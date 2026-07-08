@@ -11,6 +11,7 @@ The primary UX is **natural language**. Do not ask teammates to memorize or run 
 - PR 만들어줘 / PR 초안 써줘 / PR 설명 정리해줘 → read `.agent/skills/kd-pr/SKILL.md`
 - 리뷰 반영해줘 / 코멘트 반영해줘 / 리뷰 답변 써줘 → read `.agent/skills/kd-review-fix/SKILL.md`
 - 팀 컨벤션으로 남길 것 정리해줘 / 배운 점 정리해줘 / 규칙 후보 뽑아줘 → read `.agent/skills/kd-team-learning/SKILL.md`
+- 페이지/라우트/폴더 구조/파일 위치/어디에 둘지 판단 → read `.agent/rules/file-structure.md`
 
 ## Product boundary
 

@@ -1,6 +1,7 @@
 export const oopNavigation = [
   { label: '홈', href: '/' },
-  { label: '팀', href: '/teams' },
-  { label: '프로젝트', href: '/projects' },
-  { label: '제출', href: '/submissions' },
+  { label: '교수자', href: '/professor' },
+  { label: '조교', href: '/assistant' },
+  { label: '학생', href: '/student' },
+  { label: '알림', href: '/notifications' },
 ];
