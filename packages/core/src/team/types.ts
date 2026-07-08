@@ -10,3 +10,8 @@ export type Team = {
   name: string;
   members: TeamMember[];
 };
+
+export type SubmitTeamInput = {
+  sectionId: string;
+  name: string;
+};
