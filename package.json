@@ -1,0 +1,38 @@
+{
+  "name": "aics-team-project-client",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "preinstall": "npx only-allow pnpm",
+    "agent:init": "node .agent/scripts/init.mjs",
+    "agent:check-local": "node .agent/scripts/check-local-files.mjs",
+    "agent:check-diff": "node .agent/scripts/check-diff-hygiene.mjs",
+    "agent:suggest-verification": "node .agent/scripts/suggest-verification.mjs",
+    "agent:collect-pr-evidence": "node .agent/scripts/collect-pr-evidence.mjs"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.0",
+    "@commitlint/config-conventional": "^19.8.0",
+    "@eslint/js": "^9.39.1",
+    "@next/eslint-plugin-next": "^15.5.20",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^16.0.0",
+    "lefthook": "^1.11.11",
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.46.3"
+  },
+  "packageManager": "pnpm@10.4.1",
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@aics/core",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --emitDeclarationOnly --outDir dist",
+    "lint": "eslint ."
+  },
+  "devDependencies": {
+    "@aics/typescript": "workspace:*",
+    "typescript": "^5.8.3"
+  }
+}

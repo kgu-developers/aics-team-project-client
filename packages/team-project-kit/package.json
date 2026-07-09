@@ -1,0 +1,22 @@
+{
+  "name": "@aics/team-project-kit",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --emitDeclarationOnly --outDir dist",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "react": "catalog:react19",
+    "@aics/core": "workspace:*",
+    "@aics/ui": "workspace:*"
+  },
+  "devDependencies": {
+    "@aics/typescript": "workspace:*",
+    "@types/react": "19.1.2",
+    "typescript": "^5.8.3"
+  }
+}
