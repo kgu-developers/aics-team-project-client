@@ -1,0 +1,22 @@
+{
+  "name": "@aics/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --emitDeclarationOnly --outDir dist",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "axios": "^1.13.2",
+    "@aics/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@aics/typescript": "workspace:*",
+    "typescript": "^5.8.3",
+    "@types/node": "^22.14.1"
+  }
+}
