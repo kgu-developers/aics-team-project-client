@@ -1,3 +1,4 @@
+import { AstryxThemeProvider } from '@aics/design-system';
 import { createRootRoute, Outlet } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 
@@ -7,9 +8,11 @@ import '../globals.css';
 
 export const Route = createRootRoute({
   component: () => (
-    <QueryProvider>
-      <Outlet />
-      <TanStackRouterDevtools />
-    </QueryProvider>
+    <AstryxThemeProvider>
+      <QueryProvider>
+        <Outlet />
+        <TanStackRouterDevtools />
+      </QueryProvider>
+    </AstryxThemeProvider>
   ),
 });
