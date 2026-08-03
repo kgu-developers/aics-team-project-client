@@ -9,9 +9,9 @@ export const Route = createLazyFileRoute('/student/team')({
 function StudentTeamPage() {
   return (
     <PagePlaceholder
-      title='내 팀 정보'
-      description='학생이 본인의 팀 배정, 팀원, 역할을 확인하는 페이지입니다.'
-      todos={['팀 배정 확인', '팀원과 역할 표시', '팀 프로젝트 주제 상태 연결']}
+      title='내 팀'
+      description='팀원, 역할, 팀장, 그리고 현재 프로젝트 주제를 확인합니다.'
+      todos={['팀원과 역할 표시', '팀장 정보 표시', '프로젝트 주제 페이지 이동']}
     />
   );
 }
