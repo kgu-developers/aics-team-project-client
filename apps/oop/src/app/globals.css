@@ -12,15 +12,78 @@ body {
   margin: 0;
 }
 
-main {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 48px 24px;
+.student-shell {
+  min-height: 100dvh;
+  color: var(--color-text-primary);
 }
 
-.page-shell {
+.student-shell__header {
+  align-items: center;
+  border-bottom: 1px solid var(--color-border-default);
+  display: flex;
+  justify-content: space-between;
+  min-height: 64px;
+  padding: 0 32px;
+}
+
+.student-shell__brand {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.student-shell__role,
+.onboarding-shell__eyebrow {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.student-shell__body {
+  display: grid;
+  grid-template-columns: 208px minmax(0, 1fr);
+  min-height: calc(100dvh - 64px);
+}
+
+.student-shell__navigation {
+  border-right: 1px solid var(--color-border-default);
   display: flex;
   flex-direction: column;
+  gap: var(--spacing-1);
+  padding: var(--spacing-4);
+}
+
+.student-shell__nav-link,
+.student-shell__mobile-link {
+  border-radius: var(--radius-2);
+  color: var(--color-text-secondary);
+  font-size: 0.9375rem;
+  padding: var(--spacing-2) var(--spacing-3);
+  text-decoration: none;
+}
+
+.student-shell__nav-link:hover,
+.student-shell__nav-link.is-active,
+.student-shell__mobile-link.is-active {
+  background: var(--color-accent-muted);
+  color: var(--color-text-accent);
+}
+
+.student-shell__content {
+  min-width: 0;
+}
+
+.student-shell__mobile-navigation {
+  display: none;
+}
+
+.page-placeholder {
+  margin: 0 auto;
+  max-width: 960px;
+  padding: 48px 32px;
+}
+
+.page-placeholder__content {
   gap: var(--spacing-5);
 }
 
@@ -28,7 +91,7 @@ main {
   align-self: flex-start;
 }
 
-.page-shell h1 {
+.page-placeholder h1 {
   margin: 0;
   font-size: clamp(2rem, 5vw, 3.25rem);
   letter-spacing: -0.04em;
@@ -51,4 +114,75 @@ main {
   margin: 0;
   padding-left: 20px;
   line-height: 1.8;
+}
+
+.not-found-page {
+  margin: 0 auto;
+  max-width: 720px;
+  padding: 80px 32px;
+}
+
+.onboarding-shell {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 24px;
+}
+
+.onboarding-shell__card {
+  width: min(100%, 460px);
+}
+
+.onboarding-shell .page-placeholder {
+  padding: var(--spacing-4) 0 0;
+}
+
+.onboarding-shell .page-placeholder h1 {
+  font-size: clamp(1.75rem, 8vw, 2.5rem);
+}
+
+@media (max-width: 720px) {
+  .student-shell {
+    padding-bottom: 64px;
+  }
+
+  .student-shell__header {
+    padding: 0 20px;
+  }
+
+  .student-shell__body {
+    display: block;
+    min-height: auto;
+  }
+
+  .student-shell__navigation {
+    display: none;
+  }
+
+  .student-shell__mobile-navigation {
+    background: var(--color-background-body);
+    border-top: 1px solid var(--color-border-default);
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    left: 0;
+    padding: var(--spacing-1) var(--spacing-2);
+    position: fixed;
+    right: 0;
+    z-index: 10;
+  }
+
+  .student-shell__mobile-link {
+    font-size: 0.75rem;
+    overflow: hidden;
+    padding: var(--spacing-2) var(--spacing-1);
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .page-placeholder {
+    padding: 32px 20px;
+  }
 }

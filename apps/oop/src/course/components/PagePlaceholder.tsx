@@ -1,11 +1,4 @@
-import {
-  Badge,
-  Button,
-  Card,
-  Heading,
-  Text,
-  VStack,
-} from '@aics/design-system';
+import { Badge, Card, Heading, Text, VStack } from '@aics/design-system';
 
 type PagePlaceholderProps = {
   title: string;
@@ -19,8 +12,8 @@ export default function PagePlaceholder({
   todos,
 }: PagePlaceholderProps) {
   return (
-    <main>
-      <VStack className='page-shell' gap={5}>
+    <section className='page-placeholder'>
+      <VStack className='page-placeholder__content' gap={5}>
         <Badge
           className='course-label'
           label='OOP Team Project'
@@ -39,9 +32,8 @@ export default function PagePlaceholder({
               <li key={todo}>{todo}</li>
             ))}
           </ul>
-          <Button label='일 추가' variant='primary' />
         </Card>
       </VStack>
-    </main>
+    </section>
   );
 }

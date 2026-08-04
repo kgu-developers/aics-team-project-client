@@ -1,17 +1,20 @@
 import { createLazyFileRoute } from '@tanstack/react-router';
 
-import PagePlaceholder from '~/course/components/PagePlaceholder';
+import RouteNotFoundPage from '~/app/components/RouteNotFoundPage';
+import StudentShell from '~/app/components/StudentShell';
 
 export const Route = createLazyFileRoute('/student')({
-  component: StudentPage,
+  component: StudentShell,
+  notFoundComponent: StudentNotFoundRoute,
 });
 
-function StudentPage() {
+function StudentNotFoundRoute() {
   return (
-    <PagePlaceholder
-      title='학생 대시보드'
-      description='학생이 본인 팀, 마일스톤, 제출, 피드백을 확인하는 홈입니다.'
-      todos={['내 팀과 역할 표시', '마감 임박 마일스톤 요약', '피드백/성적 확인 연결']}
+    <RouteNotFoundPage
+      actionLabel='학생 홈으로 가기'
+      actionTo='/student'
+      description='학생 흐름에 없는 주소입니다.'
+      title='페이지를 찾을 수 없어요.'
     />
   );
 }

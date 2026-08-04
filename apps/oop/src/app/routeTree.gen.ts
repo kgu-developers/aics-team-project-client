@@ -13,12 +13,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Route as rootRouteImport } from './routes/__root'
 
 const StudentLazyRouteImport = createFileRoute('/student')()
-const ProfessorLazyRouteImport = createFileRoute('/professor')()
-const NotificationsLazyRouteImport = createFileRoute('/notifications')()
-const LoginLazyRouteImport = createFileRoute('/login')()
-const ForbiddenLazyRouteImport = createFileRoute('/forbidden')()
-const AssistantLazyRouteImport = createFileRoute('/assistant')()
 const IndexLazyRouteImport = createFileRoute('/')()
+const StudentIndexLazyRouteImport = createFileRoute('/student/')()
 const StudentTeamLazyRouteImport = createFileRoute('/student/team')()
 const StudentSubmissionsLazyRouteImport = createFileRoute(
   '/student/submissions',
@@ -34,72 +30,17 @@ const StudentMilestonesLazyRouteImport = createFileRoute(
 )()
 const StudentGradesLazyRouteImport = createFileRoute('/student/grades')()
 const StudentFeedbackLazyRouteImport = createFileRoute('/student/feedback')()
-const ProfessorTeamsLazyRouteImport = createFileRoute('/professor/teams')()
-const ProfessorSubmissionsLazyRouteImport = createFileRoute(
-  '/professor/submissions',
+const OnboardingTeamLazyRouteImport = createFileRoute('/onboarding/team')()
+const OnboardingTeamIndexLazyRouteImport =
+  createFileRoute('/onboarding/team/')()
+const OnboardingTeamSurveyLazyRouteImport = createFileRoute(
+  '/onboarding/team/survey',
 )()
-const ProfessorSectionsLazyRouteImport = createFileRoute(
-  '/professor/sections',
+const OnboardingTeamResultLazyRouteImport = createFileRoute(
+  '/onboarding/team/result',
 )()
-const ProfessorRubricsLazyRouteImport = createFileRoute('/professor/rubrics')()
-const ProfessorProjectTopicsLazyRouteImport = createFileRoute(
-  '/professor/project-topics',
-)()
-const ProfessorMilestonesLazyRouteImport = createFileRoute(
-  '/professor/milestones',
-)()
-const ProfessorGradesLazyRouteImport = createFileRoute('/professor/grades')()
-const ProfessorAuditLogsLazyRouteImport = createFileRoute(
-  '/professor/audit-logs',
-)()
-const AssistantTeamsLazyRouteImport = createFileRoute('/assistant/teams')()
-const AssistantSubmissionsLazyRouteImport = createFileRoute(
-  '/assistant/submissions',
-)()
-const AssistantSectionsLazyRouteImport = createFileRoute(
-  '/assistant/sections',
-)()
-const AssistantRiskTeamsLazyRouteImport = createFileRoute(
-  '/assistant/risk-teams',
-)()
-const AssistantMilestonesLazyRouteImport = createFileRoute(
-  '/assistant/milestones',
-)()
-const ProfessorTeamsUploadResultLazyRouteImport = createFileRoute(
-  '/professor/teams/upload-result',
-)()
-const ProfessorTeamsUploadLazyRouteImport = createFileRoute(
-  '/professor/teams/upload',
-)()
-const ProfessorTeamsTeamIdLazyRouteImport = createFileRoute(
-  '/professor/teams/$teamId',
-)()
-const ProfessorSubmissionsSubmissionIdLazyRouteImport = createFileRoute(
-  '/professor/submissions/$submissionId',
-)()
-const ProfessorSectionsSectionIdLazyRouteImport = createFileRoute(
-  '/professor/sections/$sectionId',
-)()
-const ProfessorRubricsNewLazyRouteImport = createFileRoute(
-  '/professor/rubrics/new',
-)()
-const ProfessorRubricsRubricIdLazyRouteImport = createFileRoute(
-  '/professor/rubrics/$rubricId',
-)()
-const ProfessorMilestonesNewLazyRouteImport = createFileRoute(
-  '/professor/milestones/new',
-)()
-const ProfessorMilestonesMilestoneIdLazyRouteImport = createFileRoute(
-  '/professor/milestones/$milestoneId',
-)()
-const ProfessorTeamsTeamIdHistoryLazyRouteImport = createFileRoute(
-  '/professor/teams/$teamId/history',
-)()
-const ProfessorSectionsSectionIdTeamsLazyRouteImport = createFileRoute(
-  '/professor/sections/$sectionId/teams',
-)()
-const ProfessorSectionsSectionIdAssistantsLazyRouteImport = createFileRoute(
-  '/professor/sections/$sectionId/assistants',
+const OnboardingTeamFirstMeetingLazyRouteImport = createFileRoute(
+  '/onboarding/team/first-meeting',
 )()
 
 const StudentLazyRoute = StudentLazyRouteImport.update({
@@ -107,36 +48,16 @@ const StudentLazyRoute = StudentLazyRouteImport.update({
   path: '/student',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/student.lazy').then((d) => d.Route))
-const ProfessorLazyRoute = ProfessorLazyRouteImport.update({
-  id: '/professor',
-  path: '/professor',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/professor.lazy').then((d) => d.Route))
-const NotificationsLazyRoute = NotificationsLazyRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/notifications.lazy').then((d) => d.Route))
-const LoginLazyRoute = LoginLazyRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/login.lazy').then((d) => d.Route))
-const ForbiddenLazyRoute = ForbiddenLazyRouteImport.update({
-  id: '/forbidden',
-  path: '/forbidden',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/forbidden.lazy').then((d) => d.Route))
-const AssistantLazyRoute = AssistantLazyRouteImport.update({
-  id: '/assistant',
-  path: '/assistant',
-  getParentRoute: () => rootRouteImport,
-} as any).lazy(() => import('./routes/assistant.lazy').then((d) => d.Route))
 const IndexLazyRoute = IndexLazyRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/index.lazy').then((d) => d.Route))
+const StudentIndexLazyRoute = StudentIndexLazyRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => StudentLazyRoute,
+} as any).lazy(() => import('./routes/student.index.lazy').then((d) => d.Route))
 const StudentTeamLazyRoute = StudentTeamLazyRouteImport.update({
   id: '/team',
   path: '/team',
@@ -184,227 +105,49 @@ const StudentFeedbackLazyRoute = StudentFeedbackLazyRouteImport.update({
 } as any).lazy(() =>
   import('./routes/student.feedback.lazy').then((d) => d.Route),
 )
-const ProfessorTeamsLazyRoute = ProfessorTeamsLazyRouteImport.update({
-  id: '/teams',
-  path: '/teams',
-  getParentRoute: () => ProfessorLazyRoute,
+const OnboardingTeamLazyRoute = OnboardingTeamLazyRouteImport.update({
+  id: '/onboarding/team',
+  path: '/onboarding/team',
+  getParentRoute: () => rootRouteImport,
 } as any).lazy(() =>
-  import('./routes/professor.teams.lazy').then((d) => d.Route),
+  import('./routes/onboarding.team.lazy').then((d) => d.Route),
 )
-const ProfessorSubmissionsLazyRoute =
-  ProfessorSubmissionsLazyRouteImport.update({
-    id: '/submissions',
-    path: '/submissions',
-    getParentRoute: () => ProfessorLazyRoute,
-  } as any).lazy(() =>
-    import('./routes/professor.submissions.lazy').then((d) => d.Route),
-  )
-const ProfessorSectionsLazyRoute = ProfessorSectionsLazyRouteImport.update({
-  id: '/sections',
-  path: '/sections',
-  getParentRoute: () => ProfessorLazyRoute,
+const OnboardingTeamIndexLazyRoute = OnboardingTeamIndexLazyRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OnboardingTeamLazyRoute,
 } as any).lazy(() =>
-  import('./routes/professor.sections.lazy').then((d) => d.Route),
+  import('./routes/onboarding.team.index.lazy').then((d) => d.Route),
 )
-const ProfessorRubricsLazyRoute = ProfessorRubricsLazyRouteImport.update({
-  id: '/rubrics',
-  path: '/rubrics',
-  getParentRoute: () => ProfessorLazyRoute,
-} as any).lazy(() =>
-  import('./routes/professor.rubrics.lazy').then((d) => d.Route),
-)
-const ProfessorProjectTopicsLazyRoute =
-  ProfessorProjectTopicsLazyRouteImport.update({
-    id: '/project-topics',
-    path: '/project-topics',
-    getParentRoute: () => ProfessorLazyRoute,
+const OnboardingTeamSurveyLazyRoute =
+  OnboardingTeamSurveyLazyRouteImport.update({
+    id: '/survey',
+    path: '/survey',
+    getParentRoute: () => OnboardingTeamLazyRoute,
   } as any).lazy(() =>
-    import('./routes/professor.project-topics.lazy').then((d) => d.Route),
+    import('./routes/onboarding.team.survey.lazy').then((d) => d.Route),
   )
-const ProfessorMilestonesLazyRoute = ProfessorMilestonesLazyRouteImport.update({
-  id: '/milestones',
-  path: '/milestones',
-  getParentRoute: () => ProfessorLazyRoute,
-} as any).lazy(() =>
-  import('./routes/professor.milestones.lazy').then((d) => d.Route),
-)
-const ProfessorGradesLazyRoute = ProfessorGradesLazyRouteImport.update({
-  id: '/grades',
-  path: '/grades',
-  getParentRoute: () => ProfessorLazyRoute,
-} as any).lazy(() =>
-  import('./routes/professor.grades.lazy').then((d) => d.Route),
-)
-const ProfessorAuditLogsLazyRoute = ProfessorAuditLogsLazyRouteImport.update({
-  id: '/audit-logs',
-  path: '/audit-logs',
-  getParentRoute: () => ProfessorLazyRoute,
-} as any).lazy(() =>
-  import('./routes/professor.audit-logs.lazy').then((d) => d.Route),
-)
-const AssistantTeamsLazyRoute = AssistantTeamsLazyRouteImport.update({
-  id: '/teams',
-  path: '/teams',
-  getParentRoute: () => AssistantLazyRoute,
-} as any).lazy(() =>
-  import('./routes/assistant.teams.lazy').then((d) => d.Route),
-)
-const AssistantSubmissionsLazyRoute =
-  AssistantSubmissionsLazyRouteImport.update({
-    id: '/submissions',
-    path: '/submissions',
-    getParentRoute: () => AssistantLazyRoute,
+const OnboardingTeamResultLazyRoute =
+  OnboardingTeamResultLazyRouteImport.update({
+    id: '/result',
+    path: '/result',
+    getParentRoute: () => OnboardingTeamLazyRoute,
   } as any).lazy(() =>
-    import('./routes/assistant.submissions.lazy').then((d) => d.Route),
+    import('./routes/onboarding.team.result.lazy').then((d) => d.Route),
   )
-const AssistantSectionsLazyRoute = AssistantSectionsLazyRouteImport.update({
-  id: '/sections',
-  path: '/sections',
-  getParentRoute: () => AssistantLazyRoute,
-} as any).lazy(() =>
-  import('./routes/assistant.sections.lazy').then((d) => d.Route),
-)
-const AssistantRiskTeamsLazyRoute = AssistantRiskTeamsLazyRouteImport.update({
-  id: '/risk-teams',
-  path: '/risk-teams',
-  getParentRoute: () => AssistantLazyRoute,
-} as any).lazy(() =>
-  import('./routes/assistant.risk-teams.lazy').then((d) => d.Route),
-)
-const AssistantMilestonesLazyRoute = AssistantMilestonesLazyRouteImport.update({
-  id: '/milestones',
-  path: '/milestones',
-  getParentRoute: () => AssistantLazyRoute,
-} as any).lazy(() =>
-  import('./routes/assistant.milestones.lazy').then((d) => d.Route),
-)
-const ProfessorTeamsUploadResultLazyRoute =
-  ProfessorTeamsUploadResultLazyRouteImport.update({
-    id: '/upload-result',
-    path: '/upload-result',
-    getParentRoute: () => ProfessorTeamsLazyRoute,
+const OnboardingTeamFirstMeetingLazyRoute =
+  OnboardingTeamFirstMeetingLazyRouteImport.update({
+    id: '/first-meeting',
+    path: '/first-meeting',
+    getParentRoute: () => OnboardingTeamLazyRoute,
   } as any).lazy(() =>
-    import('./routes/professor.teams.upload-result.lazy').then((d) => d.Route),
-  )
-const ProfessorTeamsUploadLazyRoute =
-  ProfessorTeamsUploadLazyRouteImport.update({
-    id: '/upload',
-    path: '/upload',
-    getParentRoute: () => ProfessorTeamsLazyRoute,
-  } as any).lazy(() =>
-    import('./routes/professor.teams.upload.lazy').then((d) => d.Route),
-  )
-const ProfessorTeamsTeamIdLazyRoute =
-  ProfessorTeamsTeamIdLazyRouteImport.update({
-    id: '/$teamId',
-    path: '/$teamId',
-    getParentRoute: () => ProfessorTeamsLazyRoute,
-  } as any).lazy(() =>
-    import('./routes/professor.teams.$teamId.lazy').then((d) => d.Route),
-  )
-const ProfessorSubmissionsSubmissionIdLazyRoute =
-  ProfessorSubmissionsSubmissionIdLazyRouteImport.update({
-    id: '/$submissionId',
-    path: '/$submissionId',
-    getParentRoute: () => ProfessorSubmissionsLazyRoute,
-  } as any).lazy(() =>
-    import('./routes/professor.submissions.$submissionId.lazy').then(
-      (d) => d.Route,
-    ),
-  )
-const ProfessorSectionsSectionIdLazyRoute =
-  ProfessorSectionsSectionIdLazyRouteImport.update({
-    id: '/$sectionId',
-    path: '/$sectionId',
-    getParentRoute: () => ProfessorSectionsLazyRoute,
-  } as any).lazy(() =>
-    import('./routes/professor.sections.$sectionId.lazy').then((d) => d.Route),
-  )
-const ProfessorRubricsNewLazyRoute = ProfessorRubricsNewLazyRouteImport.update({
-  id: '/new',
-  path: '/new',
-  getParentRoute: () => ProfessorRubricsLazyRoute,
-} as any).lazy(() =>
-  import('./routes/professor.rubrics.new.lazy').then((d) => d.Route),
-)
-const ProfessorRubricsRubricIdLazyRoute =
-  ProfessorRubricsRubricIdLazyRouteImport.update({
-    id: '/$rubricId',
-    path: '/$rubricId',
-    getParentRoute: () => ProfessorRubricsLazyRoute,
-  } as any).lazy(() =>
-    import('./routes/professor.rubrics.$rubricId.lazy').then((d) => d.Route),
-  )
-const ProfessorMilestonesNewLazyRoute =
-  ProfessorMilestonesNewLazyRouteImport.update({
-    id: '/new',
-    path: '/new',
-    getParentRoute: () => ProfessorMilestonesLazyRoute,
-  } as any).lazy(() =>
-    import('./routes/professor.milestones.new.lazy').then((d) => d.Route),
-  )
-const ProfessorMilestonesMilestoneIdLazyRoute =
-  ProfessorMilestonesMilestoneIdLazyRouteImport.update({
-    id: '/$milestoneId',
-    path: '/$milestoneId',
-    getParentRoute: () => ProfessorMilestonesLazyRoute,
-  } as any).lazy(() =>
-    import('./routes/professor.milestones.$milestoneId.lazy').then(
-      (d) => d.Route,
-    ),
-  )
-const ProfessorTeamsTeamIdHistoryLazyRoute =
-  ProfessorTeamsTeamIdHistoryLazyRouteImport.update({
-    id: '/history',
-    path: '/history',
-    getParentRoute: () => ProfessorTeamsTeamIdLazyRoute,
-  } as any).lazy(() =>
-    import('./routes/professor.teams.$teamId.history.lazy').then(
-      (d) => d.Route,
-    ),
-  )
-const ProfessorSectionsSectionIdTeamsLazyRoute =
-  ProfessorSectionsSectionIdTeamsLazyRouteImport.update({
-    id: '/teams',
-    path: '/teams',
-    getParentRoute: () => ProfessorSectionsSectionIdLazyRoute,
-  } as any).lazy(() =>
-    import('./routes/professor.sections.$sectionId.teams.lazy').then(
-      (d) => d.Route,
-    ),
-  )
-const ProfessorSectionsSectionIdAssistantsLazyRoute =
-  ProfessorSectionsSectionIdAssistantsLazyRouteImport.update({
-    id: '/assistants',
-    path: '/assistants',
-    getParentRoute: () => ProfessorSectionsSectionIdLazyRoute,
-  } as any).lazy(() =>
-    import('./routes/professor.sections.$sectionId.assistants.lazy').then(
-      (d) => d.Route,
-    ),
+    import('./routes/onboarding.team.first-meeting.lazy').then((d) => d.Route),
   )
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
-  '/assistant': typeof AssistantLazyRouteWithChildren
-  '/forbidden': typeof ForbiddenLazyRoute
-  '/login': typeof LoginLazyRoute
-  '/notifications': typeof NotificationsLazyRoute
-  '/professor': typeof ProfessorLazyRouteWithChildren
   '/student': typeof StudentLazyRouteWithChildren
-  '/assistant/milestones': typeof AssistantMilestonesLazyRoute
-  '/assistant/risk-teams': typeof AssistantRiskTeamsLazyRoute
-  '/assistant/sections': typeof AssistantSectionsLazyRoute
-  '/assistant/submissions': typeof AssistantSubmissionsLazyRoute
-  '/assistant/teams': typeof AssistantTeamsLazyRoute
-  '/professor/audit-logs': typeof ProfessorAuditLogsLazyRoute
-  '/professor/grades': typeof ProfessorGradesLazyRoute
-  '/professor/milestones': typeof ProfessorMilestonesLazyRouteWithChildren
-  '/professor/project-topics': typeof ProfessorProjectTopicsLazyRoute
-  '/professor/rubrics': typeof ProfessorRubricsLazyRouteWithChildren
-  '/professor/sections': typeof ProfessorSectionsLazyRouteWithChildren
-  '/professor/submissions': typeof ProfessorSubmissionsLazyRouteWithChildren
-  '/professor/teams': typeof ProfessorTeamsLazyRouteWithChildren
+  '/onboarding/team': typeof OnboardingTeamLazyRouteWithChildren
   '/student/feedback': typeof StudentFeedbackLazyRoute
   '/student/grades': typeof StudentGradesLazyRoute
   '/student/milestones': typeof StudentMilestonesLazyRoute
@@ -412,40 +155,14 @@ export interface FileRoutesByFullPath {
   '/student/project-topic': typeof StudentProjectTopicLazyRoute
   '/student/submissions': typeof StudentSubmissionsLazyRoute
   '/student/team': typeof StudentTeamLazyRoute
-  '/professor/milestones/$milestoneId': typeof ProfessorMilestonesMilestoneIdLazyRoute
-  '/professor/milestones/new': typeof ProfessorMilestonesNewLazyRoute
-  '/professor/rubrics/$rubricId': typeof ProfessorRubricsRubricIdLazyRoute
-  '/professor/rubrics/new': typeof ProfessorRubricsNewLazyRoute
-  '/professor/sections/$sectionId': typeof ProfessorSectionsSectionIdLazyRouteWithChildren
-  '/professor/submissions/$submissionId': typeof ProfessorSubmissionsSubmissionIdLazyRoute
-  '/professor/teams/$teamId': typeof ProfessorTeamsTeamIdLazyRouteWithChildren
-  '/professor/teams/upload': typeof ProfessorTeamsUploadLazyRoute
-  '/professor/teams/upload-result': typeof ProfessorTeamsUploadResultLazyRoute
-  '/professor/sections/$sectionId/assistants': typeof ProfessorSectionsSectionIdAssistantsLazyRoute
-  '/professor/sections/$sectionId/teams': typeof ProfessorSectionsSectionIdTeamsLazyRoute
-  '/professor/teams/$teamId/history': typeof ProfessorTeamsTeamIdHistoryLazyRoute
+  '/student/': typeof StudentIndexLazyRoute
+  '/onboarding/team/first-meeting': typeof OnboardingTeamFirstMeetingLazyRoute
+  '/onboarding/team/result': typeof OnboardingTeamResultLazyRoute
+  '/onboarding/team/survey': typeof OnboardingTeamSurveyLazyRoute
+  '/onboarding/team/': typeof OnboardingTeamIndexLazyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
-  '/assistant': typeof AssistantLazyRouteWithChildren
-  '/forbidden': typeof ForbiddenLazyRoute
-  '/login': typeof LoginLazyRoute
-  '/notifications': typeof NotificationsLazyRoute
-  '/professor': typeof ProfessorLazyRouteWithChildren
-  '/student': typeof StudentLazyRouteWithChildren
-  '/assistant/milestones': typeof AssistantMilestonesLazyRoute
-  '/assistant/risk-teams': typeof AssistantRiskTeamsLazyRoute
-  '/assistant/sections': typeof AssistantSectionsLazyRoute
-  '/assistant/submissions': typeof AssistantSubmissionsLazyRoute
-  '/assistant/teams': typeof AssistantTeamsLazyRoute
-  '/professor/audit-logs': typeof ProfessorAuditLogsLazyRoute
-  '/professor/grades': typeof ProfessorGradesLazyRoute
-  '/professor/milestones': typeof ProfessorMilestonesLazyRouteWithChildren
-  '/professor/project-topics': typeof ProfessorProjectTopicsLazyRoute
-  '/professor/rubrics': typeof ProfessorRubricsLazyRouteWithChildren
-  '/professor/sections': typeof ProfessorSectionsLazyRouteWithChildren
-  '/professor/submissions': typeof ProfessorSubmissionsLazyRouteWithChildren
-  '/professor/teams': typeof ProfessorTeamsLazyRouteWithChildren
   '/student/feedback': typeof StudentFeedbackLazyRoute
   '/student/grades': typeof StudentGradesLazyRoute
   '/student/milestones': typeof StudentMilestonesLazyRoute
@@ -453,41 +170,17 @@ export interface FileRoutesByTo {
   '/student/project-topic': typeof StudentProjectTopicLazyRoute
   '/student/submissions': typeof StudentSubmissionsLazyRoute
   '/student/team': typeof StudentTeamLazyRoute
-  '/professor/milestones/$milestoneId': typeof ProfessorMilestonesMilestoneIdLazyRoute
-  '/professor/milestones/new': typeof ProfessorMilestonesNewLazyRoute
-  '/professor/rubrics/$rubricId': typeof ProfessorRubricsRubricIdLazyRoute
-  '/professor/rubrics/new': typeof ProfessorRubricsNewLazyRoute
-  '/professor/sections/$sectionId': typeof ProfessorSectionsSectionIdLazyRouteWithChildren
-  '/professor/submissions/$submissionId': typeof ProfessorSubmissionsSubmissionIdLazyRoute
-  '/professor/teams/$teamId': typeof ProfessorTeamsTeamIdLazyRouteWithChildren
-  '/professor/teams/upload': typeof ProfessorTeamsUploadLazyRoute
-  '/professor/teams/upload-result': typeof ProfessorTeamsUploadResultLazyRoute
-  '/professor/sections/$sectionId/assistants': typeof ProfessorSectionsSectionIdAssistantsLazyRoute
-  '/professor/sections/$sectionId/teams': typeof ProfessorSectionsSectionIdTeamsLazyRoute
-  '/professor/teams/$teamId/history': typeof ProfessorTeamsTeamIdHistoryLazyRoute
+  '/student': typeof StudentIndexLazyRoute
+  '/onboarding/team/first-meeting': typeof OnboardingTeamFirstMeetingLazyRoute
+  '/onboarding/team/result': typeof OnboardingTeamResultLazyRoute
+  '/onboarding/team/survey': typeof OnboardingTeamSurveyLazyRoute
+  '/onboarding/team': typeof OnboardingTeamIndexLazyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexLazyRoute
-  '/assistant': typeof AssistantLazyRouteWithChildren
-  '/forbidden': typeof ForbiddenLazyRoute
-  '/login': typeof LoginLazyRoute
-  '/notifications': typeof NotificationsLazyRoute
-  '/professor': typeof ProfessorLazyRouteWithChildren
   '/student': typeof StudentLazyRouteWithChildren
-  '/assistant/milestones': typeof AssistantMilestonesLazyRoute
-  '/assistant/risk-teams': typeof AssistantRiskTeamsLazyRoute
-  '/assistant/sections': typeof AssistantSectionsLazyRoute
-  '/assistant/submissions': typeof AssistantSubmissionsLazyRoute
-  '/assistant/teams': typeof AssistantTeamsLazyRoute
-  '/professor/audit-logs': typeof ProfessorAuditLogsLazyRoute
-  '/professor/grades': typeof ProfessorGradesLazyRoute
-  '/professor/milestones': typeof ProfessorMilestonesLazyRouteWithChildren
-  '/professor/project-topics': typeof ProfessorProjectTopicsLazyRoute
-  '/professor/rubrics': typeof ProfessorRubricsLazyRouteWithChildren
-  '/professor/sections': typeof ProfessorSectionsLazyRouteWithChildren
-  '/professor/submissions': typeof ProfessorSubmissionsLazyRouteWithChildren
-  '/professor/teams': typeof ProfessorTeamsLazyRouteWithChildren
+  '/onboarding/team': typeof OnboardingTeamLazyRouteWithChildren
   '/student/feedback': typeof StudentFeedbackLazyRoute
   '/student/grades': typeof StudentGradesLazyRoute
   '/student/milestones': typeof StudentMilestonesLazyRoute
@@ -495,42 +188,18 @@ export interface FileRoutesById {
   '/student/project-topic': typeof StudentProjectTopicLazyRoute
   '/student/submissions': typeof StudentSubmissionsLazyRoute
   '/student/team': typeof StudentTeamLazyRoute
-  '/professor/milestones/$milestoneId': typeof ProfessorMilestonesMilestoneIdLazyRoute
-  '/professor/milestones/new': typeof ProfessorMilestonesNewLazyRoute
-  '/professor/rubrics/$rubricId': typeof ProfessorRubricsRubricIdLazyRoute
-  '/professor/rubrics/new': typeof ProfessorRubricsNewLazyRoute
-  '/professor/sections/$sectionId': typeof ProfessorSectionsSectionIdLazyRouteWithChildren
-  '/professor/submissions/$submissionId': typeof ProfessorSubmissionsSubmissionIdLazyRoute
-  '/professor/teams/$teamId': typeof ProfessorTeamsTeamIdLazyRouteWithChildren
-  '/professor/teams/upload': typeof ProfessorTeamsUploadLazyRoute
-  '/professor/teams/upload-result': typeof ProfessorTeamsUploadResultLazyRoute
-  '/professor/sections/$sectionId/assistants': typeof ProfessorSectionsSectionIdAssistantsLazyRoute
-  '/professor/sections/$sectionId/teams': typeof ProfessorSectionsSectionIdTeamsLazyRoute
-  '/professor/teams/$teamId/history': typeof ProfessorTeamsTeamIdHistoryLazyRoute
+  '/student/': typeof StudentIndexLazyRoute
+  '/onboarding/team/first-meeting': typeof OnboardingTeamFirstMeetingLazyRoute
+  '/onboarding/team/result': typeof OnboardingTeamResultLazyRoute
+  '/onboarding/team/survey': typeof OnboardingTeamSurveyLazyRoute
+  '/onboarding/team/': typeof OnboardingTeamIndexLazyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/assistant'
-    | '/forbidden'
-    | '/login'
-    | '/notifications'
-    | '/professor'
     | '/student'
-    | '/assistant/milestones'
-    | '/assistant/risk-teams'
-    | '/assistant/sections'
-    | '/assistant/submissions'
-    | '/assistant/teams'
-    | '/professor/audit-logs'
-    | '/professor/grades'
-    | '/professor/milestones'
-    | '/professor/project-topics'
-    | '/professor/rubrics'
-    | '/professor/sections'
-    | '/professor/submissions'
-    | '/professor/teams'
+    | '/onboarding/team'
     | '/student/feedback'
     | '/student/grades'
     | '/student/milestones'
@@ -538,40 +207,14 @@ export interface FileRouteTypes {
     | '/student/project-topic'
     | '/student/submissions'
     | '/student/team'
-    | '/professor/milestones/$milestoneId'
-    | '/professor/milestones/new'
-    | '/professor/rubrics/$rubricId'
-    | '/professor/rubrics/new'
-    | '/professor/sections/$sectionId'
-    | '/professor/submissions/$submissionId'
-    | '/professor/teams/$teamId'
-    | '/professor/teams/upload'
-    | '/professor/teams/upload-result'
-    | '/professor/sections/$sectionId/assistants'
-    | '/professor/sections/$sectionId/teams'
-    | '/professor/teams/$teamId/history'
+    | '/student/'
+    | '/onboarding/team/first-meeting'
+    | '/onboarding/team/result'
+    | '/onboarding/team/survey'
+    | '/onboarding/team/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/assistant'
-    | '/forbidden'
-    | '/login'
-    | '/notifications'
-    | '/professor'
-    | '/student'
-    | '/assistant/milestones'
-    | '/assistant/risk-teams'
-    | '/assistant/sections'
-    | '/assistant/submissions'
-    | '/assistant/teams'
-    | '/professor/audit-logs'
-    | '/professor/grades'
-    | '/professor/milestones'
-    | '/professor/project-topics'
-    | '/professor/rubrics'
-    | '/professor/sections'
-    | '/professor/submissions'
-    | '/professor/teams'
     | '/student/feedback'
     | '/student/grades'
     | '/student/milestones'
@@ -579,40 +222,16 @@ export interface FileRouteTypes {
     | '/student/project-topic'
     | '/student/submissions'
     | '/student/team'
-    | '/professor/milestones/$milestoneId'
-    | '/professor/milestones/new'
-    | '/professor/rubrics/$rubricId'
-    | '/professor/rubrics/new'
-    | '/professor/sections/$sectionId'
-    | '/professor/submissions/$submissionId'
-    | '/professor/teams/$teamId'
-    | '/professor/teams/upload'
-    | '/professor/teams/upload-result'
-    | '/professor/sections/$sectionId/assistants'
-    | '/professor/sections/$sectionId/teams'
-    | '/professor/teams/$teamId/history'
+    | '/student'
+    | '/onboarding/team/first-meeting'
+    | '/onboarding/team/result'
+    | '/onboarding/team/survey'
+    | '/onboarding/team'
   id:
     | '__root__'
     | '/'
-    | '/assistant'
-    | '/forbidden'
-    | '/login'
-    | '/notifications'
-    | '/professor'
     | '/student'
-    | '/assistant/milestones'
-    | '/assistant/risk-teams'
-    | '/assistant/sections'
-    | '/assistant/submissions'
-    | '/assistant/teams'
-    | '/professor/audit-logs'
-    | '/professor/grades'
-    | '/professor/milestones'
-    | '/professor/project-topics'
-    | '/professor/rubrics'
-    | '/professor/sections'
-    | '/professor/submissions'
-    | '/professor/teams'
+    | '/onboarding/team'
     | '/student/feedback'
     | '/student/grades'
     | '/student/milestones'
@@ -620,28 +239,17 @@ export interface FileRouteTypes {
     | '/student/project-topic'
     | '/student/submissions'
     | '/student/team'
-    | '/professor/milestones/$milestoneId'
-    | '/professor/milestones/new'
-    | '/professor/rubrics/$rubricId'
-    | '/professor/rubrics/new'
-    | '/professor/sections/$sectionId'
-    | '/professor/submissions/$submissionId'
-    | '/professor/teams/$teamId'
-    | '/professor/teams/upload'
-    | '/professor/teams/upload-result'
-    | '/professor/sections/$sectionId/assistants'
-    | '/professor/sections/$sectionId/teams'
-    | '/professor/teams/$teamId/history'
+    | '/student/'
+    | '/onboarding/team/first-meeting'
+    | '/onboarding/team/result'
+    | '/onboarding/team/survey'
+    | '/onboarding/team/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
-  AssistantLazyRoute: typeof AssistantLazyRouteWithChildren
-  ForbiddenLazyRoute: typeof ForbiddenLazyRoute
-  LoginLazyRoute: typeof LoginLazyRoute
-  NotificationsLazyRoute: typeof NotificationsLazyRoute
-  ProfessorLazyRoute: typeof ProfessorLazyRouteWithChildren
   StudentLazyRoute: typeof StudentLazyRouteWithChildren
+  OnboardingTeamLazyRoute: typeof OnboardingTeamLazyRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -653,47 +261,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/professor': {
-      id: '/professor'
-      path: '/professor'
-      fullPath: '/professor'
-      preLoaderRoute: typeof ProfessorLazyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notifications': {
-      id: '/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof NotificationsLazyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginLazyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forbidden': {
-      id: '/forbidden'
-      path: '/forbidden'
-      fullPath: '/forbidden'
-      preLoaderRoute: typeof ForbiddenLazyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/assistant': {
-      id: '/assistant'
-      path: '/assistant'
-      fullPath: '/assistant'
-      preLoaderRoute: typeof AssistantLazyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexLazyRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/student/': {
+      id: '/student/'
+      path: '/'
+      fullPath: '/student/'
+      preLoaderRoute: typeof StudentIndexLazyRouteImport
+      parentRoute: typeof StudentLazyRoute
     }
     '/student/team': {
       id: '/student/team'
@@ -744,335 +324,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentFeedbackLazyRouteImport
       parentRoute: typeof StudentLazyRoute
     }
-    '/professor/teams': {
-      id: '/professor/teams'
-      path: '/teams'
-      fullPath: '/professor/teams'
-      preLoaderRoute: typeof ProfessorTeamsLazyRouteImport
-      parentRoute: typeof ProfessorLazyRoute
+    '/onboarding/team': {
+      id: '/onboarding/team'
+      path: '/onboarding/team'
+      fullPath: '/onboarding/team'
+      preLoaderRoute: typeof OnboardingTeamLazyRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/professor/submissions': {
-      id: '/professor/submissions'
-      path: '/submissions'
-      fullPath: '/professor/submissions'
-      preLoaderRoute: typeof ProfessorSubmissionsLazyRouteImport
-      parentRoute: typeof ProfessorLazyRoute
+    '/onboarding/team/': {
+      id: '/onboarding/team/'
+      path: '/'
+      fullPath: '/onboarding/team/'
+      preLoaderRoute: typeof OnboardingTeamIndexLazyRouteImport
+      parentRoute: typeof OnboardingTeamLazyRoute
     }
-    '/professor/sections': {
-      id: '/professor/sections'
-      path: '/sections'
-      fullPath: '/professor/sections'
-      preLoaderRoute: typeof ProfessorSectionsLazyRouteImport
-      parentRoute: typeof ProfessorLazyRoute
+    '/onboarding/team/survey': {
+      id: '/onboarding/team/survey'
+      path: '/survey'
+      fullPath: '/onboarding/team/survey'
+      preLoaderRoute: typeof OnboardingTeamSurveyLazyRouteImport
+      parentRoute: typeof OnboardingTeamLazyRoute
     }
-    '/professor/rubrics': {
-      id: '/professor/rubrics'
-      path: '/rubrics'
-      fullPath: '/professor/rubrics'
-      preLoaderRoute: typeof ProfessorRubricsLazyRouteImport
-      parentRoute: typeof ProfessorLazyRoute
+    '/onboarding/team/result': {
+      id: '/onboarding/team/result'
+      path: '/result'
+      fullPath: '/onboarding/team/result'
+      preLoaderRoute: typeof OnboardingTeamResultLazyRouteImport
+      parentRoute: typeof OnboardingTeamLazyRoute
     }
-    '/professor/project-topics': {
-      id: '/professor/project-topics'
-      path: '/project-topics'
-      fullPath: '/professor/project-topics'
-      preLoaderRoute: typeof ProfessorProjectTopicsLazyRouteImport
-      parentRoute: typeof ProfessorLazyRoute
-    }
-    '/professor/milestones': {
-      id: '/professor/milestones'
-      path: '/milestones'
-      fullPath: '/professor/milestones'
-      preLoaderRoute: typeof ProfessorMilestonesLazyRouteImport
-      parentRoute: typeof ProfessorLazyRoute
-    }
-    '/professor/grades': {
-      id: '/professor/grades'
-      path: '/grades'
-      fullPath: '/professor/grades'
-      preLoaderRoute: typeof ProfessorGradesLazyRouteImport
-      parentRoute: typeof ProfessorLazyRoute
-    }
-    '/professor/audit-logs': {
-      id: '/professor/audit-logs'
-      path: '/audit-logs'
-      fullPath: '/professor/audit-logs'
-      preLoaderRoute: typeof ProfessorAuditLogsLazyRouteImport
-      parentRoute: typeof ProfessorLazyRoute
-    }
-    '/assistant/teams': {
-      id: '/assistant/teams'
-      path: '/teams'
-      fullPath: '/assistant/teams'
-      preLoaderRoute: typeof AssistantTeamsLazyRouteImport
-      parentRoute: typeof AssistantLazyRoute
-    }
-    '/assistant/submissions': {
-      id: '/assistant/submissions'
-      path: '/submissions'
-      fullPath: '/assistant/submissions'
-      preLoaderRoute: typeof AssistantSubmissionsLazyRouteImport
-      parentRoute: typeof AssistantLazyRoute
-    }
-    '/assistant/sections': {
-      id: '/assistant/sections'
-      path: '/sections'
-      fullPath: '/assistant/sections'
-      preLoaderRoute: typeof AssistantSectionsLazyRouteImport
-      parentRoute: typeof AssistantLazyRoute
-    }
-    '/assistant/risk-teams': {
-      id: '/assistant/risk-teams'
-      path: '/risk-teams'
-      fullPath: '/assistant/risk-teams'
-      preLoaderRoute: typeof AssistantRiskTeamsLazyRouteImport
-      parentRoute: typeof AssistantLazyRoute
-    }
-    '/assistant/milestones': {
-      id: '/assistant/milestones'
-      path: '/milestones'
-      fullPath: '/assistant/milestones'
-      preLoaderRoute: typeof AssistantMilestonesLazyRouteImport
-      parentRoute: typeof AssistantLazyRoute
-    }
-    '/professor/teams/upload-result': {
-      id: '/professor/teams/upload-result'
-      path: '/upload-result'
-      fullPath: '/professor/teams/upload-result'
-      preLoaderRoute: typeof ProfessorTeamsUploadResultLazyRouteImport
-      parentRoute: typeof ProfessorTeamsLazyRoute
-    }
-    '/professor/teams/upload': {
-      id: '/professor/teams/upload'
-      path: '/upload'
-      fullPath: '/professor/teams/upload'
-      preLoaderRoute: typeof ProfessorTeamsUploadLazyRouteImport
-      parentRoute: typeof ProfessorTeamsLazyRoute
-    }
-    '/professor/teams/$teamId': {
-      id: '/professor/teams/$teamId'
-      path: '/$teamId'
-      fullPath: '/professor/teams/$teamId'
-      preLoaderRoute: typeof ProfessorTeamsTeamIdLazyRouteImport
-      parentRoute: typeof ProfessorTeamsLazyRoute
-    }
-    '/professor/submissions/$submissionId': {
-      id: '/professor/submissions/$submissionId'
-      path: '/$submissionId'
-      fullPath: '/professor/submissions/$submissionId'
-      preLoaderRoute: typeof ProfessorSubmissionsSubmissionIdLazyRouteImport
-      parentRoute: typeof ProfessorSubmissionsLazyRoute
-    }
-    '/professor/sections/$sectionId': {
-      id: '/professor/sections/$sectionId'
-      path: '/$sectionId'
-      fullPath: '/professor/sections/$sectionId'
-      preLoaderRoute: typeof ProfessorSectionsSectionIdLazyRouteImport
-      parentRoute: typeof ProfessorSectionsLazyRoute
-    }
-    '/professor/rubrics/new': {
-      id: '/professor/rubrics/new'
-      path: '/new'
-      fullPath: '/professor/rubrics/new'
-      preLoaderRoute: typeof ProfessorRubricsNewLazyRouteImport
-      parentRoute: typeof ProfessorRubricsLazyRoute
-    }
-    '/professor/rubrics/$rubricId': {
-      id: '/professor/rubrics/$rubricId'
-      path: '/$rubricId'
-      fullPath: '/professor/rubrics/$rubricId'
-      preLoaderRoute: typeof ProfessorRubricsRubricIdLazyRouteImport
-      parentRoute: typeof ProfessorRubricsLazyRoute
-    }
-    '/professor/milestones/new': {
-      id: '/professor/milestones/new'
-      path: '/new'
-      fullPath: '/professor/milestones/new'
-      preLoaderRoute: typeof ProfessorMilestonesNewLazyRouteImport
-      parentRoute: typeof ProfessorMilestonesLazyRoute
-    }
-    '/professor/milestones/$milestoneId': {
-      id: '/professor/milestones/$milestoneId'
-      path: '/$milestoneId'
-      fullPath: '/professor/milestones/$milestoneId'
-      preLoaderRoute: typeof ProfessorMilestonesMilestoneIdLazyRouteImport
-      parentRoute: typeof ProfessorMilestonesLazyRoute
-    }
-    '/professor/teams/$teamId/history': {
-      id: '/professor/teams/$teamId/history'
-      path: '/history'
-      fullPath: '/professor/teams/$teamId/history'
-      preLoaderRoute: typeof ProfessorTeamsTeamIdHistoryLazyRouteImport
-      parentRoute: typeof ProfessorTeamsTeamIdLazyRoute
-    }
-    '/professor/sections/$sectionId/teams': {
-      id: '/professor/sections/$sectionId/teams'
-      path: '/teams'
-      fullPath: '/professor/sections/$sectionId/teams'
-      preLoaderRoute: typeof ProfessorSectionsSectionIdTeamsLazyRouteImport
-      parentRoute: typeof ProfessorSectionsSectionIdLazyRoute
-    }
-    '/professor/sections/$sectionId/assistants': {
-      id: '/professor/sections/$sectionId/assistants'
-      path: '/assistants'
-      fullPath: '/professor/sections/$sectionId/assistants'
-      preLoaderRoute: typeof ProfessorSectionsSectionIdAssistantsLazyRouteImport
-      parentRoute: typeof ProfessorSectionsSectionIdLazyRoute
+    '/onboarding/team/first-meeting': {
+      id: '/onboarding/team/first-meeting'
+      path: '/first-meeting'
+      fullPath: '/onboarding/team/first-meeting'
+      preLoaderRoute: typeof OnboardingTeamFirstMeetingLazyRouteImport
+      parentRoute: typeof OnboardingTeamLazyRoute
     }
   }
 }
-
-interface AssistantLazyRouteChildren {
-  AssistantMilestonesLazyRoute: typeof AssistantMilestonesLazyRoute
-  AssistantRiskTeamsLazyRoute: typeof AssistantRiskTeamsLazyRoute
-  AssistantSectionsLazyRoute: typeof AssistantSectionsLazyRoute
-  AssistantSubmissionsLazyRoute: typeof AssistantSubmissionsLazyRoute
-  AssistantTeamsLazyRoute: typeof AssistantTeamsLazyRoute
-}
-
-const AssistantLazyRouteChildren: AssistantLazyRouteChildren = {
-  AssistantMilestonesLazyRoute: AssistantMilestonesLazyRoute,
-  AssistantRiskTeamsLazyRoute: AssistantRiskTeamsLazyRoute,
-  AssistantSectionsLazyRoute: AssistantSectionsLazyRoute,
-  AssistantSubmissionsLazyRoute: AssistantSubmissionsLazyRoute,
-  AssistantTeamsLazyRoute: AssistantTeamsLazyRoute,
-}
-
-const AssistantLazyRouteWithChildren = AssistantLazyRoute._addFileChildren(
-  AssistantLazyRouteChildren,
-)
-
-interface ProfessorMilestonesLazyRouteChildren {
-  ProfessorMilestonesMilestoneIdLazyRoute: typeof ProfessorMilestonesMilestoneIdLazyRoute
-  ProfessorMilestonesNewLazyRoute: typeof ProfessorMilestonesNewLazyRoute
-}
-
-const ProfessorMilestonesLazyRouteChildren: ProfessorMilestonesLazyRouteChildren =
-  {
-    ProfessorMilestonesMilestoneIdLazyRoute:
-      ProfessorMilestonesMilestoneIdLazyRoute,
-    ProfessorMilestonesNewLazyRoute: ProfessorMilestonesNewLazyRoute,
-  }
-
-const ProfessorMilestonesLazyRouteWithChildren =
-  ProfessorMilestonesLazyRoute._addFileChildren(
-    ProfessorMilestonesLazyRouteChildren,
-  )
-
-interface ProfessorRubricsLazyRouteChildren {
-  ProfessorRubricsRubricIdLazyRoute: typeof ProfessorRubricsRubricIdLazyRoute
-  ProfessorRubricsNewLazyRoute: typeof ProfessorRubricsNewLazyRoute
-}
-
-const ProfessorRubricsLazyRouteChildren: ProfessorRubricsLazyRouteChildren = {
-  ProfessorRubricsRubricIdLazyRoute: ProfessorRubricsRubricIdLazyRoute,
-  ProfessorRubricsNewLazyRoute: ProfessorRubricsNewLazyRoute,
-}
-
-const ProfessorRubricsLazyRouteWithChildren =
-  ProfessorRubricsLazyRoute._addFileChildren(ProfessorRubricsLazyRouteChildren)
-
-interface ProfessorSectionsSectionIdLazyRouteChildren {
-  ProfessorSectionsSectionIdAssistantsLazyRoute: typeof ProfessorSectionsSectionIdAssistantsLazyRoute
-  ProfessorSectionsSectionIdTeamsLazyRoute: typeof ProfessorSectionsSectionIdTeamsLazyRoute
-}
-
-const ProfessorSectionsSectionIdLazyRouteChildren: ProfessorSectionsSectionIdLazyRouteChildren =
-  {
-    ProfessorSectionsSectionIdAssistantsLazyRoute:
-      ProfessorSectionsSectionIdAssistantsLazyRoute,
-    ProfessorSectionsSectionIdTeamsLazyRoute:
-      ProfessorSectionsSectionIdTeamsLazyRoute,
-  }
-
-const ProfessorSectionsSectionIdLazyRouteWithChildren =
-  ProfessorSectionsSectionIdLazyRoute._addFileChildren(
-    ProfessorSectionsSectionIdLazyRouteChildren,
-  )
-
-interface ProfessorSectionsLazyRouteChildren {
-  ProfessorSectionsSectionIdLazyRoute: typeof ProfessorSectionsSectionIdLazyRouteWithChildren
-}
-
-const ProfessorSectionsLazyRouteChildren: ProfessorSectionsLazyRouteChildren = {
-  ProfessorSectionsSectionIdLazyRoute:
-    ProfessorSectionsSectionIdLazyRouteWithChildren,
-}
-
-const ProfessorSectionsLazyRouteWithChildren =
-  ProfessorSectionsLazyRoute._addFileChildren(
-    ProfessorSectionsLazyRouteChildren,
-  )
-
-interface ProfessorSubmissionsLazyRouteChildren {
-  ProfessorSubmissionsSubmissionIdLazyRoute: typeof ProfessorSubmissionsSubmissionIdLazyRoute
-}
-
-const ProfessorSubmissionsLazyRouteChildren: ProfessorSubmissionsLazyRouteChildren =
-  {
-    ProfessorSubmissionsSubmissionIdLazyRoute:
-      ProfessorSubmissionsSubmissionIdLazyRoute,
-  }
-
-const ProfessorSubmissionsLazyRouteWithChildren =
-  ProfessorSubmissionsLazyRoute._addFileChildren(
-    ProfessorSubmissionsLazyRouteChildren,
-  )
-
-interface ProfessorTeamsTeamIdLazyRouteChildren {
-  ProfessorTeamsTeamIdHistoryLazyRoute: typeof ProfessorTeamsTeamIdHistoryLazyRoute
-}
-
-const ProfessorTeamsTeamIdLazyRouteChildren: ProfessorTeamsTeamIdLazyRouteChildren =
-  {
-    ProfessorTeamsTeamIdHistoryLazyRoute: ProfessorTeamsTeamIdHistoryLazyRoute,
-  }
-
-const ProfessorTeamsTeamIdLazyRouteWithChildren =
-  ProfessorTeamsTeamIdLazyRoute._addFileChildren(
-    ProfessorTeamsTeamIdLazyRouteChildren,
-  )
-
-interface ProfessorTeamsLazyRouteChildren {
-  ProfessorTeamsTeamIdLazyRoute: typeof ProfessorTeamsTeamIdLazyRouteWithChildren
-  ProfessorTeamsUploadLazyRoute: typeof ProfessorTeamsUploadLazyRoute
-  ProfessorTeamsUploadResultLazyRoute: typeof ProfessorTeamsUploadResultLazyRoute
-}
-
-const ProfessorTeamsLazyRouteChildren: ProfessorTeamsLazyRouteChildren = {
-  ProfessorTeamsTeamIdLazyRoute: ProfessorTeamsTeamIdLazyRouteWithChildren,
-  ProfessorTeamsUploadLazyRoute: ProfessorTeamsUploadLazyRoute,
-  ProfessorTeamsUploadResultLazyRoute: ProfessorTeamsUploadResultLazyRoute,
-}
-
-const ProfessorTeamsLazyRouteWithChildren =
-  ProfessorTeamsLazyRoute._addFileChildren(ProfessorTeamsLazyRouteChildren)
-
-interface ProfessorLazyRouteChildren {
-  ProfessorAuditLogsLazyRoute: typeof ProfessorAuditLogsLazyRoute
-  ProfessorGradesLazyRoute: typeof ProfessorGradesLazyRoute
-  ProfessorMilestonesLazyRoute: typeof ProfessorMilestonesLazyRouteWithChildren
-  ProfessorProjectTopicsLazyRoute: typeof ProfessorProjectTopicsLazyRoute
-  ProfessorRubricsLazyRoute: typeof ProfessorRubricsLazyRouteWithChildren
-  ProfessorSectionsLazyRoute: typeof ProfessorSectionsLazyRouteWithChildren
-  ProfessorSubmissionsLazyRoute: typeof ProfessorSubmissionsLazyRouteWithChildren
-  ProfessorTeamsLazyRoute: typeof ProfessorTeamsLazyRouteWithChildren
-}
-
-const ProfessorLazyRouteChildren: ProfessorLazyRouteChildren = {
-  ProfessorAuditLogsLazyRoute: ProfessorAuditLogsLazyRoute,
-  ProfessorGradesLazyRoute: ProfessorGradesLazyRoute,
-  ProfessorMilestonesLazyRoute: ProfessorMilestonesLazyRouteWithChildren,
-  ProfessorProjectTopicsLazyRoute: ProfessorProjectTopicsLazyRoute,
-  ProfessorRubricsLazyRoute: ProfessorRubricsLazyRouteWithChildren,
-  ProfessorSectionsLazyRoute: ProfessorSectionsLazyRouteWithChildren,
-  ProfessorSubmissionsLazyRoute: ProfessorSubmissionsLazyRouteWithChildren,
-  ProfessorTeamsLazyRoute: ProfessorTeamsLazyRouteWithChildren,
-}
-
-const ProfessorLazyRouteWithChildren = ProfessorLazyRoute._addFileChildren(
-  ProfessorLazyRouteChildren,
-)
 
 interface StudentLazyRouteChildren {
   StudentFeedbackLazyRoute: typeof StudentFeedbackLazyRoute
@@ -1082,6 +370,7 @@ interface StudentLazyRouteChildren {
   StudentProjectTopicLazyRoute: typeof StudentProjectTopicLazyRoute
   StudentSubmissionsLazyRoute: typeof StudentSubmissionsLazyRoute
   StudentTeamLazyRoute: typeof StudentTeamLazyRoute
+  StudentIndexLazyRoute: typeof StudentIndexLazyRoute
 }
 
 const StudentLazyRouteChildren: StudentLazyRouteChildren = {
@@ -1092,20 +381,34 @@ const StudentLazyRouteChildren: StudentLazyRouteChildren = {
   StudentProjectTopicLazyRoute: StudentProjectTopicLazyRoute,
   StudentSubmissionsLazyRoute: StudentSubmissionsLazyRoute,
   StudentTeamLazyRoute: StudentTeamLazyRoute,
+  StudentIndexLazyRoute: StudentIndexLazyRoute,
 }
 
 const StudentLazyRouteWithChildren = StudentLazyRoute._addFileChildren(
   StudentLazyRouteChildren,
 )
 
+interface OnboardingTeamLazyRouteChildren {
+  OnboardingTeamFirstMeetingLazyRoute: typeof OnboardingTeamFirstMeetingLazyRoute
+  OnboardingTeamResultLazyRoute: typeof OnboardingTeamResultLazyRoute
+  OnboardingTeamSurveyLazyRoute: typeof OnboardingTeamSurveyLazyRoute
+  OnboardingTeamIndexLazyRoute: typeof OnboardingTeamIndexLazyRoute
+}
+
+const OnboardingTeamLazyRouteChildren: OnboardingTeamLazyRouteChildren = {
+  OnboardingTeamFirstMeetingLazyRoute: OnboardingTeamFirstMeetingLazyRoute,
+  OnboardingTeamResultLazyRoute: OnboardingTeamResultLazyRoute,
+  OnboardingTeamSurveyLazyRoute: OnboardingTeamSurveyLazyRoute,
+  OnboardingTeamIndexLazyRoute: OnboardingTeamIndexLazyRoute,
+}
+
+const OnboardingTeamLazyRouteWithChildren =
+  OnboardingTeamLazyRoute._addFileChildren(OnboardingTeamLazyRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
-  AssistantLazyRoute: AssistantLazyRouteWithChildren,
-  ForbiddenLazyRoute: ForbiddenLazyRoute,
-  LoginLazyRoute: LoginLazyRoute,
-  NotificationsLazyRoute: NotificationsLazyRoute,
-  ProfessorLazyRoute: ProfessorLazyRouteWithChildren,
   StudentLazyRoute: StudentLazyRouteWithChildren,
+  OnboardingTeamLazyRoute: OnboardingTeamLazyRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
