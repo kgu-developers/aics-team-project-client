@@ -56,8 +56,10 @@ export default function LoginForm() {
 
   const onSubmit = handleSubmit(async values => {
     try {
-      await loginMutation.mutateAsync(values);
-      await navigate({ to: '/student' });
+      const currentUser = await loginMutation.mutateAsync(values);
+      await navigate({
+        to: currentUser.globalRole === 'STUDENT' ? '/student' : '/admin',
+      });
     } catch {
       // API failures are rendered below; they are not field-validation failures.
     }
@@ -143,6 +145,10 @@ export default function LoginForm() {
         <Text>
           개발용 MSW 학생 계정: 학번 <strong>20260001</strong> / 비밀번호{' '}
           <strong>oop-demo</strong>
+        </Text>
+        <Text>
+          개발용 MSW 관리 예시 계정: 학번 <strong>20260002</strong> / 비밀번호{' '}
+          <strong>oop-admin</strong>
         </Text>
       </Card>
     </section>

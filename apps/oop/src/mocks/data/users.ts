@@ -15,11 +15,32 @@ export const demoStudent: CurrentUser = {
   ],
 };
 
+export const demoAdmin: CurrentUser = {
+  studentNumber: '20260002',
+  name: 'OOP 데모 조교',
+  email: 'assistant@example.com',
+  globalRole: 'ASSISTANT',
+  sections: [
+    {
+      id: 'oop-2026-2-01',
+      code: 'OOP-01',
+      name: '객체지향프로그래밍 01분반',
+      role: 'ASSISTANT',
+    },
+  ],
+};
+
 export const demoAccessToken = 'msw-oop-demo-access-token';
+export const demoAdminAccessToken = 'msw-oop-demo-admin-access-token';
 
 export const demoCredentials = {
   studentNumber: '20260001',
   password: 'oop-demo',
+} as const;
+
+export const demoAdminCredentials = {
+  studentNumber: '20260002',
+  password: 'oop-admin',
 } as const;
 
 export const demoUserAccounts = [
@@ -27,5 +48,10 @@ export const demoUserAccounts = [
     user: demoStudent,
     credentials: demoCredentials,
     accessToken: demoAccessToken,
+  },
+  {
+    user: demoAdmin,
+    credentials: demoAdminCredentials,
+    accessToken: demoAdminAccessToken,
   },
 ] as const;
