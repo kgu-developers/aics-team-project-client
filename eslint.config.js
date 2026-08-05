@@ -23,6 +23,7 @@ module.exports = defineConfig([
       '**/coverage/**',
       '**/README.md',
       '**/next-env.d.ts',
+      '**/public/mockServiceWorker.js',
       '**/eslint.config.js',
     ],
   },
@@ -40,6 +41,7 @@ module.exports = defineConfig([
           pathGroups: [
             { pattern: 'react', group: 'builtin', position: 'before' },
             { pattern: '@aics/**', group: 'external', position: 'after' },
+            { pattern: '~/app/**', group: 'external', position: 'after' },
             { pattern: '~/shared/**', group: 'external', position: 'after' },
             { pattern: '~/entities/**', group: 'external', position: 'after' },
             { pattern: '~/features/**', group: 'external', position: 'after' },

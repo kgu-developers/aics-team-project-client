@@ -13,6 +13,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Route as rootRouteImport } from './routes/__root'
 
 const StudentLazyRouteImport = createFileRoute('/student')()
+const LoginLazyRouteImport = createFileRoute('/login')()
 const IndexLazyRouteImport = createFileRoute('/')()
 const StudentIndexLazyRouteImport = createFileRoute('/student/')()
 const StudentTeamLazyRouteImport = createFileRoute('/student/team')()
@@ -48,6 +49,11 @@ const StudentLazyRoute = StudentLazyRouteImport.update({
   path: '/student',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/student.lazy').then((d) => d.Route))
+const LoginLazyRoute = LoginLazyRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/login.lazy').then((d) => d.Route))
 const IndexLazyRoute = IndexLazyRouteImport.update({
   id: '/',
   path: '/',
@@ -146,6 +152,7 @@ const OnboardingTeamFirstMeetingLazyRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
+  '/login': typeof LoginLazyRoute
   '/student': typeof StudentLazyRouteWithChildren
   '/onboarding/team': typeof OnboardingTeamLazyRouteWithChildren
   '/student/feedback': typeof StudentFeedbackLazyRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
+  '/login': typeof LoginLazyRoute
   '/student/feedback': typeof StudentFeedbackLazyRoute
   '/student/grades': typeof StudentGradesLazyRoute
   '/student/milestones': typeof StudentMilestonesLazyRoute
@@ -179,6 +187,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexLazyRoute
+  '/login': typeof LoginLazyRoute
   '/student': typeof StudentLazyRouteWithChildren
   '/onboarding/team': typeof OnboardingTeamLazyRouteWithChildren
   '/student/feedback': typeof StudentFeedbackLazyRoute
@@ -198,6 +207,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/student'
     | '/onboarding/team'
     | '/student/feedback'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
     | '/student/feedback'
     | '/student/grades'
     | '/student/milestones'
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/login'
     | '/student'
     | '/onboarding/team'
     | '/student/feedback'
@@ -248,6 +260,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
+  LoginLazyRoute: typeof LoginLazyRoute
   StudentLazyRoute: typeof StudentLazyRouteWithChildren
   OnboardingTeamLazyRoute: typeof OnboardingTeamLazyRouteWithChildren
 }
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       path: '/student'
       fullPath: '/student'
       preLoaderRoute: typeof StudentLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -407,6 +427,7 @@ const OnboardingTeamLazyRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
+  LoginLazyRoute: LoginLazyRoute,
   StudentLazyRoute: StudentLazyRouteWithChildren,
   OnboardingTeamLazyRoute: OnboardingTeamLazyRouteWithChildren,
 }

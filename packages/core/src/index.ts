@@ -1,3 +1,10 @@
+export type {
+  AuthLoginInput,
+  AuthLoginResponse,
+  CurrentUser,
+  CurrentUserSection,
+  UserGlobalRole,
+} from './auth/types';
 export type { Course } from './course/types';
 export type { Milestone } from './milestone/types';
 export type { Project } from './project/types';

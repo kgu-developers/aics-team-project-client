@@ -1,8 +1,16 @@
-import { Link, Outlet } from '@tanstack/react-router';
+import { Link, Navigate, Outlet } from '@tanstack/react-router';
+
+import { useAuthStore } from '~/features/auth/authStore';
 
 import { studentPrimaryNavigation } from '~/course/navigation';
 
 export default function StudentShell() {
+  const accessToken = useAuthStore(state => state.accessToken);
+
+  if (!accessToken) {
+    return <Navigate to='/login' />;
+  }
+
   return (
     <div className='student-shell'>
       <header className='student-shell__header'>
@@ -32,7 +40,10 @@ export default function StudentShell() {
         </main>
       </div>
 
-      <nav aria-label='학생 모바일 메뉴' className='student-shell__mobile-navigation'>
+      <nav
+        aria-label='학생 모바일 메뉴'
+        className='student-shell__mobile-navigation'
+      >
         {studentPrimaryNavigation.map(item => (
           <Link
             activeOptions={{ exact: true }}
