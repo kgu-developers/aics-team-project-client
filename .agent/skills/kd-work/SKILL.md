@@ -28,6 +28,9 @@ Use this skill when the user asks to implement, fix, modify, refactor, create, o
 ## Steps
 
 1. Read relevant rules in `.agent/rules/`, especially `repo-map.md`, `course-app.md`, `component-placement.md`, `api-conventions.md`, `code-style.md`, `verification.md`, and `rubric.md`.
+   - UI, component, theme, or Astryx work: also read `design-system.md`; before editing the package, read `packages/design-system/AGENTS.md`.
+   - Route, login, session, role, or access work: also read `routing-auth.md`.
+   - Mock, fixture, or MSW work: also read `msw.md`.
 2. Convert the raw request into a task card using `.agent/templates/task-card.md` and save it under `.agent-local/task-cards/`.
 3. If scope is ambiguous, ask concise questions before implementation. Prefer safe defaults only when the risk is low and state them explicitly.
 4. Choose the target location before editing:

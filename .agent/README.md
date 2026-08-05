@@ -2,7 +2,7 @@
 
 This thin harness helps AI coding agents keep KD/AICS conventions close to the repo.
 
-Humans should not need to memorize commands. Agents should read `AGENTS.md`, then route natural-language requests to `.agent/skills/*/SKILL.md`, read the relevant `.agent/rules/*`, and write temporary artifacts under `.agent-local/`.
+Humans should not need to memorize commands. Agents should read `AGENTS.md`, then route natural-language requests to `.agent/skills/*/SKILL.md`, read the relevant `.agent/rules/*`, and write temporary artifacts under `.agent-local/`. UI/Astryx work additionally follows `.agent/rules/design-system.md`; package-level changes also read `packages/design-system/AGENTS.md`.
 
 ## Local-only workspace
 
