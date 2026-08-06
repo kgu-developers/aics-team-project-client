@@ -8,6 +8,15 @@ export const Route = createLazyFileRoute('/')({
 
 function IndexRoute() {
   const accessToken = useAuthStore(state => state.accessToken);
+  const currentUser = useAuthStore(state => state.currentUser);
 
-  return <Navigate to={accessToken ? '/student' : '/login'} />;
+  if (!accessToken || !currentUser) {
+    return <Navigate to='/login' />;
+  }
+
+  return (
+    <Navigate
+      to={currentUser.globalRole === 'STUDENT' ? '/student' : '/admin'}
+    />
+  );
 }

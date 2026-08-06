@@ -34,12 +34,12 @@ export const demoAccessToken = 'msw-oop-demo-access-token';
 export const demoAdminAccessToken = 'msw-oop-demo-admin-access-token';
 
 export const demoCredentials = {
-  studentNumber: '20260001',
+  studentNumber: demoStudent.studentNumber,
   password: 'oop-demo',
 } as const;
 
 export const demoAdminCredentials = {
-  studentNumber: '20260002',
+  studentNumber: demoAdmin.studentNumber,
   password: 'oop-admin',
 } as const;
 
@@ -48,10 +48,12 @@ export const demoUserAccounts = [
     user: demoStudent,
     credentials: demoCredentials,
     accessToken: demoAccessToken,
+    refreshToken: 'msw-oop-demo-refresh-token',
   },
   {
     user: demoAdmin,
     credentials: demoAdminCredentials,
     accessToken: demoAdminAccessToken,
+    refreshToken: 'msw-oop-demo-admin-refresh-token',
   },
 ] as const;

@@ -20,5 +20,5 @@ Add tests/typecheck when scripts exist or the change warrants it.
 
 - Run `pnpm --filter @aics/design-system build` after editing the package.
 - Run a consuming OOP build after a runtime export, CSS, provider, or theme change.
-- Inspect at least one live consuming route for UI/theme work; type declarations alone are insufficient.
+- Inspect at least one live route in the consuming app for UI/theme work; type declarations alone are insufficient.
 - Confirm app code did not add a direct `@astryxdesign/*` import or a duplicate local primitive.

@@ -6,9 +6,14 @@ import { studentPrimaryNavigation } from '~/course/navigation';
 
 export default function StudentShell() {
   const accessToken = useAuthStore(state => state.accessToken);
+  const currentUser = useAuthStore(state => state.currentUser);
 
-  if (!accessToken) {
+  if (!accessToken || !currentUser) {
     return <Navigate to='/login' />;
+  }
+
+  if (currentUser.globalRole !== 'STUDENT') {
+    return <Navigate to='/admin' />;
   }
 
   return (

@@ -1,4 +1,6 @@
-import { createLazyFileRoute } from '@tanstack/react-router';
+import { Navigate, createLazyFileRoute } from '@tanstack/react-router';
+
+import { useAuthStore } from '~/features/auth/authStore';
 
 import PagePlaceholder from '~/course/components/PagePlaceholder';
 
@@ -7,6 +9,17 @@ export const Route = createLazyFileRoute('/admin')({
 });
 
 function AdminHomePage() {
+  const accessToken = useAuthStore(state => state.accessToken);
+  const currentUser = useAuthStore(state => state.currentUser);
+
+  if (!accessToken || !currentUser) {
+    return <Navigate to='/login' />;
+  }
+
+  if (currentUser.globalRole === 'STUDENT') {
+    return <Navigate to='/student' />;
+  }
+
   return (
     <PagePlaceholder
       title='운영 홈'

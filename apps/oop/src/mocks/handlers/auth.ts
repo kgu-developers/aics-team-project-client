@@ -4,16 +4,18 @@ import { demoUserAccounts } from '../data/users';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 const refreshCookieName = 'oop_refresh_token';
-const refreshCookieValue = 'msw-oop-demo-refresh-token';
 
-function getRefreshCookieHeader(value = refreshCookieValue) {
+function getRefreshCookieHeader(value: string) {
   return `${refreshCookieName}=${value}; HttpOnly; Path=/auth; SameSite=Lax`;
 }
 
-function hasRefreshCookie(request: Request) {
+function getRefreshToken(request: Request) {
   return request.headers
     .get('cookie')
-    ?.includes(`${refreshCookieName}=${refreshCookieValue}`);
+    ?.split(';')
+    .map(cookie => cookie.trim())
+    .find(cookie => cookie.startsWith(`${refreshCookieName}=`))
+    ?.slice(`${refreshCookieName}=`.length);
 }
 
 export const authHandlers = [
@@ -55,12 +57,19 @@ export const authHandlers = [
 
     return HttpResponse.json(
       { accessToken: account.accessToken },
-      { headers: { 'Set-Cookie': getRefreshCookieHeader() } },
+      {
+        headers: { 'Set-Cookie': getRefreshCookieHeader(account.refreshToken) },
+      },
     );
   }),
 
   http.post(`${apiBaseUrl}/auth/refresh`, ({ request }) => {
-    if (!hasRefreshCookie(request)) {
+    const refreshToken = getRefreshToken(request);
+    const account = demoUserAccounts.find(
+      candidate => candidate.refreshToken === refreshToken,
+    );
+
+    if (!account) {
       return HttpResponse.json(
         {
           code: 'REFRESH_TOKEN_MISSING',
@@ -71,8 +80,10 @@ export const authHandlers = [
     }
 
     return HttpResponse.json(
-      { accessToken: demoUserAccounts[0].accessToken },
-      { headers: { 'Set-Cookie': getRefreshCookieHeader() } },
+      { accessToken: account.accessToken },
+      {
+        headers: { 'Set-Cookie': getRefreshCookieHeader(account.refreshToken) },
+      },
     );
   }),
 
