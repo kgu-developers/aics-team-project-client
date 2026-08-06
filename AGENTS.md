@@ -12,6 +12,9 @@ The primary UX is **natural language**. Do not ask teammates to memorize or run 
 - 리뷰 반영해줘 / 코멘트 반영해줘 / 리뷰 답변 써줘 → read `.agent/skills/kd-review-fix/SKILL.md`
 - 팀 컨벤션으로 남길 것 정리해줘 / 배운 점 정리해줘 / 규칙 후보 뽑아줘 → read `.agent/skills/kd-team-learning/SKILL.md`
 - 페이지/라우트/폴더 구조/파일 위치/어디에 둘지 판단 → read `.agent/rules/file-structure.md`
+- 디자인 시스템/Astryx/컴포넌트/테마/UI 작업 → read `.agent/rules/design-system.md`
+- 로그인/세션/역할/접근 제어/라우트 가드 작업 → read `.agent/rules/routing-auth.md`
+- MSW/mock/API fixture 작업 → read `.agent/rules/msw.md` and `.agent/rules/api-conventions.md`
 
 ## Product boundary
 
@@ -24,6 +27,7 @@ The primary UX is **natural language**. Do not ask teammates to memorize or run 
 
 1. Treat `.agent/skills` as executable working guidance, not human-only documentation.
 2. Read relevant files in `.agent/rules/` before changing code. For ordinary product work, start from `apps/oop` unless the request clearly names shared packages or repo tooling.
+   - Read `packages/design-system/AGENTS.md` before editing that package.
 3. Use `.agent/scripts/` as deterministic helper tools when useful, but keep them behind the agent workflow. The user-facing interface remains natural language.
 4. Keep all temporary cards, prompts, worklogs, PR drafts, screenshots, coaching notes, and team-learning proposals under `.agent-local/`.
 5. Never commit `.agent-local/` or personal coaching notes.

@@ -11,7 +11,11 @@ function StudentTeamPage() {
     <PagePlaceholder
       title='내 팀'
       description='팀원, 역할, 팀장, 그리고 현재 프로젝트 주제를 확인합니다.'
-      todos={['팀원과 역할 표시', '팀장 정보 표시', '프로젝트 주제 페이지 이동']}
+      todos={[
+        '팀원과 역할 표시',
+        '팀장 정보 표시',
+        '프로젝트 주제 페이지 이동',
+      ]}
     />
   );
 }

@@ -142,6 +142,40 @@ body {
   font-size: clamp(1.75rem, 8vw, 2.5rem);
 }
 
+.login-page {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 24px;
+}
+
+.login-card,
+.login-page__demo {
+  width: min(100%, 420px);
+}
+
+.login-page__eyebrow {
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  margin: 0 0 var(--spacing-2);
+}
+
+.login-page h1 {
+  margin: 0 0 var(--spacing-2);
+}
+
+.login-page__request-error {
+  color: var(--color-text-negative);
+  margin: 0;
+}
+
+.login-page__demo {
+  color: var(--color-text-secondary);
+}
+
 @media (max-width: 720px) {
   .student-shell {
     padding-bottom: 64px;

@@ -1,6 +1,7 @@
 # Repo map
 
 - `apps/oop`: OOP app routes, course config, course copy, course-specific templates/components, and deployment settings.
+- `packages/design-system`: Astryx dependency/theme/provider/re-export integration boundary; not an OOP component catalog.
 - `packages/ui`: domain-neutral UI primitives and common Loading/Error/Empty states.
 - `packages/core`: shared domain types and pure logic. Core domains include course, section, team, member, project, milestone, submission, review, and rubric.
 - `packages/api-client`: axios client and API functions. Do not scatter direct axios calls inside components.

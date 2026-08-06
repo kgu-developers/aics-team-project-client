@@ -6,3 +6,7 @@ coverage
 .turbo
 pnpm-lock.yaml
 .agent-local
+
+# Generated source; update through its generator, never Prettier.
+apps/oop/src/app/routeTree.gen.ts
+apps/oop/public/mockServiceWorker.js

@@ -63,10 +63,15 @@ Choose the destination in this order:
    - `packages/api-client`
    - Do not scatter direct axios calls inside app components.
 
-9. Reusable team-project template/block with a clear second course use case
-   - `packages/team-project-kit`
+9. Astryx dependency, theme/provider, reset/core CSS import order, or audited design-system re-export
+   - `packages/design-system`
+   - Read `.agent/rules/design-system.md` and `packages/design-system/AGENTS.md` first.
 
-10. Domain-neutral UI primitive or generic Loading/Error/Empty state
+10. Reusable team-project template/block with a clear second course use case
+
+- `packages/team-project-kit`
+
+11. Domain-neutral UI primitive or generic Loading/Error/Empty state that does not duplicate Astryx
     - `packages/ui`
 
 ## Route skeleton policy
