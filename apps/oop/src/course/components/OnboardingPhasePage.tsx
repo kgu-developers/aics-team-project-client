@@ -1,11 +1,7 @@
 import { Button, Card, Heading, Text, VStack } from '@aics/design-system';
 import { useNavigate } from '@tanstack/react-router';
 
-type OnboardingDestination =
-  | '/onboarding/team/survey'
-  | '/onboarding/team/result'
-  | '/onboarding/team/first-meeting'
-  | '/student';
+import { type OnboardingDestination } from '~/app/constants/routes';
 
 type OnboardingPhasePageProps = {
   title: string;

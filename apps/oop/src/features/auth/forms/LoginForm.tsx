@@ -12,6 +12,9 @@ import { isAxiosError } from 'axios';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { ROUTES } from '~/app/constants/routes';
+
+import * as styles from './LoginForm.css';
 import { useLoginMutation } from '../queries/useLoginMutation';
 
 const loginSchema = z.object({
@@ -58,7 +61,10 @@ export default function LoginForm() {
     try {
       const currentUser = await loginMutation.mutateAsync(values);
       await navigate({
-        to: currentUser.globalRole === 'STUDENT' ? '/student' : '/admin',
+        to:
+          currentUser.globalRole === 'STUDENT'
+            ? ROUTES.STUDENT.HOME
+            : ROUTES.ADMIN,
       });
     } catch {
       // API failures are rendered below; they are not field-validation failures.
@@ -72,12 +78,12 @@ export default function LoginForm() {
     : undefined;
 
   return (
-    <section aria-labelledby='login-heading' className='login-page'>
-      <Card className='login-card'>
+    <section aria-labelledby='login-heading' className={styles.loginPage}>
+      <Card className={styles.loginCard}>
         <form onSubmit={onSubmit}>
           <VStack gap={4}>
             <div>
-              <p className='login-page__eyebrow'>OOP Team Project</p>
+              <p className={styles.eyebrow}>OOP Team Project</p>
               <Heading id='login-heading' level={1}>
                 로그인
               </Heading>
@@ -124,7 +130,7 @@ export default function LoginForm() {
             />
 
             {requestError ? (
-              <p className='login-page__request-error' role='alert'>
+              <p className={styles.requestError} role='alert'>
                 {requestError}
               </p>
             ) : null}
@@ -141,7 +147,7 @@ export default function LoginForm() {
         </form>
       </Card>
 
-      <Card className='login-page__demo'>
+      <Card className={styles.demo}>
         <Text>
           개발용 MSW 학생 계정: 학번 <strong>20260001</strong> / 비밀번호{' '}
           <strong>oop-demo</strong>

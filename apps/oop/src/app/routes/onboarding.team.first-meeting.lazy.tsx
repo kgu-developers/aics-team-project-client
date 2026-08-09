@@ -1,5 +1,7 @@
 import { createLazyFileRoute } from '@tanstack/react-router';
 
+import { ROUTES } from '~/app/constants/routes';
+
 import OnboardingPhasePage from '~/course/components/OnboardingPhasePage';
 
 export const Route = createLazyFileRoute('/onboarding/team/first-meeting')({
@@ -10,7 +12,7 @@ function FirstMeetingPage() {
   return (
     <OnboardingPhasePage
       actionLabel='학생 프로젝트 홈으로 가기'
-      actionTo='/student'
+      actionTo={ROUTES.STUDENT.HOME}
       description='첫 대면에서 팀의 시작 약속을 정리하고 프로젝트 운영 화면으로 진입합니다.'
       title='첫 대면 준비'
       todos={[

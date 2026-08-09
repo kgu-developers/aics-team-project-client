@@ -1,3 +1,4 @@
+import { ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
 import { demoUserAccounts } from '../data/users';
@@ -19,7 +20,7 @@ function getRefreshToken(request: Request) {
 }
 
 export const authHandlers = [
-  http.post(`${apiBaseUrl}/auth/login`, async ({ request }) => {
+  http.post(`${apiBaseUrl}${ENDPOINTS.AUTH.LOGIN}`, async ({ request }) => {
     const input = (await request.json()) as {
       studentNumber?: string;
       password?: string;
@@ -63,7 +64,7 @@ export const authHandlers = [
     );
   }),
 
-  http.post(`${apiBaseUrl}/auth/refresh`, ({ request }) => {
+  http.post(`${apiBaseUrl}${ENDPOINTS.AUTH.REFRESH}`, ({ request }) => {
     const refreshToken = getRefreshToken(request);
     const account = demoUserAccounts.find(
       candidate => candidate.refreshToken === refreshToken,
@@ -87,7 +88,7 @@ export const authHandlers = [
     );
   }),
 
-  http.post(`${apiBaseUrl}/auth/logout`, () =>
+  http.post(`${apiBaseUrl}${ENDPOINTS.AUTH.LOGOUT}`, () =>
     HttpResponse.json(null, {
       headers: {
         'Set-Cookie': `${refreshCookieName}=; HttpOnly; Max-Age=0; Path=/auth; SameSite=Lax`,
@@ -95,7 +96,7 @@ export const authHandlers = [
     }),
   ),
 
-  http.get(`${apiBaseUrl}/me`, ({ request }) => {
+  http.get(`${apiBaseUrl}${ENDPOINTS.AUTH.ME}`, ({ request }) => {
     const authorization = request.headers.get('authorization');
 
     const account = demoUserAccounts.find(
