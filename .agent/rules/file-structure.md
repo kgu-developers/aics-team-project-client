@@ -31,6 +31,17 @@ Course(config/domain)
             -> Review/Rubric
 ```
 
+## Create folders on demand
+
+FSD is a **placement vocabulary**, not a directory template. Do not pre-create `entities/*`, `features/*`, `widgets/*`, or `shared/*` folders for planned work.
+
+- Create a directory only with its first implemented source file.
+- Remove a directory when its final source file is removed, unless a tracked file intentionally documents a stable package boundary.
+- A route or PRD item is not enough reason to create a feature/widget/entity folder; it needs code that belongs to that layer.
+- Do not promote OOP-local code into `packages/*` after one use just to make the tree look complete.
+
+This keeps the initial OOP app simple: only `app`, `course`, active feature/workflow folders, the small helpers actually in use, and implemented page sections should exist.
+
 ## Placement decision order
 
 Choose the destination in this order:

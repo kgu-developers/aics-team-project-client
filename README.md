@@ -16,10 +16,9 @@ Course → Section → Team → Project → Milestone → Submission → Review
 apps/
   oop/
 packages/
-  ui/
   core/
   api-client/
-  team-project-kit/
+  design-system/
 configs/
   typescript/
 .agent/
