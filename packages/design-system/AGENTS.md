@@ -16,7 +16,7 @@ The current runtime is `@astryxdesign/core@0.2.0`. The package exports real Astr
 
 `tokens` is a typed reference over Astryx CSS variables (Figma collection 01-05, 133 variables, plus `color.border.base` which exists in Astryx but not the Figma export). It emits no CSS and declares no values — Astryx supplies them at runtime. It is not a parallel token system; do not add values or new names to it unless they exist in Astryx. OOP-only layout tokens (Figma collection 06) live in `apps/oop/src/app/tokens.css.ts`, not here.
 
-The complete installed component inventory and the mandatory selection/re-export workflow live in `.agent/rules/astryx-components.md`. Read it before adding a visual or interactive primitive. A component missing from `src/index.ts` is not evidence that Astryx lacks it.
+The installed component inventory lives in `.agent/rules/astryx-inventory.md`; selection/re-export policy lives in `.agent/rules/design-system.md`. Read both before adding a visual or interactive primitive. A component missing from `src/index.ts` is not evidence that Astryx lacks it.
 
 ## Non-negotiable rules
 

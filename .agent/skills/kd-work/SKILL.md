@@ -18,37 +18,33 @@ Use this skill when the user asks to implement, fix, modify, refactor, create, o
 - “제출 상태 버그 수정해줘”
 - “구조 좀 정리해줘”
 
-## Required inputs to preserve
+## Context to preserve when relevant
 
 - Raw user request.
 - Current branch and `git status --short`.
-- Relevant app/package boundary from `.agent/rules/repo-map.md` and `.agent/rules/course-app.md`.
+- Relevant app/package boundary from `.agent/rules/product-structure.md`.
 - Ticket key if present, e.g. `ATP-1`.
 
 ## Steps
 
-1. Read relevant rules in `.agent/rules/`, especially `repo-map.md`, `course-app.md`, `component-placement.md`, `api-conventions.md`, `code-style.md`, `verification.md`, and `rubric.md`.
-   - UI, component, theme, or Astryx work: also read `design-system.md` and `astryx-components.md`; before editing the package, read `packages/design-system/AGENTS.md`.
+1. Read `product-structure.md`, `code-quality.md`, and only the other rules relevant to the requested scope.
+   - UI, component, theme, or Astryx work: read `design-system.md` and `astryx-inventory.md`; before editing the package, read `packages/design-system/AGENTS.md`.
    - Route, login, session, role, or access work: also read `routing-auth.md`.
-   - Mock, fixture, or MSW work: also read `msw.md`.
-2. Convert the raw request into a task card using `.agent/templates/task-card.md` and save it under `.agent-local/task-cards/`.
+   - API, Query, mock, fixture, or MSW work: read `api-msw.md`; for test code also read `testing.md`.
+   - Requirement-sensitive work: read the private PRD section of `workflow.md` and check freshness without exposing the source.
+2. Create a task card for ambiguous, ticketed, multi-layer, or high-risk work. It is optional for a small explicit change.
 3. If scope is ambiguous, ask concise questions before implementation. Prefer safe defaults only when the risk is low and state them explicitly.
-4. Choose the target location before editing:
-   - OOP-only product code → `apps/oop`.
-   - domain types/pure shared logic → `packages/core`.
-   - axios API functions → `packages/api-client`.
-   - reusable team-project templates/blocks → `packages/team-project-kit`.
-   - domain-neutral UI primitives → `packages/ui`.
+4. Choose the target location using `product-structure.md` before editing. Do not invent a future shared-package name.
 5. Implement only the requested scope.
-6. Write a worklog under `.agent-local/worklogs/` that records changed files, convention decisions, verification evidence, and unresolved risks.
+6. Write a worklog when the task has important decisions, unresolved risks, or reusable handoff value. Small explicit changes may report this in the final handoff.
 7. Run or delegate to `kd-test` for verification.
 8. If the user asked for PR support, run or delegate to `kd-pr`.
 9. Leave reusable team-rule candidates as `.agent-local/proposals/` only; do not edit `.agent/rules/` automatically.
 
 ## Outputs
 
-- `.agent-local/task-cards/<task>.md`
-- `.agent-local/worklogs/<task>.md`
+- optional `.agent-local/task-cards/<task>.md`
+- optional `.agent-local/worklogs/<task>.md`
 - optional `.agent-local/proposals/<topic>.md`
 
 ## Must not

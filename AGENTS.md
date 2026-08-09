@@ -2,7 +2,7 @@
 
 This repository uses `.agent/` as a repo-local skill pack for coding agents such as OpenAI Codex and Claude Code.
 
-The primary UX is **natural language**. Do not ask teammates to memorize or run harness commands. When a request matches one of the trigger phrases below, load the matching skill and use `.agent/scripts/` only as internal deterministic helpers.
+The primary UX is **natural language**. Do not ask teammates to memorize or run harness commands. Route the most specific matching phrase first, load that skill, and use `.agent/scripts/` only as internal deterministic helpers.
 
 ## Natural-language skill routing
 
@@ -11,10 +11,12 @@ The primary UX is **natural language**. Do not ask teammates to memorize or run 
 - PR 만들어줘 / PR 초안 써줘 / PR 설명 정리해줘 → read `.agent/skills/kd-pr/SKILL.md`
 - 리뷰 반영해줘 / 코멘트 반영해줘 / 리뷰 답변 써줘 → read `.agent/skills/kd-review-fix/SKILL.md`
 - 팀 컨벤션으로 남길 것 정리해줘 / 배운 점 정리해줘 / 규칙 후보 뽑아줘 → read `.agent/skills/kd-team-learning/SKILL.md`
-- 페이지/라우트/폴더 구조/파일 위치/어디에 둘지 판단 → read `.agent/rules/file-structure.md`
-- 디자인 시스템/Astryx/컴포넌트/테마/UI 작업 → read `.agent/rules/design-system.md` and `.agent/rules/astryx-components.md`
+- 페이지/라우트/폴더 구조/파일 위치/어디에 둘지 판단 → read `.agent/rules/product-structure.md`
+- 디자인 시스템/Astryx/컴포넌트/테마/UI 작업 → read `.agent/rules/design-system.md` and `.agent/rules/astryx-inventory.md`
 - 로그인/세션/역할/접근 제어/라우트 가드 작업 → read `.agent/rules/routing-auth.md`
-- MSW/mock/API fixture 작업 → read `.agent/rules/msw.md` and `.agent/rules/api-conventions.md`
+- API/React Query/MSW/mock 작업 → read `.agent/rules/api-msw.md` and `.agent/rules/testing.md`
+- 테스트 코드 작성 → read `.agent/rules/testing.md`; 검증/화면 확인 → read `.agent/rules/verification.md`
+- 최신 PRD 확인/요구사항 대조 → read `.agent/rules/workflow.md`의 private PRD source 절
 
 ## Product boundary
 
@@ -26,10 +28,10 @@ The primary UX is **natural language**. Do not ask teammates to memorize or run 
 ## Operating contract
 
 1. Treat `.agent/skills` as executable working guidance, not human-only documentation.
-2. Read relevant files in `.agent/rules/` before changing code. For ordinary product work, start from `apps/oop` unless the request clearly names shared packages or repo tooling.
+2. Read only the relevant source-of-truth files in `.agent/rules/` before changing code. For ordinary product work, start from `apps/oop` unless the request clearly names shared packages or repo tooling.
    - Read `packages/design-system/AGENTS.md` before editing that package.
 3. Use `.agent/scripts/` as deterministic helper tools when useful, but keep them behind the agent workflow. The user-facing interface remains natural language.
-4. Keep all temporary cards, prompts, worklogs, PR drafts, screenshots, coaching notes, and team-learning proposals under `.agent-local/`.
+4. Keep all temporary cards, prompts, worklogs, PR drafts, screenshots, coaching notes, private-source pointers/caches, and team-learning proposals under `.agent-local/`.
 5. Never commit `.agent-local/` or personal coaching notes.
 6. Do not create another course app, push, open PRs, merge, or promote team rules unless the user explicitly asks.
 

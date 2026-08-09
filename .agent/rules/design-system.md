@@ -4,7 +4,7 @@
 
 ## Use it from apps
 
-- For every UI task, read `.agent/rules/astryx-components.md` and map the requested UI to the installed Astryx inventory before writing markup or CSS.
+- For every UI task, read `.agent/rules/astryx-inventory.md` and map the requested UI to the installed Astryx inventory before writing markup or CSS.
 - In `apps/*`, import visual primitives and the theme provider only from `@aics/design-system`.
 - Do not import `@astryxdesign/*` directly from an app.
 - Keep `@aics/design-system/styles.css` imported once from the app global stylesheet before app-specific rules.
@@ -62,7 +62,7 @@ When a leftover hex has an approved mapping above, prefer the token. Using the m
 
 ## When the current inventory is insufficient
 
-1. Check `.agent/rules/astryx-components.md` and `packages/design-system/src/index.ts` before adding anything.
+1. Check `.agent/rules/astryx-inventory.md` and `packages/design-system/src/index.ts` before adding anything.
 2. If the component is installed but not yet re-exported, inspect its installed `.d.ts` contract and add only the required component and prop/type exports through `@aics/design-system`.
 3. Update the documented public inventory whenever a re-export changes.
 4. Do not fall back to native interactive markup, another UI library, or a look-alike implementation without first completing this check.
@@ -73,8 +73,7 @@ When a leftover hex has an approved mapping above, prefer the token. Using the m
 ## Package boundary
 
 - `packages/design-system` owns Astryx dependency versions, reset/core CSS import order, the OOP theme definition, provider, and audited re-exports.
-- `packages/ui` remains the place for any generic AICS-owned UI only when it does not duplicate Astryx.
-- `packages/team-project-kit` owns reusable course-operation templates after a verified second course use case.
+- A new shared component/template package requires a verified second course-app use case or an explicit extraction ticket; its name and boundary are decided by that work.
 - Read `packages/design-system/AGENTS.md` before editing the design-system package itself.
 
 ## Verification

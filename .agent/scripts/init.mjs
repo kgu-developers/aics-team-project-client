@@ -10,6 +10,8 @@ const dirs = [
   '.agent-local/screenshots',
   '.agent-local/proposals',
   '.agent-local/coaching-notes',
+  '.agent-local/sources',
+  '.agent-local/prd-cache',
 ];
 
 for (const dir of dirs) mkdirSync(dir, { recursive: true });
@@ -31,6 +33,8 @@ Use these folders:
 - screenshots/
 - proposals/
 - coaching-notes/
+- sources/
+- prd-cache/
 `,
   );
 }

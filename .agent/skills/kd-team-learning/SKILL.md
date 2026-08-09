@@ -34,6 +34,8 @@ local observation
 4. Write a proposal using `.agent/templates/team-learning-proposal.md`.
 5. Do not modify shared rules automatically.
 
+A proposal must be reusable beyond one task, evidence-backed, free of personal evaluation, and remain local until explicitly approved.
+
 ## Good candidates
 
 - Repeated file placement confusion.

@@ -4,7 +4,7 @@
 
 - TanStack file routes live in `apps/oop/src/app/routes`.
 - A route file owns route declaration, route-level redirect/guard wiring, shell selection, and page-level composition only.
-- Keep API calls, MSW fixtures, complex form state, and domain actions out of route files; place them in `features`, `entities`, `widgets`, or `course` according to `file-structure.md`.
+- Keep API calls, MSW fixtures, complex form state, and domain actions out of route files; place them according to `product-structure.md`.
 - `apps/oop/src/app/routeTree.gen.ts` is generated. Never edit it by hand. Add/remove the route source and run `pnpm --filter @aics/oop build` to regenerate it.
 
 ## Current login contract
