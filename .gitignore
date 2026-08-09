@@ -29,5 +29,8 @@ pnpm-debug.log*
 # agent local workspace
 .agent-local/
 
+# playwright MCP runtime state
+.playwright-mcp/
+
 # opencode runtime state
 .omo/

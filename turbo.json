@@ -14,6 +14,10 @@
     "//#format": {},
     "//#format:write": { "cache": false },
     "//#lint": {},
-    "//#lint:fix": { "cache": false }
+    "//#lint:fix": { "cache": false },
+    "test": {
+      "dependsOn": ["^test"],
+      "outputs": []
+    }
   }
 }
