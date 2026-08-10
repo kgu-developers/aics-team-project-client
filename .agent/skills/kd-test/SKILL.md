@@ -20,10 +20,10 @@ Use this skill when the user asks to test, verify, inspect screen states, prepar
 ## Steps
 
 1. Inspect current diff with `git status --short`, `git diff --stat`, and, when relevant, the actual diff.
-2. Run `.agent/scripts/check-local-files.mjs` to ensure `.agent-local` and private artifacts are ignored.
-3. Run `.agent/scripts/check-diff-hygiene.mjs` to flag suspicious files.
-4. Run `.agent/scripts/suggest-verification.mjs` to choose build/lint/test and app/package-specific checks.
-5. Execute the necessary verification commands when the environment is ready. Default handoff checks are `pnpm lint` and `pnpm build`.
+2. Read `testing.md` for test-authoring decisions and `verification.md` for required checks and evidence.
+3. Run `.agent/scripts/check-local-files.mjs` to ensure `.agent-local` and private artifacts are ignored.
+4. Run `.agent/scripts/check-diff-hygiene.mjs` to flag suspicious files.
+5. Run `.agent/scripts/suggest-verification.mjs` and execute the checks selected by `verification.md`.
 6. For UI changes, create a route/viewport/screenshot checklist using `.agent/scripts/make-screenshot-plan.mjs`.
 7. If browser automation is available, capture route/viewport evidence; otherwise mark manual screenshot requirements clearly.
 8. Separate passed checks, failed checks, skipped checks, and unverified risks.

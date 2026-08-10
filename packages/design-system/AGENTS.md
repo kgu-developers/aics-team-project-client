@@ -8,10 +8,15 @@ This package is the AICS integration boundary for the real Astryx design system.
 src/styles.css                    Astryx reset/core CSS import order
 src/theme/oopTheme.ts             approved OOP theme-level overrides
 src/provider/AstryxThemeProvider  Theme wiring for consuming apps
+src/tokens.ts                     typed Astryx semantic token contract (createGlobalThemeContract)
 src/index.ts                      audited public re-exports
 ```
 
-The current runtime is `@astryxdesign/core@0.2.0`. The package exports real Astryx `Badge`, `Button`, `Card`, `EmptyState`, `HStack`, `VStack`, `Text`, `Heading`, `TextInput`, and `TextArea`, plus `AstryxThemeProvider` and `oopTheme`.
+The current runtime is `@astryxdesign/core@0.2.0`. The package exports real Astryx `Avatar`, `Badge`, `Button`, `Card`, `Collapsible`, `CollapsibleGroup`, `Divider`, `EmptyState`, `IconButton`, `StatusDot`, `HStack`, `VStack`, `Text`, `Heading`, `TextInput`, and `TextArea`, plus `AstryxThemeProvider`, `oopTheme`, and `tokens`.
+
+`tokens` is a typed reference over Astryx CSS variables (Figma collection 01-05, 133 variables, plus `color.border.base` which exists in Astryx but not the Figma export). It emits no CSS and declares no values — Astryx supplies them at runtime. It is not a parallel token system; do not add values or new names to it unless they exist in Astryx. OOP-only layout tokens (Figma collection 06) live in `apps/oop/src/app/tokens.css.ts`, not here.
+
+The installed component inventory lives in `.agent/rules/astryx-inventory.md`; selection/re-export policy lives in `.agent/rules/design-system.md`. Read both before adding a visual or interactive primitive. A component missing from `src/index.ts` is not evidence that Astryx lacks it.
 
 ## Non-negotiable rules
 
@@ -35,6 +40,7 @@ The current runtime is `@astryxdesign/core@0.2.0`. The package exports real Astr
 
 - `src/styles.css` must preserve Astryx reset before core CSS.
 - Let Astryx own primitive interaction and semantic styling; app CSS may own layout and composition using Astryx semantic tokens.
+- Consuming apps style with vanilla-extract `*.css.ts` (one co-located file per component); this package itself stays plain CSS imports. See `.agent/rules/design-system.md`.
 - Check accessible foreground/background contrast when changing `--color-accent` or `--color-on-accent`.
 - Preserve labels, descriptions, errors, focus behavior, and loading/empty/error states at the consuming page level.
 

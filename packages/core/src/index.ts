@@ -13,3 +13,16 @@ export type { Rubric } from './rubric/types';
 export type { Section } from './section/types';
 export type { Submission } from './submission/types';
 export type { SubmitTeamInput, Team, TeamMember } from './team/types';
+export type {
+  StudentHomeAnnouncement,
+  StudentHomeDashboard,
+  StudentHomeHero,
+  StudentHomeMilestone,
+  StudentHomeMilestoneArtifact,
+  StudentHomeMilestoneBody,
+  StudentHomeMilestoneContentItem,
+  StudentHomeMilestoneRow,
+  StudentHomeMilestoneRowTone,
+  StudentHomeMilestoneStatus,
+  StudentHomeTopicCandidate,
+} from './studentHome/types';

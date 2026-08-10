@@ -8,6 +8,8 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint": "eslint .",
     "lint:fix": "eslint --fix ."
   },
@@ -15,8 +17,7 @@
     "@aics/api-client": "workspace:*",
     "@aics/core": "workspace:*",
     "@aics/design-system": "workspace:*",
-    "@aics/team-project-kit": "workspace:*",
-    "@aics/ui": "workspace:*",
+    "@fontsource/ibm-plex-sans-kr": "^5.3.0",
     "@hookform/resolvers": "^5.0.1",
     "@tanstack/react-query": "^5.74.4",
     "@tanstack/react-query-devtools": "^5.74.6",
@@ -34,13 +35,18 @@
     "@aics/typescript": "workspace:*",
     "@tanstack/router-devtools": "^1.114.3",
     "@tanstack/router-plugin": "^1.114.3",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.3",
     "@types/react": "19.1.2",
     "@types/react-dom": "19.1.2",
     "@vanilla-extract/vite-plugin": "^5.0.1",
     "@vitejs/plugin-react": "^4.4.2",
+    "jsdom": "^30.0.1",
     "msw": "^2.15.0",
     "typescript": "^5.8.3",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vitest": "^4.1.10"
   },
   "msw": {
     "workerDirectory": [

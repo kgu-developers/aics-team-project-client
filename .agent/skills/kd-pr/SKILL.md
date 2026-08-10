@@ -17,6 +17,8 @@ Write PR drafts that teach reviewers what changed, why it belongs in the chosen 
 4. Include the Notion ticket key (`ATP-<number>`), summary, tasks, verification, review focus, and screenshot section for UI changes.
 5. Do not push or create the GitHub PR unless the user explicitly asks.
 
+The draft must cite real evidence, separate unverified risks, include UI screenshots when applicable, and leave final wording ownership to the human author.
+
 ## PR naming
 
 - Branch: `<type>/ATP-<number>`

@@ -6,19 +6,20 @@ import { defineTheme } from '@astryxdesign/core/theme';
  * `Light.tokens.json` and `Dark.tokens.json` correspond to Astryx's
  * light-dark token pairs, so their color, spacing, radius, motion, and type
  * scale values stay in Astryx rather than being copied into this package.
- * The only non-default foundation values are the Figma font family choices.
- * Font delivery is intentionally owned by the consuming app/deployment.
+ * The approved OOP font-family decisions are the only non-default foundation
+ * values here. Font delivery is intentionally owned by the consuming
+ * app/deployment (see packages/design-system/AGENTS.md).
  */
 export const oopTheme = defineTheme({
   name: 'oop',
   typography: {
     body: {
-      family: 'Inter',
+      family: 'IBM Plex Sans KR',
       fallbacks:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
     },
     heading: {
-      family: 'Inter',
+      family: 'IBM Plex Sans KR',
       fallbacks:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
     },

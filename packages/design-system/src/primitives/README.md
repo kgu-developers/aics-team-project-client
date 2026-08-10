@@ -5,7 +5,8 @@
 현재 app 사용 가능 inventory:
 
 ```text
-Badge, Button, Card, EmptyState
+Avatar, Badge, Button, Card, Collapsible, CollapsibleGroup, Divider
+EmptyState, IconButton
 HStack, VStack
 Text, Heading
 TextInput, TextArea

@@ -1,5 +1,7 @@
 import { Navigate, createLazyFileRoute } from '@tanstack/react-router';
 
+import { ROUTES } from '~/app/constants/routes';
+
 import { useAuthStore } from '~/features/auth/authStore';
 
 export const Route = createLazyFileRoute('/')({
@@ -11,12 +13,16 @@ function IndexRoute() {
   const currentUser = useAuthStore(state => state.currentUser);
 
   if (!accessToken || !currentUser) {
-    return <Navigate to='/login' />;
+    return <Navigate to={ROUTES.LOGIN} />;
   }
 
   return (
     <Navigate
-      to={currentUser.globalRole === 'STUDENT' ? '/student' : '/admin'}
+      to={
+        currentUser.globalRole === 'STUDENT'
+          ? ROUTES.STUDENT.HOME
+          : ROUTES.ADMIN
+      }
     />
   );
 }
