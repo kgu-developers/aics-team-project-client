@@ -1,7 +1,5 @@
-import { createLazyFileRoute } from '@tanstack/react-router';
-
-import { AdminNoticeDetailPage } from '~/widgets/admin-notices/AdminNoticePages';
+import { Outlet, createLazyFileRoute } from '@tanstack/react-router';
 
 export const Route = createLazyFileRoute('/admin/notices/$noticeId')({
-  component: AdminNoticeDetailPage,
+  component: Outlet,
 });

@@ -70,7 +70,32 @@ export function AdminNoticeDetailPage() {
       <Text>발표 점수는 만점 15점이고 발표 수준에 따라 점수를 부여합니다.</Text>
       <Text>추가로 발표 자료에는 코딩과 함께 구현한 화면을 포함해 주세요.</Text>
       <div className={styles.attachment}><span>제출 파일</span><a href='#attachment'>📎 객체지향프로그래밍 7조 프로젝트 제안서.pdf</a></div>
-      <div className={styles.actions}><Button label='삭제' variant='secondary' /><Button label='수정' variant='primary' /></div>
+      <div className={styles.actions}>
+        <Button label='삭제' variant='secondary' />
+        <Link params={{ noticeId: '3' }} to={ROUTES.ADMIN_NOTICE_EDIT}>
+          <Button label='수정' variant='primary' />
+        </Link>
+      </div>
+    </Card>
+  </div>;
+}
+
+export function AdminNoticeEditPage() {
+  const [content, setContent] = useState('10주차 중간고사 10번 문제 발표는 코드, 시연(다양한 앱 예제 활용), ppt 발표자료를 준비해 주세요.\n\n발표 점수는 만점 15점이고 발표 수준에 따라 점수를 부여합니다.\n\n추가로 발표 자료에는 코딩과 함께 구현한 화면을 포함해 주세요.');
+  const [title, setTitle] = useState('10주차 발표 안내');
+
+  return <div className={styles.page}>
+    <div className={styles.titleRow}><Heading level={1}>10주차 발표 안내 공지 수정</Heading><BackToList /></div>
+    <Card className={styles.formCard}>
+      <Heading level={2}>공지사항 수정</Heading>
+      <Text className={styles.meta} color='secondary'>작성일 : 2026-07-07 14:30</Text>
+      <div className={styles.fields}>
+        <TextInput label='제목' onChange={setTitle} value={title} width='100%' />
+        <div className={styles.fieldGroup}><Text>분반</Text><button className={styles.selectButton} type='button'>전체 ▾</button></div>
+        <TextArea label='내용' onChange={setContent} rows={9} value={content} width='100%' />
+        <div className={styles.fieldGroup}><Text>첨부 파일</Text><a className={styles.attachmentLink} href='#attachment'>📎 객체지향프로그래밍 7조 프로젝트 제안서.pdf</a><Button label='파일 변경' variant='secondary' /></div>
+      </div>
+      <div className={styles.actions}><Link params={{ noticeId: '3' }} to='/admin/notices/$noticeId'><Button label='취소' variant='secondary' /></Link><Button label='저장' variant='primary' /></div>
     </Card>
   </div>;
 }

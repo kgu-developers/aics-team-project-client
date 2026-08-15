@@ -3,6 +3,7 @@ export const ROUTES = {
   ADMIN: '/admin',
   ADMIN_NOTICES: '/admin/notices',
   ADMIN_NOTICE_NEW: '/admin/notices/new',
+  ADMIN_NOTICE_EDIT: '/admin/notices/$noticeId/edit',
   STUDENT: {
     HOME: '/student',
     TEAM: '/student/team',

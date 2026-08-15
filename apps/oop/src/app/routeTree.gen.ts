@@ -51,6 +51,12 @@ const AdminNoticesNewLazyRouteImport = createFileRoute('/admin/notices/new')()
 const AdminNoticesNoticeIdLazyRouteImport = createFileRoute(
   '/admin/notices/$noticeId',
 )()
+const AdminNoticesNoticeIdIndexLazyRouteImport = createFileRoute(
+  '/admin/notices/$noticeId/',
+)()
+const AdminNoticesNoticeIdEditLazyRouteImport = createFileRoute(
+  '/admin/notices/$noticeId/edit',
+)()
 
 const StudentLazyRoute = StudentLazyRouteImport.update({
   id: '/student',
@@ -194,6 +200,22 @@ const AdminNoticesNoticeIdLazyRoute =
   } as any).lazy(() =>
     import('./routes/admin.notices.$noticeId.lazy').then((d) => d.Route),
   )
+const AdminNoticesNoticeIdIndexLazyRoute =
+  AdminNoticesNoticeIdIndexLazyRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminNoticesNoticeIdLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/admin.notices.$noticeId.index.lazy').then((d) => d.Route),
+  )
+const AdminNoticesNoticeIdEditLazyRoute =
+  AdminNoticesNoticeIdEditLazyRouteImport.update({
+    id: '/edit',
+    path: '/edit',
+    getParentRoute: () => AdminNoticesNoticeIdLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/admin.notices.$noticeId.edit.lazy').then((d) => d.Route),
+  )
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
@@ -211,13 +233,15 @@ export interface FileRoutesByFullPath {
   '/student/team': typeof StudentTeamLazyRoute
   '/admin/': typeof AdminIndexLazyRoute
   '/student/': typeof StudentIndexLazyRoute
-  '/admin/notices/$noticeId': typeof AdminNoticesNoticeIdLazyRoute
+  '/admin/notices/$noticeId': typeof AdminNoticesNoticeIdLazyRouteWithChildren
   '/admin/notices/new': typeof AdminNoticesNewLazyRoute
   '/onboarding/team/first-meeting': typeof OnboardingTeamFirstMeetingLazyRoute
   '/onboarding/team/result': typeof OnboardingTeamResultLazyRoute
   '/onboarding/team/survey': typeof OnboardingTeamSurveyLazyRoute
   '/admin/notices/': typeof AdminNoticesIndexLazyRoute
   '/onboarding/team/': typeof OnboardingTeamIndexLazyRoute
+  '/admin/notices/$noticeId/edit': typeof AdminNoticesNoticeIdEditLazyRoute
+  '/admin/notices/$noticeId/': typeof AdminNoticesNoticeIdIndexLazyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
@@ -231,13 +255,14 @@ export interface FileRoutesByTo {
   '/student/team': typeof StudentTeamLazyRoute
   '/admin': typeof AdminIndexLazyRoute
   '/student': typeof StudentIndexLazyRoute
-  '/admin/notices/$noticeId': typeof AdminNoticesNoticeIdLazyRoute
   '/admin/notices/new': typeof AdminNoticesNewLazyRoute
   '/onboarding/team/first-meeting': typeof OnboardingTeamFirstMeetingLazyRoute
   '/onboarding/team/result': typeof OnboardingTeamResultLazyRoute
   '/onboarding/team/survey': typeof OnboardingTeamSurveyLazyRoute
   '/admin/notices': typeof AdminNoticesIndexLazyRoute
   '/onboarding/team': typeof OnboardingTeamIndexLazyRoute
+  '/admin/notices/$noticeId/edit': typeof AdminNoticesNoticeIdEditLazyRoute
+  '/admin/notices/$noticeId': typeof AdminNoticesNoticeIdIndexLazyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -256,13 +281,15 @@ export interface FileRoutesById {
   '/student/team': typeof StudentTeamLazyRoute
   '/admin/': typeof AdminIndexLazyRoute
   '/student/': typeof StudentIndexLazyRoute
-  '/admin/notices/$noticeId': typeof AdminNoticesNoticeIdLazyRoute
+  '/admin/notices/$noticeId': typeof AdminNoticesNoticeIdLazyRouteWithChildren
   '/admin/notices/new': typeof AdminNoticesNewLazyRoute
   '/onboarding/team/first-meeting': typeof OnboardingTeamFirstMeetingLazyRoute
   '/onboarding/team/result': typeof OnboardingTeamResultLazyRoute
   '/onboarding/team/survey': typeof OnboardingTeamSurveyLazyRoute
   '/admin/notices/': typeof AdminNoticesIndexLazyRoute
   '/onboarding/team/': typeof OnboardingTeamIndexLazyRoute
+  '/admin/notices/$noticeId/edit': typeof AdminNoticesNoticeIdEditLazyRoute
+  '/admin/notices/$noticeId/': typeof AdminNoticesNoticeIdIndexLazyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -289,6 +316,8 @@ export interface FileRouteTypes {
     | '/onboarding/team/survey'
     | '/admin/notices/'
     | '/onboarding/team/'
+    | '/admin/notices/$noticeId/edit'
+    | '/admin/notices/$noticeId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -302,13 +331,14 @@ export interface FileRouteTypes {
     | '/student/team'
     | '/admin'
     | '/student'
-    | '/admin/notices/$noticeId'
     | '/admin/notices/new'
     | '/onboarding/team/first-meeting'
     | '/onboarding/team/result'
     | '/onboarding/team/survey'
     | '/admin/notices'
     | '/onboarding/team'
+    | '/admin/notices/$noticeId/edit'
+    | '/admin/notices/$noticeId'
   id:
     | '__root__'
     | '/'
@@ -333,6 +363,8 @@ export interface FileRouteTypes {
     | '/onboarding/team/survey'
     | '/admin/notices/'
     | '/onboarding/team/'
+    | '/admin/notices/$noticeId/edit'
+    | '/admin/notices/$noticeId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -499,17 +531,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNoticesNoticeIdLazyRouteImport
       parentRoute: typeof AdminNoticesLazyRoute
     }
+    '/admin/notices/$noticeId/': {
+      id: '/admin/notices/$noticeId/'
+      path: '/'
+      fullPath: '/admin/notices/$noticeId/'
+      preLoaderRoute: typeof AdminNoticesNoticeIdIndexLazyRouteImport
+      parentRoute: typeof AdminNoticesNoticeIdLazyRoute
+    }
+    '/admin/notices/$noticeId/edit': {
+      id: '/admin/notices/$noticeId/edit'
+      path: '/edit'
+      fullPath: '/admin/notices/$noticeId/edit'
+      preLoaderRoute: typeof AdminNoticesNoticeIdEditLazyRouteImport
+      parentRoute: typeof AdminNoticesNoticeIdLazyRoute
+    }
   }
 }
 
+interface AdminNoticesNoticeIdLazyRouteChildren {
+  AdminNoticesNoticeIdEditLazyRoute: typeof AdminNoticesNoticeIdEditLazyRoute
+  AdminNoticesNoticeIdIndexLazyRoute: typeof AdminNoticesNoticeIdIndexLazyRoute
+}
+
+const AdminNoticesNoticeIdLazyRouteChildren: AdminNoticesNoticeIdLazyRouteChildren =
+  {
+    AdminNoticesNoticeIdEditLazyRoute: AdminNoticesNoticeIdEditLazyRoute,
+    AdminNoticesNoticeIdIndexLazyRoute: AdminNoticesNoticeIdIndexLazyRoute,
+  }
+
+const AdminNoticesNoticeIdLazyRouteWithChildren =
+  AdminNoticesNoticeIdLazyRoute._addFileChildren(
+    AdminNoticesNoticeIdLazyRouteChildren,
+  )
+
 interface AdminNoticesLazyRouteChildren {
-  AdminNoticesNoticeIdLazyRoute: typeof AdminNoticesNoticeIdLazyRoute
+  AdminNoticesNoticeIdLazyRoute: typeof AdminNoticesNoticeIdLazyRouteWithChildren
   AdminNoticesNewLazyRoute: typeof AdminNoticesNewLazyRoute
   AdminNoticesIndexLazyRoute: typeof AdminNoticesIndexLazyRoute
 }
 
 const AdminNoticesLazyRouteChildren: AdminNoticesLazyRouteChildren = {
-  AdminNoticesNoticeIdLazyRoute: AdminNoticesNoticeIdLazyRoute,
+  AdminNoticesNoticeIdLazyRoute: AdminNoticesNoticeIdLazyRouteWithChildren,
   AdminNoticesNewLazyRoute: AdminNoticesNewLazyRoute,
   AdminNoticesIndexLazyRoute: AdminNoticesIndexLazyRoute,
 }

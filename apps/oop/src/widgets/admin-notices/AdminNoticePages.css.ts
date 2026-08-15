@@ -21,6 +21,7 @@ export const formCard = style({ display: 'flex', flexDirection: 'column', gap: 1
 export const meta = style({ fontSize: 13 });
 export const divider = style({ background: tokens.color.border.base, height: 1, width: '100%' });
 export const attachment = style({ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 });
+export const attachmentLink = style({ color: tokens.color.text.accent, fontSize: 13 });
 export const actions = style({ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 });
 export const fields = style({ display: 'flex', flexDirection: 'column', gap: 18 });
 export const fieldGroup = style({ display: 'flex', flexDirection: 'column', gap: 8 });
