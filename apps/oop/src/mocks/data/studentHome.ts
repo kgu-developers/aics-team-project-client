@@ -353,22 +353,20 @@ export function createStudentHomeDashboardPreview(
               ? '피드백 반영'
               : undefined,
           interaction: isDetailAvailable ? 'collapsible' : 'static',
-          status:
-            isProposalFeedbackAvailable
-              ? 'revision-available'
-              : index < currentIndex
-                ? 'completed'
-                : isTargetMilestone
-                  ? 'in-progress'
-                  : 'before-period',
-          statusLabel:
-            isProposalFeedbackAvailable
-              ? '수정 가능'
-              : index < currentIndex
-                ? '완료'
-                : isTargetMilestone
-                  ? '기간 중'
-                  : '기간 전',
+          status: isProposalFeedbackAvailable
+            ? 'revision-available'
+            : index < currentIndex
+              ? 'completed'
+              : isTargetMilestone
+                ? 'in-progress'
+                : 'before-period',
+          statusLabel: isProposalFeedbackAvailable
+            ? '수정 가능'
+            : index < currentIndex
+              ? '완료'
+              : isTargetMilestone
+                ? '기간 중'
+                : '기간 전',
           dueDate: isProposalFeedbackAvailable
             ? '수정 가능 ~ 2026/10/26 자정'
             : milestone.dueDate,
@@ -381,8 +379,7 @@ export function createStudentHomeDashboardPreview(
                   tone: 'primary',
                   actionLabel: '수정 가능',
                   actionDisabled: true,
-                  actionNotice:
-                    '제안서 편집·재제출은 후속 작업에서 제공돼요.',
+                  actionNotice: '제안서 편집·재제출은 후속 작업에서 제공돼요.',
                 },
               ]
             : milestone.rows,

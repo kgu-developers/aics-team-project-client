@@ -50,9 +50,6 @@ export type EditorSectionSlug =
   (typeof EDITOR_DOCS)[EditorDocId]['sections'][number]['slug'];
 
 /** 문서 id와 섹션 slug로 에디터 섹션 라우트 경로를 만든다. */
-export function editorSectionTo(
-  docId: EditorDocId,
-  slug: string,
-): string {
+export function editorSectionTo(docId: EditorDocId, slug: string): string {
   return `${EDITOR_DOCS[docId].path}/${slug}`;
 }

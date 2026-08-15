@@ -1,8 +1,5 @@
 export type StudentHomeMilestoneStatus =
-  | 'before-period'
-  | 'in-progress'
-  | 'revision-available'
-  | 'completed';
+  'before-period' | 'in-progress' | 'revision-available' | 'completed';
 
 export type StudentHomeMilestoneRowTone = 'default' | 'primary' | 'muted';
 

@@ -39,4 +39,3 @@ The latest PRD may be referenced locally without exposing its URL or contents in
 - Read only the sheets/ranges needed for the task when the PRD contains personal or sensitive data.
 - Treat the PRD as requirement source of truth, but do not automatically rewrite code or shared rules when it conflicts with them. Report the difference and obtain approval.
 - Promote only approved, non-sensitive, durable product rules into `.agent/rules/`.
-

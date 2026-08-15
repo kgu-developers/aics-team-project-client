@@ -31,9 +31,8 @@ async function enableDevelopmentMilestonePreview() {
     return;
   }
 
-  const { enableDevelopmentMilestonePreview: enablePreview } = await import(
-    './mocks/developmentMilestonePreview'
-  );
+  const { enableDevelopmentMilestonePreview: enablePreview } =
+    await import('./mocks/developmentMilestonePreview');
   enablePreview();
 }
 

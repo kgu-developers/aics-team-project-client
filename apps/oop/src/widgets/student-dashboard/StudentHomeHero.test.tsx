@@ -16,7 +16,9 @@ describe('StudentHomeHero', () => {
     );
 
     expect(
-      screen.getByRole('button', { name: studentHomeDashboardFixture.hero.ctaLabel }),
+      screen.getByRole('button', {
+        name: studentHomeDashboardFixture.hero.ctaLabel,
+      }),
     ).toHaveAttribute('aria-disabled', 'true');
   });
 

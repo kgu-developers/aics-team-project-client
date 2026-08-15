@@ -40,4 +40,3 @@ A demo user is one coherent account across credentials, token, login, and `/me`.
 MSW verifies development request, response, and error contracts. It does not prove real HttpOnly cookie behavior, credentialed CORS, token rotation, backend RBAC, or section-scope authorization. Never put real credentials, tokens, student data, or production URLs in fixtures.
 
 Verify at least one success scenario, one unauthorized/invalid scenario, and the consuming route/form. Keep `onUnhandledRequest: 'bypass'` intentional and investigate new unhandled requests.
-

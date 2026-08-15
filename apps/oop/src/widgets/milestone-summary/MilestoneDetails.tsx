@@ -5,7 +5,11 @@ import type {
   StudentHomeSectionStatus,
   StudentHomeTeamStatus,
 } from '@aics/core';
-import { FileInput, StatusDot, type StatusDotVariant } from '@aics/design-system';
+import {
+  FileInput,
+  StatusDot,
+  type StatusDotVariant,
+} from '@aics/design-system';
 import { Link } from '@tanstack/react-router';
 
 import * as styles from './MilestoneDetails.css';
@@ -119,7 +123,9 @@ function TeamList({ teams }: { teams: StudentHomeTeamStatus[] }) {
         <li className={styles.sectionRow} key={team.id}>
           <span className={styles.sectionLabelWrap}>
             <span className={styles.sectionLabel}>{team.label}</span>
-            {team.isMine ? <span className={styles.teamMine}>내 팀</span> : null}
+            {team.isMine ? (
+              <span className={styles.teamMine}>내 팀</span>
+            ) : null}
           </span>
         </li>
       ))}
@@ -225,10 +231,7 @@ function PresentationMaterialBody({
 function PresentationEvaluationBody({
   body,
 }: {
-  body: Extract<
-    StudentHomeMilestoneBody,
-    { kind: 'presentation-evaluation' }
-  >;
+  body: Extract<StudentHomeMilestoneBody, { kind: 'presentation-evaluation' }>;
 }) {
   return (
     <div className={styles.root}>

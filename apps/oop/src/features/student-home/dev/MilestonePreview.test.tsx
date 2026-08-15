@@ -30,9 +30,7 @@ describe('MilestonePreview', () => {
       </AstryxThemeProvider>,
     );
 
-    fireEvent.click(
-      screen.getByRole('button', { name: '발표 · 평가' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: '발표 · 평가' }));
 
     expect(window.location.search).toBe(
       '?milestonePreview=presentation-evaluation',
