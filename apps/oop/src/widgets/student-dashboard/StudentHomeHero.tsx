@@ -71,11 +71,12 @@ export default function StudentHomeHero({
           <Button
             className={styles.cta}
             endContent={<ArrowRight aria-hidden='true' size={24} />}
+            isDisabled
             label={hero.ctaLabel}
             size='lg'
+            tooltip='단계별 이동은 후속 작업에서 제공돼요.'
             variant='primary'
           />
-          {/* TODO(KD3-75 follow-up): 제안서 상세 티켓에서 작성 화면으로 연결한다. */}
         </div>
 
         <div className={styles.shortcut}>

@@ -19,4 +19,3 @@
 - Keep changes ticket-scoped.
 - Do not mix formatting-only rewrites into a feature diff unless requested.
 - Do not commit generated caches, secrets, private source material, or `.agent-local/`.
-

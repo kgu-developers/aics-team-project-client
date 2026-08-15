@@ -16,13 +16,16 @@ export type { SubmitTeamInput, Team, TeamMember } from './team/types';
 export type {
   StudentHomeAnnouncement,
   StudentHomeDashboard,
+  StudentHomeFeedbackMessage,
+  StudentHomeFile,
   StudentHomeHero,
   StudentHomeMilestone,
-  StudentHomeMilestoneArtifact,
   StudentHomeMilestoneBody,
-  StudentHomeMilestoneContentItem,
   StudentHomeMilestoneRow,
   StudentHomeMilestoneRowTone,
   StudentHomeMilestoneStatus,
+  StudentHomeProject,
+  StudentHomeSectionStatus,
+  StudentHomeTeamStatus,
   StudentHomeTopicCandidate,
 } from './studentHome/types';

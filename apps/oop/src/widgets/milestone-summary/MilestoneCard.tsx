@@ -1,6 +1,6 @@
 import type { StudentHomeMilestone } from '@aics/core';
 import { Button, Collapsible, StatusDot } from '@aics/design-system';
-import { ArrowRight } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
 
 import { cx } from '~/shared/lib/cx';
 
@@ -18,11 +18,21 @@ const ROW_TONE_CLASS = {
   muted: styles.rowValueMuted,
 } as const;
 
+const STATUS_VARIANT = {
+  completed: 'success',
+  'in-progress': 'accent',
+  'revision-available': 'accent',
+  'before-period': 'neutral',
+} as const;
+
 export default function MilestoneCard({
   milestone,
   isOpen,
 }: MilestoneCardProps) {
-  const isCollapsible = milestone.interaction === 'collapsible';
+  const navigate = useNavigate();
+  const isCollapsible =
+    milestone.isDetailAvailable && milestone.interaction === 'collapsible';
+  const statusVariant = STATUS_VARIANT[milestone.status];
 
   const headerTrigger = (
     <>
@@ -31,9 +41,10 @@ export default function MilestoneCard({
     </>
   );
 
-  const body = milestone.body ? (
-    <MilestoneDetails body={milestone.body} />
-  ) : null;
+  const body =
+    milestone.isDetailAvailable && milestone.body ? (
+      <MilestoneDetails body={milestone.body} />
+    ) : null;
 
   return (
     <article className={styles.milestone}>
@@ -44,15 +55,14 @@ export default function MilestoneCard({
         )}
       >
         <div className={styles.statusIndicator}>
-          <StatusDot
-            label={milestone.statusLabel}
-            variant={milestone.status === 'completed' ? 'success' : 'neutral'}
-          />
+          <StatusDot label={milestone.statusLabel} variant={statusVariant} />
           <p className={styles.statusLabel}>{milestone.statusLabel}</p>
         </div>
         {isOpen ? (
           <>
-            <p className={styles.statusTitle}>{milestone.title}</p>
+            <p className={styles.statusTitle}>
+              {milestone.currentStepLabel ?? milestone.title}
+            </p>
             <p className={styles.statusTeam}>{milestone.dueDate}</p>
           </>
         ) : (
@@ -85,12 +95,17 @@ export default function MilestoneCard({
                   <>
                     <Button
                       className={styles.rowAction}
-                      icon={<ArrowRight aria-hidden='true' size={14} />}
+                      isDisabled={row.actionDisabled}
                       label={row.actionLabel}
+                      onClick={
+                        row.actionTo
+                          ? () => navigate({ to: row.actionTo })
+                          : undefined
+                      }
                       size='md'
+                      tooltip={row.actionNotice}
                       variant='primary'
                     />
-                    {/* TODO(KD3-75 follow-up): 마일스톤 상세 티켓에서 행별 액션을 연결한다. */}
                   </>
                 ) : null}
               </div>

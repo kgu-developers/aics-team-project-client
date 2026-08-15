@@ -1,6 +1,6 @@
 import type { StudentHomeMilestone } from '@aics/core';
 import { CollapsibleGroup, EmptyState } from '@aics/design-system';
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import MilestoneCard from './MilestoneCard';
 import * as styles from './MilestoneList.css';
@@ -10,10 +10,19 @@ type MilestoneListProps = {
 };
 
 export default function MilestoneList({ milestones }: MilestoneListProps) {
-  const [openId, setOpenId] = useState(() => {
-    const initiallyOpen = milestones.find(milestone => milestone.isOpen);
-    return initiallyOpen ? initiallyOpen.id : '';
-  });
+  const detailAvailableIds = useMemo(
+    () =>
+      milestones
+        .filter(milestone => milestone.isDetailAvailable)
+        .map(milestone => milestone.id),
+    [milestones],
+  );
+  const detailAvailableKey = detailAvailableIds.join('|');
+  const [openIds, setOpenIds] = useState(detailAvailableIds);
+
+  useEffect(() => {
+    setOpenIds(detailAvailableKey ? detailAvailableKey.split('|') : []);
+  }, [detailAvailableKey]);
 
   return (
     <section className={styles.milestoneSection}>
@@ -30,18 +39,16 @@ export default function MilestoneList({ milestones }: MilestoneListProps) {
         />
       ) : (
         <CollapsibleGroup
-          type='single'
-          value={openId}
-          onChange={value =>
-            setOpenId(typeof value === 'string' ? value : (value[0] ?? ''))
-          }
+          type='multiple'
+          value={openIds}
+          onChange={value => setOpenIds(Array.isArray(value) ? value : [value])}
         >
           <div className={styles.milestoneList}>
             {milestones.map(milestone => (
               <MilestoneCard
                 key={milestone.id}
                 milestone={milestone}
-                isOpen={milestone.id === openId}
+                isOpen={openIds.includes(milestone.id)}
               />
             ))}
           </div>

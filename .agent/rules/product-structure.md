@@ -41,4 +41,3 @@ FSD is a placement vocabulary, not a directory template.
 - A durable navigation destination or independently owned page may become a route.
 - Action-like PRD nodes usually remain actions/TODOs inside a page until implemented.
 - Placeholder routes may contain a title, description, and clearly scoped TODOs during structure alignment.
-

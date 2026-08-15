@@ -17,7 +17,6 @@ import { useStudentHomeDashboardQuery } from './useStudentHomeDashboardQuery';
 
 import { studentHomeDashboardFixture } from '~/mocks/data/studentHome';
 
-
 const dashboardRequest = vi.fn();
 const server = setupServer(
   http.get(

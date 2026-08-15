@@ -36,4 +36,3 @@ Use the smallest test layer that proves user-visible behavior or a risky contrac
 - Await user events and asynchronous UI transitions.
 - Do not use arbitrary sleeps or depend on test execution order.
 - A test that cannot reliably distinguish the regression from a passing implementation should not be added as evidence.
-
