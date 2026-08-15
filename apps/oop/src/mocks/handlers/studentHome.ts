@@ -1,15 +1,18 @@
-import { ENDPOINTS } from '@aics/api-client';
+import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
-import { studentHomeDashboardFixture } from '../data/studentHome';
+import {
+  createStudentHomeDashboardPreview,
+  isMilestonePreviewScenario,
+  studentHomeDashboardFixture,
+} from '../data/studentHome';
 import { demoAccessToken } from '../data/users';
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
 const demoStudentSectionId = 'oop-2026-2-01';
 
 export const studentHomeHandlers = [
   http.get(
-    `${apiBaseUrl}${ENDPOINTS.SECTION.STUDENT_DASHBOARD(':sectionId')}`,
+    `${API_BASE_URL}${ENDPOINTS.SECTION.STUDENT_DASHBOARD(':sectionId')}`,
     ({ params, request }) => {
       const authorization = request.headers.get('authorization');
 
@@ -37,7 +40,12 @@ export const studentHomeHandlers = [
         );
       }
 
-      return HttpResponse.json(studentHomeDashboardFixture);
+      const previewScenario = request.headers.get('X-OOP-Milestone-Preview');
+      const dashboard = isMilestonePreviewScenario(previewScenario)
+        ? createStudentHomeDashboardPreview(previewScenario)
+        : studentHomeDashboardFixture;
+
+      return HttpResponse.json(dashboard);
     },
   ),
 ];

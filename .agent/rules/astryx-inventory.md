@@ -6,7 +6,7 @@ Version-dependent inventory for `@astryxdesign/core@0.2.0`. Selection and stylin
 
 ```text
 Avatar, Badge, Button, Card, Collapsible, CollapsibleGroup, Divider
-EmptyState, IconButton, StatusDot
+EmptyState, FileInput, IconButton, StatusDot
 Tab, TabList
 HStack, VStack
 Text, Heading
@@ -39,4 +39,3 @@ Installed package typings are authoritative when this file drifts. After an Astr
 ```bash
 node -e "const p=require('./packages/design-system/node_modules/@astryxdesign/core/package.json'); console.log(Object.keys(p.exports).filter(x=>/^\\.\\/[A-Z]/.test(x)).map(x=>x.slice(2)).join('\\n'))"
 ```
-

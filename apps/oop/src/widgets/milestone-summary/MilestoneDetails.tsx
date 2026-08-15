@@ -1,9 +1,16 @@
-import type { StudentHomeMilestoneBody } from '@aics/core';
+import type {
+  StudentHomeFeedbackMessage,
+  StudentHomeFile,
+  StudentHomeMilestoneBody,
+  StudentHomeSectionStatus,
+  StudentHomeTeamStatus,
+} from '@aics/core';
 import {
-  EmptyState,
+  FileInput,
   StatusDot,
   type StatusDotVariant,
 } from '@aics/design-system';
+import { Link } from '@tanstack/react-router';
 
 import * as styles from './MilestoneDetails.css';
 import TopicCandidateCard from './TopicCandidateCard';
@@ -12,8 +19,8 @@ type MilestoneDetailsProps = {
   body: StudentHomeMilestoneBody;
 };
 
-const CONTENT_STATUS_VARIANT: Record<
-  'completed' | 'in-progress' | 'not-started',
+const SECTION_STATUS_VARIANT: Record<
+  StudentHomeSectionStatus['status'],
   StatusDotVariant
 > = {
   completed: 'success',
@@ -21,144 +28,281 @@ const CONTENT_STATUS_VARIANT: Record<
   'not-started': 'neutral',
 };
 
-export default function MilestoneDetails({ body }: MilestoneDetailsProps) {
-  if (body.kind === 'proposal') {
-    return (
-      <div className={styles.root}>
-        <p className={styles.guidance}>{body.guidance}</p>
-        {body.topicCandidates.length > 0 ? (
-          <div className={styles.topics}>
-            {body.topicCandidates.map(candidate => (
-              <TopicCandidateCard candidate={candidate} key={candidate.id} />
-            ))}
-          </div>
-        ) : (
-          <EmptyState
-            description='팀원이 주제를 등록하면 투표할 수 있어요.'
-            headingLevel={4}
-            isCompact
-            title='등록된 주제 후보가 없어요.'
-          />
-        )}
-        <div className={styles.completion}>
-          <p className={styles.completionLabel}>{body.completion.label}</p>
-          <p className={styles.completionValue}>{body.completion.value}</p>
+function SectionBanner({ title }: { title: string }) {
+  return <p className={styles.sectionBanner}>{title}</p>;
+}
+
+function ProjectSummary({
+  title,
+  description,
+}: {
+  title?: string;
+  description: string;
+}) {
+  return (
+    <div className={styles.projectSummary}>
+      {title ? <p className={styles.projectTitle}>{title}</p> : null}
+      <p className={styles.projectDescription}>{description}</p>
+    </div>
+  );
+}
+
+function FeedbackList({
+  feedback,
+}: {
+  feedback: StudentHomeFeedbackMessage[];
+}) {
+  return (
+    <div className={styles.feedbackList}>
+      {feedback.map(message => (
+        <div className={styles.feedbackItem} key={message.id}>
+          <p className={styles.feedbackTitle}>{message.title}</p>
+          <p className={styles.feedbackContent}>{message.content}</p>
         </div>
-      </div>
-    );
-  }
+      ))}
+    </div>
+  );
+}
 
-  if (body.kind === 'submission') {
-    return (
-      <div className={styles.root}>
-        <p className={styles.guidance}>{body.guidance}</p>
-        <section aria-label='제출 항목' className={styles.panel}>
-          <p className={styles.panelTitle}>제출 항목</p>
-          {body.artifacts.length > 0 ? (
-            <ul className={styles.artifactList}>
-              {body.artifacts.map(artifact => (
-                <li className={styles.artifact} key={artifact.id}>
-                  <div>
-                    <p className={styles.artifactLabel}>{artifact.label}</p>
-                    <p className={styles.artifactDetail}>{artifact.detail}</p>
-                  </div>
-                  <span className={styles.statusWithLabel}>
-                    <StatusDot
-                      label={
-                        artifact.status === 'submitted'
-                          ? '제출 완료'
-                          : '제출 전'
-                      }
-                      variant={
-                        artifact.status === 'submitted' ? 'success' : 'neutral'
-                      }
-                    />
-                    <span className={styles.statusText}>
-                      {artifact.status === 'submitted'
-                        ? '제출 완료'
-                        : '제출 전'}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState
-              description='제출 항목이 정해지면 이곳에 표시돼요.'
-              headingLevel={4}
-              isCompact
-              title='등록된 제출 항목이 없어요.'
-            />
-          )}
-        </section>
-        {body.reviewSummary ? (
-          <p className={styles.notice}>{body.reviewSummary}</p>
-        ) : null}
-      </div>
-    );
-  }
+function ReplyComposer({ placeholder }: { placeholder: string }) {
+  return (
+    <div className={styles.replyComposer}>
+      <p className={styles.replyPlaceholder}>{placeholder}</p>
+    </div>
+  );
+}
 
-  if (body.kind === 'presentation') {
-    return (
-      <div className={styles.root}>
-        <p className={styles.guidance}>{body.guidance}</p>
-        <section aria-label='최종 선정 주제' className={styles.panel}>
-          <p className={styles.panelTitle}>최종 선정 주제</p>
-          <p className={styles.projectTitle}>{body.project.title}</p>
-          <p className={styles.projectDescription}>
-            {body.project.description}
-          </p>
-        </section>
-        <section aria-label='발표 자료 작성 현황' className={styles.panel}>
-          <p className={styles.panelTitle}>발표 자료 작성 현황</p>
-          {body.contentItems.length > 0 ? (
-            <ul className={styles.contentList}>
-              {body.contentItems.map(item => (
-                <li className={styles.contentItem} key={item.id}>
-                  <div>
-                    <p className={styles.contentLabel}>{item.label}</p>
-                    {item.updatedAt ? (
-                      <p className={styles.contentUpdatedAt}>
-                        {item.updatedAt}
-                      </p>
-                    ) : null}
-                  </div>
-                  <span className={styles.statusWithLabel}>
-                    <StatusDot
-                      label={item.statusLabel}
-                      variant={CONTENT_STATUS_VARIANT[item.status]}
-                    />
-                    <span className={styles.statusText}>
-                      {item.statusLabel}
-                    </span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState
-              description='발표 자료 항목이 정해지면 이곳에 표시돼요.'
-              headingLevel={4}
-              isCompact
-              title='등록된 발표 자료 항목이 없어요.'
-            />
-          )}
-        </section>
-        {body.evaluationWindow ? (
-          <p className={styles.notice}>{body.evaluationWindow}</p>
-        ) : null}
-      </div>
-    );
-  }
+function SectionStatusList({
+  sections,
+}: {
+  sections: StudentHomeSectionStatus[];
+}) {
+  return (
+    <ul className={styles.sectionList}>
+      {sections.map(section => {
+        const content = (
+          <>
+            <span className={styles.sectionLabelWrap}>
+              <span className={styles.sectionLabel}>{section.label}</span>
+              {section.updatedAt ? (
+                <span className={styles.sectionUpdatedAt}>
+                  ({section.updatedAt})
+                </span>
+              ) : null}
+            </span>
+            <span className={styles.statusWithLabel}>
+              <StatusDot
+                label={section.statusLabel}
+                variant={SECTION_STATUS_VARIANT[section.status]}
+              />
+              <span className={styles.statusText}>{section.statusLabel}</span>
+            </span>
+          </>
+        );
 
+        return (
+          <li className={styles.sectionRow} key={section.id}>
+            {section.to ? (
+              <Link className={styles.sectionLink} to={section.to}>
+                {content}
+              </Link>
+            ) : (
+              content
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function TeamList({ teams }: { teams: StudentHomeTeamStatus[] }) {
+  return (
+    <ul className={styles.sectionList}>
+      {teams.map(team => (
+        <li className={styles.sectionRow} key={team.id}>
+          <span className={styles.sectionLabelWrap}>
+            <span className={styles.sectionLabel}>{team.label}</span>
+            {team.isMine ? (
+              <span className={styles.teamMine}>내 팀</span>
+            ) : null}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function FileRow({ file }: { file: StudentHomeFile }) {
+  return (
+    <div className={styles.fileRow}>
+      <span aria-hidden='true' className={styles.fileIcon}>
+        {file.extension}
+      </span>
+      <span className={styles.fileInfo}>
+        <span className={styles.fileName}>{file.name}</span>
+        <span className={styles.fileMeta}>{file.meta}</span>
+      </span>
+    </div>
+  );
+}
+
+function TopicBody({
+  body,
+}: {
+  body: Extract<StudentHomeMilestoneBody, { kind: 'topic' }>;
+}) {
   return (
     <div className={styles.root}>
       <p className={styles.guidance}>{body.guidance}</p>
-      <p className={styles.notice}>{body.evaluationWindow}</p>
+      <div className={styles.topics}>
+        {body.topicCandidates.map(candidate => (
+          <TopicCandidateCard candidate={candidate} key={candidate.id} />
+        ))}
+      </div>
       <div className={styles.completion}>
         <p className={styles.completionLabel}>{body.completion.label}</p>
         <p className={styles.completionValue}>{body.completion.value}</p>
       </div>
     </div>
   );
+}
+
+function ProposalBody({
+  body,
+}: {
+  body:
+    | Extract<StudentHomeMilestoneBody, { kind: 'proposal' }>
+    | Extract<StudentHomeMilestoneBody, { kind: 'mid-review' }>;
+}) {
+  return (
+    <div className={styles.root}>
+      <SectionBanner title='최종 선정 주제' />
+      <ProjectSummary
+        description={body.project.description}
+        title={body.project.title}
+      />
+      <SectionBanner title='작성 영역별 상태' />
+      <SectionStatusList sections={body.sections} />
+    </div>
+  );
+}
+
+function ProposalFeedbackBody({
+  body,
+}: {
+  body:
+    | Extract<StudentHomeMilestoneBody, { kind: 'proposal-feedback' }>
+    | Extract<StudentHomeMilestoneBody, { kind: 'mid-review-feedback' }>;
+}) {
+  return (
+    <div className={styles.root}>
+      <SectionBanner title='교수 피드백' />
+      <FeedbackList feedback={body.feedback} />
+      {'replyPlaceholder' in body ? (
+        <ReplyComposer placeholder={body.replyPlaceholder} />
+      ) : null}
+      <SectionBanner title='작성 영역별 상태' />
+      <SectionStatusList sections={body.sections} />
+      <p className={styles.guide}>{body.guide}</p>
+    </div>
+  );
+}
+
+function PresentationMaterialBody({
+  body,
+}: {
+  body: Extract<StudentHomeMilestoneBody, { kind: 'presentation-material' }>;
+}) {
+  return (
+    <div className={styles.root}>
+      <SectionBanner title='최종 선정 주제' />
+      <ProjectSummary
+        description={body.project.description}
+        title={body.project.title}
+      />
+      <SectionBanner title='작성 영역별 상태' />
+      <SectionStatusList sections={body.sections} />
+      {body.recentFile ? <FileRow file={body.recentFile} /> : null}
+    </div>
+  );
+}
+
+function PresentationEvaluationBody({
+  body,
+}: {
+  body: Extract<StudentHomeMilestoneBody, { kind: 'presentation-evaluation' }>;
+}) {
+  return (
+    <div className={styles.root}>
+      <SectionBanner title='내 팀 발표 자료' />
+      <ProjectSummary
+        description={body.project.description}
+        title={body.project.title}
+      />
+      <p className={styles.guide}>{body.orderGuide}</p>
+      <SectionBanner title='팀별 상태' />
+      <TeamList teams={body.teams} />
+      <p className={styles.guide}>{body.timeGuide}</p>
+    </div>
+  );
+}
+
+function FinalReportBody({
+  body,
+}: {
+  body: Extract<StudentHomeMilestoneBody, { kind: 'final-report' }>;
+}) {
+  return (
+    <div className={styles.root}>
+      <SectionBanner title='최종보고서 작성 공지사항' />
+      <ProjectSummary description={body.notice.description} />
+      {body.notice.file ? <FileRow file={body.notice.file} /> : null}
+      <FileInput
+        description={body.uploadHint}
+        disabledMessage='파일 업로드는 추후 제공 예정이에요.'
+        isDisabled
+        label='제출 파일'
+        mode='dropzone'
+        onChange={() => {}}
+        placeholder='Drop files or click to upload'
+        value={null}
+      />
+      {body.submittedFile ? <FileRow file={body.submittedFile} /> : null}
+    </div>
+  );
+}
+
+function PeerEvaluationBody({
+  body,
+}: {
+  body: Extract<StudentHomeMilestoneBody, { kind: 'peer-evaluation' }>;
+}) {
+  return (
+    <div className={styles.root}>
+      <SectionBanner title='작성 영역별 상태' />
+      <SectionStatusList sections={body.sections} />
+    </div>
+  );
+}
+
+export default function MilestoneDetails({ body }: MilestoneDetailsProps) {
+  switch (body.kind) {
+    case 'topic':
+      return <TopicBody body={body} />;
+    case 'proposal':
+    case 'mid-review':
+      return <ProposalBody body={body} />;
+    case 'proposal-feedback':
+    case 'mid-review-feedback':
+      return <ProposalFeedbackBody body={body} />;
+    case 'presentation-material':
+      return <PresentationMaterialBody body={body} />;
+    case 'presentation-evaluation':
+      return <PresentationEvaluationBody body={body} />;
+    case 'final-report':
+      return <FinalReportBody body={body} />;
+    case 'peer-evaluation':
+      return <PeerEvaluationBody body={body} />;
+  }
 }

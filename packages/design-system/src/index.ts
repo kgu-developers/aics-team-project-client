@@ -15,6 +15,8 @@ export { EmptyState } from '@astryxdesign/core/EmptyState';
 export type { EmptyStateProps } from '@astryxdesign/core/EmptyState';
 export { Divider } from '@astryxdesign/core/Divider';
 export type { DividerProps, DividerVariant } from '@astryxdesign/core/Divider';
+export { FileInput } from '@astryxdesign/core/FileInput';
+export type { FileInputProps } from '@astryxdesign/core/FileInput';
 export { HStack, VStack } from '@astryxdesign/core/Layout';
 export { IconButton } from '@astryxdesign/core/IconButton';
 export type { IconButtonProps } from '@astryxdesign/core/IconButton';

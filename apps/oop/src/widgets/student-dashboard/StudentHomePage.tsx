@@ -1,5 +1,6 @@
 import { Button, EmptyState } from '@aics/design-system';
 import { isAxiosError } from 'axios';
+import { lazy, Suspense } from 'react';
 
 import { useAuthStore } from '~/features/auth/authStore';
 import { useStudentHomeDashboardQuery } from '~/features/student-home/queries';
@@ -7,7 +8,12 @@ import { useStudentHomeDashboardQuery } from '~/features/student-home/queries';
 import MilestoneList from '~/widgets/milestone-summary/MilestoneList';
 
 import StudentHomeHero from './StudentHomeHero';
+import { getStudentHomeHeroCopy } from './studentHomeHeroCopy';
 import * as styles from './StudentHomePage.css';
+
+const DevelopmentMilestonePreview = import.meta.env.DEV
+  ? lazy(() => import('~/features/student-home/dev/MilestonePreview'))
+  : null;
 
 type DashboardErrorContent = {
   title: string;
@@ -95,9 +101,20 @@ export default function StudentHomePage() {
     );
   }
 
+  const hero = getStudentHomeHeroCopy(data.hero, data.milestones);
+
   return (
     <div className={styles.root}>
-      <StudentHomeHero announcements={data.announcements} hero={data.hero} />
+      <StudentHomeHero announcements={data.announcements} hero={hero} />
+      {DevelopmentMilestonePreview ? (
+        <Suspense fallback={null}>
+          <DevelopmentMilestonePreview
+            onPreviewChange={() => {
+              void refetch();
+            }}
+          />
+        </Suspense>
+      ) : null}
       <MilestoneList milestones={data.milestones} />
     </div>
   );
