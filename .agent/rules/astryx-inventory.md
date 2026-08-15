@@ -6,7 +6,7 @@ Version-dependent inventory for `@astryxdesign/core@0.2.0`. Selection and stylin
 
 ```text
 Avatar, Badge, Button, Card, Collapsible, CollapsibleGroup, Divider
-EmptyState, IconButton, StatusDot
+EmptyState, FileInput, IconButton, StatusDot
 Tab, TabList
 HStack, VStack
 Text, Heading

@@ -1,4 +1,8 @@
-export type StudentHomeMilestoneStatus = 'before-period' | 'completed';
+export type StudentHomeMilestoneStatus =
+  | 'before-period'
+  | 'in-progress'
+  | 'revision-available'
+  | 'completed';
 
 export type StudentHomeMilestoneRowTone = 'default' | 'primary' | 'muted';
 
@@ -8,6 +12,9 @@ export type StudentHomeMilestoneRow = {
   value: string;
   tone: StudentHomeMilestoneRowTone;
   actionLabel?: string;
+  actionDisabled?: boolean;
+  actionNotice?: string;
+  actionTo?: string;
 };
 
 export type StudentHomeTopicCandidate = {
@@ -20,24 +27,42 @@ export type StudentHomeTopicCandidate = {
   isMyVote: boolean;
 };
 
-export type StudentHomeMilestoneArtifact = {
-  id: string;
-  label: string;
-  detail: string;
-  status: 'submitted' | 'missing';
-};
-
-export type StudentHomeMilestoneContentItem = {
+export type StudentHomeSectionStatus = {
   id: string;
   label: string;
   statusLabel: string;
   status: 'completed' | 'in-progress' | 'not-started';
   updatedAt?: string;
+  to?: string;
+};
+
+export type StudentHomeProject = {
+  title: string;
+  description: string;
+};
+
+export type StudentHomeFeedbackMessage = {
+  id: string;
+  title: string;
+  content: string;
+};
+
+export type StudentHomeFile = {
+  id: string;
+  extension: string;
+  name: string;
+  meta: string;
+};
+
+export type StudentHomeTeamStatus = {
+  id: string;
+  label: string;
+  isMine: boolean;
 };
 
 export type StudentHomeMilestoneBody =
   | {
-      kind: 'proposal';
+      kind: 'topic';
       guidance: string;
       topicCandidates: StudentHomeTopicCandidate[];
       completion: {
@@ -46,29 +71,53 @@ export type StudentHomeMilestoneBody =
       };
     }
   | {
-      kind: 'submission';
-      guidance: string;
-      artifacts: StudentHomeMilestoneArtifact[];
-      reviewSummary?: string;
+      kind: 'proposal';
+      project: StudentHomeProject;
+      sections: StudentHomeSectionStatus[];
     }
   | {
-      kind: 'presentation';
-      guidance: string;
-      project: {
-        title: string;
+      kind: 'proposal-feedback';
+      feedback: StudentHomeFeedbackMessage[];
+      replyPlaceholder: string;
+      sections: StudentHomeSectionStatus[];
+      guide: string;
+    }
+  | {
+      kind: 'mid-review';
+      project: StudentHomeProject;
+      sections: StudentHomeSectionStatus[];
+    }
+  | {
+      kind: 'mid-review-feedback';
+      feedback: StudentHomeFeedbackMessage[];
+      sections: StudentHomeSectionStatus[];
+      guide: string;
+    }
+  | {
+      kind: 'presentation-material';
+      project: StudentHomeProject;
+      sections: StudentHomeSectionStatus[];
+      recentFile?: StudentHomeFile;
+    }
+  | {
+      kind: 'presentation-evaluation';
+      project: StudentHomeProject;
+      orderGuide: string;
+      teams: StudentHomeTeamStatus[];
+      timeGuide: string;
+    }
+  | {
+      kind: 'final-report';
+      notice: {
         description: string;
+        file?: StudentHomeFile;
       };
-      contentItems: StudentHomeMilestoneContentItem[];
-      evaluationWindow?: string;
+      submittedFile?: StudentHomeFile;
+      uploadHint: string;
     }
   | {
       kind: 'peer-evaluation';
-      guidance: string;
-      evaluationWindow: string;
-      completion: {
-        label: string;
-        value: string;
-      };
+      sections: StudentHomeSectionStatus[];
     };
 
 export type StudentHomeMilestone = {
@@ -78,8 +127,9 @@ export type StudentHomeMilestone = {
   statusLabel: string;
   status: StudentHomeMilestoneStatus;
   dueDate: string;
+  currentStepLabel?: string;
   interaction: 'static' | 'collapsible';
-  isOpen: boolean;
+  isDetailAvailable: boolean;
   rows: StudentHomeMilestoneRow[];
   body?: StudentHomeMilestoneBody;
 };

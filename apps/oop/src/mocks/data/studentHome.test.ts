@@ -1,0 +1,100 @@
+import { setupServer } from 'msw/node';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+
+import {
+  createStudentHomeDashboardPreview,
+  milestonePreviewScenarios,
+} from './studentHome';
+import { demoAccessToken } from './users';
+import { studentHomeHandlers } from '../handlers/studentHome';
+
+const server = setupServer(...studentHomeHandlers);
+
+beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+const expectedDetailMilestone = {
+  'proposal-topic': 'proposal',
+  'proposal-writing': 'proposal',
+  'proposal-feedback': 'proposal',
+  'mid-report': 'mid-review',
+  'proposal-feedback-mid-report': 'mid-review',
+  'mid-feedback': 'mid-review',
+  'presentation-material': 'presentation',
+  'presentation-evaluation': 'presentation',
+  'final-report': 'final-report',
+  'peer-evaluation': 'peer-evaluation',
+} as const;
+
+describe('createStudentHomeDashboardPreview', () => {
+  it.each(milestonePreviewScenarios)(
+    '%s 시나리오는 해당 상위 단계의 상세를 제공한다',
+    scenario => {
+      const dashboard = createStudentHomeDashboardPreview(scenario);
+      const detailMilestones = dashboard.milestones.filter(
+        milestone => milestone.isDetailAvailable,
+      );
+
+      expect(detailMilestones).toContainEqual(
+        expect.objectContaining({ id: expectedDetailMilestone[scenario] }),
+      );
+      expect(
+        detailMilestones.find(
+          milestone => milestone.id === expectedDetailMilestone[scenario],
+        )?.body,
+      ).toBeDefined();
+    },
+  );
+
+  it('제안서 피드백 반영과 조기 활성화된 중간 단계의 상세를 함께 제공한다', () => {
+    const dashboard = createStudentHomeDashboardPreview(
+      'proposal-feedback-mid-report',
+    );
+    const proposal = dashboard.milestones.find(
+      milestone => milestone.id === 'proposal',
+    );
+    const midReview = dashboard.milestones.find(
+      milestone => milestone.id === 'mid-review',
+    );
+
+    expect(proposal).toMatchObject({
+      isDetailAvailable: true,
+      status: 'revision-available',
+      statusLabel: '수정 가능',
+    });
+    expect(proposal?.body).toMatchObject({ kind: 'proposal-feedback' });
+    expect(proposal?.rows[0]).toMatchObject({
+      label: '제안서 수정',
+      value: '피드백 반영 가능',
+    });
+    expect(midReview).toMatchObject({
+      isDetailAvailable: true,
+      status: 'in-progress',
+    });
+    expect(
+      dashboard.milestones.filter(milestone => milestone.isDetailAvailable),
+    ).toHaveLength(2);
+  });
+
+  it('MSW는 개발 preview 헤더에 맞는 fixture를 반환한다', async () => {
+    const response = await fetch(
+      'http://localhost:8080/sections/oop-2026-2-01/dashboard/student',
+      {
+        headers: {
+          Authorization: `Bearer ${demoAccessToken}`,
+          'X-OOP-Milestone-Preview': 'presentation-evaluation',
+        },
+      },
+    );
+    const dashboard = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(
+      dashboard.milestones.find(
+        (milestone: { isDetailAvailable: boolean }) =>
+          milestone.isDetailAvailable,
+      )?.id,
+    ).toBe('presentation');
+  });
+});

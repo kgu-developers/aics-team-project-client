@@ -1,7 +1,11 @@
 import { ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
-import { studentHomeDashboardFixture } from '../data/studentHome';
+import {
+  createStudentHomeDashboardPreview,
+  isMilestonePreviewScenario,
+  studentHomeDashboardFixture,
+} from '../data/studentHome';
 import { demoAccessToken } from '../data/users';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
@@ -37,7 +41,12 @@ export const studentHomeHandlers = [
         );
       }
 
-      return HttpResponse.json(studentHomeDashboardFixture);
+      const previewScenario = request.headers.get('X-OOP-Milestone-Preview');
+      const dashboard = isMilestonePreviewScenario(previewScenario)
+        ? createStudentHomeDashboardPreview(previewScenario)
+        : studentHomeDashboardFixture;
+
+      return HttpResponse.json(dashboard);
     },
   ),
 ];

@@ -26,8 +26,20 @@ async function enableMocking() {
   });
 }
 
+async function enableDevelopmentMilestonePreview() {
+  if (!import.meta.env.DEV) {
+    return;
+  }
+
+  const { enableDevelopmentMilestonePreview: enablePreview } = await import(
+    './mocks/developmentMilestonePreview'
+  );
+  enablePreview();
+}
+
 async function bootstrap() {
   await enableMocking();
+  await enableDevelopmentMilestonePreview();
   await restoreSession();
 
   const rootElement = document.getElementById('root')!;

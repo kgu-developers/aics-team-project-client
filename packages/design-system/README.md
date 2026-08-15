@@ -17,7 +17,7 @@ AICS/OOP의 Astryx integration boundary다. 이 패키지는 독자적인 디자
 
 ```text
 Avatar, Badge, Button, Card, Collapsible, CollapsibleGroup, Divider
-EmptyState, IconButton, StatusDot
+EmptyState, FileInput, IconButton, StatusDot
 HStack, VStack
 Text, Heading
 TextInput, TextArea
