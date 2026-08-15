@@ -7,6 +7,19 @@ import StudentHomeHero from './StudentHomeHero';
 import { studentHomeDashboardFixture } from '~/mocks/data/studentHome';
 
 describe('StudentHomeHero', () => {
+  it('아직 연결되지 않은 히어로 CTA를 비활성 안내로 표시한다', () => {
+    render(
+      <StudentHomeHero
+        announcements={studentHomeDashboardFixture.announcements}
+        hero={studentHomeDashboardFixture.hero}
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', { name: studentHomeDashboardFixture.hero.ctaLabel }),
+    ).toHaveAttribute('aria-disabled', 'true');
+  });
+
   it('커스텀 바로가기 탭을 클릭해서 전환한다', async () => {
     const user = userEvent.setup();
 
