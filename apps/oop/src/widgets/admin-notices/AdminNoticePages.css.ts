@@ -25,7 +25,11 @@ export const attachmentLink = style({ color: tokens.color.text.accent, fontSize:
 export const actions = style({ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 });
 export const fields = style({ display: 'flex', flexDirection: 'column', gap: 18 });
 export const fieldGroup = style({ display: 'flex', flexDirection: 'column', gap: 8 });
-export const selectButton = style({ background: tokens.color.background.surface, border: '1px solid ' + tokens.color.border.base, borderRadius: tokens.radius.element, cursor: 'pointer', padding: '10px 12px', textAlign: 'left', width: 160 });
+export const selectWrapper = style({ position: 'relative', width: 160 });
+export const selectButton = style({ alignItems: 'center', background: tokens.color.background.surface, border: '1px solid ' + tokens.color.border.base, borderRadius: tokens.radius.element, cursor: 'pointer', display: 'flex', justifyContent: 'space-between', padding: '10px 12px', textAlign: 'left', width: '100%' });
+export const selectMenu = style({ background: tokens.color.background.surface, border: '1px solid ' + tokens.color.border.base, borderRadius: tokens.radius.element, left: 0, listStyle: 'none', margin: '4px 0 0', padding: 4, position: 'absolute', top: '100%', width: '100%', zIndex: 1 });
+export const selectOption = style({ background: 'transparent', border: 0, borderRadius: tokens.radius.element, cursor: 'pointer', padding: '8px', textAlign: 'left', width: '100%' });
+export const selectOptionActive = style([selectOption, { background: tokens.color.background.gray, color: tokens.color.text.accent }]);
 globalStyle(table + ' th', { background: tokens.color.background.gray, color: tokens.color.text.secondary, fontSize: 13, fontWeight: 500, padding: '12px 16px', textAlign: 'left' });
 globalStyle(table + ' td', { borderTop: '1px solid ' + tokens.color.border.base, fontSize: 14, padding: '14px 16px' });
 globalStyle(attachment + ' a', { color: tokens.color.text.accent, fontSize: 13 });
