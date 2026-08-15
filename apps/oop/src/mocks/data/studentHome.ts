@@ -229,7 +229,9 @@ const previewSections = [
 function createPreviewBody(
   scenario: MilestonePreviewScenario,
 ): StudentHomeMilestoneBody {
-  const topic = studentHomeDashboardFixture.milestones[0]?.body;
+  const topic = studentHomeDashboardFixture.milestones.find(
+    milestone => milestone.id === 'proposal',
+  )?.body;
 
   switch (scenario) {
     case 'proposal-topic':

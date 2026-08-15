@@ -30,6 +30,25 @@ describe('getStudentHomeHeroCopy', () => {
     });
   });
 
+  it('복수 활성 단계에는 각 라벨의 종성에 맞는 조사를 사용한다', () => {
+    const dashboard = createStudentHomeDashboardPreview(
+      'proposal-feedback-mid-report',
+    );
+    const milestones = dashboard.milestones.map(milestone =>
+      milestone.id === 'mid-review'
+        ? {
+            ...milestone,
+            id: 'presentation',
+            currentStepLabel: '발표 평가',
+          }
+        : milestone,
+    );
+
+    expect(getStudentHomeHeroCopy(dashboard.hero, milestones)).toMatchObject({
+      description: '제안서 피드백 반영과 발표 평가를 함께 진행해 주세요.',
+    });
+  });
+
   it('상세가 가능한 milestone이 없으면 서버 hero 문구를 유지한다', () => {
     const dashboard = createStudentHomeDashboardPreview('proposal-topic');
     const milestones = dashboard.milestones.map(milestone => ({

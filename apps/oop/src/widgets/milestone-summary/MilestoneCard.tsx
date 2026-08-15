@@ -18,6 +18,13 @@ const ROW_TONE_CLASS = {
   muted: styles.rowValueMuted,
 } as const;
 
+const STATUS_VARIANT = {
+  completed: 'success',
+  'in-progress': 'accent',
+  'revision-available': 'accent',
+  'before-period': 'neutral',
+} as const;
+
 export default function MilestoneCard({
   milestone,
   isOpen,
@@ -25,12 +32,7 @@ export default function MilestoneCard({
   const navigate = useNavigate();
   const isCollapsible =
     milestone.isDetailAvailable && milestone.interaction === 'collapsible';
-  const statusVariant =
-    milestone.status === 'completed'
-      ? 'success'
-      : milestone.status === 'in-progress'
-        ? 'accent'
-        : 'neutral';
+  const statusVariant = STATUS_VARIANT[milestone.status];
 
   const headerTrigger = (
     <>

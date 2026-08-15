@@ -1,3 +1,5 @@
+import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
+import type { StudentHomeDashboard } from '@aics/core';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
@@ -79,7 +81,7 @@ describe('createStudentHomeDashboardPreview', () => {
 
   it('MSW는 개발 preview 헤더에 맞는 fixture를 반환한다', async () => {
     const response = await fetch(
-      'http://localhost:8080/sections/oop-2026-2-01/dashboard/student',
+      `${API_BASE_URL}${ENDPOINTS.SECTION.STUDENT_DASHBOARD('oop-2026-2-01')}`,
       {
         headers: {
           Authorization: `Bearer ${demoAccessToken}`,
@@ -87,14 +89,11 @@ describe('createStudentHomeDashboardPreview', () => {
         },
       },
     );
-    const dashboard = await response.json();
+    const dashboard = (await response.json()) as StudentHomeDashboard;
 
     expect(response.status).toBe(200);
     expect(
-      dashboard.milestones.find(
-        (milestone: { isDetailAvailable: boolean }) =>
-          milestone.isDetailAvailable,
-      )?.id,
+      dashboard.milestones.find(milestone => milestone.isDetailAvailable)?.id,
     ).toBe('presentation');
   });
 });

@@ -1,12 +1,6 @@
-import type {
-  StudentHomeHero,
-  StudentHomeMilestone,
-} from '@aics/core';
+import type { StudentHomeHero, StudentHomeMilestone } from '@aics/core';
 
-type MilestoneHeroCopy = Pick<
-  StudentHomeHero,
-  'heading' | 'description'
-> & {
+type MilestoneHeroCopy = Pick<StudentHomeHero, 'heading' | 'description'> & {
   task: string;
   actionLabel: string;
 };
@@ -28,7 +22,8 @@ const milestoneHeroCopy: Record<string, MilestoneHeroCopy> = {
     task: '제안서를 보완',
     actionLabel: '제안서 피드백 반영',
     heading: '제안서 피드백을 반영해 주세요.',
-    description: '교수 피드백을 확인한 뒤 수정 기간 안에 제안서를 다시 제출할 수 있어요.',
+    description:
+      '교수 피드백을 확인한 뒤 수정 기간 안에 제안서를 다시 제출할 수 있어요.',
   },
   'mid-review:중간보고서 작성': {
     task: '중간보고서를 작성',
@@ -74,6 +69,27 @@ function getMilestoneHeroCopy(milestone: StudentHomeMilestone) {
   ];
 }
 
+function hasFinalConsonant(value: string) {
+  const finalCode = value.charCodeAt(value.length - 1);
+  return (
+    finalCode >= 0xac00 &&
+    finalCode <= 0xd7a3 &&
+    (finalCode - 0xac00) % 28 !== 0
+  );
+}
+
+function withObjectParticle(value: string) {
+  return `${value}${hasFinalConsonant(value) ? '을' : '를'}`;
+}
+
+function joinWithAnd(values: string[]) {
+  return values.reduce(
+    (text, value) =>
+      text ? `${text}${hasFinalConsonant(text) ? '과' : '와'} ${value}` : value,
+    '',
+  );
+}
+
 export function getStudentHomeHeroCopy(
   fallbackHero: StudentHomeHero,
   milestones: StudentHomeMilestone[],
@@ -98,6 +114,6 @@ export function getStudentHomeHeroCopy(
   return {
     ...fallbackHero,
     heading: `${activeCopies.map(copy => copy.task).join('하고, ')}하고 있어요.`,
-    description: `${activeCopies.map(copy => copy.actionLabel).join('과 ')}을 함께 진행해 주세요.`,
+    description: `${withObjectParticle(joinWithAnd(activeCopies.map(copy => copy.actionLabel)))} 함께 진행해 주세요.`,
   };
 }
