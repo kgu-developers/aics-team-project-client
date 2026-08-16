@@ -145,10 +145,27 @@ function SectionSelect({
   onChange,
   value,
 }: {
-  onChange: (section: (typeof sectionFilters)[number]) => void;
-  value: (typeof sectionFilters)[number];
+  onChange: (sections: (typeof sectionFilters)[number][]) => void;
+  value: (typeof sectionFilters)[number][];
 }) {
   const [isOpen, setIsOpen] = useState(false);
+
+  const handleSelect = (section: (typeof sectionFilters)[number]) => {
+    if (section === '전체') {
+      onChange(['전체']);
+      return;
+    }
+
+    const selectedSections = value.filter(
+      valueSection => valueSection !== '전체',
+    );
+
+    const nextSections = selectedSections.includes(section)
+      ? selectedSections.filter(valueSection => valueSection !== section)
+      : [...selectedSections, section];
+
+    onChange(nextSections.length > 0 ? nextSections : ['전체']);
+  };
 
   return (
     <div className={styles.selectWrapper}>
@@ -159,30 +176,34 @@ function SectionSelect({
         onClick={() => setIsOpen(open => !open)}
         type='button'
       >
-        {value} <span aria-hidden='true'>▾</span>
+        {value.join(', ')} <span aria-hidden='true'>▾</span>
       </button>
+
       {isOpen ? (
-        <ul className={styles.selectMenu} role='listbox'>
-          {sectionFilters.map(section => (
-            <li key={section}>
-              <button
-                aria-selected={value === section}
-                className={
-                  value === section
-                    ? styles.selectOptionActive
-                    : styles.selectOption
-                }
-                onClick={() => {
-                  onChange(section);
-                  setIsOpen(false);
-                }}
-                role='option'
-                type='button'
-              >
-                {section}
-              </button>
-            </li>
-          ))}
+        <ul
+          aria-multiselectable='true'
+          className={styles.selectMenu}
+          role='listbox'
+        >
+          {sectionFilters.map(section => {
+            const isSelected = value.includes(section);
+
+            return (
+              <li key={section}>
+                <button
+                  aria-selected={isSelected}
+                  className={
+                    isSelected ? styles.selectOptionActive : styles.selectOption
+                  }
+                  onClick={() => handleSelect(section)}
+                  role='option'
+                  type='button'
+                >
+                  {section}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       ) : null}
     </div>
@@ -353,8 +374,9 @@ export function AdminNoticeEditPage() {
   const [content, setContent] = useState(
     '10주차 중간고사 10번 문제 발표는 코드, 시연(다양한 앱 예제 활용), ppt 발표자료를 준비해 주세요.\n\n발표 점수는 만점 15점이고 발표 수준에 따라 점수를 부여합니다.\n\n추가로 발표 자료에는 코딩과 함께 구현한 화면을 포함해 주세요.',
   );
-  const [section, setSection] =
-    useState<(typeof sectionFilters)[number]>('전체');
+  const [sections, setSections] = useState<(typeof sectionFilters)[number][]>([
+    '전체',
+  ]);
   const [title, setTitle] = useState('10주차 발표 안내');
 
   return (
@@ -377,7 +399,7 @@ export function AdminNoticeEditPage() {
           />
           <div className={styles.fieldGroup}>
             <Text>분반</Text>
-            <SectionSelect onChange={setSection} value={section} />
+            <SectionSelect onChange={setSections} value={sections} />
           </div>
           <TextArea
             label='내용'
@@ -407,8 +429,9 @@ export function AdminNoticeEditPage() {
 
 export function AdminNoticeNewPage() {
   const [content, setContent] = useState('');
-  const [section, setSection] =
-    useState<(typeof sectionFilters)[number]>('전체');
+  const [sections, setSections] = useState<(typeof sectionFilters)[number][]>([
+    '전체',
+  ]);
   const [title, setTitle] = useState('');
 
   return (
@@ -432,7 +455,7 @@ export function AdminNoticeNewPage() {
           />
           <div className={styles.fieldGroup}>
             <Text>분반</Text>
-            <SectionSelect onChange={setSection} value={section} />
+            <SectionSelect onChange={setSections} value={sections} />
           </div>
           <TextArea
             label='내용'
