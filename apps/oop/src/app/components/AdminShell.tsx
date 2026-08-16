@@ -23,7 +23,9 @@ export default function AdminShell() {
         <nav aria-label='관리자 메뉴' className={styles.nav}>
           {menuItems.map(item => (
             <Link
-              className={pathname === item.to ? styles.activeNav : styles.navItem}
+              className={
+                pathname === item.to ? styles.activeNav : styles.navItem
+              }
               key={item.label}
               to={item.to}
             >
@@ -47,7 +49,9 @@ export default function AdminShell() {
           </div>
         </div>
       </aside>
-      <main className={styles.main}><Outlet /></main>
+      <main className={styles.main}>
+        <Outlet />
+      </main>
     </div>
   );
 }
