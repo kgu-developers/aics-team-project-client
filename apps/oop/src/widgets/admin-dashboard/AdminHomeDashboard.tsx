@@ -4,88 +4,38 @@ import { Link } from '@tanstack/react-router';
 import { ROUTES } from '~/app/constants/routes';
 
 import * as styles from './AdminHomeDashboard.css';
-
-const schedules = [
-  [
-    '1151(월6)',
-    '48명 / 7팀',
-    '~10/8\n제출 7팀\n회의록 3건',
-    '~10/29\n제출 6팀\n회의록 3건',
-    '~11/12\n제출 6팀\n회의록 1건',
-    '~11/19\n제출 2팀\n회의록 0건',
-    '11/27\n시작 전',
-    '-',
-    '3건',
-  ],
-  [
-    '1152(월7)',
-    '46명 / 7팀',
-    '~10/8\n제출 7팀\n회의록 4건',
-    '~10/29\n제출 6팀\n회의록 3건',
-    '~11/12\n제출 6팀\n회의록 2건',
-    '~11/19\n제출 4팀\n회의록 1건',
-    '11/27\n시작 전',
-    '-',
-    '4건',
-  ],
-  [
-    '1153(월8)',
-    '47명 / 6팀',
-    '~10/8\n제출 6팀\n회의록 3건',
-    '~10/29\n제출 5팀\n회의록 2건',
-    '~11/12\n제출 1팀\n회의록 0건',
-    '~11/19\n제출 0팀\n회의록 0건',
-    '11/27\n시작 전',
-    '-',
-    '5건',
-  ],
-] as const;
-
-const notices = [
-  ['1151(월6)', '전체 접수 공지', '2025-12-17'],
-  ['1152(월7)', '프로젝트 산출물 제출 안내', '2025-12-17'],
-  ['1153(월8)', '기말 필기 시험 접수 공지 (수정 12/16)', '2025-12-15'],
-] as const;
-const minutes = [
-  ['1151반-A팀', '와이어프레임 기획 논의', '2025-12-17'],
-  ['1152반-A팀', '기획 논의', '2025-12-17'],
-  ['1152반-B팀', '주제 투표하기', '2025-12-15'],
-  ['1153반-C팀', '주제 투표하기', '2025-12-15'],
-] as const;
-const inbox = [
-  [
-    '1152-A팀',
-    '김민준 교수님, 화면설계서 1차 첨부했는데 확인 부탁드려요!',
-    '20분 전',
-  ],
-  ['1152-B팀', '이은정 교수님, 회의록을 수정 과정에서 저장됐어요.', '1시간 전'],
-  ['1153-B팀', '박서연 발표자료 초안 오늘 밤까지 올릴게요.', '1시간 전'],
-] as const;
+import {
+  dashboardInbox,
+  dashboardMinutes,
+  dashboardNotices,
+  dashboardSchedules,
+  type DashboardListItem,
+} from '../../mocks/data/adminDashboard';
 
 function List({
   isNoticeList = false,
   items,
 }: {
   isNoticeList?: boolean;
-  items: readonly (readonly [string, string, string])[];
+  items: readonly DashboardListItem[];
 }) {
   return (
     <ul className={styles.list}>
-      {items.map(([section, title, date], index) => (
-        <li className={styles.item} key={[section, title].join('-')}>
-          <span className={styles.label}>{section}</span>
-          {isNoticeList ? (
+      {items.map(item => (
+        <li className={styles.item} key={[item.section, item.title].join('-')}>
+          <span className={styles.label}>{item.section}</span>
+          {isNoticeList && item.id ? (
             <Link
               className={styles.itemTitle}
-              params={{ noticeId: String(index + 1) }}
+              params={{ noticeId: item.id }}
               to='/admin/notices/$noticeId'
             >
-              {title}
+              {item.title}
             </Link>
           ) : (
-            <span className={styles.itemTitle}>{title}</span>
+            <span className={styles.itemTitle}>{item.title}</span>
           )}
-          <time>{date}</time>
+          <time>{item.date}</time>
         </li>
       ))}
     </ul>
@@ -99,7 +49,7 @@ function Panel({
   isNoticePanel = false,
 }: {
   title: string;
-  items: readonly (readonly [string, string, string])[];
+  items: readonly DashboardListItem[];
   action?: boolean;
   isNoticePanel?: boolean;
 }) {
@@ -164,7 +114,7 @@ export default function AdminHomeDashboard() {
               </tr>
             </thead>
             <tbody>
-              {schedules.map(row => (
+              {dashboardSchedules.map(row => (
                 <tr key={row[0]}>
                   {row.map(cell => (
                     <td key={cell}>{cell}</td>
@@ -176,10 +126,10 @@ export default function AdminHomeDashboard() {
         </div>
       </section>
       <div className={styles.grid}>
-        <Panel action isNoticePanel items={notices} title='공지사항' />
-        <Panel items={minutes} title='회의록' />
+        <Panel action isNoticePanel items={dashboardNotices} title='공지사항' />
+        <Panel items={dashboardMinutes} title='회의록' />
       </div>
-      <Panel items={inbox} title='쪽지함' />
+      <Panel items={dashboardInbox} title='쪽지함' />
     </div>
   );
 }
