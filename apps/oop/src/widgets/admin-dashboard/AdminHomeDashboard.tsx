@@ -1,5 +1,5 @@
 import { Button, Heading } from '@aics/design-system';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -53,6 +53,8 @@ function Panel({
   action?: boolean;
   isNoticePanel?: boolean;
 }) {
+  const navigate = useNavigate();
+
   return (
     <section className={styles.section}>
       <div className={styles.sectionHeader}>
@@ -72,9 +74,11 @@ function Panel({
         {action ? (
           <div className={styles.action}>
             {isNoticePanel ? (
-              <Link to={ROUTES.ADMIN_NOTICE_NEW}>
-                <Button label='작성하기' variant='primary' />
-              </Link>
+              <Button
+                label='작성하기'
+                onClick={() => navigate({ to: ROUTES.ADMIN_NOTICE_NEW })}
+                variant='primary'
+              />
             ) : (
               <Button label='작성하기' variant='primary' />
             )}
