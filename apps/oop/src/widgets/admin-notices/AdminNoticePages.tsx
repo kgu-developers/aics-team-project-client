@@ -1,3 +1,5 @@
+import { type RefObject, useEffect, useRef, useState } from 'react';
+import { Link, useParams } from '@tanstack/react-router';
 import {
   Button,
   Card,
@@ -6,81 +8,18 @@ import {
   TextArea,
   TextInput,
 } from '@aics/design-system';
-import { Link } from '@tanstack/react-router';
-import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import {
+  adminNoticeDetails,
+  adminNotices,
+  type AdminNotice,
+  noticeListPageSize,
+  type NoticeSectionFilter,
+  noticeSectionFilters,
+} from '../../mocks/data/adminNotices';
 import * as styles from './AdminNoticePages.css';
-
-const notices = [
-  {
-    date: '2025-12-17',
-    id: '1',
-    section: '1151(월6)',
-    title: '전체 접수 공지',
-    writer: '이은정',
-  },
-  {
-    date: '2025-12-17',
-    id: '2',
-    section: '1152(월7)',
-    title: '프로젝트 산출물 제출 안내',
-    writer: '이은정',
-  },
-  {
-    date: '2025-12-15',
-    id: '3',
-    section: '1153(월8)',
-    title: '10주차 발표 안내',
-    writer: '이은정',
-  },
-  {
-    date: '2025-12-17',
-    id: '4',
-    section: '1151(월6)',
-    title: '전체 접수 공지',
-    writer: '이은정',
-  },
-  {
-    date: '2025-12-17',
-    id: '5',
-    section: '1152(월7)',
-    title: '프로젝트 산출물 제출 안내',
-    writer: '이은정',
-  },
-  {
-    date: '2025-12-15',
-    id: '6',
-    section: '1153(월8)',
-    title: '기말 필기 시험 접수 공지 (수정 12/16)',
-    writer: '이은정',
-  },
-  {
-    date: '2025-12-12',
-    id: '7',
-    section: '1151(월6)',
-    title: '프로젝트 중간 점검 일정 안내',
-    writer: '이은정',
-  },
-  {
-    date: '2025-12-10',
-    id: '8',
-    section: '1152(월7)',
-    title: '발표 자료 제출 전 확인 사항',
-    writer: '이은정',
-  },
-  {
-    date: '2025-12-08',
-    id: '9',
-    section: '1153(월8)',
-    title: '상호 평가 진행 안내',
-    writer: '이은정',
-  },
-] as const;
-
-const sectionFilters = ['전체', '1151(월6)', '1152(월7)', '1153(월8)'] as const;
-const noticesPerPage = 3;
 
 function BackToList() {
   return (
@@ -92,52 +31,90 @@ function BackToList() {
 
 function DeleteNoticeDialog({
   isOpen,
+  notice,
   onClose,
+  triggerRef,
 }: {
   isOpen: boolean;
+  notice: AdminNotice;
   onClose: () => void;
+  triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const detail = adminNoticeDetails[notice.id];
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+
+    if (!isOpen || !dialog) return;
+
+    dialog.showModal();
+    cancelButtonRef.current?.focus();
+
+    return () => {
+      if (dialog.open) dialog.close();
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
+  function handleClose() {
+    onClose();
+    requestAnimationFrame(() => triggerRef.current?.focus());
+  }
+
   return (
-    <div className={styles.dialogOverlay}>
-      <section
-        aria-labelledby='delete-notice-title'
-        aria-modal='true'
-        className={styles.dialog}
-        role='dialog'
+    <dialog
+      aria-labelledby='delete-notice-title'
+      aria-modal='true'
+      className={styles.dialog}
+      onCancel={event => {
+        event.preventDefault();
+        handleClose();
+      }}
+      onKeyDown={event => {
+        if (event.key !== 'Escape') return;
+
+        event.preventDefault();
+        handleClose();
+      }}
+      ref={dialogRef}
+    >
+      <Heading
+        className={styles.deleteTitle}
+        id='delete-notice-title'
+        level={2}
       >
-        <Heading
-          className={styles.deleteTitle}
-          id='delete-notice-title'
-          level={2}
-        >
-          이 공지사항을 삭제할까요?
-        </Heading>
-        <Text color='secondary'>삭제한 공지사항은 복구할 수 없습니다.</Text>
-        <Card className={styles.deletePreview}>
-          <Heading level={3}>10주차 발표 안내</Heading>
-          <Text className={styles.meta} color='secondary'>
-            작성일 : 2026-07-07 14:30
-          </Text>
-          <Text>공개 범위 : 1151(월6), 1152(월7), 1153(월8)</Text>
-          <div className={styles.divider} />
-          <Text>
-            10주차 중간고사 10번 문제 발표는 코드, 시연(다양한 앱 예제 활용),
-            ppt 발표자료를 준비해 주세요.
-          </Text>
-        </Card>
-        <div className={styles.modalActions}>
-          <Button label='취소' onClick={onClose} variant='secondary' />
-          <Button
-            className={styles.deleteButton}
-            label='삭제'
-            onClick={onClose}
-            variant='secondary'
-          />
-        </div>
-      </section>
-    </div>
+        이 공지사항을 삭제할까요?
+      </Heading>
+      <Text color='secondary'>삭제한 공지사항은 복구할 수 없습니다.</Text>
+      <Card className={styles.deletePreview}>
+        <Heading level={3}>{notice.title}</Heading>
+        <Text className={styles.meta} color='secondary'>
+          작성일 : {detail.createdAt}
+        </Text>
+        <Text>공개 범위 : {notice.section}</Text>
+        <div className={styles.divider} />
+        {detail.content.map(content => (
+          <Text key={content}>{content}</Text>
+        ))}
+      </Card>
+      <div className={styles.modalActions}>
+        <Button
+          label='취소'
+          onClick={handleClose}
+          ref={cancelButtonRef}
+          variant='secondary'
+        />
+        <Button
+          className={styles.deleteButton}
+          label='삭제'
+          onClick={handleClose}
+          variant='secondary'
+        />
+      </div>
+    </dialog>
   );
 }
 
@@ -145,12 +122,12 @@ function SectionSelect({
   onChange,
   value,
 }: {
-  onChange: (sections: (typeof sectionFilters)[number][]) => void;
-  value: (typeof sectionFilters)[number][];
+  onChange: (sections: NoticeSectionFilter[]) => void;
+  value: NoticeSectionFilter[];
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleSelect = (section: (typeof sectionFilters)[number]) => {
+  const handleSelect = (section: NoticeSectionFilter) => {
     if (section === '전체') {
       onChange(['전체']);
       return;
@@ -185,7 +162,7 @@ function SectionSelect({
           className={styles.selectMenu}
           role='listbox'
         >
-          {sectionFilters.map(section => {
+          {noticeSectionFilters.map(section => {
             const isSelected = value.includes(section);
 
             return (
@@ -213,21 +190,21 @@ function SectionSelect({
 export function AdminNoticeListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSection, setSelectedSection] =
-    useState<(typeof sectionFilters)[number]>('전체');
+    useState<NoticeSectionFilter>('전체');
   const filteredNotices =
     selectedSection === '전체'
-      ? notices
-      : notices.filter(notice => notice.section === selectedSection);
+      ? adminNotices
+      : adminNotices.filter(notice => notice.section === selectedSection);
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredNotices.length / noticesPerPage),
+    Math.ceil(filteredNotices.length / noticeListPageSize),
   );
   const displayedNotices = filteredNotices.slice(
-    (currentPage - 1) * noticesPerPage,
-    currentPage * noticesPerPage,
+    (currentPage - 1) * noticeListPageSize,
+    currentPage * noticeListPageSize,
   );
 
-  function selectSection(section: (typeof sectionFilters)[number]) {
+  function selectSection(section: NoticeSectionFilter) {
     setSelectedSection(section);
     setCurrentPage(1);
   }
@@ -236,7 +213,7 @@ export function AdminNoticeListPage() {
     <div className={styles.page}>
       <Heading level={1}>공지사항</Heading>
       <div className={styles.filters} role='group' aria-label='분반 필터'>
-        {sectionFilters.map(label => (
+        {noticeSectionFilters.map(label => (
           <button
             aria-pressed={selectedSection === label}
             className={
@@ -320,75 +297,95 @@ export function AdminNoticeListPage() {
 }
 
 export function AdminNoticeDetailPage() {
+  const { noticeId } = useParams({ from: '/admin/notices/$noticeId/' });
+  const deleteButtonRef = useRef<HTMLButtonElement>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const notice = adminNotices.find(candidate => candidate.id === noticeId);
+
+  if (!notice) {
+    return (
+      <div className={styles.page}>
+        <Heading level={1}>공지사항을 찾을 수 없어요.</Heading>
+        <BackToList />
+      </div>
+    );
+  }
+
+  const detail = adminNoticeDetails[notice.id];
 
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
-        <Heading level={1}>공지사항 &gt; 10주차 발표 안내</Heading>
+        <Heading level={1}>공지사항 &gt; {notice.title}</Heading>
         <BackToList />
       </div>
       <Card className={styles.detailCard}>
-        <Heading level={2}>10주차 발표 안내</Heading>
+        <Heading level={2}>{notice.title}</Heading>
         <Text className={styles.meta} color='secondary'>
-          작성일 : 2026-07-07 14:30
+          작성일 : {detail.createdAt}
         </Text>
-        <Text>공개 범위 : 1151(월6), 1152(월7), 1153(월8)</Text>
+        <Text>공개 범위 : {notice.section}</Text>
         <div className={styles.divider} />
-        <Text>
-          10주차 중간고사 10번 문제 발표는 코드, 시연(다양한 앱 예제 활용), ppt
-          발표자료를 준비해 주세요.
-        </Text>
-        <Text>
-          발표 점수는 만점 15점이고 발표 수준에 따라 점수를 부여합니다.
-        </Text>
-        <Text>
-          추가로 발표 자료에는 코딩과 함께 구현한 화면을 포함해 주세요.
-        </Text>
+        {detail.content.map(content => (
+          <Text key={content}>{content}</Text>
+        ))}
         <div className={styles.attachment}>
           <span>제출 파일</span>
-          <a href='#attachment'>
-            📎 객체지향프로그래밍 7조 프로젝트 제안서.pdf
-          </a>
+          <a href='#attachment'>📎 {detail.attachment}</a>
         </div>
         <div className={styles.actions}>
           <Button
             label='삭제'
             onClick={() => setIsDeleteDialogOpen(true)}
+            ref={deleteButtonRef}
             variant='secondary'
           />
-          <Link params={{ noticeId: '3' }} to={ROUTES.ADMIN_NOTICE_EDIT}>
+          <Link params={{ noticeId: notice.id }} to={ROUTES.ADMIN_NOTICE_EDIT}>
             <Button label='수정' variant='primary' />
           </Link>
         </div>
       </Card>
       <DeleteNoticeDialog
         isOpen={isDeleteDialogOpen}
+        notice={notice}
         onClose={() => setIsDeleteDialogOpen(false)}
+        triggerRef={deleteButtonRef}
       />
     </div>
   );
 }
 
 export function AdminNoticeEditPage() {
-  const [content, setContent] = useState(
-    '10주차 중간고사 10번 문제 발표는 코드, 시연(다양한 앱 예제 활용), ppt 발표자료를 준비해 주세요.\n\n발표 점수는 만점 15점이고 발표 수준에 따라 점수를 부여합니다.\n\n추가로 발표 자료에는 코딩과 함께 구현한 화면을 포함해 주세요.',
+  const { noticeId } = useParams({
+    from: '/admin/notices/$noticeId/edit',
+  });
+  const notice = adminNotices.find(candidate => candidate.id === noticeId);
+  const detail = notice ? adminNoticeDetails[notice.id] : null;
+  const [content, setContent] = useState(detail?.content.join('\n\n') ?? '');
+  const [sections, setSections] = useState<NoticeSectionFilter[]>(
+    notice ? [notice.section] : ['전체'],
   );
-  const [sections, setSections] = useState<(typeof sectionFilters)[number][]>([
-    '전체',
-  ]);
-  const [title, setTitle] = useState('10주차 발표 안내');
+  const [title, setTitle] = useState(notice?.title ?? '');
+
+  if (!notice || !detail) {
+    return (
+      <div className={styles.page}>
+        <Heading level={1}>공지사항을 찾을 수 없어요.</Heading>
+        <BackToList />
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
-        <Heading level={1}>10주차 발표 안내 공지 수정</Heading>
+        <Heading level={1}>{notice.title} 공지 수정</Heading>
         <BackToList />
       </div>
       <Card className={styles.formCard}>
         <Heading level={2}>공지사항 수정</Heading>
         <Text className={styles.meta} color='secondary'>
-          작성일 : 2026-07-07 14:30
+          작성일 : {detail.createdAt}
         </Text>
         <div className={styles.fields}>
           <TextInput
@@ -411,13 +408,13 @@ export function AdminNoticeEditPage() {
           <div className={styles.fieldGroup}>
             <Text>첨부 파일</Text>
             <a className={styles.attachmentLink} href='#attachment'>
-              📎 객체지향프로그래밍 7조 프로젝트 제안서.pdf
+              📎 {detail.attachment}
             </a>
             <Button label='파일 변경' variant='secondary' />
           </div>
         </div>
         <div className={styles.actions}>
-          <Link params={{ noticeId: '3' }} to='/admin/notices/$noticeId'>
+          <Link params={{ noticeId: notice.id }} to='/admin/notices/$noticeId'>
             <Button label='취소' variant='secondary' />
           </Link>
           <Button label='저장' variant='primary' />
@@ -429,9 +426,7 @@ export function AdminNoticeEditPage() {
 
 export function AdminNoticeNewPage() {
   const [content, setContent] = useState('');
-  const [sections, setSections] = useState<(typeof sectionFilters)[number][]>([
-    '전체',
-  ]);
+  const [sections, setSections] = useState<NoticeSectionFilter[]>(['전체']);
   const [title, setTitle] = useState('');
 
   return (

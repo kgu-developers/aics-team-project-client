@@ -99,27 +99,22 @@ export const attachmentLink = style({
   color: tokens.color.text.accent,
   fontSize: 13,
 });
-export const dialogOverlay = style({
-  alignItems: 'center',
-  background: 'rgb(0 0 0 / 0.36)',
-  display: 'flex',
-  inset: 0,
-  justifyContent: 'center',
-  padding: 24,
-  position: 'fixed',
-  zIndex: 10,
-});
 export const dialog = style({
   background: tokens.color.background.surface,
+  border: 0,
   borderRadius: tokens.radius.container,
   display: 'flex',
   flexDirection: 'column',
   gap: 16,
+  margin: 'auto',
   maxHeight: 'calc(100vh - 48px)',
   maxWidth: 680,
   overflowY: 'auto',
   padding: 28,
   width: '100%',
+});
+globalStyle(`${dialog}::backdrop`, {
+  background: 'rgb(0 0 0 / 0.36)',
 });
 export const deleteTitle = style({ color: tokens.color.text.red });
 export const deletePreview = style({
