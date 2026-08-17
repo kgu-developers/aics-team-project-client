@@ -10,6 +10,8 @@
 ## Accessibility and UI states
 
 - Prefer semantic elements such as `header`, `nav`, `main`, `section`, and `article`.
+- Do not nest interactive elements such as `Button` inside `Link`.
+- Use `Link` for text navigation. For button-styled navigation, follow the existing `Button` with `useNavigate` pattern.
 - Use visible labels when possible; use `aria-label` when an accessible name is otherwise unavailable.
 - Preserve visible focus, errors, descriptions, and understandable loading/empty/error/missing-prerequisite states.
 - Custom composite widgets such as tabs must implement the relevant ARIA roles and keyboard interaction and receive an interaction test.
