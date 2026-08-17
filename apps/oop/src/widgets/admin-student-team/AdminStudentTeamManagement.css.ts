@@ -14,30 +14,22 @@ export const page = style({
 export const heading = style({
   display: 'flex',
   flexDirection: 'column',
-  gap: 8,
-});
-
-globalStyle(`${heading} p`, {
-  color: tokens.color.text.secondary,
-  fontSize: 14,
-  margin: 0,
 });
 
 export const sectionTabs = style({
-  borderBottom: `1px solid ${tokens.color.border.base}`,
   display: 'flex',
+  flexWrap: 'wrap',
   gap: 8,
-  overflowX: 'auto',
 });
 
 const tabBase = {
-  background: 'transparent',
+  background: tokens.color.background.gray,
   border: 0,
-  borderBottom: '2px solid transparent',
-  color: tokens.color.text.secondary,
+  borderRadius: tokens.radius.full,
+  color: tokens.color.text.primary,
   cursor: 'pointer',
   font: 'inherit',
-  padding: '10px 12px',
+  padding: '7px 12px',
   whiteSpace: 'nowrap' as const,
 };
 
@@ -45,9 +37,8 @@ export const tab = style(tabBase);
 
 export const activeTab = style({
   ...tabBase,
-  borderBottomColor: tokens.color.accent,
-  color: tokens.color.text.accent,
-  fontWeight: 600,
+  background: tokens.color.text.primary,
+  color: tokens.color.background.surface,
 });
 
 export const section = style({
@@ -87,42 +78,58 @@ globalStyle(`${table} td`, {
 });
 
 export const teamGrid = style({
-  display: 'grid',
-  gap: 16,
-  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-  '@media': {
-    '(max-width: 960px)': { gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' },
-    '(max-width: 640px)': { gridTemplateColumns: '1fr' },
-  },
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
 });
 
 export const teamCard = style({
+  alignItems: 'flex-start',
   background: tokens.color.background.surface,
   border: `1px solid ${tokens.color.border.base}`,
   borderRadius: tokens.radius.container,
-  padding: 20,
+  display: 'grid',
+  gap: 12,
+  gridTemplateColumns: '72px minmax(0, 1fr)',
+  padding: 16,
+  '@media': {
+    '(max-width: 640px)': {
+      gridTemplateColumns: '1fr',
+    },
+  },
 });
 
 export const teamName = style({
   fontSize: 16,
   margin: 0,
+  paddingTop: 8,
 });
 
 export const memberList = style({
   display: 'flex',
-  flexDirection: 'column',
-  gap: 10,
+  flexWrap: 'wrap',
+  gap: 8,
   listStyle: 'none',
-  margin: '16px 0 0',
+  margin: 0,
   padding: 0,
 });
 
 export const member = style({
-  alignItems: 'center',
-  color: tokens.color.text.secondary,
+  alignItems: 'flex-start',
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: tokens.radius.element,
+  color: tokens.color.text.primary,
   display: 'flex',
+  flex: '1 1 132px',
+  flexDirection: 'column',
   fontSize: 14,
-  justifyContent: 'space-between',
+  gap: 4,
+  padding: '12px 14px',
+});
+
+globalStyle(`${member} span:last-child`, {
+  color: tokens.color.text.secondary,
+  fontSize: 13,
 });
 
 export const statePanel = style({

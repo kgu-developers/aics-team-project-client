@@ -15,6 +15,9 @@ export default function AdminStudentTeamManagement() {
 
   const students = studentsQuery.data ?? [];
   const teams = teamsQuery.data ?? [];
+  const selectedSection = adminSectionsFixture.find(
+    section => section.id === selectedSectionId,
+  );
   const studentsById = useMemo(
     () => new Map(students.map(student => [student.id, student])),
     [students],
@@ -27,20 +30,18 @@ export default function AdminStudentTeamManagement() {
     <main className={styles.page}>
       <div className={styles.heading}>
         <Heading level={1}>수강생/팀 관리</Heading>
-        <p>분반별 수강생과 팀 구성을 확인할 수 있습니다.</p>
       </div>
 
-      <div aria-label='분반 선택' className={styles.sectionTabs} role='tablist'>
+      <div aria-label='분반 선택' className={styles.sectionTabs} role='group'>
         {adminSectionsFixture.map(section => {
           const isSelected = section.id === selectedSectionId;
 
           return (
             <button
-              aria-selected={isSelected}
+              aria-pressed={isSelected}
               className={isSelected ? styles.activeTab : styles.tab}
               key={section.id}
               onClick={() => setSelectedSectionId(section.id)}
-              role='tab'
               type='button'
             >
               {section.displayName}
@@ -49,7 +50,11 @@ export default function AdminStudentTeamManagement() {
         })}
       </div>
 
-      {isPending ? (
+      {!selectedSectionId ? (
+        <section className={styles.statePanel}>
+          <p>분반 정보를 불러오지 못했습니다.</p>
+        </section>
+      ) : isPending ? (
         <section className={styles.statePanel}>
           <p>수강생과 팀 목록을 불러오는 중입니다.</p>
         </section>
@@ -90,7 +95,9 @@ export default function AdminStudentTeamManagement() {
           </section>
 
           <section className={styles.section}>
-            <Heading level={2}>팀 구성</Heading>
+            <Heading level={2}>
+              {selectedSection?.displayName ?? '분반'} 팀 구성
+            </Heading>
             {teams.length === 0 ? (
               <div className={styles.emptyTeamPanel}>
                 <p>등록된 팀이 없습니다.</p>

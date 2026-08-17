@@ -7,6 +7,7 @@ import * as styles from './AdminShell.css';
 const menuItems = [
   { label: '홈', to: ROUTES.ADMIN },
   { label: '공지사항', to: ROUTES.ADMIN_NOTICES },
+  { label: '수강생/팀 관리', to: ROUTES.ADMIN_STUDENT_TEAM },
 ] as const;
 
 function isMenuItemActive(pathname: string, itemPath: string) {
@@ -40,7 +41,7 @@ export default function AdminShell() {
               </Link>
             );
           })}
-          {['수강생/팀 관리', '분반별 제출물', '회의록'].map(item => (
+          {['분반별 제출물', '회의록'].map(item => (
             <button
               className={styles.navItem}
               disabled
