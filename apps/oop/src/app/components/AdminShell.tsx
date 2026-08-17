@@ -41,11 +41,16 @@ export default function AdminShell() {
             );
           })}
           {['수강생/팀 관리', '분반별 제출물', '회의록'].map(item => (
-            <button className={styles.navItem} key={item} type='button'>
+            <button
+              className={styles.navItem}
+              disabled
+              key={item}
+              type='button'
+            >
               {item}
             </button>
           ))}
-          <button className={styles.navItem} type='button'>
+          <button className={styles.navItem} disabled type='button'>
             쪽지함 <span className={styles.count}>12</span>
           </button>
         </nav>

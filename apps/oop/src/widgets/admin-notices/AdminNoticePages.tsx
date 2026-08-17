@@ -147,6 +147,7 @@ function SectionSelect({
   return (
     <div className={styles.selectWrapper}>
       <button
+        aria-label='분반'
         aria-expanded={isOpen}
         aria-haspopup='listbox'
         className={styles.selectButton}
@@ -158,6 +159,7 @@ function SectionSelect({
 
       {isOpen ? (
         <ul
+          aria-label='분반'
           aria-multiselectable='true'
           className={styles.selectMenu}
           role='listbox'

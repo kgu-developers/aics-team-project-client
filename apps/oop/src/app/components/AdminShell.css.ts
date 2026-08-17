@@ -48,6 +48,10 @@ export const activeNav = style({
   ...navBase,
   background: 'rgba(255, 255, 255, 0.06)',
 });
+globalStyle(navItem + ':disabled', {
+  color: tokens.color.text.disabled,
+  cursor: 'not-allowed',
+});
 export const count = style({
   alignItems: 'center',
   background: tokens.color.accent,
@@ -58,6 +62,9 @@ export const count = style({
   height: 20,
   justifyContent: 'center',
   width: 20,
+});
+globalStyle(navItem + ':disabled ' + count, {
+  opacity: 0.6,
 });
 export const account = style({
   alignItems: 'center',
