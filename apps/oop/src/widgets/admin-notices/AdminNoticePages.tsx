@@ -21,6 +21,16 @@ import {
   noticeSectionFilters,
 } from '../../mocks/data/adminNotices';
 
+const productDateTimeFormatter = new Intl.DateTimeFormat('sv-SE', {
+  day: '2-digit',
+  hour: '2-digit',
+  hourCycle: 'h23',
+  minute: '2-digit',
+  month: '2-digit',
+  timeZone: 'Asia/Seoul',
+  year: 'numeric',
+});
+
 function BackToList() {
   return (
     <Link className={styles.backLink} to={ROUTES.ADMIN_NOTICES}>
@@ -454,6 +464,9 @@ export function AdminNoticeEditPage() {
 }
 
 export function AdminNoticeNewPage() {
+  const [createdAt] = useState(() =>
+    productDateTimeFormatter.format(new Date()),
+  );
   const navigate = useNavigate();
   const [content, setContent] = useState('');
   const [sections, setSections] = useState<NoticeSectionFilter[]>(['전체']);
@@ -468,7 +481,7 @@ export function AdminNoticeNewPage() {
       <Card className={styles.formCard}>
         <Heading level={2}>공지사항 작성</Heading>
         <Text className={styles.meta} color='secondary'>
-          작성일 : 2026-07-07 14:30
+          작성일 : {createdAt}
         </Text>
         <div className={styles.fields}>
           <TextInput
