@@ -1,5 +1,3 @@
-import { type RefObject, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from '@tanstack/react-router';
 import {
   Button,
   Card,
@@ -8,9 +6,12 @@ import {
   TextArea,
   TextInput,
 } from '@aics/design-system';
+import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import { type RefObject, useEffect, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import * as styles from './AdminNoticePages.css';
 import {
   adminNoticeDetails,
   adminNotices,
@@ -19,7 +20,6 @@ import {
   type NoticeSectionFilter,
   noticeSectionFilters,
 } from '../../mocks/data/adminNotices';
-import * as styles from './AdminNoticePages.css';
 
 function BackToList() {
   return (
@@ -188,6 +188,7 @@ function SectionSelect({
 }
 
 export function AdminNoticeListPage() {
+  const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSection, setSelectedSection] =
     useState<NoticeSectionFilter>('전체');
@@ -288,9 +289,11 @@ export function AdminNoticeListPage() {
             다음
           </button>
         </div>
-        <Link to={ROUTES.ADMIN_NOTICE_NEW}>
-          <Button label='작성하기' variant='primary' />
-        </Link>
+        <Button
+          label='작성하기'
+          onClick={() => navigate({ to: ROUTES.ADMIN_NOTICE_NEW })}
+          variant='primary'
+        />
       </div>
     </div>
   );
@@ -298,6 +301,7 @@ export function AdminNoticeListPage() {
 
 export function AdminNoticeDetailPage() {
   const { noticeId } = useParams({ from: '/admin/notices/$noticeId/' });
+  const navigate = useNavigate();
   const deleteButtonRef = useRef<HTMLButtonElement>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const notice = adminNotices.find(candidate => candidate.id === noticeId);
@@ -340,9 +344,16 @@ export function AdminNoticeDetailPage() {
             ref={deleteButtonRef}
             variant='secondary'
           />
-          <Link params={{ noticeId: notice.id }} to={ROUTES.ADMIN_NOTICE_EDIT}>
-            <Button label='수정' variant='primary' />
-          </Link>
+          <Button
+            label='수정'
+            onClick={() =>
+              navigate({
+                to: ROUTES.ADMIN_NOTICE_EDIT,
+                params: { noticeId: notice.id },
+              })
+            }
+            variant='primary'
+          />
         </div>
       </Card>
       <DeleteNoticeDialog
@@ -356,6 +367,7 @@ export function AdminNoticeDetailPage() {
 }
 
 export function AdminNoticeEditPage() {
+  const navigate = useNavigate();
   const { noticeId } = useParams({
     from: '/admin/notices/$noticeId/edit',
   });
@@ -414,9 +426,16 @@ export function AdminNoticeEditPage() {
           </div>
         </div>
         <div className={styles.actions}>
-          <Link params={{ noticeId: notice.id }} to='/admin/notices/$noticeId'>
-            <Button label='취소' variant='secondary' />
-          </Link>
+          <Button
+            label='취소'
+            onClick={() =>
+              navigate({
+                to: '/admin/notices/$noticeId',
+                params: { noticeId: notice.id },
+              })
+            }
+            variant='secondary'
+          />
           <Button label='저장' variant='primary' />
         </div>
       </Card>
@@ -425,6 +444,7 @@ export function AdminNoticeEditPage() {
 }
 
 export function AdminNoticeNewPage() {
+  const navigate = useNavigate();
   const [content, setContent] = useState('');
   const [sections, setSections] = useState<NoticeSectionFilter[]>(['전체']);
   const [title, setTitle] = useState('');
@@ -466,9 +486,11 @@ export function AdminNoticeNewPage() {
           </div>
         </div>
         <div className={styles.actions}>
-          <Link to={ROUTES.ADMIN_NOTICES}>
-            <Button label='취소' variant='secondary' />
-          </Link>
+          <Button
+            label='취소'
+            onClick={() => navigate({ to: ROUTES.ADMIN_NOTICES })}
+            variant='secondary'
+          />
           <Button label='저장' variant='primary' />
         </div>
       </Card>
