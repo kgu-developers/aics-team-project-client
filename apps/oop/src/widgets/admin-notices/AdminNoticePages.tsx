@@ -379,6 +379,14 @@ export function AdminNoticeEditPage() {
   );
   const [title, setTitle] = useState(notice?.title ?? '');
 
+  useEffect(() => {
+    if (!notice || !detail) return;
+
+    setContent(detail.content.join('\n\n'));
+    setSections([notice.section]);
+    setTitle(notice.title);
+  }, [noticeId, notice, detail]);
+
   if (!notice || !detail) {
     return (
       <div className={styles.page}>
