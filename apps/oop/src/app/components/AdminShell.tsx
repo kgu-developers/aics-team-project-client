@@ -9,6 +9,12 @@ const menuItems = [
   { label: '공지사항', to: ROUTES.ADMIN_NOTICES },
 ] as const;
 
+function isMenuItemActive(pathname: string, itemPath: string) {
+  if (itemPath === ROUTES.ADMIN) return pathname === itemPath;
+
+  return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
+}
+
 export default function AdminShell() {
   const pathname = useRouterState({ select: state => state.location.pathname });
 
@@ -21,17 +27,19 @@ export default function AdminShell() {
           <small>2026-2 · 객체지향프로그래밍</small>
         </div>
         <nav aria-label='관리자 메뉴' className={styles.nav}>
-          {menuItems.map(item => (
-            <Link
-              className={
-                pathname === item.to ? styles.activeNav : styles.navItem
-              }
-              key={item.label}
-              to={item.to}
-            >
-              {item.label}
-            </Link>
-          ))}
+          {menuItems.map(item => {
+            const isActive = isMenuItemActive(pathname, item.to);
+
+            return (
+              <Link
+                className={isActive ? styles.activeNav : styles.navItem}
+                key={item.label}
+                to={item.to}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
           {['수강생/팀 관리', '분반별 제출물', '회의록'].map(item => (
             <button className={styles.navItem} key={item} type='button'>
               {item}
