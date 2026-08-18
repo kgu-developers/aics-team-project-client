@@ -27,7 +27,7 @@ export default function AdminStudentTeamManagement() {
   const error = studentsQuery.error ?? teamsQuery.error;
 
   return (
-    <main className={styles.page}>
+    <div className={styles.page}>
       <div className={styles.heading}>
         <Heading level={1}>수강생/팀 관리</Heading>
       </div>
@@ -126,6 +126,6 @@ export default function AdminStudentTeamManagement() {
           </section>
         </>
       )}
-    </main>
+    </div>
   );
 }
