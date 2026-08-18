@@ -1,15 +1,104 @@
-import { Heading } from '@aics/design-system';
-import { useMemo, useState } from 'react';
+import { Button, Heading } from '@aics/design-system';
+import { type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 
+import * as styles from './AdminStudentTeamManagement.css';
+import type { AdminStudent } from '../../features/admin-student-team/api/fetchAdminStudents';
 import { useAdminStudentsQuery } from '../../features/admin-student-team/queries/useAdminStudentsQuery';
 import { useTeamsQuery } from '../../features/teams/queries/useTeamsQuery';
 import { adminSectionsFixture } from '../../mocks/data/adminStudentTeams';
-import * as styles from './AdminStudentTeamManagement.css';
+
+function StudentDetailDialog({
+  isOpen,
+  onClose,
+  student,
+  triggerRef,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  student: AdminStudent | null;
+  triggerRef: RefObject<HTMLButtonElement | null>;
+}) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+
+    if (!isOpen || !dialog) return;
+
+    dialog.showModal();
+    closeButtonRef.current?.focus();
+
+    return () => {
+      if (dialog.open) dialog.close();
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !student) return null;
+
+  function handleClose() {
+    onClose();
+    requestAnimationFrame(() => triggerRef.current?.focus());
+  }
+
+  return (
+    <dialog
+      aria-labelledby='student-detail-title'
+      aria-modal='true'
+      className={styles.dialog}
+      onCancel={event => {
+        event.preventDefault();
+        handleClose();
+      }}
+      onKeyDown={event => {
+        if (event.key !== 'Escape') return;
+
+        event.preventDefault();
+        handleClose();
+      }}
+      ref={dialogRef}
+    >
+      <Heading id='student-detail-title' level={2}>
+        {student.name} 수강생 정보
+      </Heading>
+      <dl className={styles.detailList}>
+        <div className={styles.detailRow}>
+          <dt>이름</dt>
+          <dd>{student.name}</dd>
+        </div>
+        <div className={styles.detailRow}>
+          <dt>학번</dt>
+          <dd>{student.studentNumber}</dd>
+        </div>
+        <div className={styles.detailRow}>
+          <dt>전공</dt>
+          <dd>{student.major}</dd>
+        </div>
+        <div className={styles.detailRow}>
+          <dt>팀</dt>
+          <dd>{student.team?.name ?? '미배정'}</dd>
+        </div>
+      </dl>
+      <div className={styles.modalActions}>
+        <Button
+          label='닫기'
+          onClick={handleClose}
+          ref={closeButtonRef}
+          variant='secondary'
+        />
+      </div>
+    </dialog>
+  );
+}
 
 export default function AdminStudentTeamManagement() {
   const [selectedSectionId, setSelectedSectionId] = useState(
     adminSectionsFixture[0]?.id ?? '',
   );
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
+    null,
+  );
+  const studentTriggerRef = useRef<HTMLButtonElement>(null);
   const studentsQuery = useAdminStudentsQuery(selectedSectionId);
   const teamsQuery = useTeamsQuery(selectedSectionId);
 
@@ -22,9 +111,17 @@ export default function AdminStudentTeamManagement() {
     () => new Map(students.map(student => [student.id, student])),
     [students],
   );
+  const selectedStudent = selectedStudentId
+    ? (studentsById.get(selectedStudentId) ?? null)
+    : null;
 
   const isPending = studentsQuery.isPending || teamsQuery.isPending;
   const error = studentsQuery.error ?? teamsQuery.error;
+
+  function openStudentDetail(studentId: string, trigger: HTMLButtonElement) {
+    studentTriggerRef.current = trigger;
+    setSelectedStudentId(studentId);
+  }
 
   return (
     <div className={styles.page}>
@@ -113,7 +210,18 @@ export default function AdminStudentTeamManagement() {
 
                         return (
                           <li className={styles.member} key={member.id}>
-                            <span>{member.name}</span>
+                            <button
+                              className={styles.memberButton}
+                              onClick={event =>
+                                openStudentDetail(
+                                  member.id,
+                                  event.currentTarget,
+                                )
+                              }
+                              type='button'
+                            >
+                              {member.name}
+                            </button>
                             <span>{student?.studentNumber ?? '-'}</span>
                           </li>
                         );
@@ -126,6 +234,12 @@ export default function AdminStudentTeamManagement() {
           </section>
         </>
       )}
+      <StudentDetailDialog
+        isOpen={selectedStudent !== null}
+        onClose={() => setSelectedStudentId(null)}
+        student={selectedStudent}
+        triggerRef={studentTriggerRef}
+      />
     </div>
   );
 }

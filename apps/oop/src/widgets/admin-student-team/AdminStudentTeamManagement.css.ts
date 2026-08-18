@@ -127,6 +127,18 @@ export const member = style({
   padding: '12px 14px',
 });
 
+export const memberButton = style({
+  background: 'transparent',
+  border: 0,
+  color: 'inherit',
+  cursor: 'pointer',
+  font: 'inherit',
+  padding: 0,
+  textAlign: 'left',
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
+});
+
 globalStyle(`${member} span:last-child`, {
   color: tokens.color.text.secondary,
   fontSize: 13,
@@ -150,6 +162,49 @@ export const emptyTeamPanel = style({
   borderRadius: tokens.radius.container,
   color: tokens.color.text.secondary,
   padding: 24,
+});
+
+export const dialog = style({
+  background: tokens.color.background.surface,
+  border: 0,
+  borderRadius: tokens.radius.container,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 20,
+  margin: 'auto',
+  maxWidth: 480,
+  padding: 28,
+  width: 'calc(100% - 40px)',
+});
+
+globalStyle(`${dialog}::backdrop`, {
+  background: 'rgb(0 0 0 / 0.36)',
+});
+
+export const detailList = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
+  margin: 0,
+});
+
+export const detailRow = style({
+  display: 'grid',
+  gap: 16,
+  gridTemplateColumns: '72px minmax(0, 1fr)',
+});
+
+globalStyle(`${detailRow} dt`, {
+  color: tokens.color.text.secondary,
+});
+
+globalStyle(`${detailRow} dd`, {
+  margin: 0,
+});
+
+export const modalActions = style({
+  display: 'flex',
+  justifyContent: 'flex-end',
 });
 
 globalStyle(`${statePanel} p, ${emptyTeamPanel} p`, {
