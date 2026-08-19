@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@aics/api-client';
+import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
@@ -81,14 +81,55 @@ function createWrapper() {
   };
 }
 
-function renderPage() {
+function renderPage(currentUser = demoAdmin) {
   useAuthStore.getState().setAccessToken(demoAdminAccessToken);
-  useAuthStore.getState().setCurrentUser(demoAdmin);
+  useAuthStore.getState().setCurrentUser(currentUser);
 
   return render(<AdminStudentTeamManagement />, { wrapper: createWrapper() });
 }
 
 describe('AdminStudentTeamManagement', () => {
+  it('로그인한 관리자가 맡은 여러 분반을 표시하고 선택을 전환한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage({
+      ...demoAdmin,
+      sections: [
+        ...demoAdmin.sections,
+        {
+          id: 'oop-2026-2-02',
+          code: 'OOP-02',
+          name: '객체지향프로그래밍 02분반',
+          role: 'ASSISTANT',
+        },
+      ],
+    });
+
+    expect(
+      await screen.findByRole('button', { name: 'OOP-01' }),
+    ).toBeInTheDocument();
+    const secondSectionButton = screen.getByRole('button', {
+      name: 'OOP-02',
+    });
+
+    await user.click(secondSectionButton);
+
+    expect(
+      await screen.findByRole('heading', { name: 'OOP-02 팀 구성' }),
+    ).toBeInTheDocument();
+  });
+
+  it('로그인한 관리자의 분반 목록을 분반 선택 UI에 표시한다', async () => {
+    renderPage();
+
+    expect(
+      await screen.findByRole('button', { name: 'OOP-01' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '1151 (월6)' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('팀원 이름을 누르면 수강생 상세 정보를 표시하고 닫은 뒤 원래 버튼으로 포커스를 돌려준다', async () => {
     const user = userEvent.setup();
 
@@ -116,7 +157,7 @@ describe('AdminStudentTeamManagement', () => {
   it('목록을 기다리는 동안 로딩 상태를 표시한다', async () => {
     server.use(
       http.get(
-        `${API_BASE_URL}/admin/sections/:sectionId/students`,
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_STUDENTS(':sectionId')}`,
         async () => {
           await delay(1_000);
           return HttpResponse.json([]);
@@ -133,8 +174,9 @@ describe('AdminStudentTeamManagement', () => {
 
   it('수강생 목록이 비어 있으면 빈 상태를 표시한다', async () => {
     server.use(
-      http.get(`${API_BASE_URL}/admin/sections/:sectionId/students`, () =>
-        HttpResponse.json([]),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_STUDENTS(':sectionId')}`,
+        () => HttpResponse.json([]),
       ),
     );
 
@@ -143,18 +185,24 @@ describe('AdminStudentTeamManagement', () => {
     expect(
       await screen.findByText('이 분반에 등록된 수강생이 없습니다.'),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'OOP-01 팀 구성' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '1팀' })).toBeInTheDocument();
   });
 
   it('목록 요청이 실패하면 오류 상태를 표시한다', async () => {
     server.use(
-      http.get(`${API_BASE_URL}/admin/sections/:sectionId/students`, () =>
-        HttpResponse.json(
-          {
-            code: 'STUDENT_LOOKUP_FAILED',
-            message: '목록을 불러오지 못했습니다.',
-          },
-          { status: 500 },
-        ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_STUDENTS(':sectionId')}`,
+        () =>
+          HttpResponse.json(
+            {
+              code: 'STUDENT_LOOKUP_FAILED',
+              message: '목록을 불러오지 못했습니다.',
+            },
+            { status: 500 },
+          ),
       ),
     );
 

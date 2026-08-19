@@ -57,7 +57,7 @@ function getStudents(sectionId: string) {
 
 export const adminStudentTeamHandlers = [
   http.get(
-    `${API_BASE_URL}/admin/sections/:sectionId/students`,
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_STUDENTS(':sectionId')}`,
     ({ params, request }) => {
       const authorization = request.headers.get('authorization');
 

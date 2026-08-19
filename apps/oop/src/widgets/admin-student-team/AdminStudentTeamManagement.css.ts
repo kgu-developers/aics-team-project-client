@@ -174,6 +174,11 @@ export const dialog = style({
   margin: 'auto',
   maxWidth: 480,
   padding: 28,
+  selectors: {
+    '&:not([open])': {
+      display: 'none',
+    },
+  },
   width: 'calc(100% - 40px)',
 });
 

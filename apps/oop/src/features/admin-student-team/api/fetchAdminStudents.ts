@@ -1,4 +1,4 @@
-import { apiClient } from '@aics/api-client';
+import { apiClient, ENDPOINTS } from '@aics/api-client';
 
 export type AdminStudent = {
   id: string;
@@ -13,7 +13,7 @@ export type AdminStudent = {
 
 export async function fetchAdminStudents(sectionId: string) {
   const response = await apiClient.get<AdminStudent[]>(
-    `/admin/sections/${sectionId}/students`,
+    ENDPOINTS.ADMIN.SECTION_STUDENTS(sectionId),
   );
 
   return response.data;
