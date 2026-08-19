@@ -1,7 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
@@ -14,6 +14,7 @@ import AdminStudentTeamManagement from './AdminStudentTeamManagement';
 
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminStudentTeamHandlers } from '~/mocks/handlers/adminStudentTeams';
+import { renderWithRouter } from '~/test/renderWithRouter';
 
 const server = setupServer(...adminStudentTeamHandlers);
 const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
@@ -85,7 +86,13 @@ function renderPage(currentUser = demoAdmin) {
   useAuthStore.getState().setAccessToken(demoAdminAccessToken);
   useAuthStore.getState().setCurrentUser(currentUser);
 
-  return render(<AdminStudentTeamManagement />, { wrapper: createWrapper() });
+  const Wrapper = createWrapper();
+
+  return renderWithRouter(
+    <Wrapper>
+      <AdminStudentTeamManagement />
+    </Wrapper>,
+  );
 }
 
 describe('AdminStudentTeamManagement', () => {

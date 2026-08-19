@@ -1,5 +1,8 @@
 import { Heading } from '@aics/design-system';
+import { Link } from '@tanstack/react-router';
 import { useMemo, useRef, useState } from 'react';
+
+import { ROUTES } from '~/app/constants/routes';
 
 import * as styles from './AdminStudentTeamManagement.css';
 import StudentDetailDialog from '../../features/admin-student-team/components/StudentDetailDialog';
@@ -125,7 +128,14 @@ export default function AdminStudentTeamManagement() {
               <div className={styles.teamGrid}>
                 {teams.map(team => (
                   <article className={styles.teamCard} key={team.id}>
-                    <h3 className={styles.teamName}>{team.name}</h3>
+                    <h3 className={styles.teamName}>
+                      <Link
+                        params={{ teamId: team.id }}
+                        to={ROUTES.ADMIN_TEAM_DETAIL}
+                      >
+                        {team.name}
+                      </Link>
+                    </h3>
                     <ul className={styles.memberList}>
                       {team.members.map(member => {
                         const student = studentsById.get(member.id);
