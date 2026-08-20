@@ -1,14 +1,22 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
+
+vi.mock('@tanstack/react-router', async importOriginal => ({
+  ...(await importOriginal<typeof import('@tanstack/react-router')>()),
+  useNavigate: () => mockNavigate,
+}));
 
 import StudentHomeHero from './StudentHomeHero';
 
 import { studentHomeDashboardFixture } from '~/mocks/data/studentHome';
+import { renderWithRouter } from '~/test/renderWithRouter';
 
 describe('StudentHomeHero', () => {
-  it('아직 연결되지 않은 히어로 CTA를 비활성 안내로 표시한다', () => {
-    render(
+  it('별도 페이지가 없는 주제 선정 CTA는 진행 상태로 비활성 표시한다', () => {
+    renderWithRouter(
       <StudentHomeHero
         announcements={studentHomeDashboardFixture.announcements}
         hero={studentHomeDashboardFixture.hero}
@@ -25,7 +33,7 @@ describe('StudentHomeHero', () => {
   it('커스텀 바로가기 탭을 클릭해서 전환한다', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithRouter(
       <StudentHomeHero
         announcements={studentHomeDashboardFixture.announcements}
         hero={studentHomeDashboardFixture.hero}
@@ -46,7 +54,7 @@ describe('StudentHomeHero', () => {
   it('액션 플랜 탭에 전용 빈 상태 문구를 표시한다', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithRouter(
       <StudentHomeHero
         announcements={studentHomeDashboardFixture.announcements}
         hero={studentHomeDashboardFixture.hero}
@@ -63,7 +71,7 @@ describe('StudentHomeHero', () => {
   it('방향키로 다음 탭을 선택하고 포커스를 이동한다', async () => {
     const user = userEvent.setup();
 
-    render(
+    renderWithRouter(
       <StudentHomeHero
         announcements={studentHomeDashboardFixture.announcements}
         hero={studentHomeDashboardFixture.hero}
@@ -80,7 +88,7 @@ describe('StudentHomeHero', () => {
   });
 
   it('공지가 없으면 빈 상태를 표시한다', () => {
-    render(
+    renderWithRouter(
       <StudentHomeHero
         announcements={[]}
         hero={studentHomeDashboardFixture.hero}
@@ -91,5 +99,25 @@ describe('StudentHomeHero', () => {
     expect(
       screen.queryByRole('button', { name: '더보기' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('연결된 CTA를 클릭하면 지정한 경로로 이동한다', async () => {
+    const user = userEvent.setup();
+    const hero = {
+      ...studentHomeDashboardFixture.hero,
+      actionTo: '/student/milestones',
+    };
+    mockNavigate.mockClear();
+
+    renderWithRouter(
+      <StudentHomeHero
+        announcements={studentHomeDashboardFixture.announcements}
+        hero={hero}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: hero.ctaLabel }));
+
+    expect(mockNavigate).toHaveBeenCalledWith({ to: hero.actionTo });
   });
 });

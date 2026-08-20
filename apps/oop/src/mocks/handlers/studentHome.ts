@@ -2,10 +2,11 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
 import {
+  createStudentHomeDashboardWithTopicBoard,
   createStudentHomeDashboardPreview,
   isMilestonePreviewScenario,
-  studentHomeDashboardFixture,
 } from '../data/studentHome';
+import { getTopicBoard } from '../data/topic';
 import { getDemoStudentAccount } from '../data/users';
 
 const demoStudentSectionId = 'oop-2026-2-01';
@@ -17,7 +18,8 @@ export const studentHomeHandlers = [
       const authorization = request.headers.get('authorization');
 
       const accessToken = authorization?.replace('Bearer ', '') ?? null;
-      if (!getDemoStudentAccount(accessToken)) {
+      const account = getDemoStudentAccount(accessToken);
+      if (!account) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '학생 대시보드에 로그인해 주세요.' },
           { status: 401 },
@@ -44,7 +46,15 @@ export const studentHomeHandlers = [
       const previewScenario = request.headers.get('X-OOP-Milestone-Preview');
       const dashboard = isMilestonePreviewScenario(previewScenario)
         ? createStudentHomeDashboardPreview(previewScenario)
-        : studentHomeDashboardFixture;
+        : createStudentHomeDashboardWithTopicBoard(
+            getTopicBoard(
+              account.user.studentNumber === '20260001'
+                ? 'student-a'
+                : account.user.studentNumber === '20260003'
+                  ? 'student-b'
+                  : 'student-c',
+            ),
+          );
 
       return HttpResponse.json(dashboard);
     },

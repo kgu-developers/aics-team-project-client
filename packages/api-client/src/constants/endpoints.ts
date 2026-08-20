@@ -16,6 +16,10 @@ export const ENDPOINTS = {
   TEAM: {
     ROOT: '/teams',
   },
+  TOPIC: {
+    BOARD: (sectionId: string) => `/sections/${sectionId}/project-topic`,
+    VOTE: (sectionId: string) => `/sections/${sectionId}/project-topic/vote`,
+  },
   TEAM_ASSIGNMENT: {
     ROOT: (sectionId: string) => `/sections/${sectionId}/team-assignment`,
     SURVEY: (sectionId: string) =>
