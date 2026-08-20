@@ -9,7 +9,14 @@ This is the single source of truth for client-side server-state boundaries.
 - `apps/oop/src/features/<domain>/queries`: app-local Query/Mutation hooks.
 - Components consume hooks; they do not call axios, `apiClient`, or HTTP functions directly.
 
-HTTP function prefixes are `fetch` (GET), `submit` (POST), `update` (PUT/PATCH), and `remove` (DELETE). Export new shared types and API functions from their package entry points. UI side effects such as navigation, toast, caching, and invalidation stay in app hooks/components.
+HTTP function prefixes are `fetch` (GET), `submit` (POST), `update` (PUT/PATCH), and `remove` (DELETE). `save` is allowed for an explicit idempotent draft/save action even when it uses PUT; keep it distinct from a final `submit` action. Export new shared types and API functions from their package entry points. UI side effects such as navigation, toast, caching, and invalidation stay in app hooks/components.
+
+## API client file granularity
+
+- Each externally consumed HTTP operation gets one lowerCamelCase source file named exactly after its exported function. For example, `submitTeamAssignmentSurvey.ts` exports `submitTeamAssignmentSurvey()`.
+- Group operations in their domain directory under `packages/api-client/src/<domain>/`; the directory `index.ts` only re-exports those operations, and the package root re-exports the domain boundary.
+- Do not add several independent endpoint operations to one source file. Axios client setup, endpoint constants, and private shared mappers/helpers may remain separate when they are not operations.
+- Apply the same one-file-per-exported-Hook rule in `apps/oop/src/features/<domain>/queries/`: `useSubmitTeamAssignmentSurveyMutation.ts` exports `useSubmitTeamAssignmentSurveyMutation()`. The query-directory `index.ts` re-exports those public Hooks and shared query-key helpers; consumers import from that barrel.
 
 ## React Query
 
