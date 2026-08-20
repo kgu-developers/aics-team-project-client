@@ -1,7 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
-import { adminTeamDashboardFixture } from '../data/adminTeamDashboard';
+import { adminTeamDashboardFixtures } from '../data/adminTeamDashboard';
 import { demoAdminAccessToken } from '../data/users';
 
 export const adminTeamDashboardHandlers = [
@@ -18,15 +18,18 @@ export const adminTeamDashboardHandlers = [
       }
 
       const teamId = params.teamId;
+      const teamDashboard = adminTeamDashboardFixtures.find(
+        fixture => fixture.id === teamId,
+      );
 
-      if (teamId !== adminTeamDashboardFixture.id) {
+      if (!teamDashboard) {
         return HttpResponse.json(
           { code: 'TEAM_NOT_FOUND', message: '팀을 찾을 수 없습니다.' },
           { status: 404 },
         );
       }
 
-      return HttpResponse.json(adminTeamDashboardFixture);
+      return HttpResponse.json(teamDashboard);
     },
   ),
 ];

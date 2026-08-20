@@ -72,7 +72,7 @@ afterAll(() => {
 
 function renderPage(teamId: string) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
   const rootRoute = createRootRoute();
   const teamDashboardRoute = createRoute({
@@ -121,6 +121,18 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('미제출')).toBeInTheDocument();
     expect(screen.getByText('2026-08-17 제출')).toBeInTheDocument();
     expect(screen.getByText('평가 완료')).toBeInTheDocument();
+  });
+
+  it('수강생/팀 관리에 등록된 2팀 정보를 표시한다', async () => {
+    renderPage('team-1151-2');
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'OOP-01반 - 2팀 대시보드',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '박지훈' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '최유진' })).toBeInTheDocument();
   });
 
   it('팀원 이름을 누르면 상세 정보를 표시하고 닫은 뒤 포커스를 돌려준다', async () => {
@@ -172,7 +184,12 @@ describe('AdminTeamDashboard', () => {
     expect(
       await screen.findByText('팀 정보를 찾을 수 없습니다.'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '다시 시도' })).toBeEnabled();
+    expect(
+      screen.getByRole('link', { name: '수강생/팀 관리로' }),
+    ).toHaveAttribute('href', '/admin/student-team');
+    expect(
+      screen.queryByRole('button', { name: '다시 시도' }),
+    ).not.toBeInTheDocument();
   });
 
   it('응답을 기다리는 동안 로딩 상태를 표시한 뒤 팀 정보를 표시한다', async () => {
@@ -225,6 +242,12 @@ describe('AdminTeamDashboard', () => {
     expect(
       screen.getByText('담당 분반과 관리자 권한을 확인해 주세요.'),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: '수강생/팀 관리로' }),
+    ).toHaveAttribute('href', '/admin/student-team');
+    expect(
+      screen.queryByRole('button', { name: '다시 시도' }),
+    ).not.toBeInTheDocument();
   });
 
   it('응답을 받지 못하면 네트워크 오류 안내를 표시한다', async () => {
@@ -240,6 +263,10 @@ describe('AdminTeamDashboard', () => {
     expect(
       await screen.findByText('네트워크 연결을 확인한 뒤 다시 시도해 주세요.'),
     ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeEnabled();
+    expect(
+      screen.getByRole('link', { name: '수강생/팀 관리로' }),
+    ).toHaveAttribute('href', '/admin/student-team');
   });
 
   it('오류가 해결된 뒤 다시 시도하면 팀 정보를 표시한다', async () => {
@@ -252,7 +279,7 @@ describe('AdminTeamDashboard', () => {
         () => {
           requestCount += 1;
 
-          return requestCount === 1
+          return requestCount <= 2
             ? HttpResponse.error()
             : HttpResponse.json(adminTeamDashboardFixture);
         },

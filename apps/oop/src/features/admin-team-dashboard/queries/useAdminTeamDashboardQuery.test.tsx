@@ -38,7 +38,7 @@ afterAll(() => server.close());
 
 function createWrapper() {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
 
   return function Wrapper({ children }: PropsWithChildren) {
@@ -69,5 +69,60 @@ describe('useAdminTeamDashboardQuery', () => {
     expect(dashboardRequest).toHaveBeenCalledOnce();
     expect(dashboardRequest).toHaveBeenCalledWith('team-1151-1');
     expect(result.current.data).toEqual(adminTeamDashboardFixture);
+  });
+
+  it('404 응답은 자동으로 다시 요청하지 않는다', async () => {
+    const request = vi.fn();
+
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_DASHBOARD(':teamId')}`,
+        () => {
+          request();
+          return HttpResponse.json(
+            { code: 'TEAM_NOT_FOUND', message: '팀을 찾을 수 없습니다.' },
+            { status: 404 },
+          );
+        },
+      ),
+    );
+
+    const { result } = renderHook(
+      () => useAdminTeamDashboardQuery('not-found'),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(request).toHaveBeenCalledOnce();
+  });
+
+  it('서버 오류는 한 번 자동으로 다시 요청한다', async () => {
+    const request = vi.fn();
+
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_DASHBOARD(':teamId')}`,
+        () => {
+          request();
+
+          return request.mock.calls.length === 1
+            ? HttpResponse.json(
+                { code: 'INTERNAL_SERVER_ERROR', message: '서버 오류' },
+                { status: 500 },
+              )
+            : HttpResponse.json(adminTeamDashboardFixture);
+        },
+      ),
+    );
+
+    const { result } = renderHook(
+      () => useAdminTeamDashboardQuery('team-1151-1'),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(request).toHaveBeenCalledTimes(2);
   });
 });

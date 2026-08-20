@@ -26,6 +26,14 @@ export const backLink = style({
   textDecoration: 'none',
 });
 
+export const errorActions = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 16,
+  justifyContent: 'center',
+});
+
 export const teamInfoCard = style({
   background: tokens.color.background.surface,
   border: `1px solid ${tokens.color.border.base}`,

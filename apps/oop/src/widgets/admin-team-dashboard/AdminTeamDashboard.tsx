@@ -14,6 +14,7 @@ import AdminTeamMilestoneProgress from './AdminTeamMilestoneProgress';
 type TeamDashboardErrorContent = {
   title: string;
   description: string;
+  canRetry: boolean;
 };
 
 function getTeamDashboardErrorContent(
@@ -23,6 +24,7 @@ function getTeamDashboardErrorContent(
     return {
       title: '팀 정보를 불러오지 못했습니다.',
       description: '잠시 후 다시 시도해 주세요.',
+      canRetry: true,
     };
   }
 
@@ -30,6 +32,7 @@ function getTeamDashboardErrorContent(
     return {
       title: '팀 정보를 불러오지 못했습니다.',
       description: '네트워크 연결을 확인한 뒤 다시 시도해 주세요.',
+      canRetry: true,
     };
   }
 
@@ -38,21 +41,25 @@ function getTeamDashboardErrorContent(
       return {
         title: '로그인이 필요합니다.',
         description: '세션을 확인한 뒤 다시 로그인해 주세요.',
+        canRetry: false,
       };
     case 403:
       return {
         title: '이 팀에 접근할 수 없습니다.',
         description: '담당 분반과 관리자 권한을 확인해 주세요.',
+        canRetry: false,
       };
     case 404:
       return {
         title: '팀 정보를 찾을 수 없습니다.',
         description: '팀이 존재하는지 수강생/팀 관리에서 확인해 주세요.',
+        canRetry: false,
       };
     default:
       return {
         title: '팀 정보를 불러오지 못했습니다.',
         description: '잠시 후 다시 시도해 주세요.',
+        canRetry: true,
       };
   }
 }
@@ -84,14 +91,21 @@ export default function AdminTeamDashboard() {
       <div className={styles.page}>
         <EmptyState
           actions={
-            <Button
-              clickAction={async () => {
-                await teamDashboardQuery.refetch();
-              }}
-              isLoading={teamDashboardQuery.isFetching}
-              label='다시 시도'
-              variant='primary'
-            />
+            <div className={styles.errorActions}>
+              {errorContent.canRetry ? (
+                <Button
+                  clickAction={async () => {
+                    await teamDashboardQuery.refetch();
+                  }}
+                  isLoading={teamDashboardQuery.isFetching}
+                  label='다시 시도'
+                  variant='primary'
+                />
+              ) : null}
+              <Link className={styles.backLink} to={ROUTES.ADMIN_STUDENT_TEAM}>
+                수강생/팀 관리로
+              </Link>
+            </div>
           }
           description={errorContent.description}
           headingLevel={2}
