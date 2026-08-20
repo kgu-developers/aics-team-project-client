@@ -1,5 +1,6 @@
-import { Heading, Text } from '@aics/design-system';
+import { Button, EmptyState, Heading, Text } from '@aics/design-system';
 import { Link, useParams } from '@tanstack/react-router';
+import { isAxiosError } from 'axios';
 import { useEffect, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -9,6 +10,52 @@ import { useAdminTeamDashboardQuery } from '~/features/admin-team-dashboard/quer
 
 import * as styles from './AdminTeamDashboard.css';
 import AdminTeamMilestoneProgress from './AdminTeamMilestoneProgress';
+
+type TeamDashboardErrorContent = {
+  title: string;
+  description: string;
+};
+
+function getTeamDashboardErrorContent(
+  error: unknown,
+): TeamDashboardErrorContent {
+  if (!isAxiosError(error)) {
+    return {
+      title: '팀 정보를 불러오지 못했습니다.',
+      description: '잠시 후 다시 시도해 주세요.',
+    };
+  }
+
+  if (!error.response) {
+    return {
+      title: '팀 정보를 불러오지 못했습니다.',
+      description: '네트워크 연결을 확인한 뒤 다시 시도해 주세요.',
+    };
+  }
+
+  switch (error.response.status) {
+    case 401:
+      return {
+        title: '로그인이 필요합니다.',
+        description: '세션을 확인한 뒤 다시 로그인해 주세요.',
+      };
+    case 403:
+      return {
+        title: '이 팀에 접근할 수 없습니다.',
+        description: '담당 분반과 관리자 권한을 확인해 주세요.',
+      };
+    case 404:
+      return {
+        title: '팀 정보를 찾을 수 없습니다.',
+        description: '팀이 존재하는지 수강생/팀 관리에서 확인해 주세요.',
+      };
+    default:
+      return {
+        title: '팀 정보를 불러오지 못했습니다.',
+        description: '잠시 후 다시 시도해 주세요.',
+      };
+  }
+}
 
 export default function AdminTeamDashboard() {
   const { teamId } = useParams({ from: '/admin/teams/$teamId' });
@@ -23,15 +70,33 @@ export default function AdminTeamDashboard() {
   if (teamDashboardQuery.isPending) {
     return (
       <div className={styles.page}>
-        <Text>팀 정보를 불러오는 중입니다.</Text>
+        <p aria-live='polite' role='status'>
+          팀 정보를 불러오는 중입니다.
+        </p>
       </div>
     );
   }
 
   if (teamDashboardQuery.isError) {
+    const errorContent = getTeamDashboardErrorContent(teamDashboardQuery.error);
+
     return (
       <div className={styles.page}>
-        <Text>팀 정보를 불러오지 못했습니다.</Text>
+        <EmptyState
+          actions={
+            <Button
+              clickAction={async () => {
+                await teamDashboardQuery.refetch();
+              }}
+              isLoading={teamDashboardQuery.isFetching}
+              label='다시 시도'
+              variant='primary'
+            />
+          }
+          description={errorContent.description}
+          headingLevel={2}
+          title={errorContent.title}
+        />
       </div>
     );
   }

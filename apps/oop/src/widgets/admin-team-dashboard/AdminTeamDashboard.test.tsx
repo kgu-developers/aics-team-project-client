@@ -10,7 +10,7 @@ import {
 } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HttpResponse, http } from 'msw';
+import { HttpResponse, delay, http } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
@@ -170,7 +170,103 @@ describe('AdminTeamDashboard', () => {
     renderPage('not-found');
 
     expect(
-      await screen.findByText('팀 정보를 불러오지 못했습니다.'),
+      await screen.findByText('팀 정보를 찾을 수 없습니다.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '다시 시도' })).toBeEnabled();
+  });
+
+  it('응답을 기다리는 동안 로딩 상태를 표시한 뒤 팀 정보를 표시한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_DASHBOARD(':teamId')}`,
+        async () => {
+          await delay(500);
+          return HttpResponse.json(adminTeamDashboardFixture);
+        },
+      ),
+    );
+
+    renderPage('team-1151-1');
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      '팀 정보를 불러오는 중입니다.',
+    );
+    expect(
+      await screen.findByRole(
+        'heading',
+        {
+          name: 'OOP-01반 - 1팀 대시보드',
+        },
+        { timeout: 2_000 },
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('접근할 수 없는 팀이면 권한 안내를 표시한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_DASHBOARD(':teamId')}`,
+        () =>
+          HttpResponse.json(
+            {
+              code: 'TEAM_ACCESS_DENIED',
+              message: '이 팀에 접근할 수 없습니다.',
+            },
+            { status: 403 },
+          ),
+      ),
+    );
+
+    renderPage('team-1151-1');
+
+    expect(
+      await screen.findByText('이 팀에 접근할 수 없습니다.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('담당 분반과 관리자 권한을 확인해 주세요.'),
+    ).toBeInTheDocument();
+  });
+
+  it('응답을 받지 못하면 네트워크 오류 안내를 표시한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_DASHBOARD(':teamId')}`,
+        () => HttpResponse.error(),
+      ),
+    );
+
+    renderPage('team-1151-1');
+
+    expect(
+      await screen.findByText('네트워크 연결을 확인한 뒤 다시 시도해 주세요.'),
+    ).toBeInTheDocument();
+  });
+
+  it('오류가 해결된 뒤 다시 시도하면 팀 정보를 표시한다', async () => {
+    const user = userEvent.setup();
+    let requestCount = 0;
+
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_DASHBOARD(':teamId')}`,
+        () => {
+          requestCount += 1;
+
+          return requestCount === 1
+            ? HttpResponse.error()
+            : HttpResponse.json(adminTeamDashboardFixture);
+        },
+      ),
+    );
+
+    renderPage('team-1151-1');
+
+    await user.click(await screen.findByRole('button', { name: '다시 시도' }));
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'OOP-01반 - 1팀 대시보드',
+      }),
     ).toBeInTheDocument();
   });
 
