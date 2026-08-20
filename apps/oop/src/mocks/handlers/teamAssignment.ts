@@ -120,10 +120,10 @@ export const teamAssignmentHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.ROOT(':sectionId')}`,
     ({ params, request }) => {
-      const preview = applyDevelopmentPreview(request);
-      if (preview) return HttpResponse.json(preview);
       const denied = guard(request, String(params.sectionId));
       if (denied) return denied;
+      const preview = applyDevelopmentPreview(request);
+      if (preview) return HttpResponse.json(preview);
       return HttpResponse.json(getProjection(request));
     },
   ),
@@ -145,7 +145,11 @@ export const teamAssignmentHandlers = [
       if (denied) return denied;
 
       const accessToken = getAccessToken(request)!;
-      const requesterId = studentIdByAccessToken[accessToken]!;
+      const requesterId = studentIdByAccessToken[accessToken];
+      const requesterProjection = projectionsByAccessToken[accessToken];
+      if (!requesterId || requesterProjection?.phase !== 'survey') {
+        return HttpResponse.json({ code: 'PHASE_CLOSED' }, { status: 403 });
+      }
       const { candidateId } = (await request.json()) as { candidateId: string };
       const candidate = partnerCandidates[candidateId];
       if (!candidate || candidateId === requesterId) {

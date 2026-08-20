@@ -123,6 +123,7 @@ export function PartnerRequestPanel({ projection }: PartnerRequestPanelProps) {
               variant='primary'
             />
             <Button
+              isLoading={respondToPartnerRequest.isPending}
               label='거절'
               onClick={() => void rejectPartnerRequest()}
               variant='secondary'
@@ -168,6 +169,7 @@ export function PartnerRequestPanel({ projection }: PartnerRequestPanelProps) {
           {partnerCandidates.data?.map(candidate => (
             <button
               className={styles.partnerCandidate}
+              disabled={requestPartner.isPending}
               key={candidate.id}
               onClick={() => void createPartnerRequest(candidate.id)}
               type='button'

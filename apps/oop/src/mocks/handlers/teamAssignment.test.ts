@@ -12,7 +12,12 @@ import {
   teamAssignmentHandlers,
 } from './teamAssignment';
 import {
+  assignedFixture,
+  demoTeamAssignmentSectionId,
+} from '../data/teamAssignment';
+import {
   demoAccessToken,
+  demoCompletedAccessToken,
   demoPartnerAccessToken,
   demoPartnerStudent,
   demoStudent,
@@ -57,6 +62,56 @@ describe('team assignment MSW contract', () => {
 
     expect(projection.phase).toBe('result');
     expect(projection.assignedTeam).toBeDefined();
+  });
+
+  it('인증되지 않은 요청에는 개발 preview를 제공하지 않는다', async () => {
+    setApiAccessToken(null);
+
+    await expect(
+      fetchTeamAssignmentProjection(
+        demoTeamAssignmentSectionId,
+        'firstMeeting',
+      ),
+    ).rejects.toMatchObject({
+      response: { data: { code: 'UNAUTHORIZED' }, status: 401 },
+    });
+  });
+
+  it('완료된 학생은 파트너 신청을 만들거나 상대 학생 상태를 바꾸지 못한다', async () => {
+    setApiAccessToken(demoPartnerAccessToken);
+    const recipientBefore = await fetchTeamAssignmentProjection(
+      demoTeamAssignmentSectionId,
+    );
+
+    setApiAccessToken(demoCompletedAccessToken);
+    await expect(
+      requestPartner(demoTeamAssignmentSectionId, 'student-b'),
+    ).rejects.toMatchObject({
+      response: { data: { code: 'PHASE_CLOSED' }, status: 403 },
+    });
+
+    setApiAccessToken(demoPartnerAccessToken);
+    await expect(
+      fetchTeamAssignmentProjection(demoTeamAssignmentSectionId),
+    ).resolves.toEqual(recipientBefore);
+  });
+
+  it('연락처는 첫 만남 단계에서만 projection에 포함한다', () => {
+    expect(assignedFixture('result').assignedTeam?.members).toEqual(
+      expect.not.arrayContaining([
+        expect.objectContaining({ phoneNumber: expect.any(String) }),
+      ]),
+    );
+    expect(assignedFixture('firstMeeting').assignedTeam?.members).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ phoneNumber: expect.any(String) }),
+      ]),
+    );
+    expect(assignedFixture('completed').assignedTeam?.members).toEqual(
+      expect.not.arrayContaining([
+        expect.objectContaining({ phoneNumber: expect.any(String) }),
+      ]),
+    );
   });
 
   it('파트너 신청의 발신자는 recipient를, 수신자는 requester를 확인한다', async () => {

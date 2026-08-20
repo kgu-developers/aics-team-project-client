@@ -55,17 +55,7 @@ export default function TeamAssignmentFlow({
   if (query.isPending) return <p>팀 온보딩 상태를 불러오는 중입니다.</p>;
 
   if (query.isError || !query.data) {
-    return (
-      <OnboardingRecovery
-        description='잠시 후 다시 확인하거나, 계속되면 다시 로그인해 주세요.'
-        onRelogin={() => {
-          clearSession();
-          void navigate({ to: ROUTES.LOGIN });
-        }}
-        onRetry={() => void query.refetch()}
-        title='팀 온보딩 상태를 불러오지 못했어요'
-      />
-    );
+    return <Navigate replace to={ROUTES.STUDENT.HOME} />;
   }
 
   if (

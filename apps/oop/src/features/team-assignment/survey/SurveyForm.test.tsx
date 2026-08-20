@@ -1,7 +1,9 @@
+import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { delay, http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import type { PropsWithChildren } from 'react';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
@@ -103,6 +105,38 @@ describe('SurveyForm', () => {
     expect(
       screen.getByText('팀프로젝트 팀구성을 위한 설문에 응답해 주세요.'),
     ).toBeInTheDocument();
+  });
+
+  it('파트너 신청 중에는 같은 후보에게 중복 요청을 보내지 않는다', async () => {
+    const user = userEvent.setup();
+    let requestCount = 0;
+    server.use(
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.PARTNER_REQUESTS(':sectionId')}`,
+        async () => {
+          requestCount += 1;
+          await delay(100);
+          return HttpResponse.json(teamAssignmentFixture);
+        },
+      ),
+    );
+    renderSurvey();
+
+    await user.click(screen.getByRole('button', { name: '시작하기' }));
+    await user.click(screen.getByLabelText('개발'));
+    await user.type(
+      screen.getByLabelText('같이 팀을 할 파트너가 있으면 찾아보세요.'),
+      demoPartnerStudent.studentNumber,
+    );
+
+    const candidateButton = await screen.findByRole('button', {
+      name: new RegExp(demoPartnerStudent.name),
+    });
+    await user.click(candidateButton);
+
+    expect(candidateButton).toBeDisabled();
+    await user.click(candidateButton);
+    await waitFor(() => expect(requestCount).toBe(1));
   });
 
   it('제출 전에 확인 Dialog를 열고 이전 설문 단계로 돌아갈 수 있다', async () => {

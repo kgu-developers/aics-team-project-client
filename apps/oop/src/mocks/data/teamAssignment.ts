@@ -23,7 +23,7 @@ export const assignedFixture = (
         studentNumber: '20261001',
         department: '컴퓨터공학과',
         role: '프론트엔드',
-        ...(phase !== 'result' ? { phoneNumber: '010-8696-9149' } : {}),
+        ...(phase === 'firstMeeting' ? { phoneNumber: '010-8696-9149' } : {}),
       },
       {
         id: 'synthetic-2',
@@ -31,7 +31,7 @@ export const assignedFixture = (
         studentNumber: '20261002',
         department: '인공지능학과',
         role: '백엔드',
-        ...(phase !== 'result' ? { phoneNumber: '010-1234-1234' } : {}),
+        ...(phase === 'firstMeeting' ? { phoneNumber: '010-1234-1234' } : {}),
       },
     ],
   },

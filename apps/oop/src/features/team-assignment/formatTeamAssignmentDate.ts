@@ -14,6 +14,7 @@ export function formatTeamAssignmentDate(isoDate?: string) {
     hour: '2-digit',
     minute: '2-digit',
     month: 'long',
+    timeZone: 'Asia/Seoul',
     year: 'numeric',
   }).format(date);
 }

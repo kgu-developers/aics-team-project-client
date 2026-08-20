@@ -9,7 +9,7 @@ This is the single source of truth for client-side server-state boundaries.
 - `apps/oop/src/features/<domain>/queries`: app-local Query/Mutation hooks.
 - Components consume hooks; they do not call axios, `apiClient`, or HTTP functions directly.
 
-HTTP function prefixes are `fetch` (GET), `submit` (POST), `update` (PUT/PATCH), and `remove` (DELETE). `save` is allowed for an explicit idempotent draft/save action even when it uses PUT; keep it distinct from a final `submit` action. Export new shared types and API functions from their package entry points. UI side effects such as navigation, toast, caching, and invalidation stay in app hooks/components.
+HTTP function prefixes are `fetch` (GET), `submit` (POST), `update` (PUT/PATCH), and `remove` (DELETE). `save` is allowed for an explicit idempotent draft/save action even when it uses PUT; keep it distinct from a final `submit` action. Action-specific names such as `searchPartnerCandidates`, `requestPartner`, `respondToPartnerRequest`, `cancelPartnerRequest`, and `confirmTeamLeader` are also allowed when they make a domain operation clearer than a generic CRUD verb. Export new shared types and API functions from their package entry points. UI side effects such as navigation, toast, caching, and invalidation stay in app hooks/components.
 
 ## API client file granularity
 
