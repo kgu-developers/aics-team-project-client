@@ -6,7 +6,7 @@ import {
   isMilestonePreviewScenario,
   studentHomeDashboardFixture,
 } from '../data/studentHome';
-import { demoAccessToken } from '../data/users';
+import { getDemoStudentAccount } from '../data/users';
 
 const demoStudentSectionId = 'oop-2026-2-01';
 
@@ -16,7 +16,8 @@ export const studentHomeHandlers = [
     ({ params, request }) => {
       const authorization = request.headers.get('authorization');
 
-      if (authorization !== `Bearer ${demoAccessToken}`) {
+      const accessToken = authorization?.replace('Bearer ', '') ?? null;
+      if (!getDemoStudentAccount(accessToken)) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '학생 대시보드에 로그인해 주세요.' },
           { status: 401 },

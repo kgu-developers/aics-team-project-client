@@ -8,3 +8,13 @@ export { fetchTeams } from './teams/fetchTeams';
 export { submitTeam } from './teams/submitTeam';
 export { ENDPOINTS } from './constants/endpoints';
 export { fetchStudentHomeDashboard } from './studentHome/fetchStudentHomeDashboard';
+export {
+  cancelPartnerRequest,
+  confirmTeamLeader,
+  fetchTeamAssignmentProjection,
+  requestPartner,
+  respondToPartnerRequest,
+  saveTeamAssignmentSurvey,
+  searchPartnerCandidates,
+  submitTeamAssignmentSurvey,
+} from './team-assignment';

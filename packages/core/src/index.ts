@@ -14,6 +14,18 @@ export type { Section } from './section/types';
 export type { Submission } from './submission/types';
 export type { SubmitTeamInput, Team, TeamMember } from './team/types';
 export type {
+  ConfirmTeamLeaderInput,
+  IncomingPartnerRequest,
+  OutgoingPartnerRequest,
+  PartnerCandidate,
+  SaveTeamAssignmentSurveyInput,
+  TeamAssignmentMember,
+  TeamAssignmentPhase,
+  TeamAssignmentProjection,
+  TeamAssignmentSurvey,
+  TeamRolePreference,
+} from './team-assignment/types';
+export type {
   StudentHomeAnnouncement,
   StudentHomeDashboard,
   StudentHomeFeedbackMessage,
