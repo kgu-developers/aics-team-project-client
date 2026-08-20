@@ -1,6 +1,6 @@
 ## Notion Ticket
 
-- Ticket: ATP-
+- Ticket: <ticket-id>
 - Sprint:
 - Notion URL:
 

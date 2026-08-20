@@ -38,8 +38,11 @@ The primary UX is **natural language**. Do not ask teammates to memorize or run 
 ## Work convention
 
 - Notion tickets are the source of truth for sprint/ticket planning.
-- Branches use `<type>/ATP-<number>`, e.g. `chore/ATP-1`.
-- PR titles use `[ATP-<number>] 작업명`.
+- Use the ticket ID assigned to the work. The current OOP milestone/editor sprint uses `KD3-<number>`.
+- Branches use `<type>/<ticket-id>`, for example `feature/KD3-89`.
+- Commits use `<type>(<scope>): <ticket-id> <summary>`, for example `feat(editor): KD3-89 공통 에디터 조회 기반 추가`.
+- PR titles use `[<ticket-id>] <summary>`, for example `[KD3-89] 공통 문서 에디터 기반`.
+- Do not invent alphabetic sub-ticket IDs such as `KD3-89A`. Split work by the next assigned numeric ticket ID instead.
 - Keep GitHub Issues optional; do not make them the main workflow by default.
 
 ## Verification
