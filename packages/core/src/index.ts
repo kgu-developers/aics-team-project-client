@@ -12,6 +12,12 @@ export type { Review } from './review/types';
 export type { Rubric } from './rubric/types';
 export type { Section } from './section/types';
 export type { Submission } from './submission/types';
+export type {
+  SubmitTopicCandidateInput,
+  SubmitTopicVoteInput,
+  TopicBoard,
+  TopicCandidate,
+} from './topic/types';
 export type { SubmitTeamInput, Team, TeamMember } from './team/types';
 export type {
   ConfirmTeamLeaderInput,

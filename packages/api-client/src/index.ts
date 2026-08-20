@@ -9,6 +9,12 @@ export { submitTeam } from './teams/submitTeam';
 export { ENDPOINTS } from './constants/endpoints';
 export { fetchStudentHomeDashboard } from './studentHome/fetchStudentHomeDashboard';
 export {
+  fetchTopicBoard,
+  removeTopicVote,
+  submitTopicCandidate,
+  submitTopicVote,
+} from './topic';
+export {
   cancelPartnerRequest,
   confirmTeamLeader,
   fetchTeamAssignmentProjection,
