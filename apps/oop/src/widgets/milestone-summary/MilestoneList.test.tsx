@@ -2,7 +2,9 @@ import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('~/features/project-topic/ProjectTopicBoard', () => ({
-  default: () => <div>주제 후보 투표 영역</div>,
+  default: ({ embedded }: { embedded?: boolean }) => (
+    <div data-embedded={String(embedded)}>주제 후보 투표 영역</div>
+  ),
 }));
 
 import MilestoneDetails from './MilestoneDetails';
@@ -34,7 +36,10 @@ describe('MilestoneList', () => {
     );
 
     expect(screen.getAllByText('주제 선정').length).toBeGreaterThan(0);
-    expect(screen.getByText('주제 후보 투표 영역')).toBeInTheDocument();
+    expect(screen.getByText('주제 후보 투표 영역')).toHaveAttribute(
+      'data-embedded',
+      'true',
+    );
     expect(screen.queryByText('최종 선정 주제')).not.toBeInTheDocument();
     expect(screen.queryByText('교수 피드백')).not.toBeInTheDocument();
   });
@@ -89,6 +94,9 @@ describe('MilestoneDetails', () => {
     renderWithRouter(<MilestoneDetails body={body} />);
 
     expect(screen.getByText(body.guidance)).toBeInTheDocument();
-    expect(screen.getByText('주제 후보 투표 영역')).toBeInTheDocument();
+    expect(screen.getByText('주제 후보 투표 영역')).toHaveAttribute(
+      'data-embedded',
+      'true',
+    );
   });
 });

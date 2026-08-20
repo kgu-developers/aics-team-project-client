@@ -106,7 +106,10 @@ export default function ProjectTopicBoard({
           description='후보를 선택하면 즉시 투표됩니다. 선택한 후보를 다시 누르면 투표를 취소할 수 있어요.'
           isDisabled={isVotePending}
           label='주제 후보 선택'
-          onChange={candidateId => voteMutation.mutate(candidateId)}
+          onChange={candidateId => {
+            removeVoteMutation.reset();
+            voteMutation.mutate(candidateId);
+          }}
           value={
             board.candidates.find(candidate => candidate.isMyVote)?.id ?? ''
           }
@@ -128,6 +131,7 @@ export default function ProjectTopicBoard({
               label={candidate.title}
               onClick={() => {
                 if (candidate.isMyVote && !isVotePending) {
+                  voteMutation.reset();
                   removeVoteMutation.mutate();
                 }
               }}
