@@ -1,10 +1,9 @@
 import { Navigate, createLazyFileRoute } from '@tanstack/react-router';
 
+import AdminShell from '~/app/components/AdminShell';
 import { ROUTES } from '~/app/constants/routes';
 
 import { useAuthStore } from '~/features/auth/authStore';
-
-import AdminHomeDashboard from '~/widgets/admin-dashboard/AdminHomeDashboard';
 
 export const Route = createLazyFileRoute('/admin')({
   component: AdminHomePage,
@@ -22,5 +21,5 @@ function AdminHomePage() {
     return <Navigate to={ROUTES.STUDENT.HOME} />;
   }
 
-  return <AdminHomeDashboard />;
+  return <AdminShell />;
 }
