@@ -1,13 +1,9 @@
-import { Navigate, createLazyFileRoute } from '@tanstack/react-router';
+import { createLazyFileRoute } from '@tanstack/react-router';
 
-import { ROUTES } from '~/app/constants/routes';
-
+import TeamAssignmentFlow from '~/features/team-assignment/TeamAssignmentFlow';
 export const Route = createLazyFileRoute('/onboarding/team/')({
-  component: OnboardingTeamEntryPage,
+  component: Page,
 });
-
-function OnboardingTeamEntryPage() {
-  // KD3-67 auth/API work will replace this scaffold redirect with the
-  // server-authoritative onboarding phase resolver.
-  return <Navigate to={ROUTES.ONBOARDING.SURVEY} />;
+function Page() {
+  return <TeamAssignmentFlow resolveOnly />;
 }

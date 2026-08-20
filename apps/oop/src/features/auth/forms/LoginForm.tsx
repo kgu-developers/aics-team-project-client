@@ -12,7 +12,7 @@ import { isAxiosError } from 'axios';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
-import { ROUTES } from '~/app/constants/routes';
+import { resolveStudentLoginDestination } from '~/features/team-assignment/resolveStudentLoginDestination';
 
 import * as styles from './LoginForm.css';
 import { useLoginMutation } from '../queries/useLoginMutation';
@@ -60,12 +60,8 @@ export default function LoginForm() {
   const onSubmit = handleSubmit(async values => {
     try {
       const currentUser = await loginMutation.mutateAsync(values);
-      await navigate({
-        to:
-          currentUser.globalRole === 'STUDENT'
-            ? ROUTES.STUDENT.HOME
-            : ROUTES.ADMIN,
-      });
+      const destination = await resolveStudentLoginDestination(currentUser);
+      await navigate({ to: destination });
     } catch {
       // API failures are rendered below; they are not field-validation failures.
     }
@@ -148,14 +144,37 @@ export default function LoginForm() {
       </Card>
 
       <Card className={styles.demo}>
-        <Text>
-          개발용 MSW 학생 계정: 학번 <strong>20260001</strong> / 비밀번호{' '}
-          <strong>oop-demo</strong>
-        </Text>
-        <Text>
-          개발용 MSW 관리 예시 계정: 학번 <strong>20260002</strong> / 비밀번호{' '}
-          <strong>oop-admin</strong>
-        </Text>
+        <p className={styles.demoTitle}>개발용 MSW 계정</p>
+        <ul className={styles.demoList}>
+          <li>
+            <strong>학생 A · 신청 테스트</strong>
+            <span>
+              학번 <strong>20260001</strong> / 비밀번호{' '}
+              <strong>oop-demo-a</strong>
+            </span>
+          </li>
+          <li>
+            <strong>학생 B · 수신 테스트</strong>
+            <span>
+              학번 <strong>20260003</strong> / 비밀번호{' '}
+              <strong>oop-demo-b</strong>
+            </span>
+          </li>
+          <li>
+            <strong>학생 C · 팀 배정 완료</strong>
+            <span>
+              학번 <strong>20260004</strong> / 비밀번호{' '}
+              <strong>oop-demo-c</strong>
+            </span>
+          </li>
+          <li>
+            <strong>관리 예시 계정</strong>
+            <span>
+              학번 <strong>20260002</strong> / 비밀번호{' '}
+              <strong>oop-admin</strong>
+            </span>
+          </li>
+        </ul>
       </Card>
     </section>
   );

@@ -5,8 +5,8 @@ import * as styles from './OnboardingShell.css';
 export default function OnboardingShell() {
   return (
     <main className={styles.shell}>
+      <p className={styles.eyebrow}>AICS Team Project</p>
       <div className={styles.shellCard}>
-        <p className={styles.eyebrow}>OOP Team Project</p>
         <Outlet />
       </div>
     </main>
