@@ -48,6 +48,11 @@ export { TextArea } from '@astryxdesign/core/TextArea';
 export type { TextAreaProps } from '@astryxdesign/core/TextArea';
 export { TextInput } from '@astryxdesign/core/TextInput';
 export type { TextInputProps } from '@astryxdesign/core/TextInput';
+export { RadioList, RadioListItem } from '@astryxdesign/core/RadioList';
+export type {
+  RadioListItemProps,
+  RadioListProps,
+} from '@astryxdesign/core/RadioList';
 export { ToastViewport, useToast } from '@astryxdesign/core/Toast';
 export type { ToastOptions, ToastType } from '@astryxdesign/core/Toast';
 
