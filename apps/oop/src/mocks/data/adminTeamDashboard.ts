@@ -1,6 +1,6 @@
-import type { AdminTeamDashboard } from '@aics/core';
+import type { AdminTeamDashboardView } from '~/features/admin-team-dashboard/api';
 
-export const adminTeamDashboardFixture: AdminTeamDashboard = {
+export const adminTeamDashboardFixture: AdminTeamDashboardView = {
   id: 'team-1151-1',
   section: {
     id: 'oop-2026-2-01',
@@ -24,6 +24,35 @@ export const adminTeamDashboardFixture: AdminTeamDashboard = {
       major: '소프트웨어학과',
       isLeader: false,
       projectRole: 'GUI',
+    },
+  ],
+  milestones: [
+    {
+      id: 'proposal',
+      title: '제안서',
+      deadlineLabel: '2026-08-24',
+      status: { kind: 'before-deadline' },
+    },
+    {
+      id: 'mid-review',
+      title: '중간 점검',
+      deadlineLabel: '2026-08-15',
+      status: { kind: 'not-submitted' },
+    },
+    {
+      id: 'presentation-material',
+      title: '발표 자료 제출',
+      deadlineLabel: '2026-08-17',
+      status: {
+        kind: 'submitted',
+        submittedDateLabel: '2026-08-17',
+      },
+    },
+    {
+      id: 'presentation-evaluation',
+      title: '발표 평가',
+      deadlineLabel: '2026-08-20',
+      status: { kind: 'evaluated' },
     },
   ],
 };

@@ -8,6 +8,7 @@ import StudentDetailDialog from '~/features/admin-student-team/components/Studen
 import { useAdminTeamDashboardQuery } from '~/features/admin-team-dashboard/queries';
 
 import * as styles from './AdminTeamDashboard.css';
+import AdminTeamMilestoneProgress from './AdminTeamMilestoneProgress';
 
 export default function AdminTeamDashboard() {
   const { teamId } = useParams({ from: '/admin/teams/$teamId' });
@@ -97,6 +98,8 @@ export default function AdminTeamDashboard() {
           ))}
         </ul>
       </section>
+
+      <AdminTeamMilestoneProgress milestones={team.milestones} />
 
       <StudentDetailDialog
         isOpen={selectedStudent !== null}

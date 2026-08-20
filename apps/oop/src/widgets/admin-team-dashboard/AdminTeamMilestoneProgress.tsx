@@ -65,12 +65,14 @@ export default function AdminTeamMilestoneProgress({
                     마감 {milestone.deadlineLabel}
                   </span>
                 </div>
-                <div className={styles.status}>
-                  <StatusDot
-                    label={statusContent.label}
-                    variant={statusContent.variant}
-                  />
-                  <span>{statusContent.label}</span>
+                <div className={styles.cardBody}>
+                  <div className={styles.status}>
+                    <StatusDot
+                      label={statusContent.label}
+                      variant={statusContent.variant}
+                    />
+                    <span>{statusContent.label}</span>
+                  </div>
                 </div>
               </article>
             );

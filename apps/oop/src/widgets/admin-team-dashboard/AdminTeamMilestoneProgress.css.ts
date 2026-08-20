@@ -14,32 +14,38 @@ export const list = style({
 });
 
 export const card = style({
-  alignItems: 'center',
   background: tokens.color.background.card,
   border: `1px solid ${tokens.color.border.base}`,
   borderRadius: tokens.radius.container,
-  display: 'flex',
-  gap: 24,
-  justifyContent: 'space-between',
-  padding: '16px 20px',
+  display: 'grid',
+  gridTemplateColumns: 'minmax(120px, 160px) 1fr',
+  overflow: 'hidden',
   '@media': {
     'screen and (max-width: 767px)': {
-      alignItems: 'flex-start',
-      flexDirection: 'column',
-      gap: 12,
+      gridTemplateColumns: '1fr',
     },
   },
 });
 
 export const cardHeader = style({
+  background: tokens.color.background.gray,
   display: 'flex',
   flexDirection: 'column',
   gap: 6,
+  justifyContent: 'center',
+  padding: '16px 20px',
 });
 
 export const deadline = style({
   color: tokens.color.text.secondary,
   fontSize: 13,
+});
+
+export const cardBody = style({
+  alignItems: 'center',
+  display: 'flex',
+  minHeight: 72,
+  padding: '16px 20px',
 });
 
 export const status = style({

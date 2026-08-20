@@ -117,6 +117,10 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('20231234')).toBeInTheDocument();
     expect(screen.getByText('팀장')).toBeInTheDocument();
     expect(screen.getByText('ENGINE')).toBeInTheDocument();
+    expect(screen.getByText('제출 전')).toBeInTheDocument();
+    expect(screen.getByText('미제출')).toBeInTheDocument();
+    expect(screen.getByText('2026-08-17 제출')).toBeInTheDocument();
+    expect(screen.getByText('평가 완료')).toBeInTheDocument();
   });
 
   it('팀원 이름을 누르면 상세 정보를 표시하고 닫은 뒤 포커스를 돌려준다', async () => {
@@ -168,5 +172,83 @@ describe('AdminTeamDashboard', () => {
     expect(
       await screen.findByText('팀 정보를 불러오지 못했습니다.'),
     ).toBeInTheDocument();
+  });
+
+  it('분반에 마일스톤이 없으면 빈 상태를 표시한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_DASHBOARD(':teamId')}`,
+        () =>
+          HttpResponse.json({
+            ...adminTeamDashboardFixture,
+            milestones: [],
+          }),
+      ),
+    );
+
+    renderPage('team-1151-1');
+
+    expect(
+      await screen.findByText('등록된 마일스톤이 없습니다.'),
+    ).toBeInTheDocument();
+  });
+
+  it('임시 응답에 마일스톤 필드가 없으면 빈 목록으로 처리한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_DASHBOARD(':teamId')}`,
+        () =>
+          HttpResponse.json({
+            ...adminTeamDashboardFixture,
+            milestones: undefined,
+          }),
+      ),
+    );
+
+    renderPage('team-1151-1');
+
+    expect(
+      await screen.findByText('등록된 마일스톤이 없습니다.'),
+    ).toBeInTheDocument();
+  });
+
+  it('교수자가 설정한 마일스톤 이름과 순서를 그대로 표시한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_DASHBOARD(':teamId')}`,
+        () =>
+          HttpResponse.json({
+            ...adminTeamDashboardFixture,
+            milestones: [
+              {
+                id: 'professor-milestone-first',
+                title: '교수자 설정 첫 단계',
+                deadlineLabel: '2026-08-25',
+                status: { kind: 'before-deadline' },
+              },
+              {
+                id: 'professor-milestone-second',
+                title: '교수자 설정 두 번째 단계',
+                deadlineLabel: '2026-08-30',
+                status: { kind: 'before-deadline' },
+              },
+            ],
+          }),
+      ),
+    );
+
+    renderPage('team-1151-1');
+
+    const progressHeading = await screen.findByRole('heading', {
+      name: '진행 현황',
+    });
+    const progressSection = progressHeading.closest('section');
+
+    expect(progressSection).not.toBeNull();
+    expect(
+      within(progressSection as HTMLElement)
+        .getAllByRole('heading', { level: 3 })
+        .map(heading => heading.textContent),
+    ).toEqual(['교수자 설정 첫 단계', '교수자 설정 두 번째 단계']);
   });
 });
