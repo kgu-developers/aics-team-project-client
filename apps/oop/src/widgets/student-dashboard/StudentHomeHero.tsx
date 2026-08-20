@@ -3,6 +3,7 @@ import type {
   StudentHomeHero as StudentHomeHeroData,
 } from '@aics/core';
 import { Button, Divider, EmptyState } from '@aics/design-system';
+import { useNavigate } from '@tanstack/react-router';
 import { ArrowRight, Bell, ClipboardList, NotebookPen } from 'lucide-react';
 import { type KeyboardEvent, useRef, useState } from 'react';
 
@@ -27,6 +28,7 @@ export default function StudentHomeHero({
   hero,
   announcements,
 }: StudentHomeHeroProps) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<ShortcutTabId>('notice');
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -71,10 +73,17 @@ export default function StudentHomeHero({
           <Button
             className={styles.cta}
             endContent={<ArrowRight aria-hidden='true' size={24} />}
-            isDisabled
             label={hero.ctaLabel}
+            onClick={
+              hero.actionTo ? () => navigate({ to: hero.actionTo }) : undefined
+            }
             size='lg'
-            tooltip='단계별 이동은 후속 작업에서 제공돼요.'
+            isDisabled={!hero.actionTo}
+            tooltip={
+              hero.actionTo
+                ? undefined
+                : '단계별 이동은 후속 작업에서 제공돼요.'
+            }
             variant='primary'
           />
         </div>

@@ -3,6 +3,8 @@ import { isAxiosError } from 'axios';
 import { lazy, Suspense } from 'react';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog';
+import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
 import { useStudentHomeDashboardQuery } from '~/features/student-home/queries';
 
 import MilestoneList from '~/widgets/milestone-summary/MilestoneList';
@@ -115,7 +117,10 @@ export default function StudentHomePage() {
           />
         </Suspense>
       ) : null}
-      <MilestoneList milestones={data.milestones} />
+      <TopicCandidateDialogProvider>
+        <TopicCandidateDialog />
+        <MilestoneList milestones={data.milestones} />
+      </TopicCandidateDialogProvider>
     </div>
   );
 }

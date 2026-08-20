@@ -12,8 +12,9 @@ import {
 } from '@aics/design-system';
 import { Link } from '@tanstack/react-router';
 
+import ProjectTopicBoard from '~/features/project-topic/ProjectTopicBoard';
+
 import * as styles from './MilestoneDetails.css';
-import TopicCandidateCard from './TopicCandidateCard';
 
 type MilestoneDetailsProps = {
   body: StudentHomeMilestoneBody;
@@ -155,15 +156,7 @@ function TopicBody({
   return (
     <div className={styles.root}>
       <p className={styles.guidance}>{body.guidance}</p>
-      <div className={styles.topics}>
-        {body.topicCandidates.map(candidate => (
-          <TopicCandidateCard candidate={candidate} key={candidate.id} />
-        ))}
-      </div>
-      <div className={styles.completion}>
-        <p className={styles.completionLabel}>{body.completion.label}</p>
-        <p className={styles.completionValue}>{body.completion.value}</p>
-      </div>
+      <ProjectTopicBoard embedded />
     </div>
   );
 }

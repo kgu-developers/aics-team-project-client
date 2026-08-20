@@ -4,6 +4,8 @@ import { useNavigate } from '@tanstack/react-router';
 
 import { cx } from '~/shared/lib/cx';
 
+import { useTopicCandidateDialog } from '~/features/project-topic/TopicCandidateDialogContext';
+
 import * as styles from './MilestoneCard.css';
 import MilestoneDetails from './MilestoneDetails';
 
@@ -30,6 +32,7 @@ export default function MilestoneCard({
   isOpen,
 }: MilestoneCardProps) {
   const navigate = useNavigate();
+  const { setIsOpen: setTopicCandidateDialogOpen } = useTopicCandidateDialog();
   const isCollapsible =
     milestone.isDetailAvailable && milestone.interaction === 'collapsible';
   const statusVariant = STATUS_VARIANT[milestone.status];
@@ -98,9 +101,11 @@ export default function MilestoneCard({
                       isDisabled={row.actionDisabled}
                       label={row.actionLabel}
                       onClick={
-                        row.actionTo
-                          ? () => navigate({ to: row.actionTo })
-                          : undefined
+                        row.id === 'proposal-topic-selection'
+                          ? () => setTopicCandidateDialogOpen(true)
+                          : row.actionTo
+                            ? () => navigate({ to: row.actionTo })
+                            : undefined
                       }
                       size='md'
                       tooltip={row.actionNotice}

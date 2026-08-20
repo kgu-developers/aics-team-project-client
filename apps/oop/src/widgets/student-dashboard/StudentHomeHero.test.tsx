@@ -7,7 +7,7 @@ import StudentHomeHero from './StudentHomeHero';
 import { studentHomeDashboardFixture } from '~/mocks/data/studentHome';
 
 describe('StudentHomeHero', () => {
-  it('아직 연결되지 않은 히어로 CTA를 비활성 안내로 표시한다', () => {
+  it('별도 페이지가 없는 주제 선정 CTA는 진행 상태로 비활성 표시한다', () => {
     render(
       <StudentHomeHero
         announcements={studentHomeDashboardFixture.announcements}

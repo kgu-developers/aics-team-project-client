@@ -143,6 +143,7 @@ export type StudentHomeHero = {
   heading: string;
   description: string;
   ctaLabel: string;
+  actionTo?: string;
 };
 
 export type StudentHomeDashboard = {

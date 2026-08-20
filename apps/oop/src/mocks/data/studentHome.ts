@@ -1,6 +1,7 @@
 import type {
   StudentHomeDashboard,
   StudentHomeMilestoneBody,
+  TopicBoard,
 } from '@aics/core';
 
 const CURRENT_PERIOD = '기간 : 20260928 ~ 20261012';
@@ -12,7 +13,7 @@ export const studentHomeDashboardFixture: StudentHomeDashboard = {
     heading: '아직 주제를 선정하지 않았어요.',
     description:
       '제안서의 주제 선정 기간이에요.\n아래 진행 단계를 확인해보세요.',
-    ctaLabel: '주제 선정 확인하기',
+    ctaLabel: '주제 선정 진행 중',
   },
   announcements: [
     {
@@ -76,9 +77,7 @@ export const studentHomeDashboardFixture: StudentHomeDashboard = {
           label: '주제 선정',
           value: '내 투표 완료',
           tone: 'primary',
-          actionLabel: '등록하기',
-          actionDisabled: true,
-          actionNotice: '주제 등록·투표는 다음 작업에서 제공돼요.',
+          actionLabel: '후보 추가',
         },
       ],
     },
@@ -166,6 +165,41 @@ export const studentHomeDashboardFixture: StudentHomeDashboard = {
     },
   ],
 };
+
+export function createStudentHomeDashboardWithTopicBoard(
+  board: TopicBoard,
+): StudentHomeDashboard {
+  return {
+    ...studentHomeDashboardFixture,
+    milestones: studentHomeDashboardFixture.milestones.map(milestone => {
+      if (milestone.id !== 'proposal' || milestone.body?.kind !== 'topic') {
+        return milestone;
+      }
+
+      return {
+        ...milestone,
+        body: {
+          ...milestone.body,
+          topicCandidates: board.candidates.map(candidate => ({
+            id: candidate.id,
+            title: candidate.title,
+            proposer: candidate.proposerName,
+            description: candidate.description,
+            voteCount: candidate.voteCount,
+            isMine: candidate.isMine,
+            isMyVote: candidate.isMyVote,
+          })),
+          completion: {
+            label: `완료 ${board.participation.votedMemberCount}/${board.participation.totalMemberCount}명`,
+            value: board.candidates.some(candidate => candidate.isMyVote)
+              ? '내 투표 완료'
+              : '내 투표 전',
+          },
+        },
+      };
+    }),
+  };
+}
 
 export const milestonePreviewScenarios = [
   'proposal-topic',

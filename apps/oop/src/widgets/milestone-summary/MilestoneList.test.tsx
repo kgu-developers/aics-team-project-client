@@ -1,5 +1,9 @@
 import { screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('~/features/project-topic/ProjectTopicBoard', () => ({
+  default: () => <div>주제 후보 투표 영역</div>,
+}));
 
 import MilestoneDetails from './MilestoneDetails';
 import MilestoneList from './MilestoneList';
@@ -30,7 +34,7 @@ describe('MilestoneList', () => {
     );
 
     expect(screen.getAllByText('주제 선정').length).toBeGreaterThan(0);
-    expect(screen.getByText('영화관 관리 프로그램')).toBeInTheDocument();
+    expect(screen.getByText('주제 후보 투표 영역')).toBeInTheDocument();
     expect(screen.queryByText('최종 선정 주제')).not.toBeInTheDocument();
     expect(screen.queryByText('교수 피드백')).not.toBeInTheDocument();
   });
@@ -85,11 +89,6 @@ describe('MilestoneDetails', () => {
     renderWithRouter(<MilestoneDetails body={body} />);
 
     expect(screen.getByText(body.guidance)).toBeInTheDocument();
-    for (const candidate of body.topicCandidates) {
-      expect(screen.getByText(candidate.title)).toBeInTheDocument();
-      expect(screen.getByText(`${candidate.voteCount}표`)).toBeInTheDocument();
-    }
-    expect(screen.getByText(body.completion.label)).toBeInTheDocument();
-    expect(screen.getByText(body.completion.value)).toBeInTheDocument();
+    expect(screen.getByText('주제 후보 투표 영역')).toBeInTheDocument();
   });
 });
