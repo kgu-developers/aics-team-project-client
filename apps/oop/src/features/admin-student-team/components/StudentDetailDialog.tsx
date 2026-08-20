@@ -2,12 +2,20 @@ import { Button, Heading } from '@aics/design-system';
 import { type RefObject, useEffect, useRef } from 'react';
 
 import * as styles from './StudentDetailDialog.css';
-import type { AdminStudent } from '../api/fetchAdminStudents';
+
+export type StudentDetailDialogStudent = {
+  name: string;
+  studentNumber: string;
+  major: string;
+  team: {
+    name: string;
+  } | null;
+};
 
 type StudentDetailDialogProps = {
   isOpen: boolean;
   onClose: () => void;
-  student: AdminStudent | null;
+  student: StudentDetailDialogStudent | null;
   triggerRef: RefObject<HTMLButtonElement | null>;
 };
 

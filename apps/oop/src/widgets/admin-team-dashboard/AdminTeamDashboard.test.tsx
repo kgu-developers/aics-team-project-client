@@ -1,4 +1,4 @@
-import { setApiAccessToken } from '@aics/api-client';
+import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -8,23 +8,67 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import AdminTeamDashboard from './AdminTeamDashboard';
 
+import { adminTeamDashboardFixture } from '~/mocks/data/adminTeamDashboard';
 import { demoAdminAccessToken } from '~/mocks/data/users';
 import { adminTeamDashboardHandlers } from '~/mocks/handlers/adminTeamDashboard';
 
 const server = setupServer(...adminTeamDashboardHandlers);
+const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
+  HTMLDialogElement.prototype,
+  'close',
+);
+const originalDialogShowModalDescriptor = Object.getOwnPropertyDescriptor(
+  HTMLDialogElement.prototype,
+  'showModal',
+);
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeAll(() => {
+  server.listen({ onUnhandledRequest: 'error' });
+
+  Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+    configurable: true,
+    value() {
+      this.open = true;
+    },
+  });
+  Object.defineProperty(HTMLDialogElement.prototype, 'close', {
+    configurable: true,
+    value() {
+      this.open = false;
+    },
+  });
+});
 afterEach(() => {
   setApiAccessToken(null);
   server.resetHandlers();
 });
-afterAll(() => server.close());
+afterAll(() => {
+  server.close();
+
+  if (originalDialogShowModalDescriptor) {
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
+      ...originalDialogShowModalDescriptor,
+    });
+  } else {
+    Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal');
+  }
+
+  if (originalDialogCloseDescriptor) {
+    Object.defineProperty(HTMLDialogElement.prototype, 'close', {
+      ...originalDialogCloseDescriptor,
+    });
+  } else {
+    Reflect.deleteProperty(HTMLDialogElement.prototype, 'close');
+  }
+});
 
 function renderPage(teamId: string) {
   const queryClient = new QueryClient({
@@ -64,9 +108,58 @@ describe('AdminTeamDashboard', () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('프로젝트 주제: AI 기반 팀 프로젝트 관리 서비스'),
+      screen.getByText('AI 기반 팀 프로젝트 관리 서비스'),
     ).toBeInTheDocument();
-    expect(screen.getByText(/김민준 \/ 20231234/)).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: '← 수강생/팀 관리로' }),
+    ).toHaveAttribute('href', '/admin/student-team');
+    expect(screen.getByRole('button', { name: '김민준' })).toBeInTheDocument();
+    expect(screen.getByText('20231234')).toBeInTheDocument();
+    expect(screen.getByText('팀장')).toBeInTheDocument();
+    expect(screen.getByText('ENGINE')).toBeInTheDocument();
+  });
+
+  it('팀원 이름을 누르면 상세 정보를 표시하고 닫은 뒤 포커스를 돌려준다', async () => {
+    const user = userEvent.setup();
+
+    renderPage('team-1151-1');
+
+    const memberButton = await screen.findByRole('button', { name: '김민준' });
+    await user.click(memberButton);
+
+    const dialog = await screen.findByRole('dialog', {
+      name: '김민준 수강생 정보',
+    });
+
+    expect(within(dialog).getByText('컴퓨터공학과')).toBeInTheDocument();
+    expect(within(dialog).getByText('1팀')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '닫기' })).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(memberButton).toHaveFocus());
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('프로젝트 주제와 역할이 없으면 미정 상태를 표시한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_DASHBOARD(':teamId')}`,
+        () =>
+          HttpResponse.json({
+            ...adminTeamDashboardFixture,
+            projectTopic: null,
+            members: adminTeamDashboardFixture.members.map((member, index) =>
+              index === 0 ? { ...member, projectRole: null } : member,
+            ),
+          }),
+      ),
+    );
+
+    renderPage('team-1151-1');
+
+    expect(await screen.findByText('미정')).toBeInTheDocument();
+    expect(screen.getByText('역할 미정')).toBeInTheDocument();
   });
 
   it('존재하지 않는 팀이면 오류 안내를 표시한다', async () => {
