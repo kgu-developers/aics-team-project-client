@@ -13,6 +13,12 @@ export type {
 } from '@astryxdesign/core/Collapsible';
 export { EmptyState } from '@astryxdesign/core/EmptyState';
 export type { EmptyStateProps } from '@astryxdesign/core/EmptyState';
+export { Dialog } from '@astryxdesign/core/Dialog';
+export type {
+  DialogProps,
+  DialogPurpose,
+  DialogVariant,
+} from '@astryxdesign/core/Dialog';
 export { Divider } from '@astryxdesign/core/Divider';
 export type { DividerProps, DividerVariant } from '@astryxdesign/core/Divider';
 export { FileInput } from '@astryxdesign/core/FileInput';
@@ -26,10 +32,24 @@ export type {
   StatusDotProps,
   StatusDotVariant,
 } from '@astryxdesign/core/StatusDot';
+export { Table, proportional } from '@astryxdesign/core/Table';
+export type { TableColumn, TableProps } from '@astryxdesign/core/Table';
+export {
+  CheckboxList,
+  CheckboxListItem,
+} from '@astryxdesign/core/CheckboxList';
+export type {
+  CheckboxListItemProps,
+  CheckboxListProps,
+} from '@astryxdesign/core/CheckboxList';
+export { Field } from '@astryxdesign/core/Field';
+export type { FieldProps } from '@astryxdesign/core/Field';
 export { TextArea } from '@astryxdesign/core/TextArea';
 export type { TextAreaProps } from '@astryxdesign/core/TextArea';
 export { TextInput } from '@astryxdesign/core/TextInput';
 export type { TextInputProps } from '@astryxdesign/core/TextInput';
+export { ToastViewport, useToast } from '@astryxdesign/core/Toast';
+export type { ToastOptions, ToastType } from '@astryxdesign/core/Toast';
 
 export { default as AstryxThemeProvider } from './provider/AstryxThemeProvider';
 export { oopTheme } from './theme/oopTheme';

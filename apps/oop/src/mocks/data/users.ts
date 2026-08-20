@@ -1,18 +1,34 @@
 import type { CurrentUser } from '@aics/core';
 
+const demoStudentSection = {
+  id: 'oop-2026-2-01',
+  code: 'OOP-01',
+  name: '객체지향프로그래밍 01분반',
+  role: 'STUDENT' as const,
+};
+
 export const demoStudent: CurrentUser = {
   studentNumber: '20260001',
-  name: 'OOP 데모 학생',
-  email: 'student@example.com',
+  name: 'OOP 데모 학생 A',
+  email: 'student-a@example.com',
   globalRole: 'STUDENT',
-  sections: [
-    {
-      id: 'oop-2026-2-01',
-      code: 'OOP-01',
-      name: '객체지향프로그래밍 01분반',
-      role: 'STUDENT',
-    },
-  ],
+  sections: [demoStudentSection],
+};
+
+export const demoPartnerStudent: CurrentUser = {
+  studentNumber: '20260003',
+  name: 'OOP 데모 학생 B',
+  email: 'student-b@example.com',
+  globalRole: 'STUDENT',
+  sections: [demoStudentSection],
+};
+
+export const demoCompletedStudent: CurrentUser = {
+  studentNumber: '20260004',
+  name: 'OOP 데모 학생 C',
+  email: 'student-c@example.com',
+  globalRole: 'STUDENT',
+  sections: [demoStudentSection],
 };
 
 export const demoAdmin: CurrentUser = {
@@ -22,20 +38,30 @@ export const demoAdmin: CurrentUser = {
   globalRole: 'ASSISTANT',
   sections: [
     {
-      id: 'oop-2026-2-01',
-      code: 'OOP-01',
-      name: '객체지향프로그래밍 01분반',
+      ...demoStudentSection,
       role: 'ASSISTANT',
     },
   ],
 };
 
-export const demoAccessToken = 'msw-oop-demo-access-token';
+export const demoAccessToken = 'msw-oop-demo-student-a-access-token';
+export const demoPartnerAccessToken = 'msw-oop-demo-student-b-access-token';
+export const demoCompletedAccessToken = 'msw-oop-demo-student-c-access-token';
 export const demoAdminAccessToken = 'msw-oop-demo-admin-access-token';
 
 export const demoCredentials = {
   studentNumber: demoStudent.studentNumber,
-  password: 'oop-demo',
+  password: 'oop-demo-a',
+} as const;
+
+export const demoPartnerCredentials = {
+  studentNumber: demoPartnerStudent.studentNumber,
+  password: 'oop-demo-b',
+} as const;
+
+export const demoCompletedCredentials = {
+  studentNumber: demoCompletedStudent.studentNumber,
+  password: 'oop-demo-c',
 } as const;
 
 export const demoAdminCredentials = {
@@ -45,15 +71,36 @@ export const demoAdminCredentials = {
 
 export const demoUserAccounts = [
   {
-    user: demoStudent,
-    credentials: demoCredentials,
     accessToken: demoAccessToken,
-    refreshToken: 'msw-oop-demo-refresh-token',
+    credentials: demoCredentials,
+    refreshToken: 'msw-oop-demo-student-a-refresh-token',
+    user: demoStudent,
   },
   {
-    user: demoAdmin,
-    credentials: demoAdminCredentials,
+    accessToken: demoPartnerAccessToken,
+    credentials: demoPartnerCredentials,
+    refreshToken: 'msw-oop-demo-student-b-refresh-token',
+    user: demoPartnerStudent,
+  },
+  {
+    accessToken: demoCompletedAccessToken,
+    credentials: demoCompletedCredentials,
+    refreshToken: 'msw-oop-demo-student-c-refresh-token',
+    user: demoCompletedStudent,
+  },
+  {
     accessToken: demoAdminAccessToken,
+    credentials: demoAdminCredentials,
     refreshToken: 'msw-oop-demo-admin-refresh-token',
+    user: demoAdmin,
   },
 ] as const;
+
+export function getDemoUserAccount(accessToken: string | null) {
+  return demoUserAccounts.find(account => account.accessToken === accessToken);
+}
+
+export function getDemoStudentAccount(accessToken: string | null) {
+  const account = getDemoUserAccount(accessToken);
+  return account?.user.globalRole === 'STUDENT' ? account : undefined;
+}

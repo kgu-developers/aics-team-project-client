@@ -16,4 +16,19 @@ export const ENDPOINTS = {
   TEAM: {
     ROOT: '/teams',
   },
+  TEAM_ASSIGNMENT: {
+    ROOT: (sectionId: string) => `/sections/${sectionId}/team-assignment`,
+    SURVEY: (sectionId: string) =>
+      `/sections/${sectionId}/team-assignment/survey`,
+    LEADER: (sectionId: string, teamId: string) =>
+      `/sections/${sectionId}/team-assignment/teams/${teamId}/leader`,
+    PARTNER_CANDIDATES: (sectionId: string) =>
+      `/sections/${sectionId}/team-assignment/partner-candidates`,
+    PARTNER_REQUESTS: (sectionId: string) =>
+      `/sections/${sectionId}/team-assignment/partner-requests`,
+    PARTNER_REQUEST_RESPONSE: (sectionId: string, requestId: string) =>
+      `/sections/${sectionId}/team-assignment/partner-requests/${requestId}`,
+    PARTNER_REQUEST: (sectionId: string, requestId: string) =>
+      `/sections/${sectionId}/team-assignment/partner-requests/${requestId}`,
+  },
 } as const;

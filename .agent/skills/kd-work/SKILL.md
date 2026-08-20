@@ -23,7 +23,7 @@ Use this skill when the user asks to implement, fix, modify, refactor, create, o
 - Raw user request.
 - Current branch and `git status --short`.
 - Relevant app/package boundary from `.agent/rules/product-structure.md`.
-- Ticket key if present, e.g. `ATP-1`.
+- Ticket ID if present, e.g. the current OOP sprint's `KD3-89`.
 
 ## Steps
 

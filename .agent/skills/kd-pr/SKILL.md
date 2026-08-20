@@ -14,13 +14,13 @@ Write PR drafts that teach reviewers what changed, why it belongs in the chosen 
 1. Inspect `git status --short`, `git diff --stat`, commits, and relevant worklogs under `.agent-local/worklogs/`.
 2. Use `.agent/scripts/collect-pr-evidence.mjs` to summarize changed files and verification evidence.
 3. Draft the PR body from `.agent/templates/pr-draft.md` under `.agent-local/pr-drafts/`.
-4. Include the Notion ticket key (`ATP-<number>`), summary, tasks, verification, review focus, and screenshot section for UI changes.
+4. Include the Notion-assigned ticket ID (currently `KD3-<number>` for the OOP milestone/editor sprint), summary, tasks, verification, review focus, and screenshot section for UI changes.
 5. Do not push or create the GitHub PR unless the user explicitly asks.
 
 The draft must cite real evidence, separate unverified risks, include UI screenshots when applicable, and leave final wording ownership to the human author.
 
 ## PR naming
 
-- Branch: `<type>/ATP-<number>`
-- PR title: `[ATP-<number>] <summary>`
-- Commit: `<type>(<scope>): ATP-<number> <summary>`
+- Branch: `<type>/<ticket-id>`, e.g. `feature/KD3-89`
+- PR title: `[<ticket-id>] <summary>`, e.g. `[KD3-89] 공통 문서 에디터 기반`
+- Commit: `<type>(<scope>): <ticket-id> <summary>`

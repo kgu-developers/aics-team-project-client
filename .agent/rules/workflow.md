@@ -3,9 +3,11 @@
 ## Git and tickets
 
 - Notion is the sprint/ticket source of truth; GitHub is for code review and CI.
-- Branch: `<type>/ATP-<number>`
-- Commit: `<type>(<scope>): ATP-<number> <summary>`
-- PR title: `[ATP-<number>] <summary>`
+- Use the Notion-assigned ticket ID in Git artifacts. The current OOP milestone/editor sprint uses `KD3-<number>`.
+- Branch: `<type>/<ticket-id>`, for example `feature/KD3-89`.
+- Commit: `<type>(<scope>): <ticket-id> <summary>`.
+- PR title: `[<ticket-id>] <summary>`.
+- Do not create alphabetic sub-ticket IDs such as `KD3-89A`; split work by the next numeric ticket ID.
 - Do not push, open a PR, merge, or promote team rules without explicit user approval.
 
 ## Local artifacts

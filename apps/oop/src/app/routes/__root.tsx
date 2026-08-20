@@ -1,4 +1,4 @@
-import { AstryxThemeProvider } from '@aics/design-system';
+import { AstryxThemeProvider, ToastViewport } from '@aics/design-system';
 import { Outlet, createRootRoute } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 
@@ -20,8 +20,10 @@ function RootRoute() {
   return (
     <AstryxThemeProvider>
       <QueryProvider>
-        <Outlet />
-        <TanStackRouterDevtools />
+        <ToastViewport position='bottomEnd'>
+          <Outlet />
+          <TanStackRouterDevtools />
+        </ToastViewport>
       </QueryProvider>
     </AstryxThemeProvider>
   );

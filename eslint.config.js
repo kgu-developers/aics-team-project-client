@@ -17,6 +17,7 @@ module.exports = defineConfig([
     ignores: [
       '**/node_modules/**',
       '**/.turbo/**',
+      '**/.agent-local/**',
 
       '**/dist/**',
       '**/build/**',
