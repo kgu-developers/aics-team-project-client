@@ -16,7 +16,10 @@ import {
 
 import { useMyTeamSubmissionQuery } from './useMyTeamSubmissionQuery';
 
-import { getSubmissionByMilestone } from '~/mocks/data/submission';
+import {
+  demoSubmissionTeamId,
+  getSubmissionByMilestone,
+} from '~/mocks/data/submission';
 
 const submissionRequest = vi.fn();
 const server = setupServer(
@@ -25,7 +28,10 @@ const server = setupServer(
     ({ params }) => {
       submissionRequest();
       return HttpResponse.json(
-        getSubmissionByMilestone(String(params.milestoneId)),
+        getSubmissionByMilestone(
+          demoSubmissionTeamId,
+          String(params.milestoneId),
+        ),
       );
     },
   ),

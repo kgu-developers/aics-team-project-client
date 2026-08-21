@@ -89,11 +89,17 @@ function extensionOf(fileName: string) {
   return fileName.split('.').pop()?.toLowerCase() ?? '';
 }
 
-function validateArtifacts(
-  input: SubmitSubmissionVersionInput,
-  rules: SubmissionArtifactRule[],
-) {
-  if (!Array.isArray(input.artifacts)) {
+function isArtifactInput(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object';
+}
+
+function validateArtifacts(input: unknown, rules: SubmissionArtifactRule[]) {
+  if (
+    !input ||
+    typeof input !== 'object' ||
+    !('artifacts' in input) ||
+    !Array.isArray(input.artifacts)
+  ) {
     return errorResponse(
       'ARTIFACTS_REQUIRED',
       '필수 제출 파일을 모두 선택해 주세요.',
@@ -103,8 +109,11 @@ function validateArtifacts(
 
   const remaining = [...input.artifacts];
   for (const rule of rules) {
-    const index = remaining.findIndex(artifact =>
-      rule.allowedExtensions.includes(extensionOf(artifact.name ?? '')),
+    const index = remaining.findIndex(
+      artifact =>
+        isArtifactInput(artifact) &&
+        typeof artifact.name === 'string' &&
+        rule.allowedExtensions.includes(extensionOf(artifact.name)),
     );
     if (index < 0) {
       return errorResponse(
@@ -115,8 +124,9 @@ function validateArtifacts(
     }
     const [artifact] = remaining.splice(index, 1);
     if (
+      !isArtifactInput(artifact) ||
       artifact.kind !== 'FILE' ||
-      !artifact.name ||
+      typeof artifact.name !== 'string' ||
       typeof artifact.size !== 'number' ||
       artifact.size <= 0
     ) {
@@ -150,7 +160,10 @@ export const submissionHandlers = [
     ({ params, request }) => {
       const result = guard(request);
       if ('response' in result) return result.response;
-      const submission = getSubmissionByMilestone(String(params.milestoneId));
+      const submission = getSubmissionByMilestone(
+        result.teamId,
+        String(params.milestoneId),
+      );
       if (!submission) {
         return errorResponse(
           'SUBMISSION_NOT_FOUND',
@@ -203,9 +216,9 @@ export const submissionHandlers = [
         );
       }
 
-      let input: SubmitSubmissionVersionInput;
+      let input: unknown;
       try {
-        input = (await request.json()) as SubmitSubmissionVersionInput;
+        input = await request.json();
       } catch {
         return errorResponse(
           'INVALID_REQUEST',
@@ -223,7 +236,7 @@ export const submissionHandlers = [
         submitMockSubmissionVersion(
           submissionId,
           { userId: result.userId, name: result.userName },
-          input,
+          input as SubmitSubmissionVersionInput,
         ),
       );
     },

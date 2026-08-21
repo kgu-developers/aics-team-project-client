@@ -7,7 +7,10 @@ import {
   createStudentHomeDashboardPreview,
   isMilestonePreviewScenario,
 } from '../data/studentHome';
-import { getSubmissionByMilestone } from '../data/submission';
+import {
+  demoSubmissionTeamId,
+  getSubmissionByMilestone,
+} from '../data/submission';
 import { getTopicBoard } from '../data/topic';
 import { getDemoStudentAccount } from '../data/users';
 
@@ -61,7 +64,7 @@ export const studentHomeHandlers = [
       return HttpResponse.json(
         createStudentHomeDashboardWithFinalReportSubmission(
           baseDashboard,
-          getSubmissionByMilestone('final-report'),
+          getSubmissionByMilestone(demoSubmissionTeamId, 'final-report'),
         ),
       );
     },

@@ -433,6 +433,7 @@ export function createStudentHomeDashboardPreview(
             : isTargetMilestone && milestone.id === 'final-report'
               ? milestone.rows.map(row => ({
                   ...row,
+                  tone: 'primary',
                   actionDisabled: false,
                   actionLabel: '파일 제출',
                   actionNotice:

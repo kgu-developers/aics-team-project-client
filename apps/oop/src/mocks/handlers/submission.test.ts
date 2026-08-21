@@ -4,7 +4,10 @@ import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { submissionHandlers } from './submission';
-import { resetSubmissionMockData } from '../data/submission';
+import {
+  getSubmissionByMilestone,
+  resetSubmissionMockData,
+} from '../data/submission';
 import { demoAccessToken, demoAdminAccessToken } from '../data/users';
 
 const headers = {
@@ -53,6 +56,17 @@ describe('submissionHandlers', () => {
       canSubmitNow: true,
     });
     expect(detail.currentVersion?.versionNumber).toBe(1);
+  });
+
+  it('같은 마일스톤에서도 팀 범위의 제출물만 조회한다', () => {
+    expect(getSubmissionByMilestone('team-07', 'presentation')).toMatchObject({
+      id: 'submission-presentation',
+      teamId: 'team-07',
+    });
+    expect(getSubmissionByMilestone('team-99', 'presentation')).toMatchObject({
+      id: 'submission-other-team',
+      teamId: 'team-99',
+    });
   });
 
   it('공식 리뷰가 있는 발표 제출은 새 버전을 만들고 이후 수정은 같은 버전을 덮어쓴다', async () => {
@@ -110,6 +124,26 @@ describe('submissionHandlers', () => {
     expect(oversizedPdf.status).toBe(413);
     await expect(oversizedPdf.json()).resolves.toMatchObject({
       code: 'ARTIFACT_TOO_LARGE',
+    });
+  });
+
+  it('잘못된 JSON 구조를 400 응답으로 처리한다', async () => {
+    const nullBody = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.SUBMISSION.VERSIONS('submission-final-report')}`,
+      { method: 'POST', headers, body: 'null' },
+    );
+    const nullArtifact = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.SUBMISSION.VERSIONS('submission-final-report')}`,
+      { method: 'POST', headers, body: JSON.stringify({ artifacts: [null] }) },
+    );
+
+    expect(nullBody.status).toBe(400);
+    await expect(nullBody.json()).resolves.toMatchObject({
+      code: 'ARTIFACTS_REQUIRED',
+    });
+    expect(nullArtifact.status).toBe(400);
+    await expect(nullArtifact.json()).resolves.toMatchObject({
+      code: 'REQUIRED_ARTIFACT_MISSING',
     });
   });
 

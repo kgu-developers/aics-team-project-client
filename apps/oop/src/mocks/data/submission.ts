@@ -116,7 +116,7 @@ function createInitialState(): SubmissionMockState {
     'submission-other-team': {
       id: 'submission-other-team',
       sectionId: demoSubmissionSectionId,
-      milestoneId: 'other-team-presentation',
+      milestoneId: submissionMilestoneIds.presentation,
       milestoneKind: 'PRESENTATION',
       milestoneTitle: '다른 팀 발표 자료',
       teamId: 'team-99',
@@ -139,9 +139,10 @@ function toSubmission(record: SubmissionRecord): Submission {
   return structuredClone(submission);
 }
 
-export function getSubmissionByMilestone(milestoneId: string) {
+export function getSubmissionByMilestone(teamId: string, milestoneId: string) {
   const record = Object.values(state).find(
-    submission => submission.milestoneId === milestoneId,
+    submission =>
+      submission.teamId === teamId && submission.milestoneId === milestoneId,
   );
   return record ? toSubmission(record) : undefined;
 }
