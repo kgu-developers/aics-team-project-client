@@ -8,6 +8,7 @@ export const ENDPOINTS = {
   ADMIN: {
     SECTION_STUDENTS: (sectionId: string) =>
       `/admin/sections/${sectionId}/students`,
+    TEAM_DASHBOARD: (teamId: string) => `/admin/teams/${teamId}/dashboard`,
   },
   SECTION: {
     STUDENT_DASHBOARD: (sectionId: string) =>

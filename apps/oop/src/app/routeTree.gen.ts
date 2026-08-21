@@ -45,6 +45,9 @@ const OnboardingTeamResultLazyRouteImport = createFileRoute(
 const OnboardingTeamFirstMeetingLazyRouteImport = createFileRoute(
   '/onboarding/team/first-meeting',
 )()
+const AdminTeamsTeamIdLazyRouteImport = createFileRoute(
+  '/admin/teams/$teamId',
+)()
 const AdminNoticesNewLazyRouteImport = createFileRoute('/admin/notices/new')()
 const AdminNoticesNoticeIdLazyRouteImport = createFileRoute(
   '/admin/notices/$noticeId',
@@ -195,6 +198,13 @@ const OnboardingTeamFirstMeetingLazyRoute =
   } as any).lazy(() =>
     import('./routes/onboarding.team.first-meeting.lazy').then((d) => d.Route),
   )
+const AdminTeamsTeamIdLazyRoute = AdminTeamsTeamIdLazyRouteImport.update({
+  id: '/teams/$teamId',
+  path: '/teams/$teamId',
+  getParentRoute: () => AdminLazyRoute,
+} as any).lazy(() =>
+  import('./routes/admin.teams.$teamId.lazy').then((d) => d.Route),
+)
 const AdminNoticesNewLazyRoute = AdminNoticesNewLazyRouteImport.update({
   id: '/new',
   path: '/new',
@@ -275,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/student/': typeof StudentIndexLazyRoute
   '/admin/notices/$noticeId': typeof AdminNoticesNoticeIdLazyRouteWithChildren
   '/admin/notices/new': typeof AdminNoticesNewLazyRoute
+  '/admin/teams/$teamId': typeof AdminTeamsTeamIdLazyRoute
   '/onboarding/team/first-meeting': typeof OnboardingTeamFirstMeetingLazyRoute
   '/onboarding/team/result': typeof OnboardingTeamResultLazyRoute
   '/onboarding/team/survey': typeof OnboardingTeamSurveyLazyRoute
@@ -299,6 +310,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexLazyRoute
   '/student': typeof StudentIndexLazyRoute
   '/admin/notices/new': typeof AdminNoticesNewLazyRoute
+  '/admin/teams/$teamId': typeof AdminTeamsTeamIdLazyRoute
   '/onboarding/team/first-meeting': typeof OnboardingTeamFirstMeetingLazyRoute
   '/onboarding/team/result': typeof OnboardingTeamResultLazyRoute
   '/onboarding/team/survey': typeof OnboardingTeamSurveyLazyRoute
@@ -329,6 +341,7 @@ export interface FileRoutesById {
   '/student/': typeof StudentIndexLazyRoute
   '/admin/notices/$noticeId': typeof AdminNoticesNoticeIdLazyRouteWithChildren
   '/admin/notices/new': typeof AdminNoticesNewLazyRoute
+  '/admin/teams/$teamId': typeof AdminTeamsTeamIdLazyRoute
   '/onboarding/team/first-meeting': typeof OnboardingTeamFirstMeetingLazyRoute
   '/onboarding/team/result': typeof OnboardingTeamResultLazyRoute
   '/onboarding/team/survey': typeof OnboardingTeamSurveyLazyRoute
@@ -360,6 +373,7 @@ export interface FileRouteTypes {
     | '/student/'
     | '/admin/notices/$noticeId'
     | '/admin/notices/new'
+    | '/admin/teams/$teamId'
     | '/onboarding/team/first-meeting'
     | '/onboarding/team/result'
     | '/onboarding/team/survey'
@@ -384,6 +398,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/student'
     | '/admin/notices/new'
+    | '/admin/teams/$teamId'
     | '/onboarding/team/first-meeting'
     | '/onboarding/team/result'
     | '/onboarding/team/survey'
@@ -413,6 +428,7 @@ export interface FileRouteTypes {
     | '/student/'
     | '/admin/notices/$noticeId'
     | '/admin/notices/new'
+    | '/admin/teams/$teamId'
     | '/onboarding/team/first-meeting'
     | '/onboarding/team/result'
     | '/onboarding/team/survey'
@@ -575,6 +591,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingTeamFirstMeetingLazyRouteImport
       parentRoute: typeof OnboardingTeamLazyRoute
     }
+    '/admin/teams/$teamId': {
+      id: '/admin/teams/$teamId'
+      path: '/teams/$teamId'
+      fullPath: '/admin/teams/$teamId'
+      preLoaderRoute: typeof AdminTeamsTeamIdLazyRouteImport
+      parentRoute: typeof AdminLazyRoute
+    }
     '/admin/notices/new': {
       id: '/admin/notices/new'
       path: '/new'
@@ -662,12 +685,14 @@ interface AdminLazyRouteChildren {
   AdminNoticesLazyRoute: typeof AdminNoticesLazyRouteWithChildren
   AdminStudentTeamLazyRoute: typeof AdminStudentTeamLazyRoute
   AdminIndexLazyRoute: typeof AdminIndexLazyRoute
+  AdminTeamsTeamIdLazyRoute: typeof AdminTeamsTeamIdLazyRoute
 }
 
 const AdminLazyRouteChildren: AdminLazyRouteChildren = {
   AdminNoticesLazyRoute: AdminNoticesLazyRouteWithChildren,
   AdminStudentTeamLazyRoute: AdminStudentTeamLazyRoute,
   AdminIndexLazyRoute: AdminIndexLazyRoute,
+  AdminTeamsTeamIdLazyRoute: AdminTeamsTeamIdLazyRoute,
 }
 
 const AdminLazyRouteWithChildren = AdminLazyRoute._addFileChildren(

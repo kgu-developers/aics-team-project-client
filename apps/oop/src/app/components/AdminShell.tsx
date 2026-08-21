@@ -13,6 +13,10 @@ const menuItems = [
 function isMenuItemActive(pathname: string, itemPath: string) {
   if (itemPath === ROUTES.ADMIN) return pathname === itemPath;
 
+  if (itemPath === ROUTES.ADMIN_STUDENT_TEAM) {
+    return pathname === itemPath || pathname.startsWith('/admin/teams/');
+  }
+
   return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
 }
 

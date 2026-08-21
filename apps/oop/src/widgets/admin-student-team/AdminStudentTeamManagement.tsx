@@ -1,95 +1,14 @@
-import { Button, Heading } from '@aics/design-system';
-import { type RefObject, useEffect, useMemo, useRef, useState } from 'react';
+import { Heading } from '@aics/design-system';
+import { Link } from '@tanstack/react-router';
+import { useMemo, useState } from 'react';
+
+import { ROUTES } from '~/app/constants/routes';
 
 import * as styles from './AdminStudentTeamManagement.css';
-import type { AdminStudent } from '../../features/admin-student-team/api/fetchAdminStudents';
+import StudentDetailDialog from '../../features/admin-student-team/components/StudentDetailDialog';
 import { useAdminStudentsQuery } from '../../features/admin-student-team/queries/useAdminStudentsQuery';
 import { useAuthStore } from '../../features/auth/authStore';
 import { useTeamsQuery } from '../../features/teams/queries/useTeamsQuery';
-
-function StudentDetailDialog({
-  isOpen,
-  onClose,
-  student,
-  triggerRef,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  student: AdminStudent | null;
-  triggerRef: RefObject<HTMLButtonElement | null>;
-}) {
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-
-    if (!isOpen || !dialog) return;
-
-    dialog.showModal();
-    closeButtonRef.current?.focus();
-
-    return () => {
-      if (dialog.open) dialog.close();
-    };
-  }, [isOpen]);
-
-  if (!isOpen || !student) return null;
-
-  function handleClose() {
-    onClose();
-    requestAnimationFrame(() => triggerRef.current?.focus());
-  }
-
-  return (
-    <dialog
-      aria-labelledby='student-detail-title'
-      aria-modal='true'
-      className={styles.dialog}
-      onCancel={event => {
-        event.preventDefault();
-        handleClose();
-      }}
-      onKeyDown={event => {
-        if (event.key !== 'Escape') return;
-
-        event.preventDefault();
-        handleClose();
-      }}
-      ref={dialogRef}
-    >
-      <Heading id='student-detail-title' level={2}>
-        {student.name} 수강생 정보
-      </Heading>
-      <dl className={styles.detailList}>
-        <div className={styles.detailRow}>
-          <dt>이름</dt>
-          <dd>{student.name}</dd>
-        </div>
-        <div className={styles.detailRow}>
-          <dt>학번</dt>
-          <dd>{student.studentNumber}</dd>
-        </div>
-        <div className={styles.detailRow}>
-          <dt>전공</dt>
-          <dd>{student.major}</dd>
-        </div>
-        <div className={styles.detailRow}>
-          <dt>팀</dt>
-          <dd>{student.team?.name ?? '미배정'}</dd>
-        </div>
-      </dl>
-      <div className={styles.modalActions}>
-        <Button
-          label='닫기'
-          onClick={handleClose}
-          ref={closeButtonRef}
-          variant='secondary'
-        />
-      </div>
-    </dialog>
-  );
-}
 
 export default function AdminStudentTeamManagement() {
   const currentUser = useAuthStore(state => state.currentUser);
@@ -99,7 +18,6 @@ export default function AdminStudentTeamManagement() {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
     null,
   );
-  const studentTriggerRef = useRef<HTMLButtonElement>(null);
   const sections = currentUser?.sections ?? [];
   const selectedSection =
     sections.find(section => section.id === selectedSectionId) ??
@@ -122,8 +40,7 @@ export default function AdminStudentTeamManagement() {
   const isPending = studentsQuery.isPending || teamsQuery.isPending;
   const error = studentsQuery.error ?? teamsQuery.error;
 
-  function openStudentDetail(studentId: string, trigger: HTMLButtonElement) {
-    studentTriggerRef.current = trigger;
+  function openStudentDetail(studentId: string) {
     setSelectedStudentId(studentId);
   }
 
@@ -209,7 +126,14 @@ export default function AdminStudentTeamManagement() {
               <div className={styles.teamGrid}>
                 {teams.map(team => (
                   <article className={styles.teamCard} key={team.id}>
-                    <h3 className={styles.teamName}>{team.name}</h3>
+                    <h3 className={styles.teamName}>
+                      <Link
+                        params={{ teamId: team.id }}
+                        to={ROUTES.ADMIN_TEAM_DETAIL}
+                      >
+                        {team.name}
+                      </Link>
+                    </h3>
                     <ul className={styles.memberList}>
                       {team.members.map(member => {
                         const student = studentsById.get(member.id);
@@ -218,12 +142,7 @@ export default function AdminStudentTeamManagement() {
                           <li className={styles.member} key={member.id}>
                             <button
                               className={styles.memberButton}
-                              onClick={event =>
-                                openStudentDetail(
-                                  member.id,
-                                  event.currentTarget,
-                                )
-                              }
+                              onClick={() => openStudentDetail(member.id)}
                               type='button'
                             >
                               {member.name}
@@ -244,7 +163,6 @@ export default function AdminStudentTeamManagement() {
         isOpen={selectedStudent !== null}
         onClose={() => setSelectedStudentId(null)}
         student={selectedStudent}
-        triggerRef={studentTriggerRef}
       />
     </div>
   );

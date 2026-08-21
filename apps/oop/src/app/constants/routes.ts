@@ -5,6 +5,7 @@ export const ROUTES = {
   ADMIN_NOTICE_NEW: '/admin/notices/new',
   ADMIN_NOTICE_EDIT: '/admin/notices/$noticeId/edit',
   ADMIN_STUDENT_TEAM: '/admin/student-team',
+  ADMIN_TEAM_DETAIL: '/admin/teams/$teamId',
   STUDENT: {
     HOME: '/student',
     TEAM: '/student/team',
