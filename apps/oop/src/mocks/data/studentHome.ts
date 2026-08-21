@@ -1,4 +1,5 @@
 import type {
+  Submission,
   StudentHomeDashboard,
   StudentHomeMilestoneBody,
   TopicBoard,
@@ -178,6 +179,19 @@ export function createStudentHomeDashboardWithTopicBoard(
 
       return {
         ...milestone,
+        rows: milestone.rows.map(row =>
+          row.id === 'proposal-topic-selection'
+            ? {
+                ...row,
+                tone: board.candidates.some(candidate => candidate.isMyVote)
+                  ? 'primary'
+                  : 'muted',
+                value: board.candidates.some(candidate => candidate.isMyVote)
+                  ? '내 투표 완료'
+                  : '내 투표 전',
+              }
+            : row,
+        ),
         body: {
           ...milestone.body,
           topicCandidates: board.candidates.map(candidate => ({
@@ -416,7 +430,16 @@ export function createStudentHomeDashboardPreview(
                   actionNotice: '제안서 편집·재제출은 후속 작업에서 제공돼요.',
                 },
               ]
-            : milestone.rows,
+            : isTargetMilestone && milestone.id === 'final-report'
+              ? milestone.rows.map(row => ({
+                  ...row,
+                  actionDisabled: false,
+                  actionLabel: '파일 제출',
+                  actionNotice:
+                    '최종보고서 PDF와 소스코드 ZIP을 제출하거나 교체합니다.',
+                  value: '제출 가능',
+                }))
+              : milestone.rows,
           body: isProposalFeedbackAvailable
             ? createPreviewBody('proposal-feedback')
             : isTargetMilestone
@@ -425,5 +448,54 @@ export function createStudentHomeDashboardPreview(
         };
       },
     ),
+  };
+}
+
+export function createStudentHomeDashboardWithFinalReportSubmission(
+  dashboard: StudentHomeDashboard,
+  submission: Submission | undefined,
+): StudentHomeDashboard {
+  const version = submission?.currentVersion;
+  if (!version) return dashboard;
+
+  const submittedFiles = version.artifacts
+    .filter(artifact => artifact.kind === 'FILE')
+    .map(artifact => ({
+      id: artifact.id,
+      extension: artifact.name.split('.').pop()?.toUpperCase() ?? 'FILE',
+      name: artifact.name,
+      meta: `${version.submittedBy.name} · ${new Intl.DateTimeFormat('ko-KR', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      }).format(new Date(version.submittedAt))} 제출`,
+    }));
+
+  return {
+    ...dashboard,
+    milestones: dashboard.milestones.map(milestone => {
+      if (milestone.id !== 'final-report') return milestone;
+
+      return {
+        ...milestone,
+        rows: milestone.rows.map(row =>
+          row.id === 'final-report-submission'
+            ? {
+                ...row,
+                actionDisabled: !submission.canSubmitNow,
+                actionLabel: submission.canSubmitNow ? '파일 교체' : undefined,
+                actionNotice: submission.canSubmitNow
+                  ? '최종보고서 PDF와 소스코드 ZIP을 교체합니다.'
+                  : submission.submitDisabledReason,
+                tone: 'primary',
+                value: '제출 완료',
+              }
+            : row,
+        ),
+        body:
+          milestone.body?.kind === 'final-report'
+            ? { ...milestone.body, submittedFiles }
+            : milestone.body,
+      };
+    }),
   };
 }
