@@ -20,6 +20,12 @@ export const ENDPOINTS = {
     BOARD: (sectionId: string) => `/sections/${sectionId}/project-topic`,
     VOTE: (sectionId: string) => `/sections/${sectionId}/project-topic/vote`,
   },
+  SUBMISSION: {
+    MY_TEAM_BY_MILESTONE: (milestoneId: string) =>
+      `/milestones/${milestoneId}/my-team-submission`,
+    DETAIL: (submissionId: string) => `/submissions/${submissionId}`,
+    VERSIONS: (submissionId: string) => `/submissions/${submissionId}/versions`,
+  },
   TEAM_ASSIGNMENT: {
     ROOT: (sectionId: string) => `/sections/${sectionId}/team-assignment`,
     SURVEY: (sectionId: string) =>
