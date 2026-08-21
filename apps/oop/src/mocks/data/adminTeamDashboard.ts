@@ -1,4 +1,4 @@
-import type { AdminTeamDashboardView } from '~/features/admin-team-dashboard/api';
+import type { AdminTeamDashboardView } from '~/features/admin-team-dashboard/model';
 
 export const adminTeamDashboardFixture: AdminTeamDashboardView = {
   id: 'team-1151-1',

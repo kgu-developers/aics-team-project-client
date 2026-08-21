@@ -4,7 +4,12 @@ export { submitLogin } from './auth/submitLogin';
 export { submitLogout } from './auth/submitLogout';
 export { submitRefresh } from './auth/submitRefresh';
 export { API_BASE_URL, apiClient } from './client';
-export { fetchAdminTeamDashboard } from './teams/fetchAdminTeamDashboard';
+export {
+  fetchAdminTeamDashboard,
+  type AdminTeamDashboardMilestoneDto,
+  type AdminTeamDashboardMilestoneStatusDto,
+  type AdminTeamDashboardResponse,
+} from './teams/fetchAdminTeamDashboard';
 export { fetchTeams } from './teams/fetchTeams';
 export { submitTeam } from './teams/submitTeam';
 export { ENDPOINTS } from './constants/endpoints';

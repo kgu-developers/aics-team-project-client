@@ -35,13 +35,9 @@ export const errorActions = style({
 });
 
 export const teamInfoCard = style({
-  background: tokens.color.background.surface,
-  border: `1px solid ${tokens.color.border.base}`,
-  borderRadius: tokens.radius.container,
   display: 'flex',
   flexDirection: 'column',
   gap: 16,
-  padding: 24,
 });
 
 export const memberList = style({
@@ -55,13 +51,11 @@ export const memberList = style({
 
 export const memberCard = style({
   alignItems: 'center',
-  border: `1px solid ${tokens.color.border.base}`,
-  borderRadius: tokens.radius.container,
   display: 'flex',
   flexDirection: 'column',
   gap: 8,
+  height: '100%',
   minWidth: 0,
-  padding: 16,
 });
 
 export const memberButton = style({
@@ -90,22 +84,4 @@ export const memberBadges = style({
   flexWrap: 'wrap',
   gap: 6,
   justifyContent: 'center',
-});
-
-const badgeBase = {
-  borderRadius: tokens.radius.full,
-  fontSize: 12,
-  padding: '3px 8px',
-};
-
-export const leaderBadge = style({
-  ...badgeBase,
-  background: tokens.color.background.blue,
-  color: tokens.color.text.accent,
-});
-
-export const roleBadge = style({
-  ...badgeBase,
-  background: tokens.color.background.gray,
-  color: tokens.color.text.secondary,
 });

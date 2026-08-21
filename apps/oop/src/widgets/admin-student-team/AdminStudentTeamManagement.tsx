@@ -1,6 +1,6 @@
 import { Heading } from '@aics/design-system';
 import { Link } from '@tanstack/react-router';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -18,7 +18,6 @@ export default function AdminStudentTeamManagement() {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
     null,
   );
-  const studentTriggerRef = useRef<HTMLButtonElement>(null);
   const sections = currentUser?.sections ?? [];
   const selectedSection =
     sections.find(section => section.id === selectedSectionId) ??
@@ -41,8 +40,7 @@ export default function AdminStudentTeamManagement() {
   const isPending = studentsQuery.isPending || teamsQuery.isPending;
   const error = studentsQuery.error ?? teamsQuery.error;
 
-  function openStudentDetail(studentId: string, trigger: HTMLButtonElement) {
-    studentTriggerRef.current = trigger;
+  function openStudentDetail(studentId: string) {
     setSelectedStudentId(studentId);
   }
 
@@ -144,12 +142,7 @@ export default function AdminStudentTeamManagement() {
                           <li className={styles.member} key={member.id}>
                             <button
                               className={styles.memberButton}
-                              onClick={event =>
-                                openStudentDetail(
-                                  member.id,
-                                  event.currentTarget,
-                                )
-                              }
+                              onClick={() => openStudentDetail(member.id)}
                               type='button'
                             >
                               {member.name}
@@ -170,7 +163,6 @@ export default function AdminStudentTeamManagement() {
         isOpen={selectedStudent !== null}
         onClose={() => setSelectedStudentId(null)}
         student={selectedStudent}
-        triggerRef={studentTriggerRef}
       />
     </div>
   );

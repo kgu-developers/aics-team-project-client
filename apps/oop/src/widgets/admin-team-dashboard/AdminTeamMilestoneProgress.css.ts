@@ -14,9 +14,6 @@ export const list = style({
 });
 
 export const card = style({
-  background: tokens.color.background.card,
-  border: `1px solid ${tokens.color.border.base}`,
-  borderRadius: tokens.radius.container,
   display: 'grid',
   gridTemplateColumns: 'minmax(120px, 160px) 1fr',
   overflow: 'hidden',

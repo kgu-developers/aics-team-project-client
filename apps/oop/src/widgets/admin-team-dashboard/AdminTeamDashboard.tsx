@@ -1,7 +1,14 @@
-import { Button, EmptyState, Heading, Text } from '@aics/design-system';
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Heading,
+  Text,
+} from '@aics/design-system';
 import { Link, useParams } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -67,7 +74,6 @@ function getTeamDashboardErrorContent(
 export default function AdminTeamDashboard() {
   const { teamId } = useParams({ from: '/admin/teams/$teamId' });
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
-  const memberTriggerRef = useRef<HTMLButtonElement>(null);
   const teamDashboardQuery = useAdminTeamDashboardQuery(teamId);
 
   useEffect(() => {
@@ -128,8 +134,7 @@ export default function AdminTeamDashboard() {
       }
     : null;
 
-  function openStudentDetail(memberId: string, trigger: HTMLButtonElement) {
-    memberTriggerRef.current = trigger;
+  function openStudentDetail(memberId: string) {
     setSelectedMemberId(memberId);
   }
 
@@ -144,38 +149,43 @@ export default function AdminTeamDashboard() {
         </Link>
       </div>
 
-      <section className={styles.teamInfoCard}>
-        <Heading level={2}>{team.name} 상세</Heading>
-        <Text>
-          프로젝트 주제: <strong>{team.projectTopic ?? '미정'}</strong>
-        </Text>
+      <section aria-labelledby='team-detail-heading'>
+        <Card className={styles.teamInfoCard} padding={6}>
+          <Heading id='team-detail-heading' level={2}>
+            {team.name} 상세
+          </Heading>
+          <Text>
+            프로젝트 주제: <strong>{team.projectTopic ?? '미정'}</strong>
+          </Text>
 
-        <ul className={styles.memberList}>
-          {team.members.map(member => (
-            <li className={styles.memberCard} key={member.id}>
-              <button
-                className={styles.memberButton}
-                onClick={event =>
-                  openStudentDetail(member.id, event.currentTarget)
-                }
-                type='button'
-              >
-                {member.name}
-              </button>
-              <span className={styles.studentNumber}>
-                {member.studentNumber}
-              </span>
-              <div className={styles.memberBadges}>
-                {member.isLeader ? (
-                  <span className={styles.leaderBadge}>팀장</span>
-                ) : null}
-                <span className={styles.roleBadge}>
-                  {member.projectRole ?? '역할 미정'}
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
+          <ul className={styles.memberList}>
+            {team.members.map(member => (
+              <li key={member.id}>
+                <Card className={styles.memberCard} padding={4}>
+                  <button
+                    className={styles.memberButton}
+                    onClick={() => openStudentDetail(member.id)}
+                    type='button'
+                  >
+                    {member.name}
+                  </button>
+                  <span className={styles.studentNumber}>
+                    {member.studentNumber}
+                  </span>
+                  <div className={styles.memberBadges}>
+                    {member.isLeader ? (
+                      <Badge label='팀장' variant='info' />
+                    ) : null}
+                    <Badge
+                      label={member.projectRole ?? '역할 미정'}
+                      variant='neutral'
+                    />
+                  </div>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </Card>
       </section>
 
       <AdminTeamMilestoneProgress milestones={team.milestones} />
@@ -184,7 +194,6 @@ export default function AdminTeamDashboard() {
         isOpen={selectedStudent !== null}
         onClose={() => setSelectedMemberId(null)}
         student={selectedStudent}
-        triggerRef={memberTriggerRef}
       />
     </div>
   );

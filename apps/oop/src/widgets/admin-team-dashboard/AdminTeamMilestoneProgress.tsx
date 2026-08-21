@@ -1,4 +1,5 @@
 import {
+  Card,
   EmptyState,
   Heading,
   StatusDot,
@@ -58,22 +59,24 @@ export default function AdminTeamMilestoneProgress({
             const statusContent = getMilestoneStatusContent(milestone.status);
 
             return (
-              <article className={styles.card} key={milestone.id}>
-                <div className={styles.cardHeader}>
-                  <Heading level={3}>{milestone.title}</Heading>
-                  <span className={styles.deadline}>
-                    마감 {milestone.deadlineLabel}
-                  </span>
-                </div>
-                <div className={styles.cardBody}>
-                  <div className={styles.status}>
-                    <StatusDot
-                      label={statusContent.label}
-                      variant={statusContent.variant}
-                    />
-                    <span>{statusContent.label}</span>
+              <article key={milestone.id}>
+                <Card className={styles.card} padding={0}>
+                  <div className={styles.cardHeader}>
+                    <Heading level={3}>{milestone.title}</Heading>
+                    <span className={styles.deadline}>
+                      마감 {milestone.deadlineLabel}
+                    </span>
                   </div>
-                </div>
+                  <div className={styles.cardBody}>
+                    <div className={styles.status}>
+                      <StatusDot
+                        label={statusContent.label}
+                        variant={statusContent.variant}
+                      />
+                      <span>{statusContent.label}</span>
+                    </div>
+                  </div>
+                </Card>
               </article>
             );
           })}
