@@ -26,11 +26,7 @@ export function useSubmitSubmissionVersionMutation(
         submission,
       );
       queryClient.setQueryData(
-        submissionKeys.byMilestone(
-          sectionId,
-          userId,
-          submission.milestoneId,
-        ),
+        submissionKeys.byMilestone(sectionId, userId, submission.milestoneId),
         submission,
       );
       void queryClient.invalidateQueries({
