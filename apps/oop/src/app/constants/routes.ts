@@ -9,7 +9,6 @@ export const ROUTES = {
     HOME: '/student',
     TEAM: '/student/team',
     PROJECT_TOPIC: '/student/project-topic',
-    SUBMISSIONS: '/student/submissions',
     FEEDBACK: '/student/feedback',
     PEER_REVIEW: '/student/peer-review',
     GRADES: '/student/grades',
