@@ -19,9 +19,6 @@ const IndexLazyRouteImport = createFileRoute('/')()
 const StudentIndexLazyRouteImport = createFileRoute('/student/')()
 const AdminIndexLazyRouteImport = createFileRoute('/admin/')()
 const StudentTeamLazyRouteImport = createFileRoute('/student/team')()
-const StudentSubmissionsLazyRouteImport = createFileRoute(
-  '/student/submissions',
-)()
 const StudentProjectTopicLazyRouteImport = createFileRoute(
   '/student/project-topic',
 )()
@@ -103,13 +100,6 @@ const StudentTeamLazyRoute = StudentTeamLazyRouteImport.update({
   path: '/team',
   getParentRoute: () => StudentLazyRoute,
 } as any).lazy(() => import('./routes/student.team.lazy').then((d) => d.Route))
-const StudentSubmissionsLazyRoute = StudentSubmissionsLazyRouteImport.update({
-  id: '/submissions',
-  path: '/submissions',
-  getParentRoute: () => StudentLazyRoute,
-} as any).lazy(() =>
-  import('./routes/student.submissions.lazy').then((d) => d.Route),
-)
 const StudentProjectTopicLazyRoute = StudentProjectTopicLazyRouteImport.update({
   id: '/project-topic',
   path: '/project-topic',
@@ -280,7 +270,6 @@ export interface FileRoutesByFullPath {
   '/student/peer-review': typeof StudentPeerReviewLazyRoute
   '/student/presentation-evaluation': typeof StudentPresentationEvaluationLazyRoute
   '/student/project-topic': typeof StudentProjectTopicLazyRoute
-  '/student/submissions': typeof StudentSubmissionsLazyRoute
   '/student/team': typeof StudentTeamLazyRoute
   '/admin/': typeof AdminIndexLazyRoute
   '/student/': typeof StudentIndexLazyRoute
@@ -306,7 +295,6 @@ export interface FileRoutesByTo {
   '/student/peer-review': typeof StudentPeerReviewLazyRoute
   '/student/presentation-evaluation': typeof StudentPresentationEvaluationLazyRoute
   '/student/project-topic': typeof StudentProjectTopicLazyRoute
-  '/student/submissions': typeof StudentSubmissionsLazyRoute
   '/student/team': typeof StudentTeamLazyRoute
   '/admin': typeof AdminIndexLazyRoute
   '/student': typeof StudentIndexLazyRoute
@@ -336,7 +324,6 @@ export interface FileRoutesById {
   '/student/peer-review': typeof StudentPeerReviewLazyRoute
   '/student/presentation-evaluation': typeof StudentPresentationEvaluationLazyRoute
   '/student/project-topic': typeof StudentProjectTopicLazyRoute
-  '/student/submissions': typeof StudentSubmissionsLazyRoute
   '/student/team': typeof StudentTeamLazyRoute
   '/admin/': typeof AdminIndexLazyRoute
   '/student/': typeof StudentIndexLazyRoute
@@ -368,7 +355,6 @@ export interface FileRouteTypes {
     | '/student/peer-review'
     | '/student/presentation-evaluation'
     | '/student/project-topic'
-    | '/student/submissions'
     | '/student/team'
     | '/admin/'
     | '/student/'
@@ -394,7 +380,6 @@ export interface FileRouteTypes {
     | '/student/peer-review'
     | '/student/presentation-evaluation'
     | '/student/project-topic'
-    | '/student/submissions'
     | '/student/team'
     | '/admin'
     | '/student'
@@ -423,7 +408,6 @@ export interface FileRouteTypes {
     | '/student/peer-review'
     | '/student/presentation-evaluation'
     | '/student/project-topic'
-    | '/student/submissions'
     | '/student/team'
     | '/admin/'
     | '/student/'
@@ -498,13 +482,6 @@ declare module '@tanstack/react-router' {
       path: '/team'
       fullPath: '/student/team'
       preLoaderRoute: typeof StudentTeamLazyRouteImport
-      parentRoute: typeof StudentLazyRoute
-    }
-    '/student/submissions': {
-      id: '/student/submissions'
-      path: '/submissions'
-      fullPath: '/student/submissions'
-      preLoaderRoute: typeof StudentSubmissionsLazyRouteImport
       parentRoute: typeof StudentLazyRoute
     }
     '/student/project-topic': {
@@ -703,7 +680,6 @@ interface StudentLazyRouteChildren {
   StudentPeerReviewLazyRoute: typeof StudentPeerReviewLazyRoute
   StudentPresentationEvaluationLazyRoute: typeof StudentPresentationEvaluationLazyRoute
   StudentProjectTopicLazyRoute: typeof StudentProjectTopicLazyRoute
-  StudentSubmissionsLazyRoute: typeof StudentSubmissionsLazyRoute
   StudentTeamLazyRoute: typeof StudentTeamLazyRoute
   StudentIndexLazyRoute: typeof StudentIndexLazyRoute
   StudentEditorMidReviewSectionLazyRoute: typeof StudentEditorMidReviewSectionLazyRoute
@@ -718,7 +694,6 @@ const StudentLazyRouteChildren: StudentLazyRouteChildren = {
   StudentPresentationEvaluationLazyRoute:
     StudentPresentationEvaluationLazyRoute,
   StudentProjectTopicLazyRoute: StudentProjectTopicLazyRoute,
-  StudentSubmissionsLazyRoute: StudentSubmissionsLazyRoute,
   StudentTeamLazyRoute: StudentTeamLazyRoute,
   StudentIndexLazyRoute: StudentIndexLazyRoute,
   StudentEditorMidReviewSectionLazyRoute:

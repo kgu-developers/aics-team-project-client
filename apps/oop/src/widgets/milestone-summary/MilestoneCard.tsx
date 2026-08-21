@@ -5,6 +5,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { cx } from '~/shared/lib/cx';
 
 import { useTopicCandidateDialog } from '~/features/project-topic/TopicCandidateDialogContext';
+import { useFinalReportSubmissionDialog } from '~/features/submission/FinalReportSubmissionDialogContext';
 
 import * as styles from './MilestoneCard.css';
 import MilestoneDetails from './MilestoneDetails';
@@ -33,6 +34,8 @@ export default function MilestoneCard({
 }: MilestoneCardProps) {
   const navigate = useNavigate();
   const { setIsOpen: setTopicCandidateDialogOpen } = useTopicCandidateDialog();
+  const { setIsOpen: setFinalReportSubmissionDialogOpen } =
+    useFinalReportSubmissionDialog();
   const isCollapsible =
     milestone.isDetailAvailable && milestone.interaction === 'collapsible';
   const statusVariant = STATUS_VARIANT[milestone.status];
@@ -103,9 +106,11 @@ export default function MilestoneCard({
                       onClick={
                         row.id === 'proposal-topic-selection'
                           ? () => setTopicCandidateDialogOpen(true)
-                          : row.actionTo
-                            ? () => navigate({ to: row.actionTo })
-                            : undefined
+                          : row.id === 'final-report-submission'
+                            ? () => setFinalReportSubmissionDialogOpen(true)
+                            : row.actionTo
+                              ? () => navigate({ to: row.actionTo })
+                              : undefined
                       }
                       size='md'
                       tooltip={row.actionNotice}

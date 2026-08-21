@@ -6,6 +6,8 @@ import { useAuthStore } from '~/features/auth/authStore';
 import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog';
 import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
 import { useStudentHomeDashboardQuery } from '~/features/student-home/queries';
+import FinalReportSubmissionDialog from '~/features/submission/FinalReportSubmissionDialog';
+import { FinalReportSubmissionDialogProvider } from '~/features/submission/FinalReportSubmissionDialogContext';
 
 import MilestoneList from '~/widgets/milestone-summary/MilestoneList';
 
@@ -118,8 +120,11 @@ export default function StudentHomePage() {
         </Suspense>
       ) : null}
       <TopicCandidateDialogProvider>
-        <TopicCandidateDialog />
-        <MilestoneList milestones={data.milestones} />
+        <FinalReportSubmissionDialogProvider>
+          <TopicCandidateDialog />
+          <FinalReportSubmissionDialog />
+          <MilestoneList milestones={data.milestones} />
+        </FinalReportSubmissionDialogProvider>
       </TopicCandidateDialogProvider>
     </div>
   );

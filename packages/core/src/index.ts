@@ -11,7 +11,18 @@ export type { Project } from './project/types';
 export type { Review } from './review/types';
 export type { Rubric } from './rubric/types';
 export type { Section } from './section/types';
-export type { Submission } from './submission/types';
+export type {
+  Submission,
+  SubmissionArtifact,
+  SubmissionArtifactRule,
+  SubmissionFileArtifact,
+  SubmissionLinkArtifact,
+  SubmissionMilestoneKind,
+  SubmissionStatus,
+  SubmissionVersion,
+  SubmitSubmissionFileArtifactInput,
+  SubmitSubmissionVersionInput,
+} from './submission/types';
 export type {
   SubmitTopicCandidateInput,
   SubmitTopicVoteInput,

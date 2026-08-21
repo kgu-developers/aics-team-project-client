@@ -109,8 +109,7 @@ export type StudentHomeMilestoneBody =
         description: string;
         file?: StudentHomeFile;
       };
-      submittedFile?: StudentHomeFile;
-      uploadHint: string;
+      submittedFiles?: StudentHomeFile[];
     }
   | {
       kind: 'peer-evaluation';

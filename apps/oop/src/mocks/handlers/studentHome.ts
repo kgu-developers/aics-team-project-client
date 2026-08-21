@@ -2,10 +2,15 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
 import {
+  createStudentHomeDashboardWithFinalReportSubmission,
   createStudentHomeDashboardWithTopicBoard,
   createStudentHomeDashboardPreview,
   isMilestonePreviewScenario,
 } from '../data/studentHome';
+import {
+  demoSubmissionTeamId,
+  getSubmissionByMilestone,
+} from '../data/submission';
 import { getTopicBoard } from '../data/topic';
 import { getDemoStudentAccount } from '../data/users';
 
@@ -44,7 +49,7 @@ export const studentHomeHandlers = [
       }
 
       const previewScenario = request.headers.get('X-OOP-Milestone-Preview');
-      const dashboard = isMilestonePreviewScenario(previewScenario)
+      const baseDashboard = isMilestonePreviewScenario(previewScenario)
         ? createStudentHomeDashboardPreview(previewScenario)
         : createStudentHomeDashboardWithTopicBoard(
             getTopicBoard(
@@ -56,7 +61,12 @@ export const studentHomeHandlers = [
             ),
           );
 
-      return HttpResponse.json(dashboard);
+      return HttpResponse.json(
+        createStudentHomeDashboardWithFinalReportSubmission(
+          baseDashboard,
+          getSubmissionByMilestone(demoSubmissionTeamId, 'final-report'),
+        ),
+      );
     },
   ),
 ];

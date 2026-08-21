@@ -5,11 +5,7 @@ import type {
   StudentHomeSectionStatus,
   StudentHomeTeamStatus,
 } from '@aics/core';
-import {
-  FileInput,
-  StatusDot,
-  type StatusDotVariant,
-} from '@aics/design-system';
+import { Button, StatusDot, type StatusDotVariant } from '@aics/design-system';
 import { Link } from '@tanstack/react-router';
 
 import ProjectTopicBoard from '~/features/project-topic/ProjectTopicBoard';
@@ -134,7 +130,13 @@ function TeamList({ teams }: { teams: StudentHomeTeamStatus[] }) {
   );
 }
 
-function FileRow({ file }: { file: StudentHomeFile }) {
+function FileRow({
+  file,
+  showDownload = false,
+}: {
+  file: StudentHomeFile;
+  showDownload?: boolean;
+}) {
   return (
     <div className={styles.fileRow}>
       <span aria-hidden='true' className={styles.fileIcon}>
@@ -144,6 +146,15 @@ function FileRow({ file }: { file: StudentHomeFile }) {
         <span className={styles.fileName}>{file.name}</span>
         <span className={styles.fileMeta}>{file.meta}</span>
       </span>
+      {showDownload ? (
+        <Button
+          isDisabled
+          label='다운로드'
+          size='sm'
+          tooltip='파일 저장소 연동 후 제공돼요.'
+          variant='secondary'
+        />
+      ) : null}
     </div>
   );
 }
@@ -251,17 +262,9 @@ function FinalReportBody({
       <SectionBanner title='최종보고서 작성 공지사항' />
       <ProjectSummary description={body.notice.description} />
       {body.notice.file ? <FileRow file={body.notice.file} /> : null}
-      <FileInput
-        description={body.uploadHint}
-        disabledMessage='파일 업로드는 추후 제공 예정이에요.'
-        isDisabled
-        label='제출 파일'
-        mode='dropzone'
-        onChange={() => {}}
-        placeholder='Drop files or click to upload'
-        value={null}
-      />
-      {body.submittedFile ? <FileRow file={body.submittedFile} /> : null}
+      {body.submittedFiles?.map(file => (
+        <FileRow file={file} key={file.id} showDownload />
+      ))}
     </div>
   );
 }
