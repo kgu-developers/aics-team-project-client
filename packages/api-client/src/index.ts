@@ -3,6 +3,14 @@ export { fetchCurrentUser } from './auth/fetchCurrentUser';
 export { submitLogin } from './auth/submitLogin';
 export { submitLogout } from './auth/submitLogout';
 export { submitRefresh } from './auth/submitRefresh';
+export {
+  fetchMyProfile,
+  type MyProfileResponse,
+} from './profile/fetchMyProfile';
+export {
+  updateMyProfile,
+  type UpdateMyProfileInput,
+} from './profile/updateMyProfile';
 export { API_BASE_URL, apiClient } from './client';
 export {
   fetchAdminTeamDashboard,
