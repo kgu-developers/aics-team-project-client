@@ -1,6 +1,7 @@
 import {
   Button,
   Card,
+  Dialog,
   FileInput,
   Heading,
   Text,
@@ -19,6 +20,7 @@ import { useAuthStore } from '~/features/auth/authStore';
 import * as styles from './AdminProfilePage.css';
 
 type UploadFileKind = 'studentRoster' | 'teamRoster';
+type Section = { id: string; code: string; name: string };
 
 const uploadCopy: Record<
   UploadFileKind,
@@ -26,25 +28,23 @@ const uploadCopy: Record<
 > = {
   studentRoster: {
     description:
-      '학번, 이름, 소속(전공), 학년, 학적 구분, 이메일 컬럼 포함 Excel (.xlsx)',
+      '학번, 이름, 소속(전공), 학년, 학적 구분, 이메일 컬럼 포함 Excel (.xls/.xlsx)',
     label: '학생 명단 파일 선택',
     title: '학생 명단',
   },
   teamRoster: {
-    description: '팀명, 학번 컬럼 포함 Excel (.xlsx)',
+    description: '팀명, 학번 컬럼 포함 Excel (.xls/.xlsx)',
     label: '팀 구성 명단 파일 선택',
     title: '팀 구성 명단',
   },
 };
 
 function FileSelectionCard({
-  file,
   kind,
-  onChange,
+  onOpen,
 }: {
-  file: File | null;
   kind: UploadFileKind;
-  onChange: (file: File | null) => void;
+  onOpen: () => void;
 }) {
   const copy = uploadCopy[kind];
 
@@ -55,13 +55,74 @@ function FileSelectionCard({
         <Text color='secondary' type='supporting'>
           {copy.description}
         </Text>
+        <Button label={copy.label} onClick={onOpen} variant='primary' />
+      </VStack>
+    </Card>
+  );
+}
+
+function UploadDialog({
+  file,
+  fileError,
+  isOpen,
+  kind,
+  onClose,
+  onFileChange,
+  onSectionChange,
+  sections,
+  sectionId,
+}: {
+  file: File | null;
+  fileError: string | null;
+  isOpen: boolean;
+  kind: UploadFileKind | null;
+  onClose: () => void;
+  onFileChange: (file: File | null) => void;
+  onSectionChange: (sectionId: string) => void;
+  sections: Section[];
+  sectionId: string;
+}) {
+  if (!kind) return null;
+  const copy = uploadCopy[kind];
+
+  return (
+    <Dialog
+      aria-label={`${copy.title} 업로드`}
+      isOpen={isOpen}
+      onOpenChange={nextIsOpen => {
+        if (!nextIsOpen) onClose();
+      }}
+      purpose='info'
+      width={520}
+    >
+      <VStack gap={3}>
+        <Heading level={2}>{copy.title} 업로드</Heading>
+        <Text color='secondary' type='supporting'>
+          업로드할 분반을 선택한 뒤 Excel 파일을 선택해 주세요. 아직 서버에
+          업로드되지는 않습니다.
+        </Text>
+        <label>
+          <Text>분반</Text>
+          <select
+            aria-label='업로드 분반'
+            className={styles.sectionSelect}
+            onChange={event => onSectionChange(event.target.value)}
+            value={sectionId}
+          >
+            {sections.map(section => (
+              <option key={section.id} value={section.id}>
+                {section.code} ({section.name})
+              </option>
+            ))}
+          </select>
+        </label>
         <FileInput
-          accept='.xlsx'
+          accept='.xls,.xlsx'
           label={copy.label}
           mode='input'
           onChange={selected => {
             const nextFile = Array.isArray(selected) ? selected[0] : selected;
-            onChange(nextFile ?? null);
+            onFileChange(nextFile ?? null);
           }}
           placeholder='Excel 파일 선택'
           value={file}
@@ -72,8 +133,12 @@ function FileSelectionCard({
             {file.name} 선택됨 · 아직 업로드되지 않았습니다.
           </Text>
         ) : null}
+        {fileError ? <Text role='alert'>{fileError}</Text> : null}
+        <div className={styles.actions}>
+          <Button label='닫기' onClick={onClose} variant='secondary' />
+        </div>
       </VStack>
-    </Card>
+    </Dialog>
   );
 }
 
@@ -81,14 +146,40 @@ export default function AdminProfilePage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const [message, setMessage] = useState('');
   const [isEditingIntroduction, setIsEditingIntroduction] = useState(false);
-  const [studentRosterFile, setStudentRosterFile] = useState<File | null>(null);
-  const [teamRosterFile, setTeamRosterFile] = useState<File | null>(null);
+  const [uploadKind, setUploadKind] = useState<UploadFileKind | null>(null);
+  const [uploadSectionId, setUploadSectionId] = useState('');
+  const [uploadFiles, setUploadFiles] = useState<
+    Record<UploadFileKind, Record<string, File | null>>
+  >({
+    studentRoster: {},
+    teamRoster: {},
+  });
+  const [uploadFileErrors, setUploadFileErrors] = useState<
+    Record<UploadFileKind, Record<string, string | null>>
+  >({
+    studentRoster: {},
+    teamRoster: {},
+  });
   const sections = currentUser?.sections ?? [];
   const profileQuery = useAdminProfileQuery();
   const updateProfileMutation = useUpdateAdminProfileMutation();
   const savedIntroduction = profileQuery.data?.introduction ?? '';
   const hasSavedIntroduction = savedIntroduction.trim().length > 0;
   const showIntroductionEditor = isEditingIntroduction || !hasSavedIntroduction;
+  const uploadSections = sections.map(section => ({
+    code: section.code,
+    id: section.id,
+    name: section.name,
+  }));
+  const selectedUploadFile =
+    uploadKind && uploadSectionId
+      ? (uploadFiles[uploadKind][uploadSectionId] ?? null)
+      : null;
+
+  function openUploadDialog(kind: UploadFileKind) {
+    setUploadKind(kind);
+    setUploadSectionId(uploadSections[0]?.id ?? '');
+  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -208,14 +299,12 @@ export default function AdminProfilePage() {
 
           <div className={styles.uploadGrid}>
             <FileSelectionCard
-              file={studentRosterFile}
               kind='studentRoster'
-              onChange={setStudentRosterFile}
+              onOpen={() => openUploadDialog('studentRoster')}
             />
             <FileSelectionCard
-              file={teamRosterFile}
               kind='teamRoster'
-              onChange={setTeamRosterFile}
+              onOpen={() => openUploadDialog('teamRoster')}
             />
           </div>
 
@@ -235,11 +324,7 @@ export default function AdminProfilePage() {
                         <li key={section.id}>
                           <strong>{section.code}</strong>
                           <span>
-                            {(
-                              kind === 'studentRoster'
-                                ? studentRosterFile
-                                : teamRosterFile
-                            )
+                            {uploadFiles[kind][section.id]
                               ? '파일 선택됨 · 업로드 전'
                               : '업로드 상태 확인 전'}
                           </span>
@@ -253,6 +338,41 @@ export default function AdminProfilePage() {
           </section>
         </VStack>
       </Card>
+
+      <UploadDialog
+        file={selectedUploadFile}
+        fileError={
+          uploadKind && uploadSectionId
+            ? (uploadFileErrors[uploadKind][uploadSectionId] ?? null)
+            : null
+        }
+        isOpen={uploadKind !== null && uploadSectionId !== ''}
+        kind={uploadKind}
+        onClose={() => setUploadKind(null)}
+        onFileChange={file => {
+          if (!uploadKind || !uploadSectionId) return;
+          const isExcelFile = file ? /\.(xls|xlsx)$/i.test(file.name) : true;
+          setUploadFiles(current => ({
+            ...current,
+            [uploadKind]: {
+              ...current[uploadKind],
+              [uploadSectionId]: isExcelFile ? file : null,
+            },
+          }));
+          setUploadFileErrors(current => ({
+            ...current,
+            [uploadKind]: {
+              ...current[uploadKind],
+              [uploadSectionId]: isExcelFile
+                ? null
+                : 'Excel(.xls 또는 .xlsx) 파일만 선택할 수 있습니다.',
+            },
+          }));
+        }}
+        onSectionChange={setUploadSectionId}
+        sections={uploadSections}
+        sectionId={uploadSectionId}
+      />
     </div>
   );
 }

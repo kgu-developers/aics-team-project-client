@@ -91,7 +91,9 @@ describe('AdminProfilePage', () => {
       expect(getAdminProfile().introduction).toBe(introductionText),
     );
     expect(screen.getByText(introductionText)).toBeInTheDocument();
-    expect(screen.queryByLabelText('간단한 메시지')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: '간단한 메시지' }),
+    ).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '수정하기' }));
     expect(screen.getByLabelText('간단한 메시지')).toHaveValue(
       introductionText,

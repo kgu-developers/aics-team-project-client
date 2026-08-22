@@ -41,6 +41,16 @@ export const actions = style({
   justifyContent: 'flex-end',
 });
 
+export const sectionSelect = style({
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: tokens.radius.element,
+  font: 'inherit',
+  marginTop: 6,
+  minHeight: 40,
+  padding: '8px 12px',
+  width: '100%',
+});
+
 export const fieldLabel = style({
   display: 'block',
   marginBottom: 6,
