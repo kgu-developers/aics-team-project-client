@@ -40,9 +40,11 @@ const uploadCopy: Record<
 };
 
 function FileSelectionCard({
+  isDisabled,
   kind,
   onOpen,
 }: {
+  isDisabled: boolean;
   kind: UploadFileKind;
   onOpen: () => void;
 }) {
@@ -55,7 +57,12 @@ function FileSelectionCard({
         <Text color='secondary' type='supporting'>
           {copy.description}
         </Text>
-        <Button label={copy.label} onClick={onOpen} variant='primary' />
+        <Button
+          isDisabled={isDisabled}
+          label={copy.label}
+          onClick={onOpen}
+          variant='primary'
+        />
       </VStack>
     </Card>
   );
@@ -63,7 +70,6 @@ function FileSelectionCard({
 
 function UploadDialog({
   file,
-  fileError,
   isOpen,
   kind,
   onClose,
@@ -73,7 +79,6 @@ function UploadDialog({
   sectionId,
 }: {
   file: File | null;
-  fileError: string | null;
   isOpen: boolean;
   kind: UploadFileKind | null;
   onClose: () => void;
@@ -133,8 +138,14 @@ function UploadDialog({
             {file.name} 선택됨 · 아직 업로드되지 않았습니다.
           </Text>
         ) : null}
-        {fileError ? <Text role='alert'>{fileError}</Text> : null}
         <div className={styles.actions}>
+          {file ? (
+            <Button
+              label='선택한 파일 제거'
+              onClick={() => onFileChange(null)}
+              variant='secondary'
+            />
+          ) : null}
           <Button label='닫기' onClick={onClose} variant='secondary' />
         </div>
       </VStack>
@@ -154,13 +165,8 @@ export default function AdminProfilePage() {
     studentRoster: {},
     teamRoster: {},
   });
-  const [uploadFileErrors, setUploadFileErrors] = useState<
-    Record<UploadFileKind, Record<string, string | null>>
-  >({
-    studentRoster: {},
-    teamRoster: {},
-  });
   const sections = currentUser?.sections ?? [];
+  const hasUploadSections = sections.length > 0;
   const profileQuery = useAdminProfileQuery();
   const updateProfileMutation = useUpdateAdminProfileMutation();
   const savedIntroduction = profileQuery.data?.introduction ?? '';
@@ -177,6 +183,8 @@ export default function AdminProfilePage() {
       : null;
 
   function openUploadDialog(kind: UploadFileKind) {
+    if (!hasUploadSections) return;
+
     setUploadKind(kind);
     setUploadSectionId(uploadSections[0]?.id ?? '');
   }
@@ -299,10 +307,12 @@ export default function AdminProfilePage() {
 
           <div className={styles.uploadGrid}>
             <FileSelectionCard
+              isDisabled={!hasUploadSections}
               kind='studentRoster'
               onOpen={() => openUploadDialog('studentRoster')}
             />
             <FileSelectionCard
+              isDisabled={!hasUploadSections}
               kind='teamRoster'
               onOpen={() => openUploadDialog('teamRoster')}
             />
@@ -313,7 +323,9 @@ export default function AdminProfilePage() {
               분반별 업로드 현황
             </Heading>
             {sections.length === 0 ? (
-              <Text color='secondary'>담당 분반 정보를 찾을 수 없습니다.</Text>
+              <Text color='secondary' role='status'>
+                담당 분반이 없어 명단 파일을 선택할 수 없습니다.
+              </Text>
             ) : (
               <div className={styles.statusGroups}>
                 {(['studentRoster', 'teamRoster'] as const).map(kind => (
@@ -341,31 +353,16 @@ export default function AdminProfilePage() {
 
       <UploadDialog
         file={selectedUploadFile}
-        fileError={
-          uploadKind && uploadSectionId
-            ? (uploadFileErrors[uploadKind][uploadSectionId] ?? null)
-            : null
-        }
         isOpen={uploadKind !== null && uploadSectionId !== ''}
         kind={uploadKind}
         onClose={() => setUploadKind(null)}
         onFileChange={file => {
           if (!uploadKind || !uploadSectionId) return;
-          const isExcelFile = file ? /\.(xls|xlsx)$/i.test(file.name) : true;
           setUploadFiles(current => ({
             ...current,
             [uploadKind]: {
               ...current[uploadKind],
-              [uploadSectionId]: isExcelFile ? file : null,
-            },
-          }));
-          setUploadFileErrors(current => ({
-            ...current,
-            [uploadKind]: {
-              ...current[uploadKind],
-              [uploadSectionId]: isExcelFile
-                ? null
-                : 'Excel(.xls 또는 .xlsx) 파일만 선택할 수 있습니다.',
+              [uploadSectionId]: file,
             },
           }));
         }}
