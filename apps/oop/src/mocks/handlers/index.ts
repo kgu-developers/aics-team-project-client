@@ -1,4 +1,5 @@
 import { adminStudentTeamHandlers } from './adminStudentTeams';
+import { adminProfileHandlers } from './adminProfile';
 import { adminTeamDashboardHandlers } from './adminTeamDashboard';
 import { authHandlers } from './auth';
 import { studentHomeHandlers } from './studentHome';
@@ -14,4 +15,5 @@ export const handlers = [
   ...topicHandlers,
   ...adminTeamDashboardHandlers,
   ...adminStudentTeamHandlers,
+  ...adminProfileHandlers,
 ];
