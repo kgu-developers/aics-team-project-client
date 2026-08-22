@@ -31,9 +31,27 @@ export const profileForm = style({
   gridTemplateColumns: '1fr',
 });
 
+export const introductionForm = style({
+  display: 'grid',
+  gap: 16,
+});
+
 export const actions = style({
   display: 'flex',
   justifyContent: 'flex-end',
+});
+
+export const fieldLabel = style({
+  display: 'block',
+  marginBottom: 6,
+});
+
+export const introductionPreview = style({
+  background: tokens.color.background.gray,
+  borderRadius: tokens.radius.element,
+  minHeight: 96,
+  padding: 12,
+  whiteSpace: 'pre-wrap',
 });
 
 export const uploadGrid = style({

@@ -15,9 +15,10 @@ import {
   it,
 } from 'vitest';
 
+import { useAuthStore } from '~/features/auth/authStore';
+
 import AdminProfilePage from './AdminProfilePage';
 
-import { useAuthStore } from '~/features/auth/authStore';
 import {
   getAdminProfile,
   resetAdminProfileMockData,
@@ -72,21 +73,31 @@ describe('AdminProfilePage', () => {
     renderPage();
 
     const introduction = await screen.findByLabelText('간단한 메시지');
-    await user.type(
-      introduction,
-      '안녕하세요. OOP 팀프로젝트 담당 조교입니다.',
+    const introductionText = '안녕하세요. OOP 팀프로젝트 담당 조교입니다.';
+    await user.type(introduction, introductionText);
+    expect(screen.getByLabelText('간단한 메시지')).toHaveValue(
+      introductionText,
     );
+    expect(
+      screen.getByRole('button', { name: '저장하기' }),
+    ).toBeInTheDocument();
+    expect(getAdminProfile().introduction).toBe('');
     await user.click(screen.getByRole('button', { name: '저장하기' }));
 
     expect(
-      await screen.findByRole('status', {
-        name: '소개 메시지를 저장했습니다.',
-      }),
+      await screen.findByText('소개 메시지를 저장했습니다.'),
     ).toBeInTheDocument();
     await waitFor(() =>
-      expect(getAdminProfile().introduction).toBe(
-        '안녕하세요. OOP 팀프로젝트 담당 조교입니다.',
-      ),
+      expect(getAdminProfile().introduction).toBe(introductionText),
     );
+    expect(screen.getByText(introductionText)).toBeInTheDocument();
+    expect(screen.queryByLabelText('간단한 메시지')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '수정하기' }));
+    expect(screen.getByLabelText('간단한 메시지')).toHaveValue(
+      introductionText,
+    );
+    expect(
+      screen.getByRole('button', { name: '저장하기' }),
+    ).toBeInTheDocument();
   });
 });

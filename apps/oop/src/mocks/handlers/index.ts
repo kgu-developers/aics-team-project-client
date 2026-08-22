@@ -1,5 +1,5 @@
-import { adminStudentTeamHandlers } from './adminStudentTeams';
 import { adminProfileHandlers } from './adminProfile';
+import { adminStudentTeamHandlers } from './adminStudentTeams';
 import { adminTeamDashboardHandlers } from './adminTeamDashboard';
 import { authHandlers } from './auth';
 import { studentHomeHandlers } from './studentHome';

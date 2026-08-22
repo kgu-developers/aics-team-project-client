@@ -1,7 +1,6 @@
+import type { MyProfileResponse } from './fetchMyProfile';
 import { apiClient } from '../client';
 import { ENDPOINTS } from '../constants/endpoints';
-
-import type { MyProfileResponse } from './fetchMyProfile';
 
 export type UpdateMyProfileInput = {
   introduction: string;

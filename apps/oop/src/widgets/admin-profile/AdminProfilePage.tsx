@@ -8,13 +8,13 @@ import {
   TextInput,
   VStack,
 } from '@aics/design-system';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
-import { useAuthStore } from '~/features/auth/authStore';
 import {
   useAdminProfileQuery,
   useUpdateAdminProfileMutation,
 } from '~/features/admin-profile/queries';
+import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminProfilePage.css';
 
@@ -80,19 +80,27 @@ function FileSelectionCard({
 export default function AdminProfilePage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const [message, setMessage] = useState('');
+  const [isEditingIntroduction, setIsEditingIntroduction] = useState(false);
   const [studentRosterFile, setStudentRosterFile] = useState<File | null>(null);
   const [teamRosterFile, setTeamRosterFile] = useState<File | null>(null);
   const sections = currentUser?.sections ?? [];
   const profileQuery = useAdminProfileQuery();
   const updateProfileMutation = useUpdateAdminProfileMutation();
-
-  useEffect(() => {
-    setMessage(profileQuery.data?.introduction ?? '');
-  }, [profileQuery.data?.introduction]);
+  const savedIntroduction = profileQuery.data?.introduction ?? '';
+  const hasSavedIntroduction = savedIntroduction.trim().length > 0;
+  const showIntroductionEditor = isEditingIntroduction || !hasSavedIntroduction;
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    updateProfileMutation.mutate({ introduction: message });
+    updateProfileMutation.mutate(
+      { introduction: message },
+      {
+        onSuccess: profile => {
+          setMessage(profile.introduction);
+          setIsEditingIntroduction(false);
+        },
+      },
+    );
   }
 
   return (
@@ -109,7 +117,7 @@ export default function AdminProfilePage() {
             </Text>
           </header>
 
-          <form className={styles.profileForm} onSubmit={handleSubmit}>
+          <div className={styles.profileForm}>
             <TextInput
               label='이름'
               isDisabled
@@ -123,26 +131,55 @@ export default function AdminProfilePage() {
               value={currentUser?.email ?? ''}
               width='100%'
             />
-            <TextArea
-              label='간단한 메시지'
-              onChange={setMessage}
-              placeholder='예) 안녕하세요. OOP 팀프로젝트를 담당하는 교수자입니다. 궁금한 점은 쪽지로 남겨주세요.'
-              value={message}
-              width='100%'
-            />
-            <Text color='secondary' type='supporting'>
-              학생들에게 노출되는 소개 메시지입니다.
-            </Text>
-            <div className={styles.actions}>
-              <Button
-                isDisabled={
-                  profileQuery.isLoading || updateProfileMutation.isPending
-                }
-                label='저장하기'
-                type='submit'
-                variant='primary'
-              />
-            </div>
+            {showIntroductionEditor ? (
+              <form className={styles.introductionForm} onSubmit={handleSubmit}>
+                <TextArea
+                  label='간단한 메시지'
+                  onChange={setMessage}
+                  placeholder='예) 안녕하세요. OOP 팀프로젝트를 담당하는 교수자입니다. 궁금한 점은 쪽지로 남겨주세요.'
+                  value={message}
+                  width='100%'
+                />
+                <Text color='secondary' type='supporting'>
+                  학생들에게 노출되는 소개 메시지입니다.
+                </Text>
+                <div className={styles.actions}>
+                  <Button
+                    isDisabled={
+                      profileQuery.isLoading || updateProfileMutation.isPending
+                    }
+                    label='저장하기'
+                    type='submit'
+                    variant='primary'
+                  />
+                </div>
+              </form>
+            ) : (
+              <section className={styles.introductionForm}>
+                <Text className={styles.fieldLabel}>간단한 메시지</Text>
+                <div
+                  aria-label='간단한 메시지'
+                  className={styles.introductionPreview}
+                >
+                  {savedIntroduction}
+                </div>
+                <Text color='secondary' type='supporting'>
+                  학생들에게 노출되는 소개 메시지입니다.
+                </Text>
+                <div className={styles.actions}>
+                  <Button
+                    label='수정하기'
+                    onClick={() => {
+                      updateProfileMutation.reset();
+                      setMessage(savedIntroduction);
+                      setIsEditingIntroduction(true);
+                    }}
+                    type='button'
+                    variant='secondary'
+                  />
+                </div>
+              </section>
+            )}
             {profileQuery.isError ? (
               <Text role='alert'>
                 소개 메시지를 불러오지 못했습니다. 저장하면 다시 시도합니다.
@@ -156,7 +193,7 @@ export default function AdminProfilePage() {
                 소개 메시지를 저장하지 못했습니다. 다시 시도해 주세요.
               </Text>
             ) : null}
-          </form>
+          </div>
         </VStack>
       </Card>
 
