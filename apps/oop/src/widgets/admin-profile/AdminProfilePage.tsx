@@ -233,6 +233,7 @@ export default function AdminProfilePage() {
             {showIntroductionEditor ? (
               <form className={styles.introductionForm} onSubmit={handleSubmit}>
                 <TextArea
+                  isDisabled={profileQuery.isPending}
                   label='간단한 메시지'
                   onChange={setMessage}
                   placeholder='예) 안녕하세요. OOP 팀프로젝트를 담당하는 교수자입니다. 궁금한 점은 쪽지로 남겨주세요.'

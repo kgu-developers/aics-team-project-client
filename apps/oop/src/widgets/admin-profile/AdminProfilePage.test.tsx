@@ -115,6 +115,7 @@ describe('AdminProfilePage', () => {
     renderPage();
 
     const introduction = await screen.findByLabelText('간단한 메시지');
+    await waitFor(() => expect(introduction).toBeEnabled());
     const introductionText = '안녕하세요. OOP 팀프로젝트 담당 조교입니다.';
     await user.type(introduction, introductionText);
     expect(screen.getByLabelText('간단한 메시지')).toHaveValue(

@@ -7,11 +7,12 @@ import { adminProfileKeys } from './adminProfileKeys';
 
 export function useAdminProfileQuery() {
   const accessToken = useAuthStore(state => state.accessToken);
+  const accountId = useAuthStore(state => state.currentUser?.studentNumber);
 
   return useQuery({
-    queryKey: adminProfileKeys.mine(),
+    queryKey: adminProfileKeys.mine(accountId ?? 'anonymous'),
     queryFn: fetchMyProfile,
-    enabled: Boolean(accessToken),
+    enabled: Boolean(accessToken && accountId),
     retry: false,
   });
 }
