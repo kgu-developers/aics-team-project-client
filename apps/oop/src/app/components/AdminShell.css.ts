@@ -70,17 +70,12 @@ export const account = style({
   alignItems: 'center',
   background: 'rgba(255, 255, 255, 0.08)',
   borderRadius: tokens.radius.container,
+  color: tokens.color.background.surface,
   display: 'flex',
   gap: 10,
   marginTop: 'auto',
   padding: 12,
-});
-export const avatar = style({
-  background: tokens.color.icon.disabled,
-  borderRadius: '50%',
-  display: 'block',
-  height: 28,
-  width: 28,
+  textDecoration: 'none',
 });
 export const main = style({ minWidth: 0 });
 globalStyle(brand + ' span, ' + account + ' span', {

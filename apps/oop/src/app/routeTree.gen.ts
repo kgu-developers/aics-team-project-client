@@ -32,6 +32,7 @@ const StudentGradesLazyRouteImport = createFileRoute('/student/grades')()
 const StudentFeedbackLazyRouteImport = createFileRoute('/student/feedback')()
 const OnboardingTeamLazyRouteImport = createFileRoute('/onboarding/team')()
 const AdminStudentTeamLazyRouteImport = createFileRoute('/admin/student-team')()
+const AdminProfileLazyRouteImport = createFileRoute('/admin/profile')()
 const AdminNoticesLazyRouteImport = createFileRoute('/admin/notices')()
 const OnboardingTeamIndexLazyRouteImport =
   createFileRoute('/onboarding/team/')()
@@ -155,6 +156,11 @@ const AdminStudentTeamLazyRoute = AdminStudentTeamLazyRouteImport.update({
 } as any).lazy(() =>
   import('./routes/admin.student-team.lazy').then((d) => d.Route),
 )
+const AdminProfileLazyRoute = AdminProfileLazyRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AdminLazyRoute,
+} as any).lazy(() => import('./routes/admin.profile.lazy').then((d) => d.Route))
 const AdminNoticesLazyRoute = AdminNoticesLazyRouteImport.update({
   id: '/notices',
   path: '/notices',
@@ -273,6 +279,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginLazyRoute
   '/student': typeof StudentLazyRouteWithChildren
   '/admin/notices': typeof AdminNoticesLazyRouteWithChildren
+  '/admin/profile': typeof AdminProfileLazyRoute
   '/admin/student-team': typeof AdminStudentTeamLazyRoute
   '/onboarding/team': typeof OnboardingTeamLazyRouteWithChildren
   '/student/feedback': typeof StudentFeedbackLazyRoute
@@ -300,6 +307,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
   '/login': typeof LoginLazyRoute
+  '/admin/profile': typeof AdminProfileLazyRoute
   '/admin/student-team': typeof AdminStudentTeamLazyRoute
   '/student/feedback': typeof StudentFeedbackLazyRoute
   '/student/grades': typeof StudentGradesLazyRoute
@@ -329,6 +337,7 @@ export interface FileRoutesById {
   '/login': typeof LoginLazyRoute
   '/student': typeof StudentLazyRouteWithChildren
   '/admin/notices': typeof AdminNoticesLazyRouteWithChildren
+  '/admin/profile': typeof AdminProfileLazyRoute
   '/admin/student-team': typeof AdminStudentTeamLazyRoute
   '/onboarding/team': typeof OnboardingTeamLazyRouteWithChildren
   '/student/feedback': typeof StudentFeedbackLazyRoute
@@ -361,6 +370,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/student'
     | '/admin/notices'
+    | '/admin/profile'
     | '/admin/student-team'
     | '/onboarding/team'
     | '/student/feedback'
@@ -388,6 +398,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/admin/profile'
     | '/admin/student-team'
     | '/student/feedback'
     | '/student/grades'
@@ -416,6 +427,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/student'
     | '/admin/notices'
+    | '/admin/profile'
     | '/admin/student-team'
     | '/onboarding/team'
     | '/student/feedback'
@@ -547,6 +559,13 @@ declare module '@tanstack/react-router' {
       path: '/student-team'
       fullPath: '/admin/student-team'
       preLoaderRoute: typeof AdminStudentTeamLazyRouteImport
+      parentRoute: typeof AdminLazyRoute
+    }
+    '/admin/profile': {
+      id: '/admin/profile'
+      path: '/profile'
+      fullPath: '/admin/profile'
+      preLoaderRoute: typeof AdminProfileLazyRouteImport
       parentRoute: typeof AdminLazyRoute
     }
     '/admin/notices': {
@@ -683,6 +702,7 @@ const AdminNoticesLazyRouteWithChildren =
 
 interface AdminLazyRouteChildren {
   AdminNoticesLazyRoute: typeof AdminNoticesLazyRouteWithChildren
+  AdminProfileLazyRoute: typeof AdminProfileLazyRoute
   AdminStudentTeamLazyRoute: typeof AdminStudentTeamLazyRoute
   AdminIndexLazyRoute: typeof AdminIndexLazyRoute
   AdminTeamsTeamIdLazyRoute: typeof AdminTeamsTeamIdLazyRoute
@@ -690,6 +710,7 @@ interface AdminLazyRouteChildren {
 
 const AdminLazyRouteChildren: AdminLazyRouteChildren = {
   AdminNoticesLazyRoute: AdminNoticesLazyRouteWithChildren,
+  AdminProfileLazyRoute: AdminProfileLazyRoute,
   AdminStudentTeamLazyRoute: AdminStudentTeamLazyRoute,
   AdminIndexLazyRoute: AdminIndexLazyRoute,
   AdminTeamsTeamIdLazyRoute: AdminTeamsTeamIdLazyRoute,
