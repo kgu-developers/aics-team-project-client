@@ -6,7 +6,7 @@ Version-dependent inventory for `@astryxdesign/core@0.2.0`. Selection and stylin
 
 ```text
 Avatar, Badge, Button, Card, CheckboxList, CheckboxListItem, Collapsible, CollapsibleGroup, Dialog, Divider
-EmptyState, Field, FileInput, IconButton, RadioList, RadioListItem, StatusDot, Table, ToastViewport, useToast
+EmptyState, Field, FileInput, IconButton, RadioList, RadioListItem, Selector, SelectorOption, StatusDot, Table, ToastViewport, useToast
 Tab, TabList
 HStack, VStack
 Text, Heading
