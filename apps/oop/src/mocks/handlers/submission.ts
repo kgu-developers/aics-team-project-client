@@ -6,6 +6,12 @@ import type {
 } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
+import { isEditLockHeldByOther } from './editLock';
+import {
+  getCurrentPresentation,
+  isPresentationSubmitted,
+  markPresentationMaterialChanged,
+} from '../data/presentation';
 import {
   demoSubmissionSectionId,
   demoSubmissionTeamId,
@@ -215,7 +221,6 @@ export const submissionHandlers = [
           409,
         );
       }
-
       let input: unknown;
       try {
         input = await request.json();
@@ -232,13 +237,39 @@ export const submissionHandlers = [
       );
       if (validationError) return validationError;
 
-      return HttpResponse.json(
-        submitMockSubmissionVersion(
-          submissionId,
-          { userId: result.userId, name: result.userName },
-          input as SubmitSubmissionVersionInput,
-        ),
+      if (submission.milestoneKind === 'PRESENTATION') {
+        if (isPresentationSubmitted()) {
+          return errorResponse(
+            'PRESENTATION_SUBMITTED',
+            '제출한 발표 문서는 수정할 수 없어요.',
+            409,
+          );
+        }
+        const lock = isEditLockHeldByOther(
+          {
+            targetType: 'PRESENTATION_CONTENT_BLOCK',
+            targetId: `${getCurrentPresentation().id}:presentation-material`,
+          },
+          result.userName,
+        );
+        if (lock) {
+          return errorResponse(
+            'BLOCK_LOCKED',
+            `${lock.lockedBy}님이 이 영역을 편집 중이에요.`,
+            409,
+          );
+        }
+      }
+
+      const submitted = submitMockSubmissionVersion(
+        submissionId,
+        { userId: result.userId, name: result.userName },
+        input as SubmitSubmissionVersionInput,
       );
+      if (submission.milestoneKind === 'PRESENTATION') {
+        markPresentationMaterialChanged(result.userName);
+      }
+      return HttpResponse.json(submitted);
     },
   ),
 ];

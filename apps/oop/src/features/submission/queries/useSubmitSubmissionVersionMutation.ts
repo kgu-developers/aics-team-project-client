@@ -2,6 +2,7 @@ import { submitSubmissionVersion } from '@aics/api-client';
 import type { SubmitSubmissionVersionInput } from '@aics/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { presentationKeys } from '~/features/presentation/queries';
 import { studentHomeKeys } from '~/features/student-home/queries';
 
 import { submissionKeys } from './submissionKeys';
@@ -29,6 +30,9 @@ export function useSubmitSubmissionVersionMutation(
         submissionKeys.byMilestone(sectionId, userId, submission.milestoneId),
         submission,
       );
+      void queryClient.invalidateQueries({
+        queryKey: presentationKeys.current(),
+      });
       void queryClient.invalidateQueries({
         queryKey: studentHomeKeys.dashboard(sectionId),
       });
