@@ -53,6 +53,12 @@ export type {
   RadioListItemProps,
   RadioListProps,
 } from '@astryxdesign/core/RadioList';
+export { MultiSelector } from '@astryxdesign/core/MultiSelector';
+export type {
+  MultiSelectorOptionData,
+  MultiSelectorOptionType,
+  MultiSelectorProps,
+} from '@astryxdesign/core/MultiSelector';
 export { ToastViewport, useToast } from '@astryxdesign/core/Toast';
 export type { ToastOptions, ToastType } from '@astryxdesign/core/Toast';
 

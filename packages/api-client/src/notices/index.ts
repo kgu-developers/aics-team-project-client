@@ -1,0 +1,1 @@
+export { removeAdminNoticeAttachment } from './removeAdminNoticeAttachment';

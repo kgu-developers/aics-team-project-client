@@ -1,0 +1,1 @@
+export { useRemoveAdminNoticeAttachmentMutation } from './useRemoveAdminNoticeAttachmentMutation';
