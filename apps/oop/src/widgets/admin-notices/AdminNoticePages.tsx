@@ -13,6 +13,8 @@ import { type RefObject, useEffect, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { useRemoveAdminNoticeAttachmentMutation } from '~/features/admin-notices/queries';
+
 import * as styles from './AdminNoticePages.css';
 import {
   adminNoticeDetails,
@@ -164,13 +166,19 @@ function SectionSelect({
 function NoticeAttachmentField({
   existingFileName,
   file,
+  isRemoving,
   label,
   onChange,
+  onRemoveExisting,
+  removeError,
 }: {
   existingFileName?: string;
   file: File | null;
+  isRemoving?: boolean;
   label: string;
   onChange: (file: File | null) => void;
+  onRemoveExisting?: () => void;
+  removeError?: string;
 }) {
   return (
     <div className={styles.fieldGroup}>
@@ -186,9 +194,21 @@ function NoticeAttachmentField({
         width='100%'
       />
       {existingFileName && !file ? (
-        <a className={styles.attachmentLink} href='#attachment'>
-          📎 {existingFileName}
-        </a>
+        <>
+          <a className={styles.attachmentLink} href='#attachment'>
+            📎 {existingFileName}
+          </a>
+          {onRemoveExisting ? (
+            <Button
+              isDisabled={isRemoving}
+              isLoading={isRemoving}
+              label='기존 파일 삭제'
+              onClick={onRemoveExisting}
+              variant='secondary'
+            />
+          ) : null}
+          {removeError ? <Text role='alert'>{removeError}</Text> : null}
+        </>
       ) : null}
       {file ? (
         <>
@@ -394,15 +414,20 @@ export function AdminNoticeEditPage() {
   const detail = notice ? adminNoticeDetails[notice.id] : null;
   const [content, setContent] = useState(detail?.content.join('\n\n') ?? '');
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [isExistingAttachmentRemoved, setIsExistingAttachmentRemoved] =
+    useState(false);
   const [sections, setSections] = useState<NoticeSection[]>(
     notice && isNoticeSection(notice.section) ? [notice.section] : [],
   );
   const [title, setTitle] = useState(notice?.title ?? '');
+  const removeAttachmentMutation = useRemoveAdminNoticeAttachmentMutation();
 
   useEffect(() => {
     if (!notice || !detail) return;
 
     setContent(detail.content.join('\n\n'));
+    setAttachmentFile(null);
+    setIsExistingAttachmentRemoved(false);
     if (isNoticeSection(notice.section)) setSections([notice.section]);
     setTitle(notice.title);
   }, [noticeId, notice, detail]);
@@ -446,10 +471,23 @@ export function AdminNoticeEditPage() {
             width='100%'
           />
           <NoticeAttachmentField
-            existingFileName={detail.attachment}
+            existingFileName={
+              isExistingAttachmentRemoved ? undefined : detail.attachment
+            }
             file={attachmentFile}
+            isRemoving={removeAttachmentMutation.isPending}
             label='첨부 파일 변경'
             onChange={setAttachmentFile}
+            onRemoveExisting={() => {
+              removeAttachmentMutation.mutate(notice.id, {
+                onSuccess: () => setIsExistingAttachmentRemoved(true),
+              });
+            }}
+            removeError={
+              removeAttachmentMutation.isError
+                ? '첨부 파일 삭제에 실패했습니다. 다시 시도해 주세요.'
+                : undefined
+            }
           />
         </div>
         <div className={styles.actions}>
