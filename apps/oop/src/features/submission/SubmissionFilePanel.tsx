@@ -27,10 +27,14 @@ type SelectedFiles = Partial<
 >;
 
 type SubmissionFilePanelProps = {
+  isReadOnly?: boolean;
   milestoneId: 'presentation' | 'final-report';
   title: string;
   showCurrentFiles?: boolean;
 };
+
+const READ_ONLY_MESSAGE =
+  '읽기 전용 상태에서는 파일을 선택하거나 교체할 수 없어요.';
 
 function formatSubmittedAt(value: string) {
   return new Intl.DateTimeFormat('ko-KR', {
@@ -64,6 +68,7 @@ function SubmittedFileSummary({ submission }: { submission: Submission }) {
 }
 
 export default function SubmissionFilePanel({
+  isReadOnly = false,
   milestoneId,
   showCurrentFiles = true,
   title,
@@ -119,6 +124,7 @@ export default function SubmissionFilePanel({
   }
 
   const submission = submissionQuery.data;
+  const mutationDisabled = isReadOnly || submitMutation.isPending;
 
   return (
     <VStack className={styles.root} gap={4}>
@@ -126,6 +132,7 @@ export default function SubmissionFilePanel({
       {showCurrentFiles ? (
         <SubmittedFileSummary submission={submission} />
       ) : null}
+      {isReadOnly ? <Text color='secondary'>{READ_ONLY_MESSAGE}</Text> : null}
       {!submission.canSubmitNow ? (
         <Text color='secondary'>
           {submission.submitDisabledReason ?? '지금은 제출할 수 없어요.'}
@@ -135,6 +142,7 @@ export default function SubmissionFilePanel({
           className={styles.form}
           onSubmit={event => {
             event.preventDefault();
+            if (isReadOnly) return;
             setSuccessMessage(null);
             const fileError = validateSubmissionFiles(
               submission.artifactRules,
@@ -177,12 +185,15 @@ export default function SubmissionFilePanel({
                 .map(extension => `.${extension}`)
                 .join(',')}
               description={`${rule.allowedExtensions.map(extension => extension.toUpperCase()).join('/')} · 최대 ${formatFileSize(rule.maxSize)}`}
+              disabledMessage={isReadOnly ? READ_ONLY_MESSAGE : undefined}
+              isDisabled={mutationDisabled}
               isRequired
               key={rule.key}
               label={rule.label}
               maxSize={rule.maxSize}
               mode='dropzone'
               onChange={selected => {
+                if (isReadOnly) return;
                 const file = Array.isArray(selected) ? selected[0] : selected;
                 setFiles(current => ({ ...current, [rule.key]: file }));
                 setClientError(null);
@@ -200,9 +211,10 @@ export default function SubmissionFilePanel({
           ) : null}
           {successMessage ? <Text role='status'>{successMessage}</Text> : null}
           <Button
-            isDisabled={submitMutation.isPending}
+            isDisabled={mutationDisabled}
             isLoading={submitMutation.isPending}
             label={submission.currentVersion ? '파일 교체' : '파일 제출'}
+            tooltip={isReadOnly ? READ_ONLY_MESSAGE : undefined}
             type='submit'
             variant='primary'
           />
