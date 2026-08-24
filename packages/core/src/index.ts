@@ -6,7 +6,51 @@ export type {
   UserGlobalRole,
 } from './auth/types';
 export type { Course } from './course/types';
+export type {
+  CompleteDocumentBlockInput,
+  DocumentBlockStatus,
+  DocumentSession,
+  DocumentSessionBlock,
+  DocumentSessionStatus,
+  SubmitDocumentSessionInput,
+} from './documentSession/types';
+export type {
+  EditLockAcquireInput,
+  EditLockReleaseInput,
+  EditLockStatus,
+  EditLockTarget,
+  EditLockTargetType,
+} from './editLock/types';
+export { editLockTargetTypes } from './editLock/types';
 export type { Milestone } from './milestone/types';
+export type {
+  MidReport,
+  MidReportBlock,
+  MidReportBlockKey,
+  MidReportField,
+  UpdateMidReportBlockInput,
+} from './midReport/types';
+export { midReportBlockKeys } from './midReport/types';
+export type {
+  Presentation,
+  PresentationBlock,
+  PresentationBlockKey,
+  PresentationField,
+  UpdatePresentationBlockInput,
+} from './presentation/types';
+export { presentationBlockKeys } from './presentation/types';
+export type {
+  CompleteProposalBlockInput,
+  Proposal,
+  ProposalBlock,
+  ProposalBlockKey,
+  ProposalBlockStatus,
+  ProposalField,
+  ProposalStatus,
+  SubmitProposalInput,
+  UpdateProposalBlockInput,
+} from './proposal/types';
+export { proposalBlockKeys } from './proposal/types';
 export type { Project } from './project/types';
 export type { Review } from './review/types';
 export type { Rubric } from './rubric/types';
