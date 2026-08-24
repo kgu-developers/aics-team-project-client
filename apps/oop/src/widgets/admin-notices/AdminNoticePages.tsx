@@ -1,6 +1,7 @@
 import {
   Button,
   Card,
+  FileInput,
   Heading,
   MultiSelector,
   Text,
@@ -157,6 +158,51 @@ function SectionSelect({
       value={value}
       width='100%'
     />
+  );
+}
+
+function NoticeAttachmentField({
+  existingFileName,
+  file,
+  label,
+  onChange,
+}: {
+  existingFileName?: string;
+  file: File | null;
+  label: string;
+  onChange: (file: File | null) => void;
+}) {
+  return (
+    <div className={styles.fieldGroup}>
+      <FileInput
+        label={label}
+        mode='input'
+        onChange={selected => {
+          const nextFile = Array.isArray(selected) ? selected[0] : selected;
+          onChange(nextFile ?? null);
+        }}
+        placeholder='파일 선택'
+        value={file}
+        width='100%'
+      />
+      {existingFileName && !file ? (
+        <a className={styles.attachmentLink} href='#attachment'>
+          📎 {existingFileName}
+        </a>
+      ) : null}
+      {file ? (
+        <>
+          <Text color='secondary' role='status' type='supporting'>
+            {file.name} 선택됨 · 아직 업로드되지 않았습니다.
+          </Text>
+          <Button
+            label='선택한 파일 제거'
+            onClick={() => onChange(null)}
+            variant='secondary'
+          />
+        </>
+      ) : null}
+    </div>
   );
 }
 
@@ -347,6 +393,7 @@ export function AdminNoticeEditPage() {
   const notice = adminNotices.find(candidate => candidate.id === noticeId);
   const detail = notice ? adminNoticeDetails[notice.id] : null;
   const [content, setContent] = useState(detail?.content.join('\n\n') ?? '');
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [sections, setSections] = useState<NoticeSection[]>(
     notice && isNoticeSection(notice.section) ? [notice.section] : [],
   );
@@ -398,13 +445,12 @@ export function AdminNoticeEditPage() {
             value={content}
             width='100%'
           />
-          <div className={styles.fieldGroup}>
-            <Text>첨부 파일</Text>
-            <a className={styles.attachmentLink} href='#attachment'>
-              📎 {detail.attachment}
-            </a>
-            <Button label='파일 변경' variant='secondary' />
-          </div>
+          <NoticeAttachmentField
+            existingFileName={detail.attachment}
+            file={attachmentFile}
+            label='첨부 파일 변경'
+            onChange={setAttachmentFile}
+          />
         </div>
         <div className={styles.actions}>
           <Button
@@ -434,6 +480,7 @@ export function AdminNoticeNewPage() {
   );
   const navigate = useNavigate();
   const [content, setContent] = useState('');
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [sections, setSections] = useState<NoticeSection[]>([]);
   const [title, setTitle] = useState('');
 
@@ -468,10 +515,11 @@ export function AdminNoticeNewPage() {
             value={content}
             width='100%'
           />
-          <div className={styles.fieldGroup}>
-            <Text>첨부 파일</Text>
-            <Button label='파일 선택' variant='secondary' />
-          </div>
+          <NoticeAttachmentField
+            file={attachmentFile}
+            label='첨부 파일'
+            onChange={setAttachmentFile}
+          />
         </div>
         <div className={styles.actions}>
           <Button
