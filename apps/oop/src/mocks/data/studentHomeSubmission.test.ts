@@ -70,4 +70,20 @@ describe('createStudentHomeDashboardWithFinalReportSubmission', () => {
       ],
     });
   });
+
+  it('지난 기간의 제안서 행은 다음 발표 단계에서 후보 등록 CTA를 노출하지 않는다', () => {
+    const dashboard = createStudentHomeDashboardPreview(
+      'presentation-material',
+    );
+    const proposal = dashboard.milestones.find(item => item.id === 'proposal');
+
+    expect(proposal).toMatchObject({
+      status: 'completed',
+      statusLabel: '완료',
+    });
+    expect(proposal?.rows[0]).toMatchObject({
+      value: '완료',
+      actionLabel: undefined,
+    });
+  });
 });

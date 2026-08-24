@@ -7,7 +7,6 @@ import {
   createRouter,
 } from '@tanstack/react-router';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import type { PropsWithChildren } from 'react';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
@@ -22,9 +21,14 @@ import {
   demoCompletedStudent,
 } from '~/mocks/data/users';
 import { studentHomeHandlers } from '~/mocks/handlers/studentHome';
+import { submissionHandlers } from '~/mocks/handlers/submission';
 import { topicHandlers } from '~/mocks/handlers/topic';
 
-const server = setupServer(...studentHomeHandlers, ...topicHandlers);
+const server = setupServer(
+  ...studentHomeHandlers,
+  ...submissionHandlers,
+  ...topicHandlers,
+);
 const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
   'close',
@@ -98,23 +102,15 @@ function createWrapper() {
 }
 
 describe('StudentHomeTopicFlow', () => {
-  it('제안서 단계를 접은 상태에서도 후보 추가 Dialog를 표시한다', async () => {
-    const user = userEvent.setup();
+  it('선정된 주제 상태에서는 후보 투표 대신 제안서 작성 CTA를 표시한다', async () => {
     useAuthStore.getState().setAccessToken(demoCompletedAccessToken);
     useAuthStore.getState().setCurrentUser(demoCompletedStudent);
     render(<StudentHomePage />, { wrapper: createWrapper() });
 
-    await screen.findByRole('radio', { name: '영화관 관리 프로그램' });
-    const proposalTrigger = screen.getByRole('button', {
-      name: /제안서기간 : 20260928/,
-    });
-    await user.click(proposalTrigger);
-    expect(proposalTrigger).toHaveAttribute('aria-expanded', 'false');
-
-    await user.click(screen.getByRole('button', { name: '후보 추가' }));
-
+    expect(await screen.findAllByText('제안서 작성')).not.toHaveLength(0);
+    expect(screen.getByRole('button', { name: '작성하기' })).toBeEnabled();
     expect(
-      screen.getByRole('dialog', { name: '주제 후보 추가' }),
-    ).toBeInTheDocument();
+      screen.queryByRole('button', { name: '후보 추가' }),
+    ).not.toBeInTheDocument();
   });
 });

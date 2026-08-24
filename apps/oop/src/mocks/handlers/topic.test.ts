@@ -1,7 +1,15 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import type { TopicBoard } from '@aics/core';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 
 import { topicHandlers } from './topic';
 import { resetTopicMockData } from '../data/topic';
@@ -12,6 +20,7 @@ const headers = { Authorization: `Bearer ${demoAccessToken}` };
 const server = setupServer(...topicHandlers);
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => resetTopicMockData({ selection: 'VOTING' }));
 afterEach(() => {
   resetTopicMockData();
   server.resetHandlers();
@@ -152,5 +161,38 @@ describe('topicHandlers', () => {
     );
 
     expect(response.status).toBe(404);
+  });
+
+  it('주제 선정이 끝나면 후보와 투표 mutation을 모두 거부한다', async () => {
+    resetTopicMockData();
+    const requestHeaders = {
+      ...headers,
+      'Content-Type': 'application/json',
+    };
+    const responses = await Promise.all([
+      fetch(`${API_BASE_URL}${ENDPOINTS.TOPIC.BOARD(sectionId)}`, {
+        method: 'POST',
+        headers: requestHeaders,
+        body: JSON.stringify({ title: '새 후보', description: '설명' }),
+      }),
+      fetch(`${API_BASE_URL}${ENDPOINTS.TOPIC.VOTE(sectionId)}`, {
+        method: 'PUT',
+        headers: requestHeaders,
+        body: JSON.stringify({ candidateId: 'topic-3' }),
+      }),
+      fetch(`${API_BASE_URL}${ENDPOINTS.TOPIC.VOTE(sectionId)}`, {
+        method: 'DELETE',
+        headers,
+      }),
+    ]);
+
+    expect(responses.map(response => response.status)).toEqual([409, 409, 409]);
+    await Promise.all(
+      responses.map(async response =>
+        expect(await response.json()).toMatchObject({
+          code: 'TOPIC_SELECTION_FINALIZED',
+        }),
+      ),
+    );
   });
 });

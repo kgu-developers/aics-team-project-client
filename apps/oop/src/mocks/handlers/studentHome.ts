@@ -1,8 +1,14 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { getCurrentMidReport } from '../data/midReport';
+import { getCurrentPresentation } from '../data/presentation';
+import { getCurrentProposal } from '../data/proposal';
 import {
   createStudentHomeDashboardWithFinalReportSubmission,
+  createStudentHomeDashboardWithMidReportProgress,
+  createStudentHomeDashboardWithPresentationProgress,
+  createStudentHomeDashboardWithProposalProgress,
   createStudentHomeDashboardWithTopicBoard,
   createStudentHomeDashboardPreview,
   isMilestonePreviewScenario,
@@ -61,9 +67,23 @@ export const studentHomeHandlers = [
             ),
           );
 
+      const withProposalProgress =
+        createStudentHomeDashboardWithProposalProgress(
+          baseDashboard,
+          getCurrentProposal(),
+        );
+
+      const withDocumentProgress =
+        createStudentHomeDashboardWithPresentationProgress(
+          createStudentHomeDashboardWithMidReportProgress(
+            withProposalProgress,
+            getCurrentMidReport(),
+          ),
+          getCurrentPresentation(),
+        );
       return HttpResponse.json(
         createStudentHomeDashboardWithFinalReportSubmission(
-          baseDashboard,
+          withDocumentProgress,
           getSubmissionByMilestone(demoSubmissionTeamId, 'final-report'),
         ),
       );
