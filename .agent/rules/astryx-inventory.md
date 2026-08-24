@@ -18,7 +18,7 @@ AstryxThemeProvider, oopTheme, tokens
 
 ```text
 AlertDialog, AppShell, AspectRatio, Avatar, AvatarGroup
-Badge, Banner, Blockquote, Breadcrumbs, Button, ButtonGroup
+Badge, Banner, Blockquote, Breadcrumbs, Button, ButtonGroup, MultiSelector
 Calendar, Card, Carousel, Center, Chat, CheckboxInput, CheckboxList
 Citation, ClickableCard, Code, CodeBlock, Collapsible, CommandPalette
 ContextMenu, DateInput, DateRangeInput, DateTimeInput, Dialog, Divider

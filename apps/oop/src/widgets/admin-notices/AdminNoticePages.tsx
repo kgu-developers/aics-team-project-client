@@ -2,6 +2,7 @@ import {
   Button,
   Card,
   Heading,
+  MultiSelector,
   Text,
   TextArea,
   TextInput,
@@ -128,74 +129,34 @@ function DeleteNoticeDialog({
   );
 }
 
+type NoticeSection = Exclude<NoticeSectionFilter, '전체'>;
+
+function isNoticeSection(value: string): value is NoticeSection {
+  return value !== '전체';
+}
+
 function SectionSelect({
   onChange,
   value,
 }: {
-  onChange: (sections: NoticeSectionFilter[]) => void;
-  value: NoticeSectionFilter[];
+  onChange: (sections: NoticeSection[]) => void;
+  value: NoticeSection[];
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const handleSelect = (section: NoticeSectionFilter) => {
-    if (section === '전체') {
-      onChange(['전체']);
-      return;
-    }
-
-    const selectedSections = value.filter(
-      valueSection => valueSection !== '전체',
-    );
-
-    const nextSections = selectedSections.includes(section)
-      ? selectedSections.filter(valueSection => valueSection !== section)
-      : [...selectedSections, section];
-
-    onChange(nextSections.length > 0 ? nextSections : ['전체']);
-  };
+  const options = noticeSectionFilters.filter(isNoticeSection);
 
   return (
-    <div className={styles.selectWrapper}>
-      <button
-        aria-label='분반'
-        aria-expanded={isOpen}
-        aria-haspopup='listbox'
-        className={styles.selectButton}
-        onClick={() => setIsOpen(open => !open)}
-        type='button'
-      >
-        {value.join(', ')} <span aria-hidden='true'>▾</span>
-      </button>
-
-      {isOpen ? (
-        <ul
-          aria-label='분반'
-          aria-multiselectable='true'
-          className={styles.selectMenu}
-          role='listbox'
-        >
-          {noticeSectionFilters.map(section => {
-            const isSelected = value.includes(section);
-
-            return (
-              <li key={section}>
-                <button
-                  aria-selected={isSelected}
-                  className={
-                    isSelected ? styles.selectOptionActive : styles.selectOption
-                  }
-                  onClick={() => handleSelect(section)}
-                  role='option'
-                  type='button'
-                >
-                  {section}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-    </div>
+    <MultiSelector
+      hasClear
+      hasSelectAll
+      label='분반'
+      onChange={nextValue => onChange(nextValue.filter(isNoticeSection))}
+      options={options}
+      placeholder='분반을 선택해 주세요.'
+      selectAllLabel='전체 선택'
+      triggerDisplay='labels'
+      value={value}
+      width='100%'
+    />
   );
 }
 
@@ -386,8 +347,8 @@ export function AdminNoticeEditPage() {
   const notice = adminNotices.find(candidate => candidate.id === noticeId);
   const detail = notice ? adminNoticeDetails[notice.id] : null;
   const [content, setContent] = useState(detail?.content.join('\n\n') ?? '');
-  const [sections, setSections] = useState<NoticeSectionFilter[]>(
-    notice ? [notice.section] : ['전체'],
+  const [sections, setSections] = useState<NoticeSection[]>(
+    notice && isNoticeSection(notice.section) ? [notice.section] : [],
   );
   const [title, setTitle] = useState(notice?.title ?? '');
 
@@ -395,7 +356,7 @@ export function AdminNoticeEditPage() {
     if (!notice || !detail) return;
 
     setContent(detail.content.join('\n\n'));
-    setSections([notice.section]);
+    if (isNoticeSection(notice.section)) setSections([notice.section]);
     setTitle(notice.title);
   }, [noticeId, notice, detail]);
 
@@ -456,7 +417,11 @@ export function AdminNoticeEditPage() {
             }
             variant='secondary'
           />
-          <Button label='저장' variant='primary' />
+          <Button
+            isDisabled={sections.length === 0}
+            label='저장'
+            variant='primary'
+          />
         </div>
       </Card>
     </div>
@@ -469,7 +434,7 @@ export function AdminNoticeNewPage() {
   );
   const navigate = useNavigate();
   const [content, setContent] = useState('');
-  const [sections, setSections] = useState<NoticeSectionFilter[]>(['전체']);
+  const [sections, setSections] = useState<NoticeSection[]>([]);
   const [title, setTitle] = useState('');
 
   return (
@@ -514,7 +479,11 @@ export function AdminNoticeNewPage() {
             onClick={() => navigate({ to: ROUTES.ADMIN_NOTICES })}
             variant='secondary'
           />
-          <Button label='저장' variant='primary' />
+          <Button
+            isDisabled={sections.length === 0}
+            label='저장'
+            variant='primary'
+          />
         </div>
       </Card>
     </div>
