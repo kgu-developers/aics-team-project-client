@@ -5,9 +5,13 @@ export const ENDPOINTS = {
     LOGOUT: '/auth/logout',
     ME: '/me',
   },
+  PROFILE: {
+    ME: '/me/profile',
+  },
   ADMIN: {
     SECTION_STUDENTS: (sectionId: string) =>
       `/admin/sections/${sectionId}/students`,
+    TEAM_DASHBOARD: (teamId: string) => `/admin/teams/${teamId}/dashboard`,
   },
   SECTION: {
     STUDENT_DASHBOARD: (sectionId: string) =>

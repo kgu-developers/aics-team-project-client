@@ -3,7 +3,21 @@ export { fetchCurrentUser } from './auth/fetchCurrentUser';
 export { submitLogin } from './auth/submitLogin';
 export { submitLogout } from './auth/submitLogout';
 export { submitRefresh } from './auth/submitRefresh';
+export {
+  fetchMyProfile,
+  type MyProfileResponse,
+} from './profile/fetchMyProfile';
+export {
+  updateMyProfile,
+  type UpdateMyProfileInput,
+} from './profile/updateMyProfile';
 export { API_BASE_URL, apiClient } from './client';
+export {
+  fetchAdminTeamDashboard,
+  type AdminTeamDashboardMilestoneDto,
+  type AdminTeamDashboardMilestoneStatusDto,
+  type AdminTeamDashboardResponse,
+} from './teams/fetchAdminTeamDashboard';
 export { acquireEditLock, fetchEditLock, removeEditLock } from './editLock';
 export { fetchTeams } from './teams/fetchTeams';
 export { submitTeam } from './teams/submitTeam';

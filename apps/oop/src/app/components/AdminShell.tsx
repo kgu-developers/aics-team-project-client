@@ -13,6 +13,10 @@ const menuItems = [
 function isMenuItemActive(pathname: string, itemPath: string) {
   if (itemPath === ROUTES.ADMIN) return pathname === itemPath;
 
+  if (itemPath === ROUTES.ADMIN_STUDENT_TEAM) {
+    return pathname === itemPath || pathname.startsWith('/admin/teams/');
+  }
+
   return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
 }
 
@@ -55,13 +59,12 @@ export default function AdminShell() {
             쪽지함 <span className={styles.count}>12</span>
           </button>
         </nav>
-        <div className={styles.account}>
-          <span aria-hidden='true' className={styles.avatar} />
+        <Link className={styles.account} to={ROUTES.ADMIN_PROFILE}>
           <div>
             <strong>어드민 계정</strong>
             <span>로그아웃 / 권한 변경</span>
           </div>
-        </div>
+        </Link>
       </aside>
       <main className={styles.main}>
         <Outlet />

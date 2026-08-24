@@ -73,7 +73,13 @@ export type {
   TopicBoard,
   TopicCandidate,
 } from './topic/types';
-export type { SubmitTeamInput, Team, TeamMember } from './team/types';
+export type {
+  AdminTeamDashboard,
+  AdminTeamDashboardMember,
+  SubmitTeamInput,
+  Team,
+  TeamMember,
+} from './team/types';
 export type {
   ConfirmTeamLeaderInput,
   IncomingPartnerRequest,
