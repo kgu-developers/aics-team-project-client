@@ -6,6 +6,7 @@ export const ROUTES = {
   ADMIN_NOTICE_EDIT: '/admin/notices/$noticeId/edit',
   ADMIN_PROFILE: '/admin/profile',
   ADMIN_STUDENT_TEAM: '/admin/student-team',
+  ADMIN_SUBMISSIONS: '/admin/submissions',
   ADMIN_TEAM_DETAIL: '/admin/teams/$teamId',
   STUDENT: {
     HOME: '/student',

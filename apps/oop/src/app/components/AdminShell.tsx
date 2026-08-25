@@ -8,6 +8,7 @@ const menuItems = [
   { label: '홈', to: ROUTES.ADMIN },
   { label: '공지사항', to: ROUTES.ADMIN_NOTICES },
   { label: '수강생/팀 관리', to: ROUTES.ADMIN_STUDENT_TEAM },
+  { label: '분반별 제출물', to: ROUTES.ADMIN_SUBMISSIONS },
 ] as const;
 
 function isMenuItemActive(pathname: string, itemPath: string) {
@@ -45,16 +46,9 @@ export default function AdminShell() {
               </Link>
             );
           })}
-          {['분반별 제출물', '회의록'].map(item => (
-            <button
-              className={styles.navItem}
-              disabled
-              key={item}
-              type='button'
-            >
-              {item}
-            </button>
-          ))}
+          <button className={styles.navItem} disabled type='button'>
+            회의록
+          </button>
           <button className={styles.navItem} disabled type='button'>
             쪽지함 <span className={styles.count}>12</span>
           </button>

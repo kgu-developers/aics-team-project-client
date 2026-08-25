@@ -175,7 +175,24 @@ export default function AdminHomeDashboard() {
                           sectionMilestone.id === milestone.id,
                       )?.summary;
 
-                      return <td key={milestone.id}>{summary ?? '-'}</td>;
+                      return (
+                        <td key={milestone.id}>
+                          {summary ? (
+                            <Link
+                              className={styles.milestoneLink}
+                              search={{
+                                milestoneId: milestone.id,
+                                sectionId: section.sectionId,
+                              }}
+                              to={ROUTES.ADMIN_SUBMISSIONS}
+                            >
+                              {summary}
+                            </Link>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                      );
                     })}
                     <td>{section.unreadMessageCountLabel}</td>
                   </tr>
