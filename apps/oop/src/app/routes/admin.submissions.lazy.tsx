@@ -1,7 +1,5 @@
-import { createLazyFileRoute } from '@tanstack/react-router';
-
-import AdminSubmissionsPage from '~/widgets/admin-submissions/AdminSubmissionsPage';
+import { Outlet, createLazyFileRoute } from '@tanstack/react-router';
 
 export const Route = createLazyFileRoute('/admin/submissions')({
-  component: AdminSubmissionsPage,
+  component: Outlet,
 });
