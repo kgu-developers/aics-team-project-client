@@ -1,6 +1,7 @@
 import {
   Button,
   Card,
+  Dialog,
   FileInput,
   Heading,
   MultiSelector,
@@ -9,7 +10,7 @@ import {
   TextInput,
 } from '@aics/design-system';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
-import { type RefObject, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -47,53 +48,22 @@ function DeleteNoticeDialog({
   isOpen,
   notice,
   onClose,
-  triggerRef,
 }: {
   isOpen: boolean;
   notice: AdminNotice;
   onClose: () => void;
-  triggerRef: RefObject<HTMLButtonElement | null>;
 }) {
-  const cancelButtonRef = useRef<HTMLButtonElement>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const detail = adminNoticeDetails[notice.id];
 
-  useEffect(() => {
-    const dialog = dialogRef.current;
-
-    if (!isOpen || !dialog) return;
-
-    dialog.showModal();
-    cancelButtonRef.current?.focus();
-
-    return () => {
-      if (dialog.open) dialog.close();
-    };
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  function handleClose() {
-    onClose();
-    requestAnimationFrame(() => triggerRef.current?.focus());
-  }
-
   return (
-    <dialog
-      aria-labelledby='delete-notice-title'
-      aria-modal='true'
-      className={styles.dialog}
-      onCancel={event => {
-        event.preventDefault();
-        handleClose();
+    <Dialog
+      aria-label='공지사항 삭제 확인'
+      isOpen={isOpen}
+      onOpenChange={nextIsOpen => {
+        if (!nextIsOpen) onClose();
       }}
-      onKeyDown={event => {
-        if (event.key !== 'Escape') return;
-
-        event.preventDefault();
-        handleClose();
-      }}
-      ref={dialogRef}
+      purpose='form'
+      width={480}
     >
       <Heading
         className={styles.deleteTitle}
@@ -117,18 +87,18 @@ function DeleteNoticeDialog({
       <div className={styles.modalActions}>
         <Button
           label='취소'
-          onClick={handleClose}
-          ref={cancelButtonRef}
+          data-autofocus=''
+          onClick={onClose}
           variant='secondary'
         />
         <Button
           className={styles.deleteButton}
           label='삭제'
-          onClick={handleClose}
+          onClick={onClose}
           variant='secondary'
         />
       </div>
-    </dialog>
+    </Dialog>
   );
 }
 
@@ -341,7 +311,6 @@ export function AdminNoticeListPage() {
 export function AdminNoticeDetailPage() {
   const { noticeId } = useParams({ from: '/admin/notices/$noticeId/' });
   const navigate = useNavigate();
-  const deleteButtonRef = useRef<HTMLButtonElement>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const notice = adminNotices.find(candidate => candidate.id === noticeId);
 
@@ -380,7 +349,6 @@ export function AdminNoticeDetailPage() {
           <Button
             label='삭제'
             onClick={() => setIsDeleteDialogOpen(true)}
-            ref={deleteButtonRef}
             variant='secondary'
           />
           <Button
@@ -399,7 +367,6 @@ export function AdminNoticeDetailPage() {
         isOpen={isDeleteDialogOpen}
         notice={notice}
         onClose={() => setIsDeleteDialogOpen(false)}
-        triggerRef={deleteButtonRef}
       />
     </div>
   );
