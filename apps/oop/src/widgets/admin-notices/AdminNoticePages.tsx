@@ -1,7 +1,9 @@
 import {
   Button,
   Card,
+  FileInput,
   Heading,
+  MultiSelector,
   Text,
   TextArea,
   TextInput,
@@ -10,6 +12,8 @@ import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { type RefObject, useEffect, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
+
+import { useRemoveAdminNoticeAttachmentMutation } from '~/features/admin-notices/queries';
 
 import * as styles from './AdminNoticePages.css';
 import {
@@ -128,72 +132,95 @@ function DeleteNoticeDialog({
   );
 }
 
+type NoticeSection = Exclude<NoticeSectionFilter, '전체'>;
+
+function isNoticeSection(value: string): value is NoticeSection {
+  return value !== '전체';
+}
+
 function SectionSelect({
   onChange,
   value,
 }: {
-  onChange: (sections: NoticeSectionFilter[]) => void;
-  value: NoticeSectionFilter[];
+  onChange: (sections: NoticeSection[]) => void;
+  value: NoticeSection[];
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const handleSelect = (section: NoticeSectionFilter) => {
-    if (section === '전체') {
-      onChange(['전체']);
-      return;
-    }
-
-    const selectedSections = value.filter(
-      valueSection => valueSection !== '전체',
-    );
-
-    const nextSections = selectedSections.includes(section)
-      ? selectedSections.filter(valueSection => valueSection !== section)
-      : [...selectedSections, section];
-
-    onChange(nextSections.length > 0 ? nextSections : ['전체']);
-  };
+  const options = noticeSectionFilters.filter(isNoticeSection);
 
   return (
-    <div className={styles.selectWrapper}>
-      <button
-        aria-label='분반'
-        aria-expanded={isOpen}
-        aria-haspopup='listbox'
-        className={styles.selectButton}
-        onClick={() => setIsOpen(open => !open)}
-        type='button'
-      >
-        {value.join(', ')} <span aria-hidden='true'>▾</span>
-      </button>
+    <MultiSelector
+      hasClear
+      hasSelectAll
+      label='분반'
+      onChange={nextValue => onChange(nextValue.filter(isNoticeSection))}
+      options={options}
+      placeholder='분반을 선택해 주세요.'
+      selectAllLabel='전체 선택'
+      triggerDisplay='labels'
+      value={value}
+      width='100%'
+    />
+  );
+}
 
-      {isOpen ? (
-        <ul
-          aria-label='분반'
-          aria-multiselectable='true'
-          className={styles.selectMenu}
-          role='listbox'
-        >
-          {noticeSectionFilters.map(section => {
-            const isSelected = value.includes(section);
-
-            return (
-              <li key={section}>
-                <button
-                  aria-selected={isSelected}
-                  className={
-                    isSelected ? styles.selectOptionActive : styles.selectOption
-                  }
-                  onClick={() => handleSelect(section)}
-                  role='option'
-                  type='button'
-                >
-                  {section}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+function NoticeAttachmentField({
+  existingFileName,
+  file,
+  isRemoving,
+  label,
+  onChange,
+  onRemoveExisting,
+  removeError,
+}: {
+  existingFileName?: string;
+  file: File | null;
+  isRemoving?: boolean;
+  label: string;
+  onChange: (file: File | null) => void;
+  onRemoveExisting?: () => void;
+  removeError?: string;
+}) {
+  return (
+    <div className={styles.fieldGroup}>
+      <FileInput
+        label={label}
+        mode='input'
+        onChange={selected => {
+          const nextFile = Array.isArray(selected) ? selected[0] : selected;
+          onChange(nextFile ?? null);
+        }}
+        placeholder='파일 선택'
+        value={file}
+        width='100%'
+      />
+      {existingFileName && !file ? (
+        <>
+          <a className={styles.attachmentLink} href='#attachment'>
+            📎 {existingFileName}
+          </a>
+          {onRemoveExisting ? (
+            <Button
+              isDisabled={isRemoving}
+              isLoading={isRemoving}
+              label='기존 파일 삭제'
+              onClick={onRemoveExisting}
+              variant='secondary'
+            />
+          ) : null}
+          {removeError ? <Text role='alert'>{removeError}</Text> : null}
+        </>
+      ) : null}
+      {file ? (
+        <>
+          <Text color='secondary' role='status' type='supporting'>
+            {file.name} 선택됨 · 아직 업로드되지 않았습니다.
+          </Text>
+          <Button
+            label='선택한 파일 제거'
+            onClick={() => onChange(null)}
+            variant='secondary'
+          />
+        </>
       ) : null}
     </div>
   );
@@ -386,16 +413,22 @@ export function AdminNoticeEditPage() {
   const notice = adminNotices.find(candidate => candidate.id === noticeId);
   const detail = notice ? adminNoticeDetails[notice.id] : null;
   const [content, setContent] = useState(detail?.content.join('\n\n') ?? '');
-  const [sections, setSections] = useState<NoticeSectionFilter[]>(
-    notice ? [notice.section] : ['전체'],
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [isExistingAttachmentRemoved, setIsExistingAttachmentRemoved] =
+    useState(false);
+  const [sections, setSections] = useState<NoticeSection[]>(
+    notice && isNoticeSection(notice.section) ? [notice.section] : [],
   );
   const [title, setTitle] = useState(notice?.title ?? '');
+  const removeAttachmentMutation = useRemoveAdminNoticeAttachmentMutation();
 
   useEffect(() => {
     if (!notice || !detail) return;
 
     setContent(detail.content.join('\n\n'));
-    setSections([notice.section]);
+    setAttachmentFile(null);
+    setIsExistingAttachmentRemoved(false);
+    if (isNoticeSection(notice.section)) setSections([notice.section]);
     setTitle(notice.title);
   }, [noticeId, notice, detail]);
 
@@ -437,13 +470,25 @@ export function AdminNoticeEditPage() {
             value={content}
             width='100%'
           />
-          <div className={styles.fieldGroup}>
-            <Text>첨부 파일</Text>
-            <a className={styles.attachmentLink} href='#attachment'>
-              📎 {detail.attachment}
-            </a>
-            <Button label='파일 변경' variant='secondary' />
-          </div>
+          <NoticeAttachmentField
+            existingFileName={
+              isExistingAttachmentRemoved ? undefined : detail.attachment
+            }
+            file={attachmentFile}
+            isRemoving={removeAttachmentMutation.isPending}
+            label='첨부 파일 변경'
+            onChange={setAttachmentFile}
+            onRemoveExisting={() => {
+              removeAttachmentMutation.mutate(notice.id, {
+                onSuccess: () => setIsExistingAttachmentRemoved(true),
+              });
+            }}
+            removeError={
+              removeAttachmentMutation.isError
+                ? '첨부 파일 삭제에 실패했습니다. 다시 시도해 주세요.'
+                : undefined
+            }
+          />
         </div>
         <div className={styles.actions}>
           <Button
@@ -456,7 +501,11 @@ export function AdminNoticeEditPage() {
             }
             variant='secondary'
           />
-          <Button label='저장' variant='primary' />
+          <Button
+            isDisabled={sections.length === 0}
+            label='저장'
+            variant='primary'
+          />
         </div>
       </Card>
     </div>
@@ -469,7 +518,8 @@ export function AdminNoticeNewPage() {
   );
   const navigate = useNavigate();
   const [content, setContent] = useState('');
-  const [sections, setSections] = useState<NoticeSectionFilter[]>(['전체']);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [sections, setSections] = useState<NoticeSection[]>([]);
   const [title, setTitle] = useState('');
 
   return (
@@ -503,10 +553,11 @@ export function AdminNoticeNewPage() {
             value={content}
             width='100%'
           />
-          <div className={styles.fieldGroup}>
-            <Text>첨부 파일</Text>
-            <Button label='파일 선택' variant='secondary' />
-          </div>
+          <NoticeAttachmentField
+            file={attachmentFile}
+            label='첨부 파일'
+            onChange={setAttachmentFile}
+          />
         </div>
         <div className={styles.actions}>
           <Button
@@ -514,7 +565,11 @@ export function AdminNoticeNewPage() {
             onClick={() => navigate({ to: ROUTES.ADMIN_NOTICES })}
             variant='secondary'
           />
-          <Button label='저장' variant='primary' />
+          <Button
+            isDisabled={sections.length === 0}
+            label='저장'
+            variant='primary'
+          />
         </div>
       </Card>
     </div>

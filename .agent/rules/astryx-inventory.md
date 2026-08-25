@@ -10,7 +10,7 @@ EmptyState, Field, FileInput, IconButton, RadioList, RadioListItem, Selector, Se
 Tab, TabList
 HStack, VStack
 Text, Heading
-TextInput, TextArea
+TextInput, TextArea, MultiSelector
 AstryxThemeProvider, oopTheme, tokens
 ```
 
@@ -25,7 +25,7 @@ ContextMenu, DateInput, DateRangeInput, DateTimeInput, Dialog, Divider
 DropdownMenu, EmptyState, Field, FieldStatus, FileInput, FormLayout
 Grid, HStack, Heading, HoverCard, Icon, IconButton, InputGroup, Item
 Kbd, Layer, Layout, Lightbox, Link, List, Markdown, MetadataList
-MobileNav, MoreMenu, MultiSelector, NavIcon, NavMenu, NumberInput
+MobileNav, MoreMenu, NavIcon, NavMenu, NumberInput
 Outline, OverflowList, Overlay, Pagination, Popover, PowerSearch
 ProgressBar, RadioList, Resizable, Section, SegmentedControl
 SelectableCard, Selector, SideNav, Skeleton, Slider, Spinner, Stack
