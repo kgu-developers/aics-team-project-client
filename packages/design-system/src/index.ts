@@ -59,6 +59,11 @@ export type {
   MultiSelectorOptionType,
   MultiSelectorProps,
 } from '@astryxdesign/core/MultiSelector';
+export { Selector, SelectorOption } from '@astryxdesign/core/Selector';
+export type {
+  SelectorOptionData,
+  SelectorProps,
+} from '@astryxdesign/core/Selector';
 export { ToastViewport, useToast } from '@astryxdesign/core/Toast';
 export type { ToastOptions, ToastType } from '@astryxdesign/core/Toast';
 

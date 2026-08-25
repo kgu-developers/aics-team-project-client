@@ -18,11 +18,30 @@ export {
   type AdminTeamDashboardMilestoneStatusDto,
   type AdminTeamDashboardResponse,
 } from './teams/fetchAdminTeamDashboard';
+export { acquireEditLock, fetchEditLock, removeEditLock } from './editLock';
 export { fetchTeams } from './teams/fetchTeams';
 export { submitTeam } from './teams/submitTeam';
 export { removeAdminNoticeAttachment } from './notices';
 export { ENDPOINTS } from './constants/endpoints';
 export { fetchStudentHomeDashboard } from './studentHome/fetchStudentHomeDashboard';
+export {
+  completeMidReportBlock,
+  fetchCurrentMidReport,
+  submitMidReport,
+  updateMidReportBlock,
+} from './midReport';
+export {
+  completePresentationBlock,
+  fetchCurrentPresentation,
+  submitPresentation,
+  updatePresentationBlock,
+} from './presentation';
+export {
+  completeProposalBlock,
+  fetchCurrentProposal,
+  submitProposal,
+  updateProposalBlock,
+} from './proposal';
 export {
   fetchMyTeamSubmission,
   fetchSubmission,

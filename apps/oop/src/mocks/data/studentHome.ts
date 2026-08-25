@@ -1,9 +1,14 @@
 import type {
+  MidReport,
+  Presentation,
+  Proposal,
   Submission,
   StudentHomeDashboard,
   StudentHomeMilestoneBody,
   TopicBoard,
 } from '@aics/core';
+
+import { editorSectionTo } from '~/app/constants/editorSections';
 
 const CURRENT_PERIOD = '기간 : 20260928 ~ 20261012';
 const UPCOMING_PERIOD = '기간 : 20261013 ~ 20261026';
@@ -41,9 +46,9 @@ export const studentHomeDashboardFixture: StudentHomeDashboard = {
         topicCandidates: [
           {
             id: 'topic-1',
-            title: '영화관 관리 프로그램',
+            title: 'CineFlow · 영화관 통합 관리 시스템',
             proposer: '김민준',
-            description: '상영작·좌석·예매 현황을 한 곳에서 관리',
+            description: '상영 일정, 좌석, 예매와 결제 흐름을 통합 관리합니다.',
             voteCount: 3,
             isMine: false,
             isMyVote: true,
@@ -170,11 +175,51 @@ export const studentHomeDashboardFixture: StudentHomeDashboard = {
 export function createStudentHomeDashboardWithTopicBoard(
   board: TopicBoard,
 ): StudentHomeDashboard {
+  const selectedCandidate = board.selection.selectedCandidateId
+    ? board.candidates.find(
+        candidate => candidate.id === board.selection.selectedCandidateId,
+      )
+    : undefined;
+
   return {
     ...studentHomeDashboardFixture,
+    hero: selectedCandidate
+      ? {
+          ...studentHomeDashboardFixture.hero,
+          heading: '제안서를 작성해 주세요.',
+          description: `${selectedCandidate.title} 주제가 선정됐어요.\n아래 제안서 작성 단계를 진행해 주세요.`,
+          ctaLabel: '제안서 작성 진행 중',
+        }
+      : studentHomeDashboardFixture.hero,
     milestones: studentHomeDashboardFixture.milestones.map(milestone => {
       if (milestone.id !== 'proposal' || milestone.body?.kind !== 'topic') {
         return milestone;
+      }
+
+      if (selectedCandidate) {
+        return {
+          ...milestone,
+          currentStepLabel: '제안서 작성',
+          body: {
+            kind: 'proposal',
+            project: {
+              title: selectedCandidate.title,
+              description: selectedCandidate.description,
+            },
+            sections: previewSections,
+          },
+          rows: [
+            {
+              id: 'proposal-writing',
+              label: '제안서 작성',
+              value: '작성 가능',
+              tone: 'primary',
+              actionLabel: '작성하기',
+              actionTo: editorSectionTo('proposal', 'team-info'),
+              actionNotice: '제안서의 다섯 작성 영역을 차례로 작성합니다.',
+            },
+          ],
+        };
       }
 
       return {
@@ -213,6 +258,155 @@ export function createStudentHomeDashboardWithTopicBoard(
       };
     }),
   };
+}
+
+export function createStudentHomeDashboardWithProposalProgress(
+  dashboard: StudentHomeDashboard,
+  proposal: Proposal,
+): StudentHomeDashboard {
+  return {
+    ...dashboard,
+    milestones: dashboard.milestones.map(milestone => {
+      if (milestone.id !== 'proposal' || milestone.body?.kind !== 'proposal') {
+        return milestone;
+      }
+
+      const sections = proposal.blocks.map(block => ({
+        id: block.key,
+        label: block.title.replace(/^\d+\.\s*/, ''),
+        statusLabel: block.status === 'COMPLETED' ? '작성 완료' : '작성 중',
+        status:
+          block.status === 'COMPLETED'
+            ? ('completed' as const)
+            : ('in-progress' as const),
+        updatedAt: new Intl.DateTimeFormat('ko-KR', {
+          month: 'numeric',
+          day: 'numeric',
+        }).format(new Date(block.lastSavedAt)),
+        to: editorSectionTo('proposal', block.key),
+      }));
+      const isSubmitted = proposal.status === 'SUBMITTED';
+      const allCompleted = proposal.blocks.every(
+        block => block.status === 'COMPLETED',
+      );
+
+      return {
+        ...milestone,
+        currentStepLabel: isSubmitted ? '제출 완료' : '제안서 작성',
+        status: isSubmitted ? 'completed' : 'in-progress',
+        statusLabel: isSubmitted ? '완료' : '기간 중',
+        body: { ...milestone.body, sections },
+        rows: [
+          {
+            id: 'proposal-writing',
+            label: '제안서 작성',
+            value: isSubmitted
+              ? '제출 완료'
+              : allCompleted
+                ? '모든 영역 작성 완료'
+                : `작성 완료 ${proposal.blocks.filter(block => block.status === 'COMPLETED').length}/${proposal.blocks.length}`,
+            tone: isSubmitted ? 'default' : allCompleted ? 'primary' : 'muted',
+            actionLabel: isSubmitted ? '제출 완료' : '작성하기',
+            actionDisabled: isSubmitted,
+            actionTo: editorSectionTo('proposal', 'team-info'),
+            actionNotice: isSubmitted
+              ? '제출된 제안서는 읽기 전용으로 확인할 수 있어요.'
+              : allCompleted
+                ? '팀장은 작성 화면에서 제안서를 제출할 수 있어요.'
+                : '작성 영역을 모두 완료 처리하면 팀장이 제출할 수 있어요.',
+          },
+        ],
+      };
+    }),
+  };
+}
+
+function documentSections(
+  document: MidReport | Presentation,
+  docId: 'mid-review' | 'presentation',
+) {
+  return document.blocks.map(block => ({
+    id: block.key,
+    label: block.title.replace(/^\d+\.\s*/, ''),
+    statusLabel: block.status === 'COMPLETED' ? '작성 완료' : '작성 중',
+    status:
+      block.status === 'COMPLETED'
+        ? ('completed' as const)
+        : ('in-progress' as const),
+    to: editorSectionTo(docId, block.key),
+  }));
+}
+
+function withDocumentProgress(
+  dashboard: StudentHomeDashboard,
+  milestoneId: 'mid-review' | 'presentation',
+  document: MidReport | Presentation,
+  documentLabel: string,
+): StudentHomeDashboard {
+  const submitted = document.status === 'SUBMITTED';
+  const completed = document.blocks.every(
+    block => block.status === 'COMPLETED',
+  );
+  return {
+    ...dashboard,
+    milestones: dashboard.milestones.map(milestone => {
+      if (milestone.id !== milestoneId) return milestone;
+      const body = milestone.body;
+      const hasSections =
+        body?.kind === 'mid-review' || body?.kind === 'presentation-material';
+      return {
+        ...milestone,
+        currentStepLabel: submitted ? '제출 완료' : `${documentLabel} 작성`,
+        status: submitted ? 'completed' : milestone.status,
+        statusLabel: submitted ? '완료' : milestone.statusLabel,
+        body: hasSections
+          ? { ...body, sections: documentSections(document, milestoneId) }
+          : body,
+        rows: milestone.rows.map(row => {
+          const canOpenEditor =
+            row.actionDisabled !== true && Boolean(row.actionTo);
+
+          return {
+            ...row,
+            value: submitted
+              ? '제출 완료'
+              : completed
+                ? '모든 영역 작성 완료'
+                : `작성 완료 ${document.blocks.filter(block => block.status === 'COMPLETED').length}/${document.blocks.length}`,
+            tone: submitted ? 'default' : completed ? 'primary' : 'muted',
+            actionLabel: submitted ? '제출 완료' : row.actionLabel,
+            actionDisabled: submitted || !canOpenEditor,
+            actionNotice: submitted
+              ? `제출된 ${documentLabel}는 읽기 전용으로 확인할 수 있어요.`
+              : canOpenEditor
+                ? completed
+                  ? `팀장은 작성 화면에서 ${documentLabel}를 제출할 수 있어요.`
+                  : '작성 영역을 모두 완료 처리하면 팀장이 제출할 수 있어요.'
+                : row.actionNotice,
+          };
+        }),
+      };
+    }),
+  };
+}
+
+export function createStudentHomeDashboardWithMidReportProgress(
+  dashboard: StudentHomeDashboard,
+  report: MidReport,
+) {
+  return withDocumentProgress(dashboard, 'mid-review', report, '중간보고서');
+}
+
+export function createStudentHomeDashboardWithPresentationProgress(
+  dashboard: StudentHomeDashboard,
+  presentation: Presentation,
+) {
+  return withDocumentProgress(
+    dashboard,
+    'presentation',
+    presentation,
+    '발표 문서',
+  );
 }
 
 export const milestonePreviewScenarios = [
@@ -261,16 +455,77 @@ const previewProject = {
 
 const previewSections = [
   {
-    id: 'overview',
+    id: 'team-info',
+    label: '팀 정보',
+    statusLabel: '작성 완료',
+    status: 'completed' as const,
+    to: editorSectionTo('proposal', 'team-info'),
+  },
+  {
+    id: 'topic',
+    label: '주제',
+    statusLabel: '작성 완료',
+    status: 'completed' as const,
+    to: editorSectionTo('proposal', 'topic'),
+  },
+  {
+    id: 'data-composition',
+    label: '데이터 구성',
+    statusLabel: '작성 중',
+    status: 'in-progress' as const,
+    to: editorSectionTo('proposal', 'data-composition'),
+  },
+  {
+    id: 'screen-composition',
+    label: '화면 구성',
+    statusLabel: '작성 전',
+    status: 'not-started' as const,
+    to: editorSectionTo('proposal', 'screen-composition'),
+  },
+  {
+    id: 'team-operations',
+    label: '팀 운영 방식',
+    statusLabel: '작성 전',
+    status: 'not-started' as const,
+    to: editorSectionTo('proposal', 'team-operations'),
+  },
+];
+
+const presentationPreviewSections = [
+  {
+    id: 'project-overview',
     label: '프로젝트 개요',
     statusLabel: '작성 완료',
     status: 'completed' as const,
+    to: editorSectionTo('presentation', 'project-overview'),
   },
   {
-    id: 'content',
-    label: '작성 내용',
+    id: 'presentation-material',
+    label: '프레젠테이션 자료',
     statusLabel: '작성 중',
     status: 'in-progress' as const,
+    to: editorSectionTo('presentation', 'presentation-material'),
+  },
+  {
+    id: 'main-features',
+    label: '주요 기능',
+    statusLabel: '작성 전',
+    status: 'not-started' as const,
+    to: editorSectionTo('presentation', 'main-features'),
+  },
+  {
+    id: 'main-screens',
+    label: '주요 화면',
+    statusLabel: '작성 전',
+    status: 'not-started' as const,
+    to: editorSectionTo('presentation', 'main-screens'),
+  },
+  {
+    id: 'demo-video',
+    label: '시연 영상',
+    statusLabel: '작성 전',
+    status: 'not-started' as const,
+    to: editorSectionTo('presentation', 'demo-video'),
   },
 ];
 
@@ -330,7 +585,7 @@ function createPreviewBody(
       return {
         kind: 'presentation-material',
         project: previewProject,
-        sections: previewSections,
+        sections: presentationPreviewSections,
         recentFile: {
           id: 'presentation-file',
           extension: 'PPT',
@@ -355,7 +610,6 @@ function createPreviewBody(
         notice: {
           description: '최종보고서와 필수 소스코드 ZIP을 제출해 주세요.',
         },
-        uploadHint: 'ZIP up to 50MB',
       };
     case 'peer-evaluation':
       return { kind: 'peer-evaluation', sections: previewSections };
@@ -392,6 +646,8 @@ export function createStudentHomeDashboardPreview(
           hasProposalFeedbackAndMidReport && milestone.id === 'proposal';
         const isDetailAvailable =
           isTargetMilestone || isProposalFeedbackAvailable;
+        const isPastMilestone =
+          index < currentIndex && !isProposalFeedbackAvailable;
         return {
           ...milestone,
           isDetailAvailable,
@@ -425,22 +681,70 @@ export function createStudentHomeDashboardPreview(
                   label: '제안서 수정',
                   value: '피드백 반영 가능',
                   tone: 'primary',
-                  actionLabel: '수정 가능',
-                  actionDisabled: true,
-                  actionNotice: '제안서 편집·재제출은 후속 작업에서 제공돼요.',
+                  actionLabel: '작성하기',
+                  actionTo: editorSectionTo('proposal', 'team-info'),
+                  actionNotice:
+                    '제안서의 다섯 작성 영역을 다시 확인하고 수정합니다.',
                 },
               ]
-            : isTargetMilestone && milestone.id === 'final-report'
+            : isPastMilestone
               ? milestone.rows.map(row => ({
                   ...row,
+                  actionLabel: undefined,
+                  actionDisabled: true,
+                  actionNotice: undefined,
                   tone: 'primary',
-                  actionDisabled: false,
-                  actionLabel: '파일 제출',
-                  actionNotice:
-                    '최종보고서 PDF와 소스코드 ZIP을 제출하거나 교체합니다.',
-                  value: '제출 가능',
+                  value: '완료',
                 }))
-              : milestone.rows,
+              : isTargetMilestone && milestone.id === 'proposal'
+                ? milestone.rows.map(row => ({
+                    ...row,
+                    id: 'proposal-writing',
+                    label: '제안서 작성',
+                    value: '작성 가능',
+                    tone: 'primary',
+                    actionDisabled: false,
+                    actionLabel: '작성하기',
+                    actionTo: editorSectionTo('proposal', 'team-info'),
+                    actionNotice:
+                      '제안서의 다섯 작성 영역을 차례로 작성합니다.',
+                  }))
+                : isTargetMilestone && milestone.id === 'mid-review'
+                  ? milestone.rows.map(row => ({
+                      ...row,
+                      actionDisabled: false,
+                      actionLabel: '작성하기',
+                      actionTo: editorSectionTo('mid-review', 'topic'),
+                      actionNotice:
+                        '중간보고서의 다섯 작성 영역을 차례로 작성합니다.',
+                      tone: 'primary',
+                      value: '작성 가능',
+                    }))
+                  : isTargetMilestone && milestone.id === 'presentation'
+                    ? milestone.rows.map(row => ({
+                        ...row,
+                        actionDisabled: false,
+                        actionLabel: '작성하기',
+                        actionTo: editorSectionTo(
+                          'presentation',
+                          'presentation-material',
+                        ),
+                        actionNotice:
+                          '발표 에디터에서 PPT/PPTX 자료를 등록하거나 교체합니다.',
+                        tone: 'primary',
+                        value: '작성 가능',
+                      }))
+                    : isTargetMilestone && milestone.id === 'final-report'
+                      ? milestone.rows.map(row => ({
+                          ...row,
+                          tone: 'primary',
+                          actionDisabled: false,
+                          actionLabel: '파일 제출',
+                          actionNotice:
+                            '최종보고서 PDF와 소스코드 ZIP을 제출하거나 교체합니다.',
+                          value: '제출 가능',
+                        }))
+                      : milestone.rows,
           body: isProposalFeedbackAvailable
             ? createPreviewBody('proposal-feedback')
             : isTargetMilestone

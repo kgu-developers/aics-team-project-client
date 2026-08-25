@@ -123,7 +123,10 @@ export default function StudentHomePage() {
         <FinalReportSubmissionDialogProvider>
           <TopicCandidateDialog />
           <FinalReportSubmissionDialog />
-          <MilestoneList milestones={data.milestones} />
+          <MilestoneList
+            milestones={data.milestones}
+            persistenceKey={`${currentUser?.studentNumber ?? 'anonymous'}:${sectionId}`}
+          />
         </FinalReportSubmissionDialogProvider>
       </TopicCandidateDialogProvider>
     </div>

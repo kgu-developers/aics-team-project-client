@@ -53,11 +53,12 @@ function signInCompletedStudent() {
 describe('ProjectTopicBoard', () => {
   it('선택한 후보를 다시 누르면 기존 투표를 취소한다', async () => {
     const user = userEvent.setup();
+    resetTopicMockData({ selection: 'VOTING' });
     signInCompletedStudent();
     render(<ProjectTopicBoard embedded />, { wrapper: createWrapper() });
 
     const selectedCandidate = await screen.findByRole('radio', {
-      name: '도서 대여 관리 프로그램',
+      name: 'CineFlow · 영화관 통합 관리 시스템',
     });
     expect(selectedCandidate).toBeChecked();
 

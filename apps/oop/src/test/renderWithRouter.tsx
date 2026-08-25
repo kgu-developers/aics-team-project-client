@@ -14,7 +14,14 @@ export function renderWithRouter(ui: ReactElement): RenderResult {
     history: createMemoryHistory({ initialEntries: ['/'] }),
   });
 
-  return render(
+  const view = render(
     <RouterContextProvider router={router}>{ui}</RouterContextProvider>,
   );
+  return {
+    ...view,
+    rerender: nextUi =>
+      view.rerender(
+        <RouterContextProvider router={router}>{nextUi}</RouterContextProvider>,
+      ),
+  };
 }

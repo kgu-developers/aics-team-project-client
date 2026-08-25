@@ -3,22 +3,44 @@ import type { Submission } from '@aics/core';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
+import { editLockHandlers, resetEditLockFixture } from './editLock';
 import { submissionHandlers } from './submission';
 import {
+  completePresentationBlock,
+  getCurrentPresentation,
+  resetPresentationMockData,
+  submitCurrentPresentation,
+} from '../data/presentation';
+import {
+  getSubmissionById,
   getSubmissionByMilestone,
   resetSubmissionMockData,
 } from '../data/submission';
-import { demoAccessToken, demoAdminAccessToken } from '../data/users';
+import {
+  demoAccessToken,
+  demoAdminAccessToken,
+  demoPartnerAccessToken,
+} from '../data/users';
 
 const headers = {
   Authorization: `Bearer ${demoAccessToken}`,
   'Content-Type': 'application/json',
 };
-const server = setupServer(...submissionHandlers);
+const partnerHeaders = {
+  Authorization: `Bearer ${demoPartnerAccessToken}`,
+  'Content-Type': 'application/json',
+};
+const presentationMaterialLock = {
+  targetType: 'PRESENTATION_CONTENT_BLOCK',
+  targetId: 'presentation-team-07:presentation-material',
+} as const;
+const server = setupServer(...submissionHandlers, ...editLockHandlers);
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   resetSubmissionMockData();
+  resetPresentationMockData();
+  resetEditLockFixture();
   server.resetHandlers();
 });
 afterAll(() => server.close());
@@ -34,6 +56,40 @@ function postVersion(
     `${API_BASE_URL}${ENDPOINTS.SUBMISSION.VERSIONS(submissionId)}`,
     { method: 'POST', headers, body: JSON.stringify(body) },
   );
+}
+
+function markPresentationMaterialCompleted() {
+  const presentation = getCurrentPresentation();
+  const material = presentation.blocks.find(
+    block => block.key === 'presentation-material',
+  );
+  if (!material) throw new Error('presentation-material fixture is required');
+  const completed = completePresentationBlock(
+    material.key,
+    presentation.version,
+    'OOP 데모 학생 A',
+  );
+  if (!completed) throw new Error('presentation-material should complete');
+  return completed;
+}
+
+function submitPresentationDocument() {
+  let presentation = getCurrentPresentation();
+  for (const block of presentation.blocks) {
+    const completed = completePresentationBlock(
+      block.key,
+      presentation.version,
+      'OOP 데모 학생 A',
+    );
+    if (!completed) throw new Error(`${block.key} should complete`);
+    presentation = completed;
+  }
+  const submitted = submitCurrentPresentation(
+    presentation.version,
+    'OOP 데모 학생 A',
+  );
+  if (!submitted) throw new Error('presentation should submit');
+  return submitted;
 }
 
 describe('submissionHandlers', () => {
@@ -97,6 +153,106 @@ describe('submissionHandlers', () => {
       description: '오탈자를 바로잡았습니다.',
     });
     expect(overwrittenSubmission.versions).toHaveLength(2);
+  });
+
+  it('발표 문서 제출 후에는 파일 버전을 만들지 않고 제출 상태를 보존한다', async () => {
+    submitPresentationDocument();
+    const before = getSubmissionById('submission-presentation');
+
+    const response = await postVersion('submission-presentation', {
+      description: '제출 후 파일 교체 시도입니다.',
+      artifacts: [
+        {
+          kind: 'FILE',
+          name: 'presentation-after-submit.pptx',
+          size: 1024,
+          mimeType:
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        },
+      ],
+    });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'PRESENTATION_SUBMITTED',
+    });
+    expect(getSubmissionById('submission-presentation')).toEqual(before);
+  });
+
+  it('다른 사용자가 발표 자료 블록을 잠그면 파일 버전을 만들지 않는다', async () => {
+    const lockResponse = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.EDIT_LOCKS.ROOT}`,
+      {
+        method: 'POST',
+        headers: partnerHeaders,
+        body: JSON.stringify(presentationMaterialLock),
+      },
+    );
+    const acquiredLock = (await lockResponse.json()) as { leaseId?: string };
+    expect(lockResponse.status).toBe(200);
+
+    const before = getSubmissionById('submission-presentation');
+    const response = await postVersion('submission-presentation', {
+      description: '잠금 중 파일 교체 시도입니다.',
+      artifacts: [
+        {
+          kind: 'FILE',
+          name: 'presentation-locked.pptx',
+          size: 1024,
+          mimeType:
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        },
+      ],
+    });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'BLOCK_LOCKED',
+    });
+    expect(getSubmissionById('submission-presentation')).toEqual(before);
+
+    const releaseUrl = new URL(`${API_BASE_URL}${ENDPOINTS.EDIT_LOCKS.ROOT}`);
+    releaseUrl.search = new URLSearchParams(
+      presentationMaterialLock,
+    ).toString();
+    if (acquiredLock.leaseId) {
+      releaseUrl.searchParams.set('leaseId', acquiredLock.leaseId);
+    }
+    await fetch(releaseUrl, { method: 'DELETE', headers: partnerHeaders });
+  });
+
+  it('완료된 발표 자료를 교체하면 자료 블록은 다시 진행 중이 되고 문서 버전이 증가한다', async () => {
+    const completed = markPresentationMaterialCompleted();
+    const beforeSubmission = getSubmissionById('submission-presentation');
+
+    const response = await postVersion('submission-presentation', {
+      description: '발표 자료를 교체했습니다.',
+      artifacts: [
+        {
+          kind: 'FILE',
+          name: 'presentation-replaced.pptx',
+          size: 1024,
+          mimeType:
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        },
+      ],
+    });
+    const currentPresentation = getCurrentPresentation();
+    const currentSubmission = getSubmissionById('submission-presentation');
+
+    expect(response.status).toBe(200);
+    expect(currentPresentation.version).toBe(completed.version + 1);
+    expect(
+      currentPresentation.blocks.find(
+        block => block.key === 'presentation-material',
+      ),
+    ).toMatchObject({
+      status: 'IN_PROGRESS',
+      lastEditedBy: 'OOP 데모 학생 A',
+    });
+    expect(currentSubmission?.currentVersion?.versionNumber).toBe(
+      (beforeSubmission?.currentVersion?.versionNumber ?? 0) + 1,
+    );
   });
 
   it('최종보고서 PDF의 누락, 형식, 용량을 검증한다', async () => {

@@ -1,6 +1,6 @@
 import { createLazyFileRoute } from '@tanstack/react-router';
 
-import EditorSectionPage from '~/app/components/EditorSectionPage';
+import PresentationEditorPage from '~/features/presentation/PresentationEditorPage';
 
 export const Route = createLazyFileRoute(
   '/student/editor/presentation/$section',
@@ -10,5 +10,5 @@ export const Route = createLazyFileRoute(
 
 function PresentationEditorSectionRoute() {
   const { section } = Route.useParams();
-  return <EditorSectionPage docId='presentation' section={section} />;
+  return <PresentationEditorPage section={section} />;
 }

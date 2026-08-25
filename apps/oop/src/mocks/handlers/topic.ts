@@ -39,6 +39,16 @@ function guard(request: Request, sectionId: string) {
   return { account, currentUserId };
 }
 
+function selectionFinalized() {
+  return HttpResponse.json(
+    {
+      code: 'TOPIC_SELECTION_FINALIZED',
+      message: '선정이 끝난 주제 후보와 투표는 변경할 수 없어요.',
+    },
+    { status: 409 },
+  );
+}
+
 export const topicHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.TOPIC.BOARD(':sectionId')}`,
@@ -53,6 +63,8 @@ export const topicHandlers = [
     async ({ params, request }) => {
       const result = guard(request, String(params.sectionId));
       if ('response' in result) return result.response;
+      if (getTopicBoard(result.currentUserId).selection.status === 'SELECTED')
+        return selectionFinalized();
       const input = (await request.json()) as {
         title?: string;
         description?: string;
@@ -76,6 +88,8 @@ export const topicHandlers = [
     async ({ params, request }) => {
       const result = guard(request, String(params.sectionId));
       if ('response' in result) return result.response;
+      if (getTopicBoard(result.currentUserId).selection.status === 'SELECTED')
+        return selectionFinalized();
       const { candidateId } = (await request.json()) as {
         candidateId?: string;
       };
@@ -104,6 +118,8 @@ export const topicHandlers = [
     ({ params, request }) => {
       const result = guard(request, String(params.sectionId));
       if ('response' in result) return result.response;
+      if (getTopicBoard(result.currentUserId).selection.status === 'SELECTED')
+        return selectionFinalized();
       return HttpResponse.json(cancelTopicVote(result.currentUserId));
     },
   ),
