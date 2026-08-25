@@ -1,7 +1,9 @@
-import { Heading, Text } from '@aics/design-system';
-import { Link, useSearch } from '@tanstack/react-router';
+import { EmptyState, Heading, Text } from '@aics/design-system';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { type KeyboardEvent, useRef } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
+import { cx } from '~/shared/lib/cx';
 
 import * as styles from './AdminSubmissionsPage.css';
 
@@ -35,12 +37,76 @@ const previewSubmissions = [
   },
 ] as const;
 
+const MILESTONE_TABS = [
+  { id: 'proposal', isListAvailable: true, label: '제안서' },
+  { id: 'midterm', isListAvailable: true, label: '중간 점검' },
+  {
+    id: 'presentation-submit',
+    isListAvailable: true,
+    label: '발표 자료 제출',
+  },
+  {
+    id: 'presentation-evaluate',
+    isListAvailable: false,
+    label: '발표 평가',
+  },
+  { id: 'final-report', isListAvailable: true, label: '최종 보고서' },
+  { id: 'peer-review', isListAvailable: false, label: '상호 평가' },
+] as const;
+
+type MilestoneTabId = (typeof MILESTONE_TABS)[number]['id'];
+
+function isMilestoneTabId(value: string | undefined): value is MilestoneTabId {
+  return MILESTONE_TABS.some(tab => tab.id === value);
+}
+
 export default function AdminSubmissionsPage() {
+  const navigate = useNavigate();
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const search = useSearch({ from: '/admin/submissions' }) as {
     milestoneId?: string;
     sectionId?: string;
   };
   const { milestoneId, sectionId } = search;
+  const activeMilestoneId = isMilestoneTabId(milestoneId)
+    ? milestoneId
+    : 'proposal';
+  const activeTab = MILESTONE_TABS.find(tab => tab.id === activeMilestoneId);
+
+  if (!activeTab) return null;
+
+  function selectTab(index: number) {
+    const tab = MILESTONE_TABS[index];
+    if (!tab) return;
+
+    navigate({
+      search: { milestoneId: tab.id, sectionId },
+      to: ROUTES.ADMIN_SUBMISSIONS,
+    });
+    tabRefs.current[index]?.focus();
+  }
+
+  function handleTabKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) {
+    let nextIndex: number | null = null;
+
+    if (event.key === 'ArrowRight') {
+      nextIndex = (index + 1) % MILESTONE_TABS.length;
+    } else if (event.key === 'ArrowLeft') {
+      nextIndex = (index - 1 + MILESTONE_TABS.length) % MILESTONE_TABS.length;
+    } else if (event.key === 'Home') {
+      nextIndex = 0;
+    } else if (event.key === 'End') {
+      nextIndex = MILESTONE_TABS.length - 1;
+    }
+
+    if (nextIndex === null) return;
+
+    event.preventDefault();
+    selectTab(nextIndex);
+  }
 
   return (
     <div className={styles.page}>
@@ -48,45 +114,93 @@ export default function AdminSubmissionsPage() {
         <div>
           <Heading level={1}>분반별 제출물</Heading>
           <Text className={styles.description}>
-            {sectionId ?? '담당 분반'} · {milestoneId ?? '첫 번째 마일스톤'}
+            {sectionId ?? '담당 분반'} · {activeTab.label}
           </Text>
         </div>
         <Text className={styles.readOnly}>조회 전용</Text>
       </div>
 
       <section className={styles.listSection}>
-        <Heading level={2}>제안서 목록</Heading>
-        <div className={styles.list}>
-          {previewSubmissions.map(submission => (
-            <article className={styles.submission} key={submission.id}>
-              <div className={styles.submissionMeta}>
-                <Text className={styles.teamName}>{submission.teamName}</Text>
-                <Text className={styles.date}>{submission.submittedAt}</Text>
+        <div aria-label='마일스톤 선택' className={styles.tabs} role='tablist'>
+          {MILESTONE_TABS.map((tab, index) => {
+            const isActive = tab.id === activeTab.id;
+
+            return (
+              <button
+                aria-controls={`submission-panel-${tab.id}`}
+                aria-selected={isActive}
+                className={cx(styles.tab, isActive ? styles.tabActive : '')}
+                id={`submission-tab-${tab.id}`}
+                key={tab.id}
+                onClick={() => selectTab(index)}
+                onKeyDown={event => handleTabKeyDown(event, index)}
+                ref={element => {
+                  tabRefs.current[index] = element;
+                }}
+                role='tab'
+                tabIndex={isActive ? 0 : -1}
+                type='button'
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div
+          aria-labelledby={`submission-tab-${activeTab.id}`}
+          className={styles.tabPanel}
+          id={`submission-panel-${activeTab.id}`}
+          role='tabpanel'
+        >
+          {activeTab.isListAvailable ? (
+            <>
+              <Heading level={2}>{activeTab.label} 목록</Heading>
+              <div className={styles.list}>
+                {previewSubmissions.map(submission => (
+                  <article className={styles.submission} key={submission.id}>
+                    <div className={styles.submissionMeta}>
+                      <Text className={styles.teamName}>
+                        {submission.teamName}
+                      </Text>
+                      <Text className={styles.date}>
+                        {submission.submittedAt}
+                      </Text>
+                    </div>
+                    <div className={styles.submissionContent}>
+                      <div className={styles.submissionSummary}>
+                        <Text className={styles.topic}>
+                          주제: {submission.topic}
+                        </Text>
+                        <Text>팀장: {submission.leaderName}</Text>
+                      </div>
+                      <div className={styles.submissionFooter}>
+                        <div className={styles.footerMetric}>
+                          <Text>회의록: {submission.meetingCount}개</Text>
+                        </div>
+                        <div className={styles.footerMetric}>
+                          <Text>쪽지: {submission.messageCount}개</Text>
+                        </div>
+                        <Link
+                          className={styles.detailLink}
+                          params={{ submissionId: submission.id }}
+                          search={{ milestoneId: activeTab.id, sectionId }}
+                          to={ROUTES.ADMIN_SUBMISSION_DETAIL}
+                        >
+                          상세보기
+                        </Link>
+                      </div>
+                    </div>
+                  </article>
+                ))}
               </div>
-              <div className={styles.submissionContent}>
-                <div className={styles.submissionSummary}>
-                  <Text className={styles.topic}>주제: {submission.topic}</Text>
-                  <Text>팀장: {submission.leaderName}</Text>
-                </div>
-                <div className={styles.submissionFooter}>
-                  <div className={styles.footerMetric}>
-                    <Text>회의록: {submission.meetingCount}개</Text>
-                  </div>
-                  <div className={styles.footerMetric}>
-                    <Text>쪽지: {submission.messageCount}개</Text>
-                  </div>
-                  <Link
-                    className={styles.detailLink}
-                    params={{ submissionId: submission.id }}
-                    search={{ milestoneId, sectionId }}
-                    to={ROUTES.ADMIN_SUBMISSION_DETAIL}
-                  >
-                    상세보기
-                  </Link>
-                </div>
-              </div>
-            </article>
-          ))}
+            </>
+          ) : (
+            <EmptyState
+              description={`${activeTab.label} 결과를 확인하는 화면은 후속 작업에서 연결합니다.`}
+              title={`${activeTab.label} 목록을 준비하고 있습니다.`}
+            />
+          )}
         </div>
       </section>
     </div>
