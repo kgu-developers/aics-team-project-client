@@ -6,34 +6,24 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 
+import { AdminMilestoneSubmissionCard } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard';
+import * as cardStyles from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard.css';
+
 import * as styles from './AdminSubmissionsPage.css';
 
 const previewSubmissions = [
   {
     id: 'proposal-oop-01-a',
     leaderName: '김ㅇㅇ',
-    meetingCount: 2,
-    messageCount: 1,
     submittedAt: '2026/09/05',
-    teamName: 'OOP-01 - A팀',
+    teamName: 'OOP-01 - 1팀',
     topic: '구독 관리 가계부 프로젝트',
   },
   {
     id: 'proposal-oop-01-b',
     leaderName: '김ㅇㅇ',
-    meetingCount: 2,
-    messageCount: 1,
     submittedAt: '2026/09/06',
-    teamName: 'OOP-01 - B팀',
-    topic: '구독 관리 가계부 프로젝트',
-  },
-  {
-    id: 'proposal-oop-01-c',
-    leaderName: '김ㅇㅇ',
-    meetingCount: 2,
-    messageCount: 1,
-    submittedAt: '2026/09/07',
-    teamName: 'OOP-01 - C팀',
+    teamName: 'OOP-01 - 2팀',
     topic: '구독 관리 가계부 프로젝트',
   },
 ] as const;
@@ -69,27 +59,27 @@ function getSubmissionSummary(
     case 'midterm':
       return (
         <>
-          <Text>첨부 파일 수: 3</Text>
-          <Text>피드백: 2</Text>
+          <Text>첨부 파일 수: -</Text>
+          <Text>피드백: -</Text>
         </>
       );
     case 'presentation-submit':
       return (
         <>
-          <Text>PPT 파일:</Text>
-          <Text>시연 파일(zip):</Text>
-          <Text>링크:</Text>
+          <Text>PPT 파일: -</Text>
+          <Text>시연 파일(zip): -</Text>
+          <Text>링크: -</Text>
         </>
       );
     case 'final-report':
       return (
         <>
-          <Text>보고서(pdf):</Text>
-          <Text>전체 파일(zip):</Text>
+          <Text>보고서(pdf): -</Text>
+          <Text>전체 파일(zip): -</Text>
         </>
       );
     case 'peer-review':
-      return <Text>제출자 수: 5/5</Text>;
+      return <Text>제출자 수: -</Text>;
     default:
       return (
         <>
@@ -198,37 +188,24 @@ export default function AdminSubmissionsPage() {
               <Heading level={2}>{activeTab.label} 목록</Heading>
               <div className={styles.list}>
                 {previewSubmissions.map(submission => (
-                  <article className={styles.submission} key={submission.id}>
-                    <div className={styles.submissionMeta}>
-                      <Text className={styles.teamName}>
-                        {submission.teamName}
-                      </Text>
-                      <Text className={styles.date}>
-                        {submission.submittedAt}
-                      </Text>
-                    </div>
-                    <div className={styles.submissionContent}>
-                      <div className={styles.submissionSummary}>
-                        {getSubmissionSummary(activeTab.id, submission)}
-                      </div>
-                      <div className={styles.submissionFooter}>
-                        <div className={styles.footerMetric}>
-                          <Text>회의록: {submission.meetingCount}개</Text>
-                        </div>
-                        <div className={styles.footerMetric}>
-                          <Text>쪽지: {submission.messageCount}개</Text>
-                        </div>
-                        <Link
-                          className={styles.detailLink}
-                          params={{ submissionId: submission.id }}
-                          search={{ milestoneId: activeTab.id, sectionId }}
-                          to={ROUTES.ADMIN_SUBMISSION_DETAIL}
-                        >
-                          상세보기
-                        </Link>
-                      </div>
-                    </div>
-                  </article>
+                  <AdminMilestoneSubmissionCard
+                    detailAction={
+                      <Link
+                        className={cardStyles.detailLink}
+                        params={{ submissionId: submission.id }}
+                        search={{ milestoneId: activeTab.id, sectionId }}
+                        to={ROUTES.ADMIN_SUBMISSION_DETAIL}
+                      >
+                        상세보기
+                      </Link>
+                    }
+                    key={submission.id}
+                    label={submission.teamName}
+                    meetingCountLabel='회의록: -'
+                    messageCountLabel='쪽지: -'
+                    secondaryLabel={submission.submittedAt}
+                    summary={getSubmissionSummary(activeTab.id, submission)}
+                  />
                 ))}
               </div>
             </>

@@ -117,10 +117,17 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('20231234')).toBeInTheDocument();
     expect(screen.getByText('팀장')).toBeInTheDocument();
     expect(screen.getByText('ENGINE')).toBeInTheDocument();
-    expect(screen.getByText('제출 전')).toBeInTheDocument();
-    expect(screen.getByText('미제출')).toBeInTheDocument();
-    expect(screen.getByText('2026-08-17 제출')).toBeInTheDocument();
-    expect(screen.getByText('평가 완료')).toBeInTheDocument();
+    expect(screen.getByText('제안서')).toBeInTheDocument();
+    expect(screen.getByText('중간 점검')).toBeInTheDocument();
+    expect(screen.getByText('발표 자료 제출')).toBeInTheDocument();
+    expect(screen.getByText('최종 보고서')).toBeInTheDocument();
+    expect(screen.getByText('상호 평가')).toBeInTheDocument();
+    expect(screen.queryByText('발표 평가')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: '상세보기' })).toHaveLength(4);
+    expect(screen.getByRole('link', { name: '상세보기' })).toHaveAttribute(
+      'href',
+      '/admin/submissions/team-1151-1-presentation-submit?milestoneId=presentation-submit&sectionId=oop-2026-2-01',
+    );
   });
 
   it('수강생/팀 관리에 등록된 2팀 정보를 표시한다', async () => {
@@ -133,6 +140,8 @@ describe('AdminTeamDashboard', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '박지훈' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '최유진' })).toBeInTheDocument();
+    expect(screen.getByText('최종 보고서')).toBeInTheDocument();
+    expect(screen.getByText('상호 평가')).toBeInTheDocument();
   });
 
   it('팀원 이름을 누르면 상세 정보를 표시하고 닫은 뒤 포커스를 돌려준다', async () => {
@@ -370,8 +379,8 @@ describe('AdminTeamDashboard', () => {
     expect(progressSection).not.toBeNull();
     expect(
       within(progressSection as HTMLElement)
-        .getAllByRole('heading', { level: 3 })
-        .map(heading => heading.textContent),
+        .getAllByText(/교수자 설정 .* 단계/)
+        .map(label => label.textContent),
     ).toEqual(['교수자 설정 첫 단계', '교수자 설정 두 번째 단계']);
   });
 });

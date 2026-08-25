@@ -34,13 +34,13 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
       status: { kind: 'before-deadline' },
     },
     {
-      id: 'mid-review',
+      id: 'midterm',
       title: '중간 점검',
       deadlineLabel: '2026-08-15',
       status: { kind: 'not-submitted' },
     },
     {
-      id: 'presentation-material',
+      id: 'presentation-submit',
       title: '발표 자료 제출',
       deadlineLabel: '2026-08-17',
       status: {
@@ -49,10 +49,22 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
       },
     },
     {
-      id: 'presentation-evaluation',
+      id: 'presentation-evaluate',
       title: '발표 평가',
       deadlineLabel: '2026-08-20',
       status: { kind: 'evaluated' },
+    },
+    {
+      id: 'final-report',
+      title: '최종 보고서',
+      deadlineLabel: '2026-08-27',
+      status: { kind: 'before-deadline' },
+    },
+    {
+      id: 'peer-review',
+      title: '상호 평가',
+      deadlineLabel: '2026-08-30',
+      status: { kind: 'before-deadline' },
     },
   ],
 };
@@ -93,22 +105,34 @@ export const adminTeamDashboardFixtures: AdminTeamDashboardView[] = [
         status: { kind: 'before-deadline' },
       },
       {
-        id: 'mid-review',
+        id: 'midterm',
         title: '중간 점검',
         deadlineLabel: '2026-08-15',
         status: { kind: 'not-submitted' },
       },
       {
-        id: 'presentation-material',
+        id: 'presentation-submit',
         title: '발표 자료 제출',
         deadlineLabel: '2026-08-17',
         status: { kind: 'not-submitted' },
       },
       {
-        id: 'presentation-evaluation',
+        id: 'presentation-evaluate',
         title: '발표 평가',
         deadlineLabel: '2026-08-20',
         status: { kind: 'evaluated' },
+      },
+      {
+        id: 'final-report',
+        title: '최종 보고서',
+        deadlineLabel: '2026-08-27',
+        status: { kind: 'before-deadline' },
+      },
+      {
+        id: 'peer-review',
+        title: '상호 평가',
+        deadlineLabel: '2026-08-30',
+        status: { kind: 'before-deadline' },
       },
     ],
   },

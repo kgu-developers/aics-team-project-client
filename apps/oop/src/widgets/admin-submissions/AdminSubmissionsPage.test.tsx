@@ -54,8 +54,8 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('heading', { name: '중간 점검 목록' }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText('첨부 파일 수: 3')).toHaveLength(3);
-    expect(screen.getAllByText('피드백: 2')).toHaveLength(3);
+    expect(screen.getAllByText('첨부 파일 수: -')).toHaveLength(2);
+    expect(screen.getAllByText('피드백: -')).toHaveLength(2);
   });
 
   it('상세보기에서 선택한 마일스톤 이름을 유지한다', async () => {
