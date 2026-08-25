@@ -44,7 +44,7 @@ function BackToList() {
   );
 }
 
-function DeleteNoticeDialog({
+export function DeleteNoticeDialog({
   isOpen,
   notice,
   onClose,
