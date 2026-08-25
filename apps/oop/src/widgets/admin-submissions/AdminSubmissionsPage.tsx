@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { type KeyboardEvent, useRef } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
+
 import { cx } from '~/shared/lib/cx';
 
 import * as styles from './AdminSubmissionsPage.css';
@@ -51,13 +52,52 @@ const MILESTONE_TABS = [
     label: '발표 평가',
   },
   { id: 'final-report', isListAvailable: true, label: '최종 보고서' },
-  { id: 'peer-review', isListAvailable: false, label: '상호 평가' },
+  { id: 'peer-review', isListAvailable: true, label: '상호 평가' },
 ] as const;
 
 type MilestoneTabId = (typeof MILESTONE_TABS)[number]['id'];
 
 function isMilestoneTabId(value: string | undefined): value is MilestoneTabId {
   return MILESTONE_TABS.some(tab => tab.id === value);
+}
+
+function getSubmissionSummary(
+  milestoneId: MilestoneTabId,
+  submission: (typeof previewSubmissions)[number],
+) {
+  switch (milestoneId) {
+    case 'midterm':
+      return (
+        <>
+          <Text>첨부 파일 수: 3</Text>
+          <Text>피드백: 2</Text>
+        </>
+      );
+    case 'presentation-submit':
+      return (
+        <>
+          <Text>PPT 파일:</Text>
+          <Text>시연 파일(zip):</Text>
+          <Text>링크:</Text>
+        </>
+      );
+    case 'final-report':
+      return (
+        <>
+          <Text>보고서(pdf):</Text>
+          <Text>전체 파일(zip):</Text>
+        </>
+      );
+    case 'peer-review':
+      return <Text>제출자 수: 5/5</Text>;
+    default:
+      return (
+        <>
+          <Text className={styles.topic}>주제: {submission.topic}</Text>
+          <Text>팀장: {submission.leaderName}</Text>
+        </>
+      );
+  }
 }
 
 export default function AdminSubmissionsPage() {
@@ -169,10 +209,7 @@ export default function AdminSubmissionsPage() {
                     </div>
                     <div className={styles.submissionContent}>
                       <div className={styles.submissionSummary}>
-                        <Text className={styles.topic}>
-                          주제: {submission.topic}
-                        </Text>
-                        <Text>팀장: {submission.leaderName}</Text>
+                        {getSubmissionSummary(activeTab.id, submission)}
                       </div>
                       <div className={styles.submissionFooter}>
                         <div className={styles.footerMetric}>
