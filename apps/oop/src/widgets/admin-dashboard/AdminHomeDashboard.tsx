@@ -3,14 +3,36 @@ import { Link, useNavigate } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import type {
+  AdminMilestoneScheduleMilestoneView,
+  AdminMilestoneScheduleSectionView,
+} from '~/features/admin-milestone-review/model';
+import { useAdminMilestoneScheduleQuery } from '~/features/admin-milestone-review/queries';
+import { useAuthStore } from '~/features/auth/authStore';
+
 import * as styles from './AdminHomeDashboard.css';
 import {
   dashboardInbox,
   dashboardMinutes,
   dashboardNotices,
-  dashboardSchedules,
   type DashboardListItem,
 } from '../../mocks/data/adminDashboard';
+
+function getMilestoneColumns(
+  sections: readonly AdminMilestoneScheduleSectionView[],
+) {
+  const milestonesById = new Map<string, AdminMilestoneScheduleMilestoneView>();
+
+  sections.forEach(section => {
+    section.milestones.forEach(milestone => {
+      if (!milestonesById.has(milestone.id)) {
+        milestonesById.set(milestone.id, milestone);
+      }
+    });
+  });
+
+  return [...milestonesById.values()];
+}
 
 function List({
   isNoticeList = false,
@@ -90,6 +112,14 @@ function Panel({
 }
 
 export default function AdminHomeDashboard() {
+  const currentUser = useAuthStore(state => state.currentUser);
+  const accessibleSectionIds =
+    currentUser?.sections.map(section => section.id) ?? [];
+  const milestoneScheduleQuery =
+    useAdminMilestoneScheduleQuery(accessibleSectionIds);
+  const scheduleSections = milestoneScheduleQuery.data?.sections ?? [];
+  const milestoneColumns = getMilestoneColumns(scheduleSections);
+
   return (
     <div className={styles.content}>
       <Heading level={1}>홈</Heading>
@@ -99,34 +129,60 @@ export default function AdminHomeDashboard() {
           <Button label='일정 작성' variant='primary' />
         </div>
         <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                {[
-                  '분반',
-                  '인원/팀 수',
-                  '제안서',
-                  '중간 점검',
-                  '발표 제출',
-                  '발표 평가',
-                  '최종 보고서',
-                  '상호 평가',
-                  '쪽지',
-                ].map(header => (
-                  <th key={header}>{header}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {dashboardSchedules.map(row => (
-                <tr key={row[0]}>
-                  {row.map(cell => (
-                    <td key={cell}>{cell}</td>
+          {accessibleSectionIds.length === 0 ? (
+            <p className={styles.scheduleState}>
+              담당 분반이 없어 진행 일정을 표시할 수 없습니다.
+            </p>
+          ) : milestoneScheduleQuery.isPending ? (
+            <p
+              aria-live='polite'
+              className={styles.scheduleState}
+              role='status'
+            >
+              분반별 진행 일정을 불러오는 중입니다.
+            </p>
+          ) : milestoneScheduleQuery.isError ? (
+            <p className={styles.scheduleState}>
+              분반별 진행 일정을 불러오지 못했습니다. 잠시 후 다시 시도해
+              주세요.
+            </p>
+          ) : scheduleSections.length === 0 ? (
+            <p className={styles.scheduleState}>
+              표시할 분반별 진행 일정이 없습니다.
+            </p>
+          ) : (
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th scope='col'>분반</th>
+                  <th scope='col'>인원/팀 수</th>
+                  {milestoneColumns.map(milestone => (
+                    <th key={milestone.id} scope='col'>
+                      {milestone.title}
+                    </th>
                   ))}
+                  <th scope='col'>쪽지</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {scheduleSections.map(section => (
+                  <tr key={section.sectionId}>
+                    <td>{section.sectionLabel}</td>
+                    <td>{section.memberCountLabel}</td>
+                    {milestoneColumns.map(milestone => {
+                      const summary = section.milestones.find(
+                        sectionMilestone =>
+                          sectionMilestone.id === milestone.id,
+                      )?.summary;
+
+                      return <td key={milestone.id}>{summary ?? '-'}</td>;
+                    })}
+                    <td>{section.unreadMessageCountLabel}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </section>
       <div className={styles.grid}>

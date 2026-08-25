@@ -9,6 +9,7 @@ export const ENDPOINTS = {
     ME: '/me/profile',
   },
   ADMIN: {
+    MILESTONE_SCHEDULE: '/admin/milestone-schedule',
     SECTION_STUDENTS: (sectionId: string) =>
       `/admin/sections/${sectionId}/students`,
     TEAM_DASHBOARD: (teamId: string) => `/admin/teams/${teamId}/dashboard`,

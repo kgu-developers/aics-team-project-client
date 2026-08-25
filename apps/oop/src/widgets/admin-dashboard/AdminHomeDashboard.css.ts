@@ -113,6 +113,11 @@ export const table = style({
   tableLayout: 'fixed',
   width: '100%',
 });
+export const scheduleState = style({
+  color: tokens.color.text.secondary,
+  margin: 0,
+  padding: 24,
+});
 export const grid = style({
   display: 'grid',
   gap: 28,

@@ -25,6 +25,12 @@ export { removeAdminNoticeAttachment } from './notices';
 export { ENDPOINTS } from './constants/endpoints';
 export { fetchStudentHomeDashboard } from './studentHome/fetchStudentHomeDashboard';
 export {
+  fetchAdminMilestoneSchedule,
+  type AdminMilestoneScheduleMilestoneDto,
+  type AdminMilestoneScheduleResponse,
+  type AdminMilestoneScheduleSectionDto,
+} from './milestones';
+export {
   completeMidReportBlock,
   fetchCurrentMidReport,
   submitMidReport,
