@@ -4,3 +4,9 @@ export {
   type AdminMilestoneScheduleSectionView,
   type AdminMilestoneScheduleView,
 } from './adminMilestoneSchedule';
+export {
+  toAdminMilestoneSubmissionsView,
+  type AdminMilestoneSubmissionSummaryView,
+  type AdminMilestoneSubmissionView,
+  type AdminMilestoneSubmissionsView,
+} from './adminMilestoneSubmissions';

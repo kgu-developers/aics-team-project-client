@@ -8,25 +8,11 @@ import { cx } from '~/shared/lib/cx';
 
 import { AdminMilestoneSubmissionCard } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard';
 import * as cardStyles from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard.css';
+import type { AdminMilestoneSubmissionView } from '~/features/admin-milestone-review/model';
+import { useAdminMilestoneSubmissionsQuery } from '~/features/admin-milestone-review/queries';
+import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminSubmissionsPage.css';
-
-const previewSubmissions = [
-  {
-    id: 'proposal-oop-01-a',
-    leaderName: '김ㅇㅇ',
-    submittedAt: '2026/09/05',
-    teamName: 'OOP-01 - 1팀',
-    topic: '구독 관리 가계부 프로젝트',
-  },
-  {
-    id: 'proposal-oop-01-b',
-    leaderName: '김ㅇㅇ',
-    submittedAt: '2026/09/06',
-    teamName: 'OOP-01 - 2팀',
-    topic: '구독 관리 가계부 프로젝트',
-  },
-] as const;
 
 const MILESTONE_TABS = [
   { id: 'proposal', isListAvailable: true, label: '제안서' },
@@ -53,44 +39,59 @@ function isMilestoneTabId(value: string | undefined): value is MilestoneTabId {
 
 function getSubmissionSummary(
   milestoneId: MilestoneTabId,
-  submission: (typeof previewSubmissions)[number],
+  submission: AdminMilestoneSubmissionView,
 ) {
   switch (milestoneId) {
     case 'midterm':
       return (
         <>
-          <Text>첨부 파일 수: -</Text>
-          <Text>피드백: -</Text>
+          <Text>
+            {submission.summary.attachmentCountLabel ?? '첨부 파일 수: -'}
+          </Text>
+          <Text>{submission.summary.feedbackCountLabel ?? '피드백: -'}</Text>
         </>
       );
     case 'presentation-submit':
       return (
         <>
-          <Text>PPT 파일: -</Text>
-          <Text>시연 파일(zip): -</Text>
-          <Text>링크: -</Text>
+          <Text>
+            PPT 파일: {submission.summary.presentationFileName ?? '-'}
+          </Text>
+          <Text>
+            시연 파일(zip): {submission.summary.sourceArchiveFileName ?? '-'}
+          </Text>
+          <Text>링크: {submission.summary.linkLabel ?? '-'}</Text>
         </>
       );
     case 'final-report':
       return (
         <>
-          <Text>보고서(pdf): -</Text>
-          <Text>전체 파일(zip): -</Text>
+          <Text>보고서(pdf): {submission.summary.reportFileName ?? '-'}</Text>
+          <Text>
+            전체 파일(zip): {submission.summary.sourceArchiveFileName ?? '-'}
+          </Text>
         </>
       );
     case 'peer-review':
-      return <Text>제출자 수: -</Text>;
+      return (
+        <Text>
+          {submission.summary.submittedMemberCountLabel ?? '제출자 수: -'}
+        </Text>
+      );
     default:
       return (
         <>
-          <Text className={styles.topic}>주제: {submission.topic}</Text>
-          <Text>팀장: {submission.leaderName}</Text>
+          <Text className={styles.topic}>
+            주제: {submission.summary.projectTopic ?? '-'}
+          </Text>
+          <Text>팀장: {submission.summary.leaderName ?? '-'}</Text>
         </>
       );
   }
 }
 
 export default function AdminSubmissionsPage() {
+  const currentUser = useAuthStore(state => state.currentUser);
   const navigate = useNavigate();
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const search = useSearch({ from: '/admin/submissions' }) as {
@@ -102,6 +103,22 @@ export default function AdminSubmissionsPage() {
     ? milestoneId
     : 'proposal';
   const activeTab = MILESTONE_TABS.find(tab => tab.id === activeMilestoneId);
+  const accessibleSections = currentUser?.sections ?? [];
+  const accessibleSectionIds = accessibleSections.map(section => section.id);
+  const effectiveSectionId = sectionId ?? accessibleSectionIds[0];
+  const isAccessibleSection = Boolean(
+    effectiveSectionId && accessibleSectionIds.includes(effectiveSectionId),
+  );
+  const submissionsQuery = useAdminMilestoneSubmissionsQuery(
+    effectiveSectionId,
+    activeMilestoneId,
+    isAccessibleSection && activeTab?.isListAvailable === true,
+  );
+  const sectionLabel =
+    submissionsQuery.data?.sectionLabel ??
+    accessibleSections.find(section => section.id === effectiveSectionId)
+      ?.code ??
+    '담당 분반';
 
   if (!activeTab) return null;
 
@@ -110,7 +127,7 @@ export default function AdminSubmissionsPage() {
     if (!tab) return;
 
     navigate({
-      search: { milestoneId: tab.id, sectionId },
+      search: { milestoneId: tab.id, sectionId: effectiveSectionId },
       to: ROUTES.ADMIN_SUBMISSIONS,
     });
     tabRefs.current[index]?.focus();
@@ -144,7 +161,7 @@ export default function AdminSubmissionsPage() {
         <div>
           <Heading level={1}>분반별 제출물</Heading>
           <Text className={styles.description}>
-            {sectionId ?? '담당 분반'} · {activeTab.label}
+            {sectionLabel} · {activeTab.label}
           </Text>
         </div>
         <Text className={styles.readOnly}>조회 전용</Text>
@@ -186,28 +203,57 @@ export default function AdminSubmissionsPage() {
           {activeTab.isListAvailable ? (
             <>
               <Heading level={2}>{activeTab.label} 목록</Heading>
-              <div className={styles.list}>
-                {previewSubmissions.map(submission => (
-                  <AdminMilestoneSubmissionCard
-                    detailAction={
-                      <Link
-                        className={cardStyles.detailLink}
-                        params={{ submissionId: submission.id }}
-                        search={{ milestoneId: activeTab.id, sectionId }}
-                        to={ROUTES.ADMIN_SUBMISSION_DETAIL}
-                      >
-                        상세보기
-                      </Link>
-                    }
-                    key={submission.id}
-                    label={submission.teamName}
-                    meetingCountLabel='회의록: -'
-                    messageCountLabel='쪽지: -'
-                    secondaryLabel={submission.submittedAt}
-                    summary={getSubmissionSummary(activeTab.id, submission)}
-                  />
-                ))}
-              </div>
+              {accessibleSectionIds.length === 0 ? (
+                <EmptyState
+                  description='담당 분반이 없어 제출물을 조회할 수 없습니다.'
+                  title='표시할 제출물이 없습니다.'
+                />
+              ) : !isAccessibleSection ? (
+                <EmptyState
+                  description='담당 분반만 제출물을 조회할 수 있습니다.'
+                  title='접근할 수 없는 분반입니다.'
+                />
+              ) : submissionsQuery.isPending ? (
+                <Text aria-live='polite' role='status'>
+                  제출물 목록을 불러오는 중입니다.
+                </Text>
+              ) : submissionsQuery.isError ? (
+                <EmptyState
+                  description='잠시 후 다시 시도해 주세요.'
+                  title='제출물 목록을 불러오지 못했습니다.'
+                />
+              ) : submissionsQuery.data?.submissions.length === 0 ? (
+                <EmptyState
+                  description='이 마일스톤에 제출한 팀이 없습니다.'
+                  title='표시할 제출물이 없습니다.'
+                />
+              ) : (
+                <div className={styles.list}>
+                  {submissionsQuery.data?.submissions.map(submission => (
+                    <AdminMilestoneSubmissionCard
+                      detailAction={
+                        <Link
+                          className={cardStyles.detailLink}
+                          params={{ submissionId: submission.id }}
+                          search={{
+                            milestoneId: activeTab.id,
+                            sectionId: effectiveSectionId,
+                          }}
+                          to={ROUTES.ADMIN_SUBMISSION_DETAIL}
+                        >
+                          상세보기
+                        </Link>
+                      }
+                      key={submission.id}
+                      label={submission.teamName}
+                      meetingCountLabel={submission.meetingCountLabel}
+                      messageCountLabel={submission.messageCountLabel}
+                      secondaryLabel={submission.submittedAtLabel}
+                      summary={getSubmissionSummary(activeTab.id, submission)}
+                    />
+                  ))}
+                </div>
+              )}
             </>
           ) : (
             <EmptyState

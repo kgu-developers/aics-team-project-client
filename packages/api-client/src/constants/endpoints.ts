@@ -10,6 +10,8 @@ export const ENDPOINTS = {
   },
   ADMIN: {
     MILESTONE_SCHEDULE: '/admin/milestone-schedule',
+    SECTION_MILESTONE_SUBMISSIONS: (sectionId: string, milestoneId: string) =>
+      `/admin/sections/${sectionId}/milestones/${milestoneId}/submissions`,
     SECTION_STUDENTS: (sectionId: string) =>
       `/admin/sections/${sectionId}/students`,
     TEAM_DASHBOARD: (teamId: string) => `/admin/teams/${teamId}/dashboard`,
