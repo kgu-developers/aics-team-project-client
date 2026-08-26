@@ -1,5 +1,5 @@
 import type { TeamAssignmentProjection } from '@aics/core';
-import { Button, TextInput, useToast } from '@aics/design-system';
+import { Button, Text, TextInput, useToast } from '@aics/design-system';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
@@ -110,12 +110,16 @@ export function PartnerRequestPanel({ projection }: PartnerRequestPanelProps) {
           className={styles.partnerRequest}
           role='region'
         >
-          <p>
+          <Text as='p' color='secondary' type='supporting'>
             <strong>{projection.incomingPartnerRequest.requester.name}</strong>{' '}
             님이 파트너 신청을 보냈습니다.
-          </p>
-          <p>{projection.incomingPartnerRequest.requester.studentNumber}</p>
-          <p>설문을 제출하기 전에 승인 또는 거절을 선택해 주세요.</p>
+          </Text>
+          <Text as='p' color='secondary' type='supporting'>
+            {projection.incomingPartnerRequest.requester.studentNumber}
+          </Text>
+          <Text as='p' color='secondary' type='supporting'>
+            설문을 제출하기 전에 승인 또는 거절을 선택해 주세요.
+          </Text>
           <div className={styles.requestActions}>
             <Button
               label='승인'
@@ -135,11 +139,13 @@ export function PartnerRequestPanel({ projection }: PartnerRequestPanelProps) {
           aria-label='보낸 파트너 신청'
           className={styles.partnerRequest}
         >
-          <p>
+          <Text as='p' color='secondary' type='supporting'>
             <strong>{projection.outgoingPartnerRequest.recipient.name}</strong>{' '}
             님의 응답을 기다리고 있습니다.
-          </p>
-          <p>{projection.outgoingPartnerRequest.recipient.studentNumber}</p>
+          </Text>
+          <Text as='p' color='secondary' type='supporting'>
+            {projection.outgoingPartnerRequest.recipient.studentNumber}
+          </Text>
           <div className={styles.requestActions}>
             <Button
               label='신청 취소'
@@ -150,12 +156,16 @@ export function PartnerRequestPanel({ projection }: PartnerRequestPanelProps) {
         </section>
       ) : projection.confirmedPartner ? (
         <section aria-label='확정된 파트너' className={styles.partnerRequest}>
-          <p>
+          <Text as='p' color='secondary' type='supporting'>
             <strong>{projection.confirmedPartner.name}</strong> 님이 파트너로
             확정되었습니다.
-          </p>
-          <p>{projection.confirmedPartner.studentNumber}</p>
-          <p>파트너가 확정된 뒤에는 변경할 수 없어요.</p>
+          </Text>
+          <Text as='p' color='secondary' type='supporting'>
+            {projection.confirmedPartner.studentNumber}
+          </Text>
+          <Text as='p' color='secondary' type='supporting'>
+            파트너가 확정된 뒤에는 변경할 수 없어요.
+          </Text>
         </section>
       ) : (
         <div className={styles.partnerSearch}>
@@ -165,7 +175,11 @@ export function PartnerRequestPanel({ projection }: PartnerRequestPanelProps) {
             placeholder='이름 또는 학번 검색'
             value={partnerQuery}
           />
-          {partnerCandidates.isFetching ? <p>후보를 찾는 중입니다.</p> : null}
+          {partnerCandidates.isFetching ? (
+            <Text as='p' color='secondary' type='supporting'>
+              후보를 찾는 중입니다.
+            </Text>
+          ) : null}
           {partnerCandidates.data?.map(candidate => (
             <button
               className={styles.partnerCandidate}
@@ -181,7 +195,9 @@ export function PartnerRequestPanel({ projection }: PartnerRequestPanelProps) {
           {partnerQuery.trim() &&
           !partnerCandidates.isFetching &&
           partnerCandidates.data?.length === 0 ? (
-            <p>일치하는 학생이 없습니다.</p>
+            <Text as='p' color='secondary' type='supporting'>
+              일치하는 학생이 없습니다.
+            </Text>
           ) : null}
         </div>
       )}

@@ -17,6 +17,8 @@ import {
 } from '@aics/design-system';
 import { useState } from 'react';
 
+import { SurveyFlow, SurveyQuestion } from '~/shared/ui/SurveyFlow';
+
 import { useSubmitTeamAssignmentSurveyMutation } from '../queries';
 import * as styles from '../TeamAssignmentFlow.css';
 import { PartnerRequestPanel } from './PartnerRequestPanel';
@@ -86,24 +88,29 @@ export function SurveyForm({ projection }: SurveyFormProps) {
     }
   }
 
+  const surveyActions = (
+    <Button
+      isDisabled={
+        (step === 1 && !hasRole) || (step > 0 && hasIncomingPartnerRequest)
+      }
+      label={step === 0 ? '시작하기' : step === 2 ? '설문 제출' : '다음 설문'}
+      onClick={continueSurvey}
+      variant='secondary'
+    />
+  );
+
   return (
-    <section className={styles.page} aria-label='팀 구성 설문'>
-      <nav aria-label='설문 단계' className={styles.stepper}>
-        {stepLabels.map((label, index) => (
-          <button
-            aria-current={index === step ? 'step' : undefined}
-            className={`${styles.step} ${index === step ? styles.activeStep : ''}`}
-            disabled={index > step}
-            key={label}
-            onClick={() => moveToStep(index)}
-            type='button'
-          >
-            {index + 1}. {label}
-          </button>
-        ))}
-      </nav>
-      <div
-        className={`${styles.content} ${step === 0 ? styles.centeredContent : ''}`}
+    <>
+      <SurveyFlow
+        actions={surveyActions}
+        activeStep={step}
+        ariaLabel='팀 구성 설문'
+        centered={step === 0}
+        onStepChange={moveToStep}
+        steps={stepLabels.map((label, index) => ({
+          label,
+          isDisabled: index > step,
+        }))}
       >
         {step === 0 ? (
           <div className={styles.centeredCopy}>
@@ -112,14 +119,19 @@ export function SurveyForm({ projection }: SurveyFormProps) {
               className={styles.illustration}
               src='/team-survey-illustration.svg'
             />
-            <h2 className={styles.headline}>
+            <Text as='h2' type='label' weight='semibold'>
               팀프로젝트 팀구성을 위한 설문에 응답해 주세요.
-            </h2>
-            <p>마감 전까지 응답할 수 있어요.</p>
+            </Text>
+            <Text as='p' color='secondary' type='supporting'>
+              마감 전까지 응답할 수 있어요.
+            </Text>
           </div>
         ) : null}
         {step === 1 ? (
-          <div className={styles.formFields}>
+          <SurveyQuestion
+            description='함께하고 싶은 팀원과 맡고 싶은 역할을 알려주세요.'
+            title='역할과 팀원'
+          >
             <PartnerRequestPanel projection={projection} />
             <Field
               inputID='team-role-preferences'
@@ -160,10 +172,13 @@ export function SurveyForm({ projection }: SurveyFormProps) {
                 ))}
               </CheckboxList>
             </Field>
-          </div>
+          </SurveyQuestion>
         ) : null}
         {step === 2 ? (
-          <div className={styles.formFields}>
+          <SurveyQuestion
+            description='생각해 둔 주제나 팀 구성에 필요한 의견을 남겨주세요.'
+            title='주제와 의견'
+          >
             <TextArea
               isOptional
               label='프로젝트 주제 아이디어'
@@ -176,25 +191,14 @@ export function SurveyForm({ projection }: SurveyFormProps) {
               onChange={value => updateSurvey('note', value)}
               value={survey.note ?? ''}
             />
-          </div>
+          </SurveyQuestion>
         ) : null}
-        {requestError ? <p role='alert'>{requestError}</p> : null}
-        <div
-          className={`${styles.actions} ${step === 0 ? styles.centeredActions : ''}`}
-        >
-          <Button
-            isDisabled={
-              (step === 1 && !hasRole) ||
-              (step > 0 && hasIncomingPartnerRequest)
-            }
-            label={
-              step === 0 ? '시작하기' : step === 2 ? '설문 제출' : '다음 설문'
-            }
-            onClick={continueSurvey}
-            variant='secondary'
-          />
-        </div>
-      </div>
+        {requestError ? (
+          <Text as='p' color='secondary' role='alert' type='supporting'>
+            {requestError}
+          </Text>
+        ) : null}
+      </SurveyFlow>
       <Dialog
         aria-label='설문 제출 확인'
         isOpen={submitConfirmOpen}
@@ -226,6 +230,6 @@ export function SurveyForm({ projection }: SurveyFormProps) {
           </HStack>
         </VStack>
       </Dialog>
-    </section>
+    </>
   );
 }
