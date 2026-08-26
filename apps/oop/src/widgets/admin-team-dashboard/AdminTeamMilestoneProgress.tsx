@@ -111,10 +111,7 @@ export default function AdminTeamMilestoneProgress({
       ) : (
         <div className={styles.list}>
           {displayMilestones.map(milestone => {
-            const detailSubmissionId =
-              milestone.status.kind === 'submitted'
-                ? milestone.submissionId
-                : null;
+            const detailSubmissionId = milestone.submissionId;
             return (
               <AdminMilestoneSubmissionCard
                 action={

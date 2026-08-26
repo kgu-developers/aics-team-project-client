@@ -25,8 +25,8 @@ const milestones: TeamMilestoneProgress[] = [
     id: 'midterm',
     title: '중간 점검',
     deadlineLabel: '2026-08-15',
-    submissionId: null,
-    status: { kind: 'not-submitted' },
+    submissionId: 'submission-midterm-team-1',
+    status: { kind: 'evaluated' },
   },
   {
     id: 'presentation-submit',
@@ -110,8 +110,14 @@ describe('AdminTeamMilestoneProgress', () => {
     expect(screen.getByText('상호 평가')).toBeInTheDocument();
     expect(screen.getByText('제출자 수: 0 / 2')).toBeInTheDocument();
     expect(screen.queryByText('발표 평가')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: '상세보기' })).toHaveLength(3);
-    expect(screen.getByRole('link', { name: '상세보기' })).toHaveAttribute(
+    expect(screen.getAllByRole('button', { name: '상세보기' })).toHaveLength(2);
+    const detailLinks = screen.getAllByRole('link', { name: '상세보기' });
+
+    expect(detailLinks[0]).toHaveAttribute(
+      'href',
+      '/admin/submissions/submission-midterm-team-1?milestoneId=midterm&sectionId=oop-01',
+    );
+    expect(detailLinks[1]).toHaveAttribute(
       'href',
       '/admin/submissions/submission-presentation-team-1?milestoneId=presentation-submit&sectionId=oop-01',
     );
