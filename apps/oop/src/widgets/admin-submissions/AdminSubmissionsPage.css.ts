@@ -62,6 +62,12 @@ export const tabPanel = style({
   gap: 18,
 });
 
+export const evaluationHeader = style({
+  alignItems: 'center',
+  display: 'flex',
+  justifyContent: 'space-between',
+});
+
 export const list = style({
   display: 'flex',
   flexDirection: 'column',

@@ -24,6 +24,10 @@ export {
   type AdminPresentationEvaluationTeamDto,
   type AdminPresentationEvaluationsResponse,
 } from './fetchAdminPresentationEvaluations';
+export {
+  updateAdminPresentationEvaluationSettings,
+  type UpdateAdminPresentationEvaluationSettingsInput,
+} from './updateAdminPresentationEvaluationSettings';
 export { fetchMyTeamSubmission } from './fetchMyTeamSubmission';
 export { fetchSubmission } from './fetchSubmission';
 export { submitSubmissionVersion } from './submitSubmissionVersion';
