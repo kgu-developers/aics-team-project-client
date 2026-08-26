@@ -151,6 +151,24 @@ describe('AdminSubmissionsPage', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 
+  it('제출된 발표 자료를 읽기 전용으로 표시한다', async () => {
+    renderPage(
+      '/admin/submissions/submission-oop-01-1-presentation-submit?milestoneId=presentation-submit&sectionId=oop-2026-2-01',
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'OOP-01 - 1팀 발표 자료 제출',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('oop-01-1-presentation.pdf')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'https://youtu.be/demo-oop-01-1' }),
+    ).toHaveAttribute('href', 'https://youtu.be/demo-oop-01-1');
+    expect(screen.getByText('3. 주요 화면')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
   it('2팀의 중간 점검도 해당 팀 정보로 표시한다', async () => {
     renderPage(
       '/admin/submissions/submission-oop-01-2-midterm?milestoneId=midterm&sectionId=oop-2026-2-01',

@@ -45,12 +45,28 @@ export type AdminMidtermSubmissionDetailDto = {
   teamName: string;
 };
 
+export type AdminPresentationSubmissionBlockDto = {
+  description: string;
+  fields: AdminMidtermSubmissionFieldDto[];
+  title: string;
+};
+
+export type AdminPresentationSubmissionDetailDto = {
+  blocks: AdminPresentationSubmissionBlockDto[];
+  presentationFileName: string | null;
+  sourceArchiveFileName: string | null;
+  teamLeaderName: string;
+  teamName: string;
+  videoUrl: string | null;
+};
+
 export type AdminMilestoneSubmissionDetailResponse = {
   milestone: {
     id: string;
     title: string;
   };
   midterm: AdminMidtermSubmissionDetailDto | null;
+  presentation: AdminPresentationSubmissionDetailDto | null;
   proposal: AdminProposalSubmissionDetailDto | null;
   section: {
     id: string;

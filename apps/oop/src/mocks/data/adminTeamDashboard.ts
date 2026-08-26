@@ -51,8 +51,8 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
       id: 'presentation-submit',
       title: '발표 자료 제출',
       deadlineLabel: '2026-11-12',
-      submissionId: null,
-      status: { kind: 'not-submitted' },
+      submissionId: 'submission-oop-01-1-presentation-submit',
+      status: { kind: 'submitted', submittedDateLabel: '2026-11-12' },
     },
     {
       id: 'presentation-evaluate',
@@ -131,8 +131,8 @@ export const adminTeamDashboardFixtures: AdminTeamDashboardView[] = [
         id: 'presentation-submit',
         title: '발표 자료 제출',
         deadlineLabel: '2026-11-12',
-        submissionId: null,
-        status: { kind: 'not-submitted' },
+        submissionId: 'submission-oop-01-2-presentation-submit',
+        status: { kind: 'submitted', submittedDateLabel: '2026-11-13' },
       },
       {
         id: 'presentation-evaluate',

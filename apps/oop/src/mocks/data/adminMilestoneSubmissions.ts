@@ -59,6 +59,16 @@ const submissionDetailsByMilestone: Partial<
       submittedAt: '2026/10/13',
     },
   ],
+  'presentation-submit': [
+    {
+      submissionId: 'submission-oop-01-1-presentation-submit',
+      submittedAt: '2026/11/12',
+    },
+    {
+      submissionId: 'submission-oop-01-2-presentation-submit',
+      submittedAt: '2026/11/13',
+    },
+  ],
 };
 
 export function getAdminMilestoneSubmissionsFixture(

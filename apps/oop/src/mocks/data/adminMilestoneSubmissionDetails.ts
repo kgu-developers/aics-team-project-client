@@ -6,6 +6,7 @@ const proposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
     title: '제안서',
   },
   midterm: null,
+  presentation: null,
   proposal: {
     collaboration: '주 2회 대면 회의, GitHub PR 리뷰 후 병합',
     dataRows: [
@@ -154,6 +155,7 @@ const midtermSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
     teamName: 'OOP-01 - 1팀',
   },
   proposal: null,
+  presentation: null,
   section: {
     id: 'oop-2026-2-01',
     label: 'OOP-01',
@@ -165,6 +167,94 @@ const midtermSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
     teamName: 'OOP-01 - 1팀',
   },
 };
+
+const presentationSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
+  milestone: { id: 'presentation-submit', title: '발표 자료 제출' },
+  midterm: null,
+  presentation: {
+    blocks: [
+      {
+        title: '1. 프로젝트 개요',
+        description: '발표에서 소개할 프로젝트 내용을 정리합니다.',
+        fields: [
+          {
+            label: '프로젝트 제목',
+            value: 'AI 기반 팀 프로젝트 관리 서비스',
+          },
+          {
+            label: '개요 요약',
+            value: '팀 프로젝트 진행과 제출물을 관리합니다.',
+          },
+        ],
+      },
+      {
+        title: '2. 주요 기능',
+        description: '시연할 핵심 기능을 정리합니다.',
+        fields: [
+          {
+            label: '기능 1',
+            value:
+              '예매 등록\n좌석 선택부터 예약 생성까지의 흐름을 처리합니다.',
+          },
+          {
+            label: '기능 2',
+            value:
+              '결제 처리\n예매 정보와 결제 결과를 연결해 완료 상태를 저장합니다.',
+          },
+        ],
+      },
+      {
+        title: '3. 주요 화면',
+        description: '발표에서 보여줄 대표 화면을 정리합니다.',
+        fields: [
+          {
+            label: '화면 1',
+            value: '메인 화면\n상영 일정과 예매 현황을 확인합니다.',
+          },
+          {
+            label: '화면 2',
+            value: '예매 관리\n좌석 선택과 결제를 처리합니다.',
+          },
+        ],
+      },
+      {
+        title: '4. 시연 영상',
+        description: '발표에서 사용할 시연 영상 링크입니다.',
+        fields: [],
+      },
+    ],
+    presentationFileName: 'oop-01-1-presentation.pdf',
+    sourceArchiveFileName: 'oop-01-1-source.zip',
+    teamLeaderName: '김민준',
+    teamName: 'OOP-01 - 1팀',
+    videoUrl: 'https://youtu.be/demo-oop-01-1',
+  },
+  proposal: null,
+  section: { id: 'oop-2026-2-01', label: 'OOP-01' },
+  submittedAt: '2026/11/12',
+  submission: {
+    id: 'submission-oop-01-1-presentation-submit',
+    teamId: 'team-1151-1',
+    teamName: 'OOP-01 - 1팀',
+  },
+};
+
+const secondTeamPresentationSubmissionDetail: AdminMilestoneSubmissionDetailResponse =
+  {
+    ...presentationSubmissionDetail,
+    presentation: {
+      ...presentationSubmissionDetail.presentation!,
+      presentationFileName: 'oop-01-2-presentation.pdf',
+      sourceArchiveFileName: 'oop-01-2-source.zip',
+      teamLeaderName: '박지훈',
+      teamName: 'OOP-01 - 2팀',
+    },
+    submission: {
+      id: 'submission-oop-01-2-presentation-submit',
+      teamId: 'team-1151-2',
+      teamName: 'OOP-01 - 2팀',
+    },
+  };
 
 const secondTeamProposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse =
   {
@@ -215,6 +305,14 @@ export function getAdminMilestoneSubmissionDetailFixture(
 
   if (submissionId === secondTeamMidtermSubmissionDetail.submission.id) {
     return structuredClone(secondTeamMidtermSubmissionDetail);
+  }
+
+  if (submissionId === presentationSubmissionDetail.submission.id) {
+    return structuredClone(presentationSubmissionDetail);
+  }
+
+  if (submissionId === secondTeamPresentationSubmissionDetail.submission.id) {
+    return structuredClone(secondTeamPresentationSubmissionDetail);
   }
 
   return undefined;

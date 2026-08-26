@@ -3,6 +3,7 @@ import type {
   AdminMidtermSubmissionBlockDto,
   AdminProposalDataRowDto,
   AdminProposalScreenDto,
+  AdminPresentationSubmissionDetailDto,
 } from '@aics/api-client';
 
 export type AdminProposalSubmissionDetailView = {
@@ -27,10 +28,13 @@ export type AdminMidtermSubmissionDetailView = {
   teamName: string;
 };
 
+export type AdminPresentationSubmissionDetailView = AdminPresentationSubmissionDetailDto;
+
 export type AdminMilestoneSubmissionDetailView = {
   milestoneId: string;
   milestoneTitle: string;
   midterm: AdminMidtermSubmissionDetailView | null;
+  presentation: AdminPresentationSubmissionDetailView | null;
   proposal: AdminProposalSubmissionDetailView | null;
   sectionId: string;
   sectionLabel: string;
@@ -47,6 +51,7 @@ export function toAdminMilestoneSubmissionDetailView(
     milestoneId: response.milestone.id,
     milestoneTitle: response.milestone.title,
     midterm: response.midterm,
+    presentation: response.presentation,
     proposal: response.proposal,
     sectionId: response.section.id,
     sectionLabel: response.section.label,

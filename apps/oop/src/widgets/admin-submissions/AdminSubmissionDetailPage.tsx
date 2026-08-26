@@ -251,6 +251,84 @@ export default function AdminSubmissionDetailPage() {
     );
   }
 
+  function renderPresentation() {
+    if (!detail?.presentation) {
+      return (
+        <EmptyState
+          description='발표 자료 상세 내용이 없습니다.'
+          title='표시할 상세 내용이 없습니다.'
+        />
+      );
+    }
+    const presentation = detail.presentation;
+    return (
+      <Card className={styles.document}>
+        <div className={styles.documentHeader}>
+          <Text className={styles.documentLabel}>
+            DOC / PRESENTATION / FORM V1
+          </Text>
+          <Heading level={2}>{detail.teamName} 발표 자료 제출</Heading>
+          <Text className={styles.metadata}>
+            {detail.sectionLabel} · 제출일 {detail.submittedAt} · 조회 전용
+          </Text>
+        </div>
+        {presentation.blocks.map(block => (
+          <section className={styles.section} key={block.title}>
+            <Heading level={3}>{block.title}</Heading>
+            <Text className={styles.sectionDescription}>
+              {block.description}
+            </Text>
+            {block.title === '4. 시연 영상' && (
+              <div className={`${styles.field} ${styles.fullWidthField}`}>
+                <Text className={styles.fieldLabel}>시연 링크</Text>
+                {presentation.videoUrl ? (
+                  <a
+                    className={styles.fieldValue}
+                    href={presentation.videoUrl}
+                    rel='noreferrer'
+                    target='_blank'
+                  >
+                    {presentation.videoUrl}
+                  </a>
+                ) : (
+                  <Text className={styles.fieldValue}>-</Text>
+                )}
+              </div>
+            )}
+            <div className={styles.fieldGrid}>
+              {block.fields.map(field => (
+                <div
+                  className={`${styles.field} ${styles.fullWidthField}`}
+                  key={field.label}
+                >
+                  <Text className={styles.fieldLabel}>{field.label}</Text>
+                  <Text className={styles.fieldValue}>{field.value}</Text>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+        <section className={styles.section}>
+          <Heading level={3}>제출 파일</Heading>
+          <div className={styles.fieldGrid}>
+            <div className={styles.field}>
+              <Text className={styles.fieldLabel}>발표 자료 PDF</Text>
+              <Text className={styles.fieldValue}>
+                {presentation.presentationFileName ?? '-'}
+              </Text>
+            </div>
+            <div className={styles.field}>
+              <Text className={styles.fieldLabel}>시연 파일 ZIP</Text>
+              <Text className={styles.fieldValue}>
+                {presentation.sourceArchiveFileName ?? '-'}
+              </Text>
+            </div>
+          </div>
+        </section>
+      </Card>
+    );
+  }
+
   return (
     <div className={styles.page}>
       <Link
@@ -279,6 +357,8 @@ export default function AdminSubmissionDetailPage() {
         renderProposal()
       ) : detail.milestoneId === 'midterm' ? (
         renderMidterm()
+      ) : detail.milestoneId === 'presentation-submit' ? (
+        renderPresentation()
       ) : (
         <EmptyState
           description='이 마일스톤의 상세보기는 후속 작업에서 연결합니다.'
