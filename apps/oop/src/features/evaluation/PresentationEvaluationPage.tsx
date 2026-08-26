@@ -59,11 +59,7 @@ function EvaluationTimer({
 
   const remainingTime = formatEvaluationRemainingTime(targetAt, now);
   useEffect(() => {
-    if (
-      remainingTime === '00:00:00' &&
-      !hasCompleted.current &&
-      onComplete
-    ) {
+    if (remainingTime === '00:00:00' && !hasCompleted.current && onComplete) {
       hasCompleted.current = true;
       onComplete();
     }
@@ -434,9 +430,7 @@ function PresentationEvaluationContent({
       },
       {
         onSuccess: () => {
-          setSubmittedTeamIds(current =>
-            new Set(current).add(selectedTeam.id),
-          );
+          setSubmittedTeamIds(current => new Set(current).add(selectedTeam.id));
           toast({ body: `${selectedTeam.name} 발표 평가를 제출했어요.` });
         },
       },

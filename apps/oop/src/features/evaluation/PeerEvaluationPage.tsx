@@ -68,8 +68,9 @@ function initialTargetDrafts(
       return [
         target.userId,
         {
-          contributionPercent:
-            answer ? String(answer.contributionPercent) : '0',
+          contributionPercent: answer
+            ? String(answer.contributionPercent)
+            : '0',
           contributionDetail: answer?.contributionDetail ?? '',
           teammateAssessment: answer?.teammateAssessment ?? '',
         },
@@ -115,7 +116,8 @@ function PeerEvaluationForm({
     response?.projectReviewComment ?? '',
   );
   const [reflectionComment, setReflectionComment] = useState(
-    response?.answers.find(answer => answer.kind === 'REFLECTION')?.comment ?? '',
+    response?.answers.find(answer => answer.kind === 'REFLECTION')?.comment ??
+      '',
   );
   const [clientError, setClientError] = useState('');
   const [editingTargetId, setEditingTargetId] = useState<string | null>(null);
@@ -236,15 +238,12 @@ function PeerEvaluationForm({
       );
       return;
     }
-    submitMutation.mutate(
-      input,
-      {
-        onSuccess: () => {
-          toast({ body: '상호평가를 제출했어요.' });
-          void navigate({ to: ROUTES.STUDENT.HOME });
-        },
+    submitMutation.mutate(input, {
+      onSuccess: () => {
+        toast({ body: '상호평가를 제출했어요.' });
+        void navigate({ to: ROUTES.STUDENT.HOME });
       },
-    );
+    });
   };
 
   const editingTarget = targets.find(
@@ -512,11 +511,7 @@ function PeerEvaluationForm({
                 placeholder='협업 과정에서 확인한 기여를 한 줄로 작성해 주세요.'
                 value={editingDraft.teammateAssessment}
               />
-              <HStack
-                className={styles.dialogActions}
-                gap={2}
-                justify='end'
-              >
+              <HStack className={styles.dialogActions} gap={2} justify='end'>
                 <Button
                   label={isReadOnly ? '닫기' : '취소'}
                   onClick={closeTargetDialog}

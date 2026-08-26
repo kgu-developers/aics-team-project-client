@@ -143,9 +143,10 @@ describe('KD3-92 학생 평가 화면', () => {
     expect(
       screen.queryByRole('button', { name: '임시 저장' }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: '제출하기' }),
-    ).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: '제출하기' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
 
     for (const option of screen.getAllByRole('radio', { name: '4점' }))
       await user.click(option);
@@ -370,9 +371,10 @@ describe('KD3-92 학생 평가 화면', () => {
       'aria-disabled',
       'true',
     );
-    expect(
-      screen.getByRole('button', { name: '제출하기' }),
-    ).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: '제출하기' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     expect(
       screen.getByText(
         '수업 시간이 시작되기 전에는 발표 자료만 확인할 수 있어요.',
@@ -391,9 +393,9 @@ describe('KD3-92 학생 평가 화면', () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByRole('timer')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('radio', { name: '4점' })[0]).not.toHaveAttribute(
-      'aria-disabled',
-    );
+    expect(
+      screen.getAllByRole('radio', { name: '4점' })[0],
+    ).not.toHaveAttribute('aria-disabled');
     for (const option of screen.getAllByRole('radio', { name: '4점' }))
       await user.click(option);
     expect(
