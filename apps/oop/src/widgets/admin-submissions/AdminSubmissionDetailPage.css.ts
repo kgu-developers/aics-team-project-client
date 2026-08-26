@@ -182,3 +182,14 @@ export const screenList = style({
     },
   },
 });
+
+export const evaluatorButton = style({
+  background: 'none',
+  border: 0,
+  color: 'inherit',
+  cursor: 'pointer',
+  font: 'inherit',
+  padding: 0,
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
+});

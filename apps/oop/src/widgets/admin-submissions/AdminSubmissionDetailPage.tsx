@@ -15,6 +15,8 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { useAdminMilestoneSubmissionDetailQuery } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
+import StudentDetailDialog from '~/features/admin-student-team/components/StudentDetailDialog';
+import { useAdminStudentsQuery } from '~/features/admin-student-team/queries/useAdminStudentsQuery';
 
 import * as styles from './AdminSubmissionDetailPage.css';
 
@@ -46,6 +48,12 @@ export default function AdminSubmissionDetailPage() {
       reflection: string;
     };
   } | null>(null);
+  const [selectedEvaluator, setSelectedEvaluator] = useState<{
+    name: string;
+    studentNumber: string;
+    major: string;
+    team: { name: string } | null;
+  } | null>(null);
   const currentUser = useAuthStore(state => state.currentUser);
   const { submissionId } = useParams({
     from: '/admin/submissions/$submissionId',
@@ -59,6 +67,7 @@ export default function AdminSubmissionDetailPage() {
   const accessibleSectionIds =
     currentUser?.sections.map(section => section.id) ?? [];
   const detail = submissionQuery.data;
+  const studentsQuery = useAdminStudentsQuery(detail?.sectionId ?? '');
   const isAccessibleSection = Boolean(
     detail && accessibleSectionIds.includes(detail.sectionId),
   );
@@ -495,53 +504,78 @@ export default function AdminSubmissionDetailPage() {
     }
 
     return (
-      <Card className={styles.document}>
-        <div className={styles.documentHeader}>
-          <Text className={styles.documentLabel}>
-            PRESENTATION EVALUATION / READ ONLY
-          </Text>
-          <Heading level={2}>{detail.teamName} 발표 평가</Heading>
-          <Text className={styles.metadata}>
-            {detail.sectionLabel} · 평가 마감일 {detail.submittedAt} · 조회 전용
-          </Text>
-        </div>
-        <Table
-          columns={[
-            {
-              align: 'start',
-              header: '평가자',
-              key: 'evaluatorName',
-              width: proportional(1, { minWidth: 120 }),
-            },
-            ...evaluation.criteria.map(criterion => ({
-              align: 'center' as const,
-              header: criterion.label,
-              key: criterion.id,
-              renderCell: (
-                evaluator: (typeof evaluation.evaluations)[number],
-              ) =>
-                evaluator.isTargetTeamMember
-                  ? '-'
-                  : (evaluator.scores[criterion.id] ?? '미평가'),
-              width: proportional(1, { minWidth: 144 }),
-            })),
-            {
-              align: 'center',
-              header: '합계',
-              key: 'total',
-              renderCell: evaluator =>
-                evaluator.isTargetTeamMember
-                  ? '-'
-                  : (evaluator.total ?? '미평가'),
-              width: proportional(0.7, { minWidth: 96 }),
-            },
-          ]}
-          data={evaluation.evaluations}
-          dividers='rows'
-          textOverflow='wrap'
-          verticalAlign='middle'
+      <>
+        <Card className={styles.document}>
+          <div className={styles.documentHeader}>
+            <Text className={styles.documentLabel}>
+              PRESENTATION EVALUATION / READ ONLY
+            </Text>
+            <Heading level={2}>{detail.teamName} 발표 평가</Heading>
+            <Text className={styles.metadata}>
+              {detail.sectionLabel} · 평가 마감일 {detail.submittedAt} · 조회
+              전용
+            </Text>
+          </div>
+          <Table
+            columns={[
+              {
+                align: 'start',
+                header: '평가자',
+                key: 'evaluatorName',
+                renderCell: evaluator => {
+                  const student = studentsQuery.data?.find(
+                    item =>
+                      item.studentNumber === evaluator.evaluatorStudentNumber,
+                  );
+                  return student ? (
+                    <button
+                      className={styles.evaluatorButton}
+                      onClick={() => setSelectedEvaluator(student)}
+                      type='button'
+                    >
+                      {evaluator.evaluatorName}
+                    </button>
+                  ) : (
+                    evaluator.evaluatorName
+                  );
+                },
+                width: proportional(1, { minWidth: 120 }),
+              },
+              ...evaluation.criteria.map(criterion => ({
+                align: 'center' as const,
+                header: criterion.label,
+                key: criterion.id,
+                renderCell: (
+                  evaluator: (typeof evaluation.evaluations)[number],
+                ) =>
+                  evaluator.isTargetTeamMember
+                    ? '-'
+                    : (evaluator.scores[criterion.id] ?? '미평가'),
+                width: proportional(1, { minWidth: 144 }),
+              })),
+              {
+                align: 'center',
+                header: '합계',
+                key: 'total',
+                renderCell: evaluator =>
+                  evaluator.isTargetTeamMember
+                    ? '-'
+                    : (evaluator.total ?? '미평가'),
+                width: proportional(0.7, { minWidth: 96 }),
+              },
+            ]}
+            data={evaluation.evaluations}
+            dividers='rows'
+            textOverflow='wrap'
+            verticalAlign='middle'
+          />
+        </Card>
+        <StudentDetailDialog
+          isOpen={selectedEvaluator !== null}
+          onClose={() => setSelectedEvaluator(null)}
+          student={selectedEvaluator}
         />
-      </Card>
+      </>
     );
   }
 
