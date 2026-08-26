@@ -90,6 +90,32 @@ export const fieldValue = style({
   whiteSpace: 'pre-wrap',
 });
 
+export const evaluationList = style({
+  display: 'grid',
+  gap: 12,
+  marginTop: 16,
+});
+
+export const evaluationHeader = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 6,
+});
+
+export const evaluationClose = style({
+  marginTop: 20,
+});
+
+export const evaluationItem = style({
+  background: tokens.color.background.muted,
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: 8,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 6,
+  padding: 14,
+});
+
 export const table = style({
   border: `1px solid ${tokens.color.border.base}`,
   borderCollapse: 'separate',
@@ -108,6 +134,21 @@ export const tableHeader = style({
   background: tokens.color.background.muted,
   fontWeight: 700,
   textAlign: 'left',
+});
+
+export const peerMemberButton = style({
+  background: 'transparent',
+  border: 0,
+  color: 'inherit',
+  cursor: 'pointer',
+  font: 'inherit',
+  padding: 0,
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
+  ':focus-visible': {
+    outline: `2px solid ${tokens.color.accent}`,
+    outlineOffset: 2,
+  },
 });
 
 export const lastTableRow = style({

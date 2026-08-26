@@ -86,7 +86,12 @@ function getSubmissionSummary(
     case 'peer-review':
       return (
         <Text>
-          {submission.summary.submittedMemberCountLabel ?? '제출자 수: -'}
+          제출자 수:{' '}
+          {submission.summary.submittedMemberCountLabel?.replace(
+            '제출자 수: ',
+            '',
+          ) ?? '-'}{' '}
+          / {submission.summary.memberCount ?? '-'}
         </Text>
       );
     default:

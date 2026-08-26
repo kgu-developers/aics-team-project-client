@@ -1,5 +1,13 @@
-import { Card, EmptyState, Heading, Text } from '@aics/design-system';
+import {
+  Button,
+  Card,
+  Dialog,
+  EmptyState,
+  Heading,
+  Text,
+} from '@aics/design-system';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
+import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -26,6 +34,16 @@ function getMilestoneLabel(milestoneId: string | undefined) {
 }
 
 export default function AdminSubmissionDetailPage() {
+  const [selectedPeerMember, setSelectedPeerMember] = useState<{
+    name: string;
+    studentNumber: string;
+    major: string;
+    evaluation: {
+      roleSummary: string;
+      teamEvaluation: string;
+      reflection: string;
+    };
+  } | null>(null);
   const currentUser = useAuthStore(state => state.currentUser);
   const { submissionId } = useParams({
     from: '/admin/submissions/$submissionId',
@@ -329,6 +347,145 @@ export default function AdminSubmissionDetailPage() {
     );
   }
 
+  function renderPeerEvaluation() {
+    const peer = detail?.peerEvaluation;
+    if (!peer)
+      return (
+        <EmptyState
+          description='상호 평가 데이터가 없습니다.'
+          title='표시할 평가가 없습니다.'
+        />
+      );
+    const scoreFor = (memberNumber: string, targetNumber: string) =>
+      peer.responses.find(
+        response => response.evaluatorStudentNumber === memberNumber,
+      )?.scores[targetNumber];
+    return (
+      <Card className={styles.document}>
+        <div className={styles.documentHeader}>
+          <Text className={styles.documentLabel}>
+            PEER EVALUATION / READ ONLY
+          </Text>
+          <Heading level={2}>{detail.teamName} 상호 평가</Heading>
+        </div>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th className={`${styles.tableCell} ${styles.tableHeader}`}>
+                이름
+              </th>
+              {peer.members.map(member => (
+                <th
+                  className={`${styles.tableCell} ${styles.tableHeader}`}
+                  key={member.studentNumber}
+                >
+                  {member.name}
+                </th>
+              ))}
+              <th className={`${styles.tableCell} ${styles.tableHeader}`}>
+                평균
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {peer.members.map(member => {
+              const values = peer.members
+                .filter(target => target.studentNumber !== member.studentNumber)
+                .map(target =>
+                  scoreFor(target.studentNumber, member.studentNumber),
+                )
+                .filter((value): value is number => value !== undefined);
+              return (
+                <tr key={member.studentNumber}>
+                  <td className={styles.tableCell}>
+                    <button
+                      className={styles.peerMemberButton}
+                      type='button'
+                      onClick={() =>
+                        setSelectedPeerMember({
+                          ...member,
+                          evaluation: peer.responses.find(
+                            response =>
+                              response.evaluatorStudentNumber ===
+                              member.studentNumber,
+                          )?.projectEvaluation ?? {
+                            roleSummary: '-',
+                            teamEvaluation: '-',
+                            reflection: '-',
+                          },
+                        })
+                      }
+                    >
+                      {member.name}
+                    </button>
+                  </td>
+                  {peer.members.map(target => (
+                    <td className={styles.tableCell} key={target.studentNumber}>
+                      {target.studentNumber === member.studentNumber
+                        ? '-'
+                        : (scoreFor(
+                            target.studentNumber,
+                            member.studentNumber,
+                          ) ?? '-')}
+                    </td>
+                  ))}
+                  <td className={styles.tableCell}>
+                    {values.length
+                      ? (
+                          values.reduce((sum, value) => sum + value, 0) /
+                          values.length
+                        ).toFixed(1)
+                      : '-'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <Dialog
+          aria-label='프로젝트 평가'
+          isOpen={selectedPeerMember !== null}
+          onOpenChange={open => {
+            if (!open) setSelectedPeerMember(null);
+          }}
+          purpose='info'
+          width={480}
+        >
+          {selectedPeerMember ? (
+            <>
+              <div className={styles.evaluationHeader}>
+                <Heading level={2}>{selectedPeerMember.name} 평가</Heading>
+                <Text>학번: {selectedPeerMember.studentNumber}</Text>
+                <Text>전공: {selectedPeerMember.major}</Text>
+              </div>
+              <div className={styles.evaluationList}>
+                <div className={styles.evaluationItem}>
+                  <Text className={styles.fieldLabel}>자신의 역할 요약</Text>
+                  <Text>{selectedPeerMember.evaluation.roleSummary}</Text>
+                </div>
+                <div className={styles.evaluationItem}>
+                  <Text className={styles.fieldLabel}>팀 프로젝트 평가</Text>
+                  <Text>{selectedPeerMember.evaluation.teamEvaluation}</Text>
+                </div>
+                <div className={styles.evaluationItem}>
+                  <Text className={styles.fieldLabel}>소감 또는 팀원 칭찬</Text>
+                  <Text>{selectedPeerMember.evaluation.reflection}</Text>
+                </div>
+              </div>
+              <Button
+                className={styles.evaluationClose}
+                data-autofocus=''
+                label='닫기'
+                onClick={() => setSelectedPeerMember(null)}
+                variant='secondary'
+              />
+            </>
+          ) : null}
+        </Dialog>
+      </Card>
+    );
+  }
+
   return (
     <div className={styles.page}>
       <Link
@@ -359,6 +516,8 @@ export default function AdminSubmissionDetailPage() {
         renderMidterm()
       ) : detail.milestoneId === 'presentation-submit' ? (
         renderPresentation()
+      ) : detail.milestoneId === 'peer-review' ? (
+        renderPeerEvaluation()
       ) : (
         <EmptyState
           description='이 마일스톤의 상세보기는 후속 작업에서 연결합니다.'

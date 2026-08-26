@@ -13,6 +13,7 @@ export type AdminSectionMilestoneSubmissionSummaryDto = {
   sourceArchiveFileName: string | null;
   sourceArchiveDownloadUrl: string | null;
   submittedMemberCount: number | null;
+  memberCount?: number | null;
 };
 
 export type AdminSectionMilestoneSubmissionItemDto = {

@@ -60,12 +60,34 @@ export type AdminPresentationSubmissionDetailDto = {
   videoUrl: string | null;
 };
 
+export type AdminPeerEvaluationMemberDto = {
+  major: string;
+  name: string;
+  studentNumber: string;
+};
+
+export type AdminPeerEvaluationScoreDto = {
+  evaluatorStudentNumber: string;
+  projectEvaluation: {
+    roleSummary: string;
+    teamEvaluation: string;
+    reflection: string;
+  };
+  scores: Record<string, number>;
+};
+
+export type AdminPeerEvaluationDetailDto = {
+  members: AdminPeerEvaluationMemberDto[];
+  responses: AdminPeerEvaluationScoreDto[];
+};
+
 export type AdminMilestoneSubmissionDetailResponse = {
   milestone: {
     id: string;
     title: string;
   };
   midterm: AdminMidtermSubmissionDetailDto | null;
+  peerEvaluation?: AdminPeerEvaluationDetailDto | null;
   presentation: AdminPresentationSubmissionDetailDto | null;
   proposal: AdminProposalSubmissionDetailDto | null;
   section: {

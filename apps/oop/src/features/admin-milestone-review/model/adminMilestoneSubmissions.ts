@@ -15,6 +15,7 @@ export type AdminMilestoneSubmissionSummaryView = {
   sourceArchiveFileName: string | null;
   sourceArchiveDownloadUrl: string | null;
   submittedMemberCountLabel: string | null;
+  memberCount: number | null;
 };
 
 export type AdminMilestoneSubmissionView = {
@@ -72,6 +73,7 @@ function toSubmissionView(
         submission.summary.submittedMemberCount === null
           ? null
           : toCountLabel('제출자 수', submission.summary.submittedMemberCount),
+      memberCount: submission.summary.memberCount ?? null,
     },
     teamId: submission.teamId,
     teamName: submission.teamName,

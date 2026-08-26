@@ -41,9 +41,16 @@ const milestones: Record<MilestoneId, { title: string }> = {
 const submissionDetailsByMilestone: Partial<
   Record<
     MilestoneId,
-    ReadonlyArray<{ submittedAt: string; submissionId: string }>
+    ReadonlyArray<{ submittedAt: string | null; submissionId: string | null }>
   >
 > = {
+  'peer-review': [
+    {
+      submissionId: 'submission-oop-01-1-peer-review',
+      submittedAt: '2026/12/14',
+    },
+    { submissionId: null, submittedAt: null },
+  ],
   proposal: [
     {
       submissionId: 'submission-oop-01-1-proposal',
@@ -136,7 +143,9 @@ export function getAdminMilestoneSubmissionsFixture(
               : null,
           sourceArchiveDownloadUrl:
             typedMilestoneId === 'final-report' ? mockDownloadUrls.zip : null,
-          submittedMemberCount: null,
+          submittedMemberCount:
+            typedMilestoneId === 'peer-review' ? (index === 0 ? 3 : 0) : null,
+          memberCount: typedMilestoneId === 'peer-review' ? 3 : null,
         },
         teamId: team.teamId,
         teamName: team.teamName,
