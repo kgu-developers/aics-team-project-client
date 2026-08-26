@@ -29,7 +29,14 @@ export {
 } from './evaluation';
 export { fetchTeams } from './teams/fetchTeams';
 export { submitTeam } from './teams/submitTeam';
-export { removeAdminNoticeAttachment } from './notices';
+export {
+  fetchAdminNotice,
+  fetchAdminNotices,
+  removeAdminNoticeAttachment,
+  type AdminNoticeDetailDto,
+  type AdminNoticeDto,
+  type AdminNoticesResponse,
+} from './notices';
 export { ENDPOINTS } from './constants/endpoints';
 export { fetchStudentHomeDashboard } from './studentHome/fetchStudentHomeDashboard';
 export {

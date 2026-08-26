@@ -21,6 +21,8 @@ export const ENDPOINTS = {
     TEAM_DASHBOARD: (teamId: string) => `/admin/teams/${teamId}/dashboard`,
     NOTICE_ATTACHMENT: (noticeId: string) =>
       `/admin/notices/${noticeId}/attachment`,
+    NOTICES: '/admin/notices',
+    NOTICE_DETAIL: (noticeId: string) => `/admin/notices/${noticeId}`,
   },
   SECTION: {
     STUDENT_DASHBOARD: (sectionId: string) =>

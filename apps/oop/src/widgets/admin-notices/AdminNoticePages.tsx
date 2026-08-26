@@ -1,3 +1,4 @@
+import type { AdminNoticeDetailDto } from '@aics/api-client';
 import {
   Button,
   Card,
@@ -14,17 +15,13 @@ import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { useRemoveAdminNoticeAttachmentMutation } from '~/features/admin-notices/queries';
+import {
+  useAdminNoticeQuery,
+  useAdminNoticesQuery,
+  useRemoveAdminNoticeAttachmentMutation,
+} from '~/features/admin-notices/queries';
 
 import * as styles from './AdminNoticePages.css';
-import {
-  adminNoticeDetails,
-  adminNotices,
-  type AdminNotice,
-  noticeListPageSize,
-  type NoticeSectionFilter,
-  noticeSectionFilters,
-} from '../../mocks/data/adminNotices';
 
 const productDateTimeFormatter = new Intl.DateTimeFormat('sv-SE', {
   day: '2-digit',
@@ -45,15 +42,15 @@ function BackToList() {
 }
 
 export function DeleteNoticeDialog({
+  detail,
   isOpen,
-  notice,
   onClose,
 }: {
   isOpen: boolean;
-  notice: AdminNotice;
+  detail: AdminNoticeDetailDto;
   onClose: () => void;
 }) {
-  const detail = adminNoticeDetails[notice.id];
+  const { notice } = detail;
 
   return (
     <Dialog
@@ -104,19 +101,21 @@ export function DeleteNoticeDialog({
 
 type NoticeSection = Exclude<NoticeSectionFilter, '전체'>;
 
+type NoticeSectionFilter = string;
+
 function isNoticeSection(value: string): value is NoticeSection {
   return value !== '전체';
 }
 
 function SectionSelect({
+  options,
   onChange,
   value,
 }: {
+  options: NoticeSectionFilter[];
   onChange: (sections: NoticeSection[]) => void;
   value: NoticeSection[];
 }) {
-  const options = noticeSectionFilters.filter(isNoticeSection);
-
   return (
     <MultiSelector
       hasClear
@@ -199,19 +198,20 @@ function NoticeAttachmentField({
 export function AdminNoticeListPage() {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
+  const noticesQuery = useAdminNoticesQuery();
   const [selectedSection, setSelectedSection] =
     useState<NoticeSectionFilter>('전체');
+  const notices = noticesQuery.data?.notices ?? [];
+  const sectionFilters = noticesQuery.data?.sectionFilters ?? ['전체'];
+  const pageSize = noticesQuery.data?.pageSize ?? 1;
   const filteredNotices =
     selectedSection === '전체'
-      ? adminNotices
-      : adminNotices.filter(notice => notice.section === selectedSection);
-  const totalPages = Math.max(
-    1,
-    Math.ceil(filteredNotices.length / noticeListPageSize),
-  );
+      ? notices
+      : notices.filter(notice => notice.section === selectedSection);
+  const totalPages = Math.max(1, Math.ceil(filteredNotices.length / pageSize));
   const displayedNotices = filteredNotices.slice(
-    (currentPage - 1) * noticeListPageSize,
-    currentPage * noticeListPageSize,
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
   );
 
   function selectSection(section: NoticeSectionFilter) {
@@ -223,7 +223,7 @@ export function AdminNoticeListPage() {
     <div className={styles.page}>
       <Heading level={1}>공지사항</Heading>
       <div className={styles.filters} role='group' aria-label='분반 필터'>
-        {noticeSectionFilters.map(label => (
+        {sectionFilters.map(label => (
           <button
             aria-pressed={selectedSection === label}
             className={
@@ -237,6 +237,12 @@ export function AdminNoticeListPage() {
           </button>
         ))}
       </div>
+      {noticesQuery.isLoading ? (
+        <Text>공지사항을 불러오는 중입니다.</Text>
+      ) : null}
+      {noticesQuery.isError ? (
+        <Text role='alert'>공지사항을 불러오지 못했습니다.</Text>
+      ) : null}
       <Card className={styles.tableCard}>
         <table className={styles.table}>
           <thead>
@@ -312,9 +318,15 @@ export function AdminNoticeDetailPage() {
   const { noticeId } = useParams({ from: '/admin/notices/$noticeId/' });
   const navigate = useNavigate();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const notice = adminNotices.find(candidate => candidate.id === noticeId);
+  const noticeQuery = useAdminNoticeQuery(noticeId);
+  const detail = noticeQuery.data;
+  const notice = detail?.notice;
 
-  if (!notice) {
+  if (noticeQuery.isLoading) {
+    return <div className={styles.page}>공지사항을 불러오는 중입니다.</div>;
+  }
+
+  if (!notice || !detail) {
     return (
       <div className={styles.page}>
         <Heading level={1}>공지사항을 찾을 수 없어요.</Heading>
@@ -322,8 +334,6 @@ export function AdminNoticeDetailPage() {
       </div>
     );
   }
-
-  const detail = adminNoticeDetails[notice.id];
 
   return (
     <div className={styles.page}>
@@ -365,7 +375,7 @@ export function AdminNoticeDetailPage() {
       </Card>
       <DeleteNoticeDialog
         isOpen={isDeleteDialogOpen}
-        notice={notice}
+        detail={detail}
         onClose={() => setIsDeleteDialogOpen(false)}
       />
     </div>
@@ -377,8 +387,10 @@ export function AdminNoticeEditPage() {
   const { noticeId } = useParams({
     from: '/admin/notices/$noticeId/edit',
   });
-  const notice = adminNotices.find(candidate => candidate.id === noticeId);
-  const detail = notice ? adminNoticeDetails[notice.id] : null;
+  const noticeQuery = useAdminNoticeQuery(noticeId);
+  const noticesQuery = useAdminNoticesQuery();
+  const detail = noticeQuery.data;
+  const notice = detail?.notice;
   const [content, setContent] = useState(detail?.content.join('\n\n') ?? '');
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [isExistingAttachmentRemoved, setIsExistingAttachmentRemoved] =
@@ -398,6 +410,10 @@ export function AdminNoticeEditPage() {
     if (isNoticeSection(notice.section)) setSections([notice.section]);
     setTitle(notice.title);
   }, [noticeId, notice, detail]);
+
+  if (noticeQuery.isLoading) {
+    return <div className={styles.page}>공지사항을 불러오는 중입니다.</div>;
+  }
 
   if (!notice || !detail) {
     return (
@@ -428,7 +444,11 @@ export function AdminNoticeEditPage() {
           />
           <div className={styles.fieldGroup}>
             <Text>분반</Text>
-            <SectionSelect onChange={setSections} value={sections} />
+            <SectionSelect
+              onChange={setSections}
+              options={noticesQuery.data?.sectionFilters ?? []}
+              value={sections}
+            />
           </div>
           <TextArea
             label='내용'
@@ -488,6 +508,7 @@ export function AdminNoticeNewPage() {
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [sections, setSections] = useState<NoticeSection[]>([]);
   const [title, setTitle] = useState('');
+  const noticesQuery = useAdminNoticesQuery();
 
   return (
     <div className={styles.page}>
@@ -510,7 +531,11 @@ export function AdminNoticeNewPage() {
           />
           <div className={styles.fieldGroup}>
             <Text>분반</Text>
-            <SectionSelect onChange={setSections} value={sections} />
+            <SectionSelect
+              onChange={setSections}
+              options={noticesQuery.data?.sectionFilters ?? []}
+              value={sections}
+            />
           </div>
           <TextArea
             label='내용'
