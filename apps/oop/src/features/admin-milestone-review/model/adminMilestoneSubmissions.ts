@@ -11,7 +11,9 @@ export type AdminMilestoneSubmissionSummaryView = {
   presentationFileName: string | null;
   projectTopic: string | null;
   reportFileName: string | null;
+  reportDownloadUrl: string | null;
   sourceArchiveFileName: string | null;
+  sourceArchiveDownloadUrl: string | null;
   submittedMemberCountLabel: string | null;
 };
 
@@ -63,7 +65,9 @@ function toSubmissionView(
       presentationFileName: submission.summary.presentationFileName,
       projectTopic: submission.summary.projectTopic,
       reportFileName: submission.summary.reportFileName,
+      reportDownloadUrl: submission.summary.reportDownloadUrl,
       sourceArchiveFileName: submission.summary.sourceArchiveFileName,
+      sourceArchiveDownloadUrl: submission.summary.sourceArchiveDownloadUrl,
       submittedMemberCountLabel:
         submission.summary.submittedMemberCount === null
           ? null

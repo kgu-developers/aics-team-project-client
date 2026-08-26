@@ -69,6 +69,8 @@ export {
   type AdminMidtermSubmissionBlockDto,
   type AdminMidtermSubmissionFieldDto,
   type AdminMidtermSubmissionDetailDto,
+  type AdminPresentationSubmissionBlockDto,
+  type AdminPresentationSubmissionDetailDto,
   type AdminProposalDataRowDto,
   type AdminProposalScreenDto,
   type AdminProposalSubmissionDetailDto,

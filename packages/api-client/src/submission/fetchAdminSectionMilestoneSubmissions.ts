@@ -9,7 +9,9 @@ export type AdminSectionMilestoneSubmissionSummaryDto = {
   presentationFileName: string | null;
   projectTopic: string | null;
   reportFileName: string | null;
+  reportDownloadUrl: string | null;
   sourceArchiveFileName: string | null;
+  sourceArchiveDownloadUrl: string | null;
   submittedMemberCount: number | null;
 };
 

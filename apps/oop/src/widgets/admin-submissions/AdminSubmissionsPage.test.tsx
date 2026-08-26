@@ -109,20 +109,23 @@ describe('AdminSubmissionsPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('제출 전 또는 미제출 항목의 상세보기는 비활성화한다', async () => {
+  it('최종 보고서 PDF와 ZIP 다운로드 링크를 표시한다', async () => {
     const user = userEvent.setup();
 
     renderPage();
 
     await user.click(await screen.findByRole('tab', { name: '최종 보고서' }));
 
-    expect(screen.getAllByRole('button', { name: '상세보기' })).toHaveLength(2);
-    expect(
-      screen.getAllByRole('button', { name: '상세보기' })[0],
-    ).toBeDisabled();
-    expect(
-      screen.queryByRole('link', { name: '상세보기' }),
-    ).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'PDF 다운로드' })).toHaveLength(
+      2,
+    );
+    expect(screen.getAllByRole('link', { name: 'ZIP 다운로드' })).toHaveLength(
+      2,
+    );
+    expect(screen.getAllByRole('link', { name: 'PDF 다운로드' })[0]).toHaveAttribute(
+      'download',
+      'oop-01-1-final-report.pdf',
+    );
   });
 
   it('제출된 제안서를 읽기 전용으로 표시한다', async () => {

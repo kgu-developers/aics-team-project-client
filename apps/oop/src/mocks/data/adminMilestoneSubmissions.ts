@@ -12,6 +12,11 @@ const section = {
   label: 'OOP-01',
 } as const;
 
+const mockDownloadUrls = {
+  pdf: 'data:application/pdf;base64,JVBERi0xLjQKJQ==',
+  zip: 'data:application/zip;base64,UEsDBAo=',
+} as const;
+
 const teamSubmissions = [
   {
     id: 'submission-oop-01-1',
@@ -69,6 +74,16 @@ const submissionDetailsByMilestone: Partial<
       submittedAt: '2026/11/13',
     },
   ],
+  'final-report': [
+    {
+      submissionId: 'submission-oop-01-1-final-report',
+      submittedAt: '2026/12/07',
+    },
+    {
+      submissionId: 'submission-oop-01-2-final-report',
+      submittedAt: '2026/12/08',
+    },
+  ],
 };
 
 export function getAdminMilestoneSubmissionsFixture(
@@ -109,8 +124,18 @@ export function getAdminMilestoneSubmissionsFixture(
             typedMilestoneId === 'proposal'
               ? 'AI 기반 팀 프로젝트 관리 서비스'
               : null,
-          reportFileName: null,
-          sourceArchiveFileName: null,
+          reportFileName:
+            typedMilestoneId === 'final-report'
+              ? `oop-01-${index + 1}-final-report.pdf`
+              : null,
+          reportDownloadUrl:
+            typedMilestoneId === 'final-report' ? mockDownloadUrls.pdf : null,
+          sourceArchiveFileName:
+            typedMilestoneId === 'final-report'
+              ? `oop-01-${index + 1}-final-report.zip`
+              : null,
+          sourceArchiveDownloadUrl:
+            typedMilestoneId === 'final-report' ? mockDownloadUrls.zip : null,
           submittedMemberCount: null,
         },
         teamId: team.teamId,

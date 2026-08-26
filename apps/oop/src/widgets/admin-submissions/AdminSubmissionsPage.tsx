@@ -66,10 +66,32 @@ function getSubmissionSummary(
     case 'final-report':
       return (
         <>
-          <Text>보고서(pdf): {submission.summary.reportFileName ?? '-'}</Text>
-          <Text>
-            전체 파일(zip): {submission.summary.sourceArchiveFileName ?? '-'}
-          </Text>
+          <div className={styles.downloadRow}>
+            <Text>보고서(pdf): {submission.summary.reportFileName ?? '-'}</Text>
+            {submission.summary.reportDownloadUrl ? (
+              <a
+                className={styles.downloadLink}
+                download={submission.summary.reportFileName ?? true}
+                href={submission.summary.reportDownloadUrl}
+              >
+                PDF 다운로드
+              </a>
+            ) : null}
+          </div>
+          <div className={styles.downloadRow}>
+            <Text>
+              전체 파일(zip): {submission.summary.sourceArchiveFileName ?? '-'}
+            </Text>
+            {submission.summary.sourceArchiveDownloadUrl ? (
+              <a
+                className={styles.downloadLink}
+                download={submission.summary.sourceArchiveFileName ?? true}
+                href={submission.summary.sourceArchiveDownloadUrl}
+              >
+                ZIP 다운로드
+              </a>
+            ) : null}
+          </div>
         </>
       );
     case 'peer-review':
@@ -239,7 +261,8 @@ export default function AdminSubmissionsPage() {
                     return (
                       <AdminMilestoneSubmissionCard
                         detailAction={
-                          canViewDetail ? (
+                          activeMilestoneId ===
+                          'final-report' ? null : canViewDetail ? (
                             <Link
                               className={cardStyles.detailLink}
                               params={{ submissionId: detailSubmissionId }}
