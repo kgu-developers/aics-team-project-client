@@ -1,4 +1,5 @@
 import { apiClient } from '../client';
+import type { AdminPresentationEvaluationCriterionDto } from './fetchAdminPresentationEvaluations';
 import { ENDPOINTS } from '../constants/endpoints';
 
 export type AdminProposalDataRowDto = {
@@ -81,6 +82,17 @@ export type AdminPeerEvaluationDetailDto = {
   responses: AdminPeerEvaluationScoreDto[];
 };
 
+export type AdminPresentationEvaluationDetailDto = {
+  criteria: AdminPresentationEvaluationCriterionDto[];
+  evaluations: Array<{
+    evaluatorName: string;
+    evaluatorStudentNumber: string;
+    isTargetTeamMember: boolean;
+    scores: Record<string, number | null>;
+    total: number | null;
+  }>;
+};
+
 export type AdminMilestoneSubmissionDetailResponse = {
   milestone: {
     id: string;
@@ -88,6 +100,7 @@ export type AdminMilestoneSubmissionDetailResponse = {
   };
   midterm: AdminMidtermSubmissionDetailDto | null;
   peerEvaluation?: AdminPeerEvaluationDetailDto | null;
+  presentationEvaluation?: AdminPresentationEvaluationDetailDto | null;
   presentation: AdminPresentationSubmissionDetailDto | null;
   proposal: AdminProposalSubmissionDetailDto | null;
   section: {

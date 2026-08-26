@@ -11,6 +11,7 @@ type AdminTeamMilestoneProgressProps = {
   milestones: TeamMilestoneProgress[];
   projectTopic: string | null;
   sectionId: string;
+  teamMemberCount: number;
   teamLeaderName: string | null;
 };
 
@@ -38,6 +39,7 @@ function getFinalReportDownloadFiles(milestone: TeamMilestoneProgress) {
 function getMilestoneSummary(
   milestone: TeamMilestoneProgress,
   projectTopic: string | null,
+  teamMemberCount: number,
   teamLeaderName: string | null,
 ) {
   switch (milestone.id) {
@@ -70,7 +72,16 @@ function getMilestoneSummary(
         />
       );
     case 'peer-review':
-      return <Text>제출자 수: -</Text>;
+      return (
+        <Text>
+          제출자 수:{' '}
+          {milestone.status.kind === 'submitted' ||
+          milestone.status.kind === 'evaluated'
+            ? teamMemberCount
+            : 0}{' '}
+          / {teamMemberCount}
+        </Text>
+      );
     default:
       return <Text>제출 상태를 확인할 수 없습니다.</Text>;
   }
@@ -80,6 +91,7 @@ export default function AdminTeamMilestoneProgress({
   milestones,
   projectTopic,
   sectionId,
+  teamMemberCount,
   teamLeaderName,
 }: AdminTeamMilestoneProgressProps) {
   const displayMilestones = milestones.filter(
@@ -122,6 +134,7 @@ export default function AdminTeamMilestoneProgress({
                 summary={getMilestoneSummary(
                   milestone,
                   projectTopic,
+                  teamMemberCount,
                   teamLeaderName,
                 )}
               />

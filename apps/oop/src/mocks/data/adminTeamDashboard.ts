@@ -86,8 +86,8 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
       id: 'peer-review',
       title: '상호 평가',
       deadlineLabel: '2026-08-30',
-      submissionId: null,
-      status: { kind: 'before-deadline' },
+      submissionId: 'submission-oop-01-1-peer-review',
+      status: { kind: 'submitted', submittedDateLabel: '2026-12-14' },
     },
   ],
 };

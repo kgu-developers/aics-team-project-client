@@ -14,6 +14,8 @@ export const ENDPOINTS = {
       `/admin/submissions/${submissionId}`,
     SECTION_MILESTONE_SUBMISSIONS: (sectionId: string, milestoneId: string) =>
       `/admin/sections/${sectionId}/milestones/${milestoneId}/submissions`,
+    SECTION_PRESENTATION_EVALUATIONS: (sectionId: string) =>
+      `/admin/sections/${sectionId}/presentation-evaluations`,
     SECTION_STUDENTS: (sectionId: string) =>
       `/admin/sections/${sectionId}/students`,
     TEAM_DASHBOARD: (teamId: string) => `/admin/teams/${teamId}/dashboard`,

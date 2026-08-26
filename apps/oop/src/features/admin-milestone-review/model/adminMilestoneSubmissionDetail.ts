@@ -5,6 +5,7 @@ import type {
   AdminProposalScreenDto,
   AdminPresentationSubmissionDetailDto,
   AdminPeerEvaluationDetailDto,
+  AdminPresentationEvaluationDetailDto,
 } from '@aics/api-client';
 
 export type AdminProposalSubmissionDetailView = {
@@ -32,12 +33,15 @@ export type AdminMidtermSubmissionDetailView = {
 export type AdminPresentationSubmissionDetailView =
   AdminPresentationSubmissionDetailDto;
 export type AdminPeerEvaluationDetailView = AdminPeerEvaluationDetailDto;
+export type AdminPresentationEvaluationDetailView =
+  AdminPresentationEvaluationDetailDto;
 
 export type AdminMilestoneSubmissionDetailView = {
   milestoneId: string;
   milestoneTitle: string;
   midterm: AdminMidtermSubmissionDetailView | null;
   peerEvaluation: AdminPeerEvaluationDetailView | null;
+  presentationEvaluation: AdminPresentationEvaluationDetailView | null;
   presentation: AdminPresentationSubmissionDetailView | null;
   proposal: AdminProposalSubmissionDetailView | null;
   sectionId: string;
@@ -58,6 +62,7 @@ export function toAdminMilestoneSubmissionDetailView(
     presentation: response.presentation,
     proposal: response.proposal,
     peerEvaluation: response.peerEvaluation ?? null,
+    presentationEvaluation: response.presentationEvaluation ?? null,
     sectionId: response.section.id,
     sectionLabel: response.section.label,
     submittedAt: response.submittedAt,

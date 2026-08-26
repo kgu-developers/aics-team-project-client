@@ -1,5 +1,13 @@
-import { EmptyState, Heading, Text } from '@aics/design-system';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import type { AdminPresentationEvaluationTeamDto } from '@aics/api-client';
+import {
+  Card,
+  EmptyState,
+  Heading,
+  proportional,
+  Table,
+  Text,
+} from '@aics/design-system';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { type KeyboardEvent, useRef } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -10,7 +18,10 @@ import { AdminFinalReportDownloadSummary } from '~/features/admin-milestone-revi
 import { AdminMilestoneSubmissionCard } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard';
 import { AdminMilestoneSubmissionDetailAction } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionDetailAction';
 import type { AdminMilestoneSubmissionView } from '~/features/admin-milestone-review/model';
-import { useAdminMilestoneSubmissionsQuery } from '~/features/admin-milestone-review/queries';
+import {
+  useAdminMilestoneSubmissionsQuery,
+  useAdminPresentationEvaluationsQuery,
+} from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminSubmissionsPage.css';
@@ -25,7 +36,7 @@ const MILESTONE_TABS = [
   },
   {
     id: 'presentation-evaluate',
-    isListAvailable: false,
+    isListAvailable: true,
     label: '발표 평가',
   },
   { id: 'final-report', isListAvailable: true, label: '최종 보고서' },
@@ -128,7 +139,14 @@ export default function AdminSubmissionsPage() {
   const submissionsQuery = useAdminMilestoneSubmissionsQuery(
     effectiveSectionId,
     activeMilestoneId,
-    isAccessibleSection && activeTab?.isListAvailable === true,
+    isAccessibleSection &&
+      activeMilestoneId !== 'presentation-evaluate' &&
+      activeTab?.isListAvailable === true,
+  );
+  const presentationEvaluationsQuery = useAdminPresentationEvaluationsQuery(
+    activeMilestoneId === 'presentation-evaluate' && isAccessibleSection
+      ? effectiveSectionId
+      : undefined,
   );
   const sectionLabel =
     submissionsQuery.data?.sectionLabel ??
@@ -180,7 +198,6 @@ export default function AdminSubmissionsPage() {
             {sectionLabel} · {activeTab.label}
           </Text>
         </div>
-        <Text className={styles.readOnly}>조회 전용</Text>
       </div>
 
       <section className={styles.listSection}>
@@ -216,7 +233,89 @@ export default function AdminSubmissionsPage() {
           id={`submission-panel-${activeTab.id}`}
           role='tabpanel'
         >
-          {activeTab.isListAvailable ? (
+          {activeMilestoneId === 'presentation-evaluate' ? (
+            <>
+              <Heading level={2}>발표 평가 목록</Heading>
+              {presentationEvaluationsQuery.isPending ? (
+                <Text aria-live='polite' role='status'>
+                  발표 평가 목록을 불러오는 중입니다.
+                </Text>
+              ) : presentationEvaluationsQuery.isError ? (
+                <EmptyState
+                  description='잠시 후 다시 시도해 주세요.'
+                  title='발표 평가 목록을 불러오지 못했습니다.'
+                />
+              ) : presentationEvaluationsQuery.data ? (
+                <Card>
+                  <Table
+                    columns={[
+                      {
+                        align: 'start',
+                        header: '팀',
+                        key: 'teamName',
+                        renderCell: team => (
+                          <Link
+                            params={{ submissionId: team.submissionId }}
+                            search={{
+                              milestoneId: 'presentation-evaluate',
+                              sectionId: effectiveSectionId,
+                            }}
+                            to={ROUTES.ADMIN_SUBMISSION_DETAIL}
+                          >
+                            {team.teamName}
+                          </Link>
+                        ),
+                        width: proportional(1, { minWidth: 128 }),
+                      },
+                      {
+                        align: 'start',
+                        header: '주제',
+                        key: 'projectTopic',
+                        renderCell: team => team.projectTopic ?? '-',
+                        width: proportional(2, { minWidth: 200 }),
+                      },
+                      ...presentationEvaluationsQuery.data.criteria.map(
+                        criterion => ({
+                          align: 'center' as const,
+                          header: criterion.label,
+                          key: criterion.id,
+                          renderCell: (
+                            team: AdminPresentationEvaluationTeamDto,
+                          ) => team.criteria[criterion.id] ?? '-',
+                          width: proportional(1, { minWidth: 116 }),
+                        }),
+                      ),
+                      {
+                        align: 'center',
+                        header: '합계',
+                        key: 'total',
+                        renderCell: team => {
+                          const scores =
+                            presentationEvaluationsQuery.data.criteria.map(
+                              criterion => team.criteria[criterion.id],
+                            );
+                          const submittedScores = scores.filter(
+                            (score): score is number => score !== null,
+                          );
+                          return submittedScores.length === scores.length
+                            ? submittedScores.reduce(
+                                (sum, score) => sum + score,
+                                0,
+                              )
+                            : '-';
+                        },
+                        width: proportional(0.7, { minWidth: 72 }),
+                      },
+                    ]}
+                    data={presentationEvaluationsQuery.data.teams}
+                    dividers='rows'
+                    textOverflow='wrap'
+                    verticalAlign='middle'
+                  />
+                </Card>
+              ) : null}
+            </>
+          ) : activeTab.isListAvailable ? (
             <>
               <Heading level={2}>{activeTab.label} 목록</Heading>
               {accessibleSectionIds.length === 0 ? (

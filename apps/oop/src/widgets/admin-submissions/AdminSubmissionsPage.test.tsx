@@ -22,10 +22,12 @@ import AdminSubmissionsPage from './AdminSubmissionsPage';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
+import { adminPresentationEvaluationHandlers } from '~/mocks/handlers/adminPresentationEvaluations';
 
 const server = setupServer(
   ...adminMilestoneSubmissionDetailHandlers,
   ...adminMilestoneSubmissionsHandlers,
+  ...adminPresentationEvaluationHandlers,
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -122,10 +124,48 @@ describe('AdminSubmissionsPage', () => {
     expect(screen.getAllByRole('link', { name: 'ZIP 다운로드' })).toHaveLength(
       2,
     );
-    expect(screen.getAllByRole('link', { name: 'PDF 다운로드' })[0]).toHaveAttribute(
-      'download',
-      'oop-01-1-final-report.pdf',
+    expect(
+      screen.getAllByRole('link', { name: 'PDF 다운로드' })[0],
+    ).toHaveAttribute('download', 'oop-01-1-final-report.pdf');
+  });
+
+  it('발표 평가 목록과 팀별 상세보기 링크를 표시한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    expect(
+      await screen.findByRole('heading', { name: '발표 평가 목록' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('프로젝트 완성도')).toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'OOP-01 - 1팀' }));
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'OOP-01 - 1팀 발표 평가',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('프로젝트 완성도')).toHaveLength(1);
+    expect(screen.getByText('김민준')).toBeInTheDocument();
+    expect(screen.getByText('이서연')).toBeInTheDocument();
+    expect(screen.getByText('박지훈')).toBeInTheDocument();
+    expect(screen.getByText('최유진')).toBeInTheDocument();
+    expect(screen.getAllByText('-')).toHaveLength(8);
+  });
+
+  it('미제출 팀의 발표 평가 상세에 다른 팀 학생을 미평가로 표시한다', async () => {
+    renderPage(
+      '/admin/submissions/submission-oop-01-2-presentation-evaluate?milestoneId=presentation-evaluate&sectionId=oop-2026-2-01',
     );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'OOP-01 - 2팀 발표 평가',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('미평가')).toHaveLength(8);
   });
 
   it('제출된 제안서를 읽기 전용으로 표시한다', async () => {
@@ -170,6 +210,26 @@ describe('AdminSubmissionsPage', () => {
     ).toHaveAttribute('href', 'https://youtu.be/demo-oop-01-1');
     expect(screen.getByText('3. 주요 화면')).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('상호 평가 상세를 디자인 시스템 표로 표시하고 평가자 정보를 연다', async () => {
+    const user = userEvent.setup();
+
+    renderPage(
+      '/admin/submissions/submission-oop-01-1-peer-review?milestoneId=peer-review&sectionId=oop-2026-2-01',
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'OOP-01 - 1팀 상호 평가' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '평균' }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '김민준' }));
+    expect(
+      await screen.findByRole('heading', { name: '김민준 평가' }),
+    ).toBeInTheDocument();
   });
 
   it('2팀의 중간 점검도 해당 팀 정보로 표시한다', async () => {

@@ -4,6 +4,8 @@ import {
   Dialog,
   EmptyState,
   Heading,
+  proportional,
+  Table,
   Text,
 } from '@aics/design-system';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
@@ -368,80 +370,75 @@ export default function AdminSubmissionDetailPage() {
           </Text>
           <Heading level={2}>{detail.teamName} 상호 평가</Heading>
         </div>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th className={`${styles.tableCell} ${styles.tableHeader}`}>
-                이름
-              </th>
-              {peer.members.map(member => (
-                <th
-                  className={`${styles.tableCell} ${styles.tableHeader}`}
-                  key={member.studentNumber}
+        <Table
+          columns={[
+            {
+              align: 'start',
+              header: '이름',
+              key: 'name',
+              renderCell: member => (
+                <button
+                  className={styles.peerMemberButton}
+                  type='button'
+                  onClick={() =>
+                    setSelectedPeerMember({
+                      ...member,
+                      evaluation: peer.responses.find(
+                        response =>
+                          response.evaluatorStudentNumber ===
+                          member.studentNumber,
+                      )?.projectEvaluation ?? {
+                        reflection: '-',
+                        roleSummary: '-',
+                        teamEvaluation: '-',
+                      },
+                    })
+                  }
                 >
                   {member.name}
-                </th>
-              ))}
-              <th className={`${styles.tableCell} ${styles.tableHeader}`}>
-                평균
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {peer.members.map(member => {
-              const values = peer.members
-                .filter(target => target.studentNumber !== member.studentNumber)
-                .map(target =>
-                  scoreFor(target.studentNumber, member.studentNumber),
-                )
-                .filter((value): value is number => value !== undefined);
-              return (
-                <tr key={member.studentNumber}>
-                  <td className={styles.tableCell}>
-                    <button
-                      className={styles.peerMemberButton}
-                      type='button'
-                      onClick={() =>
-                        setSelectedPeerMember({
-                          ...member,
-                          evaluation: peer.responses.find(
-                            response =>
-                              response.evaluatorStudentNumber ===
-                              member.studentNumber,
-                          )?.projectEvaluation ?? {
-                            roleSummary: '-',
-                            teamEvaluation: '-',
-                            reflection: '-',
-                          },
-                        })
-                      }
-                    >
-                      {member.name}
-                    </button>
-                  </td>
-                  {peer.members.map(target => (
-                    <td className={styles.tableCell} key={target.studentNumber}>
-                      {target.studentNumber === member.studentNumber
-                        ? '-'
-                        : (scoreFor(
-                            target.studentNumber,
-                            member.studentNumber,
-                          ) ?? '-')}
-                    </td>
-                  ))}
-                  <td className={styles.tableCell}>
-                    {values.length
-                      ? (
-                          values.reduce((sum, value) => sum + value, 0) /
-                          values.length
-                        ).toFixed(1)
-                      : '-'}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                </button>
+              ),
+              width: proportional(1, { minWidth: 120 }),
+            },
+            ...peer.members.map(target => ({
+              align: 'center' as const,
+              header: target.name,
+              key: target.studentNumber,
+              renderCell: (member: (typeof peer.members)[number]) =>
+                target.studentNumber === member.studentNumber
+                  ? '-'
+                  : (scoreFor(target.studentNumber, member.studentNumber) ??
+                    '-'),
+              width: proportional(1, { minWidth: 112 }),
+            })),
+            {
+              align: 'center',
+              header: '평균',
+              key: 'average',
+              renderCell: member => {
+                const values = peer.members
+                  .filter(
+                    target => target.studentNumber !== member.studentNumber,
+                  )
+                  .map(target =>
+                    scoreFor(target.studentNumber, member.studentNumber),
+                  )
+                  .filter((value): value is number => value !== undefined);
+                return values.length
+                  ? (
+                      values.reduce((sum, value) => sum + value, 0) /
+                      values.length
+                    ).toFixed(1)
+                  : '-';
+              },
+              width: proportional(0.8, { minWidth: 96 }),
+            },
+          ]}
+          data={peer.members}
+          dividers='rows'
+          textOverflow='wrap'
+          verticalAlign='middle'
+        />
         <Dialog
           aria-label='프로젝트 평가'
           isOpen={selectedPeerMember !== null}
@@ -486,16 +483,80 @@ export default function AdminSubmissionDetailPage() {
     );
   }
 
+  function renderPresentationEvaluation() {
+    const evaluation = detail?.presentationEvaluation;
+    if (!evaluation) {
+      return (
+        <EmptyState
+          description='발표 평가 데이터가 없습니다.'
+          title='표시할 평가가 없습니다.'
+        />
+      );
+    }
+
+    return (
+      <Card className={styles.document}>
+        <div className={styles.documentHeader}>
+          <Text className={styles.documentLabel}>
+            PRESENTATION EVALUATION / READ ONLY
+          </Text>
+          <Heading level={2}>{detail.teamName} 발표 평가</Heading>
+          <Text className={styles.metadata}>
+            {detail.sectionLabel} · 평가 마감일 {detail.submittedAt} · 조회 전용
+          </Text>
+        </div>
+        <Table
+          columns={[
+            {
+              align: 'start',
+              header: '평가자',
+              key: 'evaluatorName',
+              width: proportional(1, { minWidth: 120 }),
+            },
+            ...evaluation.criteria.map(criterion => ({
+              align: 'center' as const,
+              header: criterion.label,
+              key: criterion.id,
+              renderCell: (
+                evaluator: (typeof evaluation.evaluations)[number],
+              ) =>
+                evaluator.isTargetTeamMember
+                  ? '-'
+                  : (evaluator.scores[criterion.id] ?? '미평가'),
+              width: proportional(1, { minWidth: 144 }),
+            })),
+            {
+              align: 'center',
+              header: '합계',
+              key: 'total',
+              renderCell: evaluator =>
+                evaluator.isTargetTeamMember
+                  ? '-'
+                  : (evaluator.total ?? '미평가'),
+              width: proportional(0.7, { minWidth: 96 }),
+            },
+          ]}
+          data={evaluation.evaluations}
+          dividers='rows'
+          textOverflow='wrap'
+          verticalAlign='middle'
+        />
+      </Card>
+    );
+  }
+
   return (
     <div className={styles.page}>
-      <Link
-        className={styles.backLink}
-        search={search}
-        to={ROUTES.ADMIN_SUBMISSIONS}
-      >
-        ← {milestoneLabel} 목록으로
-      </Link>
-      <Heading level={1}>{milestoneLabel} 상세보기</Heading>
+      <div className={styles.pageHeader}>
+        <Heading level={1}>{milestoneLabel} 상세보기</Heading>
+        <Link
+          className={styles.backLink}
+          search={search}
+          to={ROUTES.ADMIN_SUBMISSIONS}
+        >
+          ← {milestoneLabel} 목록으로
+        </Link>
+      </div>
       {submissionQuery.isPending ? (
         <Text aria-live='polite' role='status'>
           제출물 상세를 불러오는 중입니다.
@@ -516,6 +577,8 @@ export default function AdminSubmissionDetailPage() {
         renderMidterm()
       ) : detail.milestoneId === 'presentation-submit' ? (
         renderPresentation()
+      ) : detail.milestoneId === 'presentation-evaluate' ? (
+        renderPresentationEvaluation()
       ) : detail.milestoneId === 'peer-review' ? (
         renderPeerEvaluation()
       ) : (

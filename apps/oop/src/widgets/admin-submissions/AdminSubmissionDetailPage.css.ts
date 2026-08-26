@@ -22,6 +22,19 @@ export const backLink = style({
   },
 });
 
+export const pageHeader = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: 16,
+  justifyContent: 'space-between',
+  '@media': {
+    'screen and (max-width: 560px)': {
+      alignItems: 'flex-start',
+      flexDirection: 'column',
+    },
+  },
+});
+
 export const metadata = style({
   color: tokens.color.text.secondary,
   fontSize: 14,

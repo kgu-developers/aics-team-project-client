@@ -83,6 +83,7 @@ function renderProgress(items: TeamMilestoneProgress[]) {
           milestones={items}
           projectTopic='구독 관리 가계부 프로젝트'
           sectionId='oop-01'
+          teamMemberCount={2}
           teamLeaderName='김ㅇㅇ'
         />
       </AstryxThemeProvider>
@@ -107,6 +108,7 @@ describe('AdminTeamMilestoneProgress', () => {
     expect(screen.getByText('발표 자료 제출')).toBeInTheDocument();
     expect(screen.getByText('최종 보고서')).toBeInTheDocument();
     expect(screen.getByText('상호 평가')).toBeInTheDocument();
+    expect(screen.getByText('제출자 수: 0 / 2')).toBeInTheDocument();
     expect(screen.queryByText('발표 평가')).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: '상세보기' })).toHaveLength(3);
     expect(screen.getByRole('link', { name: '상세보기' })).toHaveAttribute(

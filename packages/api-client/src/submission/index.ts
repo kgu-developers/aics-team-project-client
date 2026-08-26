@@ -7,6 +7,7 @@ export {
   type AdminPresentationSubmissionBlockDto,
   type AdminPresentationSubmissionDetailDto,
   type AdminPeerEvaluationDetailDto,
+  type AdminPresentationEvaluationDetailDto,
   type AdminProposalDataRowDto,
   type AdminProposalScreenDto,
   type AdminProposalSubmissionDetailDto,
@@ -17,6 +18,12 @@ export {
   type AdminSectionMilestoneSubmissionSummaryDto,
   type AdminSectionMilestoneSubmissionsResponse,
 } from './fetchAdminSectionMilestoneSubmissions';
+export {
+  fetchAdminPresentationEvaluations,
+  type AdminPresentationEvaluationCriterionDto,
+  type AdminPresentationEvaluationTeamDto,
+  type AdminPresentationEvaluationsResponse,
+} from './fetchAdminPresentationEvaluations';
 export { fetchMyTeamSubmission } from './fetchMyTeamSubmission';
 export { fetchSubmission } from './fetchSubmission';
 export { submitSubmissionVersion } from './submitSubmissionVersion';

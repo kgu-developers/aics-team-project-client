@@ -2,6 +2,7 @@ import { adminMilestoneScheduleHandlers } from './adminMilestoneSchedule';
 import { adminMilestoneSubmissionDetailHandlers } from './adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from './adminMilestoneSubmissions';
 import { adminNoticeHandlers } from './adminNotices';
+import { adminPresentationEvaluationHandlers } from './adminPresentationEvaluations';
 import { adminProfileHandlers } from './adminProfile';
 import { adminStudentTeamHandlers } from './adminStudentTeams';
 import { adminTeamDashboardHandlers } from './adminTeamDashboard';
@@ -22,6 +23,7 @@ export const handlers = [
   ...adminMilestoneSubmissionDetailHandlers,
   ...adminMilestoneSubmissionsHandlers,
   ...adminNoticeHandlers,
+  ...adminPresentationEvaluationHandlers,
   ...editLockHandlers,
   ...evaluationHandlers,
   ...midReportHandlers,

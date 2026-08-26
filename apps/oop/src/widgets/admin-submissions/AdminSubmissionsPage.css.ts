@@ -22,11 +22,6 @@ export const description = style({
   marginTop: 8,
 });
 
-export const readOnly = style({
-  color: tokens.color.text.secondary,
-  fontSize: 13,
-});
-
 export const listSection = style({
   display: 'flex',
   flexDirection: 'column',

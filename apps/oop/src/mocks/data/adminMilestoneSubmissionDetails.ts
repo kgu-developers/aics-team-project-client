@@ -338,6 +338,75 @@ const peerEvaluationSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
   },
 };
 
+const presentationEvaluationCriteria = [
+  { id: 'completion', label: '프로젝트 완성도' },
+  { id: 'implementation', label: '기능 구성과 구현' },
+  { id: 'delivery', label: '발표 전달력' },
+];
+
+function createPresentationEvaluationDetail(
+  targetTeamId: string,
+  submittedScoresByStudentNumber: Record<string, Record<string, number>>,
+) {
+  return adminStudentsFixture.map(student => {
+    const isTargetTeamMember = student.teamId === targetTeamId;
+    const scores = submittedScoresByStudentNumber[student.studentNumber];
+
+    return {
+      evaluatorName: student.name,
+      evaluatorStudentNumber: student.studentNumber,
+      isTargetTeamMember,
+      scores: isTargetTeamMember
+        ? { completion: null, delivery: null, implementation: null }
+        : (scores ?? {
+            completion: null,
+            delivery: null,
+            implementation: null,
+          }),
+      total:
+        !isTargetTeamMember && scores
+          ? Object.values(scores).reduce((sum, score) => sum + score, 0)
+          : null,
+    };
+  });
+}
+
+const presentationEvaluationSubmissionDetail: AdminMilestoneSubmissionDetailResponse =
+  {
+    milestone: { id: 'presentation-evaluate', title: '발표 평가' },
+    section: { id: 'oop-2026-2-01', label: 'OOP-01' },
+    submittedAt: '2026/11/26',
+    submission: {
+      id: 'submission-oop-01-1-presentation-evaluate',
+      teamId: 'team-1151-1',
+      teamName: 'OOP-01 - 1팀',
+    },
+    proposal: null,
+    midterm: null,
+    presentation: null,
+    presentationEvaluation: {
+      criteria: presentationEvaluationCriteria,
+      evaluations: createPresentationEvaluationDetail('team-1151-1', {
+        '20234567': { completion: 5, delivery: 5, implementation: 4 },
+        '20239876': { completion: 5, delivery: 5, implementation: 4 },
+      }),
+    },
+  };
+
+const secondTeamPresentationEvaluationSubmissionDetail: AdminMilestoneSubmissionDetailResponse =
+  {
+    ...presentationEvaluationSubmissionDetail,
+    submission: {
+      id: 'submission-oop-01-2-presentation-evaluate',
+      teamId: 'team-1151-2',
+      teamName: 'OOP-01 - 2팀',
+    },
+    presentationEvaluation: {
+      ...presentationEvaluationSubmissionDetail.presentationEvaluation!,
+      evaluations: createPresentationEvaluationDetail('team-1151-2', {}),
+    },
+  };
+
 export function getAdminMilestoneSubmissionDetailFixture(
   submissionId: string,
 ): AdminMilestoneSubmissionDetailResponse | undefined {
@@ -359,6 +428,17 @@ export function getAdminMilestoneSubmissionDetailFixture(
 
   if (submissionId === peerEvaluationSubmissionDetail.submission.id) {
     return structuredClone(peerEvaluationSubmissionDetail);
+  }
+
+  if (submissionId === presentationEvaluationSubmissionDetail.submission.id) {
+    return structuredClone(presentationEvaluationSubmissionDetail);
+  }
+
+  if (
+    submissionId ===
+    secondTeamPresentationEvaluationSubmissionDetail.submission.id
+  ) {
+    return structuredClone(secondTeamPresentationEvaluationSubmissionDetail);
   }
 
   if (submissionId === presentationSubmissionDetail.submission.id) {
