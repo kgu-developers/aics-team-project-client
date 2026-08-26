@@ -121,7 +121,10 @@ export type SubmitPeerEvaluationResponseInput = {
   submit: boolean;
 };
 
-export type MyPeerEvaluationResponse = SubmitPeerEvaluationResponseInput & {
+export type MyPeerEvaluationResponse = Omit<
+  SubmitPeerEvaluationResponseInput,
+  'submit'
+> & {
   id: string;
   status: PresentationEvaluationStatus;
   updatedAt: string;

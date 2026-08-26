@@ -390,12 +390,13 @@ export const evaluationHandlers = [
           422,
         );
       const now = new Date().toISOString();
+      const { submit, ...responseInput } = input;
       const response: MyPeerEvaluationResponse = {
         id: existing?.id ?? `peer-response-${student.userId}`,
-        ...input,
-        status: input.submit ? 'SUBMITTED' : 'DRAFT',
+        ...responseInput,
+        status: submit ? 'SUBMITTED' : 'DRAFT',
         updatedAt: now,
-        submittedAt: input.submit ? now : undefined,
+        submittedAt: submit ? now : undefined,
       };
       setPeerResponse(student.userId, response);
       return HttpResponse.json(response);

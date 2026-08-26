@@ -350,8 +350,6 @@ function PresentationEvaluationContent({
     });
   }, [overview.myEvaluations]);
 
-  const isComplete = (teamId: string) =>
-    criteria.every(criterion => draftsByTeam[teamId]?.[criterion.id]);
   const isSubmitted = (teamId: string) => submittedTeamIds.has(teamId);
   const submittedTeamCount = eligibleTeams.filter(team =>
     isSubmitted(team.id),
@@ -376,13 +374,17 @@ function PresentationEvaluationContent({
     item => item.rateeTeamId === selectedTeam.id,
   );
 
-  const selectedScores = draftsByTeam[selectedTeam.id] ?? {};
+  const selectedScores =
+    draftsByTeam[selectedTeam.id] ?? toScoreRecord(evaluation);
+  const selectedIsComplete = criteria.every(
+    criterion => selectedScores[criterion.id],
+  );
   const selectedIsSubmitted = isSubmitted(selectedTeam.id);
   const canSubmitSelected =
     !selectedTeam.isMyTeam &&
     !selectedIsSubmitted &&
     overview.windowState !== 'UPCOMING' &&
-    isComplete(selectedTeam.id);
+    selectedIsComplete;
 
   const saveSelectedDraft = async () => {
     if (
@@ -443,7 +445,7 @@ function PresentationEvaluationContent({
       ? '이 팀의 평가는 제출했어요.'
       : overview.windowState === 'UPCOMING'
         ? '발표 평가가 시작되면 작성하고 제출할 수 있어요.'
-        : !isComplete(selectedTeam.id)
+        : !selectedIsComplete
           ? '현재 팀의 모든 평가 항목을 입력해 주세요.'
           : '현재 팀 평가를 제출해요.';
 
@@ -507,7 +509,7 @@ function PresentationEvaluationContent({
                 [selectedTeam.id]: scores,
               }))
             }
-            scores={draftsByTeam[selectedTeam.id] ?? toScoreRecord(evaluation)}
+            scores={selectedScores}
             team={selectedTeam}
             windowState={overview.windowState}
           />

@@ -36,39 +36,6 @@ export const helper = style({
   margin: 0,
 });
 
-export const targetList = style({
-  display: 'grid',
-  gap: tokens.spacing['6'],
-});
-
-export const targetItem = style({
-  borderBottom: `1px solid ${tokens.color.border.base}`,
-  display: 'grid',
-  gap: tokens.spacing['4'],
-  paddingBottom: tokens.spacing['6'],
-});
-
-export const targetHeader = style({
-  alignItems: 'center',
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: tokens.spacing['2'],
-  justifyContent: 'space-between',
-});
-
-export const targetName = style({
-  color: tokens.color.text.primary,
-  fontSize: '0.875rem',
-  fontWeight: 600,
-  margin: 0,
-});
-
-export const targetRole = style({
-  color: tokens.color.text.secondary,
-  fontSize: '0.8125rem',
-  margin: `${tokens.spacing['1']} 0 0`,
-});
-
 export const total = style({
   alignItems: 'center',
   display: 'flex',

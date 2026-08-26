@@ -1,8 +1,9 @@
-import { setApiAccessToken } from '@aics/api-client';
+import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import type { PropsWithChildren, ReactElement } from 'react';
 import {
@@ -22,6 +23,7 @@ import PeerEvaluationPage from './PeerEvaluationPage';
 import PresentationEvaluationPage from './PresentationEvaluationPage';
 
 import {
+  getPresentationEvaluationOverview,
   resetEvaluationMockData,
   setEvaluationWindowStates,
 } from '~/mocks/data/evaluation';
@@ -339,6 +341,68 @@ describe('KD3-92 학생 평가 화면', () => {
     await screen.findByRole('heading', { level: 1, name: '발표 평가' });
 
     expect(screen.getAllByRole('radio', { name: '4점' })[0]).toBeChecked();
+  });
+
+  it('수업 시작 refetch에서 추가된 팀의 서버 초안 점수로 제출을 활성화한다', async () => {
+    const overview = getPresentationEvaluationOverview(
+      demoStudent.studentNumber,
+    );
+    const initialTeam = overview.teams.find(team => team.id === 'team-03');
+    const savedTeam = overview.teams.find(team => team.id === 'team-01');
+    if (!initialTeam || !savedTeam)
+      throw new Error('발표 평가 회귀 테스트 팀 fixture가 필요합니다.');
+
+    let requestCount = 0;
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.MY_TEAM_EVALUATIONS(':milestoneId')}`,
+        () => {
+          requestCount += 1;
+          if (requestCount === 1)
+            return HttpResponse.json({
+              ...overview,
+              evaluationOpensAt: new Date(Date.now() - 1_000).toISOString(),
+              myEvaluations: [],
+              teams: [initialTeam],
+              windowState: 'UPCOMING' as const,
+            });
+
+          return HttpResponse.json({
+            ...overview,
+            myEvaluations: [
+              {
+                id: 'presentation-evaluation-refetched-draft',
+                rateeTeamId: savedTeam.id,
+                scores: [
+                  { criterionId: 'project-completeness', score: 4 },
+                  { criterionId: 'feature-implementation', score: 4 },
+                  { criterionId: 'presentation-delivery', score: 4 },
+                ],
+                status: 'DRAFT' as const,
+                updatedAt: new Date().toISOString(),
+              },
+            ],
+            teams: [savedTeam],
+            windowState: 'OPEN' as const,
+          });
+        },
+      ),
+    );
+
+    renderPage(<PresentationEvaluationPage />);
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 2,
+        name: savedTeam.presentation.projectTitle,
+      }),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(requestCount).toBeGreaterThan(1));
+    for (const option of screen.getAllByRole('radio', { name: '4점' }))
+      expect(option).toBeChecked();
+    expect(
+      screen.getByRole('button', { name: '제출하기' }),
+    ).not.toHaveAttribute('aria-disabled', 'true');
   });
 
   it('학생이 변경할 수 없는 발표 진행 상태 배지를 표시하지 않는다', async () => {

@@ -11,7 +11,10 @@ import {
   it,
 } from 'vitest';
 
-import { resetEvaluationMockData } from './evaluation';
+import {
+  resetEvaluationMockData,
+  setEvaluationWindowStates,
+} from './evaluation';
 import {
   createStudentHomeDashboardPreview,
   milestonePreviewScenarios,
@@ -38,6 +41,23 @@ const expectedDetailMilestone = {
   'final-report': 'final-report',
   'peer-evaluation': 'peer-evaluation',
 } as const;
+
+async function fetchPresentationEvaluationDashboard() {
+  const response = await fetch(
+    `${API_BASE_URL}${ENDPOINTS.SECTION.STUDENT_DASHBOARD('oop-2026-2-01')}`,
+    {
+      headers: {
+        Authorization: `Bearer ${demoAccessToken}`,
+        'X-OOP-Milestone-Preview': 'presentation-evaluation',
+      },
+    },
+  );
+
+  return {
+    dashboard: (await response.json()) as StudentHomeDashboard,
+    response,
+  };
+}
 
 describe('createStudentHomeDashboardPreview', () => {
   it.each(milestonePreviewScenarios)(
@@ -105,16 +125,8 @@ describe('createStudentHomeDashboardPreview', () => {
   });
 
   it('MSW는 개발 preview 헤더에 맞는 fixture를 반환한다', async () => {
-    const response = await fetch(
-      `${API_BASE_URL}${ENDPOINTS.SECTION.STUDENT_DASHBOARD('oop-2026-2-01')}`,
-      {
-        headers: {
-          Authorization: `Bearer ${demoAccessToken}`,
-          'X-OOP-Milestone-Preview': 'presentation-evaluation',
-        },
-      },
-    );
-    const dashboard = (await response.json()) as StudentHomeDashboard;
+    const { dashboard, response } =
+      await fetchPresentationEvaluationDashboard();
 
     expect(response.status).toBe(200);
     expect(
@@ -131,6 +143,53 @@ describe('createStudentHomeDashboardPreview', () => {
           expect.objectContaining({ id: 'team-07', isMine: true }),
         ]),
       },
+    });
+  });
+
+  it.each([
+    ['UPCOMING', '기간 전'],
+    ['NOT_CONFIGURED', '일정 미정'],
+  ] as const)(
+    '발표 평가가 %s 상태이면 홈의 평가 CTA를 잠근다',
+    async (windowState, label) => {
+      setEvaluationWindowStates(windowState, 'OPEN');
+      const { dashboard } = await fetchPresentationEvaluationDashboard();
+      const presentation = dashboard.milestones.find(
+        milestone => milestone.id === 'presentation',
+      );
+
+      expect(presentation).toMatchObject({
+        status: 'before-period',
+        statusLabel: label,
+        rows: [
+          expect.objectContaining({
+            actionDisabled: true,
+            actionLabel: label,
+            tone: 'muted',
+            value: label,
+          }),
+        ],
+      });
+    },
+  );
+
+  it('발표 수업 종료 후에도 홈의 평가 CTA를 활성 상태로 유지한다', async () => {
+    setEvaluationWindowStates('CLOSED', 'OPEN');
+    const { dashboard } = await fetchPresentationEvaluationDashboard();
+    const presentation = dashboard.milestones.find(
+      milestone => milestone.id === 'presentation',
+    );
+
+    expect(presentation).toMatchObject({
+      status: 'in-progress',
+      statusLabel: '평가 가능',
+      rows: [
+        expect.objectContaining({
+          actionDisabled: false,
+          actionLabel: '평가하기',
+          value: '평가 가능',
+        }),
+      ],
     });
   });
 });

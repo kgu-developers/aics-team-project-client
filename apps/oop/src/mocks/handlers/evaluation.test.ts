@@ -57,7 +57,8 @@ function request(
 }
 
 function contributionAnswers(total = 100) {
-  const percentages = total === 100 ? [40, 30, 30] : [30, 30, 30];
+  const base = Math.floor(total / 3);
+  const percentages = [total - base * 2, base, base];
   return ['20260003', '20260004', '20260005'].map((targetUserId, index) => ({
     kind: 'TEAMMATE_CONTRIBUTION' as const,
     targetUserId,

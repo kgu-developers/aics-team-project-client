@@ -872,6 +872,11 @@ export function createStudentHomeDashboardWithEvaluationProgress(
     evaluation => evaluation.status === 'DRAFT',
   ).length;
   const targetCount = evaluatableTeamIds.size;
+  const isPresentationEvaluationAvailable =
+    presentation.windowState === 'OPEN' ||
+    presentation.windowState === 'CLOSED';
+  const inactiveEvaluationLabel =
+    presentation.windowState === 'NOT_CONFIGURED' ? '일정 미정' : '기간 전';
 
   return {
     ...dashboard,
@@ -880,11 +885,27 @@ export function createStudentHomeDashboardWithEvaluationProgress(
         return {
           ...milestone,
           currentStepLabel: '발표 평가',
-          status: 'in-progress' as const,
-          statusLabel: '기간 중',
+          status: isPresentationEvaluationAvailable
+            ? ('in-progress' as const)
+            : ('before-period' as const),
+          statusLabel: isPresentationEvaluationAvailable
+            ? presentation.windowState === 'CLOSED'
+              ? '평가 가능'
+              : '기간 중'
+            : inactiveEvaluationLabel,
           rows: milestone.rows.map(row => {
             if (row.id !== 'presentation-material' || targetCount === 0)
               return row;
+
+            if (!isPresentationEvaluationAvailable)
+              return {
+                ...row,
+                value: inactiveEvaluationLabel,
+                tone: 'muted' as const,
+                actionLabel: inactiveEvaluationLabel,
+                actionDisabled: true,
+                actionNotice: presentation.windowMessage,
+              };
 
             if (submittedCount === targetCount) {
               return {
