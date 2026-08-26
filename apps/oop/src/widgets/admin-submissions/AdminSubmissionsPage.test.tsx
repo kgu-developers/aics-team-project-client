@@ -19,9 +19,13 @@ import AdminSubmissionDetailPage from './AdminSubmissionDetailPage';
 import AdminSubmissionsPage from './AdminSubmissionsPage';
 
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
 
-const server = setupServer(...adminMilestoneSubmissionsHandlers);
+const server = setupServer(
+  ...adminMilestoneSubmissionDetailHandlers,
+  ...adminMilestoneSubmissionsHandlers,
+);
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
@@ -31,7 +35,9 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderPage() {
+function renderPage(
+  initialEntry = '/admin/submissions?sectionId=oop-2026-2-01',
+) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
@@ -60,7 +66,7 @@ function renderPage() {
   });
   const router = createRouter({
     history: createMemoryHistory({
-      initialEntries: ['/admin/submissions?sectionId=oop-2026-2-01'],
+      initialEntries: [initialEntry],
     }),
     routeTree: rootRoute.addChildren([submissionsRoute, submissionDetailRoute]),
   });
@@ -100,5 +106,19 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('heading', { name: '최종 보고서 상세보기' }),
     ).toBeInTheDocument();
+  });
+
+  it('제출된 제안서를 읽기 전용으로 표시한다', async () => {
+    renderPage(
+      '/admin/submissions/submission-oop-01-1-proposal?milestoneId=proposal&sectionId=oop-2026-2-01',
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'OOP-01 - 1팀 제안서' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('AI 기반 팀 프로젝트 관리 서비스'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 });

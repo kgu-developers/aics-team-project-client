@@ -1,4 +1,11 @@
 export {
+  fetchAdminMilestoneSubmissionDetail,
+  type AdminMilestoneSubmissionDetailResponse,
+  type AdminProposalDataRowDto,
+  type AdminProposalScreenDto,
+  type AdminProposalSubmissionDetailDto,
+} from './fetchAdminMilestoneSubmissionDetail';
+export {
   fetchAdminSectionMilestoneSubmissions,
   type AdminSectionMilestoneSubmissionItemDto,
   type AdminSectionMilestoneSubmissionSummaryDto,

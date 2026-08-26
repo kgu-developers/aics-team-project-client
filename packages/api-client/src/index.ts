@@ -49,6 +49,7 @@ export {
   updateProposalBlock,
 } from './proposal';
 export {
+  fetchAdminMilestoneSubmissionDetail,
   fetchAdminSectionMilestoneSubmissions,
   fetchMyTeamSubmission,
   fetchSubmission,
@@ -56,6 +57,10 @@ export {
   type AdminSectionMilestoneSubmissionItemDto,
   type AdminSectionMilestoneSubmissionSummaryDto,
   type AdminSectionMilestoneSubmissionsResponse,
+  type AdminMilestoneSubmissionDetailResponse,
+  type AdminProposalDataRowDto,
+  type AdminProposalScreenDto,
+  type AdminProposalSubmissionDetailDto,
 } from './submission';
 export {
   fetchTopicBoard,
