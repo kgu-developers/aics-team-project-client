@@ -1,8 +1,17 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import type { StudentHomeDashboard } from '@aics/core';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 
+import { resetEvaluationMockData } from './evaluation';
 import {
   createStudentHomeDashboardPreview,
   milestonePreviewScenarios,
@@ -13,6 +22,7 @@ import { studentHomeHandlers } from '../handlers/studentHome';
 const server = setupServer(...studentHomeHandlers);
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => resetEvaluationMockData());
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
@@ -79,6 +89,21 @@ describe('createStudentHomeDashboardPreview', () => {
     ).toHaveLength(2);
   });
 
+  it('상호평가 상세는 프로젝트 평가와 팀원 기여도 평가만 표시한다', () => {
+    const dashboard = createStudentHomeDashboardPreview('peer-evaluation');
+    const peerEvaluation = dashboard.milestones.find(
+      milestone => milestone.id === 'peer-evaluation',
+    );
+
+    expect(peerEvaluation?.body).toEqual({
+      kind: 'peer-evaluation',
+      sections: [
+        expect.objectContaining({ label: '프로젝트 평가' }),
+        expect.objectContaining({ label: '팀원 기여도 평가' }),
+      ],
+    });
+  });
+
   it('MSW는 개발 preview 헤더에 맞는 fixture를 반환한다', async () => {
     const response = await fetch(
       `${API_BASE_URL}${ENDPOINTS.SECTION.STUDENT_DASHBOARD('oop-2026-2-01')}`,
@@ -95,5 +120,17 @@ describe('createStudentHomeDashboardPreview', () => {
     expect(
       dashboard.milestones.find(milestone => milestone.isDetailAvailable)?.id,
     ).toBe('presentation');
+    expect(
+      dashboard.milestones.find(milestone => milestone.id === 'presentation'),
+    ).toMatchObject({
+      currentStepLabel: '발표 평가',
+      rows: [expect.objectContaining({ value: '평가 가능' })],
+      body: {
+        kind: 'presentation-evaluation',
+        teams: expect.arrayContaining([
+          expect.objectContaining({ id: 'team-07', isMine: true }),
+        ]),
+      },
+    });
   });
 });
