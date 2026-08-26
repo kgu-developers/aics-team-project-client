@@ -1,10 +1,8 @@
 import { EmptyState, Heading, Text } from '@aics/design-system';
-import { Link } from '@tanstack/react-router';
 
-import { ROUTES } from '~/app/constants/routes';
-
+import { AdminFinalReportDownloadSummary } from '~/features/admin-milestone-review/components/AdminFinalReportDownloadSummary';
 import { AdminMilestoneSubmissionCard } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard';
-import * as cardStyles from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard.css';
+import { AdminMilestoneSubmissionDetailAction } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionDetailAction';
 import type { TeamMilestoneProgress } from '~/features/admin-team-dashboard/model';
 
 import * as styles from './AdminTeamMilestoneProgress.css';
@@ -15,6 +13,27 @@ type AdminTeamMilestoneProgressProps = {
   sectionId: string;
   teamLeaderName: string | null;
 };
+
+function getFinalReportDownloadFiles(milestone: TeamMilestoneProgress) {
+  const files = milestone.downloadFiles ?? [
+    {
+      downloadUrl: null,
+      fileName: null,
+      label: '보고서(pdf)',
+    },
+    {
+      downloadUrl: null,
+      fileName: null,
+      label: '전체 파일(zip)',
+    },
+  ];
+
+  return files.map(file => ({
+    ...file,
+    downloadLabel:
+      file.label === '보고서(pdf)' ? 'PDF 다운로드' : 'ZIP 다운로드',
+  }));
+}
 
 function getMilestoneSummary(
   milestone: TeamMilestoneProgress,
@@ -46,10 +65,9 @@ function getMilestoneSummary(
       );
     case 'final-report':
       return (
-        <>
-          <Text>보고서(pdf): -</Text>
-          <Text>전체 파일(zip): -</Text>
-        </>
+        <AdminFinalReportDownloadSummary
+          files={getFinalReportDownloadFiles(milestone)}
+        />
       );
     case 'peer-review':
       return <Text>제출자 수: -</Text>;
@@ -85,28 +103,15 @@ export default function AdminTeamMilestoneProgress({
               milestone.status.kind === 'submitted'
                 ? milestone.submissionId
                 : null;
-            const canViewDetail = detailSubmissionId !== null;
-
             return (
               <AdminMilestoneSubmissionCard
-                detailAction={
-                  canViewDetail ? (
-                    <Link
-                      className={cardStyles.detailLink}
-                      params={{ submissionId: detailSubmissionId }}
-                      search={{ milestoneId: milestone.id, sectionId }}
-                      to={ROUTES.ADMIN_SUBMISSION_DETAIL}
-                    >
-                      상세보기
-                    </Link>
-                  ) : (
-                    <button
-                      className={`${cardStyles.detailLink} ${cardStyles.detailButtonDisabled}`}
-                      disabled
-                      type='button'
-                    >
-                      상세보기
-                    </button>
+                action={
+                  milestone.id === 'final-report' ? null : (
+                    <AdminMilestoneSubmissionDetailAction
+                      milestoneId={milestone.id}
+                      sectionId={sectionId}
+                      submissionId={detailSubmissionId}
+                    />
                   )
                 }
                 key={milestone.id}

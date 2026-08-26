@@ -64,9 +64,22 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
     {
       id: 'final-report',
       title: '최종 보고서',
-      deadlineLabel: '2026-08-27',
-      submissionId: null,
-      status: { kind: 'before-deadline' },
+      deadlineLabel: '2026-12-07',
+      submissionId: 'submission-oop-01-1-final-report',
+      downloadFiles: [
+        {
+          downloadUrl: 'data:application/pdf;base64,JVBERi0xLjQKJQ==',
+          fileName: 'oop-01-1-final-report.pdf',
+          label: '보고서(pdf)',
+        },
+        {
+          downloadUrl:
+            'data:application/zip;base64,UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==',
+          fileName: 'oop-01-1-final-report.zip',
+          label: '전체 파일(zip)',
+        },
+      ],
+      status: { kind: 'submitted', submittedDateLabel: '2026-12-07' },
     },
     {
       id: 'peer-review',
@@ -144,9 +157,22 @@ export const adminTeamDashboardFixtures: AdminTeamDashboardView[] = [
       {
         id: 'final-report',
         title: '최종 보고서',
-        deadlineLabel: '2026-08-27',
-        submissionId: null,
-        status: { kind: 'before-deadline' },
+        deadlineLabel: '2026-12-07',
+        submissionId: 'submission-oop-01-2-final-report',
+        downloadFiles: [
+          {
+            downloadUrl: 'data:application/pdf;base64,JVBERi0xLjQKJQ==',
+            fileName: 'oop-01-2-final-report.pdf',
+            label: '보고서(pdf)',
+          },
+          {
+            downloadUrl:
+              'data:application/zip;base64,UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==',
+            fileName: 'oop-01-2-final-report.zip',
+            label: '전체 파일(zip)',
+          },
+        ],
+        status: { kind: 'submitted', submittedDateLabel: '2026-12-08' },
       },
       {
         id: 'peer-review',

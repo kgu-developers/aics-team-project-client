@@ -123,7 +123,7 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('최종 보고서')).toBeInTheDocument();
     expect(screen.getByText('상호 평가')).toBeInTheDocument();
     expect(screen.queryByText('발표 평가')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: '상세보기' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: '상세보기' })).toHaveLength(1);
     expect(screen.getAllByRole('link', { name: '상세보기' })).toHaveLength(3);
     expect(
       screen.getAllByRole('link', { name: '상세보기' })[0],

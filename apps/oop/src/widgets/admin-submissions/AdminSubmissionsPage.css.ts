@@ -77,27 +77,6 @@ export const topic = style({
   fontWeight: 600,
 });
 
-export const downloadRow = style({
-  alignItems: 'center',
-  display: 'flex',
-  gap: 12,
-  justifyContent: 'space-between',
-});
-
-export const downloadLink = style({
-  background: tokens.color.accent,
-  borderRadius: 8,
-  color: tokens.color['on-accent'],
-  flex: 'none',
-  fontSize: 14,
-  padding: '8px 12px',
-  textDecoration: 'none',
-  ':focus-visible': {
-    outline: `2px solid ${tokens.color.accent}`,
-    outlineOffset: 2,
-  },
-});
-
 export const backLink = style({
   color: tokens.color.text.accent,
   fontSize: 14,

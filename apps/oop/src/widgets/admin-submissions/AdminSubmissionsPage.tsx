@@ -1,13 +1,14 @@
 import { EmptyState, Heading, Text } from '@aics/design-system';
-import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { type KeyboardEvent, useRef } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 
+import { AdminFinalReportDownloadSummary } from '~/features/admin-milestone-review/components/AdminFinalReportDownloadSummary';
 import { AdminMilestoneSubmissionCard } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard';
-import * as cardStyles from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard.css';
+import { AdminMilestoneSubmissionDetailAction } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionDetailAction';
 import type { AdminMilestoneSubmissionView } from '~/features/admin-milestone-review/model';
 import { useAdminMilestoneSubmissionsQuery } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -65,34 +66,22 @@ function getSubmissionSummary(
       );
     case 'final-report':
       return (
-        <>
-          <div className={styles.downloadRow}>
-            <Text>보고서(pdf): {submission.summary.reportFileName ?? '-'}</Text>
-            {submission.summary.reportDownloadUrl ? (
-              <a
-                className={styles.downloadLink}
-                download={submission.summary.reportFileName ?? true}
-                href={submission.summary.reportDownloadUrl}
-              >
-                PDF 다운로드
-              </a>
-            ) : null}
-          </div>
-          <div className={styles.downloadRow}>
-            <Text>
-              전체 파일(zip): {submission.summary.sourceArchiveFileName ?? '-'}
-            </Text>
-            {submission.summary.sourceArchiveDownloadUrl ? (
-              <a
-                className={styles.downloadLink}
-                download={submission.summary.sourceArchiveFileName ?? true}
-                href={submission.summary.sourceArchiveDownloadUrl}
-              >
-                ZIP 다운로드
-              </a>
-            ) : null}
-          </div>
-        </>
+        <AdminFinalReportDownloadSummary
+          files={[
+            {
+              downloadUrl: submission.summary.reportDownloadUrl,
+              downloadLabel: 'PDF 다운로드',
+              fileName: submission.summary.reportFileName,
+              label: '보고서(pdf)',
+            },
+            {
+              downloadUrl: submission.summary.sourceArchiveDownloadUrl,
+              downloadLabel: 'ZIP 다운로드',
+              fileName: submission.summary.sourceArchiveFileName,
+              label: '전체 파일(zip)',
+            },
+          ]}
+        />
       );
     case 'peer-review':
       return (
@@ -256,32 +245,15 @@ export default function AdminSubmissionsPage() {
                       submission.submittedAt !== null
                         ? submission.submissionId
                         : null;
-                    const canViewDetail = detailSubmissionId !== null;
-
                     return (
                       <AdminMilestoneSubmissionCard
-                        detailAction={
-                          activeMilestoneId ===
-                          'final-report' ? null : canViewDetail ? (
-                            <Link
-                              className={cardStyles.detailLink}
-                              params={{ submissionId: detailSubmissionId }}
-                              search={{
-                                milestoneId: activeTab.id,
-                                sectionId: effectiveSectionId,
-                              }}
-                              to={ROUTES.ADMIN_SUBMISSION_DETAIL}
-                            >
-                              상세보기
-                            </Link>
-                          ) : (
-                            <button
-                              className={`${cardStyles.detailLink} ${cardStyles.detailButtonDisabled}`}
-                              disabled
-                              type='button'
-                            >
-                              상세보기
-                            </button>
+                        action={
+                          activeMilestoneId === 'final-report' ? null : (
+                            <AdminMilestoneSubmissionDetailAction
+                              milestoneId={activeTab.id}
+                              sectionId={effectiveSectionId}
+                              submissionId={detailSubmissionId}
+                            />
                           )
                         }
                         key={submission.id}

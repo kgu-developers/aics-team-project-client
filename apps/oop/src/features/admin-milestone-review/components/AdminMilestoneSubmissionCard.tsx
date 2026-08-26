@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import * as styles from './AdminMilestoneSubmissionCard.css';
 
 type AdminMilestoneSubmissionCardProps = {
-  detailAction: ReactNode;
+  action: ReactNode;
   label: string;
   meetingCountLabel: string;
   messageCountLabel: string;
@@ -13,7 +13,7 @@ type AdminMilestoneSubmissionCardProps = {
 };
 
 export function AdminMilestoneSubmissionCard({
-  detailAction,
+  action,
   label,
   meetingCountLabel,
   messageCountLabel,
@@ -35,7 +35,7 @@ export function AdminMilestoneSubmissionCard({
           <div className={styles.footerMetric}>
             <Text>{messageCountLabel}</Text>
           </div>
-          {detailAction}
+          {action}
         </div>
       </div>
     </article>

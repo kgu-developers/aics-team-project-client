@@ -9,10 +9,17 @@ export type AdminTeamDashboardMilestoneStatusDto =
   | { kind: 'submitted'; submittedDateLabel: string }
   | { kind: 'evaluated' };
 
+export type AdminTeamDashboardMilestoneDownloadFileDto = {
+  downloadUrl: string;
+  fileName: string;
+  label: string;
+};
+
 export type AdminTeamDashboardMilestoneDto = {
   id: string;
   title: string;
   deadlineLabel: string;
+  downloadFiles?: AdminTeamDashboardMilestoneDownloadFileDto[];
   submissionId: string | null;
   status: AdminTeamDashboardMilestoneStatusDto;
 };
