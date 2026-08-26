@@ -99,23 +99,6 @@ export const attachmentLink = style({
   color: tokens.color.text.accent,
   fontSize: 13,
 });
-export const dialog = style({
-  background: tokens.color.background.surface,
-  border: 0,
-  borderRadius: tokens.radius.container,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 16,
-  margin: 'auto',
-  maxHeight: 'calc(100vh - 48px)',
-  maxWidth: 680,
-  overflowY: 'auto',
-  padding: 28,
-  width: '100%',
-});
-globalStyle(`${dialog}::backdrop`, {
-  background: 'rgb(0 0 0 / 0.36)',
-});
 export const deleteTitle = style({ color: tokens.color.text.red });
 export const deletePreview = style({
   display: 'flex',
@@ -127,6 +110,7 @@ export const modalActions = style({
   display: 'flex',
   gap: 8,
   justifyContent: 'flex-end',
+  marginTop: 8,
 });
 export const deleteButton = style({
   background: tokens.color.background['error-inverted'],
