@@ -19,6 +19,14 @@ export {
   type AdminTeamDashboardResponse,
 } from './teams/fetchAdminTeamDashboard';
 export { acquireEditLock, fetchEditLock, removeEditLock } from './editLock';
+export {
+  fetchEvaluationContext,
+  fetchMyPresentationEvaluations,
+  fetchPeerEvaluationTargets,
+  fetchTeamEvaluationCriteria,
+  submitPeerEvaluationResponse,
+  submitPresentationEvaluation,
+} from './evaluation';
 export { fetchTeams } from './teams/fetchTeams';
 export { submitTeam } from './teams/submitTeam';
 export { removeAdminNoticeAttachment } from './notices';

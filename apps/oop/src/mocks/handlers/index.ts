@@ -4,6 +4,7 @@ import { adminStudentTeamHandlers } from './adminStudentTeams';
 import { adminTeamDashboardHandlers } from './adminTeamDashboard';
 import { authHandlers } from './auth';
 import { editLockHandlers } from './editLock';
+import { evaluationHandlers } from './evaluation';
 import { midReportHandlers } from './midReport';
 import { presentationHandlers } from './presentation';
 import { proposalHandlers } from './proposal';
@@ -16,6 +17,7 @@ export const handlers = [
   ...authHandlers,
   ...adminNoticeHandlers,
   ...editLockHandlers,
+  ...evaluationHandlers,
   ...midReportHandlers,
   ...presentationHandlers,
   ...proposalHandlers,
