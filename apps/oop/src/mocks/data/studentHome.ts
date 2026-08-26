@@ -1,6 +1,8 @@
 import type {
   MidReport,
+  MyPeerEvaluationResponse,
   Presentation,
+  PresentationEvaluationOverview,
   Proposal,
   Submission,
   StudentHomeDashboard,
@@ -9,6 +11,7 @@ import type {
 } from '@aics/core';
 
 import { editorSectionTo } from '~/app/constants/editorSections';
+import { ROUTES } from '~/app/constants/routes';
 
 const CURRENT_PERIOD = '기간 : 20260928 ~ 20261012';
 const UPCOMING_PERIOD = '기간 : 20261013 ~ 20261026';
@@ -529,6 +532,21 @@ const presentationPreviewSections = [
   },
 ];
 
+const peerEvaluationPreviewSections = [
+  {
+    id: 'project-evaluation',
+    label: '프로젝트 평가',
+    statusLabel: '작성 전',
+    status: 'not-started' as const,
+  },
+  {
+    id: 'teammate-contribution',
+    label: '팀원 기여도 평가',
+    statusLabel: '작성 전',
+    status: 'not-started' as const,
+  },
+];
+
 function createPreviewBody(
   scenario: MilestonePreviewScenario,
 ): StudentHomeMilestoneBody {
@@ -588,8 +606,8 @@ function createPreviewBody(
         sections: presentationPreviewSections,
         recentFile: {
           id: 'presentation-file',
-          extension: 'PPT',
-          name: 'cineflow-presentation.pptx',
+          extension: 'PDF',
+          name: 'cineflow-presentation.pdf',
           meta: '서진규 · 2026-11-04 18:20 업로드',
         },
       };
@@ -612,7 +630,10 @@ function createPreviewBody(
         },
       };
     case 'peer-evaluation':
-      return { kind: 'peer-evaluation', sections: previewSections };
+      return {
+        kind: 'peer-evaluation',
+        sections: peerEvaluationPreviewSections,
+      };
   }
 }
 
@@ -720,31 +741,55 @@ export function createStudentHomeDashboardPreview(
                       tone: 'primary',
                       value: '작성 가능',
                     }))
-                  : isTargetMilestone && milestone.id === 'presentation'
+                  : isTargetMilestone &&
+                      milestone.id === 'presentation' &&
+                      scenario === 'presentation-evaluation'
                     ? milestone.rows.map(row => ({
                         ...row,
                         actionDisabled: false,
-                        actionLabel: '작성하기',
-                        actionTo: editorSectionTo(
-                          'presentation',
-                          'presentation-material',
-                        ),
+                        actionLabel: '평가하기',
+                        actionTo: ROUTES.STUDENT.PRESENTATION_EVALUATION,
                         actionNotice:
-                          '발표 에디터에서 PPT/PPTX 자료를 등록하거나 교체합니다.',
+                          '다른 팀의 발표 자료를 확인하고 내 평가를 저장·제출합니다.',
                         tone: 'primary',
-                        value: '작성 가능',
+                        value: '평가 가능',
                       }))
-                    : isTargetMilestone && milestone.id === 'final-report'
+                    : isTargetMilestone && milestone.id === 'presentation'
                       ? milestone.rows.map(row => ({
                           ...row,
-                          tone: 'primary',
                           actionDisabled: false,
-                          actionLabel: '파일 제출',
+                          actionLabel: '작성하기',
+                          actionTo: editorSectionTo(
+                            'presentation',
+                            'presentation-material',
+                          ),
                           actionNotice:
-                            '최종보고서 PDF와 소스코드 ZIP을 제출하거나 교체합니다.',
-                          value: '제출 가능',
+                            '발표 에디터에서 평가용 PDF를 등록하거나 교체합니다.',
+                          tone: 'primary',
+                          value: '작성 가능',
                         }))
-                      : milestone.rows,
+                      : isTargetMilestone && milestone.id === 'peer-evaluation'
+                        ? milestone.rows.map(row => ({
+                            ...row,
+                            actionDisabled: false,
+                            actionLabel: '평가하기',
+                            actionTo: ROUTES.STUDENT.PEER_REVIEW,
+                            actionNotice:
+                              '팀원 기여도와 개인보고서를 저장·제출합니다.',
+                            tone: 'primary',
+                            value: '평가 가능',
+                          }))
+                        : isTargetMilestone && milestone.id === 'final-report'
+                          ? milestone.rows.map(row => ({
+                              ...row,
+                              tone: 'primary',
+                              actionDisabled: false,
+                              actionLabel: '파일 제출',
+                              actionNotice:
+                                '최종보고서 PDF와 소스코드 ZIP을 제출하거나 교체합니다.',
+                              value: '제출 가능',
+                            }))
+                          : milestone.rows,
           body: isProposalFeedbackAvailable
             ? createPreviewBody('proposal-feedback')
             : isTargetMilestone
@@ -753,6 +798,210 @@ export function createStudentHomeDashboardPreview(
         };
       },
     ),
+  };
+}
+
+function evaluationSectionStatus(started: boolean, completed: boolean) {
+  if (completed) {
+    return { status: 'completed' as const, statusLabel: '작성 완료' };
+  }
+  if (started) {
+    return { status: 'in-progress' as const, statusLabel: '작성 중' };
+  }
+  return { status: 'not-started' as const, statusLabel: '작성 전' };
+}
+
+function getPeerEvaluationSectionProgress(
+  response: MyPeerEvaluationResponse,
+  targetCount: number,
+) {
+  const reflection = response.answers.find(
+    answer => answer.kind === 'REFLECTION',
+  );
+  const projectValues = [
+    response.selfContribution,
+    response.projectReviewComment,
+    reflection?.comment ?? '',
+  ];
+  const teammateAnswers = response.answers.filter(
+    answer => answer.kind === 'TEAMMATE_CONTRIBUTION',
+  );
+  const hasStartedTeammateEvaluation = teammateAnswers.some(
+    answer =>
+      answer.contributionPercent > 0 ||
+      Boolean(answer.contributionDetail.trim()) ||
+      Boolean(answer.teammateAssessment.trim()),
+  );
+  const isSubmitted = response.status === 'SUBMITTED';
+
+  return {
+    project: evaluationSectionStatus(
+      projectValues.some(value => value.trim()),
+      isSubmitted || projectValues.every(value => value.trim()),
+    ),
+    teammate: evaluationSectionStatus(
+      hasStartedTeammateEvaluation,
+      isSubmitted ||
+        (targetCount > 0 &&
+          teammateAnswers.length === targetCount &&
+          teammateAnswers.every(
+            answer =>
+              answer.contributionDetail.trim() &&
+              answer.teammateAssessment.trim(),
+          )),
+    ),
+  };
+}
+
+export function createStudentHomeDashboardWithEvaluationProgress(
+  dashboard: StudentHomeDashboard,
+  presentation: PresentationEvaluationOverview,
+  peerResponse: MyPeerEvaluationResponse | undefined,
+  peerTargetCount: number,
+): StudentHomeDashboard {
+  const evaluatableTeamIds = new Set(
+    presentation.teams.filter(team => !team.isMyTeam).map(team => team.id),
+  );
+  const currentEvaluations = presentation.myEvaluations.filter(evaluation =>
+    evaluatableTeamIds.has(evaluation.rateeTeamId),
+  );
+  const submittedCount = currentEvaluations.filter(
+    evaluation => evaluation.status === 'SUBMITTED',
+  ).length;
+  const draftCount = currentEvaluations.filter(
+    evaluation => evaluation.status === 'DRAFT',
+  ).length;
+  const targetCount = evaluatableTeamIds.size;
+  const isPresentationEvaluationAvailable =
+    presentation.windowState === 'OPEN' ||
+    presentation.windowState === 'CLOSED';
+  const inactiveEvaluationLabel =
+    presentation.windowState === 'NOT_CONFIGURED' ? '일정 미정' : '기간 전';
+
+  return {
+    ...dashboard,
+    milestones: dashboard.milestones.map(milestone => {
+      if (milestone.body?.kind === 'presentation-evaluation') {
+        return {
+          ...milestone,
+          currentStepLabel: '발표 평가',
+          status: isPresentationEvaluationAvailable
+            ? ('in-progress' as const)
+            : ('before-period' as const),
+          statusLabel: isPresentationEvaluationAvailable
+            ? presentation.windowState === 'CLOSED'
+              ? '평가 가능'
+              : '기간 중'
+            : inactiveEvaluationLabel,
+          rows: milestone.rows.map(row => {
+            if (row.id !== 'presentation-material' || targetCount === 0)
+              return row;
+
+            if (!isPresentationEvaluationAvailable)
+              return {
+                ...row,
+                value: inactiveEvaluationLabel,
+                tone: 'muted' as const,
+                actionLabel: inactiveEvaluationLabel,
+                actionDisabled: true,
+                actionNotice: presentation.windowMessage,
+              };
+
+            if (submittedCount === targetCount) {
+              return {
+                ...row,
+                value: `평가 완료 ${submittedCount}/${targetCount}팀`,
+                tone: 'default' as const,
+                actionLabel: '평가 내역 보기',
+                actionDisabled: false,
+                actionNotice: '제출한 팀별 발표 평가 내역을 확인합니다.',
+              };
+            }
+            if (draftCount > 0) {
+              return {
+                ...row,
+                value:
+                  submittedCount > 0
+                    ? `제출 완료 ${submittedCount}/${targetCount}팀 · 작성 중 ${draftCount}팀`
+                    : `작성 중 ${draftCount}/${targetCount}팀`,
+                tone: 'primary' as const,
+                actionLabel: '이어 평가',
+                actionDisabled: false,
+                actionNotice: '저장한 발표 평가를 이어서 작성합니다.',
+              };
+            }
+            if (submittedCount > 0) {
+              return {
+                ...row,
+                value: `제출 완료 ${submittedCount}/${targetCount}팀`,
+                tone: 'primary' as const,
+                actionLabel: '평가 계속',
+                actionDisabled: false,
+                actionNotice: '남은 팀의 발표 평가를 작성합니다.',
+              };
+            }
+            return {
+              ...row,
+              value: '평가 가능',
+              tone: 'primary' as const,
+              actionLabel: '평가하기',
+              actionDisabled: false,
+              actionNotice:
+                '다른 팀의 발표 자료를 확인하고 내 평가를 저장·제출합니다.',
+            };
+          }),
+          body: {
+            ...milestone.body,
+            teams: presentation.teams.map(team => ({
+              id: team.id,
+              label: team.name,
+              isMine: team.isMyTeam,
+            })),
+          },
+        };
+      }
+
+      if (milestone.body?.kind === 'peer-evaluation' && peerResponse) {
+        const sectionProgress = getPeerEvaluationSectionProgress(
+          peerResponse,
+          peerTargetCount,
+        );
+        const isSubmitted = peerResponse.status === 'SUBMITTED';
+
+        return {
+          ...milestone,
+          rows: milestone.rows.map(row =>
+            row.id === 'peer-evaluation-submission'
+              ? {
+                  ...row,
+                  value: isSubmitted ? '제출 완료' : '작성 중',
+                  tone: isSubmitted
+                    ? ('default' as const)
+                    : ('primary' as const),
+                  actionLabel: isSubmitted ? '제출 내역 보기' : '이어 작성',
+                  actionDisabled: false,
+                  actionNotice: isSubmitted
+                    ? '제출한 상호평가와 개인보고서를 확인합니다.'
+                    : '저장한 상호평가와 개인보고서를 이어서 작성합니다.',
+                }
+              : row,
+          ),
+          body: {
+            ...milestone.body,
+            sections: milestone.body.sections.map(section => ({
+              ...section,
+              ...(section.id === 'project-evaluation'
+                ? sectionProgress.project
+                : section.id === 'teammate-contribution'
+                  ? sectionProgress.teammate
+                  : {}),
+            })),
+          },
+        };
+      }
+
+      return milestone;
+    }),
   };
 }
 

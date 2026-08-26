@@ -1,10 +1,16 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import {
+  getPeerResponse,
+  getPeerTargets,
+  getPresentationEvaluationOverview,
+} from '../data/evaluation';
 import { getCurrentMidReport } from '../data/midReport';
 import { getCurrentPresentation } from '../data/presentation';
 import { getCurrentProposal } from '../data/proposal';
 import {
+  createStudentHomeDashboardWithEvaluationProgress,
   createStudentHomeDashboardWithFinalReportSubmission,
   createStudentHomeDashboardWithMidReportProgress,
   createStudentHomeDashboardWithPresentationProgress,
@@ -44,13 +50,24 @@ export const studentHomeHandlers = [
         );
       }
 
-      if (params.sectionId !== demoStudentSectionId) {
+      if (
+        !account.user.sections.some(
+          section => section.id === String(params.sectionId),
+        )
+      ) {
         return HttpResponse.json(
           {
             code: 'SECTION_ACCESS_DENIED',
             message: '이 분반의 학생 대시보드에 접근할 수 없습니다.',
           },
           { status: 403 },
+        );
+      }
+
+      if (params.sectionId !== demoStudentSectionId) {
+        return HttpResponse.json(
+          { code: 'SECTION_NOT_FOUND', message: '분반을 찾을 수 없습니다.' },
+          { status: 404 },
         );
       }
 
@@ -81,10 +98,19 @@ export const studentHomeHandlers = [
           ),
           getCurrentPresentation(),
         );
-      return HttpResponse.json(
+      const withSubmissionProgress =
         createStudentHomeDashboardWithFinalReportSubmission(
           withDocumentProgress,
           getSubmissionByMilestone(demoSubmissionTeamId, 'final-report'),
+        );
+      const userId = account.user.studentNumber;
+
+      return HttpResponse.json(
+        createStudentHomeDashboardWithEvaluationProgress(
+          withSubmissionProgress,
+          getPresentationEvaluationOverview(userId),
+          getPeerResponse(userId),
+          getPeerTargets(userId).length,
         ),
       );
     },

@@ -87,8 +87,9 @@ describe('SubmissionFilePanel', () => {
     const fileInput =
       container.querySelector<HTMLInputElement>('input[type="file"]');
     if (!fileInput) throw new Error('presentation file input is required');
-    const file = new File(['slides'], 'cineflow-v2.pptx', {
-      type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    expect(fileInput).toHaveAttribute('accept', '.pdf');
+    const file = new File(['slides'], 'cineflow-v2.pdf', {
+      type: 'application/pdf',
     });
 
     await user.upload(fileInput, file);

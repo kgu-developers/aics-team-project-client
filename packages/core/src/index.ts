@@ -22,6 +22,28 @@ export type {
   EditLockTargetType,
 } from './editLock/types';
 export { editLockTargetTypes } from './editLock/types';
+export type {
+  EvaluationContext,
+  EvaluationWindowState,
+  MyPeerEvaluationResponse,
+  MyPresentationEvaluation,
+  PeerEvaluationAnswer,
+  PeerEvaluationReflectionAnswer,
+  PeerEvaluationTarget,
+  PeerEvaluationTargets,
+  PeerEvaluationTeammateAnswer,
+  PresentationEvaluationCriterion,
+  PresentationEvaluationFeature,
+  PresentationEvaluationMaterial,
+  PresentationEvaluationOverview,
+  PresentationEvaluationScore,
+  PresentationEvaluationScreen,
+  PresentationEvaluationStatus,
+  PresentationEvaluationTeam,
+  PresentationTeamProgress,
+  SubmitPeerEvaluationResponseInput,
+  SubmitPresentationEvaluationInput,
+} from './evaluation/types';
 export type { Milestone } from './milestone/types';
 export type {
   MidReport,

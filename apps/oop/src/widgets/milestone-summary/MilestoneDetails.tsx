@@ -276,8 +276,11 @@ function PeerEvaluationBody({
 }) {
   return (
     <div className={styles.root}>
-      <SectionBanner title='작성 영역별 상태' />
+      <SectionBanner title='내 상호평가 작성 상태' />
       <SectionStatusList sections={body.sections} />
+      <p className={styles.guide}>
+        프로젝트 평가와 팀원 기여도 평가를 모두 작성한 뒤 한 번에 제출합니다.
+      </p>
     </div>
   );
 }

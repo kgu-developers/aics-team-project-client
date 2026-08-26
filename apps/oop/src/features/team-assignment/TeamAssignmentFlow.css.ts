@@ -10,54 +10,6 @@ export const page = style({
   width: '100%',
 });
 
-export const stepper = style({
-  alignItems: 'flex-start',
-  display: 'flex',
-  gap: 20,
-  justifyContent: 'center',
-  width: '100%',
-});
-
-export const step = style({
-  background: 'transparent',
-  border: 0,
-  borderBottom: '2.5px solid transparent',
-  color: tokens.color.text.secondary,
-  cursor: 'pointer',
-  font: 'inherit',
-  fontSize: '0.84375rem',
-  fontWeight: 500,
-  padding: '0 4px 8px',
-  textAlign: 'center',
-  whiteSpace: 'nowrap',
-  selectors: {
-    '&:disabled': { cursor: 'default' },
-    '&:focus-visible': { outline: `2px solid ${tokens.color.accent}` },
-  },
-});
-
-export const activeStep = style({
-  borderBottomColor: tokens.color.text.primary,
-  color: tokens.color.text.primary,
-  fontWeight: 600,
-});
-
-export const content = style({
-  alignSelf: 'center',
-  display: 'flex',
-  flex: 1,
-  flexDirection: 'column',
-  gap: 20,
-  justifyContent: 'flex-start',
-  minHeight: 0,
-  padding: '8px 0 24px',
-  width: 'min(100%, 364px)',
-});
-
-export const centeredContent = style({
-  justifyContent: 'center',
-});
-
 export const centeredStage = style({
   alignItems: 'center',
   display: 'flex',
@@ -112,11 +64,6 @@ export const centeredActions = style({
   justifyContent: 'center',
   marginTop: 0,
   width: '100%',
-});
-
-export const formFields = style({
-  display: 'grid',
-  gap: 24,
 });
 
 export const partnerSearch = style({

@@ -7,6 +7,13 @@ const demoStudentSection = {
   role: 'STUDENT' as const,
 };
 
+const demoOtherStudentSection = {
+  id: 'oop-2026-2-02',
+  code: 'OOP-02',
+  name: '객체지향프로그래밍 02분반',
+  role: 'STUDENT' as const,
+};
+
 export const demoStudent: CurrentUser = {
   studentNumber: '20260001',
   name: 'OOP 데모 학생 A',
@@ -31,6 +38,14 @@ export const demoCompletedStudent: CurrentUser = {
   sections: [demoStudentSection],
 };
 
+export const demoOtherSectionStudent: CurrentUser = {
+  studentNumber: '20260021',
+  name: 'OOP 타 분반 학생',
+  email: 'student-other-section@example.com',
+  globalRole: 'STUDENT',
+  sections: [demoOtherStudentSection],
+};
+
 export const demoAdmin: CurrentUser = {
   studentNumber: '20260002',
   name: 'OOP 데모 조교',
@@ -47,6 +62,8 @@ export const demoAdmin: CurrentUser = {
 export const demoAccessToken = 'msw-oop-demo-student-a-access-token';
 export const demoPartnerAccessToken = 'msw-oop-demo-student-b-access-token';
 export const demoCompletedAccessToken = 'msw-oop-demo-student-c-access-token';
+export const demoOtherSectionAccessToken =
+  'msw-oop-demo-other-section-student-access-token';
 export const demoAdminAccessToken = 'msw-oop-demo-admin-access-token';
 
 export const demoCredentials = {
@@ -62,6 +79,11 @@ export const demoPartnerCredentials = {
 export const demoCompletedCredentials = {
   studentNumber: demoCompletedStudent.studentNumber,
   password: 'oop-demo-c',
+} as const;
+
+export const demoOtherSectionCredentials = {
+  studentNumber: demoOtherSectionStudent.studentNumber,
+  password: 'oop-demo-other-section',
 } as const;
 
 export const demoAdminCredentials = {
@@ -87,6 +109,12 @@ export const demoUserAccounts = [
     credentials: demoCompletedCredentials,
     refreshToken: 'msw-oop-demo-student-c-refresh-token',
     user: demoCompletedStudent,
+  },
+  {
+    accessToken: demoOtherSectionAccessToken,
+    credentials: demoOtherSectionCredentials,
+    refreshToken: 'msw-oop-demo-other-section-student-refresh-token',
+    user: demoOtherSectionStudent,
   },
   {
     accessToken: demoAdminAccessToken,

@@ -30,6 +30,19 @@ export const ENDPOINTS = {
   EDIT_LOCKS: {
     ROOT: '/edit-locks',
   },
+  EVALUATION: {
+    CONTEXT: (sectionId: string) => `/sections/${sectionId}/evaluation-context`,
+    TEAM_CRITERIA: (sectionId: string) =>
+      `/sections/${sectionId}/team-evaluation-criteria`,
+    TEAM_EVALUATIONS: (milestoneId: string) =>
+      `/milestones/${milestoneId}/team-evaluations`,
+    MY_TEAM_EVALUATIONS: (milestoneId: string) =>
+      `/milestones/${milestoneId}/team-evaluations/my`,
+    PEER_TARGETS: (formId: string) =>
+      `/peer-evaluation-forms/${formId}/targets`,
+    PEER_RESPONSES: (formId: string) =>
+      `/peer-evaluation-forms/${formId}/responses`,
+  },
   TOPIC: {
     BOARD: (sectionId: string) => `/sections/${sectionId}/project-topic`,
     VOTE: (sectionId: string) => `/sections/${sectionId}/project-topic/vote`,

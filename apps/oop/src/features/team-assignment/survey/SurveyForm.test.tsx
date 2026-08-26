@@ -107,6 +107,30 @@ describe('SurveyForm', () => {
     ).toBeInTheDocument();
   });
 
+  it('아직 진행하지 않은 설문 단계로는 건너뛸 수 없다', async () => {
+    const user = userEvent.setup();
+    renderSurvey();
+
+    expect(
+      screen.getByRole('heading', {
+        name: '팀프로젝트 팀구성을 위한 설문에 응답해 주세요.',
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '시작하기' }));
+
+    const topicStep = screen.getByRole('button', { name: '3. 주제와 의견' });
+    expect(topicStep).toHaveAttribute('aria-disabled', 'true');
+    await user.click(topicStep);
+
+    expect(
+      screen.getByRole('heading', { name: '역할과 팀원' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('프로젝트 주제 아이디어'),
+    ).not.toBeInTheDocument();
+  });
+
   it('파트너 신청 중에는 같은 후보에게 중복 요청을 보내지 않는다', async () => {
     const user = userEvent.setup();
     let requestCount = 0;
