@@ -5,26 +5,26 @@ export const adminMilestoneScheduleFixture: AdminMilestoneScheduleResponse = {
     {
       sectionId: 'oop-2026-2-01',
       sectionLabel: 'OOP-01',
-      memberCountLabel: '48명 / 7팀',
+      memberCountLabel: '4명 / 2팀',
       milestones: [
-        { id: 'proposal', title: '제안서', summary: '~10/8\n제출 7팀' },
-        { id: 'midterm', title: '중간 점검', summary: '~10/29\n제출 6팀' },
+        { id: 'proposal', title: '제안서', summary: '~08/24\n제출 2팀' },
+        { id: 'midterm', title: '중간 점검', summary: '~10/15\n제출 2팀' },
         {
           id: 'presentation-submit',
           title: '발표 자료 제출',
-          summary: '~11/12\n제출 6팀',
+          summary: '~11/12\n제출 2팀',
         },
         {
           id: 'presentation-evaluate',
           title: '발표 평가',
-          summary: '~11/19\n제출 2팀',
+          summary: '~08/20\n평가 완료',
         },
         {
           id: 'final-report',
           title: '최종 보고서',
-          summary: '11/27\n시작 전',
+          summary: '~12/07\n제출 2팀',
         },
-        { id: 'peer-review', title: '상호 평가', summary: '-' },
+        { id: 'peer-review', title: '상호 평가', summary: '~08/30\n제출 1팀' },
       ],
       unreadMessageCountLabel: '3건',
     },
