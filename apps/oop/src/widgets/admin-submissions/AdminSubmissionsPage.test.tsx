@@ -178,6 +178,17 @@ describe('AdminSubmissionsPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('상호 평가 제출자 수에 따라 상세보기를 활성화한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '상호 평가' }));
+
+    expect(await screen.findByText('제출자 수: 1 / 2')).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: '상세보기' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: '상세보기' })).toHaveLength(1);
+  });
+
   it('미제출 팀의 발표 평가 상세에 다른 팀 학생을 미평가로 표시한다', async () => {
     renderPage(
       '/admin/submissions/submission-oop-01-2-presentation-evaluate?milestoneId=presentation-evaluate&sectionId=oop-2026-2-01',

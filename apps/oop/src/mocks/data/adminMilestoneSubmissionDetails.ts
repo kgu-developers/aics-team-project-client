@@ -325,15 +325,6 @@ const peerEvaluationSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
         },
         scores: { '20235678': 30 },
       },
-      {
-        evaluatorStudentNumber: '20235678',
-        projectEvaluation: {
-          roleSummary: '화면 구성과 사용자 흐름 정리를 담당했습니다.',
-          teamEvaluation: '역할 분담이 명확하고 일정 관리가 좋았습니다.',
-          reflection: '팀원들과 의견을 맞추며 프로젝트를 완성했습니다.',
-        },
-        scores: { '20231234': 30 },
-      },
     ],
   },
 };

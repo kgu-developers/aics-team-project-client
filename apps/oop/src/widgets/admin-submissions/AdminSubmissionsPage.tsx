@@ -348,10 +348,13 @@ export default function AdminSubmissionsPage() {
               ) : (
                 <div className={styles.list}>
                   {submissionsQuery.data?.submissions.map(submission => {
-                    const detailSubmissionId =
-                      submission.submittedAt !== null
-                        ? submission.submissionId
-                        : null;
+                    const canViewDetail =
+                      activeMilestoneId === 'peer-review'
+                        ? (submission.summary.submittedMemberCount ?? 0) > 0
+                        : submission.submittedAt !== null;
+                    const detailSubmissionId = canViewDetail
+                      ? submission.submissionId
+                      : null;
                     return (
                       <AdminMilestoneSubmissionCard
                         action={

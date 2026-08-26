@@ -149,7 +149,7 @@ export function getAdminMilestoneSubmissionsFixture(
           submittedMemberCount:
             typedMilestoneId === 'peer-review'
               ? index === 0
-                ? teamMemberCount
+                ? 1
                 : 0
               : null,
           memberCount:
