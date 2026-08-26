@@ -95,10 +95,9 @@ describe('useSubmitSubmissionVersionMutation', () => {
         artifacts: [
           {
             kind: 'FILE',
-            name: 'presentation-replaced.pptx',
+            name: 'presentation-replaced.pdf',
             size: 1024,
-            mimeType:
-              'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            mimeType: 'application/pdf',
           },
         ],
       },

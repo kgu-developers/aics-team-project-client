@@ -58,11 +58,11 @@ let presentation: Presentation = {
       ],
     ),
     // 프레젠테이션 자료는 KD3-90 제출 계약(SubmissionFilePanel)으로
-    // PPT/PPTX를 등록·교체한다. 문서 필드 블록으로 위조하지 않는다.
+    // PDF를 등록·교체한다. 문서 필드 블록으로 위조하지 않는다.
     block(
       'presentation-material',
       '2. 프레젠테이션 자료',
-      '발표 슬라이드(PPT/PPTX)를 등록하거나 교체합니다.',
+      '평가와 공유에 사용할 발표 자료 PDF를 등록하거나 교체합니다.',
       [],
     ),
     block(

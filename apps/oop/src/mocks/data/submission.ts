@@ -16,10 +16,10 @@ const MB = 1024 * 1024;
 
 const presentationRules: SubmissionArtifactRule[] = [
   {
-    key: 'PRESENTATION_FILE',
-    label: '발표 자료',
+    key: 'PRESENTATION_PDF',
+    label: '발표 자료 PDF',
     required: true,
-    allowedExtensions: ['ppt', 'pptx'],
+    allowedExtensions: ['pdf'],
     maxSize: 20 * MB,
   },
 ];
@@ -58,10 +58,9 @@ function createInitialState(): SubmissionMockState {
       {
         id: 'artifact-presentation-v1',
         kind: 'FILE',
-        name: 'cineflow-presentation.pptx',
-        size: 4_820_000,
-        mimeType:
-          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        name: 'cineflow-presentation.pdf',
+        size: 2_140_000,
+        mimeType: 'application/pdf',
       },
     ],
   };

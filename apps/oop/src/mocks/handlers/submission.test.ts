@@ -114,6 +114,27 @@ describe('submissionHandlers', () => {
     expect(detail.currentVersion?.versionNumber).toBe(1);
   });
 
+  it('발표 자료는 PDF만 허용한다', async () => {
+    const response = await postVersion('submission-presentation', {
+      description: '허용되지 않은 원본 형식입니다.',
+      artifacts: [
+        {
+          kind: 'FILE',
+          name: 'presentation.pptx',
+          size: 1024,
+          mimeType:
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        },
+      ],
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'REQUIRED_ARTIFACT_MISSING',
+      message: '발표 자료 PDF 파일이 필요해요.',
+    });
+  });
+
   it('같은 마일스톤에서도 팀 범위의 제출물만 조회한다', () => {
     expect(getSubmissionByMilestone('team-07', 'presentation')).toMatchObject({
       id: 'submission-presentation',
@@ -131,10 +152,9 @@ describe('submissionHandlers', () => {
       artifacts: [
         {
           kind: 'FILE' as const,
-          name: 'presentation.pptx',
+          name: 'presentation.pdf',
           size: 1024,
-          mimeType:
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          mimeType: 'application/pdf',
         },
       ],
     };
@@ -164,10 +184,9 @@ describe('submissionHandlers', () => {
       artifacts: [
         {
           kind: 'FILE',
-          name: 'presentation-after-submit.pptx',
+          name: 'presentation-after-submit.pdf',
           size: 1024,
-          mimeType:
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          mimeType: 'application/pdf',
         },
       ],
     });
@@ -197,10 +216,9 @@ describe('submissionHandlers', () => {
       artifacts: [
         {
           kind: 'FILE',
-          name: 'presentation-locked.pptx',
+          name: 'presentation-locked.pdf',
           size: 1024,
-          mimeType:
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          mimeType: 'application/pdf',
         },
       ],
     });
@@ -230,10 +248,9 @@ describe('submissionHandlers', () => {
       artifacts: [
         {
           kind: 'FILE',
-          name: 'presentation-replaced.pptx',
+          name: 'presentation-replaced.pdf',
           size: 1024,
-          mimeType:
-            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          mimeType: 'application/pdf',
         },
       ],
     });
@@ -330,7 +347,7 @@ describe('submissionHandlers', () => {
       artifacts: [
         {
           kind: 'FILE',
-          name: 'presentation.pptx',
+          name: 'presentation.pdf',
           size: 1024,
           mimeType: 'application/octet-stream',
         },
