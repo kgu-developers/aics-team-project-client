@@ -8,5 +8,6 @@ export type TeamMilestoneProgress = {
   id: string;
   title: string;
   deadlineLabel: string;
+  submissionId: string | null;
   status: TeamMilestoneProgressStatus;
 };

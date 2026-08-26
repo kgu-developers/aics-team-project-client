@@ -18,12 +18,14 @@ const milestones: TeamMilestoneProgress[] = [
     id: 'proposal',
     title: '제안서',
     deadlineLabel: '2026-08-10',
+    submissionId: null,
     status: { kind: 'before-deadline' },
   },
   {
     id: 'midterm',
     title: '중간 점검',
     deadlineLabel: '2026-08-15',
+    submissionId: null,
     status: { kind: 'not-submitted' },
   },
   {
@@ -34,23 +36,27 @@ const milestones: TeamMilestoneProgress[] = [
       kind: 'submitted',
       submittedDateLabel: '2026-08-17',
     },
+    submissionId: 'submission-presentation-team-1',
   },
   {
     id: 'presentation-evaluate',
     title: '발표 평가',
     deadlineLabel: '2026-08-20',
+    submissionId: null,
     status: { kind: 'evaluated' },
   },
   {
     id: 'final-report',
     title: '최종 보고서',
     deadlineLabel: '2026-08-27',
+    submissionId: null,
     status: { kind: 'before-deadline' },
   },
   {
     id: 'peer-review',
     title: '상호 평가',
     deadlineLabel: '2026-08-30',
+    submissionId: null,
     status: { kind: 'before-deadline' },
   },
 ];
@@ -64,7 +70,6 @@ function renderProgress(items: TeamMilestoneProgress[]) {
           milestones={items}
           projectTopic='구독 관리 가계부 프로젝트'
           sectionId='oop-01'
-          teamId='team-1'
           teamLeaderName='김ㅇㅇ'
         />
       </AstryxThemeProvider>
@@ -93,7 +98,7 @@ describe('AdminTeamMilestoneProgress', () => {
     expect(screen.getAllByRole('button', { name: '상세보기' })).toHaveLength(4);
     expect(screen.getByRole('link', { name: '상세보기' })).toHaveAttribute(
       'href',
-      '/admin/submissions/team-1-presentation-submit?milestoneId=presentation-submit&sectionId=oop-01',
+      '/admin/submissions/submission-presentation-team-1?milestoneId=presentation-submit&sectionId=oop-01',
     );
   });
 

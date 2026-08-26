@@ -28,11 +28,29 @@ export type AdminProposalSubmissionDetailDto = {
   wireframeFileNames: string[];
 };
 
+export type AdminMidtermSubmissionFieldDto = {
+  label: string;
+  value: string;
+};
+
+export type AdminMidtermSubmissionBlockDto = {
+  description: string;
+  fields: AdminMidtermSubmissionFieldDto[];
+  title: string;
+};
+
+export type AdminMidtermSubmissionDetailDto = {
+  blocks: AdminMidtermSubmissionBlockDto[];
+  teamLeaderName: string;
+  teamName: string;
+};
+
 export type AdminMilestoneSubmissionDetailResponse = {
   milestone: {
     id: string;
     title: string;
   };
+  midterm: AdminMidtermSubmissionDetailDto | null;
   proposal: AdminProposalSubmissionDetailDto | null;
   section: {
     id: string;

@@ -5,6 +5,7 @@ const proposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
     id: 'proposal',
     title: '제안서',
   },
+  midterm: null,
   proposal: {
     collaboration: '주 2회 대면 회의, GitHub PR 리뷰 후 병합',
     dataRows: [
@@ -59,6 +60,112 @@ const proposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
   },
 };
 
+const midtermSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
+  milestone: {
+    id: 'midterm',
+    title: '중간 점검',
+  },
+  midterm: {
+    blocks: [
+      {
+        description: '제안서에서 확정된 주제와 현재 기획 방향을 정리합니다.',
+        fields: [
+          {
+            label: '프로젝트 제목',
+            value: 'AI 기반 팀 프로젝트 관리 서비스',
+          },
+          {
+            label: '주제 설명',
+            value: '팀 프로젝트의 진행 상황과 제출물을 한곳에서 관리합니다.',
+          },
+        ],
+        title: '1. 주제',
+      },
+      {
+        description: '화면별 이름과 동작 설명을 한 세트씩 등록합니다.',
+        fields: [
+          {
+            label: '화면 GUI 목록',
+            value:
+              '팀 대시보드: 팀 진행 현황과 제출 상태를 확인합니다.\n분반별 제출물: 마일스톤별 팀 제출물을 확인합니다.',
+          },
+        ],
+        title: '2. 화면 GUI 설계',
+      },
+      {
+        description: '클래스 구조와 기능 로직, 실행 관련 파일을 정리합니다.',
+        fields: [
+          {
+            label: '구현된 기능 목록',
+            value: '팀 구성 조회 · 마일스톤 진행 현황 · 제출물 목록',
+          },
+          {
+            label: '클래스 구조와 주요 기능 설명',
+            value:
+              '분반, 팀, 마일스톤, 제출물의 조회 책임을 나누어 관리합니다.',
+          },
+          {
+            label: '입력·출력 테스트 케이스',
+            value:
+              '담당 분반의 팀 제출물 목록을 조회하고 상세 화면으로 이동합니다.',
+          },
+        ],
+        title: '3. 엔진부 설계',
+      },
+      {
+        description: '완료·진행·미구현 항목과 이후 일정을 정리합니다.',
+        fields: [
+          {
+            label: '완료된 내용',
+            value: '팀 대시보드와 분반별 제출물 조회 화면',
+          },
+          {
+            label: '진행 중인 내용',
+            value: '마일스톤별 제출물 상세 조회',
+          },
+          {
+            label: '미구현 내용',
+            value: '실제 제출 API 연동과 파일 다운로드',
+          },
+          {
+            label: '문제점 또는 지원 필요',
+            value: '제출물 API의 파일 URL과 권한 계약 확인이 필요합니다.',
+          },
+        ],
+        title: '4. 팀프로젝트 진행 계획',
+      },
+      {
+        description:
+          '대면 점검에서 확인받고 싶은 질문과 시연 초점을 작성합니다.',
+        fields: [
+          {
+            label: '중점 시연 기능',
+            value: '분반별 팀 제출물 조회부터 상세보기 이동까지의 흐름',
+          },
+          {
+            label: '교수님께 질문할 내용',
+            value: '마일스톤별 제출물 파일 다운로드 정책을 확인하고 싶습니다.',
+          },
+        ],
+        title: '5. 중간 점검 질문',
+      },
+    ],
+    teamLeaderName: '김민준',
+    teamName: 'OOP-01 - 1팀',
+  },
+  proposal: null,
+  section: {
+    id: 'oop-2026-2-01',
+    label: 'OOP-01',
+  },
+  submittedAt: '2026/10/12',
+  submission: {
+    id: 'submission-oop-01-1-midterm',
+    teamId: 'team-1151-1',
+    teamName: 'OOP-01 - 1팀',
+  },
+};
+
 const secondTeamProposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse =
   {
     ...proposalSubmissionDetail,
@@ -76,6 +183,21 @@ const secondTeamProposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse
     },
   };
 
+const secondTeamMidtermSubmissionDetail: AdminMilestoneSubmissionDetailResponse =
+  {
+    ...midtermSubmissionDetail,
+    midterm: {
+      ...midtermSubmissionDetail.midterm!,
+      teamLeaderName: '박지훈',
+      teamName: 'OOP-01 - 2팀',
+    },
+    submission: {
+      id: 'submission-oop-01-2-midterm',
+      teamId: 'team-1151-2',
+      teamName: 'OOP-01 - 2팀',
+    },
+  };
+
 export function getAdminMilestoneSubmissionDetailFixture(
   submissionId: string,
 ): AdminMilestoneSubmissionDetailResponse | undefined {
@@ -85,6 +207,14 @@ export function getAdminMilestoneSubmissionDetailFixture(
 
   if (submissionId === secondTeamProposalSubmissionDetail.submission.id) {
     return structuredClone(secondTeamProposalSubmissionDetail);
+  }
+
+  if (submissionId === midtermSubmissionDetail.submission.id) {
+    return structuredClone(midtermSubmissionDetail);
+  }
+
+  if (submissionId === secondTeamMidtermSubmissionDetail.submission.id) {
+    return structuredClone(secondTeamMidtermSubmissionDetail);
   }
 
   return undefined;

@@ -123,10 +123,12 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('최종 보고서')).toBeInTheDocument();
     expect(screen.getByText('상호 평가')).toBeInTheDocument();
     expect(screen.queryByText('발표 평가')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: '상세보기' })).toHaveLength(4);
-    expect(screen.getByRole('link', { name: '상세보기' })).toHaveAttribute(
+    expect(screen.getAllByRole('button', { name: '상세보기' })).toHaveLength(3);
+    expect(
+      screen.getAllByRole('link', { name: '상세보기' })[0],
+    ).toHaveAttribute(
       'href',
-      '/admin/submissions/team-1151-1-presentation-submit?milestoneId=presentation-submit&sectionId=oop-2026-2-01',
+      '/admin/submissions/submission-oop-01-1-proposal?milestoneId=proposal&sectionId=oop-2026-2-01',
     );
   });
 
@@ -356,12 +358,14 @@ describe('AdminTeamDashboard', () => {
                 id: 'professor-milestone-first',
                 title: '교수자 설정 첫 단계',
                 deadlineLabel: '2026-08-25',
+                submissionId: null,
                 status: { kind: 'before-deadline' },
               },
               {
                 id: 'professor-milestone-second',
                 title: '교수자 설정 두 번째 단계',
                 deadlineLabel: '2026-08-30',
+                submissionId: null,
                 status: { kind: 'before-deadline' },
               },
             ],

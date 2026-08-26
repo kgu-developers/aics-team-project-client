@@ -19,6 +19,8 @@ export type AdminMilestoneSubmissionView = {
   id: string;
   meetingCountLabel: string;
   messageCountLabel: string;
+  submissionId: string | null;
+  submittedAt: string | null;
   submittedAtLabel: string;
   summary: AdminMilestoneSubmissionSummaryView;
   teamId: string;
@@ -44,6 +46,8 @@ function toSubmissionView(
     id: submission.id,
     meetingCountLabel: toCountLabel('회의록', submission.meetingRecordCount),
     messageCountLabel: toCountLabel('쪽지', submission.messageCount),
+    submissionId: submission.submissionId,
+    submittedAt: submission.submittedAt,
     submittedAtLabel: submission.submittedAt ?? '-',
     summary: {
       attachmentCountLabel:

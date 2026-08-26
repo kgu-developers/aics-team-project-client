@@ -13,6 +13,7 @@ export type AdminTeamDashboardMilestoneDto = {
   id: string;
   title: string;
   deadlineLabel: string;
+  submissionId: string | null;
   status: AdminTeamDashboardMilestoneStatusDto;
 };
 

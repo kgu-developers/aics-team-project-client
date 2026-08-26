@@ -1,5 +1,6 @@
 import type {
   AdminMilestoneSubmissionDetailResponse,
+  AdminMidtermSubmissionBlockDto,
   AdminProposalDataRowDto,
   AdminProposalScreenDto,
 } from '@aics/api-client';
@@ -20,9 +21,16 @@ export type AdminProposalSubmissionDetailView = {
   wireframeFileNames: string[];
 };
 
+export type AdminMidtermSubmissionDetailView = {
+  blocks: AdminMidtermSubmissionBlockDto[];
+  teamLeaderName: string;
+  teamName: string;
+};
+
 export type AdminMilestoneSubmissionDetailView = {
   milestoneId: string;
   milestoneTitle: string;
+  midterm: AdminMidtermSubmissionDetailView | null;
   proposal: AdminProposalSubmissionDetailView | null;
   sectionId: string;
   sectionLabel: string;
@@ -38,6 +46,7 @@ export function toAdminMilestoneSubmissionDetailView(
   return {
     milestoneId: response.milestone.id,
     milestoneTitle: response.milestone.title,
+    midterm: response.midterm,
     proposal: response.proposal,
     sectionId: response.section.id,
     sectionLabel: response.section.label,

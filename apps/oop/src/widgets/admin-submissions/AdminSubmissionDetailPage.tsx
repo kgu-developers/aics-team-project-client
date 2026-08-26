@@ -206,6 +206,51 @@ export default function AdminSubmissionDetailPage() {
     );
   }
 
+  function renderMidterm() {
+    if (!detail?.midterm) {
+      return (
+        <EmptyState
+          description='이 중간 점검 제출물의 상세 내용을 찾을 수 없습니다.'
+          title='표시할 상세 내용이 없습니다.'
+        />
+      );
+    }
+
+    const midterm = detail.midterm;
+
+    return (
+      <Card className={styles.document}>
+        <div className={styles.documentHeader}>
+          <Text className={styles.documentLabel}>DOC / MIDTERM / FORM V1</Text>
+          <Heading level={2}>{detail.teamName} 중간 점검</Heading>
+          <Text className={styles.metadata}>
+            {detail.sectionLabel} · 제출일 {detail.submittedAt} · 조회 전용
+          </Text>
+        </div>
+
+        {midterm.blocks.map(block => (
+          <section className={styles.section} key={block.title}>
+            <Heading level={3}>{block.title}</Heading>
+            <Text className={styles.sectionDescription}>
+              {block.description}
+            </Text>
+            <div className={styles.fieldGrid}>
+              {block.fields.map(field => (
+                <div
+                  className={`${styles.field} ${styles.fullWidthField}`}
+                  key={field.label}
+                >
+                  <Text className={styles.fieldLabel}>{field.label}</Text>
+                  <Text className={styles.fieldValue}>{field.value}</Text>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+      </Card>
+    );
+  }
+
   return (
     <div className={styles.page}>
       <Link
@@ -230,13 +275,15 @@ export default function AdminSubmissionDetailPage() {
           description='담당 분반의 제출물만 조회할 수 있습니다.'
           title='접근할 수 없는 제출물입니다.'
         />
-      ) : detail.milestoneId !== 'proposal' ? (
+      ) : detail.milestoneId === 'proposal' ? (
+        renderProposal()
+      ) : detail.milestoneId === 'midterm' ? (
+        renderMidterm()
+      ) : (
         <EmptyState
-          description='제안서 외 마일스톤의 상세보기는 후속 작업에서 연결합니다.'
+          description='이 마일스톤의 상세보기는 후속 작업에서 연결합니다.'
           title='표시할 상세 내용이 없습니다.'
         />
-      ) : (
-        renderProposal()
       )}
     </div>
   );

@@ -17,6 +17,7 @@ export type AdminSectionMilestoneSubmissionItemDto = {
   id: string;
   meetingRecordCount: number | null;
   messageCount: number | null;
+  submissionId: string | null;
   submittedAt: string | null;
   summary: AdminSectionMilestoneSubmissionSummaryDto;
   teamId: string;

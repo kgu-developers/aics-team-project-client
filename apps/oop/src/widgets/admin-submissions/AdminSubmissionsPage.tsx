@@ -229,29 +229,47 @@ export default function AdminSubmissionsPage() {
                 />
               ) : (
                 <div className={styles.list}>
-                  {submissionsQuery.data?.submissions.map(submission => (
-                    <AdminMilestoneSubmissionCard
-                      detailAction={
-                        <Link
-                          className={cardStyles.detailLink}
-                          params={{ submissionId: submission.id }}
-                          search={{
-                            milestoneId: activeTab.id,
-                            sectionId: effectiveSectionId,
-                          }}
-                          to={ROUTES.ADMIN_SUBMISSION_DETAIL}
-                        >
-                          상세보기
-                        </Link>
-                      }
-                      key={submission.id}
-                      label={submission.teamName}
-                      meetingCountLabel={submission.meetingCountLabel}
-                      messageCountLabel={submission.messageCountLabel}
-                      secondaryLabel={submission.submittedAtLabel}
-                      summary={getSubmissionSummary(activeTab.id, submission)}
-                    />
-                  ))}
+                  {submissionsQuery.data?.submissions.map(submission => {
+                    const detailSubmissionId =
+                      submission.submittedAt !== null
+                        ? submission.submissionId
+                        : null;
+                    const canViewDetail = detailSubmissionId !== null;
+
+                    return (
+                      <AdminMilestoneSubmissionCard
+                        detailAction={
+                          canViewDetail ? (
+                            <Link
+                              className={cardStyles.detailLink}
+                              params={{ submissionId: detailSubmissionId }}
+                              search={{
+                                milestoneId: activeTab.id,
+                                sectionId: effectiveSectionId,
+                              }}
+                              to={ROUTES.ADMIN_SUBMISSION_DETAIL}
+                            >
+                              상세보기
+                            </Link>
+                          ) : (
+                            <button
+                              className={`${cardStyles.detailLink} ${cardStyles.detailButtonDisabled}`}
+                              disabled
+                              type='button'
+                            >
+                              상세보기
+                            </button>
+                          )
+                        }
+                        key={submission.id}
+                        label={submission.teamName}
+                        meetingCountLabel={submission.meetingCountLabel}
+                        messageCountLabel={submission.messageCountLabel}
+                        secondaryLabel={submission.submittedAtLabel}
+                        summary={getSubmissionSummary(activeTab.id, submission)}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </>

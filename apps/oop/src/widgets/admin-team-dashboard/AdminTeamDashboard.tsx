@@ -192,7 +192,6 @@ export default function AdminTeamDashboard() {
         milestones={team.milestones}
         projectTopic={team.projectTopic}
         sectionId={team.section.id}
-        teamId={team.id}
         teamLeaderName={
           team.members.find(member => member.isLeader)?.name ?? null
         }

@@ -13,7 +13,6 @@ type AdminTeamMilestoneProgressProps = {
   milestones: TeamMilestoneProgress[];
   projectTopic: string | null;
   sectionId: string;
-  teamId: string;
   teamLeaderName: string | null;
 };
 
@@ -63,7 +62,6 @@ export default function AdminTeamMilestoneProgress({
   milestones,
   projectTopic,
   sectionId,
-  teamId,
   teamLeaderName,
 }: AdminTeamMilestoneProgressProps) {
   const displayMilestones = milestones.filter(
@@ -83,16 +81,19 @@ export default function AdminTeamMilestoneProgress({
       ) : (
         <div className={styles.list}>
           {displayMilestones.map(milestone => {
-            const isSubmitted = milestone.status.kind === 'submitted';
-            const submissionId = `${teamId}-${milestone.id}`;
+            const detailSubmissionId =
+              milestone.status.kind === 'submitted'
+                ? milestone.submissionId
+                : null;
+            const canViewDetail = detailSubmissionId !== null;
 
             return (
               <AdminMilestoneSubmissionCard
                 detailAction={
-                  isSubmitted ? (
+                  canViewDetail ? (
                     <Link
                       className={cardStyles.detailLink}
-                      params={{ submissionId }}
+                      params={{ submissionId: detailSubmissionId }}
                       search={{ milestoneId: milestone.id, sectionId }}
                       to={ROUTES.ADMIN_SUBMISSION_DETAIL}
                     >

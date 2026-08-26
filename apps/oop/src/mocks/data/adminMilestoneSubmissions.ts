@@ -33,12 +33,41 @@ const milestones: Record<MilestoneId, { title: string }> = {
   'peer-review': { title: '상호 평가' },
 };
 
+const submissionDetailsByMilestone: Partial<
+  Record<
+    MilestoneId,
+    ReadonlyArray<{ submittedAt: string; submissionId: string }>
+  >
+> = {
+  proposal: [
+    {
+      submissionId: 'submission-oop-01-1-proposal',
+      submittedAt: '2026/09/05',
+    },
+    {
+      submissionId: 'submission-oop-01-2-proposal',
+      submittedAt: '2026/09/06',
+    },
+  ],
+  midterm: [
+    {
+      submissionId: 'submission-oop-01-1-midterm',
+      submittedAt: '2026/10/12',
+    },
+    {
+      submissionId: 'submission-oop-01-2-midterm',
+      submittedAt: '2026/10/13',
+    },
+  ],
+};
+
 export function getAdminMilestoneSubmissionsFixture(
   milestoneId: string,
 ): AdminSectionMilestoneSubmissionsResponse | undefined {
   if (!(milestoneId in milestones)) return undefined;
 
   const typedMilestoneId = milestoneId as MilestoneId;
+  const submissionDetails = submissionDetailsByMilestone[typedMilestoneId];
 
   return {
     milestone: {
@@ -46,32 +75,37 @@ export function getAdminMilestoneSubmissionsFixture(
       title: milestones[typedMilestoneId].title,
     },
     section,
-    submissions: teamSubmissions.map((team, index) => ({
-      id: `${team.id}-${typedMilestoneId}`,
-      meetingRecordCount: null,
-      messageCount: null,
-      submittedAt: index === 0 ? '2026/09/05' : '2026/09/06',
-      summary: {
-        attachmentCount: null,
-        feedbackCount: null,
-        leaderName:
-          typedMilestoneId === 'proposal'
-            ? index === 0
-              ? '김민준'
-              : '박지훈'
-            : null,
-        linkLabel: null,
-        presentationFileName: null,
-        projectTopic:
-          typedMilestoneId === 'proposal'
-            ? 'AI 기반 팀 프로젝트 관리 서비스'
-            : null,
-        reportFileName: null,
-        sourceArchiveFileName: null,
-        submittedMemberCount: null,
-      },
-      teamId: team.teamId,
-      teamName: team.teamName,
-    })),
+    submissions: teamSubmissions.map((team, index) => {
+      const submissionDetail = submissionDetails?.[index] ?? null;
+
+      return {
+        id: `${team.id}-${typedMilestoneId}`,
+        meetingRecordCount: null,
+        messageCount: null,
+        submissionId: submissionDetail?.submissionId ?? null,
+        submittedAt: submissionDetail?.submittedAt ?? null,
+        summary: {
+          attachmentCount: null,
+          feedbackCount: null,
+          leaderName:
+            typedMilestoneId === 'proposal'
+              ? index === 0
+                ? '김민준'
+                : '박지훈'
+              : null,
+          linkLabel: null,
+          presentationFileName: null,
+          projectTopic:
+            typedMilestoneId === 'proposal'
+              ? 'AI 기반 팀 프로젝트 관리 서비스'
+              : null,
+          reportFileName: null,
+          sourceArchiveFileName: null,
+          submittedMemberCount: null,
+        },
+        teamId: team.teamId,
+        teamName: team.teamName,
+      };
+    }),
   };
 }

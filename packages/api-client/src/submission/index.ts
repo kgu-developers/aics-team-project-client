@@ -1,6 +1,9 @@
 export {
   fetchAdminMilestoneSubmissionDetail,
   type AdminMilestoneSubmissionDetailResponse,
+  type AdminMidtermSubmissionBlockDto,
+  type AdminMidtermSubmissionDetailDto,
+  type AdminMidtermSubmissionFieldDto,
   type AdminProposalDataRowDto,
   type AdminProposalScreenDto,
   type AdminProposalSubmissionDetailDto,
