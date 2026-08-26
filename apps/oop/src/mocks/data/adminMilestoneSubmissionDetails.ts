@@ -1,5 +1,7 @@
 import type { AdminMilestoneSubmissionDetailResponse } from '@aics/api-client';
 
+import { adminStudentsFixture, adminTeamsFixture } from './adminStudentTeams';
+
 const proposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
   milestone: {
     id: 'proposal',
@@ -288,6 +290,54 @@ const secondTeamMidtermSubmissionDetail: AdminMilestoneSubmissionDetailResponse 
     },
   };
 
+const peerEvaluationTeam = adminTeamsFixture.find(
+  team => team.id === 'team-1151-1',
+);
+const peerEvaluationMembers = adminStudentsFixture.filter(
+  student => student.teamId === peerEvaluationTeam?.id,
+);
+
+const peerEvaluationSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
+  milestone: { id: 'peer-review', title: '상호 평가' },
+  section: { id: 'oop-2026-2-01', label: 'OOP-01' },
+  submittedAt: '2026/12/14',
+  submission: {
+    id: 'submission-oop-01-1-peer-review',
+    teamId: 'team-1151-1',
+    teamName: 'OOP-01 - 1팀',
+  },
+  proposal: null,
+  midterm: null,
+  presentation: null,
+  peerEvaluation: {
+    members: peerEvaluationMembers.map(({ name, studentNumber, major }) => ({
+      name,
+      studentNumber,
+      major,
+    })),
+    responses: [
+      {
+        evaluatorStudentNumber: '20231234',
+        projectEvaluation: {
+          roleSummary: '팀 일정 관리와 백엔드 구현을 담당했습니다.',
+          teamEvaluation: '협업 과정이 원활했고 목표한 기능을 완성했습니다.',
+          reflection: '서로 피드백하며 결과물을 개선할 수 있었습니다.',
+        },
+        scores: { '20235678': 30 },
+      },
+      {
+        evaluatorStudentNumber: '20235678',
+        projectEvaluation: {
+          roleSummary: '화면 구성과 사용자 흐름 정리를 담당했습니다.',
+          teamEvaluation: '역할 분담이 명확하고 일정 관리가 좋았습니다.',
+          reflection: '팀원들과 의견을 맞추며 프로젝트를 완성했습니다.',
+        },
+        scores: { '20231234': 30 },
+      },
+    ],
+  },
+};
+
 export function getAdminMilestoneSubmissionDetailFixture(
   submissionId: string,
 ): AdminMilestoneSubmissionDetailResponse | undefined {
@@ -305,6 +355,10 @@ export function getAdminMilestoneSubmissionDetailFixture(
 
   if (submissionId === secondTeamMidtermSubmissionDetail.submission.id) {
     return structuredClone(secondTeamMidtermSubmissionDetail);
+  }
+
+  if (submissionId === peerEvaluationSubmissionDetail.submission.id) {
+    return structuredClone(peerEvaluationSubmissionDetail);
   }
 
   if (submissionId === presentationSubmissionDetail.submission.id) {

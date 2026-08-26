@@ -1,5 +1,23 @@
 import type { AdminTeamDashboardView } from '~/features/admin-team-dashboard/model';
 
+import { getAdminTeamMembersFixture } from './adminStudentTeams';
+
+const adminTeamRoles = {
+  'student-1151-1': { isLeader: true, projectRole: 'ENGINE' as const },
+  'student-1151-2': { isLeader: false, projectRole: 'GUI' as const },
+  'student-1151-3': { isLeader: true, projectRole: 'ENGINE' as const },
+  'student-1151-4': { isLeader: false, projectRole: 'GUI' as const },
+};
+
+const getDashboardMembers = (teamId: string) =>
+  getAdminTeamMembersFixture(teamId).map(member => ({
+    id: member.id,
+    name: member.name,
+    studentNumber: member.studentNumber,
+    major: member.major,
+    ...adminTeamRoles[member.id as keyof typeof adminTeamRoles],
+  }));
+
 export const adminTeamDashboardFixture: AdminTeamDashboardView = {
   id: 'team-1151-1',
   section: {
@@ -8,24 +26,7 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
   },
   name: '1팀',
   projectTopic: 'AI 기반 팀 프로젝트 관리 서비스',
-  members: [
-    {
-      id: 'student-1151-1',
-      name: '김민준',
-      studentNumber: '20231234',
-      major: '컴퓨터공학과',
-      isLeader: true,
-      projectRole: 'ENGINE',
-    },
-    {
-      id: 'student-1151-2',
-      name: '이서연',
-      studentNumber: '20235678',
-      major: '소프트웨어학과',
-      isLeader: false,
-      projectRole: 'GUI',
-    },
-  ],
+  members: getDashboardMembers('team-1151-1'),
   milestones: [
     {
       id: 'proposal',
@@ -101,24 +102,7 @@ export const adminTeamDashboardFixtures: AdminTeamDashboardView[] = [
     },
     name: '2팀',
     projectTopic: '캠퍼스 학습 일정 관리 서비스',
-    members: [
-      {
-        id: 'student-1151-3',
-        name: '박지훈',
-        studentNumber: '20239876',
-        major: '컴퓨터공학과',
-        isLeader: true,
-        projectRole: 'ENGINE',
-      },
-      {
-        id: 'student-1151-4',
-        name: '최유진',
-        studentNumber: '20234567',
-        major: '인공지능학과',
-        isLeader: false,
-        projectRole: 'GUI',
-      },
-    ],
+    members: getDashboardMembers('team-1151-2'),
     milestones: [
       {
         id: 'proposal',
