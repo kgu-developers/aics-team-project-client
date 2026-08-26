@@ -54,7 +54,12 @@ export function getAdminMilestoneSubmissionsFixture(
       summary: {
         attachmentCount: null,
         feedbackCount: null,
-        leaderName: typedMilestoneId === 'proposal' ? '김민준' : null,
+        leaderName:
+          typedMilestoneId === 'proposal'
+            ? index === 0
+              ? '김민준'
+              : '박지훈'
+            : null,
         linkLabel: null,
         presentationFileName: null,
         projectTopic:
