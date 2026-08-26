@@ -6,6 +6,8 @@ export { Button } from '@astryxdesign/core/Button';
 export type { ButtonProps, ButtonVariant } from '@astryxdesign/core/Button';
 export { Card } from '@astryxdesign/core/Card';
 export type { CardProps, CardVariant } from '@astryxdesign/core/Card';
+export { Carousel } from '@astryxdesign/core/Carousel';
+export type { CarouselProps } from '@astryxdesign/core/Carousel';
 export { Collapsible, CollapsibleGroup } from '@astryxdesign/core/Collapsible';
 export type {
   CollapsibleGroupProps,
@@ -27,6 +29,8 @@ export { HStack, VStack } from '@astryxdesign/core/Layout';
 export { IconButton } from '@astryxdesign/core/IconButton';
 export type { IconButtonProps } from '@astryxdesign/core/IconButton';
 export { Text, Heading } from '@astryxdesign/core/Text';
+export { Tab, TabList } from '@astryxdesign/core/TabList';
+export type { TabListProps, TabProps } from '@astryxdesign/core/TabList';
 export { StatusDot } from '@astryxdesign/core/StatusDot';
 export type {
   StatusDotProps,

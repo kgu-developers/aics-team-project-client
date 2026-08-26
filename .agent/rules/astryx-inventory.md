@@ -5,7 +5,7 @@ Version-dependent inventory for `@astryxdesign/core@0.2.0`. Selection and stylin
 ## Exported by `@aics/design-system`
 
 ```text
-Avatar, Badge, Button, Card, CheckboxList, CheckboxListItem, Collapsible, CollapsibleGroup, Dialog, Divider
+Avatar, Badge, Button, Card, Carousel, CheckboxList, CheckboxListItem, Collapsible, CollapsibleGroup, Dialog, Divider
 EmptyState, Field, FileInput, IconButton, RadioList, RadioListItem, Selector, SelectorOption, StatusDot, Table, ToastViewport, useToast
 Tab, TabList
 HStack, VStack

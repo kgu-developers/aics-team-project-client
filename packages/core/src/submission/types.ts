@@ -35,7 +35,7 @@ export type SubmissionVersion = {
 };
 
 export type SubmissionArtifactRule = {
-  key: 'PRESENTATION_FILE' | 'FINAL_REPORT_PDF' | 'SOURCE_CODE_ZIP';
+  key: 'PRESENTATION_PDF' | 'FINAL_REPORT_PDF' | 'SOURCE_CODE_ZIP';
   label: string;
   required: true;
   allowedExtensions: string[];
