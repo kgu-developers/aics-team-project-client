@@ -19,6 +19,7 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminSubmissionDetailPage from './AdminSubmissionDetailPage';
 import AdminSubmissionsPage from './AdminSubmissionsPage';
 
+import { adminPresentationEvaluationsFixture } from '~/mocks/data/adminPresentationEvaluations';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
@@ -153,6 +154,28 @@ describe('AdminSubmissionsPage', () => {
     expect(screen.getByText('박지훈')).toBeInTheDocument();
     expect(screen.getByText('최유진')).toBeInTheDocument();
     expect(screen.getAllByText('-')).toHaveLength(8);
+  });
+
+  it('발표 평가 상세 ID가 없으면 팀 이름을 링크로 표시하지 않는다', async () => {
+    const user = userEvent.setup();
+    const response = structuredClone(adminPresentationEvaluationsFixture);
+    response.teams[1]!.submissionId = null;
+
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_PRESENTATION_EVALUATIONS('oop-2026-2-01')}`,
+        () => HttpResponse.json(response),
+      ),
+    );
+
+    renderPage();
+
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    expect(await screen.findByText('OOP-01 - 2팀')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'OOP-01 - 2팀' }),
+    ).not.toBeInTheDocument();
   });
 
   it('미제출 팀의 발표 평가 상세에 다른 팀 학생을 미평가로 표시한다', async () => {

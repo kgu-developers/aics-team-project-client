@@ -253,18 +253,21 @@ export default function AdminSubmissionsPage() {
                         align: 'start',
                         header: '팀',
                         key: 'teamName',
-                        renderCell: team => (
-                          <Link
-                            params={{ submissionId: team.submissionId }}
-                            search={{
-                              milestoneId: 'presentation-evaluate',
-                              sectionId: effectiveSectionId,
-                            }}
-                            to={ROUTES.ADMIN_SUBMISSION_DETAIL}
-                          >
-                            {team.teamName}
-                          </Link>
-                        ),
+                        renderCell: team =>
+                          team.submissionId ? (
+                            <Link
+                              params={{ submissionId: team.submissionId }}
+                              search={{
+                                milestoneId: 'presentation-evaluate',
+                                sectionId: effectiveSectionId,
+                              }}
+                              to={ROUTES.ADMIN_SUBMISSION_DETAIL}
+                            >
+                              {team.teamName}
+                            </Link>
+                          ) : (
+                            team.teamName
+                          ),
                         width: proportional(1, { minWidth: 128 }),
                       },
                       {

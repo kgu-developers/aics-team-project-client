@@ -6,7 +6,7 @@ export type AdminPresentationEvaluationCriterionDto = {
   label: string;
 };
 export type AdminPresentationEvaluationTeamDto = {
-  submissionId: string;
+  submissionId: string | null;
   teamId: string;
   teamName: string;
   projectTopic: string | null;
