@@ -1,5 +1,5 @@
 import { Avatar, Divider, HStack, IconButton, Text } from '@aics/design-system';
-import { Link, Navigate, Outlet } from '@tanstack/react-router';
+import { Link, Navigate, Outlet, useNavigate } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -12,6 +12,7 @@ import * as styles from './StudentShell.css';
 export default function StudentShell() {
   const accessToken = useAuthStore(state => state.accessToken);
   const currentUser = useAuthStore(state => state.currentUser);
+  const navigate = useNavigate();
 
   if (!accessToken || !currentUser) {
     return <Navigate to={ROUTES.LOGIN} />;
@@ -53,10 +54,11 @@ export default function StudentShell() {
             <IconButton
               icon={<img alt='' src='/icons/meeting-notes.svg' />}
               label='회의록 열기'
+              onClick={() => void navigate({ to: ROUTES.STUDENT.MEETINGS })}
               size='sm'
               variant='ghost'
             />
-            {/* TODO(KD3-75 follow-up): 알림/회의록 티켓에서 헤더 액션을 연결한다. */}
+            {/* TODO(KD3-75 follow-up): 알림 헤더 액션을 연결한다. */}
             <Avatar
               alt={currentUser.name}
               size={24}

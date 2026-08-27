@@ -12,6 +12,7 @@ const fetchProjectionMock = vi.mocked(fetchTeamAssignmentProjection);
 const student: CurrentUser = {
   email: 'student@example.com',
   globalRole: 'STUDENT',
+  id: 'student-a',
   name: '학생',
   sections: [
     {

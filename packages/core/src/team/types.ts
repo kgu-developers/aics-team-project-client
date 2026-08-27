@@ -1,6 +1,7 @@
 export type TeamMember = {
   id: string;
   name: string;
+  isLeader?: boolean;
   role?: string;
 };
 

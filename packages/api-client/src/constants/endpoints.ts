@@ -22,6 +22,11 @@ export const ENDPOINTS = {
   TEAM: {
     ROOT: '/teams',
   },
+  MEETING: {
+    RECORDS: (teamId: string) => `/teams/${teamId}/meeting-records`,
+    RECORD: (meetingId: string) => `/meeting-records/${meetingId}`,
+    ACTION: (actionId: string) => `/meeting-actions/${actionId}`,
+  },
   EDIT_LOCKS: {
     ROOT: '/edit-locks',
   },

@@ -1,3 +1,5 @@
+import type { Team } from '../team/types';
+
 export type AuthLoginInput = {
   studentNumber: string;
   password: string;
@@ -17,9 +19,11 @@ export type CurrentUserSection = {
 };
 
 export type CurrentUser = {
+  id: string;
   studentNumber: string;
   name: string;
   email: string;
   globalRole: UserGlobalRole;
   sections: CurrentUserSection[];
+  currentTeam?: Team | null;
 };
