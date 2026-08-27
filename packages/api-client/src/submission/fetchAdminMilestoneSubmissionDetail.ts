@@ -30,6 +30,11 @@ export type AdminProposalSubmissionDetailDto = {
 };
 
 export type AdminMidtermSubmissionFieldDto = {
+  attachment?: {
+    contentType: string;
+    downloadUrl: string;
+    fileName: string;
+  };
   label: string;
   value: string;
 };
@@ -54,7 +59,9 @@ export type AdminPresentationSubmissionBlockDto = {
 
 export type AdminPresentationSubmissionDetailDto = {
   blocks: AdminPresentationSubmissionBlockDto[];
+  presentationFileDownloadUrl: string | null;
   presentationFileName: string | null;
+  sourceArchiveDownloadUrl: string | null;
   sourceArchiveFileName: string | null;
   teamLeaderName: string;
   teamName: string;

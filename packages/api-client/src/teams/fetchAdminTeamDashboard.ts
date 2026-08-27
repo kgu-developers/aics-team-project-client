@@ -15,11 +15,21 @@ export type AdminTeamDashboardMilestoneDownloadFileDto = {
   label: string;
 };
 
+export type AdminTeamDashboardMilestoneSummaryDto = {
+  attachmentCount?: number | null;
+  presentationFileDownloadUrl?: string | null;
+  presentationFileName?: string | null;
+  sourceArchiveDownloadUrl?: string | null;
+  sourceArchiveFileName?: string | null;
+  videoUrl?: string | null;
+};
+
 export type AdminTeamDashboardMilestoneDto = {
   id: string;
   title: string;
   deadlineLabel: string;
   downloadFiles?: AdminTeamDashboardMilestoneDownloadFileDto[];
+  summary?: AdminTeamDashboardMilestoneSummaryDto;
   submissionId: string | null;
   status: AdminTeamDashboardMilestoneStatusDto;
   submittedMemberCount?: number | null;

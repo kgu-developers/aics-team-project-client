@@ -8,6 +8,7 @@ export type AdminMilestoneSubmissionSummaryView = {
   feedbackCountLabel: string | null;
   leaderName: string | null;
   linkLabel: string | null;
+  presentationFileDownloadUrl: string | null;
   presentationFileName: string | null;
   projectTopic: string | null;
   reportFileName: string | null;
@@ -64,6 +65,8 @@ function toSubmissionView(
           : toCountLabel('피드백', submission.summary.feedbackCount),
       leaderName: submission.summary.leaderName,
       linkLabel: submission.summary.linkLabel,
+      presentationFileDownloadUrl:
+        submission.summary.presentationFileDownloadUrl,
       presentationFileName: submission.summary.presentationFileName,
       projectTopic: submission.summary.projectTopic,
       reportFileName: submission.summary.reportFileName,

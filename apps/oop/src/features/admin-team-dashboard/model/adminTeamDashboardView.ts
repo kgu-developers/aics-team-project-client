@@ -17,6 +17,7 @@ function toTeamMilestoneProgress(
     deadlineLabel: milestone.deadlineLabel,
     downloadFiles: milestone.downloadFiles?.map(file => ({ ...file })),
     id: milestone.id,
+    summary: milestone.summary ? { ...milestone.summary } : undefined,
     status: milestone.status,
     submittedMemberCount: milestone.submittedMemberCount,
     memberCount: milestone.memberCount,

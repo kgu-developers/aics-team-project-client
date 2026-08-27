@@ -1,6 +1,10 @@
 import type { AdminMilestoneSubmissionDetailResponse } from '@aics/api-client';
 
+import { getAdminSubmissionFiles } from './adminSubmissionFiles';
 import { adminStudentsFixture, adminTeamsFixture } from './adminStudentTeams';
+
+const teamOneFiles = getAdminSubmissionFiles('team-1151-1');
+const teamTwoFiles = getAdminSubmissionFiles('team-1151-2');
 
 const proposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
   milestone: {
@@ -91,6 +95,7 @@ const midtermSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
             label: '화면 GUI 목록',
             value:
               '팀 대시보드: 팀 진행 현황과 제출 상태를 확인합니다.\n분반별 제출물: 마일스톤별 팀 제출물을 확인합니다.',
+            attachment: teamOneFiles?.midterm[0],
           },
         ],
         title: '2. 화면 GUI 설계',
@@ -225,11 +230,15 @@ const presentationSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
         fields: [],
       },
     ],
-    presentationFileName: 'oop-01-1-presentation.pdf',
-    sourceArchiveFileName: 'oop-01-1-source.zip',
+    presentationFileName: teamOneFiles?.presentation.presentationFileName ?? null,
+    presentationFileDownloadUrl:
+      teamOneFiles?.presentation.presentationFileDownloadUrl ?? null,
+    sourceArchiveDownloadUrl:
+      teamOneFiles?.presentation.sourceArchiveDownloadUrl ?? null,
+    sourceArchiveFileName: teamOneFiles?.presentation.sourceArchiveFileName ?? null,
     teamLeaderName: '김민준',
     teamName: 'OOP-01 - 1팀',
-    videoUrl: 'https://youtu.be/demo-oop-01-1',
+    videoUrl: teamOneFiles?.presentation.videoUrl ?? null,
   },
   proposal: null,
   section: { id: 'oop-2026-2-01', label: 'OOP-01' },
@@ -246,10 +255,15 @@ const secondTeamPresentationSubmissionDetail: AdminMilestoneSubmissionDetailResp
     ...presentationSubmissionDetail,
     presentation: {
       ...presentationSubmissionDetail.presentation!,
-      presentationFileName: 'oop-01-2-presentation.pdf',
-      sourceArchiveFileName: 'oop-01-2-source.zip',
+      presentationFileName: teamTwoFiles?.presentation.presentationFileName ?? null,
+      presentationFileDownloadUrl:
+        teamTwoFiles?.presentation.presentationFileDownloadUrl ?? null,
+      sourceArchiveDownloadUrl:
+        teamTwoFiles?.presentation.sourceArchiveDownloadUrl ?? null,
+      sourceArchiveFileName: teamTwoFiles?.presentation.sourceArchiveFileName ?? null,
       teamLeaderName: '박지훈',
       teamName: 'OOP-01 - 2팀',
+      videoUrl: teamTwoFiles?.presentation.videoUrl ?? null,
     },
     submission: {
       id: 'submission-oop-01-2-presentation-submit',
@@ -280,6 +294,18 @@ const secondTeamMidtermSubmissionDetail: AdminMilestoneSubmissionDetailResponse 
     ...midtermSubmissionDetail,
     midterm: {
       ...midtermSubmissionDetail.midterm!,
+      blocks: midtermSubmissionDetail.midterm!.blocks.map(block =>
+        block.title === '2. 화면 GUI 설계'
+          ? {
+              ...block,
+              fields: block.fields.map(field =>
+                field.label === '화면 GUI 목록'
+                  ? { ...field, attachment: teamTwoFiles?.midterm[0] }
+                  : field,
+              ),
+            }
+          : block,
+      ),
       teamLeaderName: '박지훈',
       teamName: 'OOP-01 - 2팀',
     },

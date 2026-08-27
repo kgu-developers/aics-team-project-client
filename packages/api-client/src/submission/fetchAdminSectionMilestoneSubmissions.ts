@@ -6,6 +6,7 @@ export type AdminSectionMilestoneSubmissionSummaryDto = {
   feedbackCount: number | null;
   leaderName: string | null;
   linkLabel: string | null;
+  presentationFileDownloadUrl: string | null;
   presentationFileName: string | null;
   projectTopic: string | null;
   reportFileName: string | null;

@@ -2,6 +2,7 @@ import type { AdminTeamDashboardView } from '~/features/admin-team-dashboard/mod
 
 import { getAdminPeerEvaluationProgress } from './adminPeerEvaluationProgress';
 import { getAdminTeamMembersFixture } from './adminStudentTeams';
+import { getAdminSubmissionFiles } from './adminSubmissionFiles';
 
 const adminTeamRoles = {
   'student-1151-1': { isLeader: true, projectRole: 'ENGINE' as const },
@@ -19,6 +20,24 @@ const getDashboardMembers = (teamId: string) =>
     ...adminTeamRoles[member.id as keyof typeof adminTeamRoles],
   }));
 
+function getMilestoneSummary(teamId: string, milestoneId: string) {
+  const files = getAdminSubmissionFiles(teamId);
+
+  if (!files) {
+    return undefined;
+  }
+
+  if (milestoneId === 'midterm') {
+    return { attachmentCount: files.midterm.length };
+  }
+
+  if (milestoneId === 'presentation-submit') {
+    return { ...files.presentation };
+  }
+
+  return undefined;
+}
+
 export const adminTeamDashboardFixture: AdminTeamDashboardView = {
   id: 'team-1151-1',
   section: {
@@ -28,7 +47,7 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
   name: '1팀',
   projectTopic: 'AI 기반 팀 프로젝트 관리 서비스',
   members: getDashboardMembers('team-1151-1'),
-      milestones: [
+  milestones: [
     {
       id: 'proposal',
       title: '제안서',
@@ -43,6 +62,7 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
       id: 'midterm',
       title: '중간 점검',
       deadlineLabel: '2026-10-15',
+      summary: getMilestoneSummary('team-1151-1', 'midterm'),
       submissionId: 'submission-oop-01-1-midterm',
       status: {
         kind: 'submitted',
@@ -53,6 +73,7 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
       id: 'presentation-submit',
       title: '발표 자료 제출',
       deadlineLabel: '2026-11-12',
+      summary: getMilestoneSummary('team-1151-1', 'presentation-submit'),
       submissionId: 'submission-oop-01-1-presentation-submit',
       status: { kind: 'submitted', submittedDateLabel: '2026-11-12' },
     },
@@ -120,6 +141,7 @@ export const adminTeamDashboardFixtures: AdminTeamDashboardView[] = [
         id: 'midterm',
         title: '중간 점검',
         deadlineLabel: '2026-10-15',
+        summary: getMilestoneSummary('team-1151-2', 'midterm'),
         submissionId: 'submission-oop-01-2-midterm',
         status: {
           kind: 'submitted',
@@ -130,6 +152,7 @@ export const adminTeamDashboardFixtures: AdminTeamDashboardView[] = [
         id: 'presentation-submit',
         title: '발표 자료 제출',
         deadlineLabel: '2026-11-12',
+        summary: getMilestoneSummary('team-1151-2', 'presentation-submit'),
         submissionId: 'submission-oop-01-2-presentation-submit',
         status: { kind: 'submitted', submittedDateLabel: '2026-11-13' },
       },

@@ -1,6 +1,7 @@
 import type { AdminSectionMilestoneSubmissionsResponse } from '@aics/api-client';
 
 import { getAdminPeerEvaluationProgress } from './adminPeerEvaluationProgress';
+import { getAdminSubmissionFiles } from './adminSubmissionFiles';
 
 type MilestoneId =
   | 'proposal'
@@ -112,6 +113,7 @@ export function getAdminMilestoneSubmissionsFixture(
     submissions: teamSubmissions.map((team, index) => {
       const submissionDetail = submissionDetails?.[index] ?? null;
       const peerEvaluationProgress = getAdminPeerEvaluationProgress(team.teamId);
+      const submissionFiles = getAdminSubmissionFiles(team.teamId);
 
       return {
         id: `${team.id}-${typedMilestoneId}`,
@@ -120,7 +122,10 @@ export function getAdminMilestoneSubmissionsFixture(
         submissionId: submissionDetail?.submissionId ?? null,
         submittedAt: submissionDetail?.submittedAt ?? null,
         summary: {
-          attachmentCount: null,
+          attachmentCount:
+            typedMilestoneId === 'midterm'
+              ? (submissionFiles?.midterm.length ?? 0)
+              : null,
           feedbackCount: null,
           leaderName:
             typedMilestoneId === 'proposal'
@@ -128,8 +133,18 @@ export function getAdminMilestoneSubmissionsFixture(
                 ? '김민준'
                 : '박지훈'
               : null,
-          linkLabel: null,
-          presentationFileName: null,
+          linkLabel:
+            typedMilestoneId === 'presentation-submit'
+              ? (submissionFiles?.presentation.videoUrl ?? null)
+              : null,
+          presentationFileDownloadUrl:
+            typedMilestoneId === 'presentation-submit'
+              ? (submissionFiles?.presentation.presentationFileDownloadUrl ?? null)
+              : null,
+          presentationFileName:
+            typedMilestoneId === 'presentation-submit'
+              ? (submissionFiles?.presentation.presentationFileName ?? null)
+              : null,
           projectTopic:
             typedMilestoneId === 'proposal'
               ? 'AI 기반 팀 프로젝트 관리 서비스'
@@ -141,11 +156,17 @@ export function getAdminMilestoneSubmissionsFixture(
           reportDownloadUrl:
             typedMilestoneId === 'final-report' ? mockDownloadUrls.pdf : null,
           sourceArchiveFileName:
-            typedMilestoneId === 'final-report'
-              ? `oop-01-${index + 1}-final-report.zip`
-              : null,
+            typedMilestoneId === 'presentation-submit'
+              ? (submissionFiles?.presentation.sourceArchiveFileName ?? null)
+              : typedMilestoneId === 'final-report'
+                ? `oop-01-${index + 1}-final-report.zip`
+                : null,
           sourceArchiveDownloadUrl:
-            typedMilestoneId === 'final-report' ? mockDownloadUrls.zip : null,
+            typedMilestoneId === 'presentation-submit'
+              ? (submissionFiles?.presentation.sourceArchiveDownloadUrl ?? null)
+              : typedMilestoneId === 'final-report'
+                ? mockDownloadUrls.zip
+                : null,
           submittedMemberCount:
             typedMilestoneId === 'peer-review'
               ? peerEvaluationProgress.submittedMemberCount
