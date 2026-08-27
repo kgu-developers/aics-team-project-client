@@ -15,6 +15,10 @@ export const ENDPOINTS = {
     NOTICE_ATTACHMENT: (noticeId: string) =>
       `/admin/notices/${noticeId}/attachment`,
   },
+  ANNOUNCEMENTS: {
+    SECTION_LIST: (sectionId: string) =>
+      `/sections/${sectionId}/announcements`,
+  },
   SECTION: {
     STUDENT_DASHBOARD: (sectionId: string) =>
       `/sections/${sectionId}/dashboard/student`,
