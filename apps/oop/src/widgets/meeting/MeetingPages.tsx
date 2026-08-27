@@ -124,6 +124,11 @@ function MeetingEditor({
   useEffect(() => {
     editor?.setEditable(!isDisabled);
   }, [editor, isDisabled]);
+  useEffect(() => {
+    if (!editor || JSON.stringify(editor.getJSON()) === JSON.stringify(content))
+      return;
+    editor.commands.setContent(content, { emitUpdate: false });
+  }, [content, editor]);
   return (
     <div className={styles.fields}>
       <Text weight='medium'>회의 내용</Text>
@@ -621,9 +626,11 @@ export function MeetingListPage() {
 function ActionStatusControl({
   action,
   meetingId,
+  teamId,
 }: {
   action: MeetingAction;
   meetingId: string;
+  teamId: string;
 }) {
   const mutation = useUpdateMeetingActionMutation();
   return (
@@ -635,6 +642,7 @@ function ActionStatusControl({
           actionId: action.id,
           input: { status: status as MeetingActionStatus },
           meetingId,
+          teamId,
         })
       }
       options={statusOptions}
@@ -810,6 +818,7 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
                       <ActionStatusControl
                         action={action}
                         meetingId={meetingId}
+                        teamId={record.teamId}
                       />
                     ),
                     width: proportional(2, { minWidth: 140 }),

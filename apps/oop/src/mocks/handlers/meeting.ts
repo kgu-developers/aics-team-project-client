@@ -1,9 +1,10 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
-import type {
-  CreateMeetingRecordInput,
-  MeetingRecord,
-  UpdateMeetingActionInput,
-  UpdateMeetingRecordInput,
+import {
+  meetingActionStatuses,
+  type CreateMeetingRecordInput,
+  type MeetingRecord,
+  type UpdateMeetingActionInput,
+  type UpdateMeetingRecordInput,
 } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
@@ -148,7 +149,9 @@ export const meetingHandlers = [
       const input = (await request.json()) as UpdateMeetingActionInput;
       if (
         (input.content !== undefined && !input.content.trim()) ||
-        (input.assigneeUserId && !isMeetingMemberId(input.assigneeUserId))
+        (input.assigneeUserId && !isMeetingMemberId(input.assigneeUserId)) ||
+        (input.status !== undefined &&
+          !meetingActionStatuses.includes(input.status))
       )
         return error('INVALID_MEETING_ACTION', 400);
       return HttpResponse.json(

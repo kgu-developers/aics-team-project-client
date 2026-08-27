@@ -14,10 +14,15 @@ export function useUpdateMeetingActionMutation() {
       actionId: string;
       input: UpdateMeetingActionInput;
       meetingId: string;
+      teamId: string;
     }) => updateMeetingAction(actionId, input),
-    onSuccess: (_, { meetingId }) =>
+    onSuccess: (_, { meetingId, teamId }) => {
       void queryClient.invalidateQueries({
         queryKey: meetingKeys.detail(meetingId),
-      }),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: meetingKeys.list(teamId),
+      });
+    },
   });
 }

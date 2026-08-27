@@ -1,23 +1,30 @@
-import { fetchMeetingRecord, fetchMeetingRecords } from '@aics/api-client';
+import {
+  fetchMeetingRecord,
+  fetchMeetingRecords,
+  updateMeetingAction,
+} from '@aics/api-client';
 import type { MeetingRecord } from '@aics/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { PropsWithChildren } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useMeetingHomeSummaryQuery } from './useMeetingHomeSummaryQuery';
 import { useMeetingRecordQuery } from './useMeetingRecordQuery';
 import { useMeetingRecordsQuery } from './useMeetingRecordsQuery';
+import { useUpdateMeetingActionMutation } from './useUpdateMeetingActionMutation';
 
 import { getMeetingRecords } from '~/mocks/data/meeting';
 
 vi.mock('@aics/api-client', () => ({
   fetchMeetingRecord: vi.fn(),
   fetchMeetingRecords: vi.fn(),
+  updateMeetingAction: vi.fn(),
 }));
 
 const fetchRecordMock = vi.mocked(fetchMeetingRecord);
 const fetchRecordsMock = vi.mocked(fetchMeetingRecords);
+const updateActionMock = vi.mocked(updateMeetingAction);
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -34,6 +41,7 @@ function createWrapper() {
 afterEach(() => {
   fetchRecordMock.mockReset();
   fetchRecordsMock.mockReset();
+  updateActionMock.mockReset();
 });
 
 describe('meeting queries', () => {
@@ -121,5 +129,44 @@ describe('meeting queries', () => {
       'action-meeting-second',
       'action-meeting-oldest',
     ]);
+  });
+
+  it('액션 상태 변경 후 회의록 상세와 팀 목록 캐시를 모두 무효화한다', async () => {
+    const [record] = getMeetingRecords('team-07');
+    const action = record?.actions[0];
+    if (!record || !action)
+      throw new Error('meeting action fixture is required');
+    const queryClient = new QueryClient({
+      defaultOptions: { mutations: { retry: false } },
+    });
+    const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
+    updateActionMock.mockResolvedValue({ ...action, status: 'DONE' });
+
+    const { result } = renderHook(() => useUpdateMeetingActionMutation(), {
+      wrapper: ({ children }: PropsWithChildren) => (
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      ),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        actionId: action.id,
+        input: { status: 'DONE' },
+        meetingId: record.id,
+        teamId: record.teamId,
+      });
+    });
+
+    expect(updateActionMock).toHaveBeenCalledWith(action.id, {
+      status: 'DONE',
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['meeting-records', 'detail', record.id],
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['meeting-records', 'list', record.teamId],
+    });
   });
 });

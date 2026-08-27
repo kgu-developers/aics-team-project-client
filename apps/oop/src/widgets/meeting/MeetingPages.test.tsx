@@ -225,6 +225,61 @@ describe('MeetingNewPage', () => {
       );
     });
   });
+
+  it('편집 대상이 바뀌면 새 회의록 본문을 표시하고 해당 ID로 저장한다', async () => {
+    const firstRecord: MeetingRecord = {
+      ...meetingRecord,
+      content: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: '첫 번째 회의 내용' }],
+          },
+        ],
+      },
+    };
+    const secondRecord: MeetingRecord = {
+      ...meetingRecord,
+      id: 'meeting-2',
+      title: '두 번째 회의',
+      content: {
+        type: 'doc',
+        content: [
+          {
+            type: 'paragraph',
+            content: [{ type: 'text', text: '두 번째 회의 내용' }],
+          },
+        ],
+      },
+    };
+    queries.meetingRecord = firstRecord;
+    mutations.updateRecord.mockResolvedValue(secondRecord);
+    const { rerender } = renderWithRouter(
+      <MeetingEditPage meetingId={firstRecord.id} />,
+    );
+
+    expect(screen.getByText('첫 번째 회의 내용')).toBeInTheDocument();
+
+    queries.meetingRecord = secondRecord;
+    rerender(<MeetingEditPage meetingId={secondRecord.id} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('두 번째 회의 내용')).toBeInTheDocument();
+      expect(screen.queryByText('첫 번째 회의 내용')).not.toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: '저장' }));
+
+    await waitFor(() => {
+      expect(mutations.updateRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          input: expect.objectContaining({ content: secondRecord.content }),
+          meetingId: secondRecord.id,
+          teamId: secondRecord.teamId,
+        }),
+      );
+    });
+  });
 });
 
 function MeetingDeleteDialogHarness({ onConfirm }: { onConfirm: () => void }) {

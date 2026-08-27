@@ -57,6 +57,7 @@ export type {
   UpdateMeetingActionInput,
   UpdateMeetingRecordInput,
 } from './meeting/types';
+export { meetingActionStatuses } from './meeting/types';
 export type {
   MidReport,
   MidReportBlock,

@@ -96,6 +96,23 @@ describe('meetingHandlers', () => {
     expect(getMeetingRecord('meeting-1')).toBeDefined();
   });
 
+  it('지원하지 않는 액션 플랜 상태를 거부하고 기존 상태를 유지한다', async () => {
+    const response = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.MEETING.ACTION('meeting-action-1')}`,
+      {
+        method: 'PUT',
+        headers: leaderHeaders,
+        body: JSON.stringify({ status: 'CANCELLED' }),
+      },
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'INVALID_MEETING_ACTION',
+    });
+    expect(getMeetingRecord('meeting-1')?.actions[0]?.status).toBe('TODO');
+  });
+
   it('작성자이자 팀장인 사용자는 회의록을 삭제한다', async () => {
     const response = await fetch(
       `${API_BASE_URL}${ENDPOINTS.MEETING.RECORD('meeting-1')}`,
