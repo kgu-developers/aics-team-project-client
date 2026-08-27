@@ -1,8 +1,12 @@
 import type { AdminTeamDashboardView } from '~/features/admin-team-dashboard/model';
 
 import { getAdminPeerEvaluationProgress } from './adminPeerEvaluationProgress';
+import { adminPresentationEvaluationPeriodFixture } from './adminPresentationEvaluations';
 import { getAdminTeamMembersFixture } from './adminStudentTeams';
 import { getAdminSubmissionFiles } from './adminSubmissionFiles';
+
+const presentationEvaluationDeadlineLabel =
+  adminPresentationEvaluationPeriodFixture.endsAt.slice(0, 10);
 
 const adminTeamRoles = {
   'student-1151-1': { isLeader: true, projectRole: 'ENGINE' as const },
@@ -102,7 +106,7 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
     {
       id: 'presentation-evaluate',
       title: '발표 평가',
-      deadlineLabel: '2026-08-20',
+      deadlineLabel: presentationEvaluationDeadlineLabel,
       submissionId: null,
       status: { kind: 'evaluated' },
     },
@@ -170,7 +174,7 @@ export const adminTeamDashboardFixtures: AdminTeamDashboardView[] = [
       {
         id: 'presentation-evaluate',
         title: '발표 평가',
-        deadlineLabel: '2026-08-20',
+        deadlineLabel: presentationEvaluationDeadlineLabel,
         submissionId: null,
         status: { kind: 'evaluated' },
       },

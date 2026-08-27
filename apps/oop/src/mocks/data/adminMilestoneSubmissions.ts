@@ -94,7 +94,7 @@ const submissionDetailsByMilestone: Partial<
 export function getAdminMilestoneSubmissionsFixture(
   milestoneId: string,
 ): AdminSectionMilestoneSubmissionsResponse | undefined {
-  if (!(milestoneId in milestones)) return undefined;
+  if (!Object.hasOwn(milestones, milestoneId)) return undefined;
 
   const typedMilestoneId = milestoneId as MilestoneId;
   const submissionDetails = submissionDetailsByMilestone[typedMilestoneId];

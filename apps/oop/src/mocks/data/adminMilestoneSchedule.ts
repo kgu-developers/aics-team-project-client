@@ -1,5 +1,7 @@
 import type { AdminMilestoneScheduleResponse } from '@aics/api-client';
 
+import { adminPresentationEvaluationPeriodFixture } from './adminPresentationEvaluations';
+
 export const adminMilestoneScheduleFixture: AdminMilestoneScheduleResponse = {
   sections: [
     {
@@ -17,7 +19,7 @@ export const adminMilestoneScheduleFixture: AdminMilestoneScheduleResponse = {
         {
           id: 'presentation-evaluate',
           title: '발표 평가',
-          summary: '~08/20\n평가 완료',
+          summary: `~${adminPresentationEvaluationPeriodFixture.endsAt.slice(0, 10).replaceAll('-', '/')}\n평가 완료`,
         },
         {
           id: 'final-report',

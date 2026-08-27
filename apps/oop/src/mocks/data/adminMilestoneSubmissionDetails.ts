@@ -252,11 +252,62 @@ const presentationSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
   },
 };
 
+const secondTeamPresentationBlocks = [
+  {
+    title: '1. 프로젝트 개요',
+    description: '발표에서 소개할 프로젝트 내용을 정리합니다.',
+    fields: [
+      {
+        label: '프로젝트 제목',
+        value: teamTwoFiles?.proposal.projectTopic ?? '미정',
+      },
+      {
+        label: '개요 요약',
+        value: '캠퍼스 구성원의 학습 일정과 과제 관리를 돕는 서비스입니다.',
+      },
+    ],
+  },
+  {
+    title: '2. 주요 기능',
+    description: '시연할 핵심 기능을 정리합니다.',
+    fields: [
+      {
+        label: '기능 1',
+        value: '시간표 관리\n학기별 수업과 과제 일정을 한곳에서 관리합니다.',
+      },
+      {
+        label: '기능 2',
+        value: '과제 알림\n마감일을 기준으로 필요한 알림을 제공합니다.',
+      },
+    ],
+  },
+  {
+    title: '3. 주요 화면',
+    description: '발표에서 보여줄 대표 화면을 정리합니다.',
+    fields: [
+      {
+        label: '화면 1',
+        value: '학습 일정 화면\n수업과 과제 일정을 달력으로 확인합니다.',
+      },
+      {
+        label: '화면 2',
+        value: '과제 관리 화면\n과제 진행 상태와 마감일을 관리합니다.',
+      },
+    ],
+  },
+  {
+    title: '4. 시연 영상',
+    description: '발표에서 사용할 시연 영상 링크입니다.',
+    fields: [],
+  },
+];
+
 const secondTeamPresentationSubmissionDetail: AdminMilestoneSubmissionDetailResponse =
   {
     ...presentationSubmissionDetail,
     presentation: {
       ...presentationSubmissionDetail.presentation!,
+      blocks: secondTeamPresentationBlocks,
       presentationFileName:
         teamTwoFiles?.presentation.presentationFileName ?? null,
       presentationFileDownloadUrl:
@@ -269,6 +320,7 @@ const secondTeamPresentationSubmissionDetail: AdminMilestoneSubmissionDetailResp
       teamName: 'OOP-01 - 2팀',
       videoUrl: teamTwoFiles?.presentation.videoUrl ?? null,
     },
+    submittedAt: '2026/11/13',
     submission: {
       id: 'submission-oop-01-2-presentation-submit',
       teamId: 'team-1151-2',
@@ -286,6 +338,7 @@ const secondTeamProposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse
       teamLeaderName: '박지훈',
       teamName: 'OOP-01 - 2팀',
     },
+    submittedAt: '2026/09/06',
     submission: {
       id: 'submission-oop-01-2-proposal',
       teamId: 'team-1151-2',
@@ -313,6 +366,7 @@ const secondTeamMidtermSubmissionDetail: AdminMilestoneSubmissionDetailResponse 
       teamLeaderName: '박지훈',
       teamName: 'OOP-01 - 2팀',
     },
+    submittedAt: '2026/10/13',
     submission: {
       id: 'submission-oop-01-2-midterm',
       teamId: 'team-1151-2',

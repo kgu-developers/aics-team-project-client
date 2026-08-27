@@ -268,111 +268,119 @@ export default function AdminSubmissionsPage() {
           role='tabpanel'
         >
           {activeMilestoneId === 'presentation-evaluate' ? (
-            <>
-              <div className={styles.evaluationHeader}>
-                <Heading level={2}>발표 평가 목록</Heading>
-                <Button
-                  label='순서 배정 및 평가'
-                  onClick={() => setIsEvaluationSettingsOpen(true)}
-                />
-              </div>
-              {presentationEvaluationsQuery.isPending ? (
-                <Text aria-live='polite' role='status'>
-                  발표 평가 목록을 불러오는 중입니다.
-                </Text>
-              ) : presentationEvaluationsQuery.isError ? (
-                <EmptyState
-                  description='잠시 후 다시 시도해 주세요.'
-                  title='발표 평가 목록을 불러오지 못했습니다.'
-                />
-              ) : presentationEvaluationsQuery.data ? (
-                <>
-                  <Card>
-                    <Table
-                      columns={[
-                        {
-                          align: 'start',
-                          header: '팀',
-                          key: 'teamName',
-                          renderCell: team =>
-                            team.submissionId ? (
-                              <Link
-                                params={{ submissionId: team.submissionId }}
-                                search={{
-                                  milestoneId: 'presentation-evaluate',
-                                  sectionId: effectiveSectionId,
-                                }}
-                                to={ROUTES.ADMIN_SUBMISSION_DETAIL}
-                              >
-                                {team.teamName}
-                              </Link>
-                            ) : (
-                              team.teamName
-                            ),
-                          width: proportional(1, { minWidth: 128 }),
-                        },
-                        {
-                          align: 'start',
-                          header: '주제',
-                          key: 'projectTopic',
-                          renderCell: team => team.projectTopic ?? '-',
-                          width: proportional(2, { minWidth: 200 }),
-                        },
-                        ...presentationEvaluationsQuery.data.criteria.map(
-                          criterion => ({
-                            align: 'center' as const,
-                            header: criterion.label,
-                            key: criterion.id,
-                            renderCell: (
-                              team: AdminPresentationEvaluationTeamDto,
-                            ) => team.criteria[criterion.id] ?? '-',
-                            width: proportional(1, { minWidth: 116 }),
-                          }),
-                        ),
-                        {
-                          align: 'center',
-                          header: '합계',
-                          key: 'total',
-                          renderCell: team => {
-                            const scores =
-                              presentationEvaluationsQuery.data.criteria.map(
-                                criterion => team.criteria[criterion.id],
-                              );
-                            const submittedScores = scores.filter(
-                              (score): score is number => score !== null,
-                            );
-                            return submittedScores.length === scores.length
-                              ? submittedScores.reduce(
-                                  (sum, score) => sum + score,
-                                  0,
-                                )
-                              : '-';
-                          },
-                          width: proportional(0.7, { minWidth: 72 }),
-                        },
-                      ]}
-                      data={presentationEvaluationsQuery.data.teams}
-                      dividers='rows'
-                      textOverflow='wrap'
-                      verticalAlign='middle'
-                    />
-                  </Card>
-                  <AdminPresentationEvaluationSettingsDialog
-                    endsAt={
-                      presentationEvaluationsQuery.data.evaluationPeriod.endsAt
-                    }
-                    isOpen={isEvaluationSettingsOpen}
-                    sectionId={effectiveSectionId ?? ''}
-                    onClose={() => setIsEvaluationSettingsOpen(false)}
-                    startsAt={
-                      presentationEvaluationsQuery.data.evaluationPeriod
-                        .startsAt
-                    }
-                    teams={presentationEvaluationsQuery.data.teams}
+            !isAccessibleSection ? (
+              <EmptyState
+                description='담당 분반만 제출물을 조회할 수 있습니다.'
+                title='접근할 수 없는 분반입니다.'
+              />
+            ) : (
+              <>
+                <div className={styles.evaluationHeader}>
+                  <Heading level={2}>발표 평가 목록</Heading>
+                  <Button
+                    label='순서 배정 및 평가'
+                    onClick={() => setIsEvaluationSettingsOpen(true)}
                   />
-                </>
-              ) : null}
-            </>
+                </div>
+                {presentationEvaluationsQuery.isPending ? (
+                  <Text aria-live='polite' role='status'>
+                    발표 평가 목록을 불러오는 중입니다.
+                  </Text>
+                ) : presentationEvaluationsQuery.isError ? (
+                  <EmptyState
+                    description='잠시 후 다시 시도해 주세요.'
+                    title='발표 평가 목록을 불러오지 못했습니다.'
+                  />
+                ) : presentationEvaluationsQuery.data ? (
+                  <>
+                    <Card>
+                      <Table
+                        columns={[
+                          {
+                            align: 'start',
+                            header: '팀',
+                            key: 'teamName',
+                            renderCell: team =>
+                              team.submissionId ? (
+                                <Link
+                                  params={{ submissionId: team.submissionId }}
+                                  search={{
+                                    milestoneId: 'presentation-evaluate',
+                                    sectionId: effectiveSectionId,
+                                  }}
+                                  to={ROUTES.ADMIN_SUBMISSION_DETAIL}
+                                >
+                                  {team.teamName}
+                                </Link>
+                              ) : (
+                                team.teamName
+                              ),
+                            width: proportional(1, { minWidth: 128 }),
+                          },
+                          {
+                            align: 'start',
+                            header: '주제',
+                            key: 'projectTopic',
+                            renderCell: team => team.projectTopic ?? '-',
+                            width: proportional(2, { minWidth: 200 }),
+                          },
+                          ...presentationEvaluationsQuery.data.criteria.map(
+                            criterion => ({
+                              align: 'center' as const,
+                              header: criterion.label,
+                              key: criterion.id,
+                              renderCell: (
+                                team: AdminPresentationEvaluationTeamDto,
+                              ) => team.criteria[criterion.id] ?? '-',
+                              width: proportional(1, { minWidth: 116 }),
+                            }),
+                          ),
+                          {
+                            align: 'center',
+                            header: '합계',
+                            key: 'total',
+                            renderCell: team => {
+                              const scores =
+                                presentationEvaluationsQuery.data.criteria.map(
+                                  criterion => team.criteria[criterion.id],
+                                );
+                              const submittedScores = scores.filter(
+                                (score): score is number => score !== null,
+                              );
+                              return submittedScores.length === scores.length
+                                ? submittedScores.reduce(
+                                    (sum, score) => sum + score,
+                                    0,
+                                  )
+                                : '-';
+                            },
+                            width: proportional(0.7, { minWidth: 72 }),
+                          },
+                        ]}
+                        data={presentationEvaluationsQuery.data.teams}
+                        dividers='rows'
+                        textOverflow='wrap'
+                        verticalAlign='middle'
+                      />
+                    </Card>
+                    <AdminPresentationEvaluationSettingsDialog
+                      endsAt={
+                        presentationEvaluationsQuery.data.evaluationPeriod
+                          .endsAt
+                      }
+                      isOpen={isEvaluationSettingsOpen}
+                      sectionId={effectiveSectionId ?? ''}
+                      onClose={() => setIsEvaluationSettingsOpen(false)}
+                      startsAt={
+                        presentationEvaluationsQuery.data.evaluationPeriod
+                          .startsAt
+                      }
+                      teams={presentationEvaluationsQuery.data.teams}
+                    />
+                  </>
+                ) : null}
+              </>
+            )
           ) : activeTab.isListAvailable ? (
             <>
               <Heading level={2}>{activeTab.label} 목록</Heading>

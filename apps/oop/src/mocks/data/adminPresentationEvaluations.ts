@@ -1,12 +1,14 @@
 import type { AdminPresentationEvaluationsResponse } from '@aics/api-client';
 
+export const adminPresentationEvaluationPeriodFixture = {
+  startsAt: '2026-11-19T09:00:00+09:00',
+  endsAt: '2026-11-26T18:00:00+09:00',
+} as const;
+
 export const adminPresentationEvaluationsFixture: AdminPresentationEvaluationsResponse =
   {
     section: { id: 'oop-2026-2-01', label: 'OOP-01' },
-    evaluationPeriod: {
-      startsAt: '2026-11-19T09:00:00+09:00',
-      endsAt: '2026-11-26T18:00:00+09:00',
-    },
+    evaluationPeriod: { ...adminPresentationEvaluationPeriodFixture },
     criteria: [
       { id: 'completion', label: '프로젝트 완성도' },
       { id: 'implementation', label: '기능 구성과 구현' },

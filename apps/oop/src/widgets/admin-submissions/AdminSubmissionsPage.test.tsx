@@ -19,6 +19,8 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminSubmissionDetailPage from './AdminSubmissionDetailPage';
 import AdminSubmissionsPage from './AdminSubmissionsPage';
 
+import { getAdminMilestoneSubmissionDetailFixture } from '~/mocks/data/adminMilestoneSubmissionDetails';
+import { getAdminMilestoneSubmissionsFixture } from '~/mocks/data/adminMilestoneSubmissions';
 import { adminPresentationEvaluationsFixture } from '~/mocks/data/adminPresentationEvaluations';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
@@ -206,6 +208,19 @@ describe('AdminSubmissionsPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('접근할 수 없는 분반의 발표 평가는 설정이나 로딩 상태보다 접근 오류를 먼저 표시한다', async () => {
+    renderPage(
+      '/admin/submissions?milestoneId=presentation-evaluate&sectionId=not-assigned-section',
+    );
+
+    expect(
+      await screen.findByText('접근할 수 없는 분반입니다.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '순서 배정 및 평가' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('상호 평가 제출자 수에 따라 상세보기를 활성화한다', async () => {
     const user = userEvent.setup();
 
@@ -279,6 +294,22 @@ describe('AdminSubmissionsPage', () => {
     ).toHaveAttribute('href', 'https://youtu.be/demo-oop-01-1');
     expect(screen.getByText('3. 주요 화면')).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('상세 응답의 마일스톤 이름을 주소의 임시 검색값보다 우선 표시한다', async () => {
+    renderPage(
+      '/admin/submissions/submission-oop-01-2-presentation-submit?milestoneId=proposal&sectionId=oop-2026-2-01',
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: '발표 자료 제출 상세보기',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: '← 발표 자료 제출 목록으로' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/시간표 관리/)).toBeInTheDocument();
   });
 
   it('상호 평가 상세를 디자인 시스템 표로 표시하고 평가자 정보를 연다', async () => {
@@ -359,5 +390,20 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByText('제출물 상세를 불러오지 못했습니다.'),
     ).toBeInTheDocument();
+  });
+
+  it('알 수 없는 마일스톤 키는 제출 목록 fixture에서 찾지 않는다', () => {
+    expect(getAdminMilestoneSubmissionsFixture('constructor')).toBeUndefined();
+  });
+
+  it('2팀 발표 자료 상세는 2팀의 제출일과 프로젝트 내용을 사용한다', () => {
+    const detail = getAdminMilestoneSubmissionDetailFixture(
+      'submission-oop-01-2-presentation-submit',
+    );
+
+    expect(detail?.submittedAt).toBe('2026/11/13');
+    expect(detail?.presentation?.blocks[1]?.fields[0]?.value).toContain(
+      '시간표 관리',
+    );
   });
 });

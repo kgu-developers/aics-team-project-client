@@ -34,7 +34,7 @@ const milestoneLabels = {
 } as const;
 
 function getMilestoneLabel(milestoneId: string | undefined) {
-  if (milestoneId && milestoneId in milestoneLabels) {
+  if (milestoneId && Object.hasOwn(milestoneLabels, milestoneId)) {
     return milestoneLabels[milestoneId as keyof typeof milestoneLabels];
   }
 
@@ -66,11 +66,12 @@ export default function AdminSubmissionDetailPage() {
     milestoneId?: string;
     sectionId?: string;
   };
-  const milestoneLabel = getMilestoneLabel(search.milestoneId);
   const submissionQuery = useAdminMilestoneSubmissionDetailQuery(submissionId);
   const accessibleSectionIds =
     currentUser?.sections.map(section => section.id) ?? [];
   const detail = submissionQuery.data;
+  const milestoneLabel =
+    detail?.milestoneTitle ?? getMilestoneLabel(search.milestoneId);
   const studentsQuery = useAdminStudentsQuery(detail?.sectionId ?? '');
   const isAccessibleSection = Boolean(
     detail && accessibleSectionIds.includes(detail.sectionId),

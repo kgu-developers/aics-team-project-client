@@ -3,6 +3,7 @@ import {
   Button,
   Card,
   Dialog,
+  EmptyState,
   FileInput,
   Heading,
   MultiSelector,
@@ -11,6 +12,7 @@ import {
   TextInput,
 } from '@aics/design-system';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import { isAxiosError } from 'axios';
 import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -32,6 +34,10 @@ const productDateTimeFormatter = new Intl.DateTimeFormat('sv-SE', {
   timeZone: 'Asia/Seoul',
   year: 'numeric',
 });
+
+function isNoticeNotFoundError(error: unknown) {
+  return isAxiosError(error) && error.response?.status === 404;
+}
 
 function BackToList() {
   return (
@@ -326,6 +332,17 @@ export function AdminNoticeDetailPage() {
     return <div className={styles.page}>공지사항을 불러오는 중입니다.</div>;
   }
 
+  if (noticeQuery.isError && !isNoticeNotFoundError(noticeQuery.error)) {
+    return (
+      <div className={styles.page}>
+        <EmptyState
+          description='잠시 후 다시 시도해 주세요.'
+          title='공지사항을 불러오지 못했습니다.'
+        />
+      </div>
+    );
+  }
+
   if (!notice || !detail) {
     return (
       <div className={styles.page}>
@@ -413,6 +430,17 @@ export function AdminNoticeEditPage() {
 
   if (noticeQuery.isLoading) {
     return <div className={styles.page}>공지사항을 불러오는 중입니다.</div>;
+  }
+
+  if (noticeQuery.isError && !isNoticeNotFoundError(noticeQuery.error)) {
+    return (
+      <div className={styles.page}>
+        <EmptyState
+          description='잠시 후 다시 시도해 주세요.'
+          title='공지사항을 불러오지 못했습니다.'
+        />
+      </div>
+    );
   }
 
   if (!notice || !detail) {
