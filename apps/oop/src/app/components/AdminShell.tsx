@@ -1,3 +1,4 @@
+import { Divider } from '@aics/design-system';
 import { Link, Outlet, useRouterState } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -8,6 +9,7 @@ const menuItems = [
   { label: '홈', to: ROUTES.ADMIN },
   { label: '공지사항', to: ROUTES.ADMIN_NOTICES },
   { label: '수강생/팀 관리', to: ROUTES.ADMIN_STUDENT_TEAM },
+  { label: '분반별 제출물', to: ROUTES.ADMIN_SUBMISSIONS },
 ] as const;
 
 function isMenuItemActive(pathname: string, itemPath: string) {
@@ -27,9 +29,8 @@ export default function AdminShell() {
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
         <div className={styles.brand}>
-          <strong>AICS Team</strong>
-          <span>팀 프로젝트 운영 플랫폼</span>
-          <small>2026-2 · 객체지향프로그래밍</small>
+          <strong>객체지향 프로그래밍</strong>
+          <small>2026-2 · 팀 프로젝트</small>
         </div>
         <nav aria-label='관리자 메뉴' className={styles.nav}>
           {menuItems.map(item => {
@@ -45,16 +46,9 @@ export default function AdminShell() {
               </Link>
             );
           })}
-          {['분반별 제출물', '회의록'].map(item => (
-            <button
-              className={styles.navItem}
-              disabled
-              key={item}
-              type='button'
-            >
-              {item}
-            </button>
-          ))}
+          <button className={styles.navItem} disabled type='button'>
+            회의록
+          </button>
           <button className={styles.navItem} disabled type='button'>
             쪽지함 <span className={styles.count}>12</span>
           </button>
@@ -67,7 +61,19 @@ export default function AdminShell() {
         </Link>
       </aside>
       <main className={styles.main}>
-        <Outlet />
+        <div className={styles.content}>
+          <Outlet />
+        </div>
+        <footer className={styles.footer}>
+          <Divider />
+          <div className={styles.footerBrand}>
+            <img
+              alt='경기대학교'
+              className={styles.universityLogo}
+              src='/brand/kyonggi-university.png'
+            />
+          </div>
+        </footer>
       </main>
     </div>
   );

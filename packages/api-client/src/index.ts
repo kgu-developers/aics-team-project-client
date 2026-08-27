@@ -29,9 +29,22 @@ export {
 } from './evaluation';
 export { fetchTeams } from './teams/fetchTeams';
 export { submitTeam } from './teams/submitTeam';
-export { removeAdminNoticeAttachment } from './notices';
+export {
+  fetchAdminNotice,
+  fetchAdminNotices,
+  removeAdminNoticeAttachment,
+  type AdminNoticeDetailDto,
+  type AdminNoticeDto,
+  type AdminNoticesResponse,
+} from './notices';
 export { ENDPOINTS } from './constants/endpoints';
 export { fetchStudentHomeDashboard } from './studentHome/fetchStudentHomeDashboard';
+export {
+  fetchAdminMilestoneSchedule,
+  type AdminMilestoneScheduleMilestoneDto,
+  type AdminMilestoneScheduleResponse,
+  type AdminMilestoneScheduleSectionDto,
+} from './milestones';
 export {
   fetchMeetingRecord,
   fetchMeetingRecords,
@@ -59,9 +72,31 @@ export {
   updateProposalBlock,
 } from './proposal';
 export {
+  fetchAdminMilestoneSubmissionDetail,
+  fetchAdminSectionMilestoneSubmissions,
+  fetchAdminPresentationEvaluations,
+  updateAdminPresentationEvaluationSettings,
   fetchMyTeamSubmission,
   fetchSubmission,
   submitSubmissionVersion,
+  type AdminSectionMilestoneSubmissionItemDto,
+  type AdminSectionMilestoneSubmissionSummaryDto,
+  type AdminSectionMilestoneSubmissionsResponse,
+  type AdminPresentationEvaluationCriterionDto,
+  type AdminPresentationEvaluationTeamDto,
+  type AdminPresentationEvaluationsResponse,
+  type UpdateAdminPresentationEvaluationSettingsInput,
+  type AdminMilestoneSubmissionDetailResponse,
+  type AdminMidtermSubmissionBlockDto,
+  type AdminMidtermSubmissionFieldDto,
+  type AdminMidtermSubmissionDetailDto,
+  type AdminPresentationSubmissionBlockDto,
+  type AdminPresentationSubmissionDetailDto,
+  type AdminPeerEvaluationDetailDto,
+  type AdminPresentationEvaluationDetailDto,
+  type AdminProposalDataRowDto,
+  type AdminProposalScreenDto,
+  type AdminProposalSubmissionDetailDto,
 } from './submission';
 export {
   fetchTopicBoard,

@@ -1,5 +1,65 @@
 import type { AdminTeamDashboardView } from '~/features/admin-team-dashboard/model';
 
+import { getAdminMilestoneDeadlineLabel } from './adminMilestoneDeadlines';
+import { getAdminPeerEvaluationProgress } from './adminPeerEvaluationProgress';
+import { getAdminTeamMembersFixture } from './adminStudentTeams';
+import { getAdminSubmissionFiles } from './adminSubmissionFiles';
+
+const adminTeamRoles = {
+  'student-1151-1': { isLeader: true, projectRole: 'ENGINE' as const },
+  'student-1151-2': { isLeader: false, projectRole: 'GUI' as const },
+  'student-1151-3': { isLeader: true, projectRole: 'ENGINE' as const },
+  'student-1151-4': { isLeader: false, projectRole: 'GUI' as const },
+};
+
+const getDashboardMembers = (teamId: string) =>
+  getAdminTeamMembersFixture(teamId).map(member => ({
+    id: member.id,
+    name: member.name,
+    studentNumber: member.studentNumber,
+    major: member.major,
+    ...adminTeamRoles[member.id as keyof typeof adminTeamRoles],
+  }));
+
+function getMilestoneSummary(teamId: string, milestoneId: string) {
+  const files = getAdminSubmissionFiles(teamId);
+
+  if (!files) {
+    return undefined;
+  }
+
+  if (milestoneId === 'midterm') {
+    return { attachmentCount: files.midterm.length };
+  }
+
+  if (milestoneId === 'presentation-submit') {
+    return { ...files.presentation };
+  }
+
+  return undefined;
+}
+
+function getFinalReportDownloadFiles(teamId: string) {
+  const files = getAdminSubmissionFiles(teamId)?.finalReport;
+
+  if (!files) {
+    return [];
+  }
+
+  return [
+    {
+      downloadUrl: files.reportDownloadUrl,
+      fileName: files.reportFileName,
+      label: '보고서(pdf)',
+    },
+    {
+      downloadUrl: files.sourceArchiveDownloadUrl,
+      fileName: files.sourceArchiveFileName,
+      label: '전체 파일(zip)',
+    },
+  ];
+}
+
 export const adminTeamDashboardFixture: AdminTeamDashboardView = {
   id: 'team-1151-1',
   section: {
@@ -7,52 +67,61 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
     code: 'OOP-01',
   },
   name: '1팀',
-  projectTopic: 'AI 기반 팀 프로젝트 관리 서비스',
-  members: [
-    {
-      id: 'student-1151-1',
-      name: '김민준',
-      studentNumber: '20231234',
-      major: '컴퓨터공학과',
-      isLeader: true,
-      projectRole: 'ENGINE',
-    },
-    {
-      id: 'student-1151-2',
-      name: '이서연',
-      studentNumber: '20235678',
-      major: '소프트웨어학과',
-      isLeader: false,
-      projectRole: 'GUI',
-    },
-  ],
+  projectTopic:
+    getAdminSubmissionFiles('team-1151-1')?.proposal.projectTopic ?? null,
+  members: getDashboardMembers('team-1151-1'),
   milestones: [
     {
       id: 'proposal',
       title: '제안서',
-      deadlineLabel: '2026-08-24',
-      status: { kind: 'before-deadline' },
-    },
-    {
-      id: 'mid-review',
-      title: '중간 점검',
-      deadlineLabel: '2026-08-15',
-      status: { kind: 'not-submitted' },
-    },
-    {
-      id: 'presentation-material',
-      title: '발표 자료 제출',
-      deadlineLabel: '2026-08-17',
+      deadlineLabel: getAdminMilestoneDeadlineLabel('proposal'),
+      submissionId: 'submission-oop-01-1-proposal',
       status: {
         kind: 'submitted',
-        submittedDateLabel: '2026-08-17',
+        submittedDateLabel: '2026-09-05',
       },
     },
     {
-      id: 'presentation-evaluation',
+      id: 'midterm',
+      title: '중간 점검',
+      deadlineLabel: getAdminMilestoneDeadlineLabel('midterm'),
+      summary: getMilestoneSummary('team-1151-1', 'midterm'),
+      submissionId: 'submission-oop-01-1-midterm',
+      status: {
+        kind: 'submitted',
+        submittedDateLabel: '2026-10-12',
+      },
+    },
+    {
+      id: 'presentation-submit',
+      title: '발표 자료 제출',
+      deadlineLabel: getAdminMilestoneDeadlineLabel('presentation-submit'),
+      summary: getMilestoneSummary('team-1151-1', 'presentation-submit'),
+      submissionId: 'submission-oop-01-1-presentation-submit',
+      status: { kind: 'submitted', submittedDateLabel: '2026-11-12' },
+    },
+    {
+      id: 'presentation-evaluate',
       title: '발표 평가',
-      deadlineLabel: '2026-08-20',
+      deadlineLabel: getAdminMilestoneDeadlineLabel('presentation-evaluate'),
+      submissionId: null,
       status: { kind: 'evaluated' },
+    },
+    {
+      id: 'final-report',
+      title: '최종 보고서',
+      deadlineLabel: getAdminMilestoneDeadlineLabel('final-report'),
+      submissionId: 'submission-oop-01-1-final-report',
+      downloadFiles: getFinalReportDownloadFiles('team-1151-1'),
+      status: { kind: 'submitted', submittedDateLabel: '2026-12-07' },
+    },
+    {
+      id: 'peer-review',
+      title: '상호 평가',
+      deadlineLabel: getAdminMilestoneDeadlineLabel('peer-review'),
+      submissionId: 'submission-oop-01-1-peer-review',
+      status: { kind: 'submitted', submittedDateLabel: '2026-12-14' },
+      ...getAdminPeerEvaluationProgress('team-1151-1'),
     },
   ],
 };
@@ -66,49 +135,61 @@ export const adminTeamDashboardFixtures: AdminTeamDashboardView[] = [
       code: 'OOP-01',
     },
     name: '2팀',
-    projectTopic: '캠퍼스 학습 일정 관리 서비스',
-    members: [
-      {
-        id: 'student-1151-3',
-        name: '박지훈',
-        studentNumber: '20239876',
-        major: '컴퓨터공학과',
-        isLeader: true,
-        projectRole: 'ENGINE',
-      },
-      {
-        id: 'student-1151-4',
-        name: '최유진',
-        studentNumber: '20234567',
-        major: '인공지능학과',
-        isLeader: false,
-        projectRole: 'GUI',
-      },
-    ],
+    projectTopic:
+      getAdminSubmissionFiles('team-1151-2')?.proposal.projectTopic ?? null,
+    members: getDashboardMembers('team-1151-2'),
     milestones: [
       {
         id: 'proposal',
         title: '제안서',
-        deadlineLabel: '2026-08-24',
-        status: { kind: 'before-deadline' },
+        deadlineLabel: getAdminMilestoneDeadlineLabel('proposal'),
+        submissionId: 'submission-oop-01-2-proposal',
+        status: {
+          kind: 'submitted',
+          submittedDateLabel: '2026-09-06',
+        },
       },
       {
-        id: 'mid-review',
+        id: 'midterm',
         title: '중간 점검',
-        deadlineLabel: '2026-08-15',
-        status: { kind: 'not-submitted' },
+        deadlineLabel: getAdminMilestoneDeadlineLabel('midterm'),
+        summary: getMilestoneSummary('team-1151-2', 'midterm'),
+        submissionId: 'submission-oop-01-2-midterm',
+        status: {
+          kind: 'submitted',
+          submittedDateLabel: '2026-10-13',
+        },
       },
       {
-        id: 'presentation-material',
+        id: 'presentation-submit',
         title: '발표 자료 제출',
-        deadlineLabel: '2026-08-17',
-        status: { kind: 'not-submitted' },
+        deadlineLabel: getAdminMilestoneDeadlineLabel('presentation-submit'),
+        summary: getMilestoneSummary('team-1151-2', 'presentation-submit'),
+        submissionId: 'submission-oop-01-2-presentation-submit',
+        status: { kind: 'submitted', submittedDateLabel: '2026-11-13' },
       },
       {
-        id: 'presentation-evaluation',
+        id: 'presentation-evaluate',
         title: '발표 평가',
-        deadlineLabel: '2026-08-20',
+        deadlineLabel: getAdminMilestoneDeadlineLabel('presentation-evaluate'),
+        submissionId: null,
         status: { kind: 'evaluated' },
+      },
+      {
+        id: 'final-report',
+        title: '최종 보고서',
+        deadlineLabel: getAdminMilestoneDeadlineLabel('final-report'),
+        submissionId: 'submission-oop-01-2-final-report',
+        downloadFiles: getFinalReportDownloadFiles('team-1151-2'),
+        status: { kind: 'submitted', submittedDateLabel: '2026-12-08' },
+      },
+      {
+        id: 'peer-review',
+        title: '상호 평가',
+        deadlineLabel: getAdminMilestoneDeadlineLabel('peer-review'),
+        submissionId: null,
+        status: { kind: 'before-deadline' },
+        ...getAdminPeerEvaluationProgress('team-1151-2'),
       },
     ],
   },

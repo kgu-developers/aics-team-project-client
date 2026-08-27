@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { DeleteNoticeDialog } from './AdminNoticePages';
 
-import { adminNotices } from '~/mocks/data/adminNotices';
+import { adminNoticeDetails, adminNotices } from '~/mocks/data/adminNotices';
 
 const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
@@ -59,8 +59,8 @@ function NoticeDialogTestHarness() {
         삭제
       </button>
       <DeleteNoticeDialog
+        detail={{ ...adminNoticeDetails['1'], notice: adminNotices[0] }}
         isOpen={isOpen}
-        notice={adminNotices[0]}
         onClose={() => setIsOpen(false)}
       />
     </>

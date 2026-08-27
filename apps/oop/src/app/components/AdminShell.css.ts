@@ -77,7 +77,32 @@ export const account = style({
   padding: 12,
   textDecoration: 'none',
 });
-export const main = style({ minWidth: 0 });
+export const main = style({
+  display: 'flex',
+  flexDirection: 'column',
+  minWidth: 0,
+});
+export const content = style({
+  flex: 1,
+  minWidth: 0,
+});
+export const footer = style({
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: 105,
+  padding: '0 clamp(20px, 5vw, 48px)',
+});
+export const footerBrand = style({
+  alignItems: 'center',
+  display: 'flex',
+  flex: 1,
+  justifyContent: 'center',
+});
+export const universityLogo = style({
+  display: 'block',
+  height: 'auto',
+  width: 209,
+});
 globalStyle(brand + ' span, ' + account + ' span', {
   color: tokens.color.text.disabled,
   fontSize: 12,

@@ -9,11 +9,22 @@ export const ENDPOINTS = {
     ME: '/me/profile',
   },
   ADMIN: {
+    MILESTONE_SCHEDULE: '/admin/milestone-schedule',
+    MILESTONE_SUBMISSION_DETAIL: (submissionId: string) =>
+      `/admin/submissions/${submissionId}`,
+    SECTION_MILESTONE_SUBMISSIONS: (sectionId: string, milestoneId: string) =>
+      `/admin/sections/${sectionId}/milestones/${milestoneId}/submissions`,
+    SECTION_PRESENTATION_EVALUATIONS: (sectionId: string) =>
+      `/admin/sections/${sectionId}/presentation-evaluations`,
+    SECTION_PRESENTATION_EVALUATION_SETTINGS: (sectionId: string) =>
+      `/admin/sections/${sectionId}/presentation-evaluation-settings`,
     SECTION_STUDENTS: (sectionId: string) =>
       `/admin/sections/${sectionId}/students`,
     TEAM_DASHBOARD: (teamId: string) => `/admin/teams/${teamId}/dashboard`,
     NOTICE_ATTACHMENT: (noticeId: string) =>
       `/admin/notices/${noticeId}/attachment`,
+    NOTICES: '/admin/notices',
+    NOTICE_DETAIL: (noticeId: string) => `/admin/notices/${noticeId}`,
   },
   SECTION: {
     STUDENT_DASHBOARD: (sectionId: string) =>

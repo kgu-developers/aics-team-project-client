@@ -65,3 +65,14 @@ export const adminTeamsFixture: AdminTeamFixture[] = [
     memberIds: ['student-1151-3', 'student-1151-4'],
   },
 ];
+
+export function getAdminTeamMembersFixture(teamId: string) {
+  const team = adminTeamsFixture.find(item => item.id === teamId);
+  if (!team) return [];
+
+  return team.memberIds
+    .map(memberId =>
+      adminStudentsFixture.find(student => student.id === memberId),
+    )
+    .filter((student): student is AdminStudentFixture => student !== undefined);
+}
