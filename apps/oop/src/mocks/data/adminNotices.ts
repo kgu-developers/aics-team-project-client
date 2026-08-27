@@ -1,9 +1,4 @@
-export const noticeSectionFilters = [
-  '전체',
-  '1151(월6)',
-  '1152(월7)',
-  '1153(월8)',
-] as const;
+export const noticeSectionFilters = ['전체', 'OOP-01'] as const;
 
 export type NoticeSectionFilter = (typeof noticeSectionFilters)[number];
 
@@ -11,63 +6,63 @@ export const adminNotices = [
   {
     date: '2025-12-17',
     id: '1',
-    section: '1151(월6)',
+    section: 'OOP-01',
     title: '전체 접수 공지',
     writer: '이은정',
   },
   {
     date: '2025-12-17',
     id: '2',
-    section: '1152(월7)',
+    section: 'OOP-01',
     title: '프로젝트 산출물 제출 안내',
     writer: '이은정',
   },
   {
     date: '2025-12-15',
     id: '3',
-    section: '1153(월8)',
+    section: 'OOP-01',
     title: '10주차 발표 안내',
     writer: '이은정',
   },
   {
     date: '2025-12-17',
     id: '4',
-    section: '1151(월6)',
+    section: 'OOP-01',
     title: '전체 접수 공지',
     writer: '이은정',
   },
   {
     date: '2025-12-17',
     id: '5',
-    section: '1152(월7)',
+    section: 'OOP-01',
     title: '프로젝트 산출물 제출 안내',
     writer: '이은정',
   },
   {
     date: '2025-12-15',
     id: '6',
-    section: '1153(월8)',
+    section: 'OOP-01',
     title: '기말 필기 시험 접수 공지 (수정 12/16)',
     writer: '이은정',
   },
   {
     date: '2025-12-12',
     id: '7',
-    section: '1151(월6)',
+    section: 'OOP-01',
     title: '프로젝트 중간 점검 일정 안내',
     writer: '이은정',
   },
   {
     date: '2025-12-10',
     id: '8',
-    section: '1152(월7)',
+    section: 'OOP-01',
     title: '발표 자료 제출 전 확인 사항',
     writer: '이은정',
   },
   {
     date: '2025-12-08',
     id: '9',
-    section: '1153(월8)',
+    section: 'OOP-01',
     title: '상호 평가 진행 안내',
     writer: '이은정',
   },
