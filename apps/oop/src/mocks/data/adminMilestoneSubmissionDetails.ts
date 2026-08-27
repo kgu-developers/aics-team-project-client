@@ -1,7 +1,7 @@
 import type { AdminMilestoneSubmissionDetailResponse } from '@aics/api-client';
 
-import { getAdminSubmissionFiles } from './adminSubmissionFiles';
 import { adminStudentsFixture, adminTeamsFixture } from './adminStudentTeams';
+import { getAdminSubmissionFiles } from './adminSubmissionFiles';
 
 const teamOneFiles = getAdminSubmissionFiles('team-1151-1');
 const teamTwoFiles = getAdminSubmissionFiles('team-1151-2');
