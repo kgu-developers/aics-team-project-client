@@ -99,6 +99,28 @@ describe('AdminSubmissionsPage', () => {
     expect(screen.getAllByText('피드백: -')).toHaveLength(2);
   });
 
+  it('팀별 공통 제출 요약의 제안서 주제와 최종 보고서 파일을 표시한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    expect(
+      await screen.findByText(/AI 기반 팀 프로젝트 관리 서비스/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/캠퍼스 학습 일정 관리 서비스/),
+    ).toBeInTheDocument();
+
+    await user.click(await screen.findByRole('tab', { name: '최종 보고서' }));
+
+    expect(
+      screen.getByRole('link', { name: 'oop-01-2-final-report.pdf' }),
+    ).toHaveAttribute('download', 'oop-01-2-final-report.pdf');
+    expect(
+      screen.getByRole('link', { name: 'oop-01-2-final-report.zip' }),
+    ).toHaveAttribute('download', 'oop-01-2-final-report.zip');
+  });
+
   it('제출 완료된 상세보기에서 선택한 마일스톤 이름을 유지한다', async () => {
     const user = userEvent.setup();
 
@@ -312,6 +334,26 @@ describe('AdminSubmissionsPage', () => {
   it('존재하지 않는 중간 점검 상세는 오류 상태를 표시한다', async () => {
     renderPage(
       '/admin/submissions/submission-oop-01-missing-midterm?milestoneId=midterm&sectionId=oop-2026-2-01',
+    );
+
+    expect(
+      await screen.findByText('제출물 상세를 불러오지 못했습니다.'),
+    ).toBeInTheDocument();
+  });
+
+  it('존재하지 않는 발표 자료 상세는 오류 상태를 표시한다', async () => {
+    renderPage(
+      '/admin/submissions/submission-oop-01-missing-presentation?milestoneId=presentation-submit&sectionId=oop-2026-2-01',
+    );
+
+    expect(
+      await screen.findByText('제출물 상세를 불러오지 못했습니다.'),
+    ).toBeInTheDocument();
+  });
+
+  it('존재하지 않는 상호 평가 상세는 오류 상태를 표시한다', async () => {
+    renderPage(
+      '/admin/submissions/submission-oop-01-missing-peer-review?milestoneId=peer-review&sectionId=oop-2026-2-01',
     );
 
     expect(

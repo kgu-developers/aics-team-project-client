@@ -153,8 +153,14 @@ describe('AdminTeamDashboard', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '박지훈' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '최유진' })).toBeInTheDocument();
+    expect(
+      screen.getByText('캠퍼스 학습 일정 관리 서비스'),
+    ).toBeInTheDocument();
     expect(screen.getByText('최종 보고서')).toBeInTheDocument();
     expect(screen.getByText('상호 평가')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'oop-01-2-final-report.pdf' }),
+    ).toHaveAttribute('download', 'oop-01-2-final-report.pdf');
   });
 
   it('팀원 이름을 누르면 상세 정보를 표시하고 닫은 뒤 포커스를 돌려준다', async () => {

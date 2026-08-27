@@ -15,11 +15,6 @@ const section = {
   label: 'OOP-01',
 } as const;
 
-const mockDownloadUrls = {
-  pdf: 'data:application/pdf;base64,JVBERi0xLjQKJQ==',
-  zip: 'data:application/zip;base64,UEsDBAo=',
-} as const;
-
 const teamSubmissions = [
   {
     id: 'submission-oop-01-1',
@@ -112,7 +107,9 @@ export function getAdminMilestoneSubmissionsFixture(
     section,
     submissions: teamSubmissions.map((team, index) => {
       const submissionDetail = submissionDetails?.[index] ?? null;
-      const peerEvaluationProgress = getAdminPeerEvaluationProgress(team.teamId);
+      const peerEvaluationProgress = getAdminPeerEvaluationProgress(
+        team.teamId,
+      );
       const submissionFiles = getAdminSubmissionFiles(team.teamId);
 
       return {
@@ -139,7 +136,8 @@ export function getAdminMilestoneSubmissionsFixture(
               : null,
           presentationFileDownloadUrl:
             typedMilestoneId === 'presentation-submit'
-              ? (submissionFiles?.presentation.presentationFileDownloadUrl ?? null)
+              ? (submissionFiles?.presentation.presentationFileDownloadUrl ??
+                null)
               : null,
           presentationFileName:
             typedMilestoneId === 'presentation-submit'
@@ -147,25 +145,28 @@ export function getAdminMilestoneSubmissionsFixture(
               : null,
           projectTopic:
             typedMilestoneId === 'proposal'
-              ? 'AI 기반 팀 프로젝트 관리 서비스'
+              ? (submissionFiles?.proposal.projectTopic ?? null)
               : null,
           reportFileName:
             typedMilestoneId === 'final-report'
-              ? `oop-01-${index + 1}-final-report.pdf`
+              ? (submissionFiles?.finalReport.reportFileName ?? null)
               : null,
           reportDownloadUrl:
-            typedMilestoneId === 'final-report' ? mockDownloadUrls.pdf : null,
+            typedMilestoneId === 'final-report'
+              ? (submissionFiles?.finalReport.reportDownloadUrl ?? null)
+              : null,
           sourceArchiveFileName:
             typedMilestoneId === 'presentation-submit'
               ? (submissionFiles?.presentation.sourceArchiveFileName ?? null)
               : typedMilestoneId === 'final-report'
-                ? `oop-01-${index + 1}-final-report.zip`
+                ? (submissionFiles?.finalReport.sourceArchiveFileName ?? null)
                 : null,
           sourceArchiveDownloadUrl:
             typedMilestoneId === 'presentation-submit'
               ? (submissionFiles?.presentation.sourceArchiveDownloadUrl ?? null)
               : typedMilestoneId === 'final-report'
-                ? mockDownloadUrls.zip
+                ? (submissionFiles?.finalReport.sourceArchiveDownloadUrl ??
+                  null)
                 : null,
           submittedMemberCount:
             typedMilestoneId === 'peer-review'

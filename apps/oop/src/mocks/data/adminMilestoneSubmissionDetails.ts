@@ -36,7 +36,7 @@ const proposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
     members: ['이서연', '김민준'],
     projectDescription:
       '팀 프로젝트의 진행 상황과 제출물을 한곳에서 관리합니다.',
-    projectTitle: 'AI 기반 팀 프로젝트 관리 서비스',
+    projectTitle: teamOneFiles?.proposal.projectTopic ?? '미정',
     roles: '김민준: ENGINE · 이서연: GUI',
     schedule: '9월 도메인 설계 → 10월 중간보고서 → 11월 발표·최종 제출',
     screenDescription:
@@ -79,7 +79,7 @@ const midtermSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
         fields: [
           {
             label: '프로젝트 제목',
-            value: 'AI 기반 팀 프로젝트 관리 서비스',
+            value: teamOneFiles?.proposal.projectTopic ?? '미정',
           },
           {
             label: '주제 설명',
@@ -230,12 +230,14 @@ const presentationSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
         fields: [],
       },
     ],
-    presentationFileName: teamOneFiles?.presentation.presentationFileName ?? null,
+    presentationFileName:
+      teamOneFiles?.presentation.presentationFileName ?? null,
     presentationFileDownloadUrl:
       teamOneFiles?.presentation.presentationFileDownloadUrl ?? null,
     sourceArchiveDownloadUrl:
       teamOneFiles?.presentation.sourceArchiveDownloadUrl ?? null,
-    sourceArchiveFileName: teamOneFiles?.presentation.sourceArchiveFileName ?? null,
+    sourceArchiveFileName:
+      teamOneFiles?.presentation.sourceArchiveFileName ?? null,
     teamLeaderName: '김민준',
     teamName: 'OOP-01 - 1팀',
     videoUrl: teamOneFiles?.presentation.videoUrl ?? null,
@@ -255,12 +257,14 @@ const secondTeamPresentationSubmissionDetail: AdminMilestoneSubmissionDetailResp
     ...presentationSubmissionDetail,
     presentation: {
       ...presentationSubmissionDetail.presentation!,
-      presentationFileName: teamTwoFiles?.presentation.presentationFileName ?? null,
+      presentationFileName:
+        teamTwoFiles?.presentation.presentationFileName ?? null,
       presentationFileDownloadUrl:
         teamTwoFiles?.presentation.presentationFileDownloadUrl ?? null,
       sourceArchiveDownloadUrl:
         teamTwoFiles?.presentation.sourceArchiveDownloadUrl ?? null,
-      sourceArchiveFileName: teamTwoFiles?.presentation.sourceArchiveFileName ?? null,
+      sourceArchiveFileName:
+        teamTwoFiles?.presentation.sourceArchiveFileName ?? null,
       teamLeaderName: '박지훈',
       teamName: 'OOP-01 - 2팀',
       videoUrl: teamTwoFiles?.presentation.videoUrl ?? null,
@@ -278,7 +282,7 @@ const secondTeamProposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse
     proposal: {
       ...proposalSubmissionDetail.proposal!,
       members: ['박지훈', '최유진'],
-      projectTitle: '분반 프로젝트 협업 보드',
+      projectTitle: teamTwoFiles?.proposal.projectTopic ?? '미정',
       teamLeaderName: '박지훈',
       teamName: 'OOP-01 - 2팀',
     },
