@@ -1,11 +1,15 @@
 import type {
+  MeetingAction,
+  MeetingRecord,
   StudentHomeAnnouncement,
   StudentHomeHero as StudentHomeHeroData,
 } from '@aics/core';
 import { Button, Divider, EmptyState } from '@aics/design-system';
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowRight, Bell, ClipboardList, NotebookPen } from 'lucide-react';
 import { type KeyboardEvent, useRef, useState } from 'react';
+
+import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 
@@ -22,11 +26,17 @@ type ShortcutTabId = (typeof SHORTCUT_TABS)[number]['id'];
 type StudentHomeHeroProps = {
   hero: StudentHomeHeroData;
   announcements: StudentHomeAnnouncement[];
+  assignedActions?: MeetingAction[];
+  recentMeetingRecords?: MeetingRecord[];
+  meetingState?: 'error' | 'pending' | 'ready';
 };
 
 export default function StudentHomeHero({
   hero,
   announcements,
+  assignedActions = [],
+  recentMeetingRecords = [],
+  meetingState = 'ready',
 }: StudentHomeHeroProps) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<ShortcutTabId>('notice');
@@ -165,21 +175,116 @@ export default function StudentHomeHero({
                   title='등록된 공지가 없어요.'
                 />
               )
+            ) : activeTab === 'minutes' ? (
+              meetingState === 'pending' ? (
+                <EmptyState
+                  className={styles.emptyTab}
+                  description='팀 회의록을 불러오고 있어요.'
+                  isCompact
+                  title='잠시만 기다려 주세요.'
+                />
+              ) : meetingState === 'error' ? (
+                <EmptyState
+                  className={styles.emptyTab}
+                  description='회의록 목록에서 다시 확인해 주세요.'
+                  isCompact
+                  title='회의록을 불러오지 못했어요.'
+                />
+              ) : (
+                <div className={styles.noticeList}>
+                  {recentMeetingRecords.length > 0 ? (
+                    recentMeetingRecords.map((record, index) => (
+                      <div key={record.id}>
+                        <Link
+                          className={styles.noticeLink}
+                          params={{ meetingId: record.id }}
+                          to='/student/meetings/$meetingId'
+                        >
+                          <div className={styles.notice}>
+                            <p className={styles.noticeTitle}>{record.title}</p>
+                            <div className={styles.noticeMeta}>
+                              <p className={styles.noticeContent}>
+                                {record.createdBy.name} · 액션 플랜{' '}
+                                {record.actions.length}건
+                              </p>
+                              <p className={styles.noticeDate}>
+                                {record.heldAt.slice(0, 10)}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                        {index < recentMeetingRecords.length - 1 ? (
+                          <Divider className={styles.divider} />
+                        ) : null}
+                      </div>
+                    ))
+                  ) : (
+                    <EmptyState
+                      className={styles.emptyTab}
+                      description='첫 회의를 기록하면 이곳에서 바로 확인할 수 있어요.'
+                      isCompact
+                      title='아직 작성된 회의록이 없어요.'
+                    />
+                  )}
+                  <Button
+                    className={styles.more}
+                    label='더보기'
+                    onClick={() => navigate({ to: ROUTES.STUDENT.MEETINGS })}
+                    size='sm'
+                    variant='ghost'
+                  />
+                </div>
+              )
             ) : (
-              <EmptyState
-                className={styles.emptyTab}
-                description={
-                  activeTab === 'minutes'
-                    ? '회의록을 작성하면 이곳에서 확인할 수 있어요.'
-                    : '팀의 다음 할 일을 등록하면 이곳에서 확인할 수 있어요.'
-                }
-                isCompact
-                title={
-                  activeTab === 'minutes'
-                    ? '아직 작성된 회의록이 없어요.'
-                    : '아직 등록된 액션 플랜이 없어요.'
-                }
-              />
+              <div className={styles.noticeList}>
+                {meetingState === 'pending' ? (
+                  <EmptyState
+                    className={styles.emptyTab}
+                    description='팀의 액션 플랜을 불러오고 있어요.'
+                    isCompact
+                    title='잠시만 기다려 주세요.'
+                  />
+                ) : meetingState === 'error' ? (
+                  <EmptyState
+                    className={styles.emptyTab}
+                    description='회의록 목록에서 다시 확인해 주세요.'
+                    isCompact
+                    title='액션 플랜을 불러오지 못했어요.'
+                  />
+                ) : assignedActions.length > 0 ? (
+                  assignedActions.map((action, index) => (
+                    <div key={action.id}>
+                      <Link
+                        className={styles.noticeLink}
+                        params={{ meetingId: action.meetingId }}
+                        to='/student/meetings/$meetingId'
+                      >
+                        <div className={styles.notice}>
+                          <p className={styles.noticeTitle}>{action.content}</p>
+                          <div className={styles.noticeMeta}>
+                            <p className={styles.noticeContent}>
+                              담당 {action.assignee?.name ?? '미정'}
+                            </p>
+                            <p className={styles.noticeDate}>
+                              {action.dueDate ?? '기한 미정'}
+                            </p>
+                          </div>
+                        </div>
+                      </Link>
+                      {index < assignedActions.length - 1 ? (
+                        <Divider className={styles.divider} />
+                      ) : null}
+                    </div>
+                  ))
+                ) : (
+                  <EmptyState
+                    className={styles.emptyTab}
+                    description='내 담당으로 지정된 할 일이 이곳에 표시돼요.'
+                    isCompact
+                    title='내게 배정된 액션 플랜이 없어요.'
+                  />
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -189,10 +294,10 @@ export default function StudentHomeHero({
         <Button
           className={styles.meetingCta}
           label='회의록 작성'
+          onClick={() => navigate({ to: ROUTES.STUDENT.MEETING_NEW })}
           size='lg'
           variant='primary'
         />
-        {/* TODO(KD3-75 follow-up): 회의록 티켓에서 작성 화면으로 연결한다. */}
       </div>
     </section>
   );

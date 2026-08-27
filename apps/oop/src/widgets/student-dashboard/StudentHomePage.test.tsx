@@ -1,3 +1,4 @@
+import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -12,7 +13,11 @@ import StudentHomePage, { getDashboardErrorContent } from './StudentHomePage';
 
 import { demoStudent } from '~/mocks/data/users';
 
-const server = setupServer();
+const server = setupServer(
+  http.get(`${API_BASE_URL}${ENDPOINTS.MEETING.RECORDS(':teamId')}`, () =>
+    HttpResponse.json([]),
+  ),
+);
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {

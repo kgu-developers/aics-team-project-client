@@ -15,16 +15,19 @@ import { useAuthStore } from '~/features/auth/authStore';
 
 import StudentHomePage from './StudentHomePage';
 
+import { resetMeetingMockData } from '~/mocks/data/meeting';
 import { resetTopicMockData } from '~/mocks/data/topic';
 import {
   demoCompletedAccessToken,
   demoCompletedStudent,
 } from '~/mocks/data/users';
+import { meetingHandlers } from '~/mocks/handlers/meeting';
 import { studentHomeHandlers } from '~/mocks/handlers/studentHome';
 import { submissionHandlers } from '~/mocks/handlers/submission';
 import { topicHandlers } from '~/mocks/handlers/topic';
 
 const server = setupServer(
+  ...meetingHandlers,
   ...studentHomeHandlers,
   ...submissionHandlers,
   ...topicHandlers,
@@ -55,6 +58,7 @@ beforeAll(() => {
 });
 
 afterEach(() => {
+  resetMeetingMockData();
   resetTopicMockData();
   server.resetHandlers();
   useAuthStore.getState().clearSession();
