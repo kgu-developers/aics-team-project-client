@@ -173,6 +173,20 @@ export const notice = style({
   padding: '6px 0',
 });
 
+export const noticeLink = style({
+  borderRadius: 8,
+  color: 'inherit',
+  display: 'block',
+  textDecoration: 'none',
+  ':hover': {
+    background: tokens.color.background.muted,
+  },
+  ':focus-visible': {
+    outline: `2px solid ${tokens.color.accent}`,
+    outlineOffset: 2,
+  },
+});
+
 export const noticeMeta = style({
   alignItems: 'baseline',
   display: 'flex',

@@ -10,7 +10,7 @@ EmptyState, Field, FileInput, IconButton, RadioList, RadioListItem, Selector, Se
 Tab, TabList
 HStack, VStack
 Text, Heading
-TextInput, TextArea, MultiSelector
+TextInput, TextArea, DateInput, MultiSelector
 AstryxThemeProvider, oopTheme, tokens
 ```
 

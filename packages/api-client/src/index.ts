@@ -33,6 +33,14 @@ export { removeAdminNoticeAttachment } from './notices';
 export { ENDPOINTS } from './constants/endpoints';
 export { fetchStudentHomeDashboard } from './studentHome/fetchStudentHomeDashboard';
 export {
+  fetchMeetingRecord,
+  fetchMeetingRecords,
+  removeMeetingRecord,
+  submitMeetingRecord,
+  updateMeetingAction,
+  updateMeetingRecord,
+} from './meeting';
+export {
   completeMidReportBlock,
   fetchCurrentMidReport,
   submitMidReport,
