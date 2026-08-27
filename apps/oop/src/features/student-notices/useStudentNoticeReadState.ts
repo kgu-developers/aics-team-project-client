@@ -40,7 +40,12 @@ export function useStudentNoticeReadState(userId: string, sectionId: string) {
     if (!storageKey || typeof window === 'undefined') return undefined;
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === storageKey) setReadIds(readStoredIds(storageKey));
+      if (
+        event.storageArea === window.localStorage &&
+        (event.key === storageKey || event.key === null)
+      ) {
+        setReadIds(readStoredIds(storageKey));
+      }
     };
 
     window.addEventListener('storage', handleStorage);
