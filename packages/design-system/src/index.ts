@@ -52,6 +52,8 @@ export { TextArea } from '@astryxdesign/core/TextArea';
 export type { TextAreaProps } from '@astryxdesign/core/TextArea';
 export { TextInput } from '@astryxdesign/core/TextInput';
 export type { TextInputProps } from '@astryxdesign/core/TextInput';
+export { DateInput } from '@astryxdesign/core/DateInput';
+export type { DateInputProps } from '@astryxdesign/core/DateInput';
 export { RadioList, RadioListItem } from '@astryxdesign/core/RadioList';
 export type {
   RadioListItemProps,

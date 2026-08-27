@@ -1,0 +1,6 @@
+export const meetingKeys = {
+  all: ['meeting-records'] as const,
+  list: (teamId: string) => [...meetingKeys.all, 'list', teamId] as const,
+  detail: (meetingId: string) =>
+    [...meetingKeys.all, 'detail', meetingId] as const,
+};

@@ -2,6 +2,7 @@ export const editLockTargetTypes = [
   'PROJECT_BLOCK',
   'MID_REPORT_BLOCK',
   'PRESENTATION_CONTENT_BLOCK',
+  'MEETING_RECORD',
 ] as const;
 
 export type EditLockTargetType = (typeof editLockTargetTypes)[number];

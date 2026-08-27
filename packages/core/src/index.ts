@@ -46,6 +46,19 @@ export type {
 } from './evaluation/types';
 export type { Milestone } from './milestone/types';
 export type {
+  CreateMeetingActionInput,
+  CreateMeetingRecordInput,
+  MeetingAction,
+  MeetingActionStatus,
+  MeetingParticipant,
+  MeetingRecord,
+  RichTextJson,
+  SaveMeetingActionInput,
+  UpdateMeetingActionInput,
+  UpdateMeetingRecordInput,
+} from './meeting/types';
+export { meetingActionStatuses } from './meeting/types';
+export type {
   MidReport,
   MidReportBlock,
   MidReportBlockKey,

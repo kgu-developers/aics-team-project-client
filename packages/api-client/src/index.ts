@@ -45,6 +45,13 @@ export {
   type AdminMilestoneScheduleResponse,
   type AdminMilestoneScheduleSectionDto,
 } from './milestones';
+  fetchMeetingRecord,
+  fetchMeetingRecords,
+  removeMeetingRecord,
+  submitMeetingRecord,
+  updateMeetingAction,
+  updateMeetingRecord,
+} from './meeting';
 export {
   completeMidReportBlock,
   fetchCurrentMidReport,

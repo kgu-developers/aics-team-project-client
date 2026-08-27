@@ -12,6 +12,8 @@ export const ROUTES = {
   STUDENT: {
     HOME: '/student',
     TEAM: '/student/team',
+    MEETINGS: '/student/meetings',
+    MEETING_NEW: '/student/meetings/new',
     PROJECT_TOPIC: '/student/project-topic',
     FEEDBACK: '/student/feedback',
     PEER_REVIEW: '/student/peer-review',

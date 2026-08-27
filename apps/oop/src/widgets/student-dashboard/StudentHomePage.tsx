@@ -3,6 +3,7 @@ import { isAxiosError } from 'axios';
 import { lazy, Suspense } from 'react';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import { useMeetingHomeSummaryQuery } from '~/features/meeting/queries';
 import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog';
 import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
 import { useStudentHomeDashboardQuery } from '~/features/student-home/queries';
@@ -61,6 +62,11 @@ export function getDashboardErrorContent(
 export default function StudentHomePage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const sectionId = currentUser?.sections[0]?.id ?? '';
+  const teamId = currentUser?.currentTeam?.id;
+  const meetingSummaryQuery = useMeetingHomeSummaryQuery(
+    teamId,
+    currentUser?.id,
+  );
 
   const { data, error, isFetching, isPending, refetch } =
     useStudentHomeDashboardQuery(sectionId);
@@ -109,7 +115,23 @@ export default function StudentHomePage() {
 
   return (
     <div className={styles.root}>
-      <StudentHomeHero announcements={data.announcements} hero={hero} />
+      <StudentHomeHero
+        announcements={data.announcements}
+        assignedActions={meetingSummaryQuery.data?.assignedActions ?? []}
+        hero={hero}
+        recentMeetingRecords={
+          meetingSummaryQuery.data?.recentMeetingRecords ?? []
+        }
+        meetingState={
+          !teamId
+            ? 'ready'
+            : meetingSummaryQuery.isPending
+              ? 'pending'
+              : meetingSummaryQuery.isError
+                ? 'error'
+                : 'ready'
+        }
+      />
       {DevelopmentMilestonePreview ? (
         <Suspense fallback={null}>
           <DevelopmentMilestonePreview
