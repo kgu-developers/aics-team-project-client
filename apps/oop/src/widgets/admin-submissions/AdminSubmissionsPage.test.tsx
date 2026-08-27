@@ -221,6 +221,29 @@ describe('AdminSubmissionsPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('담당하지 않은 분반의 상세 URL은 제출물 상세 요청을 보내지 않는다', async () => {
+    let detailRequestCount = 0;
+
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSION_DETAIL('submission-oop-01-1-proposal')}`,
+        () => {
+          detailRequestCount += 1;
+          return HttpResponse.json({});
+        },
+      ),
+    );
+
+    renderPage(
+      '/admin/submissions/submission-oop-01-1-proposal?milestoneId=proposal&sectionId=not-assigned-section',
+    );
+
+    expect(
+      await screen.findByText('접근할 수 없는 제출물입니다.'),
+    ).toBeInTheDocument();
+    expect(detailRequestCount).toBe(0);
+  });
+
   it('상호 평가 제출자 수에 따라 상세보기를 활성화한다', async () => {
     const user = userEvent.setup();
 

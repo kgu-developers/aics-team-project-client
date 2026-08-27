@@ -1,12 +1,9 @@
 import type { AdminTeamDashboardView } from '~/features/admin-team-dashboard/model';
 
+import { getAdminMilestoneDeadlineLabel } from './adminMilestoneDeadlines';
 import { getAdminPeerEvaluationProgress } from './adminPeerEvaluationProgress';
-import { adminPresentationEvaluationPeriodFixture } from './adminPresentationEvaluations';
 import { getAdminTeamMembersFixture } from './adminStudentTeams';
 import { getAdminSubmissionFiles } from './adminSubmissionFiles';
-
-const presentationEvaluationDeadlineLabel =
-  adminPresentationEvaluationPeriodFixture.endsAt.slice(0, 10);
 
 const adminTeamRoles = {
   'student-1151-1': { isLeader: true, projectRole: 'ENGINE' as const },
@@ -77,7 +74,7 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
     {
       id: 'proposal',
       title: '제안서',
-      deadlineLabel: '2026-08-24',
+      deadlineLabel: getAdminMilestoneDeadlineLabel('proposal'),
       submissionId: 'submission-oop-01-1-proposal',
       status: {
         kind: 'submitted',
@@ -87,7 +84,7 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
     {
       id: 'midterm',
       title: '중간 점검',
-      deadlineLabel: '2026-10-15',
+      deadlineLabel: getAdminMilestoneDeadlineLabel('midterm'),
       summary: getMilestoneSummary('team-1151-1', 'midterm'),
       submissionId: 'submission-oop-01-1-midterm',
       status: {
@@ -98,7 +95,7 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
     {
       id: 'presentation-submit',
       title: '발표 자료 제출',
-      deadlineLabel: '2026-11-12',
+      deadlineLabel: getAdminMilestoneDeadlineLabel('presentation-submit'),
       summary: getMilestoneSummary('team-1151-1', 'presentation-submit'),
       submissionId: 'submission-oop-01-1-presentation-submit',
       status: { kind: 'submitted', submittedDateLabel: '2026-11-12' },
@@ -106,14 +103,14 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
     {
       id: 'presentation-evaluate',
       title: '발표 평가',
-      deadlineLabel: presentationEvaluationDeadlineLabel,
+      deadlineLabel: getAdminMilestoneDeadlineLabel('presentation-evaluate'),
       submissionId: null,
       status: { kind: 'evaluated' },
     },
     {
       id: 'final-report',
       title: '최종 보고서',
-      deadlineLabel: '2026-12-07',
+      deadlineLabel: getAdminMilestoneDeadlineLabel('final-report'),
       submissionId: 'submission-oop-01-1-final-report',
       downloadFiles: getFinalReportDownloadFiles('team-1151-1'),
       status: { kind: 'submitted', submittedDateLabel: '2026-12-07' },
@@ -121,7 +118,7 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
     {
       id: 'peer-review',
       title: '상호 평가',
-      deadlineLabel: '2026-08-30',
+      deadlineLabel: getAdminMilestoneDeadlineLabel('peer-review'),
       submissionId: 'submission-oop-01-1-peer-review',
       status: { kind: 'submitted', submittedDateLabel: '2026-12-14' },
       ...getAdminPeerEvaluationProgress('team-1151-1'),
@@ -145,7 +142,7 @@ export const adminTeamDashboardFixtures: AdminTeamDashboardView[] = [
       {
         id: 'proposal',
         title: '제안서',
-        deadlineLabel: '2026-08-24',
+        deadlineLabel: getAdminMilestoneDeadlineLabel('proposal'),
         submissionId: 'submission-oop-01-2-proposal',
         status: {
           kind: 'submitted',
@@ -155,7 +152,7 @@ export const adminTeamDashboardFixtures: AdminTeamDashboardView[] = [
       {
         id: 'midterm',
         title: '중간 점검',
-        deadlineLabel: '2026-10-15',
+        deadlineLabel: getAdminMilestoneDeadlineLabel('midterm'),
         summary: getMilestoneSummary('team-1151-2', 'midterm'),
         submissionId: 'submission-oop-01-2-midterm',
         status: {
@@ -166,7 +163,7 @@ export const adminTeamDashboardFixtures: AdminTeamDashboardView[] = [
       {
         id: 'presentation-submit',
         title: '발표 자료 제출',
-        deadlineLabel: '2026-11-12',
+        deadlineLabel: getAdminMilestoneDeadlineLabel('presentation-submit'),
         summary: getMilestoneSummary('team-1151-2', 'presentation-submit'),
         submissionId: 'submission-oop-01-2-presentation-submit',
         status: { kind: 'submitted', submittedDateLabel: '2026-11-13' },
@@ -174,14 +171,14 @@ export const adminTeamDashboardFixtures: AdminTeamDashboardView[] = [
       {
         id: 'presentation-evaluate',
         title: '발표 평가',
-        deadlineLabel: presentationEvaluationDeadlineLabel,
+        deadlineLabel: getAdminMilestoneDeadlineLabel('presentation-evaluate'),
         submissionId: null,
         status: { kind: 'evaluated' },
       },
       {
         id: 'final-report',
         title: '최종 보고서',
-        deadlineLabel: '2026-12-07',
+        deadlineLabel: getAdminMilestoneDeadlineLabel('final-report'),
         submissionId: 'submission-oop-01-2-final-report',
         downloadFiles: getFinalReportDownloadFiles('team-1151-2'),
         status: { kind: 'submitted', submittedDateLabel: '2026-12-08' },
@@ -189,7 +186,7 @@ export const adminTeamDashboardFixtures: AdminTeamDashboardView[] = [
       {
         id: 'peer-review',
         title: '상호 평가',
-        deadlineLabel: '2026-08-30',
+        deadlineLabel: getAdminMilestoneDeadlineLabel('peer-review'),
         submissionId: null,
         status: { kind: 'before-deadline' },
         ...getAdminPeerEvaluationProgress('team-1151-2'),

@@ -66,15 +66,25 @@ export default function AdminSubmissionDetailPage() {
     milestoneId?: string;
     sectionId?: string;
   };
-  const submissionQuery = useAdminMilestoneSubmissionDetailQuery(submissionId);
   const accessibleSectionIds =
     currentUser?.sections.map(section => section.id) ?? [];
+  const isRequestedSectionAccessible = Boolean(
+    search.sectionId && accessibleSectionIds.includes(search.sectionId),
+  );
+  const submissionQuery = useAdminMilestoneSubmissionDetailQuery(
+    submissionId,
+    isRequestedSectionAccessible,
+  );
   const detail = submissionQuery.data;
   const milestoneLabel =
     detail?.milestoneTitle ?? getMilestoneLabel(search.milestoneId);
-  const studentsQuery = useAdminStudentsQuery(detail?.sectionId ?? '');
+  const studentsQuery = useAdminStudentsQuery(
+    isRequestedSectionAccessible ? (detail?.sectionId ?? '') : '',
+  );
   const isAccessibleSection = Boolean(
-    detail && accessibleSectionIds.includes(detail.sectionId),
+    detail &&
+    search.sectionId === detail.sectionId &&
+    accessibleSectionIds.includes(detail.sectionId),
   );
 
   function renderProposal() {
@@ -627,7 +637,12 @@ export default function AdminSubmissionDetailPage() {
           ← {milestoneLabel} 목록으로
         </Link>
       </div>
-      {submissionQuery.isPending ? (
+      {!isRequestedSectionAccessible ? (
+        <EmptyState
+          description='담당 분반의 제출물만 조회할 수 있습니다.'
+          title='접근할 수 없는 제출물입니다.'
+        />
+      ) : submissionQuery.isPending ? (
         <Text aria-live='polite' role='status'>
           제출물 상세를 불러오는 중입니다.
         </Text>

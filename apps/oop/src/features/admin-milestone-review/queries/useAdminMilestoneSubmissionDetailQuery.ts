@@ -6,9 +6,10 @@ import { adminMilestoneSubmissionsKeys } from './adminMilestoneSubmissionsKeys';
 
 export function useAdminMilestoneSubmissionDetailQuery(
   submissionId: string | undefined,
+  enabled = true,
 ) {
   return useQuery({
-    enabled: Boolean(submissionId),
+    enabled: Boolean(submissionId) && enabled,
     queryKey: adminMilestoneSubmissionsKeys.detail(submissionId ?? ''),
     queryFn: async () => {
       if (!submissionId) {

@@ -2,7 +2,7 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
 import { getAdminMilestoneSubmissionDetailFixture } from '../data/adminMilestoneSubmissionDetails';
-import { demoAdminAccessToken } from '../data/users';
+import { demoAdmin, demoAdminAccessToken } from '../data/users';
 
 export const adminMilestoneSubmissionDetailHandlers = [
   http.get(
@@ -28,6 +28,18 @@ export const adminMilestoneSubmissionDetailHandlers = [
             message: '제출물을 찾을 수 없습니다.',
           },
           { status: 404 },
+        );
+      }
+
+      if (
+        !demoAdmin.sections.some(section => section.id === fixture.section.id)
+      ) {
+        return HttpResponse.json(
+          {
+            code: 'FORBIDDEN',
+            message: '담당 분반의 제출물만 조회할 수 있습니다.',
+          },
+          { status: 403 },
         );
       }
 
