@@ -45,6 +45,7 @@ export {
   type AdminMilestoneScheduleResponse,
   type AdminMilestoneScheduleSectionDto,
 } from './milestones';
+export {
   fetchMeetingRecord,
   fetchMeetingRecords,
   removeMeetingRecord,
