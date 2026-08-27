@@ -17,4 +17,6 @@ export type TeamMilestoneProgress = {
   downloadFiles?: TeamMilestoneDownloadFile[];
   submissionId: string | null;
   status: TeamMilestoneProgressStatus;
+  submittedMemberCount?: number | null;
+  memberCount?: number | null;
 };

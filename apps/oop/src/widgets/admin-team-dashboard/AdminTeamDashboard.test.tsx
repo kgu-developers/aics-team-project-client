@@ -122,7 +122,7 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('발표 자료 제출')).toBeInTheDocument();
     expect(screen.getByText('최종 보고서')).toBeInTheDocument();
     expect(screen.getByText('상호 평가')).toBeInTheDocument();
-    expect(screen.getByText('제출자 수: 2 / 2')).toBeInTheDocument();
+    expect(screen.getByText('제출자 수: 1 / 2')).toBeInTheDocument();
     expect(screen.queryByText('발표 평가')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: '상세보기' }),

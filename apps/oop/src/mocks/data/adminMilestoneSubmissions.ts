@@ -1,6 +1,6 @@
 import type { AdminSectionMilestoneSubmissionsResponse } from '@aics/api-client';
 
-import { getAdminTeamMembersFixture } from './adminStudentTeams';
+import { getAdminPeerEvaluationProgress } from './adminPeerEvaluationProgress';
 
 type MilestoneId =
   | 'proposal'
@@ -111,7 +111,7 @@ export function getAdminMilestoneSubmissionsFixture(
     section,
     submissions: teamSubmissions.map((team, index) => {
       const submissionDetail = submissionDetails?.[index] ?? null;
-      const teamMemberCount = getAdminTeamMembersFixture(team.teamId).length;
+      const peerEvaluationProgress = getAdminPeerEvaluationProgress(team.teamId);
 
       return {
         id: `${team.id}-${typedMilestoneId}`,
@@ -148,12 +148,12 @@ export function getAdminMilestoneSubmissionsFixture(
             typedMilestoneId === 'final-report' ? mockDownloadUrls.zip : null,
           submittedMemberCount:
             typedMilestoneId === 'peer-review'
-              ? index === 0
-                ? 1
-                : 0
+              ? peerEvaluationProgress.submittedMemberCount
               : null,
           memberCount:
-            typedMilestoneId === 'peer-review' ? teamMemberCount : null,
+            typedMilestoneId === 'peer-review'
+              ? peerEvaluationProgress.memberCount
+              : null,
         },
         teamId: team.teamId,
         teamName: team.teamName,

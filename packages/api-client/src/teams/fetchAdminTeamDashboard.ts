@@ -22,6 +22,8 @@ export type AdminTeamDashboardMilestoneDto = {
   downloadFiles?: AdminTeamDashboardMilestoneDownloadFileDto[];
   submissionId: string | null;
   status: AdminTeamDashboardMilestoneStatusDto;
+  submittedMemberCount?: number | null;
+  memberCount?: number | null;
 };
 
 export type AdminTeamDashboardResponse = AdminTeamDashboard & {

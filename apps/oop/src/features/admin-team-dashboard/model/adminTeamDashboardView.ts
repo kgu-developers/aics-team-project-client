@@ -18,6 +18,8 @@ function toTeamMilestoneProgress(
     downloadFiles: milestone.downloadFiles?.map(file => ({ ...file })),
     id: milestone.id,
     status: milestone.status,
+    submittedMemberCount: milestone.submittedMemberCount,
+    memberCount: milestone.memberCount,
     submissionId: milestone.submissionId,
     title: milestone.title,
   };

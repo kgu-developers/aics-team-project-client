@@ -74,12 +74,8 @@ function getMilestoneSummary(
     case 'peer-review':
       return (
         <Text>
-          제출자 수:{' '}
-          {milestone.status.kind === 'submitted' ||
-          milestone.status.kind === 'evaluated'
-            ? teamMemberCount
-            : 0}{' '}
-          / {teamMemberCount}
+          제출자 수: {milestone.submittedMemberCount ?? 0} /{' '}
+          {milestone.memberCount ?? teamMemberCount}
         </Text>
       );
     default:

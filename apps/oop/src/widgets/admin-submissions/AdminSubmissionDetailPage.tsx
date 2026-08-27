@@ -14,9 +14,9 @@ import { useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { useAdminMilestoneSubmissionDetailQuery } from '~/features/admin-milestone-review/queries';
-import { useAuthStore } from '~/features/auth/authStore';
 import StudentDetailDialog from '~/features/admin-student-team/components/StudentDetailDialog';
 import { useAdminStudentsQuery } from '~/features/admin-student-team/queries/useAdminStudentsQuery';
+import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminSubmissionDetailPage.css';
 

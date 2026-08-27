@@ -1,5 +1,6 @@
 import type { AdminTeamDashboardView } from '~/features/admin-team-dashboard/model';
 
+import { getAdminPeerEvaluationProgress } from './adminPeerEvaluationProgress';
 import { getAdminTeamMembersFixture } from './adminStudentTeams';
 
 const adminTeamRoles = {
@@ -27,7 +28,7 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
   name: '1팀',
   projectTopic: 'AI 기반 팀 프로젝트 관리 서비스',
   members: getDashboardMembers('team-1151-1'),
-  milestones: [
+      milestones: [
     {
       id: 'proposal',
       title: '제안서',
@@ -88,6 +89,7 @@ export const adminTeamDashboardFixture: AdminTeamDashboardView = {
       deadlineLabel: '2026-08-30',
       submissionId: 'submission-oop-01-1-peer-review',
       status: { kind: 'submitted', submittedDateLabel: '2026-12-14' },
+      ...getAdminPeerEvaluationProgress('team-1151-1'),
     },
   ],
 };
@@ -164,6 +166,7 @@ export const adminTeamDashboardFixtures: AdminTeamDashboardView[] = [
         deadlineLabel: '2026-08-30',
         submissionId: null,
         status: { kind: 'before-deadline' },
+        ...getAdminPeerEvaluationProgress('team-1151-2'),
       },
     ],
   },
