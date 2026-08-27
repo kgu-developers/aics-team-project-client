@@ -13,6 +13,13 @@ export {
 } from './profile/updateMyProfile';
 export { API_BASE_URL, apiClient } from './client';
 export {
+  fetchAdminMeetingRecord,
+  fetchAdminMeetingRecords,
+  type AdminMeetingRecordDetailDto,
+  type AdminMeetingRecordSummaryDto,
+  type AdminMeetingRecordsResponse,
+} from './adminMeeting';
+export {
   fetchAdminTeamDashboard,
   type AdminTeamDashboardMilestoneDto,
   type AdminTeamDashboardMilestoneStatusDto,

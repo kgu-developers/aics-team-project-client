@@ -9,6 +9,8 @@ export const ENDPOINTS = {
     ME: '/me/profile',
   },
   ADMIN: {
+    MEETING_RECORDS: '/admin/meeting-records',
+    MEETING_RECORD: (meetingId: string) => `/admin/meeting-records/${meetingId}`,
     MILESTONE_SCHEDULE: '/admin/milestone-schedule',
     MILESTONE_SUBMISSION_DETAIL: (submissionId: string) =>
       `/admin/submissions/${submissionId}`,

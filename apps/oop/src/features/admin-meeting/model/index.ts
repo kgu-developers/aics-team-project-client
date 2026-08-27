@@ -1,0 +1,1 @@
+export { getRichTextPlainText } from './getRichTextPlainText';
