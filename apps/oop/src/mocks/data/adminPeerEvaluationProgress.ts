@@ -5,7 +5,9 @@ export const adminPeerEvaluationProgress = {
 
 export function getAdminPeerEvaluationProgress(teamId: string) {
   return (
-    adminPeerEvaluationProgress[teamId as keyof typeof adminPeerEvaluationProgress] ?? {
+    adminPeerEvaluationProgress[
+      teamId as keyof typeof adminPeerEvaluationProgress
+    ] ?? {
       submittedMemberCount: 0,
       memberCount: 0,
     }

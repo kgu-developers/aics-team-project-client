@@ -89,7 +89,10 @@ export function AdminPresentationEvaluationSettingsDialog({
         startsAt: start,
         endsAt: end,
       },
-      { onSuccess: onClose, onError: () => setError('저장하지 못했습니다. 다시 시도해 주세요.') },
+      {
+        onSuccess: onClose,
+        onError: () => setError('저장하지 못했습니다. 다시 시도해 주세요.'),
+      },
     );
   }
 
@@ -160,7 +163,12 @@ export function AdminPresentationEvaluationSettingsDialog({
             type='button'
             variant='secondary'
           />
-          <Button isDisabled={saveMutation.isPending} label={saveMutation.isPending ? '저장 중...' : '저장'} onClick={handleSave} type='button' />
+          <Button
+            isDisabled={saveMutation.isPending}
+            label={saveMutation.isPending ? '저장 중...' : '저장'}
+            onClick={handleSave}
+            type='button'
+          />
         </HStack>
       </VStack>
     </Dialog>
