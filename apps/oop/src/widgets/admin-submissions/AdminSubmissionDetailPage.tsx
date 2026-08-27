@@ -13,6 +13,10 @@ import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import {
+  AdminSubmissionExternalLink,
+  AdminSubmissionFileDownloadLink,
+} from '~/features/admin-milestone-review/components/AdminFinalReportDownloadSummary';
 import { useAdminMilestoneSubmissionDetailQuery } from '~/features/admin-milestone-review/queries';
 import StudentDetailDialog from '~/features/admin-student-team/components/StudentDetailDialog';
 import { useAdminStudentsQuery } from '~/features/admin-student-team/queries/useAdminStudentsQuery';
@@ -271,6 +275,32 @@ export default function AdminSubmissionDetailPage() {
                 >
                   <Text className={styles.fieldLabel}>{field.label}</Text>
                   <Text className={styles.fieldValue}>{field.value}</Text>
+                  {field.attachment ? (
+                    field.attachment.contentType.startsWith('image/') ? (
+                      <div className={styles.attachment}>
+                        <img
+                          alt={`${field.label} 미리보기`}
+                          className={styles.imagePreview}
+                          src={field.attachment.downloadUrl}
+                        />
+                        <a
+                          className={styles.downloadLink}
+                          download={field.attachment.fileName}
+                          href={field.attachment.downloadUrl}
+                        >
+                          {field.attachment.fileName} 다운로드
+                        </a>
+                      </div>
+                    ) : (
+                      <a
+                        className={styles.downloadLink}
+                        download={field.attachment.fileName}
+                        href={field.attachment.downloadUrl}
+                      >
+                        {field.attachment.fileName} 다운로드
+                      </a>
+                    )
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -311,14 +341,7 @@ export default function AdminSubmissionDetailPage() {
               <div className={`${styles.field} ${styles.fullWidthField}`}>
                 <Text className={styles.fieldLabel}>시연 링크</Text>
                 {presentation.videoUrl ? (
-                  <a
-                    className={styles.fieldValue}
-                    href={presentation.videoUrl}
-                    rel='noreferrer'
-                    target='_blank'
-                  >
-                    {presentation.videoUrl}
-                  </a>
+                  <AdminSubmissionExternalLink url={presentation.videoUrl} />
                 ) : (
                   <Text className={styles.fieldValue}>-</Text>
                 )}
@@ -342,15 +365,27 @@ export default function AdminSubmissionDetailPage() {
           <div className={styles.fieldGrid}>
             <div className={styles.field}>
               <Text className={styles.fieldLabel}>발표 자료 PDF</Text>
-              <Text className={styles.fieldValue}>
-                {presentation.presentationFileName ?? '-'}
-              </Text>
+              {presentation.presentationFileDownloadUrl &&
+              presentation.presentationFileName ? (
+                <AdminSubmissionFileDownloadLink
+                  downloadUrl={presentation.presentationFileDownloadUrl}
+                  fileName={presentation.presentationFileName}
+                />
+              ) : (
+                <Text className={styles.fieldValue}>-</Text>
+              )}
             </div>
             <div className={styles.field}>
               <Text className={styles.fieldLabel}>시연 파일 ZIP</Text>
-              <Text className={styles.fieldValue}>
-                {presentation.sourceArchiveFileName ?? '-'}
-              </Text>
+              {presentation.sourceArchiveDownloadUrl &&
+              presentation.sourceArchiveFileName ? (
+                <AdminSubmissionFileDownloadLink
+                  downloadUrl={presentation.sourceArchiveDownloadUrl}
+                  fileName={presentation.sourceArchiveFileName}
+                />
+              ) : (
+                <Text className={styles.fieldValue}>-</Text>
+              )}
             </div>
           </div>
         </section>

@@ -1,8 +1,15 @@
 import { EmptyState, Heading, Text } from '@aics/design-system';
 
-import { AdminFinalReportDownloadSummary } from '~/features/admin-milestone-review/components/AdminFinalReportDownloadSummary';
+import {
+  AdminFinalReportDownloadSummary,
+  AdminSubmissionExternalLink,
+  AdminSubmissionFileDownloadLink,
+} from '~/features/admin-milestone-review/components/AdminFinalReportDownloadSummary';
 import { AdminMilestoneSubmissionCard } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard';
-import { AdminMilestoneSubmissionDetailAction } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionDetailAction';
+import {
+  AdminMilestoneSubmissionBulkDownloadAction,
+  AdminMilestoneSubmissionDetailAction,
+} from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionDetailAction';
 import type { TeamMilestoneProgress } from '~/features/admin-team-dashboard/model';
 
 import * as styles from './AdminTeamMilestoneProgress.css';
@@ -29,11 +36,7 @@ function getFinalReportDownloadFiles(milestone: TeamMilestoneProgress) {
     },
   ];
 
-  return files.map(file => ({
-    ...file,
-    downloadLabel:
-      file.label === '보고서(pdf)' ? 'PDF 다운로드' : 'ZIP 다운로드',
-  }));
+  return files;
 }
 
 function getMilestoneSummary(
@@ -53,16 +56,45 @@ function getMilestoneSummary(
     case 'midterm':
       return (
         <>
-          <Text>첨부 파일 수: -</Text>
+          <Text>첨부 파일 수: {milestone.summary?.attachmentCount ?? '-'}</Text>
           <Text>피드백: -</Text>
         </>
       );
     case 'presentation-submit':
       return (
         <>
-          <Text>PPT 파일: -</Text>
-          <Text>시연 파일(zip): -</Text>
-          <Text>링크: -</Text>
+          <Text>
+            PPT 파일:{' '}
+            {milestone.summary?.presentationFileDownloadUrl &&
+            milestone.summary.presentationFileName ? (
+              <AdminSubmissionFileDownloadLink
+                downloadUrl={milestone.summary.presentationFileDownloadUrl}
+                fileName={milestone.summary.presentationFileName}
+              />
+            ) : (
+              '-'
+            )}
+          </Text>
+          <Text>
+            시연 파일(zip):{' '}
+            {milestone.summary?.sourceArchiveDownloadUrl &&
+            milestone.summary.sourceArchiveFileName ? (
+              <AdminSubmissionFileDownloadLink
+                downloadUrl={milestone.summary.sourceArchiveDownloadUrl}
+                fileName={milestone.summary.sourceArchiveFileName}
+              />
+            ) : (
+              '-'
+            )}
+          </Text>
+          <Text>
+            링크:{' '}
+            {milestone.summary?.videoUrl ? (
+              <AdminSubmissionExternalLink url={milestone.summary.videoUrl} />
+            ) : (
+              '-'
+            )}
+          </Text>
         </>
       );
     case 'final-report':
@@ -111,7 +143,9 @@ export default function AdminTeamMilestoneProgress({
             return (
               <AdminMilestoneSubmissionCard
                 action={
-                  milestone.id === 'final-report' ? null : (
+                  milestone.id === 'final-report' ? (
+                    <AdminMilestoneSubmissionBulkDownloadAction />
+                  ) : (
                     <AdminMilestoneSubmissionDetailAction
                       milestoneId={milestone.id}
                       sectionId={sectionId}

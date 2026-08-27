@@ -103,6 +103,29 @@ export const fieldValue = style({
   whiteSpace: 'pre-wrap',
 });
 
+export const attachment = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+  marginTop: 8,
+});
+
+export const imagePreview = style({
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: 6,
+  maxHeight: 280,
+  maxWidth: '100%',
+  objectFit: 'contain',
+});
+
+export const downloadLink = style({
+  color: tokens.color.text.accent,
+  fontSize: 14,
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
+  width: 'fit-content',
+});
+
 export const evaluationList = style({
   display: 'grid',
   gap: 12,

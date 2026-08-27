@@ -121,10 +121,12 @@ describe('AdminTeamMilestoneProgress', () => {
       'href',
       '/admin/submissions/submission-presentation-team-1?milestoneId=presentation-submit&sectionId=oop-01',
     );
-    expect(screen.getByRole('link', { name: 'PDF 다운로드' })).toHaveAttribute(
-      'download',
-      'oop-01-1-final-report.pdf',
-    );
+    expect(
+      screen.getByRole('link', { name: 'oop-01-1-final-report.pdf' }),
+    ).toHaveAttribute('download', 'oop-01-1-final-report.pdf');
+    expect(
+      screen.getByRole('button', { name: '일괄 다운로드' }),
+    ).toBeDisabled();
   });
 
   it('마일스톤이 없으면 빈 상태를 표시한다', async () => {

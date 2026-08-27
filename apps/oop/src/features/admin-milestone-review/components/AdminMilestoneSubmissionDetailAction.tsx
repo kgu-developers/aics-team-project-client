@@ -38,3 +38,15 @@ export function AdminMilestoneSubmissionDetailAction({
     </Link>
   );
 }
+
+export function AdminMilestoneSubmissionBulkDownloadAction() {
+  return (
+    <button
+      className={`${styles.detailLink} ${styles.detailButtonDisabled}`}
+      disabled
+      type='button'
+    >
+      일괄 다운로드
+    </button>
+  );
+}

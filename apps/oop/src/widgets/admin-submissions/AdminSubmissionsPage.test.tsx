@@ -95,7 +95,7 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('heading', { name: '중간 점검 목록' }),
     ).toBeInTheDocument();
-    expect(await screen.findAllByText('첨부 파일 수: -')).toHaveLength(2);
+    expect(await screen.findAllByText('첨부 파일 수: 1')).toHaveLength(2);
     expect(screen.getAllByText('피드백: -')).toHaveLength(2);
   });
 
@@ -112,22 +112,28 @@ describe('AdminSubmissionsPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('최종 보고서 PDF와 ZIP 다운로드 링크를 표시한다', async () => {
+  it('최종 보고서 파일명 다운로드 링크와 비활성화된 일괄 다운로드를 표시한다', async () => {
     const user = userEvent.setup();
 
     renderPage();
 
     await user.click(await screen.findByRole('tab', { name: '최종 보고서' }));
 
-    expect(screen.getAllByRole('link', { name: 'PDF 다운로드' })).toHaveLength(
-      2,
-    );
-    expect(screen.getAllByRole('link', { name: 'ZIP 다운로드' })).toHaveLength(
-      2,
-    );
     expect(
-      screen.getAllByRole('link', { name: 'PDF 다운로드' })[0],
+      screen.getAllByRole('link', { name: 'oop-01-1-final-report.pdf' }),
+    ).toHaveLength(1);
+    expect(
+      screen.getAllByRole('link', { name: 'oop-01-1-final-report.zip' }),
+    ).toHaveLength(1);
+    expect(
+      screen.getByRole('link', { name: 'oop-01-1-final-report.pdf' }),
     ).toHaveAttribute('download', 'oop-01-1-final-report.pdf');
+    expect(
+      screen.getAllByRole('button', { name: '일괄 다운로드' }),
+    ).toHaveLength(2);
+    expect(
+      screen.getAllByRole('button', { name: '일괄 다운로드' })[0],
+    ).toBeDisabled();
   });
 
   it('발표 평가 목록과 팀별 상세보기 링크를 표시한다', async () => {
@@ -238,7 +244,14 @@ describe('AdminSubmissionsPage', () => {
         name: 'OOP-01 - 1팀 발표 자료 제출',
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText('oop-01-1-presentation.pdf')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', {
+        name: 'oop-01-1-presentation.pdf',
+      }),
+    ).toHaveAttribute('download', 'oop-01-1-presentation.pdf');
+    expect(
+      screen.getByRole('link', { name: 'oop-01-1-source.zip' }),
+    ).toHaveAttribute('download', 'oop-01-1-source.zip');
     expect(
       screen.getByRole('link', { name: 'https://youtu.be/demo-oop-01-1' }),
     ).toHaveAttribute('href', 'https://youtu.be/demo-oop-01-1');

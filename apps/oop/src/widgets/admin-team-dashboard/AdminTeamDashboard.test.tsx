@@ -123,6 +123,13 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('최종 보고서')).toBeInTheDocument();
     expect(screen.getByText('상호 평가')).toBeInTheDocument();
     expect(screen.getByText('제출자 수: 1 / 2')).toBeInTheDocument();
+    expect(screen.getByText('첨부 파일 수: 1')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'oop-01-1-presentation.pdf' }),
+    ).toHaveAttribute('download', 'oop-01-1-presentation.pdf');
+    expect(
+      screen.getByRole('link', { name: 'oop-01-1-source.zip' }),
+    ).toHaveAttribute('download', 'oop-01-1-source.zip');
     expect(screen.queryByText('발표 평가')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: '상세보기' }),

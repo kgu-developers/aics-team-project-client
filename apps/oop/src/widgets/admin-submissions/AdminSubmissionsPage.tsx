@@ -15,9 +15,16 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 
-import { AdminFinalReportDownloadSummary } from '~/features/admin-milestone-review/components/AdminFinalReportDownloadSummary';
+import {
+  AdminFinalReportDownloadSummary,
+  AdminSubmissionExternalLink,
+  AdminSubmissionFileDownloadLink,
+} from '~/features/admin-milestone-review/components/AdminFinalReportDownloadSummary';
 import { AdminMilestoneSubmissionCard } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard';
-import { AdminMilestoneSubmissionDetailAction } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionDetailAction';
+import {
+  AdminMilestoneSubmissionBulkDownloadAction,
+  AdminMilestoneSubmissionDetailAction,
+} from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionDetailAction';
 import type { AdminMilestoneSubmissionView } from '~/features/admin-milestone-review/model';
 import {
   useAdminMilestoneSubmissionsQuery,
@@ -69,12 +76,37 @@ function getSubmissionSummary(
       return (
         <>
           <Text>
-            PPT 파일: {submission.summary.presentationFileName ?? '-'}
+            PPT 파일:{' '}
+            {submission.summary.presentationFileDownloadUrl &&
+            submission.summary.presentationFileName ? (
+              <AdminSubmissionFileDownloadLink
+                downloadUrl={submission.summary.presentationFileDownloadUrl}
+                fileName={submission.summary.presentationFileName}
+              />
+            ) : (
+              '-'
+            )}
           </Text>
           <Text>
-            시연 파일(zip): {submission.summary.sourceArchiveFileName ?? '-'}
+            시연 파일(zip):{' '}
+            {submission.summary.sourceArchiveDownloadUrl &&
+            submission.summary.sourceArchiveFileName ? (
+              <AdminSubmissionFileDownloadLink
+                downloadUrl={submission.summary.sourceArchiveDownloadUrl}
+                fileName={submission.summary.sourceArchiveFileName}
+              />
+            ) : (
+              '-'
+            )}
           </Text>
-          <Text>링크: {submission.summary.linkLabel ?? '-'}</Text>
+          <Text>
+            링크:{' '}
+            {submission.summary.linkLabel ? (
+              <AdminSubmissionExternalLink url={submission.summary.linkLabel} />
+            ) : (
+              '-'
+            )}
+          </Text>
         </>
       );
     case 'final-report':
@@ -83,13 +115,11 @@ function getSubmissionSummary(
           files={[
             {
               downloadUrl: submission.summary.reportDownloadUrl,
-              downloadLabel: 'PDF 다운로드',
               fileName: submission.summary.reportFileName,
               label: '보고서(pdf)',
             },
             {
               downloadUrl: submission.summary.sourceArchiveDownloadUrl,
-              downloadLabel: 'ZIP 다운로드',
               fileName: submission.summary.sourceArchiveFileName,
               label: '전체 파일(zip)',
             },
@@ -383,7 +413,9 @@ export default function AdminSubmissionsPage() {
                     return (
                       <AdminMilestoneSubmissionCard
                         action={
-                          activeMilestoneId === 'final-report' ? null : (
+                          activeMilestoneId === 'final-report' ? (
+                            <AdminMilestoneSubmissionBulkDownloadAction />
+                          ) : (
                             <AdminMilestoneSubmissionDetailAction
                               milestoneId={activeTab.id}
                               sectionId={effectiveSectionId}
