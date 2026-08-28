@@ -14,13 +14,19 @@ import { HttpResponse, delay, http } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
+import { useAuthStore } from '~/features/auth/authStore';
+
 import AdminTeamDashboard from './AdminTeamDashboard';
 
 import { adminTeamDashboardFixture } from '~/mocks/data/adminTeamDashboard';
-import { demoAdminAccessToken } from '~/mocks/data/users';
+import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 import { adminTeamDashboardHandlers } from '~/mocks/handlers/adminTeamDashboard';
 
-const server = setupServer(...adminTeamDashboardHandlers);
+const server = setupServer(
+  ...adminMeetingHandlers,
+  ...adminTeamDashboardHandlers,
+);
 const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
   'close',
@@ -48,6 +54,7 @@ beforeAll(() => {
 });
 afterEach(() => {
   setApiAccessToken(null);
+  useAuthStore.setState({ accessToken: null, currentUser: null });
   server.resetHandlers();
 });
 afterAll(() => {
@@ -94,6 +101,10 @@ function renderPage(teamId: string) {
   });
 
   setApiAccessToken(demoAdminAccessToken);
+  useAuthStore.setState({
+    accessToken: demoAdminAccessToken,
+    currentUser: demoAdmin,
+  });
 
   return render(<RouterProvider router={router} />);
 }
@@ -161,6 +172,87 @@ describe('AdminTeamDashboard', () => {
     expect(
       screen.getByRole('link', { name: 'oop-01-2-final-report.pdf' }),
     ).toHaveAttribute('download', 'oop-01-2-final-report.pdf');
+  });
+
+  it('팀 회의록은 최신 3개만 표시하고 전체보기 URL에 분반과 팀을 유지한다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`, () =>
+        HttpResponse.json({
+          records: [
+            {
+              createdAt: '2026-10-01T09:00:00+09:00',
+              id: 'meeting-1',
+              sectionId: 'oop-2026-2-01',
+              sectionLabel: 'OOP-01',
+              teamId: 'team-1151-1',
+              teamLabel: '1팀',
+              title: '첫 회의',
+            },
+            {
+              createdAt: '2026-10-02T09:00:00+09:00',
+              id: 'meeting-2',
+              sectionId: 'oop-2026-2-01',
+              sectionLabel: 'OOP-01',
+              teamId: 'team-1151-1',
+              teamLabel: '1팀',
+              title: '두 번째 회의',
+            },
+            {
+              createdAt: '2026-10-03T09:00:00+09:00',
+              id: 'meeting-3',
+              sectionId: 'oop-2026-2-01',
+              sectionLabel: 'OOP-01',
+              teamId: 'team-1151-1',
+              teamLabel: '1팀',
+              title: '세 번째 회의',
+            },
+            {
+              createdAt: '2026-10-04T09:00:00+09:00',
+              id: 'meeting-4',
+              sectionId: 'oop-2026-2-01',
+              sectionLabel: 'OOP-01',
+              teamId: 'team-1151-1',
+              teamLabel: '1팀',
+              title: '네 번째 회의',
+            },
+          ],
+        }),
+      ),
+    );
+
+    renderPage('team-1151-1');
+
+    expect(await screen.findByText('네 번째 회의')).toBeInTheDocument();
+    expect(screen.getByText('세 번째 회의')).toBeInTheDocument();
+    expect(screen.getByText('두 번째 회의')).toBeInTheDocument();
+    expect(screen.queryByText('첫 회의')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: '회의록: 4개' })).toHaveLength(
+      5,
+    );
+    expect(
+      screen.getAllByRole('link', { name: '회의록: 4개' })[0],
+    ).toHaveAttribute(
+      'href',
+      '/admin/meetings?sectionId=oop-2026-2-01&teamId=team-1151-1',
+    );
+    expect(screen.getByRole('link', { name: '전체보기 →' })).toHaveAttribute(
+      'href',
+      '/admin/meetings?sectionId=oop-2026-2-01&teamId=team-1151-1',
+    );
+  });
+
+  it('팀 회의록이 없으면 빈 상태를 표시한다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`, () =>
+        HttpResponse.json({ records: [] }),
+      ),
+    );
+
+    renderPage('team-1151-1');
+
+    expect(
+      await screen.findByText('등록된 회의록이 없습니다.'),
+    ).toBeInTheDocument();
   });
 
   it('팀원 이름을 누르면 상세 정보를 표시하고 닫은 뒤 포커스를 돌려준다', async () => {

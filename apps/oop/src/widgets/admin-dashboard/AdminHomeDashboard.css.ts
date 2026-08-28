@@ -145,6 +145,11 @@ export const panel = style({
   minHeight: 138,
   padding: 12,
 });
+export const panelState = style({
+  color: tokens.color.text.secondary,
+  margin: 0,
+  padding: 12,
+});
 export const list = style({
   display: 'flex',
   flexDirection: 'column',

@@ -3,6 +3,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { useAdminMeetingRecordsQuery } from '~/features/admin-meeting/queries';
 import type {
   AdminMilestoneScheduleMilestoneView,
   AdminMilestoneScheduleSectionView,
@@ -13,10 +14,25 @@ import { useAuthStore } from '~/features/auth/authStore';
 import * as styles from './AdminHomeDashboard.css';
 import {
   dashboardInbox,
-  dashboardMinutes,
   dashboardNotices,
-  type DashboardListItem,
 } from '../../mocks/data/adminDashboard';
+
+type DashboardListItem = {
+  date: string;
+  id?: string;
+  meetingId?: string;
+  section: string;
+  sectionId?: string;
+  title: string;
+};
+
+function formatMeetingCreatedAt(value: string) {
+  return new Intl.DateTimeFormat('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric',
+  }).format(new Date(value));
+}
 
 function getMilestoneColumns(
   sections: readonly AdminMilestoneScheduleSectionView[],
@@ -35,9 +51,11 @@ function getMilestoneColumns(
 }
 
 function List({
+  isMeetingList = false,
   isNoticeList = false,
   items,
 }: {
+  isMeetingList?: boolean;
   isNoticeList?: boolean;
   items: readonly DashboardListItem[];
 }) {
@@ -54,6 +72,15 @@ function List({
             >
               {item.title}
             </Link>
+          ) : isMeetingList && item.meetingId && item.sectionId ? (
+            <Link
+              className={styles.itemTitle}
+              params={{ meetingId: item.meetingId }}
+              search={{ sectionId: item.sectionId }}
+              to={ROUTES.ADMIN_MEETING_DETAIL}
+            >
+              {item.title}
+            </Link>
           ) : (
             <span className={styles.itemTitle}>{item.title}</span>
           )}
@@ -65,11 +92,15 @@ function List({
 }
 
 function Panel({
+  emptyMessage,
+  isMeetingPanel = false,
   title,
   items,
   action,
   isNoticePanel = false,
 }: {
+  emptyMessage?: string;
+  isMeetingPanel?: boolean;
   title: string;
   items: readonly DashboardListItem[];
   action?: boolean;
@@ -85,6 +116,10 @@ function Panel({
           <Link className={styles.more} to={ROUTES.ADMIN_NOTICES}>
             전체보기 ›
           </Link>
+        ) : isMeetingPanel ? (
+          <Link className={styles.more} to={ROUTES.ADMIN_MEETINGS}>
+            전체보기 ›
+          </Link>
         ) : (
           <button className={styles.more} type='button'>
             전체보기 ›
@@ -92,7 +127,15 @@ function Panel({
         )}
       </div>
       <div className={styles.panel}>
-        <List isNoticeList={isNoticePanel} items={items} />
+        {items.length > 0 ? (
+          <List
+            isMeetingList={isMeetingPanel}
+            isNoticeList={isNoticePanel}
+            items={items}
+          />
+        ) : emptyMessage ? (
+          <p className={styles.panelState}>{emptyMessage}</p>
+        ) : null}
         {action ? (
           <div className={styles.action}>
             {isNoticePanel ? (
@@ -117,8 +160,28 @@ export default function AdminHomeDashboard() {
     currentUser?.sections.map(section => section.id) ?? [];
   const milestoneScheduleQuery =
     useAdminMilestoneScheduleQuery(accessibleSectionIds);
+  const meetingRecordsQuery = useAdminMeetingRecordsQuery(accessibleSectionIds);
   const scheduleSections = milestoneScheduleQuery.data?.sections ?? [];
   const milestoneColumns = getMilestoneColumns(scheduleSections);
+  const meetingItems: DashboardListItem[] = (
+    meetingRecordsQuery.data?.records ?? []
+  )
+    .slice(0, 4)
+    .map(record => ({
+      date: formatMeetingCreatedAt(record.createdAt),
+      meetingId: record.id,
+      section: `${record.sectionLabel} · ${record.teamLabel}`,
+      sectionId: record.sectionId,
+      title: record.title,
+    }));
+  const meetingEmptyMessage =
+    accessibleSectionIds.length === 0
+      ? '담당 분반이 없어 회의록을 표시할 수 없습니다.'
+      : meetingRecordsQuery.isPending
+        ? '회의록을 불러오는 중입니다.'
+        : meetingRecordsQuery.isError
+          ? '회의록을 불러오지 못했습니다.'
+          : '등록된 회의록이 없습니다.';
 
   return (
     <div className={styles.content}>
@@ -204,7 +267,12 @@ export default function AdminHomeDashboard() {
       </section>
       <div className={styles.grid}>
         <Panel action isNoticePanel items={dashboardNotices} title='공지사항' />
-        <Panel items={dashboardMinutes} title='회의록' />
+        <Panel
+          emptyMessage={meetingEmptyMessage}
+          isMeetingPanel
+          items={meetingItems}
+          title='회의록'
+        />
       </div>
       <Panel items={dashboardInbox} title='쪽지함' />
     </div>

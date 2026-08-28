@@ -13,6 +13,11 @@ import type { TeamMilestoneProgress } from '~/features/admin-team-dashboard/mode
 
 import AdminTeamMilestoneProgress from './AdminTeamMilestoneProgress';
 
+type MeetingCountState =
+  | { status: 'pending' }
+  | { status: 'error' }
+  | { count: number; status: 'ready' };
+
 const milestones: TeamMilestoneProgress[] = [
   {
     id: 'proposal',
@@ -74,7 +79,10 @@ const milestones: TeamMilestoneProgress[] = [
   },
 ];
 
-function renderProgress(items: TeamMilestoneProgress[]) {
+function renderProgress(
+  items: TeamMilestoneProgress[],
+  meetingCountState: MeetingCountState = { count: 2, status: 'ready' },
+) {
   const rootRoute = createRootRoute();
   const progressRoute = createRoute({
     component: () => (
@@ -83,8 +91,10 @@ function renderProgress(items: TeamMilestoneProgress[]) {
           milestones={items}
           projectTopic='구독 관리 가계부 프로젝트'
           sectionId='oop-01'
+          teamId='team-1'
           teamMemberCount={2}
           teamLeaderName='김ㅇㅇ'
+          meetingCountState={meetingCountState}
         />
       </AstryxThemeProvider>
     ),
@@ -110,6 +120,9 @@ describe('AdminTeamMilestoneProgress', () => {
     expect(screen.getByText('상호 평가')).toBeInTheDocument();
     expect(screen.getByText('제출자 수: 0 / 2')).toBeInTheDocument();
     expect(screen.queryByText('발표 평가')).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole('link', { name: '회의록: 2개' })[0],
+    ).toHaveAttribute('href', '/admin/meetings?sectionId=oop-01&teamId=team-1');
     expect(screen.getAllByRole('button', { name: '상세보기' })).toHaveLength(2);
     const detailLinks = screen.getAllByRole('link', { name: '상세보기' });
 
@@ -135,5 +148,21 @@ describe('AdminTeamMilestoneProgress', () => {
     expect(
       await screen.findByText('등록된 마일스톤이 없습니다.'),
     ).toBeInTheDocument();
+  });
+
+  it('회의록 수를 아직 알 수 없으면 0개로 표시하지 않는다', async () => {
+    renderProgress(milestones, { status: 'pending' });
+
+    expect(await screen.findAllByText('회의록 조회 중...')).toHaveLength(5);
+    expect(screen.queryByText('회의록: 0개')).not.toBeInTheDocument();
+  });
+
+  it('회의록 조회가 실패하면 실패 상태를 표시한다', async () => {
+    renderProgress(milestones, { status: 'error' });
+
+    expect(
+      await screen.findAllByText('회의록을 불러오지 못했습니다.'),
+    ).toHaveLength(5);
+    expect(screen.queryByText('회의록: 0개')).not.toBeInTheDocument();
   });
 });

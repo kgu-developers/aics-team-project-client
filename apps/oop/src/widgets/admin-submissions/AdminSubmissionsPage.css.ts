@@ -78,6 +78,16 @@ export const topic = style({
   fontWeight: 600,
 });
 
+export const meetingLink = style({
+  color: tokens.color.text.primary,
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
+  ':focus-visible': {
+    outline: `2px solid ${tokens.color.accent}`,
+    outlineOffset: 2,
+  },
+});
+
 export const backLink = style({
   color: tokens.color.text.accent,
   fontSize: 14,

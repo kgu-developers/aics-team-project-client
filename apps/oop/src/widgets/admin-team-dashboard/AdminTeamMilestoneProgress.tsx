@@ -1,4 +1,7 @@
 import { EmptyState, Heading, Text } from '@aics/design-system';
+import { Link } from '@tanstack/react-router';
+
+import { ROUTES } from '~/app/constants/routes';
 
 import {
   AdminFinalReportDownloadSummary,
@@ -18,8 +21,13 @@ type AdminTeamMilestoneProgressProps = {
   milestones: TeamMilestoneProgress[];
   projectTopic: string | null;
   sectionId: string;
+  teamId: string;
   teamMemberCount: number;
   teamLeaderName: string | null;
+  meetingCountState:
+    | { status: 'pending' }
+    | { status: 'error' }
+    | { count: number; status: 'ready' };
 };
 
 function getFinalReportDownloadFiles(milestone: TeamMilestoneProgress) {
@@ -119,8 +127,10 @@ export default function AdminTeamMilestoneProgress({
   milestones,
   projectTopic,
   sectionId,
+  teamId,
   teamMemberCount,
   teamLeaderName,
+  meetingCountState,
 }: AdminTeamMilestoneProgressProps) {
   const displayMilestones = milestones.filter(
     milestone => milestone.id !== 'presentation-evaluate',
@@ -155,7 +165,23 @@ export default function AdminTeamMilestoneProgress({
                 }
                 key={milestone.id}
                 label={milestone.title}
-                meetingCountLabel='회의록: -'
+                meetingCountLabel={
+                  meetingCountState.status === 'ready' ? (
+                    <Link
+                      className={styles.meetingLink}
+                      search={{ sectionId, teamId }}
+                      to={ROUTES.ADMIN_MEETINGS}
+                    >
+                      회의록: {meetingCountState.count}개
+                    </Link>
+                  ) : (
+                    <Text>
+                      {meetingCountState.status === 'pending'
+                        ? '회의록 조회 중...'
+                        : '회의록을 불러오지 못했습니다.'}
+                    </Text>
+                  )
+                }
                 messageCountLabel='쪽지: -'
                 secondaryLabel={`마감 ${milestone.deadlineLabel}`}
                 summary={getMilestoneSummary(

@@ -23,11 +23,13 @@ import { getAdminMilestoneSubmissionDetailFixture } from '~/mocks/data/adminMile
 import { getAdminMilestoneSubmissionsFixture } from '~/mocks/data/adminMilestoneSubmissions';
 import { adminPresentationEvaluationsFixture } from '~/mocks/data/adminPresentationEvaluations';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
 import { adminPresentationEvaluationHandlers } from '~/mocks/handlers/adminPresentationEvaluations';
 
 const server = setupServer(
+  ...adminMeetingHandlers,
   ...adminMilestoneSubmissionDetailHandlers,
   ...adminMilestoneSubmissionsHandlers,
   ...adminPresentationEvaluationHandlers,
@@ -121,6 +123,24 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('link', { name: 'oop-01-2-final-report.zip' }),
     ).toHaveAttribute('download', 'oop-01-2-final-report.zip');
+  });
+
+  it('제출물 카드의 회의록 수는 팀별 전체 회의록으로 표시하고 팀 필터 목록으로 이동한다', async () => {
+    renderPage();
+
+    const meetingLinks = await screen.findAllByRole('link', {
+      name: '회의록: 1개',
+    });
+
+    expect(meetingLinks).toHaveLength(2);
+    expect(meetingLinks[0]).toHaveAttribute(
+      'href',
+      '/admin/meetings?sectionId=oop-2026-2-01&teamId=team-1151-1',
+    );
+    expect(meetingLinks[1]).toHaveAttribute(
+      'href',
+      '/admin/meetings?sectionId=oop-2026-2-01&teamId=team-1151-2',
+    );
   });
 
   it('제출 완료된 상세보기에서 선택한 마일스톤 이름을 유지한다', async () => {

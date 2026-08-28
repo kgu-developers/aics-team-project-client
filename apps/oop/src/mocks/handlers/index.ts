@@ -1,3 +1,4 @@
+import { adminMeetingHandlers } from './adminMeetings';
 import { adminMilestoneScheduleHandlers } from './adminMilestoneSchedule';
 import { adminMilestoneSubmissionDetailHandlers } from './adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from './adminMilestoneSubmissions';
@@ -24,6 +25,7 @@ export const handlers = [
   ...adminMilestoneScheduleHandlers,
   ...adminMilestoneSubmissionDetailHandlers,
   ...adminMilestoneSubmissionsHandlers,
+  ...adminMeetingHandlers,
   ...adminNoticeHandlers,
   ...adminPresentationEvaluationHandlers,
   ...editLockHandlers,

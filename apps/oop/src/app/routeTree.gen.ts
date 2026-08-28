@@ -37,6 +37,7 @@ const AdminSubmissionsLazyRouteImport = createFileRoute('/admin/submissions')()
 const AdminStudentTeamLazyRouteImport = createFileRoute('/admin/student-team')()
 const AdminProfileLazyRouteImport = createFileRoute('/admin/profile')()
 const AdminNoticesLazyRouteImport = createFileRoute('/admin/notices')()
+const AdminMeetingsLazyRouteImport = createFileRoute('/admin/meetings')()
 const StudentNoticesIndexLazyRouteImport =
   createFileRoute('/student/notices/')()
 const StudentMeetingsIndexLazyRouteImport =
@@ -47,6 +48,7 @@ const AdminSubmissionsIndexLazyRouteImport = createFileRoute(
   '/admin/submissions/',
 )()
 const AdminNoticesIndexLazyRouteImport = createFileRoute('/admin/notices/')()
+const AdminMeetingsIndexLazyRouteImport = createFileRoute('/admin/meetings/')()
 const StudentNoticesNoticeIdLazyRouteImport = createFileRoute(
   '/student/notices/$noticeId',
 )()
@@ -74,6 +76,9 @@ const AdminSubmissionsSubmissionIdLazyRouteImport = createFileRoute(
 const AdminNoticesNewLazyRouteImport = createFileRoute('/admin/notices/new')()
 const AdminNoticesNoticeIdLazyRouteImport = createFileRoute(
   '/admin/notices/$noticeId',
+)()
+const AdminMeetingsMeetingIdLazyRouteImport = createFileRoute(
+  '/admin/meetings/$meetingId',
 )()
 const StudentNoticesNoticeIdIndexLazyRouteImport = createFileRoute(
   '/student/notices/$noticeId/',
@@ -218,6 +223,13 @@ const AdminNoticesLazyRoute = AdminNoticesLazyRouteImport.update({
   path: '/notices',
   getParentRoute: () => AdminLazyRoute,
 } as any).lazy(() => import('./routes/admin.notices.lazy').then((d) => d.Route))
+const AdminMeetingsLazyRoute = AdminMeetingsLazyRouteImport.update({
+  id: '/meetings',
+  path: '/meetings',
+  getParentRoute: () => AdminLazyRoute,
+} as any).lazy(() =>
+  import('./routes/admin.meetings.lazy').then((d) => d.Route),
+)
 const StudentNoticesIndexLazyRoute = StudentNoticesIndexLazyRouteImport.update({
   id: '/',
   path: '/',
@@ -254,6 +266,13 @@ const AdminNoticesIndexLazyRoute = AdminNoticesIndexLazyRouteImport.update({
   getParentRoute: () => AdminNoticesLazyRoute,
 } as any).lazy(() =>
   import('./routes/admin.notices.index.lazy').then((d) => d.Route),
+)
+const AdminMeetingsIndexLazyRoute = AdminMeetingsIndexLazyRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminMeetingsLazyRoute,
+} as any).lazy(() =>
+  import('./routes/admin.meetings.index.lazy').then((d) => d.Route),
 )
 const StudentNoticesNoticeIdLazyRoute =
   StudentNoticesNoticeIdLazyRouteImport.update({
@@ -333,6 +352,14 @@ const AdminNoticesNoticeIdLazyRoute =
     getParentRoute: () => AdminNoticesLazyRoute,
   } as any).lazy(() =>
     import('./routes/admin.notices.$noticeId.lazy').then((d) => d.Route),
+  )
+const AdminMeetingsMeetingIdLazyRoute =
+  AdminMeetingsMeetingIdLazyRouteImport.update({
+    id: '/$meetingId',
+    path: '/$meetingId',
+    getParentRoute: () => AdminMeetingsLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/admin.meetings.$meetingId.lazy').then((d) => d.Route),
   )
 const StudentNoticesNoticeIdIndexLazyRoute =
   StudentNoticesNoticeIdIndexLazyRouteImport.update({
@@ -416,6 +443,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminLazyRouteWithChildren
   '/login': typeof LoginLazyRoute
   '/student': typeof StudentLazyRouteWithChildren
+  '/admin/meetings': typeof AdminMeetingsLazyRouteWithChildren
   '/admin/notices': typeof AdminNoticesLazyRouteWithChildren
   '/admin/profile': typeof AdminProfileLazyRoute
   '/admin/student-team': typeof AdminStudentTeamLazyRoute
@@ -431,6 +459,7 @@ export interface FileRoutesByFullPath {
   '/student/team': typeof StudentTeamLazyRoute
   '/admin/': typeof AdminIndexLazyRoute
   '/student/': typeof StudentIndexLazyRoute
+  '/admin/meetings/$meetingId': typeof AdminMeetingsMeetingIdLazyRoute
   '/admin/notices/$noticeId': typeof AdminNoticesNoticeIdLazyRouteWithChildren
   '/admin/notices/new': typeof AdminNoticesNewLazyRoute
   '/admin/submissions/$submissionId': typeof AdminSubmissionsSubmissionIdLazyRoute
@@ -441,6 +470,7 @@ export interface FileRoutesByFullPath {
   '/student/meetings/$meetingId': typeof StudentMeetingsMeetingIdLazyRouteWithChildren
   '/student/meetings/new': typeof StudentMeetingsNewLazyRoute
   '/student/notices/$noticeId': typeof StudentNoticesNoticeIdLazyRouteWithChildren
+  '/admin/meetings/': typeof AdminMeetingsIndexLazyRoute
   '/admin/notices/': typeof AdminNoticesIndexLazyRoute
   '/admin/submissions/': typeof AdminSubmissionsIndexLazyRoute
   '/onboarding/team/': typeof OnboardingTeamIndexLazyRoute
@@ -468,6 +498,7 @@ export interface FileRoutesByTo {
   '/student/team': typeof StudentTeamLazyRoute
   '/admin': typeof AdminIndexLazyRoute
   '/student': typeof StudentIndexLazyRoute
+  '/admin/meetings/$meetingId': typeof AdminMeetingsMeetingIdLazyRoute
   '/admin/notices/new': typeof AdminNoticesNewLazyRoute
   '/admin/submissions/$submissionId': typeof AdminSubmissionsSubmissionIdLazyRoute
   '/admin/teams/$teamId': typeof AdminTeamsTeamIdLazyRoute
@@ -475,6 +506,7 @@ export interface FileRoutesByTo {
   '/onboarding/team/result': typeof OnboardingTeamResultLazyRoute
   '/onboarding/team/survey': typeof OnboardingTeamSurveyLazyRoute
   '/student/meetings/new': typeof StudentMeetingsNewLazyRoute
+  '/admin/meetings': typeof AdminMeetingsIndexLazyRoute
   '/admin/notices': typeof AdminNoticesIndexLazyRoute
   '/admin/submissions': typeof AdminSubmissionsIndexLazyRoute
   '/onboarding/team': typeof OnboardingTeamIndexLazyRoute
@@ -495,6 +527,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminLazyRouteWithChildren
   '/login': typeof LoginLazyRoute
   '/student': typeof StudentLazyRouteWithChildren
+  '/admin/meetings': typeof AdminMeetingsLazyRouteWithChildren
   '/admin/notices': typeof AdminNoticesLazyRouteWithChildren
   '/admin/profile': typeof AdminProfileLazyRoute
   '/admin/student-team': typeof AdminStudentTeamLazyRoute
@@ -510,6 +543,7 @@ export interface FileRoutesById {
   '/student/team': typeof StudentTeamLazyRoute
   '/admin/': typeof AdminIndexLazyRoute
   '/student/': typeof StudentIndexLazyRoute
+  '/admin/meetings/$meetingId': typeof AdminMeetingsMeetingIdLazyRoute
   '/admin/notices/$noticeId': typeof AdminNoticesNoticeIdLazyRouteWithChildren
   '/admin/notices/new': typeof AdminNoticesNewLazyRoute
   '/admin/submissions/$submissionId': typeof AdminSubmissionsSubmissionIdLazyRoute
@@ -520,6 +554,7 @@ export interface FileRoutesById {
   '/student/meetings/$meetingId': typeof StudentMeetingsMeetingIdLazyRouteWithChildren
   '/student/meetings/new': typeof StudentMeetingsNewLazyRoute
   '/student/notices/$noticeId': typeof StudentNoticesNoticeIdLazyRouteWithChildren
+  '/admin/meetings/': typeof AdminMeetingsIndexLazyRoute
   '/admin/notices/': typeof AdminNoticesIndexLazyRoute
   '/admin/submissions/': typeof AdminSubmissionsIndexLazyRoute
   '/onboarding/team/': typeof OnboardingTeamIndexLazyRoute
@@ -541,6 +576,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/student'
+    | '/admin/meetings'
     | '/admin/notices'
     | '/admin/profile'
     | '/admin/student-team'
@@ -556,6 +592,7 @@ export interface FileRouteTypes {
     | '/student/team'
     | '/admin/'
     | '/student/'
+    | '/admin/meetings/$meetingId'
     | '/admin/notices/$noticeId'
     | '/admin/notices/new'
     | '/admin/submissions/$submissionId'
@@ -566,6 +603,7 @@ export interface FileRouteTypes {
     | '/student/meetings/$meetingId'
     | '/student/meetings/new'
     | '/student/notices/$noticeId'
+    | '/admin/meetings/'
     | '/admin/notices/'
     | '/admin/submissions/'
     | '/onboarding/team/'
@@ -593,6 +631,7 @@ export interface FileRouteTypes {
     | '/student/team'
     | '/admin'
     | '/student'
+    | '/admin/meetings/$meetingId'
     | '/admin/notices/new'
     | '/admin/submissions/$submissionId'
     | '/admin/teams/$teamId'
@@ -600,6 +639,7 @@ export interface FileRouteTypes {
     | '/onboarding/team/result'
     | '/onboarding/team/survey'
     | '/student/meetings/new'
+    | '/admin/meetings'
     | '/admin/notices'
     | '/admin/submissions'
     | '/onboarding/team'
@@ -619,6 +659,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/student'
+    | '/admin/meetings'
     | '/admin/notices'
     | '/admin/profile'
     | '/admin/student-team'
@@ -634,6 +675,7 @@ export interface FileRouteTypes {
     | '/student/team'
     | '/admin/'
     | '/student/'
+    | '/admin/meetings/$meetingId'
     | '/admin/notices/$noticeId'
     | '/admin/notices/new'
     | '/admin/submissions/$submissionId'
@@ -644,6 +686,7 @@ export interface FileRouteTypes {
     | '/student/meetings/$meetingId'
     | '/student/meetings/new'
     | '/student/notices/$noticeId'
+    | '/admin/meetings/'
     | '/admin/notices/'
     | '/admin/submissions/'
     | '/onboarding/team/'
@@ -802,6 +845,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNoticesLazyRouteImport
       parentRoute: typeof AdminLazyRoute
     }
+    '/admin/meetings': {
+      id: '/admin/meetings'
+      path: '/meetings'
+      fullPath: '/admin/meetings'
+      preLoaderRoute: typeof AdminMeetingsLazyRouteImport
+      parentRoute: typeof AdminLazyRoute
+    }
     '/student/notices/': {
       id: '/student/notices/'
       path: '/'
@@ -836,6 +886,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/notices/'
       preLoaderRoute: typeof AdminNoticesIndexLazyRouteImport
       parentRoute: typeof AdminNoticesLazyRoute
+    }
+    '/admin/meetings/': {
+      id: '/admin/meetings/'
+      path: '/'
+      fullPath: '/admin/meetings/'
+      preLoaderRoute: typeof AdminMeetingsIndexLazyRouteImport
+      parentRoute: typeof AdminMeetingsLazyRoute
     }
     '/student/notices/$noticeId': {
       id: '/student/notices/$noticeId'
@@ -907,6 +964,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNoticesNoticeIdLazyRouteImport
       parentRoute: typeof AdminNoticesLazyRoute
     }
+    '/admin/meetings/$meetingId': {
+      id: '/admin/meetings/$meetingId'
+      path: '/$meetingId'
+      fullPath: '/admin/meetings/$meetingId'
+      preLoaderRoute: typeof AdminMeetingsMeetingIdLazyRouteImport
+      parentRoute: typeof AdminMeetingsLazyRoute
+    }
     '/student/notices/$noticeId/': {
       id: '/student/notices/$noticeId/'
       path: '/'
@@ -966,6 +1030,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminMeetingsLazyRouteChildren {
+  AdminMeetingsMeetingIdLazyRoute: typeof AdminMeetingsMeetingIdLazyRoute
+  AdminMeetingsIndexLazyRoute: typeof AdminMeetingsIndexLazyRoute
+}
+
+const AdminMeetingsLazyRouteChildren: AdminMeetingsLazyRouteChildren = {
+  AdminMeetingsMeetingIdLazyRoute: AdminMeetingsMeetingIdLazyRoute,
+  AdminMeetingsIndexLazyRoute: AdminMeetingsIndexLazyRoute,
+}
+
+const AdminMeetingsLazyRouteWithChildren =
+  AdminMeetingsLazyRoute._addFileChildren(AdminMeetingsLazyRouteChildren)
+
 interface AdminNoticesNoticeIdLazyRouteChildren {
   AdminNoticesNoticeIdEditLazyRoute: typeof AdminNoticesNoticeIdEditLazyRoute
   AdminNoticesNoticeIdIndexLazyRoute: typeof AdminNoticesNoticeIdIndexLazyRoute
@@ -1011,6 +1088,7 @@ const AdminSubmissionsLazyRouteWithChildren =
   AdminSubmissionsLazyRoute._addFileChildren(AdminSubmissionsLazyRouteChildren)
 
 interface AdminLazyRouteChildren {
+  AdminMeetingsLazyRoute: typeof AdminMeetingsLazyRouteWithChildren
   AdminNoticesLazyRoute: typeof AdminNoticesLazyRouteWithChildren
   AdminProfileLazyRoute: typeof AdminProfileLazyRoute
   AdminStudentTeamLazyRoute: typeof AdminStudentTeamLazyRoute
@@ -1020,6 +1098,7 @@ interface AdminLazyRouteChildren {
 }
 
 const AdminLazyRouteChildren: AdminLazyRouteChildren = {
+  AdminMeetingsLazyRoute: AdminMeetingsLazyRouteWithChildren,
   AdminNoticesLazyRoute: AdminNoticesLazyRouteWithChildren,
   AdminProfileLazyRoute: AdminProfileLazyRoute,
   AdminStudentTeamLazyRoute: AdminStudentTeamLazyRoute,

@@ -13,6 +13,8 @@ import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { AdminTeamMeetingRecordList } from '~/features/admin-meeting/components';
+import { useAdminMeetingRecordsQuery } from '~/features/admin-meeting/queries';
 import {
   AdminSubmissionExternalLink,
   AdminSubmissionFileDownloadLink,
@@ -85,6 +87,11 @@ export default function AdminSubmissionDetailPage() {
     detail &&
     search.sectionId === detail.sectionId &&
     accessibleSectionIds.includes(detail.sectionId),
+  );
+  const meetingRecordsQuery = useAdminMeetingRecordsQuery(
+    accessibleSectionIds,
+    detail ? { sectionId: detail.sectionId, teamId: detail.teamId } : undefined,
+    isAccessibleSection,
   );
 
   function renderProposal() {
@@ -656,21 +663,32 @@ export default function AdminSubmissionDetailPage() {
           description='담당 분반의 제출물만 조회할 수 있습니다.'
           title='접근할 수 없는 제출물입니다.'
         />
-      ) : detail.milestoneId === 'proposal' ? (
-        renderProposal()
-      ) : detail.milestoneId === 'midterm' ? (
-        renderMidterm()
-      ) : detail.milestoneId === 'presentation-submit' ? (
-        renderPresentation()
-      ) : detail.milestoneId === 'presentation-evaluate' ? (
-        renderPresentationEvaluation()
-      ) : detail.milestoneId === 'peer-review' ? (
-        renderPeerEvaluation()
       ) : (
-        <EmptyState
-          description='이 마일스톤의 상세보기는 후속 작업에서 연결합니다.'
-          title='표시할 상세 내용이 없습니다.'
-        />
+        <>
+          {detail.milestoneId === 'proposal' ? (
+            renderProposal()
+          ) : detail.milestoneId === 'midterm' ? (
+            renderMidterm()
+          ) : detail.milestoneId === 'presentation-submit' ? (
+            renderPresentation()
+          ) : detail.milestoneId === 'presentation-evaluate' ? (
+            renderPresentationEvaluation()
+          ) : detail.milestoneId === 'peer-review' ? (
+            renderPeerEvaluation()
+          ) : (
+            <EmptyState
+              description='이 마일스톤의 상세보기는 후속 작업에서 연결합니다.'
+              title='표시할 상세 내용이 없습니다.'
+            />
+          )}
+          <AdminTeamMeetingRecordList
+            isError={meetingRecordsQuery.isError}
+            isPending={meetingRecordsQuery.isPending}
+            records={meetingRecordsQuery.data?.records ?? []}
+            sectionId={detail.sectionId}
+            teamId={detail.teamId}
+          />
+        </>
       )}
     </div>
   );

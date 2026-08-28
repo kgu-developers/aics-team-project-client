@@ -15,6 +15,7 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 
+import { useAdminMeetingRecordsQuery } from '~/features/admin-meeting/queries';
 import {
   AdminFinalReportDownloadSummary,
   AdminSubmissionExternalLink,
@@ -176,6 +177,11 @@ export default function AdminSubmissionsPage() {
     isAccessibleSection &&
       activeMilestoneId !== 'presentation-evaluate' &&
       activeTab?.isListAvailable === true,
+  );
+  const meetingRecordsQuery = useAdminMeetingRecordsQuery(
+    accessibleSectionIds,
+    effectiveSectionId ? { sectionId: effectiveSectionId } : undefined,
+    isAccessibleSection,
   );
   const presentationEvaluationsQuery = useAdminPresentationEvaluationsQuery(
     activeMilestoneId === 'presentation-evaluate' && isAccessibleSection
@@ -418,6 +424,16 @@ export default function AdminSubmissionsPage() {
                     const detailSubmissionId = canViewDetail
                       ? submission.submissionId
                       : null;
+                    const meetingCount = (
+                      meetingRecordsQuery.data?.records ?? []
+                    ).filter(
+                      record => record.teamId === submission.teamId,
+                    ).length;
+                    const meetingCountLabel = meetingRecordsQuery.isPending
+                      ? '회의록: 불러오는 중'
+                      : meetingRecordsQuery.isError
+                        ? '회의록: -'
+                        : `회의록: ${meetingCount}개`;
                     return (
                       <AdminMilestoneSubmissionCard
                         action={
@@ -433,7 +449,18 @@ export default function AdminSubmissionsPage() {
                         }
                         key={submission.id}
                         label={submission.teamName}
-                        meetingCountLabel={submission.meetingCountLabel}
+                        meetingCountLabel={
+                          <Link
+                            className={styles.meetingLink}
+                            search={{
+                              sectionId: effectiveSectionId,
+                              teamId: submission.teamId,
+                            }}
+                            to={ROUTES.ADMIN_MEETINGS}
+                          >
+                            {meetingCountLabel}
+                          </Link>
+                        }
                         messageCountLabel={submission.messageCountLabel}
                         secondaryLabel={submission.submittedAtLabel}
                         summary={getSubmissionSummary(activeTab.id, submission)}
