@@ -21,7 +21,7 @@ export const heroBody = style({
   display: 'flex',
   gap: 24,
   '@media': {
-    'screen and (max-width: 767px)': {
+    'screen and (max-width: 1023px)': {
       flexDirection: 'column',
     },
   },
@@ -105,7 +105,7 @@ export const shortcut = style({
   overflow: 'hidden',
   width: 566,
   '@media': {
-    'screen and (max-width: 767px)': {
+    'screen and (max-width: 1023px)': {
       width: '100%',
     },
   },
@@ -208,6 +208,13 @@ export const noticeTitle = style({
   fontWeight: 500,
   lineHeight: 1.21,
   margin: 0,
+});
+
+export const noticeTitleRow = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: tokens.spacing['2'],
+  minWidth: 0,
 });
 
 export const noticeContent = style({

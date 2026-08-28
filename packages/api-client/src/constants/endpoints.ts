@@ -28,6 +28,9 @@ export const ENDPOINTS = {
     NOTICES: '/admin/notices',
     NOTICE_DETAIL: (noticeId: string) => `/admin/notices/${noticeId}`,
   },
+  ANNOUNCEMENTS: {
+    SECTION_LIST: (sectionId: string) => `/sections/${sectionId}/announcements`,
+  },
   SECTION: {
     STUDENT_DASHBOARD: (sectionId: string) =>
       `/sections/${sectionId}/dashboard/student`,

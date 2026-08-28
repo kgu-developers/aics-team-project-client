@@ -26,6 +26,7 @@ import {
   MeetingDeleteDialog,
   MeetingDetailPage,
   MeetingEditPage,
+  MeetingListPage,
   MeetingNewPage,
 } from './MeetingPages';
 
@@ -40,6 +41,7 @@ const mutations = vi.hoisted(() => ({
 }));
 const queries = vi.hoisted(() => ({
   meetingRecord: null as MeetingRecord | null,
+  meetingRecords: [] as MeetingRecord[],
 }));
 const meetingRecord: MeetingRecord = {
   id: 'meeting-1',
@@ -119,6 +121,11 @@ vi.mock('~/features/meeting/queries', () => ({
     isError: false,
     isPending: false,
   }),
+  useMeetingRecordsQuery: () => ({
+    data: queries.meetingRecords,
+    isError: false,
+    isPending: false,
+  }),
   useRemoveMeetingRecordMutation: () => ({
     isError: false,
     isPending: false,
@@ -139,6 +146,40 @@ vi.mock('~/features/meeting/queries', () => ({
 vi.mock('~/features/editor/useEditLock', () => ({
   useEditLock: () => ({ locked: false, ownerName: null, pending: false }),
 }));
+
+describe('MeetingListPage', () => {
+  beforeEach(() => {
+    queries.meetingRecords = [meetingRecord];
+    useAuthStore.getState().setCurrentUser(demoStudent);
+  });
+
+  afterEach(() => {
+    queries.meetingRecords = [];
+    useAuthStore.getState().clearSession();
+  });
+
+  it('회의록을 공지사항과 같은 테이블 구조로 표시한다', () => {
+    renderWithRouter(<MeetingListPage />);
+
+    expect(screen.getByRole('columnheader', { name: '날짜' })).toBeVisible();
+    expect(screen.getByRole('columnheader', { name: '제목' })).toBeVisible();
+    expect(screen.getByRole('columnheader', { name: '작성자' })).toBeVisible();
+    expect(
+      screen.getByRole('link', { name: meetingRecord.title }),
+    ).toHaveAttribute('href', `/student/meetings/${meetingRecord.id}`);
+    expect(
+      screen.getByText('참석 1명 · 액션 플랜 1건 · 공학관 301호'),
+    ).toBeVisible();
+  });
+
+  it('회의록이 없으면 테이블 내부에 빈 상태를 표시한다', () => {
+    queries.meetingRecords = [];
+
+    renderWithRouter(<MeetingListPage />);
+
+    expect(screen.getByText('등록된 회의록이 없어요.')).toBeVisible();
+  });
+});
 
 describe('MeetingNewPage', () => {
   beforeEach(() => {

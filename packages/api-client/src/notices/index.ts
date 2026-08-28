@@ -1,3 +1,4 @@
+export { fetchSectionAnnouncements } from './fetchSectionAnnouncements';
 export {
   fetchAdminNotice,
   type AdminNoticeDetailDto,

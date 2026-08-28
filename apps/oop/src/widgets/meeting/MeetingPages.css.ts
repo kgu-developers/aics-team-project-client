@@ -17,17 +17,27 @@ export const titleRow = style({
   gap: 'var(--spacing-3)',
   justifyContent: 'space-between',
 });
-export const list = style({ display: 'grid', gap: 'var(--spacing-3)' });
-export const recordCard = style({
-  display: 'grid',
-  gap: 'var(--spacing-2)',
-  padding: 'var(--spacing-5)',
+export const listTableCard = style({
+  minWidth: 0,
+  width: '100%',
 });
-export const recordLink = style({
+export const listTitleCell = style({
+  display: 'grid',
+  gap: 'var(--spacing-1)',
+  minWidth: 0,
+});
+export const listTitleLink = style({
   color: 'var(--color-text-primary)',
-  fontSize: 'var(--font-size-lg)',
-  fontWeight: 600,
   textDecoration: 'none',
+  ':focus-visible': {
+    outline: '2px solid currentColor',
+    outlineOffset: 2,
+  },
+});
+export const emptyTableCell = style({
+  color: 'var(--color-text-secondary)',
+  padding: 'var(--spacing-8) var(--spacing-4)',
+  textAlign: 'center',
 });
 export const meta = style({
   color: 'var(--color-text-secondary)',
