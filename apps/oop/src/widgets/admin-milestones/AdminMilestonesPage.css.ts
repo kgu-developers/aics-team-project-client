@@ -85,3 +85,13 @@ globalStyle(table + ' td', {
   fontSize: 14,
   padding: '14px 16px',
 });
+
+export const titleLink = style({
+  color: tokens.color.text.primary,
+  textDecoration: 'none',
+});
+
+globalStyle(`${titleLink}:hover`, {
+  color: tokens.color.text.accent,
+  textDecoration: 'underline',
+});

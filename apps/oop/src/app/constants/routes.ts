@@ -7,6 +7,7 @@ export const ROUTES = {
   ADMIN_MEETINGS: '/admin/meetings',
   ADMIN_MEETING_DETAIL: '/admin/meetings/$meetingId',
   ADMIN_MILESTONES: '/admin/milestones',
+  ADMIN_MILESTONE_DETAIL: '/admin/milestones/$milestoneId',
   ADMIN_MILESTONE_NEW: '/admin/milestones/new',
   ADMIN_PROFILE: '/admin/profile',
   ADMIN_STUDENT_TEAM: '/admin/student-team',

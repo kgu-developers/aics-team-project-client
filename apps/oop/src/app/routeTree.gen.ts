@@ -82,6 +82,9 @@ const AdminNoticesNoticeIdLazyRouteImport = createFileRoute(
 const AdminMilestonesNewLazyRouteImport = createFileRoute(
   '/admin/milestones/new',
 )()
+const AdminMilestonesMilestoneIdLazyRouteImport = createFileRoute(
+  '/admin/milestones/$milestoneId',
+)()
 const AdminMeetingsMeetingIdLazyRouteImport = createFileRoute(
   '/admin/meetings/$meetingId',
 )()
@@ -373,6 +376,14 @@ const AdminMilestonesNewLazyRoute = AdminMilestonesNewLazyRouteImport.update({
 } as any).lazy(() =>
   import('./routes/admin.milestones.new.lazy').then((d) => d.Route),
 )
+const AdminMilestonesMilestoneIdLazyRoute =
+  AdminMilestonesMilestoneIdLazyRouteImport.update({
+    id: '/milestones/$milestoneId',
+    path: '/milestones/$milestoneId',
+    getParentRoute: () => AdminLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/admin.milestones.$milestoneId.lazy').then((d) => d.Route),
+  )
 const AdminMeetingsMeetingIdLazyRoute =
   AdminMeetingsMeetingIdLazyRouteImport.update({
     id: '/$meetingId',
@@ -480,6 +491,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexLazyRoute
   '/student/': typeof StudentIndexLazyRoute
   '/admin/meetings/$meetingId': typeof AdminMeetingsMeetingIdLazyRoute
+  '/admin/milestones/$milestoneId': typeof AdminMilestonesMilestoneIdLazyRoute
   '/admin/milestones/new': typeof AdminMilestonesNewLazyRoute
   '/admin/notices/$noticeId': typeof AdminNoticesNoticeIdLazyRouteWithChildren
   '/admin/notices/new': typeof AdminNoticesNewLazyRoute
@@ -521,6 +533,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexLazyRoute
   '/student': typeof StudentIndexLazyRoute
   '/admin/meetings/$meetingId': typeof AdminMeetingsMeetingIdLazyRoute
+  '/admin/milestones/$milestoneId': typeof AdminMilestonesMilestoneIdLazyRoute
   '/admin/milestones/new': typeof AdminMilestonesNewLazyRoute
   '/admin/notices/new': typeof AdminNoticesNewLazyRoute
   '/admin/submissions/$submissionId': typeof AdminSubmissionsSubmissionIdLazyRoute
@@ -568,6 +581,7 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexLazyRoute
   '/student/': typeof StudentIndexLazyRoute
   '/admin/meetings/$meetingId': typeof AdminMeetingsMeetingIdLazyRoute
+  '/admin/milestones/$milestoneId': typeof AdminMilestonesMilestoneIdLazyRoute
   '/admin/milestones/new': typeof AdminMilestonesNewLazyRoute
   '/admin/notices/$noticeId': typeof AdminNoticesNoticeIdLazyRouteWithChildren
   '/admin/notices/new': typeof AdminNoticesNewLazyRoute
@@ -619,6 +633,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/student/'
     | '/admin/meetings/$meetingId'
+    | '/admin/milestones/$milestoneId'
     | '/admin/milestones/new'
     | '/admin/notices/$noticeId'
     | '/admin/notices/new'
@@ -660,6 +675,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/student'
     | '/admin/meetings/$meetingId'
+    | '/admin/milestones/$milestoneId'
     | '/admin/milestones/new'
     | '/admin/notices/new'
     | '/admin/submissions/$submissionId'
@@ -706,6 +722,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/student/'
     | '/admin/meetings/$meetingId'
+    | '/admin/milestones/$milestoneId'
     | '/admin/milestones/new'
     | '/admin/notices/$noticeId'
     | '/admin/notices/new'
@@ -1010,6 +1027,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMilestonesNewLazyRouteImport
       parentRoute: typeof AdminLazyRoute
     }
+    '/admin/milestones/$milestoneId': {
+      id: '/admin/milestones/$milestoneId'
+      path: '/milestones/$milestoneId'
+      fullPath: '/admin/milestones/$milestoneId'
+      preLoaderRoute: typeof AdminMilestonesMilestoneIdLazyRouteImport
+      parentRoute: typeof AdminLazyRoute
+    }
     '/admin/meetings/$meetingId': {
       id: '/admin/meetings/$meetingId'
       path: '/$meetingId'
@@ -1140,6 +1164,7 @@ interface AdminLazyRouteChildren {
   AdminStudentTeamLazyRoute: typeof AdminStudentTeamLazyRoute
   AdminSubmissionsLazyRoute: typeof AdminSubmissionsLazyRouteWithChildren
   AdminIndexLazyRoute: typeof AdminIndexLazyRoute
+  AdminMilestonesMilestoneIdLazyRoute: typeof AdminMilestonesMilestoneIdLazyRoute
   AdminMilestonesNewLazyRoute: typeof AdminMilestonesNewLazyRoute
   AdminTeamsTeamIdLazyRoute: typeof AdminTeamsTeamIdLazyRoute
   AdminMilestonesIndexLazyRoute: typeof AdminMilestonesIndexLazyRoute
@@ -1152,6 +1177,7 @@ const AdminLazyRouteChildren: AdminLazyRouteChildren = {
   AdminStudentTeamLazyRoute: AdminStudentTeamLazyRoute,
   AdminSubmissionsLazyRoute: AdminSubmissionsLazyRouteWithChildren,
   AdminIndexLazyRoute: AdminIndexLazyRoute,
+  AdminMilestonesMilestoneIdLazyRoute: AdminMilestonesMilestoneIdLazyRoute,
   AdminMilestonesNewLazyRoute: AdminMilestonesNewLazyRoute,
   AdminTeamsTeamIdLazyRoute: AdminTeamsTeamIdLazyRoute,
   AdminMilestonesIndexLazyRoute: AdminMilestonesIndexLazyRoute,
