@@ -76,26 +76,6 @@ export const titleLink = style({
   textDecoration: 'none',
 });
 
-const statusBase = {
-  borderRadius: tokens.radius.full,
-  display: 'inline-flex',
-  fontSize: 13,
-  fontWeight: 600,
-  padding: '4px 8px',
-};
-
-export const publishedStatus = style({
-  ...statusBase,
-  background: tokens.color.background.gray,
-  color: tokens.color.text.primary,
-});
-
-export const unpublishedStatus = style({
-  ...statusBase,
-  background: tokens.color.background.gray,
-  color: tokens.color.text.secondary,
-});
-
 globalStyle(table + ' th', {
   background: tokens.color.background.gray,
   color: tokens.color.text.secondary,

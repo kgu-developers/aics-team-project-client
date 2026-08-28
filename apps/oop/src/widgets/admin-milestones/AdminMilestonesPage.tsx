@@ -128,17 +128,7 @@ export default function AdminMilestonesPage() {
                 <tr key={`${milestone.sectionId}-${milestone.id}`}>
                   <td>{milestone.sectionLabel}</td>
                   <td>{getDeadlineLabel(milestone.summary)}</td>
-                  <td>
-                    <span
-                      className={
-                        milestone.isPublished
-                          ? styles.publishedStatus
-                          : styles.unpublishedStatus
-                      }
-                    >
-                      {milestone.isPublished ? '공개' : '미공개'}
-                    </span>
-                  </td>
+                  <td>{milestone.isPublished ? '공개' : '미공개'}</td>
                   <td>
                     <Link
                       className={styles.titleLink}
