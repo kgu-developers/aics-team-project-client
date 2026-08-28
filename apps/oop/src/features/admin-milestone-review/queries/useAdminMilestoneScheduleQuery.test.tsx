@@ -27,14 +27,28 @@ const scheduleResponse: AdminMilestoneScheduleResponse = {
       sectionId: 'oop-01',
       sectionLabel: 'OOP-01',
       memberCountLabel: '4명 / 1팀',
-      milestones: [{ id: 'proposal', title: '제안서', summary: '제출 1팀' }],
+      milestones: [
+        {
+          id: 'proposal',
+          isPublished: true,
+          title: '제안서',
+          summary: '제출 1팀',
+        },
+      ],
       unreadMessageCountLabel: '0건',
     },
     {
       sectionId: 'oop-02',
       sectionLabel: 'OOP-02',
       memberCountLabel: '4명 / 1팀',
-      milestones: [{ id: 'proposal', title: '제안서', summary: '제출 1팀' }],
+      milestones: [
+        {
+          id: 'proposal',
+          isPublished: false,
+          title: '제안서',
+          summary: '제출 1팀',
+        },
+      ],
       unreadMessageCountLabel: '0건',
     },
   ],

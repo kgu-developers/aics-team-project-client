@@ -11,6 +11,11 @@ export {
   type AdminMilestoneScheduleView,
 } from './adminMilestoneSchedule';
 export {
+  createAdminMilestoneSectionScheduleDraft,
+  syncAdminMilestoneSectionScheduleDrafts,
+  type AdminMilestoneSectionScheduleDraft,
+} from './adminMilestoneSetupDraft';
+export {
   toAdminMilestoneSubmissionsView,
   type AdminMilestoneSubmissionSummaryView,
   type AdminMilestoneSubmissionView,
