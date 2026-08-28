@@ -81,4 +81,47 @@ describe('useAdminMeetingRecordsQuery', () => {
     expect(meetingRecordsRequest).toHaveBeenCalledOnce();
     expect(result.current.data).toEqual(response);
   });
+
+  it('여러 담당 분반의 회의록을 최신 작성일 순서로 전달한다', async () => {
+    const multipleSectionsResponse: AdminMeetingRecordsResponse = {
+      records: [
+        {
+          createdAt: '2026-10-01T10:30:00+09:00',
+          id: 'meeting-oop-01',
+          sectionId: 'oop-01',
+          sectionLabel: 'OOP-01',
+          teamId: 'team-oop-01',
+          teamLabel: '1팀',
+          title: 'OOP-01 회의록',
+        },
+        {
+          createdAt: '2026-10-08T19:00:00+09:00',
+          id: 'meeting-oop-02',
+          sectionId: 'oop-02',
+          sectionLabel: 'OOP-02',
+          teamId: 'team-oop-02',
+          teamLabel: '1팀',
+          title: 'OOP-02 회의록',
+        },
+      ],
+    };
+
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`, () =>
+        HttpResponse.json(multipleSectionsResponse),
+      ),
+    );
+
+    const { result } = renderHook(
+      () => useAdminMeetingRecordsQuery(['oop-01', 'oop-02']),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.records.map(record => record.id)).toEqual([
+      'meeting-oop-02',
+      'meeting-oop-01',
+    ]);
+  });
 });
