@@ -1,4 +1,6 @@
 export type AdminMilestoneSectionScheduleDraft = {
+  allowLateSubmission: boolean;
+  allowSubmissionEditBeforeDueAt: boolean;
   dueAt: {
     date: string;
     time: string;
@@ -16,6 +18,8 @@ function createDateTimeDraft() {
 
 export function createAdminMilestoneSectionScheduleDraft(): AdminMilestoneSectionScheduleDraft {
   return {
+    allowLateSubmission: false,
+    allowSubmissionEditBeforeDueAt: false,
     dueAt: createDateTimeDraft(),
     isPublished: false,
     opensAt: createDateTimeDraft(),

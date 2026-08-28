@@ -1,6 +1,8 @@
 import {
   Button,
   Card,
+  CheckboxList,
+  CheckboxListItem,
   DateInput,
   Heading,
   MultiSelector,
@@ -14,12 +16,13 @@ import { Link, useSearch } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
-import { useAuthStore } from '~/features/auth/authStore';
+
 import {
   createAdminMilestoneSectionScheduleDraft,
   syncAdminMilestoneSectionScheduleDrafts,
   type AdminMilestoneSectionScheduleDraft,
 } from '~/features/admin-milestone-review/model';
+import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMilestoneSetupPage.css';
 
@@ -99,9 +102,15 @@ const milestoneTemplates: readonly MilestoneTemplate[] = [
 ];
 
 function getTemplate(templateId: MilestoneTemplateId) {
+  const fallbackTemplate = milestoneTemplates[0];
+
+  if (!fallbackTemplate) {
+    throw new Error('마일스톤 기본 양식이 없습니다.');
+  }
+
   return (
     milestoneTemplates.find(template => template.id === templateId) ??
-    milestoneTemplates[0]
+    fallbackTemplate
   );
 }
 
@@ -371,6 +380,40 @@ export default function AdminMilestoneSetupPage() {
                         }
                         width={180}
                       />
+                      <CheckboxList
+                        description='마감 일시와 지각 제출 정책은 선택한 분반별로 따로 설정됩니다.'
+                        label='제출 정책'
+                        onChange={values =>
+                          updateSectionSchedule(section.id, current => ({
+                            ...current,
+                            allowLateSubmission: values.includes(
+                              'allow-late-submission',
+                            ),
+                            allowSubmissionEditBeforeDueAt: values.includes(
+                              'allow-submission-edit-before-due-at',
+                            ),
+                          }))
+                        }
+                        value={[
+                          ...(schedule.allowSubmissionEditBeforeDueAt
+                            ? ['allow-submission-edit-before-due-at']
+                            : []),
+                          ...(schedule.allowLateSubmission
+                            ? ['allow-late-submission']
+                            : []),
+                        ]}
+                      >
+                        <CheckboxListItem
+                          description='제출 마감 일시 전까지 이미 제출한 내용을 수정할 수 있습니다.'
+                          label='제출 마감 전 수정 허용'
+                          value='allow-submission-edit-before-due-at'
+                        />
+                        <CheckboxListItem
+                          description='제출 마감 이후에도 지각 상태로 제출할 수 있습니다.'
+                          label='지각 제출 허용'
+                          value='allow-late-submission'
+                        />
+                      </CheckboxList>
                     </article>
                   );
                 })}

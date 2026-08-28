@@ -33,4 +33,30 @@ describe('syncAdminMilestoneSectionScheduleDrafts', () => {
       'oop-02': createAdminMilestoneSectionScheduleDraft(),
     });
   });
+
+  it('분반별 제출 정책 초안을 독립적으로 보존한다', () => {
+    const firstSectionDraft = {
+      ...createAdminMilestoneSectionScheduleDraft(),
+      allowLateSubmission: true,
+      allowSubmissionEditBeforeDueAt: true,
+    };
+    const secondSectionDraft = createAdminMilestoneSectionScheduleDraft();
+
+    const drafts = syncAdminMilestoneSectionScheduleDrafts(
+      ['oop-01', 'oop-02'],
+      {
+        'oop-01': firstSectionDraft,
+        'oop-02': secondSectionDraft,
+      },
+    );
+
+    expect(drafts['oop-01']).toMatchObject({
+      allowLateSubmission: true,
+      allowSubmissionEditBeforeDueAt: true,
+    });
+    expect(drafts['oop-02']).toMatchObject({
+      allowLateSubmission: false,
+      allowSubmissionEditBeforeDueAt: false,
+    });
+  });
 });
