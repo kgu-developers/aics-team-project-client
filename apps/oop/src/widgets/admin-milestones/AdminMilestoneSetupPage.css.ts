@@ -82,12 +82,58 @@ export const preview = style({
   padding: 20,
 });
 
+export const previewEyebrow = style({
+  color: tokens.color.text.secondary,
+  margin: 0,
+});
+
+export const previewTitle = style({
+  margin: 0,
+  overflowWrap: 'anywhere',
+});
+
+export const previewTemplate = style({ margin: 0 });
+
+export const previewDescription = style({
+  margin: 0,
+  overflowWrap: 'anywhere',
+  whiteSpace: 'pre-wrap',
+});
+
+export const previewBlocksTitle = style({ margin: 4 });
+
 export const previewList = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 8,
   margin: 0,
-  paddingLeft: 20,
+  padding: 0,
+});
+
+export const previewItem = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: 10,
+  minWidth: 0,
+});
+
+export const previewItemNumber = style({
+  alignItems: 'center',
+  background: tokens.color.background.gray,
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: '50%',
+  display: 'inline-flex',
+  flex: '0 0 24px',
+  height: 24,
+  justifyContent: 'center',
+  width: 24,
+});
+
+export const previewNote = style({
+  borderTop: `1px solid ${tokens.color.border.base}`,
+  margin: '8px 0 0',
+  overflowWrap: 'anywhere',
+  paddingTop: 12,
 });
 
 export const action = style({

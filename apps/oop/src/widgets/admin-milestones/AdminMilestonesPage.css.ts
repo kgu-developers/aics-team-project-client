@@ -71,11 +71,6 @@ export const table = style({
   width: '100%',
 });
 
-export const titleLink = style({
-  color: tokens.color.text.primary,
-  textDecoration: 'none',
-});
-
 globalStyle(table + ' th', {
   background: tokens.color.background.gray,
   color: tokens.color.text.secondary,

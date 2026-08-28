@@ -426,19 +426,33 @@ export default function AdminMilestoneSetupPage() {
               기본 양식 미리보기
             </Heading>
             <div className={styles.preview}>
-              <Text weight='medium'>{template.label}</Text>
-              <Text color='secondary' type='supporting'>
-                {template.description}
+              <Text className={styles.previewEyebrow} type='supporting'>
+                학생 화면 기본 양식 미리보기
+              </Text>
+              <Heading className={styles.previewTitle} level={3}>
+                {title.trim() || '마일스톤 제목을 입력해주세요.'}
+              </Heading>
+              <Text className={styles.previewTemplate} weight='medium'>
+                기본 양식: {template.label}
+              </Text>
+              <Text className={styles.previewDescription} color='secondary'>
+                {description.trim() || '마일스톤 설명을 입력해주세요.'}
+              </Text>
+              <Text className={styles.previewBlocksTitle} weight='medium'>
+                학생에게 표시되는 고정 블록
               </Text>
               <ul className={styles.previewList}>
-                {template.fields.map(field => (
-                  <li key={field}>{field}</li>
+                {template.fields.map((field, index) => (
+                  <li className={styles.previewItem} key={field}>
+                    <span className={styles.previewItemNumber}>{index + 1}</span>
+                    <span>{field}</span>
+                  </li>
                 ))}
               </ul>
-              <Text color='secondary' type='supporting'>
-                이 단계에서는 학생 화면의 고정 양식을 변경하지 않습니다. 양식
-                블록의 추가·삭제·편집과 실제 저장은 후속 API·학생 양식 계약 확정
-                후 연결합니다.
+              <Text className={styles.previewNote} color='secondary' type='supporting'>
+                기본 양식의 블록 구성은 현재 학생 화면과 동일한 고정 구조입니다.
+                블록 추가·삭제·순서 변경과 실제 저장은 양식 API 계약 확정 후
+                지원합니다.
               </Text>
             </div>
           </section>

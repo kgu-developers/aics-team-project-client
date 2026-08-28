@@ -129,18 +129,7 @@ export default function AdminMilestonesPage() {
                   <td>{milestone.sectionLabel}</td>
                   <td>{getDeadlineLabel(milestone.summary)}</td>
                   <td>{milestone.isPublished ? '공개' : '미공개'}</td>
-                  <td>
-                    <Link
-                      className={styles.titleLink}
-                      search={{
-                        milestoneId: milestone.id,
-                        sectionId: milestone.sectionId,
-                      }}
-                      to={ROUTES.ADMIN_MILESTONE_NEW}
-                    >
-                      {milestone.title}
-                    </Link>
-                  </td>
+                  <td>{milestone.title}</td>
                 </tr>
               ))}
             </tbody>
