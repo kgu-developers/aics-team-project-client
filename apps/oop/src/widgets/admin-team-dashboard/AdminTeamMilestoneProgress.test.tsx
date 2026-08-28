@@ -13,6 +13,11 @@ import type { TeamMilestoneProgress } from '~/features/admin-team-dashboard/mode
 
 import AdminTeamMilestoneProgress from './AdminTeamMilestoneProgress';
 
+type MeetingCountState =
+  | { status: 'pending' }
+  | { status: 'error' }
+  | { count: number; status: 'ready' };
+
 const milestones: TeamMilestoneProgress[] = [
   {
     id: 'proposal',
@@ -74,7 +79,10 @@ const milestones: TeamMilestoneProgress[] = [
   },
 ];
 
-function renderProgress(items: TeamMilestoneProgress[]) {
+function renderProgress(
+  items: TeamMilestoneProgress[],
+  meetingCountState: MeetingCountState = { count: 2, status: 'ready' },
+) {
   const rootRoute = createRootRoute();
   const progressRoute = createRoute({
     component: () => (
@@ -86,7 +94,7 @@ function renderProgress(items: TeamMilestoneProgress[]) {
           teamId='team-1'
           teamMemberCount={2}
           teamLeaderName='김ㅇㅇ'
-          meetingCount={2}
+          meetingCountState={meetingCountState}
         />
       </AstryxThemeProvider>
     ),
@@ -140,5 +148,21 @@ describe('AdminTeamMilestoneProgress', () => {
     expect(
       await screen.findByText('등록된 마일스톤이 없습니다.'),
     ).toBeInTheDocument();
+  });
+
+  it('회의록 수를 아직 알 수 없으면 0개로 표시하지 않는다', async () => {
+    renderProgress(milestones, { status: 'pending' });
+
+    expect(await screen.findAllByText('회의록 조회 중...')).toHaveLength(5);
+    expect(screen.queryByText('회의록: 0개')).not.toBeInTheDocument();
+  });
+
+  it('회의록 조회가 실패하면 실패 상태를 표시한다', async () => {
+    renderProgress(milestones, { status: 'error' });
+
+    expect(
+      await screen.findAllByText('회의록을 불러오지 못했습니다.'),
+    ).toHaveLength(5);
+    expect(screen.queryByText('회의록: 0개')).not.toBeInTheDocument();
   });
 });

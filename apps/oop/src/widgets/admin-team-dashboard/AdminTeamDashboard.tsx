@@ -206,7 +206,16 @@ export default function AdminTeamDashboard() {
 
       <AdminTeamMilestoneProgress
         milestones={team.milestones}
-        meetingCount={meetingRecordsQuery.data?.records.length ?? 0}
+        meetingCountState={
+          meetingRecordsQuery.isSuccess
+            ? {
+                count: meetingRecordsQuery.data.records.length,
+                status: 'ready',
+              }
+            : meetingRecordsQuery.isError
+              ? { status: 'error' }
+              : { status: 'pending' }
+        }
         projectTopic={team.projectTopic}
         sectionId={team.section.id}
         teamId={team.id}

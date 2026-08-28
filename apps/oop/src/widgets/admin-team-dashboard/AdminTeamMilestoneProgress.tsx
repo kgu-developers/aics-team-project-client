@@ -24,7 +24,10 @@ type AdminTeamMilestoneProgressProps = {
   teamId: string;
   teamMemberCount: number;
   teamLeaderName: string | null;
-  meetingCount: number;
+  meetingCountState:
+    | { status: 'pending' }
+    | { status: 'error' }
+    | { count: number; status: 'ready' };
 };
 
 function getFinalReportDownloadFiles(milestone: TeamMilestoneProgress) {
@@ -127,7 +130,7 @@ export default function AdminTeamMilestoneProgress({
   teamId,
   teamMemberCount,
   teamLeaderName,
-  meetingCount,
+  meetingCountState,
 }: AdminTeamMilestoneProgressProps) {
   const displayMilestones = milestones.filter(
     milestone => milestone.id !== 'presentation-evaluate',
@@ -163,13 +166,21 @@ export default function AdminTeamMilestoneProgress({
                 key={milestone.id}
                 label={milestone.title}
                 meetingCountLabel={
-                  <Link
-                    className={styles.meetingLink}
-                    search={{ sectionId, teamId }}
-                    to={ROUTES.ADMIN_MEETINGS}
-                  >
-                    회의록: {meetingCount}개
-                  </Link>
+                  meetingCountState.status === 'ready' ? (
+                    <Link
+                      className={styles.meetingLink}
+                      search={{ sectionId, teamId }}
+                      to={ROUTES.ADMIN_MEETINGS}
+                    >
+                      회의록: {meetingCountState.count}개
+                    </Link>
+                  ) : (
+                    <Text>
+                      {meetingCountState.status === 'pending'
+                        ? '회의록 조회 중...'
+                        : '회의록을 불러오지 못했습니다.'}
+                    </Text>
+                  )
                 }
                 messageCountLabel='쪽지: -'
                 secondaryLabel={`마감 ${milestone.deadlineLabel}`}
