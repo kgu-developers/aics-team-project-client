@@ -4,7 +4,7 @@ import type {
   StudentHomeAnnouncement,
   StudentHomeHero as StudentHomeHeroData,
 } from '@aics/core';
-import { Button, Divider, EmptyState } from '@aics/design-system';
+import { Badge, Button, Divider, EmptyState } from '@aics/design-system';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { ArrowRight, Bell, ClipboardList, NotebookPen } from 'lucide-react';
 import { type KeyboardEvent, useRef, useState } from 'react';
@@ -13,6 +13,9 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 
+import { useAuthStore } from '~/features/auth/authStore';
+import { useStudentNoticeReadState } from '~/features/student-notices/useStudentNoticeReadState';
+
 import * as styles from './StudentHomeHero.css';
 
 const SHORTCUT_TABS = [
@@ -20,6 +23,7 @@ const SHORTCUT_TABS = [
   { id: 'minutes', label: '회의록', icon: NotebookPen },
   { id: 'action-plan', label: '액션 플랜', icon: ClipboardList },
 ] as const;
+const HOME_SHORTCUT_ITEM_LIMIT = 3;
 
 type ShortcutTabId = (typeof SHORTCUT_TABS)[number]['id'];
 
@@ -39,8 +43,19 @@ export default function StudentHomeHero({
   meetingState = 'ready',
 }: StudentHomeHeroProps) {
   const navigate = useNavigate();
+  const currentUser = useAuthStore(state => state.currentUser);
+  const sectionId = currentUser?.sections[0]?.id ?? '';
+  const { isRead } = useStudentNoticeReadState(
+    currentUser?.id ?? '',
+    sectionId,
+  );
   const [activeTab, setActiveTab] = useState<ShortcutTabId>('notice');
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const visibleAnnouncements = announcements.slice(0, HOME_SHORTCUT_ITEM_LIMIT);
+  const visibleMeetingRecords = recentMeetingRecords.slice(
+    0,
+    HOME_SHORTCUT_ITEM_LIMIT,
+  );
 
   const selectTab = (index: number) => {
     const tab = SHORTCUT_TABS[index];
@@ -137,24 +152,35 @@ export default function StudentHomeHero({
             role='tabpanel'
           >
             {activeTab === 'notice' ? (
-              announcements.length > 0 ? (
+              visibleAnnouncements.length > 0 ? (
                 <div className={styles.noticeList}>
-                  {announcements.map((announcement, index) => (
+                  {visibleAnnouncements.map((announcement, index) => (
                     <div key={announcement.id}>
-                      <div className={styles.notice}>
-                        <p className={styles.noticeTitle}>
-                          {announcement.title}
-                        </p>
-                        <div className={styles.noticeMeta}>
-                          <p className={styles.noticeContent}>
-                            {announcement.content}
-                          </p>
-                          <p className={styles.noticeDate}>
-                            {announcement.date}
-                          </p>
+                      <Link
+                        className={styles.noticeLink}
+                        params={{ noticeId: announcement.id }}
+                        to='/student/notices/$noticeId'
+                      >
+                        <div className={styles.notice}>
+                          <div className={styles.noticeTitleRow}>
+                            <p className={styles.noticeTitle}>
+                              {announcement.title}
+                            </p>
+                            {!isRead(announcement.id) ? (
+                              <Badge label='새 글' variant='info' />
+                            ) : null}
+                          </div>
+                          <div className={styles.noticeMeta}>
+                            <p className={styles.noticeContent}>
+                              {announcement.content}
+                            </p>
+                            <p className={styles.noticeDate}>
+                              {announcement.date}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      {index < announcements.length - 1 ? (
+                      </Link>
+                      {index < visibleAnnouncements.length - 1 ? (
                         <Divider className={styles.divider} />
                       ) : null}
                     </div>
@@ -162,10 +188,10 @@ export default function StudentHomeHero({
                   <Button
                     className={styles.more}
                     label='더보기'
+                    onClick={() => navigate({ to: ROUTES.STUDENT.NOTICES })}
                     size='sm'
                     variant='ghost'
                   />
-                  {/* TODO(KD3-75 follow-up): 공지 목록 티켓에서 더보기 동작을 연결한다. */}
                 </div>
               ) : (
                 <EmptyState
@@ -192,8 +218,8 @@ export default function StudentHomeHero({
                 />
               ) : (
                 <div className={styles.noticeList}>
-                  {recentMeetingRecords.length > 0 ? (
-                    recentMeetingRecords.map((record, index) => (
+                  {visibleMeetingRecords.length > 0 ? (
+                    visibleMeetingRecords.map((record, index) => (
                       <div key={record.id}>
                         <Link
                           className={styles.noticeLink}
@@ -213,7 +239,7 @@ export default function StudentHomeHero({
                             </div>
                           </div>
                         </Link>
-                        {index < recentMeetingRecords.length - 1 ? (
+                        {index < visibleMeetingRecords.length - 1 ? (
                           <Divider className={styles.divider} />
                         ) : null}
                       </div>

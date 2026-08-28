@@ -32,6 +32,7 @@ export { submitTeam } from './teams/submitTeam';
 export {
   fetchAdminNotice,
   fetchAdminNotices,
+  fetchSectionAnnouncements,
   removeAdminNoticeAttachment,
   type AdminNoticeDetailDto,
   type AdminNoticeDto,

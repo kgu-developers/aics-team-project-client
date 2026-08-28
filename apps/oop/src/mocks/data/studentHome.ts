@@ -26,10 +26,22 @@ export const studentHomeDashboardFixture: StudentHomeDashboard = {
   },
   announcements: [
     {
-      id: 'notice-1',
-      title: '프로젝트 진행 일정 안내',
-      content: '제안서 주제 선정 기간과 제출 일정을 확인해 주세요.',
-      date: '26/09/28',
+      id: '10',
+      title: '[첨부 테스트] 이미지 미리보기 확인',
+      content: '이미지 첨부파일이 본문 하단에 표시되는지 확인해 주세요.',
+      date: '26/08/27',
+    },
+    {
+      id: '11',
+      title: '[첨부 테스트] PDF 다운로드 확인',
+      content: 'PDF 첨부파일의 다운로드 동작을 확인해 주세요.',
+      date: '26/08/27',
+    },
+    {
+      id: '12',
+      title: '[읽음 테스트] 첨부파일 없는 공지',
+      content: '상세 확인 후 새 글 표시가 사라지는지 확인해 주세요.',
+      date: '26/08/27',
     },
   ],
   milestones: [

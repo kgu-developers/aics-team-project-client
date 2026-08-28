@@ -20,6 +20,7 @@ import {
   Text,
   TextInput,
 } from '@aics/design-system';
+import type { TableColumn } from '@aics/design-system';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -80,6 +81,43 @@ function formatHeldAt(value: string) {
     dateStyle: 'long',
   }).format(new Date(value));
 }
+
+const meetingListColumns: TableColumn<MeetingRecord>[] = [
+  {
+    key: 'heldAt',
+    header: '날짜',
+    width: proportional(1),
+    renderCell: record => <>{record.heldAt.slice(0, 10)}</>,
+  },
+  {
+    key: 'title',
+    header: '제목',
+    width: proportional(2),
+    renderCell: record => (
+      <div className={styles.listTitleCell}>
+        <Link
+          className={styles.listTitleLink}
+          params={{ meetingId: record.id }}
+          to='/student/meetings/$meetingId'
+        >
+          {record.title}
+        </Link>
+        <Text color='secondary' type='supporting'>
+          참석 {record.participants.length}명 · 액션 플랜{' '}
+          {record.actions.length}건
+          {record.location ? ` · ${record.location}` : ''}
+        </Text>
+      </div>
+    ),
+  },
+  {
+    key: 'createdBy',
+    header: '작성자',
+    width: proportional(1),
+    renderCell: record => <>{record.createdBy.name}</>,
+  },
+];
+
 function toDraftAction(action: MeetingAction): DraftAction {
   return {
     id: action.id,
@@ -591,34 +629,20 @@ export function MeetingListPage() {
           variant='primary'
         />
       </div>
-      <div className={styles.list}>
-        {query.data?.length ? (
-          query.data.map(record => (
-            <Card className={styles.recordCard} key={record.id}>
-              <Link
-                className={styles.recordLink}
-                params={{ meetingId: record.id }}
-                to='/student/meetings/$meetingId'
-              >
-                {record.title}
-              </Link>
-              <p className={styles.meta}>
-                {formatHeldAt(record.heldAt)} · {record.participants.length}명
-                참석{record.location ? ` · ${record.location}` : ''}
-              </p>
-              <Text color='secondary' type='supporting'>
-                작성: {record.createdBy.name} · 액션 플랜{' '}
-                {record.actions.length}건
-              </Text>
-            </Card>
-          ))
-        ) : (
-          <EmptyState
-            description='첫 회의를 기록해 팀의 결정과 다음 할 일을 남겨 보세요.'
-            title='등록된 회의록이 없어요.'
-          />
-        )}
-      </div>
+      <Card className={styles.listTableCard}>
+        <Table<MeetingRecord>
+          columns={meetingListColumns}
+          data={query.data ?? []}
+          density='balanced'
+          dividers='rows'
+          emptyState={
+            <span className={styles.emptyTableCell}>
+              등록된 회의록이 없어요.
+            </span>
+          }
+          idKey='id'
+        />
+      </Card>
     </div>
   );
 }

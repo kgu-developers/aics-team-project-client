@@ -5,6 +5,10 @@ export type {
   CurrentUserSection,
   UserGlobalRole,
 } from './auth/types';
+export type {
+  SectionAnnouncement,
+  SectionAnnouncementAttachment,
+} from './notice/types';
 export type { Course } from './course/types';
 export type {
   CompleteDocumentBlockInput,
