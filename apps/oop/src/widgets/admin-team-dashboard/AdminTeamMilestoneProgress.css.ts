@@ -1,3 +1,4 @@
+import { tokens } from '@aics/design-system';
 import { style } from '@vanilla-extract/css';
 
 export const section = style({
@@ -10,4 +11,10 @@ export const list = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 12,
+});
+
+export const meetingLink = style({
+  color: tokens.color.text.primary,
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
 });

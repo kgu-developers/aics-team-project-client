@@ -12,8 +12,11 @@ import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { AdminTeamMeetingRecordList } from '~/features/admin-meeting/components';
+import { useAdminMeetingRecordsQuery } from '~/features/admin-meeting/queries';
 import StudentDetailDialog from '~/features/admin-student-team/components/StudentDetailDialog';
 import { useAdminTeamDashboardQuery } from '~/features/admin-team-dashboard/queries';
+import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminTeamDashboard.css';
 import AdminTeamMilestoneProgress from './AdminTeamMilestoneProgress';
@@ -74,7 +77,20 @@ function getTeamDashboardErrorContent(
 export default function AdminTeamDashboard() {
   const { teamId } = useParams({ from: '/admin/teams/$teamId' });
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const currentUser = useAuthStore(state => state.currentUser);
+  const accessibleSectionIds =
+    currentUser?.sections.map(section => section.id) ?? [];
   const teamDashboardQuery = useAdminTeamDashboardQuery(teamId);
+  const meetingRecordsQuery = useAdminMeetingRecordsQuery(
+    accessibleSectionIds,
+    teamDashboardQuery.data
+      ? {
+          sectionId: teamDashboardQuery.data.section.id,
+          teamId,
+        }
+      : undefined,
+    Boolean(teamDashboardQuery.data),
+  );
 
   useEffect(() => {
     setSelectedMemberId(null);
@@ -190,12 +206,22 @@ export default function AdminTeamDashboard() {
 
       <AdminTeamMilestoneProgress
         milestones={team.milestones}
+        meetingCount={meetingRecordsQuery.data?.records.length ?? 0}
         projectTopic={team.projectTopic}
         sectionId={team.section.id}
+        teamId={team.id}
         teamMemberCount={team.members.length}
         teamLeaderName={
           team.members.find(member => member.isLeader)?.name ?? null
         }
+      />
+
+      <AdminTeamMeetingRecordList
+        isError={meetingRecordsQuery.isError}
+        isPending={meetingRecordsQuery.isPending}
+        records={meetingRecordsQuery.data?.records ?? []}
+        sectionId={team.section.id}
+        teamId={team.id}
       />
 
       <StudentDetailDialog

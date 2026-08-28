@@ -1,4 +1,7 @@
 import { EmptyState, Heading, Text } from '@aics/design-system';
+import { Link } from '@tanstack/react-router';
+
+import { ROUTES } from '~/app/constants/routes';
 
 import {
   AdminFinalReportDownloadSummary,
@@ -18,8 +21,10 @@ type AdminTeamMilestoneProgressProps = {
   milestones: TeamMilestoneProgress[];
   projectTopic: string | null;
   sectionId: string;
+  teamId: string;
   teamMemberCount: number;
   teamLeaderName: string | null;
+  meetingCount: number;
 };
 
 function getFinalReportDownloadFiles(milestone: TeamMilestoneProgress) {
@@ -119,8 +124,10 @@ export default function AdminTeamMilestoneProgress({
   milestones,
   projectTopic,
   sectionId,
+  teamId,
   teamMemberCount,
   teamLeaderName,
+  meetingCount,
 }: AdminTeamMilestoneProgressProps) {
   const displayMilestones = milestones.filter(
     milestone => milestone.id !== 'presentation-evaluate',
@@ -155,7 +162,15 @@ export default function AdminTeamMilestoneProgress({
                 }
                 key={milestone.id}
                 label={milestone.title}
-                meetingCountLabel='회의록: -'
+                meetingCountLabel={
+                  <Link
+                    className={styles.meetingLink}
+                    search={{ sectionId, teamId }}
+                    to={ROUTES.ADMIN_MEETINGS}
+                  >
+                    회의록: {meetingCount}개
+                  </Link>
+                }
                 messageCountLabel='쪽지: -'
                 secondaryLabel={`마감 ${milestone.deadlineLabel}`}
                 summary={getMilestoneSummary(
