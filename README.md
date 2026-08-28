@@ -29,6 +29,8 @@ configs/
 
 ## 시작하기
 
+Node.js 22 이상과 pnpm 10을 사용합니다.
+
 ```bash
 pnpm install
 pnpm dev
@@ -43,27 +45,44 @@ pnpm build
 
 ## OOP 배포
 
-OOP 프론트엔드는 Cloudflare Workers Static Assets에 배포합니다. 운영 빌드는
+OOP 프론트엔드는 Cloudflare Pages에 배포합니다. 운영 빌드는
 `apps/oop/.env.production`에 설정한 `VITE_API_BASE_URL`을 사용합니다.
 
 ```bash
-pnpm --filter @aics/oop deploy:dry-run
-pnpm --filter @aics/oop deploy
+pnpm --filter @aics/oop run deploy
 ```
 
 배포 계정은 KGU 팀 프로젝트 Cloudflare 계정
-`a6b2c7849807daa1d50fd035cb3e3e15`로 고정했습니다. 개인 계정으로 실행하면 권한
-오류가 나며 배포되지 않습니다.
+`a6b2c7849807daa1d50fd035cb3e3e15`만 사용합니다. 로컬에서는 Wrangler의
+`kgu-oop` 프로필로 로그인해야 합니다.
 
-Cloudflare Workers Builds의 Git 연동은 저장소 루트를 기준으로 아래와 같이
-설정합니다.
+Pages 프로젝트 이름은 `aics-oop`, 운영 브랜치는 `main`입니다. 커스텀 도메인은
+`team-project.kgudevelopers.monster`를 사용하며, DNS 제공자에서 아래 CNAME을
+등록합니다. Cloudflare Pages의 Custom domains에 도메인을 먼저 추가한 뒤 DNS를
+설정해야 합니다.
 
-- 빌드 명령: `pnpm --filter @aics/oop build`
-- 배포 명령: `pnpm --filter @aics/oop exec wrangler deploy`
-- 환경 변수: `VITE_API_BASE_URL=https://team-project-api.kgudevelopers.monster`
+```text
+Type: CNAME
+Name: team-project
+Target: aics-oop.pages.dev
+```
 
-`apps/oop/wrangler.jsonc`의 SPA fallback 설정에 따라 TanStack Router 경로로 직접
-접속해도 `index.html`을 반환합니다.
+백엔드 CORS 허용 목록에는 아래 운영 Origin을 추가해야 합니다.
+
+```text
+https://team-project.kgudevelopers.monster
+```
+
+기존 Workers Static Assets 배포는 롤백용으로 유지합니다.
+
+```bash
+pnpm --filter @aics/oop run deploy:worker:dry-run
+pnpm --filter @aics/oop run deploy:worker
+```
+
+Pages는 최상위 `404.html`이 없는 정적 앱을 SPA로 처리합니다. TanStack Router
+경로에 직접 접속해도 `index.html`을 반환합니다. Workers 롤백 배포에서는
+`apps/oop/wrangler.worker.jsonc`의 SPA fallback 설정을 사용합니다.
 
 ## 작업 규칙
 
