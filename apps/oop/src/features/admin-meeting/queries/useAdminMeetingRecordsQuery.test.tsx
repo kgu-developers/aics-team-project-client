@@ -124,4 +124,36 @@ describe('useAdminMeetingRecordsQuery', () => {
       'meeting-oop-01',
     ]);
   });
+
+  it('분반과 팀 필터를 API Client 요청으로 전달한다', async () => {
+    const receivedUrl = vi.fn();
+
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`,
+        ({ request }) => {
+          receivedUrl(request.url);
+          return HttpResponse.json(response);
+        },
+      ),
+    );
+
+    const { result } = renderHook(
+      () =>
+        useAdminMeetingRecordsQuery(['oop-01'], {
+          sectionId: 'oop-01',
+          teamId: 'team-1',
+        }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(receivedUrl).toHaveBeenCalledWith(
+      expect.stringContaining('sectionId=oop-01'),
+    );
+    expect(receivedUrl).toHaveBeenCalledWith(
+      expect.stringContaining('teamId=team-1'),
+    );
+  });
 });

@@ -32,6 +32,7 @@ export default function AdminMeetingDetailPage() {
   const { meetingId } = useParams({ from: '/admin/meetings/$meetingId' });
   const search = useSearch({ from: '/admin/meetings/$meetingId' }) as {
     sectionId?: string;
+    teamId?: string;
   };
   const accessibleSectionIds =
     currentUser?.sections.map(section => section.id) ?? [];
@@ -90,7 +91,11 @@ export default function AdminMeetingDetailPage() {
     <div className={styles.page}>
       <div className={styles.titleRow}>
         <Heading level={1}>회의록 &gt; {record.title}</Heading>
-        <Link className={styles.backLink} to={ROUTES.ADMIN_MEETINGS}>
+        <Link
+          className={styles.backLink}
+          search={{ sectionId: search.sectionId, teamId: search.teamId }}
+          to={ROUTES.ADMIN_MEETINGS}
+        >
           ← 회의록 목록으로
         </Link>
       </div>

@@ -15,6 +15,11 @@ export const filters = style({
   display: 'flex',
   gap: 8,
 });
+
+export const filterDescription = style({
+  color: tokens.color.text.secondary,
+  marginTop: -16,
+});
 const filterBase = {
   background: tokens.color.background.gray,
   border: 0,

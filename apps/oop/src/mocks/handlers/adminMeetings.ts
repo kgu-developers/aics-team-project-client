@@ -26,9 +26,15 @@ export const adminMeetingHandlers = [
       );
     }
 
+    const searchParams = new URL(request.url).searchParams;
+    const sectionId = searchParams.get('sectionId');
+    const teamId = searchParams.get('teamId');
+
     return HttpResponse.json({
       records: adminMeetingRecordsFixture
         .filter(record => accessibleSectionIds.includes(record.sectionId))
+        .filter(record => !sectionId || record.sectionId === sectionId)
+        .filter(record => !teamId || record.teamId === teamId)
         .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
         .map(record => ({
           createdAt: record.createdAt,

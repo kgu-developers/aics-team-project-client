@@ -16,6 +16,7 @@ export {
   fetchAdminMeetingRecord,
   fetchAdminMeetingRecords,
   type AdminMeetingRecordDetailDto,
+  type AdminMeetingRecordsFilter,
   type AdminMeetingRecordSummaryDto,
   type AdminMeetingRecordsResponse,
 } from './adminMeeting';

@@ -21,6 +21,7 @@ export default function AdminMeetingsPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: '/admin/meetings/' }) as {
     sectionId?: string;
+    teamId?: string;
   };
   const accessibleSections = currentUser?.sections ?? [];
   const accessibleSectionIds = accessibleSections.map(section => section.id);
@@ -28,13 +29,18 @@ export default function AdminMeetingsPage() {
     search.sectionId && accessibleSectionIds.includes(search.sectionId)
       ? search.sectionId
       : allSectionsValue;
-  const query = useAdminMeetingRecordsQuery(accessibleSectionIds);
+  const selectedTeamId = search.teamId;
+  const query = useAdminMeetingRecordsQuery(accessibleSectionIds, {
+    sectionId:
+      selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
+    teamId: selectedTeamId,
+  });
 
   const records = (query.data?.records ?? []).filter(
     record =>
       selectedSectionId === allSectionsValue ||
       record.sectionId === selectedSectionId,
-  );
+  ).filter(record => !selectedTeamId || record.teamId === selectedTeamId);
 
   function selectSection(sectionId: string) {
     void navigate({
@@ -46,6 +52,11 @@ export default function AdminMeetingsPage() {
   return (
     <div className={styles.page}>
       <Heading level={1}>회의록</Heading>
+      {selectedTeamId ? (
+        <Text className={styles.filterDescription}>
+          선택한 팀의 회의록만 표시합니다.
+        </Text>
+      ) : null}
       <div className={styles.filters} role='group' aria-label='분반 필터'>
         {[
           { label: '전체', value: allSectionsValue },
@@ -86,7 +97,7 @@ export default function AdminMeetingsPage() {
         />
       ) : records.length === 0 ? (
         <EmptyState
-          description='선택한 분반에 등록된 회의록이 없습니다.'
+          description='등록된 회의록이 없습니다.'
           title='표시할 회의록이 없습니다.'
         />
       ) : (
@@ -110,7 +121,10 @@ export default function AdminMeetingsPage() {
                     <Link
                       className={styles.titleLink}
                       params={{ meetingId: record.id }}
-                      search={{ sectionId: record.sectionId }}
+                      search={{
+                        sectionId: record.sectionId,
+                        teamId: record.teamId,
+                      }}
                       to={ROUTES.ADMIN_MEETING_DETAIL}
                     >
                       {record.title}

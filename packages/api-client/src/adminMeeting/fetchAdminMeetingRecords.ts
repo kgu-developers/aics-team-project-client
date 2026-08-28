@@ -15,9 +15,17 @@ export type AdminMeetingRecordsResponse = {
   records: AdminMeetingRecordSummaryDto[];
 };
 
-export async function fetchAdminMeetingRecords(): Promise<AdminMeetingRecordsResponse> {
+export type AdminMeetingRecordsFilter = {
+  sectionId?: string;
+  teamId?: string;
+};
+
+export async function fetchAdminMeetingRecords(
+  filter: AdminMeetingRecordsFilter = {},
+): Promise<AdminMeetingRecordsResponse> {
   const response = await apiClient.get<AdminMeetingRecordsResponse>(
     ENDPOINTS.ADMIN.MEETING_RECORDS,
+    { params: filter },
   );
 
   return response.data;
