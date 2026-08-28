@@ -27,7 +27,9 @@ function getTeamMember(teamId: string, studentId: string) {
   );
 
   if (!student) {
-    throw new Error(`어드민 회의록 fixture에서 팀원 ${studentId}를 찾을 수 없습니다.`);
+    throw new Error(
+      `어드민 회의록 fixture에서 팀원 ${studentId}를 찾을 수 없습니다.`,
+    );
   }
 
   return { name: student.name, userId: student.id };
@@ -49,18 +51,27 @@ const records: AdminMeetingFixture[] = [
     ],
     content: {
       content: [
-        { content: [{ text: '이번 회의 결정', type: 'text' }], type: 'heading' },
+        {
+          content: [{ text: '이번 회의 결정', type: 'text' }],
+          type: 'heading',
+        },
         {
           content: [
             {
               content: [
-                { text: 'MVP 범위는 회의록과 액션 플랜까지로 고정한다.', type: 'text' },
+                {
+                  text: 'MVP 범위는 회의록과 액션 플랜까지로 고정한다.',
+                  type: 'text',
+                },
               ],
               type: 'listItem',
             },
             {
               content: [
-                { text: '다음 주까지 도메인 모델 초안을 공유한다.', type: 'text' },
+                {
+                  text: '다음 주까지 도메인 모델 초안을 공유한다.',
+                  type: 'text',
+                },
               ],
               type: 'listItem',
             },
@@ -87,12 +98,18 @@ const records: AdminMeetingFixture[] = [
     actions: [],
     content: {
       content: [
-        { content: [{ text: '이번 회의 결정', type: 'text' }], type: 'heading' },
+        {
+          content: [{ text: '이번 회의 결정', type: 'text' }],
+          type: 'heading',
+        },
         {
           content: [
             {
               content: [
-                { text: '발표 자료의 핵심 흐름과 역할을 확정한다.', type: 'text' },
+                {
+                  text: '발표 자료의 핵심 흐름과 역할을 확정한다.',
+                  type: 'text',
+                },
               ],
               type: 'listItem',
             },

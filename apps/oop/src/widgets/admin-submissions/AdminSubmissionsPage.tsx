@@ -426,7 +426,9 @@ export default function AdminSubmissionsPage() {
                       : null;
                     const meetingCount = (
                       meetingRecordsQuery.data?.records ?? []
-                    ).filter(record => record.teamId === submission.teamId).length;
+                    ).filter(
+                      record => record.teamId === submission.teamId,
+                    ).length;
                     const meetingCountLabel = meetingRecordsQuery.isPending
                       ? '회의록: 불러오는 중'
                       : meetingRecordsQuery.isError

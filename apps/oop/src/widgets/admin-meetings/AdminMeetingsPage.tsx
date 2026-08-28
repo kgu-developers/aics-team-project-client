@@ -36,11 +36,13 @@ export default function AdminMeetingsPage() {
     teamId: selectedTeamId,
   });
 
-  const records = (query.data?.records ?? []).filter(
-    record =>
-      selectedSectionId === allSectionsValue ||
-      record.sectionId === selectedSectionId,
-  ).filter(record => !selectedTeamId || record.teamId === selectedTeamId);
+  const records = (query.data?.records ?? [])
+    .filter(
+      record =>
+        selectedSectionId === allSectionsValue ||
+        record.sectionId === selectedSectionId,
+    )
+    .filter(record => !selectedTeamId || record.teamId === selectedTeamId);
 
   function selectSection(sectionId: string) {
     void navigate({

@@ -160,8 +160,7 @@ export default function AdminHomeDashboard() {
     currentUser?.sections.map(section => section.id) ?? [];
   const milestoneScheduleQuery =
     useAdminMilestoneScheduleQuery(accessibleSectionIds);
-  const meetingRecordsQuery =
-    useAdminMeetingRecordsQuery(accessibleSectionIds);
+  const meetingRecordsQuery = useAdminMeetingRecordsQuery(accessibleSectionIds);
   const scheduleSections = milestoneScheduleQuery.data?.sections ?? [];
   const milestoneColumns = getMilestoneColumns(scheduleSections);
   const meetingItems: DashboardListItem[] = (

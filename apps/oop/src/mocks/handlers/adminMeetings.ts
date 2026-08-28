@@ -14,39 +14,42 @@ function getAccessibleSectionIds(authorization: string | null) {
 }
 
 export const adminMeetingHandlers = [
-  http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`, ({ request }) => {
-    const accessibleSectionIds = getAccessibleSectionIds(
-      request.headers.get('authorization'),
-    );
-
-    if (!accessibleSectionIds) {
-      return HttpResponse.json(
-        { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
-        { status: 401 },
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`,
+    ({ request }) => {
+      const accessibleSectionIds = getAccessibleSectionIds(
+        request.headers.get('authorization'),
       );
-    }
 
-    const searchParams = new URL(request.url).searchParams;
-    const sectionId = searchParams.get('sectionId');
-    const teamId = searchParams.get('teamId');
+      if (!accessibleSectionIds) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
 
-    return HttpResponse.json({
-      records: adminMeetingRecordsFixture
-        .filter(record => accessibleSectionIds.includes(record.sectionId))
-        .filter(record => !sectionId || record.sectionId === sectionId)
-        .filter(record => !teamId || record.teamId === teamId)
-        .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-        .map(record => ({
-          createdAt: record.createdAt,
-          id: record.id,
-          sectionId: record.sectionId,
-          sectionLabel: record.sectionLabel,
-          teamId: record.teamId,
-          teamLabel: record.teamLabel,
-          title: record.title,
-        })),
-    });
-  }),
+      const searchParams = new URL(request.url).searchParams;
+      const sectionId = searchParams.get('sectionId');
+      const teamId = searchParams.get('teamId');
+
+      return HttpResponse.json({
+        records: adminMeetingRecordsFixture
+          .filter(record => accessibleSectionIds.includes(record.sectionId))
+          .filter(record => !sectionId || record.sectionId === sectionId)
+          .filter(record => !teamId || record.teamId === teamId)
+          .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+          .map(record => ({
+            createdAt: record.createdAt,
+            id: record.id,
+            sectionId: record.sectionId,
+            sectionLabel: record.sectionLabel,
+            teamId: record.teamId,
+            teamLabel: record.teamLabel,
+            title: record.title,
+          })),
+      });
+    },
+  ),
 
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORD(':meetingId')}`,
@@ -67,14 +70,20 @@ export const adminMeetingHandlers = [
 
       if (typeof meetingId !== 'string' || !sectionId) {
         return HttpResponse.json(
-          { code: 'MEETING_LOOKUP_INVALID', message: '회의록과 분반 정보가 필요합니다.' },
+          {
+            code: 'MEETING_LOOKUP_INVALID',
+            message: '회의록과 분반 정보가 필요합니다.',
+          },
           { status: 400 },
         );
       }
 
       if (!accessibleSectionIds.includes(sectionId)) {
         return HttpResponse.json(
-          { code: 'FORBIDDEN', message: '담당 분반의 회의록만 조회할 수 있습니다.' },
+          {
+            code: 'FORBIDDEN',
+            message: '담당 분반의 회의록만 조회할 수 있습니다.',
+          },
           { status: 403 },
         );
       }

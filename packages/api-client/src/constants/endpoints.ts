@@ -10,7 +10,8 @@ export const ENDPOINTS = {
   },
   ADMIN: {
     MEETING_RECORDS: '/admin/meeting-records',
-    MEETING_RECORD: (meetingId: string) => `/admin/meeting-records/${meetingId}`,
+    MEETING_RECORD: (meetingId: string) =>
+      `/admin/meeting-records/${meetingId}`,
     MILESTONE_SCHEDULE: '/admin/milestone-schedule',
     MILESTONE_SUBMISSION_DETAIL: (submissionId: string) =>
       `/admin/submissions/${submissionId}`,

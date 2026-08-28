@@ -176,49 +176,47 @@ describe('AdminTeamDashboard', () => {
 
   it('팀 회의록은 최신 3개만 표시하고 전체보기 URL에 분반과 팀을 유지한다', async () => {
     server.use(
-      http.get(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`,
-        () =>
-          HttpResponse.json({
-            records: [
-              {
-                createdAt: '2026-10-01T09:00:00+09:00',
-                id: 'meeting-1',
-                sectionId: 'oop-2026-2-01',
-                sectionLabel: 'OOP-01',
-                teamId: 'team-1151-1',
-                teamLabel: '1팀',
-                title: '첫 회의',
-              },
-              {
-                createdAt: '2026-10-02T09:00:00+09:00',
-                id: 'meeting-2',
-                sectionId: 'oop-2026-2-01',
-                sectionLabel: 'OOP-01',
-                teamId: 'team-1151-1',
-                teamLabel: '1팀',
-                title: '두 번째 회의',
-              },
-              {
-                createdAt: '2026-10-03T09:00:00+09:00',
-                id: 'meeting-3',
-                sectionId: 'oop-2026-2-01',
-                sectionLabel: 'OOP-01',
-                teamId: 'team-1151-1',
-                teamLabel: '1팀',
-                title: '세 번째 회의',
-              },
-              {
-                createdAt: '2026-10-04T09:00:00+09:00',
-                id: 'meeting-4',
-                sectionId: 'oop-2026-2-01',
-                sectionLabel: 'OOP-01',
-                teamId: 'team-1151-1',
-                teamLabel: '1팀',
-                title: '네 번째 회의',
-              },
-            ],
-          }),
+      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`, () =>
+        HttpResponse.json({
+          records: [
+            {
+              createdAt: '2026-10-01T09:00:00+09:00',
+              id: 'meeting-1',
+              sectionId: 'oop-2026-2-01',
+              sectionLabel: 'OOP-01',
+              teamId: 'team-1151-1',
+              teamLabel: '1팀',
+              title: '첫 회의',
+            },
+            {
+              createdAt: '2026-10-02T09:00:00+09:00',
+              id: 'meeting-2',
+              sectionId: 'oop-2026-2-01',
+              sectionLabel: 'OOP-01',
+              teamId: 'team-1151-1',
+              teamLabel: '1팀',
+              title: '두 번째 회의',
+            },
+            {
+              createdAt: '2026-10-03T09:00:00+09:00',
+              id: 'meeting-3',
+              sectionId: 'oop-2026-2-01',
+              sectionLabel: 'OOP-01',
+              teamId: 'team-1151-1',
+              teamLabel: '1팀',
+              title: '세 번째 회의',
+            },
+            {
+              createdAt: '2026-10-04T09:00:00+09:00',
+              id: 'meeting-4',
+              sectionId: 'oop-2026-2-01',
+              sectionLabel: 'OOP-01',
+              teamId: 'team-1151-1',
+              teamLabel: '1팀',
+              title: '네 번째 회의',
+            },
+          ],
+        }),
       ),
     );
 
@@ -245,9 +243,8 @@ describe('AdminTeamDashboard', () => {
 
   it('팀 회의록이 없으면 빈 상태를 표시한다', async () => {
     server.use(
-      http.get(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`,
-        () => HttpResponse.json({ records: [] }),
+      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`, () =>
+        HttpResponse.json({ records: [] }),
       ),
     );
 

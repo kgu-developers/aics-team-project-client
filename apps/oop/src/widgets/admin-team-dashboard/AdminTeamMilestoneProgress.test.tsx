@@ -112,10 +112,9 @@ describe('AdminTeamMilestoneProgress', () => {
     expect(screen.getByText('상호 평가')).toBeInTheDocument();
     expect(screen.getByText('제출자 수: 0 / 2')).toBeInTheDocument();
     expect(screen.queryByText('발표 평가')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: '회의록: 2개' })[0]).toHaveAttribute(
-      'href',
-      '/admin/meetings?sectionId=oop-01&teamId=team-1',
-    );
+    expect(
+      screen.getAllByRole('link', { name: '회의록: 2개' })[0],
+    ).toHaveAttribute('href', '/admin/meetings?sectionId=oop-01&teamId=team-1');
     expect(screen.getAllByRole('button', { name: '상세보기' })).toHaveLength(2);
     const detailLinks = screen.getAllByRole('link', { name: '상세보기' });
 

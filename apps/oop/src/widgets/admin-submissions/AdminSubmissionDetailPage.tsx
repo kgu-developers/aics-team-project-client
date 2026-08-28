@@ -665,22 +665,22 @@ export default function AdminSubmissionDetailPage() {
         />
       ) : (
         <>
-          {detail.milestoneId === 'proposal'
-            ? renderProposal()
-            : detail.milestoneId === 'midterm'
-              ? renderMidterm()
-              : detail.milestoneId === 'presentation-submit'
-                ? renderPresentation()
-                : detail.milestoneId === 'presentation-evaluate'
-                  ? renderPresentationEvaluation()
-                  : detail.milestoneId === 'peer-review'
-                    ? renderPeerEvaluation()
-                    : (
-                        <EmptyState
-                          description='이 마일스톤의 상세보기는 후속 작업에서 연결합니다.'
-                          title='표시할 상세 내용이 없습니다.'
-                        />
-                      )}
+          {detail.milestoneId === 'proposal' ? (
+            renderProposal()
+          ) : detail.milestoneId === 'midterm' ? (
+            renderMidterm()
+          ) : detail.milestoneId === 'presentation-submit' ? (
+            renderPresentation()
+          ) : detail.milestoneId === 'presentation-evaluate' ? (
+            renderPresentationEvaluation()
+          ) : detail.milestoneId === 'peer-review' ? (
+            renderPeerEvaluation()
+          ) : (
+            <EmptyState
+              description='이 마일스톤의 상세보기는 후속 작업에서 연결합니다.'
+              title='표시할 상세 내용이 없습니다.'
+            />
+          )}
           <AdminTeamMeetingRecordList
             isError={meetingRecordsQuery.isError}
             isPending={meetingRecordsQuery.isPending}
