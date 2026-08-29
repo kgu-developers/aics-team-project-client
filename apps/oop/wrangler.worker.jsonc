@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "aics-oop",
+  "account_id": "a6b2c7849807daa1d50fd035cb3e3e15",
+  "compatibility_date": "2026-08-28",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application",
+  },
+}
