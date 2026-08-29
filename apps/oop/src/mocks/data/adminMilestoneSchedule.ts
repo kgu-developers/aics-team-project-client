@@ -11,21 +11,25 @@ export const adminMilestoneScheduleFixture: AdminMilestoneScheduleResponse = {
       milestones: [
         {
           id: 'proposal',
+          isPublished: true,
           title: '제안서',
           summary: getAdminMilestoneSummary('proposal', '제출 2팀'),
         },
         {
           id: 'midterm',
+          isPublished: true,
           title: '중간 점검',
           summary: getAdminMilestoneSummary('midterm', '제출 2팀'),
         },
         {
           id: 'presentation-submit',
+          isPublished: true,
           title: '발표 자료 제출',
           summary: getAdminMilestoneSummary('presentation-submit', '제출 2팀'),
         },
         {
           id: 'presentation-evaluate',
+          isPublished: true,
           title: '발표 평가',
           summary: getAdminMilestoneSummary(
             'presentation-evaluate',
@@ -34,11 +38,13 @@ export const adminMilestoneScheduleFixture: AdminMilestoneScheduleResponse = {
         },
         {
           id: 'final-report',
+          isPublished: true,
           title: '최종 보고서',
           summary: getAdminMilestoneSummary('final-report', '제출 2팀'),
         },
         {
           id: 'peer-review',
+          isPublished: false,
           title: '상호 평가',
           summary: getAdminMilestoneSummary('peer-review', '제출 1팀'),
         },

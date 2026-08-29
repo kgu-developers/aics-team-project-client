@@ -155,6 +155,7 @@ function Panel({
 }
 
 export default function AdminHomeDashboard() {
+  const navigate = useNavigate();
   const currentUser = useAuthStore(state => state.currentUser);
   const accessibleSectionIds =
     currentUser?.sections.map(section => section.id) ?? [];
@@ -189,7 +190,11 @@ export default function AdminHomeDashboard() {
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <Heading level={2}>분반별 진행 일정</Heading>
-          <Button label='일정 작성' variant='primary' />
+          <Button
+            label='마일스톤 설정'
+            onClick={() => navigate({ to: ROUTES.ADMIN_MILESTONES })}
+            variant='primary'
+          />
         </div>
         <div className={styles.tableWrap}>
           {accessibleSectionIds.length === 0 ? (

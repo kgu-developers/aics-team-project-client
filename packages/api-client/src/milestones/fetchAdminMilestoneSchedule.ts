@@ -3,6 +3,7 @@ import { ENDPOINTS } from '../constants/endpoints';
 
 export type AdminMilestoneScheduleMilestoneDto = {
   id: string;
+  isPublished: boolean;
   summary: string;
   title: string;
 };

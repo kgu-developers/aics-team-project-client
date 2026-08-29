@@ -14,6 +14,7 @@ export type AdminMilestoneScheduleSectionView = {
 
 export type AdminMilestoneScheduleMilestoneView = {
   id: string;
+  isPublished: boolean;
   summary: string;
   title: string;
 };
