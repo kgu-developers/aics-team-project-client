@@ -1,5 +1,5 @@
 import type { MeetingRecord } from '@aics/core';
-import { AstryxThemeProvider } from '@aics/design-system';
+import { AstryxThemeProvider, ToastViewport } from '@aics/design-system';
 import {
   fireEvent,
   render,
@@ -29,9 +29,18 @@ import {
   MeetingListPage,
   MeetingNewPage,
 } from './MeetingPages';
+import * as styles from './MeetingPages.css';
 
 import { demoStudent } from '~/mocks/data/users';
 import { renderWithRouter } from '~/test/renderWithRouter';
+
+const mockNavigate = vi.hoisted(() => vi.fn());
+
+vi.mock('@tanstack/react-router', async importOriginal => {
+  const actual =
+    await importOriginal<typeof import('@tanstack/react-router')>();
+  return { ...actual, useNavigate: () => mockNavigate };
+});
 
 const mutations = vi.hoisted(() => ({
   createRecord: vi.fn(),
@@ -134,7 +143,7 @@ vi.mock('~/features/meeting/queries', () => ({
   useUpdateMeetingActionMutation: () => ({
     isError: false,
     isPending: false,
-    mutateAsync: mutations.updateAction,
+    mutate: mutations.updateAction,
   }),
   useUpdateMeetingRecordMutation: () => ({
     isError: false,
@@ -150,6 +159,7 @@ vi.mock('~/features/editor/useEditLock', () => ({
 describe('MeetingListPage', () => {
   beforeEach(() => {
     queries.meetingRecords = [meetingRecord];
+    mockNavigate.mockReset();
     useAuthStore.getState().setCurrentUser(demoStudent);
   });
 
@@ -158,18 +168,44 @@ describe('MeetingListPage', () => {
     useAuthStore.getState().clearSession();
   });
 
-  it('회의록을 공지사항과 같은 테이블 구조로 표시한다', () => {
-    renderWithRouter(<MeetingListPage />);
+  it('회의록을 단일 반응형 테이블로 표시하고 표준 링크와 행 클릭으로 연다', () => {
+    const { container } = renderWithRouter(<MeetingListPage />);
 
-    expect(screen.getByRole('columnheader', { name: '날짜' })).toBeVisible();
-    expect(screen.getByRole('columnheader', { name: '제목' })).toBeVisible();
-    expect(screen.getByRole('columnheader', { name: '작성자' })).toBeVisible();
+    const responsiveTable = container.querySelector<HTMLElement>(
+      `.${styles.responsiveListTable}`,
+    );
+
+    if (!responsiveTable) {
+      throw new Error('반응형 회의록 테이블을 찾을 수 없어요.');
+    }
+
+    expect(screen.getAllByRole('table')).toHaveLength(1);
     expect(
-      screen.getByRole('link', { name: meetingRecord.title }),
-    ).toHaveAttribute('href', `/student/meetings/${meetingRecord.id}`);
+      screen.getByRole('columnheader', { name: '날짜' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '제목' }),
+    ).toBeInTheDocument();
+    expect(
+      within(responsiveTable).getByRole('columnheader', { name: '작성자' }),
+    ).toBeInTheDocument();
+    const titleLink = screen.getByRole('link', { name: '프로젝트 킥오프' });
+    expect(titleLink).toHaveAttribute(
+      'href',
+      `/student/meetings/${meetingRecord.id}`,
+    );
+    const row = titleLink.closest('tr');
+    if (!row) throw new Error('회의록 테이블 행을 찾을 수 없어요.');
+    expect(row).toHaveAttribute('data-student-meeting-row');
+    fireEvent.click(row);
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: '/student/meetings/$meetingId',
+      params: { meetingId: meetingRecord.id },
+    });
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
     expect(
       screen.getByText('참석 1명 · 액션 플랜 1건 · 공학관 301호'),
-    ).toBeVisible();
+    ).toBeInTheDocument();
   });
 
   it('회의록이 없으면 테이블 내부에 빈 상태를 표시한다', () => {
@@ -177,7 +213,7 @@ describe('MeetingListPage', () => {
 
     renderWithRouter(<MeetingListPage />);
 
-    expect(screen.getByText('등록된 회의록이 없어요.')).toBeVisible();
+    expect(screen.getByText('등록된 회의록이 없어요.')).toBeInTheDocument();
   });
 });
 
@@ -195,7 +231,7 @@ describe('MeetingNewPage', () => {
     useAuthStore.getState().clearSession();
   });
 
-  it('adds an accessible action-plan table row and removes it', () => {
+  it('액션 플랜을 단일 반응형 테이블 행으로 추가하고 삭제한다', () => {
     renderWithRouter(<MeetingNewPage />);
 
     fireEvent.click(screen.getByRole('button', { name: '액션 추가' }));
@@ -215,6 +251,7 @@ describe('MeetingNewPage', () => {
     expect(
       screen.getByPlaceholderText('실행할 일을 입력해 주세요.'),
     ).toBeInTheDocument();
+    expect(screen.getAllByRole('table')).toHaveLength(1);
     expect(
       screen.getAllByRole('button', { name: 'Open calendar' }),
     ).toHaveLength(2);
@@ -232,6 +269,18 @@ describe('MeetingNewPage', () => {
   it('exposes the rich-text toolbar and calendar-based meeting properties', () => {
     renderWithRouter(<MeetingNewPage />);
 
+    const route = screen.getByRole('navigation', { name: '회의록 경로' });
+    expect(within(route).getByRole('link', { name: '회의록' })).toHaveAttribute(
+      'href',
+      '/student/meetings',
+    );
+    expect(within(route).getByText('새 회의록')).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(
+      screen.getByRole('link', { name: '회의록 목록으로 돌아가기' }),
+    ).toHaveTextContent('목록으로');
     expect(screen.getByRole('button', { name: '굵게' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '기울임' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '취소선' })).toBeInTheDocument();
@@ -249,6 +298,17 @@ describe('MeetingNewPage', () => {
 
     renderWithRouter(<MeetingEditPage meetingId={meetingRecord.id} />);
 
+    const route = screen.getByRole('navigation', { name: '회의록 경로' });
+    expect(
+      within(route).getByRole('link', { name: meetingRecord.title }),
+    ).toHaveAttribute('href', `/student/meetings/${meetingRecord.id}`);
+    expect(within(route).getByText('수정')).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(
+      screen.getByRole('link', { name: '회의록 상세로 돌아가기' }),
+    ).toHaveTextContent('상세로');
     expect(
       screen.getByDisplayValue('도메인 모델 초안 작성'),
     ).toBeInTheDocument();
@@ -343,9 +403,11 @@ function MeetingDeleteDialogHarness({ onConfirm }: { onConfirm: () => void }) {
   );
 }
 
-describe('MeetingDetailPage 삭제 모달', () => {
+describe('MeetingDetailPage', () => {
   afterEach(() => {
     queries.meetingRecord = null;
+    mutations.removeRecord.mockReset();
+    mockNavigate.mockReset();
     useAuthStore.getState().clearSession();
   });
 
@@ -401,5 +463,69 @@ describe('MeetingDetailPage 삭제 모달', () => {
     expect(
       screen.queryByRole('button', { name: '삭제' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('현재 위치와 목록 링크를 상단에 두고 수정 액션은 상세 하단에 둔다', () => {
+    queries.meetingRecord = meetingRecord;
+    useAuthStore.getState().setCurrentUser(demoStudent);
+
+    renderWithRouter(<MeetingDetailPage meetingId={meetingRecord.id} />);
+
+    const route = screen.getByRole('navigation', { name: '회의록 경로' });
+    expect(within(route).getByRole('link', { name: '회의록' })).toHaveAttribute(
+      'href',
+      '/student/meetings',
+    );
+    expect(within(route).getByText(meetingRecord.title)).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(
+      screen.getByRole('link', { name: '회의록 목록으로 돌아가기' }),
+    ).toHaveAttribute('href', '/student/meetings');
+
+    const metadata = screen.getByText(/최초 작성/);
+    const editButton = screen.getByRole('button', { name: '수정' });
+    expect(metadata.closest('footer')).toContainElement(editButton);
+    expect(screen.getByText('작성된 회의 내용이 없어요.')).toBeInTheDocument();
+    expect(screen.getAllByRole('table')).toHaveLength(1);
+    expect(
+      within(screen.getByRole('table')).getByRole('row', {
+        name: /도메인 모델 초안 작성/,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('회의록 삭제 성공을 toast로 알리고 목록으로 이동한다', async () => {
+    const user = userEvent.setup();
+    queries.meetingRecord = meetingRecord;
+    useAuthStore.getState().setCurrentUser(demoStudent);
+    mutations.removeRecord.mockImplementation(
+      (
+        _input: unknown,
+        options?: {
+          onSuccess?: () => void;
+        },
+      ) => options?.onSuccess?.(),
+    );
+
+    renderWithRouter(
+      <AstryxThemeProvider>
+        <ToastViewport>
+          <MeetingDetailPage meetingId={meetingRecord.id} />
+        </ToastViewport>
+      </AstryxThemeProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: '삭제' }));
+    const dialog = await screen.findByRole('dialog', {
+      name: '회의록 삭제 확인',
+    });
+    await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+
+    expect(await screen.findByText('회의록을 삭제했어요.')).toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: '/student/meetings',
+    });
   });
 });

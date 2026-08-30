@@ -1,5 +1,5 @@
 import { tokens } from '@aics/design-system';
-import { style } from '@vanilla-extract/css';
+import { globalStyle, style } from '@vanilla-extract/css';
 
 export const page = style({
   display: 'flex',
@@ -9,26 +9,60 @@ export const page = style({
   maxWidth: 1240,
   padding: '28px clamp(20px, 5vw, 48px) 56px',
   width: '100%',
+  '@media': {
+    'screen and (max-width: 767px)': {
+      padding: 'var(--spacing-5) var(--spacing-4) var(--spacing-8)',
+    },
+  },
 });
 
 export const titleRow = style({
-  alignItems: 'flex-start',
+  alignItems: 'center',
   display: 'flex',
-  gap: 16,
+  flexWrap: 'nowrap',
+  gap: 'var(--spacing-3)',
   justifyContent: 'space-between',
   minWidth: 0,
-  '@media': {
-    'screen and (max-width: 767px)': {
-      flexDirection: 'column',
-    },
-  },
+});
+
+export const breadcrumb = style({
+  flex: '1 1 auto',
+  minWidth: 0,
+  overflow: 'hidden',
+  whiteSpace: 'nowrap',
+});
+
+globalStyle(`${breadcrumb} ol`, {
+  flexWrap: 'nowrap',
+  minWidth: 0,
+  overflow: 'hidden',
+});
+
+globalStyle(`${breadcrumb} li`, {
+  minWidth: 0,
+  whiteSpace: 'nowrap',
+});
+
+globalStyle(`${breadcrumb} li:last-child`, {
+  flex: '1 1 auto',
+  overflow: 'hidden',
+});
+
+globalStyle(`${breadcrumb} li:last-child > span:last-child`, {
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 });
 
 export const backLink = style({
   color: tokens.color.text.accent,
   flex: 'none',
-  fontSize: 13,
+  fontSize: 'var(--font-size-sm)',
   textDecoration: 'none',
+  ':hover': {
+    textDecoration: 'underline',
+  },
   ':focus-visible': {
     outline: `2px solid ${tokens.color.accent}`,
     outlineOffset: 2,
@@ -36,12 +70,70 @@ export const backLink = style({
 });
 
 export const tableCard = style({
+  height: 'auto',
+  minWidth: 0,
+  width: '100%',
+  '@media': {
+    'screen and (max-width: 767px)': {
+      border: 0,
+      borderRadius: 0,
+      boxShadow: 'none',
+      padding: 0,
+    },
+  },
+});
+
+globalStyle(`${tableCard} .astryx-table-scroll-wrapper`, {
+  height: 'auto',
+  marginBlock: 0,
+  marginInline: 0,
+  maxWidth: '100%',
+  minHeight: 0,
+  width: '100%',
+});
+
+export const responsiveTable = style({
+  height: 'auto',
   minWidth: 0,
   width: '100%',
 });
 
+globalStyle(`${responsiveTable} table`, {
+  '@media': {
+    'screen and (max-width: 767px)': {
+      minWidth: '0 !important',
+      tableLayout: 'fixed',
+      width: '100%',
+    },
+  },
+});
+
+globalStyle(`${responsiveTable} th, ${responsiveTable} td`, {
+  '@media': {
+    'screen and (max-width: 767px)': {
+      minWidth: '0 !important',
+      overflowWrap: 'anywhere',
+      paddingInline: `${tokens.spacing[2]} !important`,
+    },
+  },
+});
+
+globalStyle(
+  `${responsiveTable} th:nth-child(3), ${responsiveTable} td:nth-child(3)`,
+  {
+    '@media': {
+      'screen and (max-width: 767px)': {
+        display: 'none',
+      },
+    },
+  },
+);
+
 export const titleLink = style({
   color: tokens.color.text.primary,
+  cursor: 'pointer',
+  display: 'block',
+  overflowWrap: 'anywhere',
   textDecoration: 'none',
   ':focus-visible': {
     outline: `2px solid ${tokens.color.accent}`,
@@ -56,6 +148,16 @@ export const titleCell = style({
   minWidth: 0,
 });
 
+globalStyle(`${responsiveTable} [data-student-notice-row]`, {
+  cursor: 'pointer',
+  transitionDuration: 'var(--duration-fast)',
+  transitionProperty: 'background-color, box-shadow',
+  transitionTimingFunction: 'var(--ease-standard)',
+});
+globalStyle(`${responsiveTable} [data-student-notice-row]:hover`, {
+  backgroundColor: tokens.color.background.muted,
+  boxShadow: `inset 0 0 0 1px ${tokens.color.border.base}`,
+});
 export const emptyCell = style({
   color: tokens.color.text.secondary,
   padding: '42px 16px',
@@ -70,7 +172,10 @@ export const detailCard = style({
   padding: 28,
   '@media': {
     'screen and (max-width: 767px)': {
-      padding: 20,
+      border: 0,
+      borderRadius: 0,
+      boxShadow: 'none',
+      padding: 'var(--spacing-4) 0',
     },
   },
 });

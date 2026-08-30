@@ -20,6 +20,14 @@ import StudentNoticeListPage from './StudentNoticeListPage';
 import { demoAccessToken, demoStudent } from '~/mocks/data/users';
 import { renderWithRouter } from '~/test/renderWithRouter';
 
+const mockNavigate = vi.hoisted(() => vi.fn());
+
+vi.mock('@tanstack/react-router', async importOriginal => {
+  const actual =
+    await importOriginal<typeof import('@tanstack/react-router')>();
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 const mySectionAnnouncements: SectionAnnouncement[] = [
   {
     id: '1',
@@ -51,6 +59,7 @@ describe('StudentNoticeListPage', () => {
 
   beforeEach(() => {
     mockSectionAnnouncementsQuery.mockReset();
+    mockNavigate.mockReset();
     window.localStorage.clear();
   });
 
@@ -113,7 +122,7 @@ describe('StudentNoticeListPage', () => {
     );
   });
 
-  it('공지 제목 링크가 상세 페이지로 이동한다', async () => {
+  it('반응형 테이블에서 표준 링크와 행 클릭으로 공지 상세를 연다', async () => {
     const user = userEvent.setup();
 
     mockSectionAnnouncementsQuery.mockReturnValue({
@@ -128,14 +137,22 @@ describe('StudentNoticeListPage', () => {
       </AstryxThemeProvider>,
     );
 
-    const titleLink = screen.getByText('우리 분반 공지');
-    expect(titleLink).toHaveAttribute(
-      'href',
-      expect.stringContaining('/student/notices/'),
-    );
+    const titleLink = screen.getByRole('link', { name: '우리 분반 공지' });
+    expect(titleLink).toHaveAttribute('href', '/student/notices/1');
 
-    await user.click(titleLink);
+    const row = titleLink.closest('tr');
+    if (!row) throw new Error('공지사항 테이블 행을 찾을 수 없어요.');
+    expect(row).toHaveAttribute('data-student-notice-row');
 
-    expect(titleLink).toBeInTheDocument();
+    await user.click(row);
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: '/student/notices/$noticeId',
+      params: { noticeId: '1' },
+    });
+
+    expect(screen.getAllByRole('table')).toHaveLength(1);
+    expect(
+      screen.getByRole('columnheader', { name: '작성자' }),
+    ).toBeInTheDocument();
   });
 });
