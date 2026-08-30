@@ -21,10 +21,7 @@ export const ROUTES = {
     MEETING_NEW: '/student/meetings/new',
     NOTICES: '/student/notices',
     NOTICE_DETAIL: '/student/notices/$noticeId',
-    PROJECT_TOPIC: '/student/project-topic',
-    FEEDBACK: '/student/feedback',
     PEER_REVIEW: '/student/peer-review',
-    GRADES: '/student/grades',
     PRESENTATION_EVALUATION: '/student/presentation-evaluation',
   },
   ONBOARDING: {
