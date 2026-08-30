@@ -1,4 +1,4 @@
-import type { MidReportBlock, MidReportField } from '@aics/core';
+import type { MidReport, MidReportBlock, MidReportField } from '@aics/core';
 import { useToast } from '@aics/design-system';
 import { useCallback } from 'react';
 
@@ -17,6 +17,44 @@ import {
 } from './queries';
 
 type MidReportEditorPageProps = { section: string };
+
+export function canSubmitMidReportDocument(
+  report: MidReport,
+  currentUserName: string | undefined,
+) {
+  if (
+    (report.status !== 'DRAFT' && report.status !== 'REVISION_REQUESTED') ||
+    report.teamLeaderName !== currentUserName ||
+    report.blocks.some(block => block.status !== 'COMPLETED')
+  )
+    return false;
+
+  return (
+    report.status !== 'REVISION_REQUESTED' ||
+    Boolean(
+      report.revision &&
+      report.revision.affectedBlockKeys.every(key =>
+        report.revision?.changedBlockKeys.includes(key),
+      ),
+    )
+  );
+}
+
+export function getMidReportSubmitDisabledReason(
+  report: MidReport,
+  currentUserName: string | undefined,
+) {
+  if (report.status === 'SUBMITTED') return '이미 제출한 중간보고서예요.';
+  if (report.teamLeaderName !== currentUserName)
+    return '팀장만 중간보고서를 제출할 수 있어요.';
+  if (report.blocks.some(block => block.status !== 'COMPLETED'))
+    return '모든 작성 영역을 완료 처리하면 제출할 수 있어요.';
+  if (!canSubmitMidReportDocument(report, currentUserName))
+    return '피드백 대상 영역을 실제로 수정한 뒤 다시 완료해 주세요.';
+  return report.status === 'REVISION_REQUESTED'
+    ? '피드백을 반영한 수정본을 다시 제출할 수 있어요.'
+    : '모든 작성 영역이 완료되어 제출할 수 있어요.';
+}
 
 const COPY = {
   loginRequired: '로그인 후 중간보고서를 열 수 있어요.',
@@ -80,7 +118,9 @@ export default function MidReportEditorPage({
             version,
           });
           toast({
-            body: '중간보고서를 제출했어요. 이제 읽기 전용으로 확인할 수 있어요.',
+            body: report.revision?.resubmittedAt
+              ? '피드백을 반영한 중간보고서를 다시 제출했어요.'
+              : '중간보고서를 제출했어요. 이제 읽기 전용으로 확인할 수 있어요.',
           });
           return report;
         },
@@ -89,17 +129,9 @@ export default function MidReportEditorPage({
           ? getSaveErrorMessage(submitMutation.error, '제출하지 못했어요.')
           : null,
         canSubmitDocument: report =>
-          report.status === 'DRAFT' &&
-          report.teamLeaderName === currentUser?.name &&
-          report.blocks.every(block => block.status === 'COMPLETED'),
+          canSubmitMidReportDocument(report, currentUser?.name),
         submitDisabledReason: report =>
-          report.status === 'SUBMITTED'
-            ? '이미 제출한 중간보고서예요.'
-            : report.teamLeaderName !== currentUser?.name
-              ? '팀장만 중간보고서를 제출할 수 있어요.'
-              : report.blocks.every(block => block.status === 'COMPLETED')
-                ? '모든 작성 영역이 완료되어 제출할 수 있어요.'
-                : '모든 작성 영역을 완료 처리하면 제출할 수 있어요.',
+          getMidReportSubmitDisabledReason(report, currentUser?.name),
       }}
       docId='mid-review'
       documentQuery={query}

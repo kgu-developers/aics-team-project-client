@@ -8,7 +8,9 @@ import {
   TextInput,
   VStack,
 } from '@aics/design-system';
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
+
+import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import type { DocumentEditorField } from '~/features/editor/documentEditor';
 
@@ -22,6 +24,13 @@ type DataRow = {
 };
 
 type SelectedImage = { file: File; url: string };
+
+const dataColumnLabels = {
+  actions: '관리',
+  count: '예상 개수',
+  description: '데이터 설명',
+  name: '데이터 이름',
+} as const;
 
 const createId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -49,6 +58,20 @@ function replaceField(
   return fields.map(field => (field.key === key ? { ...field, value } : field));
 }
 
+function ResponsiveDataCell({
+  children,
+  label,
+}: {
+  children: ReactNode;
+  label: string;
+}) {
+  return (
+    <div className={styles.responsiveCell} data-mobile-label={label}>
+      {children}
+    </div>
+  );
+}
+
 function DataCompositionFields({
   fields,
   isLocked,
@@ -64,111 +87,111 @@ function DataCompositionFields({
     0,
   );
 
+  const updateRow = (rowId: string, patch: Partial<DataRow>) =>
+    updateRows(
+      rows.map(row => (row.id === rowId ? { ...row, ...patch } : row)),
+    );
+  const removeRow = (rowId: string) =>
+    updateRows(rows.filter(row => row.id !== rowId));
+
   return (
-    <VStack gap={4}>
-      <Table
-        columns={[
-          {
-            align: 'start',
-            header: '데이터 이름',
-            key: 'name',
-            renderCell: row => (
-              <TextInput
-                isDisabled={isLocked}
-                isLabelHidden
-                label={`${row.id} 데이터 이름`}
-                onChange={name =>
-                  updateRows(
-                    rows.map(item =>
-                      item.id === row.id ? { ...item, name } : item,
-                    ),
-                  )
-                }
-                value={row.name}
-              />
-            ),
-            width: proportional(1, { minWidth: 0 }),
-          },
-          {
-            align: 'start',
-            header: '데이터 설명',
-            key: 'description',
-            renderCell: row => (
-              <TextArea
-                isDisabled={isLocked}
-                isLabelHidden
-                label={`${row.id} 데이터 설명`}
-                onChange={description =>
-                  updateRows(
-                    rows.map(item =>
-                      item.id === row.id ? { ...item, description } : item,
-                    ),
-                  )
-                }
-                rows={1}
-                value={row.description}
-              />
-            ),
-            width: proportional(2, { minWidth: 0 }),
-          },
-          {
-            align: 'start',
-            header: '예상 개수',
-            key: 'count',
-            renderCell: row => (
-              <TextInput
-                isDisabled={isLocked}
-                isLabelHidden
-                label={`${row.id} 예상 개수`}
-                onChange={count =>
-                  updateRows(
-                    rows.map(item =>
-                      item.id === row.id
-                        ? {
-                            ...item,
-                            count: Number(count.replace(/[^0-9]/g, '')) || 0,
-                          }
-                        : item,
-                    ),
-                  )
-                }
-                value={String(row.count)}
-              />
-            ),
-            width: proportional(0.65, { minWidth: 0 }),
-          },
-          {
-            align: 'end',
-            header: '관리',
-            key: 'actions',
-            renderCell: row => (
-              <div className={styles.actionCell}>
-                <Button
-                  clickAction={() =>
-                    updateRows(rows.filter(item => item.id !== row.id))
-                  }
-                  isDisabled={isLocked || rows.length === 1}
-                  label='삭제'
-                  size='sm'
-                  tooltip={
-                    rows.length === 1
-                      ? '데이터 항목은 최소 한 개가 필요해요.'
-                      : undefined
-                  }
-                  variant='secondary'
-                />
-              </div>
-            ),
-            width: proportional(0.45, { minWidth: 0 }),
-          },
-        ]}
-        data={rows}
-        density='compact'
-        dividers='grid'
-        idKey='id'
-        textOverflow='wrap'
-        verticalAlign='top'
-      />
+    <VStack className={styles.dataComposition} gap={4}>
+      <div className={styles.tableWrapper}>
+        <Table
+          columns={[
+            {
+              align: 'start',
+              header: dataColumnLabels.name,
+              key: 'name',
+              renderCell: row => (
+                <ResponsiveDataCell label={dataColumnLabels.name}>
+                  <TextInput
+                    isDisabled={isLocked}
+                    isLabelHidden
+                    label={`${row.id} ${dataColumnLabels.name}`}
+                    onChange={name => updateRow(row.id, { name })}
+                    value={row.name}
+                    width='100%'
+                  />
+                </ResponsiveDataCell>
+              ),
+              width: proportional(1, { minWidth: 0 }),
+            },
+            {
+              align: 'start',
+              header: dataColumnLabels.description,
+              key: 'description',
+              renderCell: row => (
+                <ResponsiveDataCell label={dataColumnLabels.description}>
+                  <TextArea
+                    isDisabled={isLocked}
+                    isLabelHidden
+                    label={`${row.id} ${dataColumnLabels.description}`}
+                    onChange={description => updateRow(row.id, { description })}
+                    rows={1}
+                    value={row.description}
+                    width='100%'
+                  />
+                </ResponsiveDataCell>
+              ),
+              width: proportional(2, { minWidth: 0 }),
+            },
+            {
+              align: 'start',
+              header: dataColumnLabels.count,
+              key: 'count',
+              renderCell: row => (
+                <ResponsiveDataCell label={dataColumnLabels.count}>
+                  <TextInput
+                    isDisabled={isLocked}
+                    isLabelHidden
+                    label={`${row.id} ${dataColumnLabels.count}`}
+                    onChange={count =>
+                      updateRow(row.id, {
+                        count: Number(count.replace(/[^0-9]/g, '')) || 0,
+                      })
+                    }
+                    value={String(row.count)}
+                    width='100%'
+                  />
+                </ResponsiveDataCell>
+              ),
+              width: proportional(0.65, { minWidth: 0 }),
+            },
+            {
+              align: 'end',
+              header: dataColumnLabels.actions,
+              key: 'actions',
+              renderCell: row => (
+                <ResponsiveDataCell label={dataColumnLabels.actions}>
+                  <div className={styles.actionCell}>
+                    <Button
+                      clickAction={() => removeRow(row.id)}
+                      isDisabled={isLocked || rows.length === 1}
+                      label='삭제'
+                      size='sm'
+                      tooltip={
+                        rows.length === 1
+                          ? '데이터 항목은 최소 한 개가 필요해요.'
+                          : undefined
+                      }
+                      variant='secondary'
+                    />
+                  </div>
+                </ResponsiveDataCell>
+              ),
+              width: proportional(0.45, { minWidth: 0 }),
+            },
+          ]}
+          data={rows}
+          density='compact'
+          dividers='grid'
+          idKey='id'
+          plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
+          textOverflow='wrap'
+          verticalAlign='top'
+        />
+      </div>
       <Button
         clickAction={() =>
           updateRows([

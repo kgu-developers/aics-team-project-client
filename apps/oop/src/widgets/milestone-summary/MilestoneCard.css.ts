@@ -5,8 +5,10 @@ export const milestone = style({
   background: tokens.color.background.card,
   borderRadius: 12,
   display: 'flex',
+  scrollMarginTop: 96,
   '@media': {
     'screen and (max-width: 767px)': {
+      borderRadius: 0,
       flexDirection: 'column',
     },
   },
@@ -49,7 +51,8 @@ export const milestoneStatus = style({
   '@media': {
     'screen and (max-width: 767px)': {
       alignItems: 'flex-start',
-      borderRadius: '12px 12px 0 0',
+      borderInline: 0,
+      borderRadius: 0,
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'space-between',
@@ -110,8 +113,8 @@ export const milestoneContent = style({
   minWidth: 0,
   '@media': {
     'screen and (max-width: 767px)': {
-      borderLeft: `1px solid ${tokens.color.border.base}`,
-      borderRadius: '0 0 12px 12px',
+      borderInline: 0,
+      borderRadius: 0,
     },
   },
 });

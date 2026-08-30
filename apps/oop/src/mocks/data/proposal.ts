@@ -4,7 +4,10 @@ import {
   areDocumentFieldsComplete,
   completeDocumentSessionBlock,
   hasNonEmptyStringArray,
+  hasRequiredDocumentRevisionChanges,
   hasRequiredTextValues,
+  hasResubmittedDocumentRevision,
+  requestDocumentSessionRevision,
   saveDocumentSessionBlock,
   submitDocumentSession,
 } from './documentSession';
@@ -40,6 +43,7 @@ function createProposal(): Proposal {
     teamLeaderName: demoProposalLeaderName,
     submittedAt: null,
     submittedBy: null,
+    revision: null,
     blocks: [
       block(
         'team-info',
@@ -242,6 +246,77 @@ export function submitCurrentProposal(version: number, submitterName: string) {
   const submitted = submitDocumentSession(proposal, version, submitterName);
   if (submitted) proposal = submitted;
   return submitted;
+}
+
+export function requestCurrentProposalRevision() {
+  const requested = requestDocumentSessionRevision(proposal, ['topic']);
+  if (requested) proposal = requested;
+  return requested;
+}
+
+export function ensureProposalFeedbackRevision() {
+  if (proposal.status === 'DRAFT') {
+    const completedProposal: Proposal = {
+      ...proposal,
+      blocks: proposal.blocks.map(item => ({
+        ...item,
+        status: 'COMPLETED',
+      })),
+    };
+    const submitted = submitDocumentSession(
+      completedProposal,
+      completedProposal.version,
+      completedProposal.teamLeaderName,
+    );
+    if (submitted) proposal = submitted;
+  }
+  if (proposal.status === 'SUBMITTED' && !proposal.revision) {
+    requestCurrentProposalRevision();
+  }
+  return proposal;
+}
+
+export function ensureProposalFeedbackRevisionResubmitted() {
+  if (hasResubmittedProposalRevision()) return proposal;
+
+  const requested = ensureProposalFeedbackRevision();
+  if (requested.status !== 'REVISION_REQUESTED') return proposal;
+
+  const topic = requested.blocks.find(item => item.key === 'topic');
+  if (!topic) return proposal;
+
+  const saved = saveProposalBlock(
+    topic.key,
+    requested.version,
+    topic.fields.map(field =>
+      field.key === 'description'
+        ? {
+            ...field,
+            value: `${field.value} 핵심 사용자와 문제 상황을 구체화했습니다.`,
+          }
+        : field,
+    ),
+    requested.teamLeaderName,
+  );
+  if (!saved) return proposal;
+
+  const completed = completeProposalBlock(
+    topic.key,
+    saved.version,
+    requested.teamLeaderName,
+  );
+  if (!completed) return proposal;
+
+  submitCurrentProposal(completed.version, requested.teamLeaderName);
+  return proposal;
+}
+
+export function hasRequiredProposalRevisionChanges() {
+  return hasRequiredDocumentRevisionChanges(proposal);
+}
+
+export function hasResubmittedProposalRevision() {
+  return hasResubmittedDocumentRevision(proposal);
 }
 
 export function resetProposalFixture() {

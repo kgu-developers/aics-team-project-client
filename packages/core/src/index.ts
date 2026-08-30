@@ -13,6 +13,7 @@ export type { Course } from './course/types';
 export type {
   CompleteDocumentBlockInput,
   DocumentBlockStatus,
+  DocumentRevision,
   DocumentSession,
   DocumentSessionBlock,
   DocumentSessionStatus,
@@ -26,6 +27,12 @@ export type {
   EditLockTargetType,
 } from './editLock/types';
 export { editLockTargetTypes } from './editLock/types';
+export type {
+  MidReportFeedback,
+  ProposalFeedbackResponse,
+  SubmitMidReportFeedbackInput,
+  SubmitProposalFeedbackResponseInput,
+} from './feedback/types';
 export type {
   EvaluationContext,
   EvaluationWindowState,

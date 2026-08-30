@@ -95,9 +95,12 @@ export const feedbackList = style({
 });
 
 export const feedbackItem = style({
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: tokens.radius.element,
   display: 'flex',
   flexDirection: 'column',
-  gap: 4,
+  gap: tokens.spacing[1],
+  padding: tokens.spacing[4],
 });
 
 export const feedbackTitle = style({
@@ -115,17 +118,20 @@ export const feedbackContent = style({
   whiteSpace: 'pre-line',
 });
 
-export const replyComposer = style({
-  border: `1px solid ${tokens.color.border.base}`,
-  borderRadius: 8,
-  padding: 12,
+export const feedbackForm = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing[3],
 });
 
-export const replyPlaceholder = style({
-  color: tokens.color.text.disabled,
-  fontSize: 13,
-  fontWeight: 400,
+export const feedbackBlocked = style({
+  background: tokens.color.background.muted,
+  borderRadius: tokens.radius.element,
+  color: tokens.color.text.secondary,
+  fontSize: 'var(--font-size-sm)',
+  lineHeight: 1.5,
   margin: 0,
+  padding: tokens.spacing[3],
 });
 
 export const sectionList = style({

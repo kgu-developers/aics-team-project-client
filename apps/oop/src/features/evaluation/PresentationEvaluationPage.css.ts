@@ -7,9 +7,17 @@ const revealTeamContent = keyframes({
 });
 
 export const root = style({
+  boxSizing: 'border-box',
   display: 'flex',
   flexDirection: 'column',
   gap: tokens.spacing['6'],
+  minWidth: 0,
+  width: '100%',
+  '@media': {
+    'screen and (max-width: 767px)': {
+      paddingInline: tokens.spacing['4'],
+    },
+  },
 });
 export const contextHeader = style({
   width: '100%',

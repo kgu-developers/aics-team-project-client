@@ -1,6 +1,10 @@
 import type { TeamAssignmentMember } from '@aics/core';
 import { Button, proportional, Table, useToast } from '@aics/design-system';
 
+import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
+
+import * as styles from './TeamMemberTable.css';
+
 type TeamMemberTableProps = {
   members: TeamAssignmentMember[];
   variant: 'assignment' | 'firstMeeting';
@@ -56,70 +60,73 @@ export function TeamMemberTable({ members, variant }: TeamMemberTableProps) {
   }
 
   return (
-    <Table
-      columns={
-        variant === 'assignment'
-          ? [
-              {
-                align: 'start',
-                header: '학과',
-                key: 'department',
-                width: proportional(1, { minWidth: 0 }),
-              },
-              {
-                align: 'start',
-                header: '학번',
-                key: 'studentNumber',
-                width: proportional(1, { minWidth: 0 }),
-              },
-              {
-                align: 'start',
-                header: '이름',
-                key: 'name',
-                width: proportional(1, { minWidth: 0 }),
-              },
-            ]
-          : [
-              {
-                align: 'start',
-                header: '학과',
-                key: 'department',
-                width: proportional(1, { minWidth: 0 }),
-              },
-              {
-                align: 'start',
-                header: '이름',
-                key: 'name',
-                width: proportional(0.55, { minWidth: 0 }),
-              },
-              {
-                align: 'start',
-                header: '휴대폰 번호',
-                key: 'phoneNumber',
-                renderCell: member => {
-                  const phoneNumber = member.phoneNumber;
-                  if (!phoneNumber) return <span>연락처 미등록</span>;
-
-                  return (
-                    <Button
-                      clickAction={() => copyPhoneNumber(phoneNumber)}
-                      label={`${phoneNumber} 복사`}
-                      size='sm'
-                      variant='ghost'
-                    >
-                      {phoneNumber} 복사
-                    </Button>
-                  );
+    <div className={styles.table}>
+      <Table
+        columns={
+          variant === 'assignment'
+            ? [
+                {
+                  align: 'start',
+                  header: '학과',
+                  key: 'department',
+                  width: proportional(1, { minWidth: 0 }),
                 },
-                width: proportional(1.45, { minWidth: 0 }),
-              },
-            ]
-      }
-      data={rows}
-      density='compact'
-      dividers='rows'
-      textOverflow='wrap'
-      verticalAlign='middle'
-    />
+                {
+                  align: 'start',
+                  header: '학번',
+                  key: 'studentNumber',
+                  width: proportional(1, { minWidth: 0 }),
+                },
+                {
+                  align: 'start',
+                  header: '이름',
+                  key: 'name',
+                  width: proportional(1, { minWidth: 0 }),
+                },
+              ]
+            : [
+                {
+                  align: 'start',
+                  header: '학과',
+                  key: 'department',
+                  width: proportional(1, { minWidth: 0 }),
+                },
+                {
+                  align: 'start',
+                  header: '이름',
+                  key: 'name',
+                  width: proportional(0.55, { minWidth: 0 }),
+                },
+                {
+                  align: 'start',
+                  header: '휴대폰 번호',
+                  key: 'phoneNumber',
+                  renderCell: member => {
+                    const phoneNumber = member.phoneNumber;
+                    if (!phoneNumber) return <span>연락처 미등록</span>;
+
+                    return (
+                      <Button
+                        clickAction={() => copyPhoneNumber(phoneNumber)}
+                        label={`${phoneNumber} 복사`}
+                        size='sm'
+                        variant='ghost'
+                      >
+                        {phoneNumber} 복사
+                      </Button>
+                    );
+                  },
+                  width: proportional(1.45, { minWidth: 0 }),
+                },
+              ]
+        }
+        data={rows}
+        density='compact'
+        dividers='rows'
+        plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
+        textOverflow='wrap'
+        verticalAlign='middle'
+      />
+    </div>
   );
 }

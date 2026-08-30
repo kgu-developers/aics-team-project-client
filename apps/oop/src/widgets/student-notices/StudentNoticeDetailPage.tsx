@@ -1,13 +1,42 @@
 import type { SectionAnnouncementAttachment } from '@aics/core';
-import { Card, Heading, Text } from '@aics/design-system';
+import {
+  BreadcrumbItem,
+  Breadcrumbs,
+  Card,
+  Heading,
+  Text,
+} from '@aics/design-system';
 import { Link } from '@tanstack/react-router';
-import { useEffect } from 'react';
+import { forwardRef, useEffect, type ComponentPropsWithoutRef } from 'react';
 
 import { useAuthStore } from '~/features/auth/authStore';
 import { useSectionAnnouncementsQuery } from '~/features/student-notices/queries';
 import { useStudentNoticeReadState } from '~/features/student-notices/useStudentNoticeReadState';
 
 import * as styles from './StudentNoticePages.css';
+
+type NoticeBreadcrumbLinkProps = ComponentPropsWithoutRef<'a'> & {
+  href: string;
+};
+
+/**
+ * BreadcrumbItem follows the design-system link contract (`href`), while
+ * TanStack Router follows its own `to` contract. Keep the breadcrumb in the
+ * SPA navigation path by translating that one boundary prop here.
+ */
+const NoticeBreadcrumbLink = forwardRef<
+  HTMLAnchorElement,
+  NoticeBreadcrumbLinkProps
+>(function NoticeBreadcrumbLink({ href, ...props }, ref) {
+  return (
+    <Link
+      ref={ref}
+      activeOptions={{ exact: true }}
+      to={href as '/student/notices'}
+      {...props}
+    />
+  );
+});
 
 function formatFileSize(sizeBytes: number) {
   if (sizeBytes < 1024) return `${sizeBytes} B`;
@@ -89,13 +118,24 @@ export default function StudentNoticeDetailPage({
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
-        <Heading level={1}>공지사항 &gt; {announcement.title}</Heading>
-        <Link className={styles.backLink} to='/student/notices'>
-          ← 공지사항 목록으로
+        <div className={styles.breadcrumb}>
+          <Breadcrumbs label='공지사항 경로'>
+            <BreadcrumbItem as={NoticeBreadcrumbLink} href='/student/notices'>
+              공지사항
+            </BreadcrumbItem>
+            <BreadcrumbItem isCurrent>{announcement.title}</BreadcrumbItem>
+          </Breadcrumbs>
+        </div>
+        <Link
+          aria-label='공지사항 목록으로 돌아가기'
+          className={styles.backLink}
+          to='/student/notices'
+        >
+          목록으로
         </Link>
       </div>
       <Card className={styles.detailCard}>
-        <Heading level={2}>{announcement.title}</Heading>
+        <Heading level={1}>{announcement.title}</Heading>
         <Text className={styles.meta} color='secondary'>
           작성일 : {announcement.createdAt}
         </Text>

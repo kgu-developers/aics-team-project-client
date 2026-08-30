@@ -108,6 +108,7 @@ export function getStudentHomeHeroCopy(
       ...fallbackHero,
       heading: copy.heading,
       description: copy.description,
+      ctaLabel: copy.actionLabel,
     };
   }
 
@@ -115,5 +116,6 @@ export function getStudentHomeHeroCopy(
     ...fallbackHero,
     heading: `${activeCopies.map(copy => copy.task).join('하고, ')}하고 있어요.`,
     description: `${withObjectParticle(joinWithAnd(activeCopies.map(copy => copy.actionLabel)))} 함께 진행해 주세요.`,
+    ctaLabel: '진행 단계 확인',
   };
 }

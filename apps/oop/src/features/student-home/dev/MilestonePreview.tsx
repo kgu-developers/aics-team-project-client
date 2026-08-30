@@ -6,13 +6,15 @@ import * as styles from './MilestonePreview.css';
 const previewOptions = [
   { value: 'proposal-topic', label: '제안서 · 주제 선정' },
   { value: 'proposal-writing', label: '제안서 · 작성' },
-  { value: 'proposal-feedback', label: '제안서 · 피드백 반영' },
+  { value: 'proposal-feedback', label: '제안서 · 수정 전 차단' },
+  { value: 'proposal-feedback-ready', label: '제안서 · 답변 작성 가능' },
   { value: 'mid-report', label: '중간 · 작성' },
   {
     value: 'proposal-feedback-mid-report',
     label: '제안서 피드백 · 중간 작성',
   },
-  { value: 'mid-feedback', label: '중간 · 피드백 반영' },
+  { value: 'mid-feedback', label: '중간 · 수정 전 차단' },
+  { value: 'mid-feedback-ready', label: '중간 · 반영 기록 작성 가능' },
   { value: 'presentation-material', label: '발표 · 자료 작성' },
   { value: 'presentation-evaluation', label: '발표 · 평가' },
   { value: 'final-report', label: '최종 · 제출' },

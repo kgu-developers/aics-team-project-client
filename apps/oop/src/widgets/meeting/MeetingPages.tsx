@@ -6,6 +6,8 @@ import type {
   RichTextJson,
 } from '@aics/core';
 import {
+  BreadcrumbItem,
+  Breadcrumbs,
   Button,
   Card,
   DateInput,
@@ -19,6 +21,8 @@ import {
   Table,
   Text,
   TextInput,
+  type TableProps,
+  useToast,
 } from '@aics/design-system';
 import type { TableColumn } from '@aics/design-system';
 import { Link, useNavigate } from '@tanstack/react-router';
@@ -34,9 +38,11 @@ import {
   Quote,
   Strikethrough,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
+
+import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import { useAuthStore } from '~/features/auth/authStore';
 import { useEditLock } from '~/features/editor/useEditLock';
@@ -82,41 +88,57 @@ function formatHeldAt(value: string) {
   }).format(new Date(value));
 }
 
-const meetingListColumns: TableColumn<MeetingRecord>[] = [
-  {
-    key: 'heldAt',
-    header: '날짜',
-    width: proportional(1),
-    renderCell: record => <>{record.heldAt.slice(0, 10)}</>,
-  },
-  {
-    key: 'title',
-    header: '제목',
-    width: proportional(2),
-    renderCell: record => (
-      <div className={styles.listTitleCell}>
-        <Link
-          className={styles.listTitleLink}
-          params={{ meetingId: record.id }}
-          to='/student/meetings/$meetingId'
-        >
-          {record.title}
-        </Link>
-        <Text color='secondary' type='supporting'>
-          참석 {record.participants.length}명 · 액션 플랜{' '}
-          {record.actions.length}건
-          {record.location ? ` · ${record.location}` : ''}
-        </Text>
-      </div>
-    ),
-  },
-  {
+function hasRichTextContent(value: unknown): boolean {
+  if (!value || typeof value !== 'object') return false;
+
+  const node = value as { content?: unknown[]; text?: unknown };
+  if (typeof node.text === 'string' && node.text.trim()) return true;
+
+  return node.content?.some(hasRichTextContent) ?? false;
+}
+
+function createMeetingListColumns(): TableColumn<MeetingRecord>[] {
+  const columns: TableColumn<MeetingRecord>[] = [
+    {
+      key: 'heldAt',
+      header: '날짜',
+      width: proportional(1, { minWidth: 80 }),
+      renderCell: record => <>{record.heldAt.slice(0, 10)}</>,
+    },
+    {
+      key: 'title',
+      header: '제목',
+      width: proportional(2, { minWidth: 128 }),
+      renderCell: record => (
+        <div className={styles.listTitleCell}>
+          <Link
+            className={styles.listTitleLink}
+            params={{ meetingId: record.id }}
+            to='/student/meetings/$meetingId'
+          >
+            {record.title}
+          </Link>
+          <Text color='secondary' type='supporting'>
+            참석 {record.participants.length}명 · 액션 플랜{' '}
+            {record.actions.length}건
+            {record.location ? ` · ${record.location}` : ''}
+          </Text>
+        </div>
+      ),
+    },
+  ];
+  columns.push({
     key: 'createdBy',
     header: '작성자',
     width: proportional(1),
     renderCell: record => <>{record.createdBy.name}</>,
-  },
-];
+  });
+  return columns;
+}
+
+type MeetingTablePlugin = NonNullable<
+  TableProps<MeetingRecord>['plugins']
+>[string];
 
 function toDraftAction(action: MeetingAction): DraftAction {
   return {
@@ -284,25 +306,28 @@ function ActionFields({
         />
       </div>
       {actions.length ? (
-        <div className={styles.tableFrame}>
+        <div className={`${styles.tableFrame} ${styles.responsiveActionTable}`}>
           <Table
             columns={[
               {
                 header: '할 일',
                 key: 'content',
                 renderCell: (action: DraftAction) => (
-                  <TextInput
-                    isDisabled={isDisabled}
-                    isLabelHidden
-                    isRequired
-                    label={`할 일 ${actions.indexOf(action) + 1}`}
-                    onChange={content =>
-                      update(actions.indexOf(action), { content })
-                    }
-                    placeholder='실행할 일을 입력해 주세요.'
-                    value={action.content}
-                    width='100%'
-                  />
+                  <div className={styles.responsiveActionCell}>
+                    <span className={styles.mobileActionLabel}>할 일</span>
+                    <TextInput
+                      isDisabled={isDisabled}
+                      isLabelHidden
+                      isRequired
+                      label={`할 일 ${actions.indexOf(action) + 1}`}
+                      onChange={content =>
+                        update(actions.indexOf(action), { content })
+                      }
+                      placeholder='실행할 일을 입력해 주세요.'
+                      value={action.content}
+                      width='100%'
+                    />
+                  </div>
                 ),
                 width: proportional(3, { minWidth: 240 }),
               },
@@ -310,23 +335,26 @@ function ActionFields({
                 header: '담당자',
                 key: 'assigneeUserId',
                 renderCell: (action: DraftAction) => (
-                  <Selector
-                    isDisabled={isDisabled}
-                    isLabelHidden
-                    label={`할 일 ${actions.indexOf(action) + 1} 담당자`}
-                    onChange={assigneeUserId =>
-                      update(actions.indexOf(action), { assigneeUserId })
-                    }
-                    options={[
-                      { label: '미정', value: '' },
-                      ...members.map(member => ({
-                        label: member.name,
-                        value: member.id,
-                      })),
-                    ]}
-                    value={action.assigneeUserId}
-                    width='100%'
-                  />
+                  <div className={styles.responsiveActionCell}>
+                    <span className={styles.mobileActionLabel}>담당자</span>
+                    <Selector
+                      isDisabled={isDisabled}
+                      isLabelHidden
+                      label={`할 일 ${actions.indexOf(action) + 1} 담당자`}
+                      onChange={assigneeUserId =>
+                        update(actions.indexOf(action), { assigneeUserId })
+                      }
+                      options={[
+                        { label: '미정', value: '' },
+                        ...members.map(member => ({
+                          label: member.name,
+                          value: member.id,
+                        })),
+                      ]}
+                      value={action.assigneeUserId}
+                      width='100%'
+                    />
+                  </div>
                 ),
                 width: proportional(2, { minWidth: 140 }),
               },
@@ -334,25 +362,28 @@ function ActionFields({
                 header: '기한',
                 key: 'dueDate',
                 renderCell: (action: DraftAction) => (
-                  <DateInput
-                    hasClear
-                    isDisabled={isDisabled}
-                    isLabelHidden
-                    isOptional
-                    label={`할 일 ${actions.indexOf(action) + 1} 기한`}
-                    onChange={dueDate =>
-                      update(actions.indexOf(action), {
-                        dueDate: dueDate ?? '',
-                      })
-                    }
-                    placeholder='기한 선택'
-                    value={
-                      action.dueDate
-                        ? (action.dueDate as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
-                        : undefined
-                    }
-                    width='100%'
-                  />
+                  <div className={styles.responsiveActionCell}>
+                    <span className={styles.mobileActionLabel}>기한</span>
+                    <DateInput
+                      hasClear
+                      isDisabled={isDisabled}
+                      isLabelHidden
+                      isOptional
+                      label={`할 일 ${actions.indexOf(action) + 1} 기한`}
+                      onChange={dueDate =>
+                        update(actions.indexOf(action), {
+                          dueDate: dueDate ?? '',
+                        })
+                      }
+                      placeholder='기한 선택'
+                      value={
+                        action.dueDate
+                          ? (action.dueDate as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
+                          : undefined
+                      }
+                      width='100%'
+                    />
+                  </div>
                 ),
                 width: proportional(2, { minWidth: 140 }),
               },
@@ -360,19 +391,22 @@ function ActionFields({
                 header: '관리',
                 key: 'remove',
                 renderCell: (action: DraftAction) => (
-                  <Button
-                    isDisabled={isDisabled}
-                    label={`할 일 ${actions.indexOf(action) + 1} 삭제`}
-                    onClick={() =>
-                      onChange(
-                        actions.filter(
-                          (_, current) => current !== actions.indexOf(action),
-                        ),
-                      )
-                    }
-                    size='sm'
-                    variant='secondary'
-                  />
+                  <div className={styles.responsiveActionCell}>
+                    <span className={styles.mobileActionLabel}>관리</span>
+                    <Button
+                      isDisabled={isDisabled}
+                      label={`할 일 ${actions.indexOf(action) + 1} 삭제`}
+                      onClick={() =>
+                        onChange(
+                          actions.filter(
+                            (_, current) => current !== actions.indexOf(action),
+                          ),
+                        )
+                      }
+                      size='sm'
+                      variant='secondary'
+                    />
+                  </div>
                 ),
                 width: proportional(1, { minWidth: 80 }),
               },
@@ -380,6 +414,7 @@ function ActionFields({
             data={actions}
             density='compact'
             dividers='grid'
+            plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
             textOverflow='wrap'
             verticalAlign='top'
           />
@@ -396,6 +431,7 @@ function ActionFields({
 function MeetingForm({ record }: { record?: MeetingRecord }) {
   const currentUser = useAuthStore(state => state.currentUser);
   const navigate = useNavigate();
+  const toast = useToast();
   const team = currentUser?.currentTeam;
   const [title, setTitle] = useState(record?.title ?? '');
   const [heldAt, setHeldAt] = useState(
@@ -426,10 +462,12 @@ function MeetingForm({ record }: { record?: MeetingRecord }) {
   }, [record]);
   if (!team)
     return (
-      <EmptyState
-        description='회의록을 작성하려면 팀에 먼저 배정되어야 해요.'
-        title='소속 팀이 없어요.'
-      />
+      <div className={styles.page}>
+        <EmptyState
+          description='회의록을 작성하려면 팀에 먼저 배정되어야 해요.'
+          title='소속 팀이 없어요.'
+        />
+      </div>
     );
   const submit = async () => {
     if (
@@ -461,28 +499,51 @@ function MeetingForm({ record }: { record?: MeetingRecord }) {
             teamId: team.id,
           })
         : await submitMutation.mutateAsync({ input, teamId: team.id });
+      toast({ body: record ? '회의록을 수정했어요.' : '회의록을 등록했어요.' });
       void navigate({
         to: '/student/meetings/$meetingId',
         params: { meetingId: savedRecord.id },
       });
     } catch {
-      /* mutation 상태와 공통 오류 문구를 화면에 표시한다. */
+      toast({ body: requestErrorMessage, type: 'error' });
     }
   };
   const pending = submitMutation.isPending || updateMutation.isPending;
+  const detailPath = record
+    ? `/student/meetings/${record.id}`
+    : ROUTES.STUDENT.MEETINGS;
+
   return (
     <div className={styles.page}>
-      <div className={styles.titleRow}>
-        <Heading level={1}>{record ? '회의록 수정' : '새 회의록'}</Heading>
+      <div className={styles.routeHeader}>
+        <div className={styles.breadcrumb}>
+          <Breadcrumbs label='회의록 경로'>
+            <BreadcrumbItem as={Link} href={ROUTES.STUDENT.MEETINGS}>
+              회의록
+            </BreadcrumbItem>
+            {record ? (
+              <BreadcrumbItem as={Link} href={detailPath}>
+                {record.title}
+              </BreadcrumbItem>
+            ) : null}
+            <BreadcrumbItem isCurrent>
+              {record ? '수정' : '새 회의록'}
+            </BreadcrumbItem>
+          </Breadcrumbs>
+        </div>
         <Link
+          aria-label={
+            record ? '회의록 상세로 돌아가기' : '회의록 목록으로 돌아가기'
+          }
           className={styles.backLink}
           to={record ? '/student/meetings/$meetingId' : ROUTES.STUDENT.MEETINGS}
           params={record ? { meetingId: record.id } : undefined}
         >
-          목록으로
+          {record ? '상세로' : '목록으로'}
         </Link>
       </div>
       <Card className={styles.editorCard}>
+        <Heading level={1}>{record ? '회의록 수정' : '새 회의록'}</Heading>
         <div className={styles.fields}>
           {isLocked ? (
             <p className={styles.notice}>
@@ -598,26 +659,63 @@ export function MeetingListPage() {
   const navigate = useNavigate();
   const teamId = useAuthStore(state => state.currentUser?.currentTeam?.id);
   const query = useMeetingRecordsQuery(teamId);
+  const meetingColumns = useMemo(() => createMeetingListColumns(), []);
+  const rowInteractionPlugin = useMemo<MeetingTablePlugin>(
+    () => ({
+      transformBodyRow: (rowRenderProps, item) => {
+        const goToDetail = () =>
+          void navigate({
+            to: '/student/meetings/$meetingId',
+            params: { meetingId: item.id },
+          });
+        const onClick = rowRenderProps.htmlProps.onClick;
+        return {
+          ...rowRenderProps,
+          htmlProps: {
+            ...rowRenderProps.htmlProps,
+            'data-student-meeting-row': '',
+            onClick: event => {
+              onClick?.(event);
+              if (event.defaultPrevented) return;
+              if (
+                event.target instanceof Element &&
+                event.target.closest('a, button, input, select, textarea')
+              )
+                return;
+              goToDetail();
+            },
+          },
+        };
+      },
+    }),
+    [navigate],
+  );
   if (!teamId)
     return (
-      <EmptyState
-        description='팀 배정 후 팀 회의록을 기록할 수 있어요.'
-        title='소속 팀이 없어요.'
-      />
+      <div className={styles.page}>
+        <EmptyState
+          description='팀 배정 후 팀 회의록을 기록할 수 있어요.'
+          title='소속 팀이 없어요.'
+        />
+      </div>
     );
   if (query.isPending)
     return (
-      <EmptyState
-        description='회의록을 불러오는 중이에요.'
-        title='잠시만 기다려 주세요.'
-      />
+      <div className={styles.page}>
+        <EmptyState
+          description='회의록을 불러오는 중이에요.'
+          title='잠시만 기다려 주세요.'
+        />
+      </div>
     );
   if (query.isError)
     return (
-      <EmptyState
-        description={requestErrorMessage}
-        title='회의록을 불러올 수 없어요.'
-      />
+      <div className={styles.page}>
+        <EmptyState
+          description={requestErrorMessage}
+          title='회의록을 불러올 수 없어요.'
+        />
+      </div>
     );
   return (
     <div className={styles.page}>
@@ -630,18 +728,25 @@ export function MeetingListPage() {
         />
       </div>
       <Card className={styles.listTableCard}>
-        <Table<MeetingRecord>
-          columns={meetingListColumns}
-          data={query.data ?? []}
-          density='balanced'
-          dividers='rows'
-          emptyState={
-            <span className={styles.emptyTableCell}>
-              등록된 회의록이 없어요.
-            </span>
-          }
-          idKey='id'
-        />
+        <div className={styles.responsiveListTable}>
+          <Table<MeetingRecord>
+            columns={meetingColumns}
+            data={query.data ?? []}
+            density='balanced'
+            dividers='rows'
+            emptyState={
+              <span className={styles.emptyTableCell}>
+                등록된 회의록이 없어요.
+              </span>
+            }
+            hasHover
+            idKey='id'
+            plugins={{
+              rowInteraction: rowInteractionPlugin,
+              scrollWrapperLayout: tableScrollWrapperPlugin,
+            }}
+          />
+        </div>
       </Card>
     </div>
   );
@@ -657,17 +762,24 @@ function ActionStatusControl({
   teamId: string;
 }) {
   const mutation = useUpdateMeetingActionMutation();
+  const toast = useToast();
   return (
     <Selector
       isLabelHidden
       label={`${action.content} 상태`}
       onChange={status =>
-        mutation.mutate({
-          actionId: action.id,
-          input: { status: status as MeetingActionStatus },
-          meetingId,
-          teamId,
-        })
+        mutation.mutate(
+          {
+            actionId: action.id,
+            input: { status: status as MeetingActionStatus },
+            meetingId,
+            teamId,
+          },
+          {
+            onError: () => toast({ body: requestErrorMessage, type: 'error' }),
+            onSuccess: () => toast({ body: '액션 플랜 상태를 변경했어요.' }),
+          },
+        )
       }
       options={statusOptions}
       value={action.status}
@@ -741,23 +853,28 @@ export function MeetingDeleteDialog({
 export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
   const currentUser = useAuthStore(state => state.currentUser);
   const navigate = useNavigate();
+  const toast = useToast();
   const query = useMeetingRecordQuery(meetingId);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const teamId = currentUser?.currentTeam?.id;
   const removeMutation = useRemoveMeetingRecordMutation();
   if (query.isPending)
     return (
-      <EmptyState
-        description='회의록을 불러오는 중이에요.'
-        title='잠시만 기다려 주세요.'
-      />
+      <div className={styles.page}>
+        <EmptyState
+          description='회의록을 불러오는 중이에요.'
+          title='잠시만 기다려 주세요.'
+        />
+      </div>
     );
   if (query.isError || !query.data)
     return (
-      <EmptyState
-        description='삭제되었거나 접근 권한이 없는 회의록이에요.'
-        title='회의록을 찾을 수 없어요.'
-      />
+      <div className={styles.page}>
+        <EmptyState
+          description='삭제되었거나 접근 권한이 없는 회의록이에요.'
+          title='회의록을 찾을 수 없어요.'
+        />
+      </div>
     );
   const record = query.data;
   const member = currentUser?.currentTeam?.members.find(
@@ -767,29 +884,22 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
     record.createdBy.userId === currentUser?.id || member?.isLeader;
   return (
     <div className={styles.page}>
-      <div className={styles.titleRow}>
-        <Link className={styles.backLink} to={ROUTES.STUDENT.MEETINGS}>
-          ← 회의록 목록
-        </Link>
-        <div className={styles.actions}>
-          <Button
-            label='수정'
-            onClick={() =>
-              void navigate({
-                to: '/student/meetings/$meetingId/edit',
-                params: { meetingId },
-              })
-            }
-            variant='secondary'
-          />
-          {canDelete ? (
-            <Button
-              label='삭제'
-              onClick={() => setIsDeleteDialogOpen(true)}
-              variant='secondary'
-            />
-          ) : null}
+      <div className={styles.routeHeader}>
+        <div className={styles.breadcrumb}>
+          <Breadcrumbs label='회의록 경로'>
+            <BreadcrumbItem as={Link} href={ROUTES.STUDENT.MEETINGS}>
+              회의록
+            </BreadcrumbItem>
+            <BreadcrumbItem isCurrent>{record.title}</BreadcrumbItem>
+          </Breadcrumbs>
         </div>
+        <Link
+          aria-label='회의록 목록으로 돌아가기'
+          className={styles.backLink}
+          to={ROUTES.STUDENT.MEETINGS}
+        >
+          목록으로
+        </Link>
       </div>
       <Card className={styles.detailCard}>
         <div>
@@ -809,41 +919,67 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
             ))}
           </div>
         </section>
-        <RichTextViewer content={record.content} />
+        <section className={styles.meetingContent}>
+          <Heading level={2}>회의 내용</Heading>
+          {hasRichTextContent(record.content) ? (
+            <RichTextViewer content={record.content} />
+          ) : (
+            <Text color='secondary'>작성된 회의 내용이 없어요.</Text>
+          )}
+        </section>
         <section className={styles.fields}>
           <Heading level={2}>액션 플랜</Heading>
           {record.actions.length ? (
-            <div className={styles.tableFrame}>
+            <div
+              className={`${styles.tableFrame} ${styles.responsiveActionTable}`}
+            >
               <Table
                 columns={[
                   {
                     header: '할 일',
                     key: 'content',
+                    renderCell: (action: MeetingAction) => (
+                      <div className={styles.responsiveActionCell}>
+                        <span className={styles.mobileActionLabel}>할 일</span>
+                        <span>{action.content}</span>
+                      </div>
+                    ),
                     width: proportional(3, { minWidth: 220 }),
                   },
                   {
                     header: '담당자',
                     key: 'assignee',
-                    renderCell: (action: MeetingAction) =>
-                      action.assignee?.name ?? '미정',
+                    renderCell: (action: MeetingAction) => (
+                      <div className={styles.responsiveActionCell}>
+                        <span className={styles.mobileActionLabel}>담당자</span>
+                        <span>{action.assignee?.name ?? '미정'}</span>
+                      </div>
+                    ),
                     width: proportional(1, { minWidth: 100 }),
                   },
                   {
                     header: '기한',
                     key: 'dueDate',
-                    renderCell: (action: MeetingAction) =>
-                      action.dueDate ?? '미정',
+                    renderCell: (action: MeetingAction) => (
+                      <div className={styles.responsiveActionCell}>
+                        <span className={styles.mobileActionLabel}>기한</span>
+                        <span>{action.dueDate ?? '미정'}</span>
+                      </div>
+                    ),
                     width: proportional(1, { minWidth: 110 }),
                   },
                   {
                     header: '상태',
                     key: 'status',
                     renderCell: (action: MeetingAction) => (
-                      <ActionStatusControl
-                        action={action}
-                        meetingId={meetingId}
-                        teamId={record.teamId}
-                      />
+                      <div className={styles.responsiveActionCell}>
+                        <span className={styles.mobileActionLabel}>상태</span>
+                        <ActionStatusControl
+                          action={action}
+                          meetingId={meetingId}
+                          teamId={record.teamId}
+                        />
+                      </div>
                     ),
                     width: proportional(2, { minWidth: 140 }),
                   },
@@ -852,6 +988,7 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
                 density='compact'
                 dividers='grid'
                 idKey='id'
+                plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
                 textOverflow='wrap'
               />
             </div>
@@ -859,12 +996,31 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
             <Text color='secondary'>등록된 액션 플랜이 없어요.</Text>
           )}
         </section>
-        <div className={styles.metadata}>
+        <footer className={styles.detailFooter}>
           <Text color='secondary' type='supporting'>
             최초 작성 {record.createdBy.name} · 최종 수정{' '}
             {formatHeldAt(record.updatedAt)}
           </Text>
-        </div>
+          <div className={`${styles.actions} ${styles.detailActions}`}>
+            {canDelete ? (
+              <Button
+                label='삭제'
+                onClick={() => setIsDeleteDialogOpen(true)}
+                variant='secondary'
+              />
+            ) : null}
+            <Button
+              label='수정'
+              onClick={() =>
+                void navigate({
+                  to: '/student/meetings/$meetingId/edit',
+                  params: { meetingId },
+                })
+              }
+              variant='secondary'
+            />
+          </div>
+        </footer>
       </Card>
       <MeetingDeleteDialog
         isError={removeMutation.isError}
@@ -876,7 +1032,12 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
           removeMutation.mutate(
             { meetingId, teamId },
             {
-              onSuccess: () => void navigate({ to: ROUTES.STUDENT.MEETINGS }),
+              onError: () =>
+                toast({ body: requestErrorMessage, type: 'error' }),
+              onSuccess: () => {
+                toast({ body: '회의록을 삭제했어요.' });
+                void navigate({ to: ROUTES.STUDENT.MEETINGS });
+              },
             },
           );
         }}
@@ -892,17 +1053,21 @@ export function MeetingEditPage({ meetingId }: { meetingId: string }) {
   const query = useMeetingRecordQuery(meetingId);
   if (query.isPending)
     return (
-      <EmptyState
-        description='회의록을 불러오는 중이에요.'
-        title='잠시만 기다려 주세요.'
-      />
+      <div className={styles.page}>
+        <EmptyState
+          description='회의록을 불러오는 중이에요.'
+          title='잠시만 기다려 주세요.'
+        />
+      </div>
     );
   if (query.isError || !query.data)
     return (
-      <EmptyState
-        description='수정할 회의록을 찾을 수 없어요.'
-        title='회의록을 찾을 수 없어요.'
-      />
+      <div className={styles.page}>
+        <EmptyState
+          description='수정할 회의록을 찾을 수 없어요.'
+          title='회의록을 찾을 수 없어요.'
+        />
+      </div>
     );
   return <MeetingForm record={query.data} />;
 }

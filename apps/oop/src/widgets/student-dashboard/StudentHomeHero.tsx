@@ -33,6 +33,7 @@ type StudentHomeHeroProps = {
   assignedActions?: MeetingAction[];
   recentMeetingRecords?: MeetingRecord[];
   meetingState?: 'error' | 'pending' | 'ready';
+  onCtaClick?: () => void;
 };
 
 export default function StudentHomeHero({
@@ -41,6 +42,7 @@ export default function StudentHomeHero({
   assignedActions = [],
   recentMeetingRecords = [],
   meetingState = 'ready',
+  onCtaClick,
 }: StudentHomeHeroProps) {
   const navigate = useNavigate();
   const currentUser = useAuthStore(state => state.currentUser);
@@ -53,6 +55,10 @@ export default function StudentHomeHero({
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const visibleAnnouncements = announcements.slice(0, HOME_SHORTCUT_ITEM_LIMIT);
   const visibleMeetingRecords = recentMeetingRecords.slice(
+    0,
+    HOME_SHORTCUT_ITEM_LIMIT,
+  );
+  const visibleAssignedActions = assignedActions.slice(
     0,
     HOME_SHORTCUT_ITEM_LIMIT,
   );
@@ -100,14 +106,14 @@ export default function StudentHomeHero({
             endContent={<ArrowRight aria-hidden='true' size={24} />}
             label={hero.ctaLabel}
             onClick={
-              hero.actionTo ? () => navigate({ to: hero.actionTo }) : undefined
+              hero.actionTo ? () => navigate({ to: hero.actionTo }) : onCtaClick
             }
             size='lg'
-            isDisabled={!hero.actionTo}
+            isDisabled={!hero.actionTo && !onCtaClick}
             tooltip={
-              hero.actionTo
+              hero.actionTo || onCtaClick
                 ? undefined
-                : '단계별 이동은 후속 작업에서 제공돼요.'
+                : '현재 이동할 수 있는 진행 단계가 없어요.'
             }
             variant='primary'
           />
@@ -148,8 +154,10 @@ export default function StudentHomeHero({
 
           <div
             aria-labelledby={`shortcut-tab-${activeTab}`}
+            className={styles.panel}
             id={`shortcut-panel-${activeTab}`}
             role='tabpanel'
+            tabIndex={0}
           >
             {activeTab === 'notice' ? (
               visibleAnnouncements.length > 0 ? (
@@ -277,8 +285,8 @@ export default function StudentHomeHero({
                     isCompact
                     title='액션 플랜을 불러오지 못했어요.'
                   />
-                ) : assignedActions.length > 0 ? (
-                  assignedActions.map((action, index) => (
+                ) : visibleAssignedActions.length > 0 ? (
+                  visibleAssignedActions.map((action, index) => (
                     <div key={action.id}>
                       <Link
                         className={styles.noticeLink}
@@ -297,7 +305,7 @@ export default function StudentHomeHero({
                           </div>
                         </div>
                       </Link>
-                      {index < assignedActions.length - 1 ? (
+                      {index < visibleAssignedActions.length - 1 ? (
                         <Divider className={styles.divider} />
                       ) : null}
                     </div>

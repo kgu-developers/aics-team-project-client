@@ -8,9 +8,9 @@ export const layout = style({
   margin: '0 auto',
   padding: 'var(--spacing-6)',
   '@media': {
-    'screen and (max-width: 760px)': {
+    'screen and (max-width: 767px)': {
       gridTemplateColumns: 'minmax(0, 1fr)',
-      padding: 'var(--spacing-4)',
+      padding: 0,
     },
   },
 });
@@ -18,17 +18,22 @@ export const sidebar = style({
   display: 'grid',
   alignContent: 'start',
   gap: 'var(--spacing-2)',
+  '@media': {
+    'screen and (max-width: 767px)': {
+      paddingInline: 'var(--spacing-4)',
+    },
+  },
 });
 export const sidebarTitle = style({ margin: 0 });
 export const desktopSections = style({
   display: 'grid',
   gap: 'var(--spacing-2)',
-  '@media': { 'screen and (max-width: 760px)': { display: 'none' } },
+  '@media': { 'screen and (max-width: 767px)': { display: 'none' } },
 });
 export const mobileSelector = style({
   display: 'none',
   '@media': {
-    'screen and (max-width: 760px)': { display: 'block', minWidth: 0 },
+    'screen and (max-width: 767px)': { display: 'block', minWidth: 0 },
   },
 });
 export const sectionLink = style({
@@ -55,7 +60,11 @@ export const document = style({
   minWidth: 0,
   padding: 'var(--spacing-6)',
   '@media': {
-    'screen and (max-width: 640px)': { padding: 'var(--spacing-4)' },
+    'screen and (max-width: 767px)': {
+      borderInline: 0,
+      borderRadius: 0,
+      padding: 'var(--spacing-4)',
+    },
   },
 });
 export const metadata = style({

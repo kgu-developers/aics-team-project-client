@@ -83,7 +83,7 @@ describe('StudentNoticeDetailPage', () => {
     );
 
     expect(
-      screen.getByRole('heading', { level: 2, name: '우리 분반 공지' }),
+      screen.getByRole('heading', { level: 1, name: '우리 분반 공지' }),
     ).toBeInTheDocument();
     expect(screen.getByText('분반 공지 내용')).toBeInTheDocument();
     expect(screen.getByText('두 번째 줄')).toBeInTheDocument();
@@ -220,7 +220,7 @@ describe('StudentNoticeDetailPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('목록으로 돌아가기 링크를 표시한다', () => {
+  it('공지사항 경로와 목록으로 돌아가기 링크를 표시한다', () => {
     mockSectionAnnouncementsQuery.mockReturnValue({
       data: mySectionAnnouncements,
       isError: false,
@@ -233,6 +233,22 @@ describe('StudentNoticeDetailPage', () => {
       </AstryxThemeProvider>,
     );
 
-    expect(screen.getByText('← 공지사항 목록으로')).toBeInTheDocument();
+    expect(
+      screen.getByRole('navigation', { name: '공지사항 경로' }),
+    ).toBeInTheDocument();
+    const breadcrumb = screen.getByRole('navigation', {
+      name: '공지사항 경로',
+    });
+    const backLink = screen.getByRole('link', {
+      name: '공지사항 목록으로 돌아가기',
+    });
+
+    expect(breadcrumb).toHaveTextContent('공지사항');
+    expect(screen.getByText('공지사항')).toHaveAttribute(
+      'href',
+      expect.stringContaining('/student/notices'),
+    );
+    expect(backLink).toHaveTextContent('목록으로');
+    expect(backLink.parentElement).toContainElement(breadcrumb);
   });
 });

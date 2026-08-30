@@ -11,6 +11,10 @@ export {
   updateMyProfile,
   type UpdateMyProfileInput,
 } from './profile/updateMyProfile';
+export {
+  updateMyPassword,
+  type UpdateMyPasswordInput,
+} from './profile/updateMyPassword';
 export { API_BASE_URL, apiClient } from './client';
 export {
   fetchAdminMeetingRecord,
@@ -35,6 +39,10 @@ export {
   submitPeerEvaluationResponse,
   submitPresentationEvaluation,
 } from './evaluation';
+export {
+  submitMidReportFeedback,
+  submitProposalFeedbackResponse,
+} from './feedback';
 export { fetchTeams } from './teams/fetchTeams';
 export { submitTeam } from './teams/submitTeam';
 export {

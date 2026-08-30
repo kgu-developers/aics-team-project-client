@@ -5,11 +5,22 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 import type { PropsWithChildren } from 'react';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
-import StudentHomePage, { getDashboardErrorContent } from './StudentHomePage';
+import StudentHomePage, {
+  focusStudentMilestone,
+  getDashboardErrorContent,
+} from './StudentHomePage';
 
 import { demoStudent } from '~/mocks/data/users';
 
@@ -43,6 +54,28 @@ function createWrapper() {
 }
 
 describe('StudentHomePage', () => {
+  it('히어로 CTA 대상 마일스톤을 열고 스크롤한 뒤 포커스한다', () => {
+    const milestone = document.createElement('article');
+    milestone.id = 'student-milestone-proposal';
+    milestone.scrollIntoView = vi.fn();
+    const trigger = document.createElement('button');
+    trigger.setAttribute('aria-expanded', 'false');
+    const clickSpy = vi.spyOn(trigger, 'click');
+    milestone.append(trigger);
+    document.body.append(milestone);
+
+    focusStudentMilestone('proposal');
+
+    expect(clickSpy).toHaveBeenCalledOnce();
+    expect(milestone.scrollIntoView).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'start',
+    });
+    expect(trigger).toHaveFocus();
+
+    milestone.remove();
+  });
+
   it.each([
     [401, '로그인이 필요해요.'],
     [403, '이 분반에 접근할 수 없어요.'],

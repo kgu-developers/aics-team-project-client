@@ -2,8 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import {
   canCompleteMidReportBlock,
+  completeMidReportBlock,
+  ensureMidReportFeedbackRevision,
   getCurrentMidReport,
+  hasResubmittedMidReportRevision,
+  resetMidReportMockData,
   saveMidReportBlock,
+  submitCurrentMidReport,
 } from './midReport';
 
 describe('mid-report fixture', () => {
@@ -112,5 +117,72 @@ describe('mid-report fixture', () => {
         ]),
       ),
     ).toBe(false);
+  });
+
+  it('수정 요청 블록을 원본으로 되돌리면 재제출을 막고 실제 변경 뒤에만 허용한다', () => {
+    resetMidReportMockData();
+    const requested = ensureMidReportFeedbackRevision();
+    const gui = requested.blocks.find(block => block.key === 'gui-design');
+    if (!gui) throw new Error('GUI revision fixture is required');
+
+    const changed = saveMidReportBlock(
+      gui.key,
+      requested.version,
+      gui.fields.map(field =>
+        field.key === 'guiScreens'
+          ? { ...field, value: field.value.replace('메인 화면', '홈 화면') }
+          : field,
+      ),
+      requested.teamLeaderName,
+    );
+    expect(changed?.revision?.changedBlockKeys).toEqual(['gui-design']);
+    if (!changed) throw new Error('GUI revision save is required');
+
+    const reverted = saveMidReportBlock(
+      gui.key,
+      changed.version,
+      gui.fields,
+      requested.teamLeaderName,
+    );
+    expect(reverted?.revision?.changedBlockKeys).toEqual([]);
+    if (!reverted) throw new Error('reverted GUI revision save is required');
+    const revertedCompletion = completeMidReportBlock(
+      gui.key,
+      reverted.version,
+      requested.teamLeaderName,
+    );
+    if (!revertedCompletion)
+      throw new Error('reverted GUI revision completion is required');
+    expect(
+      submitCurrentMidReport(
+        revertedCompletion.version,
+        requested.teamLeaderName,
+      ),
+    ).toBeNull();
+
+    const changedAgain = saveMidReportBlock(
+      gui.key,
+      revertedCompletion.version,
+      gui.fields.map(field =>
+        field.key === 'guiScreens'
+          ? { ...field, value: field.value.replace('메인 화면', '홈 화면') }
+          : field,
+      ),
+      requested.teamLeaderName,
+    );
+    if (!changedAgain) throw new Error('second GUI revision save is required');
+    const completed = completeMidReportBlock(
+      gui.key,
+      changedAgain.version,
+      requested.teamLeaderName,
+    );
+    if (!completed) throw new Error('GUI revision completion is required');
+    expect(
+      submitCurrentMidReport(completed.version, requested.teamLeaderName),
+    ).toMatchObject({
+      status: 'SUBMITTED',
+      revision: { resubmittedAt: expect.any(String) },
+    });
+    expect(hasResubmittedMidReportRevision()).toBe(true);
   });
 });

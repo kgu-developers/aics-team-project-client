@@ -7,6 +7,7 @@ export const ENDPOINTS = {
   },
   PROFILE: {
     ME: '/me/profile',
+    PASSWORD: '/me/password',
   },
   ADMIN: {
     MEETING_RECORDS: '/admin/meeting-records',
@@ -69,6 +70,12 @@ export const ENDPOINTS = {
       `/milestones/${milestoneId}/my-team-submission`,
     DETAIL: (submissionId: string) => `/submissions/${submissionId}`,
     VERSIONS: (submissionId: string) => `/submissions/${submissionId}/versions`,
+    MID_REPORT_FEEDBACK: (submissionId: string) =>
+      `/submissions/${submissionId}/mid-report-feedback`,
+  },
+  REVIEW: {
+    REVISION_RESPONSE: (reviewId: string) =>
+      `/reviews/${reviewId}/revision-response`,
   },
   MID_REPORT: {
     CURRENT: '/mid-reports/current',

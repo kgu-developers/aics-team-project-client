@@ -12,6 +12,7 @@ vi.mock('@tanstack/react-router', async importOriginal => ({
 }));
 
 import StudentHomeHero from './StudentHomeHero';
+import * as styles from './StudentHomeHero.css';
 
 import { getMeetingRecords } from '~/mocks/data/meeting';
 import { studentHomeDashboardFixture } from '~/mocks/data/studentHome';
@@ -24,19 +25,25 @@ describe('StudentHomeHero', () => {
     window.localStorage.clear();
   });
 
-  it('별도 페이지가 없는 주제 선정 CTA는 진행 상태로 비활성 표시한다', () => {
+  it('별도 페이지가 없는 현재 단계 CTA는 홈 안의 단계 이동 콜백을 실행한다', async () => {
+    const user = userEvent.setup();
+    const onCtaClick = vi.fn();
+
     renderWithRouter(
       <StudentHomeHero
         announcements={studentHomeDashboardFixture.announcements}
         hero={studentHomeDashboardFixture.hero}
+        onCtaClick={onCtaClick}
       />,
     );
 
-    expect(
+    await user.click(
       screen.getByRole('button', {
         name: studentHomeDashboardFixture.hero.ctaLabel,
       }),
-    ).toHaveAttribute('aria-disabled', 'true');
+    );
+
+    expect(onCtaClick).toHaveBeenCalledOnce();
   });
 
   it('커스텀 바로가기 탭을 클릭해서 전환한다', async () => {
@@ -58,6 +65,60 @@ describe('StudentHomeHero', () => {
     expect(screen.getByRole('tabpanel')).toHaveTextContent(
       '아직 작성된 회의록이 없어요.',
     );
+  });
+
+  it('탭 전환에도 바로가기 패널의 내부 스크롤 경계를 유지한다', async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter(
+      <StudentHomeHero
+        announcements={studentHomeDashboardFixture.announcements}
+        hero={studentHomeDashboardFixture.hero}
+      />,
+    );
+
+    const assertScrollablePanel = () => {
+      const panel = screen.getByRole('tabpanel');
+
+      expect(panel).toHaveClass(styles.panel);
+      expect(panel.parentElement).toHaveClass(styles.shortcut);
+    };
+
+    assertScrollablePanel();
+    await user.click(screen.getByRole('tab', { name: '회의록' }));
+    assertScrollablePanel();
+    await user.click(screen.getByRole('tab', { name: '액션 플랜' }));
+    assertScrollablePanel();
+  });
+
+  it('액션 플랜도 홈 요약에서 최대 3개만 표시한다', async () => {
+    const user = userEvent.setup();
+    const meetingRecord = getMeetingRecords('team-07').find(
+      record => record.id === 'meeting-1',
+    );
+    if (!meetingRecord) throw new Error('meeting fixture is required');
+
+    const assignedActions = Array.from({ length: 4 }, (_, index) => ({
+      ...meetingRecord.actions[0]!,
+      id: `meeting-action-limit-${index + 1}`,
+      content:
+        index === 3 ? '숨겨질 네 번째 액션 플랜' : `액션 플랜 ${index + 1}`,
+    }));
+
+    renderWithRouter(
+      <StudentHomeHero
+        announcements={studentHomeDashboardFixture.announcements}
+        assignedActions={assignedActions}
+        hero={studentHomeDashboardFixture.hero}
+      />,
+    );
+
+    await user.click(screen.getByRole('tab', { name: '액션 플랜' }));
+
+    expect(screen.getAllByRole('link')).toHaveLength(3);
+    expect(
+      screen.queryByText('숨겨질 네 번째 액션 플랜'),
+    ).not.toBeInTheDocument();
   });
 
   it('회의록 바로가기와 작성 CTA를 각각 목록·작성 화면으로 연결한다', async () => {

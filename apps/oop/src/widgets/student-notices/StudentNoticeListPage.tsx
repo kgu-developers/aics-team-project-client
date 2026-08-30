@@ -5,10 +5,14 @@ import {
   Heading,
   Table,
   Text,
+  type TableProps,
   proportional,
 } from '@aics/design-system';
 import type { TableColumn } from '@aics/design-system';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { useMemo } from 'react';
+
+import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import { useAuthStore } from '~/features/auth/authStore';
 import { useSectionAnnouncementsQuery } from '~/features/student-notices/queries';
@@ -19,17 +23,16 @@ import * as styles from './StudentNoticePages.css';
 function createStudentNoticeColumns(
   isRead: (noticeId: string) => boolean,
 ): TableColumn<SectionAnnouncement>[] {
-  return [
+  const columns: TableColumn<SectionAnnouncement>[] = [
     {
       key: 'createdAt',
       header: '날짜',
-      width: proportional(1),
+      width: proportional(1, { minWidth: 80 }),
       renderCell: item => <>{item.createdAt.slice(0, 10)}</>,
     },
     {
       key: 'title',
       header: '제목',
-      width: proportional(2),
       renderCell: item => (
         <div className={styles.titleCell}>
           <Link
@@ -42,16 +45,23 @@ function createStudentNoticeColumns(
           {!isRead(item.id) ? <Badge label='새 글' variant='info' /> : null}
         </div>
       ),
-    },
-    {
-      key: 'authorName',
-      header: '작성자',
-      width: proportional(1),
+      width: proportional(2, { minWidth: 128 }),
     },
   ];
+  columns.push({
+    key: 'authorName',
+    header: '작성자',
+    width: proportional(1),
+  });
+  return columns;
 }
 
+type NoticeTablePlugin = NonNullable<
+  TableProps<SectionAnnouncement>['plugins']
+>[string];
+
 export default function StudentNoticeListPage() {
+  const navigate = useNavigate();
   const currentUser = useAuthStore(state => state.currentUser);
   const userId = currentUser?.id ?? '';
   const sectionId = currentUser?.sections[0]?.id ?? '';
@@ -61,7 +71,40 @@ export default function StudentNoticeListPage() {
     error,
   } = useSectionAnnouncementsQuery(sectionId);
   const { isRead } = useStudentNoticeReadState(userId, sectionId);
-  const studentNoticeColumns = createStudentNoticeColumns(isRead);
+  const noticeColumns = useMemo(
+    () => createStudentNoticeColumns(isRead),
+    [isRead],
+  );
+  const rowInteractionPlugin = useMemo<NoticeTablePlugin>(
+    () => ({
+      transformBodyRow: (rowRenderProps, item) => {
+        const openNotice = () =>
+          void navigate({
+            to: '/student/notices/$noticeId',
+            params: { noticeId: item.id },
+          });
+        const onClick = rowRenderProps.htmlProps.onClick;
+        return {
+          ...rowRenderProps,
+          htmlProps: {
+            ...rowRenderProps.htmlProps,
+            'data-student-notice-row': '',
+            onClick: event => {
+              onClick?.(event);
+              if (event.defaultPrevented) return;
+              if (
+                event.target instanceof Element &&
+                event.target.closest('a, button, input, select, textarea')
+              )
+                return;
+              openNotice();
+            },
+          },
+        };
+      },
+    }),
+    [navigate],
+  );
 
   if (!sectionId) {
     return (
@@ -94,16 +137,25 @@ export default function StudentNoticeListPage() {
     <div className={styles.page}>
       <Heading level={1}>공지사항</Heading>
       <Card className={styles.tableCard}>
-        <Table<SectionAnnouncement>
-          data={announcements ?? []}
-          idKey='id'
-          columns={studentNoticeColumns}
-          emptyState={
-            <span className={styles.emptyCell}>등록된 공지사항이 없어요.</span>
-          }
-          dividers='rows'
-          density='balanced'
-        />
+        <div className={styles.responsiveTable}>
+          <Table<SectionAnnouncement>
+            columns={noticeColumns}
+            data={announcements ?? []}
+            emptyState={
+              <span className={styles.emptyCell}>
+                등록된 공지사항이 없어요.
+              </span>
+            }
+            idKey='id'
+            plugins={{
+              rowInteraction: rowInteractionPlugin,
+              scrollWrapperLayout: tableScrollWrapperPlugin,
+            }}
+            dividers='rows'
+            density='balanced'
+            hasHover
+          />
+        </div>
       </Card>
     </div>
   );

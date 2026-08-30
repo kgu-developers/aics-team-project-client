@@ -1,3 +1,4 @@
+import type { MidReport } from '@aics/core';
 import { describe, expect, it } from 'vitest';
 
 import { getCurrentMidReport } from './midReport';
@@ -51,6 +52,38 @@ describe('student home document progress', () => {
       actionDisabled: false,
       actionLabel: '작성하기',
       actionTo: '/student/editor/mid-review/topic',
+    });
+  });
+
+  it('중간보고서 피드백 수정 CTA는 첫 작성 영역이 아니라 실제 피드백 대상 영역을 연다', () => {
+    const current = structuredClone(getCurrentMidReport());
+    const report: MidReport = {
+      ...current,
+      status: 'REVISION_REQUESTED' as const,
+      revision: {
+        affectedBlockKeys: ['gui-design'],
+        changedBlockKeys: [],
+        requestedAt: '2026-10-27T10:00:00+09:00',
+        resubmittedAt: null,
+      },
+      blocks: current.blocks.map(block =>
+        block.key === 'gui-design'
+          ? { ...block, status: 'IN_PROGRESS' as const }
+          : { ...block, status: 'COMPLETED' as const },
+      ),
+    };
+    const dashboard = createStudentHomeDashboardWithMidReportProgress(
+      createStudentHomeDashboardPreview('mid-feedback'),
+      report,
+    );
+    const row = dashboard.milestones.find(
+      milestone => milestone.id === 'mid-review',
+    )?.rows[0];
+
+    expect(row).toMatchObject({
+      actionDisabled: false,
+      actionLabel: '수정하기',
+      actionTo: '/student/editor/mid-review/gui-design',
     });
   });
 });

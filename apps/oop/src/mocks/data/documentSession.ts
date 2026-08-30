@@ -11,6 +11,21 @@ type StructuredFieldValidators = Readonly<
 type Session<TBlock extends DocumentSessionBlock<string, Field>> =
   DocumentSession<TBlock>;
 
+const revisionBaselinesByDocumentId = new Map<string, Map<string, Field[]>>();
+
+function hasEveryAffectedBlockChanged<
+  TBlock extends DocumentSessionBlock<string, Field>,
+>(document: Session<TBlock>) {
+  const revision = document.revision;
+  return Boolean(
+    revision &&
+    revision.affectedBlockKeys.length > 0 &&
+    revision.affectedBlockKeys.every(key =>
+      revision.changedBlockKeys.includes(key),
+    ),
+  );
+}
+
 function fieldsChanged<TField extends Field>(
   current: TField[],
   next: TField[],
@@ -22,6 +37,28 @@ function fieldsChanged<TField extends Field>(
         field.key !== next[index]?.key || field.value !== next[index]?.value,
     )
   );
+}
+
+function revisionChangedBlockKeys<
+  TBlock extends DocumentSessionBlock<string, Field>,
+>(
+  document: Session<TBlock>,
+  blockKey: TBlock['key'],
+  fields: TBlock['fields'],
+) {
+  const revision = document.revision;
+  if (!revision || !revision.affectedBlockKeys.includes(blockKey))
+    return revision?.changedBlockKeys ?? [];
+
+  const baseline = revisionBaselinesByDocumentId
+    .get(document.id)
+    ?.get(blockKey);
+  const differsFromBaseline = Boolean(
+    baseline && fieldsChanged(baseline, fields),
+  );
+  return differsFromBaseline
+    ? Array.from(new Set([...revision.changedBlockKeys, blockKey]))
+    : revision.changedBlockKeys.filter(key => key !== blockKey);
 }
 
 function isStructuredRow(value: unknown): value is Record<string, unknown> {
@@ -100,17 +137,32 @@ export function saveDocumentSessionBlock<
 ): Session<TBlock> | null {
   if (document.version !== version || document.status === 'SUBMITTED')
     return null;
+  const target = document.blocks.find(block => block.key === blockKey);
+  if (!target) return null;
+  const changed = fieldsChanged(target.fields, fields);
   return {
     ...document,
     version: document.version + 1,
+    revision:
+      document.status === 'REVISION_REQUESTED' &&
+      document.revision &&
+      document.revision.affectedBlockKeys.includes(blockKey)
+        ? {
+            ...document.revision,
+            changedBlockKeys: revisionChangedBlockKeys(
+              document,
+              blockKey,
+              fields,
+            ),
+          }
+        : document.revision,
     blocks: document.blocks.map(block =>
       block.key === blockKey
         ? {
             ...block,
             fields,
             status:
-              block.status === 'COMPLETED' &&
-              fieldsChanged(block.fields, fields)
+              block.status === 'COMPLETED' && changed
                 ? 'IN_PROGRESS'
                 : block.status,
             lastEditedBy: editorName,
@@ -161,14 +213,82 @@ export function submitDocumentSession<
     document.version !== version ||
     document.status === 'SUBMITTED' ||
     document.teamLeaderName !== submitterName ||
-    document.blocks.some(block => block.status !== 'COMPLETED')
+    document.blocks.some(block => block.status !== 'COMPLETED') ||
+    (document.status === 'REVISION_REQUESTED' &&
+      !hasEveryAffectedBlockChanged(document))
   )
     return null;
+  const submittedAt = new Date().toISOString();
   return {
     ...document,
     status: 'SUBMITTED',
-    submittedAt: new Date().toISOString(),
+    submittedAt,
     submittedBy: submitterName,
     version: document.version + 1,
+    revision: document.revision
+      ? { ...document.revision, resubmittedAt: submittedAt }
+      : document.revision,
   };
+}
+
+export function requestDocumentSessionRevision<
+  TBlock extends DocumentSessionBlock<string, Field>,
+>(
+  document: Session<TBlock>,
+  affectedBlockKeys: TBlock['key'][],
+): Session<TBlock> | null {
+  const uniqueKeys = Array.from(new Set(affectedBlockKeys));
+  if (
+    document.status !== 'SUBMITTED' ||
+    document.revision ||
+    uniqueKeys.length === 0 ||
+    uniqueKeys.some(key => !document.blocks.some(block => block.key === key))
+  )
+    return null;
+
+  revisionBaselinesByDocumentId.set(
+    document.id,
+    new Map(
+      document.blocks
+        .filter(block => uniqueKeys.includes(block.key))
+        .map(block => [
+          block.key,
+          block.fields.map(field => ({ key: field.key, value: field.value })),
+        ]),
+    ),
+  );
+
+  return {
+    ...document,
+    status: 'REVISION_REQUESTED',
+    version: document.version + 1,
+    revision: {
+      affectedBlockKeys: uniqueKeys,
+      changedBlockKeys: [],
+      requestedAt: new Date().toISOString(),
+      resubmittedAt: null,
+    },
+    blocks: document.blocks.map(block =>
+      uniqueKeys.includes(block.key)
+        ? { ...block, status: 'IN_PROGRESS' }
+        : block,
+    ) as TBlock[],
+  };
+}
+
+export function hasRequiredDocumentRevisionChanges<
+  TBlock extends DocumentSessionBlock<string, Field>,
+>(document: Session<TBlock>) {
+  return (
+    document.status !== 'REVISION_REQUESTED' ||
+    hasEveryAffectedBlockChanged(document)
+  );
+}
+
+export function hasResubmittedDocumentRevision<
+  TBlock extends DocumentSessionBlock<string, Field>,
+>(document: Session<TBlock>) {
+  return (
+    document.status === 'SUBMITTED' && Boolean(document.revision?.resubmittedAt)
+  );
 }

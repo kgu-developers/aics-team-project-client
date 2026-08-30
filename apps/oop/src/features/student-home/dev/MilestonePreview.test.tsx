@@ -56,4 +56,22 @@ describe('MilestonePreview', () => {
     );
     expect(onPreviewChange).toHaveBeenCalledOnce();
   });
+
+  it.each([
+    ['제안서 · 답변 작성 가능', 'proposal-feedback-ready'],
+    ['중간 · 반영 기록 작성 가능', 'mid-feedback-ready'],
+  ] as const)('%s 검수 상태를 URL로 선택한다', (label, preview) => {
+    const onPreviewChange = vi.fn();
+
+    render(
+      <AstryxThemeProvider>
+        <MilestonePreview onPreviewChange={onPreviewChange} />
+      </AstryxThemeProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: label }));
+
+    expect(window.location.search).toBe(`?milestonePreview=${preview}`);
+    expect(onPreviewChange).toHaveBeenCalledOnce();
+  });
 });

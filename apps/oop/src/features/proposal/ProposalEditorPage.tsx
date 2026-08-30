@@ -1,4 +1,4 @@
-import type { ProposalBlock, ProposalField } from '@aics/core';
+import type { Proposal, ProposalBlock, ProposalField } from '@aics/core';
 import { useToast } from '@aics/design-system';
 import { useCallback } from 'react';
 
@@ -16,6 +16,44 @@ import {
 } from './queries';
 
 type ProposalEditorPageProps = { section: string };
+
+export function canSubmitProposalDocument(
+  proposal: Proposal,
+  currentUserName: string | undefined,
+) {
+  if (
+    (proposal.status !== 'DRAFT' && proposal.status !== 'REVISION_REQUESTED') ||
+    proposal.teamLeaderName !== currentUserName ||
+    proposal.blocks.some(block => block.status !== 'COMPLETED')
+  )
+    return false;
+
+  return (
+    proposal.status !== 'REVISION_REQUESTED' ||
+    Boolean(
+      proposal.revision &&
+      proposal.revision.affectedBlockKeys.every(key =>
+        proposal.revision?.changedBlockKeys.includes(key),
+      ),
+    )
+  );
+}
+
+export function getProposalSubmitDisabledReason(
+  proposal: Proposal,
+  currentUserName: string | undefined,
+) {
+  if (proposal.status === 'SUBMITTED') return '이미 제출한 제안서예요.';
+  if (proposal.teamLeaderName !== currentUserName)
+    return '팀장만 제안서를 제출할 수 있어요.';
+  if (proposal.blocks.some(block => block.status !== 'COMPLETED'))
+    return '모든 작성 영역을 완료 처리하면 제출할 수 있어요.';
+  if (!canSubmitProposalDocument(proposal, currentUserName))
+    return '피드백 대상 영역을 실제로 수정한 뒤 다시 완료해 주세요.';
+  return proposal.status === 'REVISION_REQUESTED'
+    ? '피드백을 반영한 수정본을 다시 제출할 수 있어요.'
+    : '모든 작성 영역이 완료되어 제출할 수 있어요.';
+}
 
 const COPY = {
   loginRequired: '로그인 후 제안서를 열 수 있어요.',
@@ -79,7 +117,9 @@ export default function ProposalEditorPage({
             version,
           });
           toast({
-            body: '제안서를 제출했어요. 이제 읽기 전용으로 확인할 수 있어요.',
+            body: proposal.revision?.resubmittedAt
+              ? '피드백을 반영한 제안서를 다시 제출했어요.'
+              : '제안서를 제출했어요. 이제 읽기 전용으로 확인할 수 있어요.',
           });
           return proposal;
         },
@@ -88,17 +128,9 @@ export default function ProposalEditorPage({
           ? getSaveErrorMessage(submitMutation.error, '제출하지 못했어요.')
           : null,
         canSubmitDocument: proposal =>
-          proposal.status === 'DRAFT' &&
-          proposal.teamLeaderName === currentUser?.name &&
-          proposal.blocks.every(block => block.status === 'COMPLETED'),
-        submitDisabledReason: proposal => {
-          if (proposal.status === 'SUBMITTED') return '이미 제출한 제안서예요.';
-          if (proposal.teamLeaderName !== currentUser?.name)
-            return '팀장만 제안서를 제출할 수 있어요.';
-          return proposal.blocks.every(block => block.status === 'COMPLETED')
-            ? '모든 작성 영역이 완료되어 제출할 수 있어요.'
-            : '모든 작성 영역을 완료 처리하면 제출할 수 있어요.';
-        },
+          canSubmitProposalDocument(proposal, currentUser?.name),
+        submitDisabledReason: proposal =>
+          getProposalSubmitDisabledReason(proposal, currentUser?.name),
       }}
       docId='proposal'
       documentQuery={query}

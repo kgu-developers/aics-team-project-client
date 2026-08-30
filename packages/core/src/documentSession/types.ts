@@ -1,6 +1,14 @@
 export type DocumentBlockStatus = 'IN_PROGRESS' | 'COMPLETED';
 
-export type DocumentSessionStatus = 'DRAFT' | 'SUBMITTED';
+export type DocumentSessionStatus =
+  'DRAFT' | 'SUBMITTED' | 'REVISION_REQUESTED';
+
+export type DocumentRevision<TKey extends string = string> = {
+  affectedBlockKeys: TKey[];
+  changedBlockKeys: TKey[];
+  requestedAt: string;
+  resubmittedAt: string | null;
+};
 
 export type DocumentSessionBlock<
   TKey extends string,
@@ -16,7 +24,7 @@ export type DocumentSessionBlock<
   lastSavedAt: string;
 };
 
-export type DocumentSession<TBlock> = {
+export type DocumentSession<TBlock extends { key: string }> = {
   id: string;
   teamId: string;
   title: string;
@@ -26,6 +34,7 @@ export type DocumentSession<TBlock> = {
   teamLeaderName: string;
   submittedAt: string | null;
   submittedBy: string | null;
+  revision?: DocumentRevision<TBlock['key']> | null;
   blocks: TBlock[];
 };
 

@@ -142,40 +142,6 @@ export default function LoginForm() {
           </VStack>
         </form>
       </Card>
-
-      <Card className={styles.demo}>
-        <p className={styles.demoTitle}>개발용 MSW 계정</p>
-        <ul className={styles.demoList}>
-          <li>
-            <strong>학생 A · 신청 테스트</strong>
-            <span>
-              학번 <strong>20260001</strong> / 비밀번호{' '}
-              <strong>oop-demo-a</strong>
-            </span>
-          </li>
-          <li>
-            <strong>학생 B · 수신 테스트</strong>
-            <span>
-              학번 <strong>20260003</strong> / 비밀번호{' '}
-              <strong>oop-demo-b</strong>
-            </span>
-          </li>
-          <li>
-            <strong>학생 C · 팀 배정 완료</strong>
-            <span>
-              학번 <strong>20260004</strong> / 비밀번호{' '}
-              <strong>oop-demo-c</strong>
-            </span>
-          </li>
-          <li>
-            <strong>관리 예시 계정</strong>
-            <span>
-              학번 <strong>20260002</strong> / 비밀번호{' '}
-              <strong>oop-admin</strong>
-            </span>
-          </li>
-        </ul>
-      </Card>
     </section>
   );
 }

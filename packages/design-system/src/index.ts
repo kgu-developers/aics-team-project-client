@@ -4,6 +4,12 @@ export { Avatar } from '@astryxdesign/core/Avatar';
 export type { AvatarProps, AvatarSize } from '@astryxdesign/core/Avatar';
 export { Button } from '@astryxdesign/core/Button';
 export type { ButtonProps, ButtonVariant } from '@astryxdesign/core/Button';
+export { BreadcrumbItem, Breadcrumbs } from '@astryxdesign/core/Breadcrumbs';
+export type {
+  BreadcrumbItemProps,
+  BreadcrumbsProps,
+  BreadcrumbsVariant,
+} from '@astryxdesign/core/Breadcrumbs';
 export { Card } from '@astryxdesign/core/Card';
 export type { CardProps, CardVariant } from '@astryxdesign/core/Card';
 export { Carousel } from '@astryxdesign/core/Carousel';
@@ -28,6 +34,11 @@ export type { FileInputProps } from '@astryxdesign/core/FileInput';
 export { HStack, VStack } from '@astryxdesign/core/Layout';
 export { IconButton } from '@astryxdesign/core/IconButton';
 export type { IconButtonProps } from '@astryxdesign/core/IconButton';
+export { Popover } from '@astryxdesign/core/Popover';
+export type {
+  PopoverProps,
+  PopoverTriggerRenderProps,
+} from '@astryxdesign/core/Popover';
 export { Text, Heading } from '@astryxdesign/core/Text';
 export { Tab, TabList } from '@astryxdesign/core/TabList';
 export type { TabListProps, TabProps } from '@astryxdesign/core/TabList';

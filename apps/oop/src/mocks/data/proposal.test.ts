@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   canCompleteProposalBlock,
   completeProposalBlock,
+  ensureProposalFeedbackRevision,
   getCurrentProposal,
+  hasResubmittedProposalRevision,
   resetProposalFixture,
   saveProposalBlock,
   submitCurrentProposal,
@@ -71,6 +73,82 @@ describe('proposal fixture', () => {
       status: 'SUBMITTED',
       submittedBy: 'OOP 데모 학생 A',
     });
+  });
+
+  it('수정 요청 블록을 원본으로 되돌리면 변경 표시를 제거하고 실제 변경 뒤에만 재제출한다', () => {
+    resetProposalFixture();
+    const requested = ensureProposalFeedbackRevision();
+    const topic = requested.blocks.find(block => block.key === 'topic');
+    if (!topic) throw new Error('topic revision fixture is required');
+
+    const unchanged = saveProposalBlock(
+      topic.key,
+      requested.version,
+      topic.fields,
+      requested.teamLeaderName,
+    );
+    expect(unchanged?.revision?.changedBlockKeys).toEqual([]);
+    if (!unchanged) throw new Error('unchanged revision save is required');
+
+    const changed = saveProposalBlock(
+      topic.key,
+      unchanged.version,
+      topic.fields.map(field =>
+        field.key === 'description'
+          ? { ...field, value: `${field.value} 운영자 요구를 보완합니다.` }
+          : field,
+      ),
+      requested.teamLeaderName,
+    );
+    expect(changed?.revision?.changedBlockKeys).toEqual(['topic']);
+    if (!changed) throw new Error('changed revision save is required');
+
+    const reverted = saveProposalBlock(
+      topic.key,
+      changed.version,
+      topic.fields,
+      requested.teamLeaderName,
+    );
+    expect(reverted?.revision?.changedBlockKeys).toEqual([]);
+    if (!reverted) throw new Error('reverted revision save is required');
+    const revertedCompletion = completeProposalBlock(
+      topic.key,
+      reverted.version,
+      requested.teamLeaderName,
+    );
+    if (!revertedCompletion)
+      throw new Error('reverted revision completion is required');
+    expect(
+      submitCurrentProposal(
+        revertedCompletion.version,
+        requested.teamLeaderName,
+      ),
+    ).toBeNull();
+
+    const changedAgain = saveProposalBlock(
+      topic.key,
+      revertedCompletion.version,
+      topic.fields.map(field =>
+        field.key === 'description'
+          ? { ...field, value: `${field.value} 운영자 요구를 보완합니다.` }
+          : field,
+      ),
+      requested.teamLeaderName,
+    );
+    if (!changedAgain) throw new Error('second revision save is required');
+    const completed = completeProposalBlock(
+      topic.key,
+      changedAgain.version,
+      requested.teamLeaderName,
+    );
+    if (!completed) throw new Error('revision completion is required');
+    expect(
+      submitCurrentProposal(completed.version, requested.teamLeaderName),
+    ).toMatchObject({
+      status: 'SUBMITTED',
+      revision: { resubmittedAt: expect.any(String) },
+    });
+    expect(hasResubmittedProposalRevision()).toBe(true);
   });
 
   it('exposes the five proposal sections in document order', () => {

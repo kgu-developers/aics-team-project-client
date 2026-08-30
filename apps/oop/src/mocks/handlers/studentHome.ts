@@ -6,11 +6,27 @@ import {
   getPeerTargets,
   getPresentationEvaluationOverview,
 } from '../data/evaluation';
-import { getCurrentMidReport } from '../data/midReport';
+import {
+  ensureMidReportFeedbackRevision,
+  ensureMidReportFeedbackRevisionResubmitted,
+  getCurrentMidReport,
+  resetMidReportMockData,
+} from '../data/midReport';
 import { getCurrentPresentation } from '../data/presentation';
-import { getCurrentProposal } from '../data/proposal';
+import {
+  ensureProposalFeedbackRevision,
+  ensureProposalFeedbackRevisionResubmitted,
+  getCurrentProposal,
+  resetProposalFixture,
+} from '../data/proposal';
+import {
+  getMidReportFeedback,
+  getProposalFeedbackResponse,
+  resetStudentFeedbackMockData,
+} from '../data/studentFeedback';
 import {
   createStudentHomeDashboardWithEvaluationProgress,
+  createStudentHomeDashboardWithFeedbackSubmissions,
   createStudentHomeDashboardWithFinalReportSubmission,
   createStudentHomeDashboardWithMidReportProgress,
   createStudentHomeDashboardWithPresentationProgress,
@@ -18,6 +34,7 @@ import {
   createStudentHomeDashboardWithTopicBoard,
   createStudentHomeDashboardPreview,
   isMilestonePreviewScenario,
+  type MilestonePreviewScenario,
 } from '../data/studentHome';
 import {
   demoSubmissionTeamId,
@@ -27,6 +44,42 @@ import { getTopicBoard } from '../data/topic';
 import { getDemoStudentAccount } from '../data/users';
 
 const demoStudentSectionId = 'oop-2026-2-01';
+
+let activeMilestonePreview: MilestonePreviewScenario | null | undefined;
+
+export function resetStudentHomePreviewTransitionState() {
+  activeMilestonePreview = undefined;
+}
+
+function prepareMilestonePreview(
+  previewScenario: MilestonePreviewScenario | null,
+) {
+  if (
+    activeMilestonePreview !== undefined &&
+    activeMilestonePreview !== previewScenario
+  ) {
+    resetProposalFixture();
+    resetMidReportMockData();
+    resetStudentFeedbackMockData();
+  }
+  activeMilestonePreview = previewScenario;
+
+  if (
+    previewScenario === 'proposal-feedback' ||
+    previewScenario === 'proposal-feedback-mid-report'
+  ) {
+    ensureProposalFeedbackRevision();
+  }
+  if (previewScenario === 'proposal-feedback-ready') {
+    ensureProposalFeedbackRevisionResubmitted();
+  }
+  if (previewScenario === 'mid-feedback') {
+    ensureMidReportFeedbackRevision();
+  }
+  if (previewScenario === 'mid-feedback-ready') {
+    ensureMidReportFeedbackRevisionResubmitted();
+  }
+}
 
 export const studentHomeHandlers = [
   http.get(
@@ -71,8 +124,14 @@ export const studentHomeHandlers = [
         );
       }
 
-      const previewScenario = request.headers.get('X-OOP-Milestone-Preview');
-      const baseDashboard = isMilestonePreviewScenario(previewScenario)
+      const previewHeader = request.headers.get('X-OOP-Milestone-Preview');
+      const previewScenario = isMilestonePreviewScenario(previewHeader)
+        ? previewHeader
+        : null;
+      // 같은 preview의 사용자 작업은 유지하고, preview가 바뀔 때만
+      // 공유 mock 문서를 초기화해 시나리오 간 상태 누수를 막는다.
+      prepareMilestonePreview(previewScenario);
+      const baseDashboard = previewScenario
         ? createStudentHomeDashboardPreview(previewScenario)
         : createStudentHomeDashboardWithTopicBoard(
             getTopicBoard(
@@ -105,12 +164,21 @@ export const studentHomeHandlers = [
         );
       const userId = account.user.studentNumber;
 
+      const dashboard = createStudentHomeDashboardWithEvaluationProgress(
+        withSubmissionProgress,
+        getPresentationEvaluationOverview(userId),
+        getPeerResponse(userId),
+        getPeerTargets(userId).length,
+      );
+      const teamId = account.user.currentTeam?.id ?? '';
+
       return HttpResponse.json(
-        createStudentHomeDashboardWithEvaluationProgress(
-          withSubmissionProgress,
-          getPresentationEvaluationOverview(userId),
-          getPeerResponse(userId),
-          getPeerTargets(userId).length,
+        createStudentHomeDashboardWithFeedbackSubmissions(
+          dashboard,
+          getProposalFeedbackResponse(teamId),
+          getMidReportFeedback(teamId),
+          getCurrentProposal(),
+          getCurrentMidReport(),
         ),
       );
     },
