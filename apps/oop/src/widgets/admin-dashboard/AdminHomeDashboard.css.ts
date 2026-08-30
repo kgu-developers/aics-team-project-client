@@ -164,6 +164,7 @@ export const item = style({
   gap: 8,
   gridTemplateColumns: 'auto minmax(0, 1fr) auto',
   minHeight: 22,
+  transition: 'background-color var(--duration-fast) var(--ease-standard)',
 });
 export const itemMeta = style({
   alignItems: 'center',
@@ -193,6 +194,9 @@ export const action = style({
   display: 'flex',
   justifyContent: 'flex-end',
   marginTop: 14,
+});
+globalStyle(item + ':hover', {
+  background: tokens.color.background.muted,
 });
 globalStyle(table + ' th', {
   background: tokens.color.background.card,

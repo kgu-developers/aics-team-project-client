@@ -50,6 +50,11 @@ export const table = style({
 export const titleLink = style({
   color: tokens.color.text.primary,
   textDecoration: 'none',
+  ':hover': {
+    color: tokens.color.text.accent,
+    textDecoration: 'underline',
+    textUnderlineOffset: 3,
+  },
 });
 
 globalStyle(table + ' th', {
@@ -65,4 +70,8 @@ globalStyle(table + ' td', {
   borderTop: '1px solid ' + tokens.color.border.base,
   fontSize: 14,
   padding: '14px 16px',
+});
+
+globalStyle(table + ' tbody tr:hover td', {
+  background: tokens.color.background.muted,
 });

@@ -86,6 +86,10 @@ globalStyle(table + ' td', {
   padding: '14px 16px',
 });
 
+globalStyle(table + ' tbody tr:hover td', {
+  background: tokens.color.background.muted,
+});
+
 export const titleLink = style({
   color: tokens.color.text.primary,
   textDecoration: 'none',
