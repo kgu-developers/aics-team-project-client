@@ -1,5 +1,5 @@
-import { Avatar, Divider, HStack, IconButton, Text } from '@aics/design-system';
-import { Link, Navigate, Outlet, useNavigate } from '@tanstack/react-router';
+import { Divider, Text } from '@aics/design-system';
+import { Link, Navigate, Outlet } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -8,11 +8,11 @@ import { useAuthStore } from '~/features/auth/authStore';
 import { oopCourseConfig } from '~/course/config';
 
 import * as styles from './StudentShell.css';
+import { StudentHeaderActions } from './StudentShellPopovers';
 
 export default function StudentShell() {
   const accessToken = useAuthStore(state => state.accessToken);
   const currentUser = useAuthStore(state => state.currentUser);
-  const navigate = useNavigate();
 
   if (!accessToken || !currentUser) {
     return <Navigate to={ROUTES.LOGIN} />;
@@ -29,11 +29,29 @@ export default function StudentShell() {
     <div className={styles.shell}>
       <div className={styles.shellPage}>
         <header className={styles.shellHeader}>
-          <Link className={styles.shellBrand} to={ROUTES.STUDENT.HOME}>
-            <Text type='body' weight='medium'>
+          <Link
+            aria-label={`${oopCourseConfig.title} 홈`}
+            className={styles.shellBrand}
+            to={ROUTES.STUDENT.HOME}
+          >
+            <Text
+              aria-hidden='true'
+              className={styles.shellCompactBrand}
+              type='large'
+              weight='bold'
+            >
+              OOP
+            </Text>
+            <Text
+              aria-hidden='true'
+              className={styles.shellCourse}
+              type='body'
+              weight='medium'
+            >
               {oopCourseConfig.title}
             </Text>
             <Text
+              aria-hidden='true'
               className={styles.shellIdentity}
               color='secondary'
               type='body'
@@ -44,27 +62,7 @@ export default function StudentShell() {
             </Text>
           </Link>
 
-          <HStack align='center' className={styles.shellActions} gap={3}>
-            <IconButton
-              icon={<img alt='' src='/icons/notifications.svg' />}
-              label='공지사항 열기'
-              size='sm'
-              variant='ghost'
-            />
-            <IconButton
-              icon={<img alt='' src='/icons/meeting-notes.svg' />}
-              label='회의록 열기'
-              onClick={() => void navigate({ to: ROUTES.STUDENT.MEETINGS })}
-              size='sm'
-              variant='ghost'
-            />
-            {/* TODO(KD3-75 follow-up): 알림 헤더 액션을 연결한다. */}
-            <Avatar
-              alt={currentUser.name}
-              size={24}
-              tooltip={currentUser.name}
-            />
-          </HStack>
+          <StudentHeaderActions currentUser={currentUser} />
         </header>
 
         <main className={styles.shellContent}>

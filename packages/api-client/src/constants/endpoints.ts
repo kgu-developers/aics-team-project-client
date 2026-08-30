@@ -7,6 +7,7 @@ export const ENDPOINTS = {
   },
   PROFILE: {
     ME: '/me/profile',
+    PASSWORD: '/me/password',
   },
   ADMIN: {
     MEETING_RECORDS: '/admin/meeting-records',
