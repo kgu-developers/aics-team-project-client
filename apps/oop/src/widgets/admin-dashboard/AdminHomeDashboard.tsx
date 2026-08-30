@@ -66,7 +66,14 @@ function List({
   return (
     <ul className={styles.list}>
       {items.map(item => (
-        <li className={styles.item} key={[item.section, item.title].join('-')}>
+        <li
+          className={styles.item}
+          key={
+            isMeetingList && item.meetingId
+              ? item.meetingId
+              : [item.section, item.title].join('-')
+          }
+        >
           <span className={styles.itemMeta}>
             <span className={styles.label}>{item.section}</span>
             {isMeetingList &&

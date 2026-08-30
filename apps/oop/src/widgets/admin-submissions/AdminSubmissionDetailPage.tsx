@@ -87,14 +87,23 @@ export default function AdminSubmissionDetailPage() {
     adminId: currentUser?.id,
   });
   useEffect(() => {
-    if (detail?.submissionId && search.sectionId) {
+    if (
+      detail?.submissionId &&
+      search.sectionId &&
+      isRequestedSectionAccessible
+    ) {
       markAsRead(search.sectionId, detail.submissionId);
     }
-  }, [detail?.submissionId, search.sectionId, markAsRead]);
+  }, [
+    detail?.submissionId,
+    search.sectionId,
+    isRequestedSectionAccessible,
+    markAsRead,
+  ]);
   const milestoneLabel =
     detail?.milestoneTitle ?? getMilestoneLabel(search.milestoneId);
   const studentsQuery = useAdminStudentsQuery(
-    isRequestedSectionAccessible ? (detail?.sectionId ?? '') : '',
+    isRequestedSectionAccessible ? detail?.sectionId : undefined,
   );
   const isAccessibleSection = Boolean(
     detail &&

@@ -11,7 +11,10 @@ export function useAdminMilestoneSubmissionsQuery(
 ) {
   return useQuery({
     enabled: Boolean(sectionId) && isAccessibleSection,
-    queryKey: adminMilestoneSubmissionsKeys.list(sectionId ?? '', milestoneId),
+    queryKey: adminMilestoneSubmissionsKeys.list(
+      sectionId ?? 'disabled',
+      milestoneId,
+    ),
     queryFn: async () => {
       if (!sectionId) {
         throw new Error('분반 ID가 필요합니다.');

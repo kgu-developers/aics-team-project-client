@@ -174,7 +174,7 @@ export default function AdminSubmissionsPage() {
     effectiveSectionId && accessibleSectionIds.includes(effectiveSectionId),
   );
   const submissionsQuery = useAdminMilestoneSubmissionsQuery(
-    effectiveSectionId ?? '',
+    effectiveSectionId,
     activeMilestoneId,
     isAccessibleSection &&
       activeMilestoneId !== 'presentation-evaluate' &&
@@ -315,7 +315,7 @@ export default function AdminSubmissionsPage() {
                               const unread = Boolean(
                                 team.submissionId &&
                                 !readState.isRead(
-                                  effectiveSectionId ?? '',
+                                  effectiveSectionId!,
                                   team.submissionId,
                                 ),
                               );
@@ -393,20 +393,22 @@ export default function AdminSubmissionsPage() {
                         verticalAlign='middle'
                       />
                     </Card>
-                    <AdminPresentationEvaluationSettingsDialog
-                      endsAt={
-                        presentationEvaluationsQuery.data.evaluationPeriod
-                          .endsAt
-                      }
-                      isOpen={isEvaluationSettingsOpen}
-                      sectionId={effectiveSectionId ?? ''}
-                      onClose={() => setIsEvaluationSettingsOpen(false)}
-                      startsAt={
-                        presentationEvaluationsQuery.data.evaluationPeriod
-                          .startsAt
-                      }
-                      teams={presentationEvaluationsQuery.data.teams}
-                    />
+                    {effectiveSectionId ? (
+                      <AdminPresentationEvaluationSettingsDialog
+                        endsAt={
+                          presentationEvaluationsQuery.data.evaluationPeriod
+                            .endsAt
+                        }
+                        isOpen={isEvaluationSettingsOpen}
+                        sectionId={effectiveSectionId}
+                        onClose={() => setIsEvaluationSettingsOpen(false)}
+                        startsAt={
+                          presentationEvaluationsQuery.data.evaluationPeriod
+                            .startsAt
+                        }
+                        teams={presentationEvaluationsQuery.data.teams}
+                      />
+                    ) : null}
                   </>
                 ) : null}
               </>

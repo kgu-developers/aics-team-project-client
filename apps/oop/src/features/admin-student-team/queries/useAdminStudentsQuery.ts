@@ -9,10 +9,13 @@ const adminStudentKeys = {
     [...adminStudentKeys.lists(), sectionId] as const,
 };
 
-export function useAdminStudentsQuery(sectionId: string) {
+export function useAdminStudentsQuery(sectionId: string | undefined) {
   return useQuery({
     enabled: Boolean(sectionId),
-    queryKey: adminStudentKeys.list(sectionId),
-    queryFn: () => fetchAdminStudents(sectionId),
+    queryKey: adminStudentKeys.list(sectionId ?? 'disabled'),
+    queryFn: () => {
+      if (!sectionId) throw new Error('분반 ID가 필요합니다.');
+      return fetchAdminStudents(sectionId);
+    },
   });
 }
