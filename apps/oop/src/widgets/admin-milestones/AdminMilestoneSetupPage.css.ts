@@ -72,6 +72,19 @@ export const scheduleInputs = style({
   '@media': { '(max-width: 640px)': { gridTemplateColumns: '1fr' } },
 });
 
+export const timeInput = style({
+  appearance: 'none',
+  background: tokens.color.background.surface,
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: tokens.radius.element,
+  boxSizing: 'border-box',
+  color: tokens.color.text.primary,
+  font: 'inherit',
+  minHeight: 40,
+  padding: '8px 12px',
+  width: '100%',
+});
+
 export const preview = style({
   background: tokens.color.background.muted,
   border: `1px solid ${tokens.color.border.base}`,
