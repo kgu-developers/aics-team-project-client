@@ -9,7 +9,7 @@ import {
   Text,
 } from '@aics/design-system';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -20,6 +20,7 @@ import {
   AdminSubmissionFileDownloadLink,
 } from '~/features/admin-milestone-review/components/AdminFinalReportDownloadSummary';
 import { useAdminMilestoneSubmissionDetailQuery } from '~/features/admin-milestone-review/queries';
+import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import StudentDetailDialog from '~/features/admin-student-team/components/StudentDetailDialog';
 import { useAdminStudentsQuery } from '~/features/admin-student-team/queries/useAdminStudentsQuery';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -78,6 +79,14 @@ export default function AdminSubmissionDetailPage() {
     isRequestedSectionAccessible,
   );
   const detail = submissionQuery.data;
+  const { markAsRead } = useAdminReadState('submissions', {
+    adminId: currentUser?.id,
+  });
+  useEffect(() => {
+    if (detail?.submissionId && search.sectionId) {
+      markAsRead(search.sectionId, detail.submissionId);
+    }
+  }, [detail?.submissionId, search.sectionId, markAsRead]);
   const milestoneLabel =
     detail?.milestoneTitle ?? getMilestoneLabel(search.milestoneId);
   const studentsQuery = useAdminStudentsQuery(

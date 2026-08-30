@@ -165,8 +165,14 @@ export const item = style({
   gridTemplateColumns: 'auto minmax(0, 1fr) auto',
   minHeight: 22,
 });
+export const itemMeta = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: 6,
+  minWidth: 0,
+});
 export const label = style({
-  background: tokens.color.background.gray,
+  background: tokens.color.background.muted,
   borderRadius: 999,
   color: tokens.color.text.secondary,
   fontSize: 11,
@@ -178,13 +184,18 @@ export const itemTitle = style({
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
 });
+export const date = style({
+  color: tokens.color.text.secondary,
+  flexShrink: 0,
+  whiteSpace: 'nowrap',
+});
 export const action = style({
   display: 'flex',
   justifyContent: 'flex-end',
   marginTop: 14,
 });
 globalStyle(table + ' th', {
-  background: tokens.color.background.gray,
+  background: tokens.color.background.card,
   color: tokens.color.text.secondary,
   fontWeight: 500,
   padding: '10px 8px',

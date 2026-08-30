@@ -21,7 +21,7 @@ export const filterDescription = style({
   marginTop: -16,
 });
 const filterBase = {
-  background: tokens.color.background.gray,
+  background: tokens.color.background.muted,
   border: 0,
   borderRadius: tokens.radius.full,
   color: tokens.color.text.primary,
@@ -53,7 +53,7 @@ export const titleLink = style({
 });
 
 globalStyle(table + ' th', {
-  background: tokens.color.background.gray,
+  background: tokens.color.background.card,
   color: tokens.color.text.secondary,
   fontSize: 13,
   fontWeight: 500,

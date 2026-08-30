@@ -13,7 +13,9 @@ import {
   AdminMilestoneSubmissionBulkDownloadAction,
   AdminMilestoneSubmissionDetailAction,
 } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionDetailAction';
+import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import type { TeamMilestoneProgress } from '~/features/admin-team-dashboard/model';
+import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminTeamMilestoneProgress.css';
 
@@ -132,6 +134,8 @@ export default function AdminTeamMilestoneProgress({
   teamLeaderName,
   meetingCountState,
 }: AdminTeamMilestoneProgressProps) {
+  const adminId = useAuthStore(state => state.currentUser?.id);
+  const submissionReadState = useAdminReadState('submissions', { adminId });
   const displayMilestones = milestones.filter(
     milestone => milestone.id !== 'presentation-evaluate',
   );
@@ -164,6 +168,13 @@ export default function AdminTeamMilestoneProgress({
                   )
                 }
                 key={milestone.id}
+                isUnread={Boolean(
+                  milestone.submissionId &&
+                  !submissionReadState.isRead(
+                    sectionId,
+                    milestone.submissionId,
+                  ),
+                )}
                 label={milestone.title}
                 meetingCountLabel={
                   meetingCountState.status === 'ready' ? (

@@ -46,7 +46,7 @@ export const participantList = style({
 });
 
 export const participant = style({
-  background: tokens.color.background.gray,
+  background: tokens.color.background.muted,
   border: 0,
   borderRadius: 999,
   cursor: 'pointer',
@@ -77,7 +77,7 @@ globalStyle(actionTable + ' table', {
 });
 
 globalStyle(actionTable + ' th', {
-  background: tokens.color.background.gray,
+  background: tokens.color.background.card,
   color: tokens.color.text.secondary,
   fontSize: 13,
   fontWeight: 500,

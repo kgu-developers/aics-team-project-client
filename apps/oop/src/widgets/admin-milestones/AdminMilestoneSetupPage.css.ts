@@ -73,7 +73,7 @@ export const scheduleInputs = style({
 });
 
 export const preview = style({
-  background: tokens.color.background.gray,
+  background: tokens.color.background.muted,
   border: `1px solid ${tokens.color.border.base}`,
   borderRadius: tokens.radius.container,
   display: 'flex',
@@ -119,7 +119,7 @@ export const previewItem = style({
 
 export const previewItemNumber = style({
   alignItems: 'center',
-  background: tokens.color.background.gray,
+  background: tokens.color.background.muted,
   border: `1px solid ${tokens.color.border.base}`,
   borderRadius: '50%',
   display: 'inline-flex',

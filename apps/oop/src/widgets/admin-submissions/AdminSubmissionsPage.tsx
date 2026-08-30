@@ -31,6 +31,7 @@ import {
   useAdminMilestoneSubmissionsQuery,
   useAdminPresentationEvaluationsQuery,
 } from '~/features/admin-milestone-review/queries';
+import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import { AdminPresentationEvaluationSettingsDialog } from './AdminPresentationEvaluationSettingsDialog';
@@ -183,6 +184,9 @@ export default function AdminSubmissionsPage() {
     effectiveSectionId ? { sectionId: effectiveSectionId } : undefined,
     isAccessibleSection,
   );
+  const readState = useAdminReadState('submissions', {
+    adminId: currentUser?.id,
+  });
   const presentationEvaluationsQuery = useAdminPresentationEvaluationsQuery(
     activeMilestoneId === 'presentation-evaluate' && isAccessibleSection
       ? effectiveSectionId
@@ -434,8 +438,17 @@ export default function AdminSubmissionsPage() {
                       : meetingRecordsQuery.isError
                         ? '회의록: -'
                         : `회의록: ${meetingCount}개`;
+                    const submissionSectionId = effectiveSectionId;
                     return (
                       <AdminMilestoneSubmissionCard
+                        isUnread={Boolean(
+                          submissionSectionId &&
+                          submission.submissionId &&
+                          !readState.isRead(
+                            submissionSectionId,
+                            submission.submissionId,
+                          ),
+                        )}
                         action={
                           activeMilestoneId === 'final-report' ? (
                             <AdminMilestoneSubmissionBulkDownloadAction />

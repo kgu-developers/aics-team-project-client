@@ -4,6 +4,8 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ROUTES } from '~/app/constants/routes';
 
 import { useAdminMeetingRecordsQuery } from '~/features/admin-meeting/queries';
+import * as readStateStyles from '~/features/admin-read-state/adminReadState.css';
+import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMeetingsPage.css';
@@ -35,6 +37,7 @@ export default function AdminMeetingsPage() {
       selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
     teamId: selectedTeamId,
   });
+  const readState = useAdminReadState('meetings', { adminId: currentUser?.id });
 
   const records = (query.data?.records ?? [])
     .filter(
@@ -111,12 +114,21 @@ export default function AdminMeetingsPage() {
                 <th>분반</th>
                 <th>팀</th>
                 <th>제목</th>
+                <th>작성자</th>
               </tr>
             </thead>
             <tbody>
               {records.map(record => (
                 <tr key={record.id}>
-                  <td>{formatDate(record.createdAt)}</td>
+                  <td>
+                    {!readState.isRead(record.sectionId, record.id) ? (
+                      <span
+                        aria-label='읽지 않음'
+                        className={readStateStyles.unreadDot}
+                      />
+                    ) : null}
+                    {formatDate(record.createdAt)}
+                  </td>
                   <td>{record.sectionLabel}</td>
                   <td>{record.teamLabel}</td>
                   <td>
@@ -132,6 +144,7 @@ export default function AdminMeetingsPage() {
                       {record.title}
                     </Link>
                   </td>
+                  <td>{record.authorName ?? '미정'}</td>
                 </tr>
               ))}
             </tbody>
