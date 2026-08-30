@@ -7,15 +7,6 @@ export const table = style({
   width: '100%',
 });
 
-globalStyle(`${table} > .astryx-table-scroll-wrapper`, {
-  height: 'auto',
-  marginBlock: 0,
-  marginInline: 0,
-  maxWidth: '100%',
-  minHeight: 0,
-  width: '100%',
-});
-
 globalStyle(`${table} table`, {
   '@media': {
     'screen and (max-width: 767px)': {

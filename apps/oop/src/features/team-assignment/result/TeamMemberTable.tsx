@@ -1,6 +1,8 @@
 import type { TeamAssignmentMember } from '@aics/core';
 import { Button, proportional, Table, useToast } from '@aics/design-system';
 
+import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
+
 import * as styles from './TeamMemberTable.css';
 
 type TeamMemberTableProps = {
@@ -121,6 +123,7 @@ export function TeamMemberTable({ members, variant }: TeamMemberTableProps) {
         data={rows}
         density='compact'
         dividers='rows'
+        plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
         textOverflow='wrap'
         verticalAlign='middle'
       />

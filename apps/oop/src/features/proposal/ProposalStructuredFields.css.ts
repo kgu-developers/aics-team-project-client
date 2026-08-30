@@ -26,13 +26,7 @@ export const tableWrapper = style({
   width: '100%',
 });
 
-globalStyle(`${tableWrapper} > .astryx-table-scroll-wrapper`, {
-  height: 'auto',
-  marginBlock: 0,
-  marginInline: 0,
-  maxWidth: '100%',
-  minHeight: 0,
-  width: '100%',
+globalStyle(`${tableWrapper} > [data-aics-table-scroll-wrapper]`, {
   '@media': {
     'screen and (max-width: 1023px)': {
       overflowX: 'visible',

@@ -27,7 +27,7 @@ export default function TopicCandidateDialog() {
   const closeDialog = () => {
     setTitle('');
     setDescription('');
-    candidateMutation.reset();
+    if (!candidateMutation.isPending) candidateMutation.reset();
     setIsOpen(false);
   };
 

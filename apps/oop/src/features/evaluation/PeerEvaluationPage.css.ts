@@ -61,15 +61,6 @@ export const teammateTable = style({
   width: '100%',
 });
 
-globalStyle(`${teammateTable} > .astryx-table-scroll-wrapper`, {
-  height: 'auto',
-  marginBlock: 0,
-  marginInline: 0,
-  maxWidth: '100%',
-  minHeight: 0,
-  width: '100%',
-});
-
 globalStyle(`${teammateTable} table`, {
   '@media': {
     'screen and (max-width: 540px)': {

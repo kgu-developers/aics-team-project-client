@@ -42,6 +42,8 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
+
 import { useAuthStore } from '~/features/auth/authStore';
 import { useEditLock } from '~/features/editor/useEditLock';
 import {
@@ -412,6 +414,7 @@ function ActionFields({
             data={actions}
             density='compact'
             dividers='grid'
+            plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
             textOverflow='wrap'
             verticalAlign='top'
           />
@@ -738,7 +741,10 @@ export function MeetingListPage() {
             }
             hasHover
             idKey='id'
-            plugins={{ rowInteraction: rowInteractionPlugin }}
+            plugins={{
+              rowInteraction: rowInteractionPlugin,
+              scrollWrapperLayout: tableScrollWrapperPlugin,
+            }}
           />
         </div>
       </Card>
@@ -982,6 +988,7 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
                 density='compact'
                 dividers='grid'
                 idKey='id'
+                plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
                 textOverflow='wrap'
               />
             </div>

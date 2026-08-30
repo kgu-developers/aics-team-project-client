@@ -83,15 +83,6 @@ export const tableCard = style({
   },
 });
 
-globalStyle(`${tableCard} .astryx-table-scroll-wrapper`, {
-  height: 'auto',
-  marginBlock: 0,
-  marginInline: 0,
-  maxWidth: '100%',
-  minHeight: 0,
-  width: '100%',
-});
-
 export const responsiveTable = style({
   height: 'auto',
   minWidth: 0,

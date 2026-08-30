@@ -10,6 +10,8 @@ import {
 } from '@aics/design-system';
 import { type ReactNode, useEffect, useState } from 'react';
 
+import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
+
 import type { DocumentEditorField } from '~/features/editor/documentEditor';
 
 import * as styles from './ProposalStructuredFields.css';
@@ -185,6 +187,7 @@ function DataCompositionFields({
           density='compact'
           dividers='grid'
           idKey='id'
+          plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
           textOverflow='wrap'
           verticalAlign='top'
         />

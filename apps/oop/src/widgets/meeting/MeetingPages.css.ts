@@ -75,15 +75,6 @@ export const listTableCard = style({
   },
 });
 
-globalStyle(`${listTableCard} .astryx-table-scroll-wrapper`, {
-  height: 'auto',
-  marginBlock: 0,
-  marginInline: 0,
-  maxWidth: '100%',
-  minHeight: 0,
-  width: '100%',
-});
-
 export const responsiveListTable = style({
   height: 'auto',
   minWidth: 0,
@@ -276,15 +267,6 @@ export const tableFrame = style({
   minWidth: 0,
   width: '100%',
 });
-globalStyle(`${tableFrame} > .astryx-table-scroll-wrapper`, {
-  height: 'auto',
-  marginBlock: 0,
-  marginInline: 0,
-  maxWidth: '100%',
-  minHeight: 0,
-  width: '100%',
-});
-
 export const responsiveActionTable = style({ minWidth: 0, width: '100%' });
 
 export const responsiveActionCell = style({
@@ -310,7 +292,7 @@ export const mobileActionLabel = style({
   },
 });
 
-globalStyle(`${responsiveActionTable} .astryx-table-scroll-wrapper`, {
+globalStyle(`${responsiveActionTable} [data-aics-table-scroll-wrapper]`, {
   '@media': {
     'screen and (max-width: 767px)': {
       overflowX: 'visible',

@@ -24,6 +24,7 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { SurveyFlow, SurveyQuestion } from '~/shared/ui/SurveyFlow';
 import { SurveyShell } from '~/shared/ui/SurveyShell';
+import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -425,6 +426,7 @@ function PeerEvaluationForm({
                   data={teammateRows}
                   density='compact'
                   dividers='rows'
+                  plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
                   textOverflow='wrap'
                   verticalAlign='middle'
                 />

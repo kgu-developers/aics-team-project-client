@@ -12,6 +12,8 @@ import type { TableColumn } from '@aics/design-system';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useMemo } from 'react';
 
+import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
+
 import { useAuthStore } from '~/features/auth/authStore';
 import { useSectionAnnouncementsQuery } from '~/features/student-notices/queries';
 import { useStudentNoticeReadState } from '~/features/student-notices/useStudentNoticeReadState';
@@ -145,7 +147,10 @@ export default function StudentNoticeListPage() {
               </span>
             }
             idKey='id'
-            plugins={{ rowInteraction: rowInteractionPlugin }}
+            plugins={{
+              rowInteraction: rowInteractionPlugin,
+              scrollWrapperLayout: tableScrollWrapperPlugin,
+            }}
             dividers='rows'
             density='balanced'
             hasHover
