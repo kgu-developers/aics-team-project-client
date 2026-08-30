@@ -1,9 +1,10 @@
 import { Button, Card, Heading, Text, TextArea } from '@aics/design-system';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import * as styles from './AdminProposalFeedbackPanel.css';
 
 type FeedbackEntry = {
+  feedbackId: string;
   authorName: string;
   content: string;
   createdAt: string;
@@ -18,10 +19,15 @@ export function AdminProposalFeedbackPanel({
   history = [],
   latestStudentResponse = null,
 }: AdminProposalFeedbackPanelProps) {
-  const [content, setContent] = useState(history.at(-1)?.content ?? '');
-  const [savedContent, setSavedContent] = useState(
-    history.at(-1)?.content ?? '',
-  );
+  const latestFeedback = history.at(-1);
+  const initialContent = latestFeedback?.content ?? '';
+  const [content, setContent] = useState(initialContent);
+  const [savedContent, setSavedContent] = useState(initialContent);
+
+  useEffect(() => {
+    setContent(initialContent);
+    setSavedContent(initialContent);
+  }, [initialContent, latestStudentResponse, latestFeedback?.feedbackId]);
 
   return (
     <Card className={styles.panel}>
@@ -37,10 +43,7 @@ export function AdminProposalFeedbackPanel({
         {history.length ? (
           <div className={styles.historyList}>
             {history.map(entry => (
-              <div
-                className={styles.historyItem}
-                key={`${entry.createdAt}-${entry.authorName}`}
-              >
+              <div className={styles.historyItem} key={entry.feedbackId}>
                 <Text className={styles.meta}>
                   {entry.authorName} · {entry.createdAt}
                 </Text>

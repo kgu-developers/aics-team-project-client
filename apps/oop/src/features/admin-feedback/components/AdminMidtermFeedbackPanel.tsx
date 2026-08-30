@@ -1,5 +1,5 @@
 import { Button, Card, Heading, Text, TextArea } from '@aics/design-system';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import * as styles from './AdminProposalFeedbackPanel.css';
 
@@ -13,6 +13,11 @@ export function AdminMidtermFeedbackPanel({
 }: AdminMidtermFeedbackPanelProps) {
   const [content, setContent] = useState(initialFeedback);
   const [savedContent, setSavedContent] = useState(initialFeedback);
+
+  useEffect(() => {
+    setContent(initialFeedback);
+    setSavedContent(initialFeedback);
+  }, [initialFeedback]);
 
   return (
     <Card className={styles.panel}>
