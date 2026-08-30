@@ -53,7 +53,11 @@ export default function MilestoneCard({
     ) : null;
 
   return (
-    <article className={styles.milestone}>
+    <article
+      className={styles.milestone}
+      id={`student-milestone-${milestone.id}`}
+      tabIndex={-1}
+    >
       <div
         className={cx(
           styles.milestoneStatus,

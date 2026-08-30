@@ -1,5 +1,5 @@
 import { tokens } from '@aics/design-system';
-import { style } from '@vanilla-extract/css';
+import { globalStyle, style } from '@vanilla-extract/css';
 
 export const root = style({
   display: 'flex',
@@ -53,6 +53,42 @@ export const totalValue = style({
 
 export const error = style({ color: tokens.color.text.red, margin: 0 });
 export const status = style({ color: tokens.color.text.secondary, margin: 0 });
+
+export const teammateTable = style({
+  height: 'auto',
+  maxWidth: '100%',
+  minWidth: 0,
+  width: '100%',
+});
+
+globalStyle(`${teammateTable} > .astryx-table-scroll-wrapper`, {
+  height: 'auto',
+  marginBlock: 0,
+  marginInline: 0,
+  maxWidth: '100%',
+  minHeight: 0,
+  width: '100%',
+});
+
+globalStyle(`${teammateTable} table`, {
+  '@media': {
+    'screen and (max-width: 540px)': {
+      minWidth: '0 !important',
+      width: '100%',
+    },
+  },
+});
+
+globalStyle(
+  `${teammateTable} th:nth-child(3), ${teammateTable} td:nth-child(3)`,
+  {
+    '@media': {
+      'screen and (max-width: 540px)': {
+        display: 'none',
+      },
+    },
+  },
+);
 
 export const dialogContent = style({
   display: 'grid',

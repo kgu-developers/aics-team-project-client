@@ -67,7 +67,12 @@ export default function TeamAssignmentFlow({
     );
   }
 
-  if (teamOnly) return <TeamSummary projection={query.data} />;
+  if (teamOnly)
+    return (
+      <div className={styles.studentTeamPage}>
+        <TeamSummary projection={query.data} />
+      </div>
+    );
 
   return <PhaseContent projection={query.data} />;
 }

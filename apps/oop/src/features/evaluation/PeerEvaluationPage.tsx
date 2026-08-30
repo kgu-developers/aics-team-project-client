@@ -374,59 +374,61 @@ function PeerEvaluationForm({
                   평가 기간이 종료되어 내 제출 내역만 확인할 수 있어요.
                 </p>
               ) : null}
-              <Table
-                columns={[
-                  {
-                    align: 'start',
-                    header: '팀원',
-                    key: 'name',
-                    width: proportional(1.2, { minWidth: 96 }),
-                  },
-                  {
-                    align: 'end',
-                    header: '점수',
-                    key: 'score',
-                    width: proportional(0.55, { minWidth: 52 }),
-                  },
-                  {
-                    align: 'center',
-                    header: '평가 여부',
-                    key: 'isCompleted',
-                    renderCell: row => (
-                      <Badge
-                        label={row.isCompleted ? '완료' : '미작성'}
-                        variant={row.isCompleted ? 'success' : 'neutral'}
-                      />
-                    ),
-                    width: proportional(0.8, { minWidth: 72 }),
-                  },
-                  {
-                    align: 'end',
-                    header: '입력',
-                    key: 'target',
-                    renderCell: row => (
-                      <Button
-                        label={
-                          isReadOnly
-                            ? '보기'
-                            : row.isCompleted
-                              ? '수정'
-                              : '평가'
-                        }
-                        onClick={() => openTargetDialog(row.target)}
-                        size='sm'
-                        variant='primary'
-                      />
-                    ),
-                    width: proportional(0.65, { minWidth: 58 }),
-                  },
-                ]}
-                data={teammateRows}
-                density='compact'
-                dividers='rows'
-                textOverflow='wrap'
-                verticalAlign='middle'
-              />
+              <div className={styles.teammateTable}>
+                <Table
+                  columns={[
+                    {
+                      align: 'start',
+                      header: '팀원',
+                      key: 'name',
+                      width: proportional(1.2, { minWidth: 96 }),
+                    },
+                    {
+                      align: 'end',
+                      header: '점수',
+                      key: 'score',
+                      width: proportional(0.55, { minWidth: 52 }),
+                    },
+                    {
+                      align: 'center',
+                      header: '평가 여부',
+                      key: 'isCompleted',
+                      renderCell: row => (
+                        <Badge
+                          label={row.isCompleted ? '완료' : '미작성'}
+                          variant={row.isCompleted ? 'success' : 'neutral'}
+                        />
+                      ),
+                      width: proportional(0.8, { minWidth: 72 }),
+                    },
+                    {
+                      align: 'end',
+                      header: '입력',
+                      key: 'target',
+                      renderCell: row => (
+                        <Button
+                          label={
+                            isReadOnly
+                              ? '보기'
+                              : row.isCompleted
+                                ? '수정'
+                                : '평가'
+                          }
+                          onClick={() => openTargetDialog(row.target)}
+                          size='sm'
+                          variant='primary'
+                        />
+                      ),
+                      width: proportional(0.65, { minWidth: 58 }),
+                    },
+                  ]}
+                  data={teammateRows}
+                  density='compact'
+                  dividers='rows'
+                  textOverflow='wrap'
+                  verticalAlign='middle'
+                />
+              </div>
               <div className={styles.total}>
                 <p className={styles.totalValue}>기여도 합계 {total}%</p>
                 <Badge

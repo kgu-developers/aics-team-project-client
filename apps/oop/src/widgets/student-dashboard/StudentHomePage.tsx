@@ -59,6 +59,22 @@ export function getDashboardErrorContent(
   }
 }
 
+export function focusStudentMilestone(milestoneId: string) {
+  const milestoneElement = document.getElementById(
+    `student-milestone-${milestoneId}`,
+  );
+  const collapsibleTrigger = milestoneElement?.querySelector<HTMLElement>(
+    'button[aria-expanded]',
+  );
+
+  if (collapsibleTrigger?.getAttribute('aria-expanded') === 'false') {
+    collapsibleTrigger.click();
+  }
+
+  milestoneElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  (collapsibleTrigger ?? milestoneElement)?.focus({ preventScroll: true });
+}
+
 export default function StudentHomePage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const sectionId = currentUser?.sections[0]?.id ?? '';
@@ -73,11 +89,13 @@ export default function StudentHomePage() {
 
   if (!sectionId) {
     return (
-      <EmptyState
-        description='수강 분반 배정이 완료되면 학생 홈을 이용할 수 있어요.'
-        headingLevel={2}
-        title='소속 분반이 없어요.'
-      />
+      <div className={styles.root}>
+        <EmptyState
+          description='수강 분반 배정이 완료되면 학생 홈을 이용할 수 있어요.'
+          headingLevel={2}
+          title='소속 분반이 없어요.'
+        />
+      </div>
     );
   }
 
@@ -93,25 +111,34 @@ export default function StudentHomePage() {
     const errorContent = getDashboardErrorContent(error);
 
     return (
-      <EmptyState
-        actions={
-          <Button
-            clickAction={async () => {
-              await refetch();
-            }}
-            isLoading={isFetching}
-            label='다시 시도'
-            variant='primary'
-          />
-        }
-        description={errorContent.description}
-        headingLevel={2}
-        title={errorContent.title}
-      />
+      <div className={styles.root}>
+        <EmptyState
+          actions={
+            <Button
+              clickAction={async () => {
+                await refetch();
+              }}
+              isLoading={isFetching}
+              label='다시 시도'
+              variant='primary'
+            />
+          }
+          description={errorContent.description}
+          headingLevel={2}
+          title={errorContent.title}
+        />
+      </div>
     );
   }
 
   const hero = getStudentHomeHeroCopy(data.hero, data.milestones);
+  const activeMilestone = data.milestones.find(
+    milestone => milestone.isDetailAvailable,
+  );
+
+  const focusActiveMilestone = activeMilestone
+    ? () => focusStudentMilestone(activeMilestone.id)
+    : undefined;
 
   return (
     <div className={styles.root}>
@@ -131,6 +158,7 @@ export default function StudentHomePage() {
                 ? 'error'
                 : 'ready'
         }
+        onCtaClick={focusActiveMilestone}
       />
       {DevelopmentMilestonePreview ? (
         <Suspense fallback={null}>

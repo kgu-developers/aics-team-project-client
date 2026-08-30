@@ -10,6 +10,17 @@ export const page = style({
   width: '100%',
 });
 
+export const studentTeamPage = style({
+  boxSizing: 'border-box',
+  minWidth: 0,
+  width: '100%',
+  '@media': {
+    'screen and (max-width: 767px)': {
+      paddingInline: tokens.spacing['4'],
+    },
+  },
+});
+
 export const centeredStage = style({
   alignItems: 'center',
   display: 'flex',
@@ -138,6 +149,12 @@ export const resultDescription = style({
 export const waitAction = style({
   alignSelf: 'center',
   minWidth: 240,
+  '@media': {
+    'screen and (max-width: 767px)': {
+      minWidth: 0,
+      width: '100%',
+    },
+  },
 });
 
 export const unavailableAction = style({

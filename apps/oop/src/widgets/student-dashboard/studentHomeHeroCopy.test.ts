@@ -12,7 +12,7 @@ describe('getStudentHomeHeroCopy', () => {
       getStudentHomeHeroCopy(dashboard.hero, dashboard.milestones),
     ).toMatchObject({
       heading: '제안서 피드백을 반영해 주세요.',
-      ctaLabel: dashboard.hero.ctaLabel,
+      ctaLabel: '제안서 피드백 반영',
     });
   });
 
@@ -26,7 +26,7 @@ describe('getStudentHomeHeroCopy', () => {
     ).toMatchObject({
       heading: '제안서를 보완하고, 중간보고서를 작성하고 있어요.',
       description: '제안서 피드백 반영과 중간보고서 작성을 함께 진행해 주세요.',
-      ctaLabel: dashboard.hero.ctaLabel,
+      ctaLabel: '진행 단계 확인',
     });
   });
 

@@ -10,6 +10,7 @@ export const hero = style({
   padding: '32px 32px',
   '@media': {
     'screen and (max-width: 767px)': {
+      borderRadius: 12,
       gap: 24,
       padding: '24px 20px',
     },
@@ -50,7 +51,8 @@ export const heroHeading = style({
   whiteSpace: 'pre-line',
   '@media': {
     'screen and (max-width: 767px)': {
-      fontSize: 24,
+      fontSize: 22,
+      textWrap: 'balance',
     },
   },
 });
@@ -91,6 +93,8 @@ export const cta = style({
   '@media': {
     'screen and (max-width: 767px)': {
       alignSelf: 'stretch',
+      fontSize: 16,
+      padding: '16px 20px',
     },
   },
 });
@@ -102,11 +106,19 @@ export const shortcut = style({
   display: 'flex',
   flex: 'none',
   flexDirection: 'column',
+  height: 286,
   overflow: 'hidden',
   width: 566,
   '@media': {
     'screen and (max-width: 1023px)': {
+      height: 350,
       width: '100%',
+    },
+    'screen and (max-width: 767px)': {
+      borderRadius: 12,
+    },
+    'screen and (max-width: 359px)': {
+      height: 406,
     },
   },
 });
@@ -160,9 +172,17 @@ export const tabActive = style({
   background: tokens.color.background.card,
 });
 
+export const panel = style({
+  flex: 1,
+  minHeight: 0,
+  minWidth: 0,
+  overflowY: 'auto',
+});
+
 export const noticeList = style({
   display: 'flex',
   flexDirection: 'column',
+  minWidth: 0,
   padding: '12px 16px',
 });
 
@@ -197,6 +217,8 @@ export const noticeMeta = style({
       alignItems: 'flex-start',
       flexDirection: 'column',
       gap: 4,
+      minWidth: 0,
+      width: '100%',
     },
   },
 });
@@ -215,6 +237,7 @@ export const noticeTitleRow = style({
   display: 'flex',
   gap: tokens.spacing['2'],
   minWidth: 0,
+  width: '100%',
 });
 
 export const noticeContent = style({
@@ -229,6 +252,13 @@ export const noticeContent = style({
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
+  '@media': {
+    'screen and (max-width: 767px)': {
+      flex: 'none',
+      maxWidth: '100%',
+      width: '100%',
+    },
+  },
 });
 
 export const noticeDate = style({
