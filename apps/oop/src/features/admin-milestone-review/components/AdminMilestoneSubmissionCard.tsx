@@ -29,7 +29,10 @@ export function AdminMilestoneSubmissionCard({
       <div className={styles.meta}>
         <Text className={styles.label}>
           {isUnread ? (
-            <span aria-label='읽지 않음' className={readStateStyles.unreadDot} />
+            <span
+              aria-label='읽지 않음'
+              className={readStateStyles.unreadDot}
+            />
           ) : null}
           {label}
         </Text>
