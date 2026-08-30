@@ -29,27 +29,3 @@ export const requestError = style({
   color: tokens.color.error,
   margin: 0,
 });
-
-export const demo = style({
-  color: tokens.color.text.secondary,
-  width: 'min(100%, 420px)',
-});
-
-export const demoTitle = style({
-  color: tokens.color.text.primary,
-  fontWeight: 600,
-  margin: `0 0 ${tokens.spacing['3']}`,
-});
-
-export const demoList = style({
-  display: 'grid',
-  gap: tokens.spacing['3'],
-  listStyle: 'none',
-  margin: 0,
-  padding: 0,
-});
-
-globalStyle(`${demoList} li`, {
-  display: 'grid',
-  gap: tokens.spacing['1'],
-});
