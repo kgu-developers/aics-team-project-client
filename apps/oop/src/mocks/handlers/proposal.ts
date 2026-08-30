@@ -17,6 +17,7 @@ import {
   canCompleteProposalBlock,
   completeProposalBlock,
   getCurrentProposal,
+  hasRequiredProposalRevisionChanges,
   saveProposalBlock,
   submitCurrentProposal,
 } from '../data/proposal';
@@ -243,6 +244,12 @@ export const proposalHandlers = [
         return error(
           'PROPOSAL_INCOMPLETE',
           '모든 작성 영역을 완료 처리해 주세요.',
+          422,
+        );
+      if (!hasRequiredProposalRevisionChanges())
+        return error(
+          'PROPOSAL_REVISION_CHANGES_REQUIRED',
+          '피드백 대상 영역을 실제로 수정한 뒤 다시 완료해 주세요.',
           422,
         );
       const submitted = submitCurrentProposal(input.version, student.name);

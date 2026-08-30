@@ -39,6 +39,10 @@ export {
   submitPeerEvaluationResponse,
   submitPresentationEvaluation,
 } from './evaluation';
+export {
+  submitMidReportFeedback,
+  submitProposalFeedbackResponse,
+} from './feedback';
 export { fetchTeams } from './teams/fetchTeams';
 export { submitTeam } from './teams/submitTeam';
 export {

@@ -33,9 +33,11 @@ const expectedDetailMilestone = {
   'proposal-topic': 'proposal',
   'proposal-writing': 'proposal',
   'proposal-feedback': 'proposal',
+  'proposal-feedback-ready': 'proposal',
   'mid-report': 'mid-review',
   'proposal-feedback-mid-report': 'mid-review',
   'mid-feedback': 'mid-review',
+  'mid-feedback-ready': 'mid-review',
   'presentation-material': 'presentation',
   'presentation-evaluation': 'presentation',
   'final-report': 'final-report',
@@ -70,6 +72,9 @@ describe('createStudentHomeDashboardPreview', () => {
 
       expect(detailMilestones).toContainEqual(
         expect.objectContaining({ id: expectedDetailMilestone[scenario] }),
+      );
+      expect(dashboard.hero.ctaLabel).toBe(
+        `${detailMilestones.find(milestone => milestone.id === expectedDetailMilestone[scenario])?.currentStepLabel} 확인`,
       );
       expect(
         detailMilestones.find(

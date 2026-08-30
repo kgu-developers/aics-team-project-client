@@ -1,9 +1,11 @@
 import type {
+  MidReportFeedback,
   MidReport,
   MyPeerEvaluationResponse,
   Presentation,
   PresentationEvaluationOverview,
   Proposal,
+  ProposalFeedbackResponse,
   Submission,
   StudentHomeDashboard,
   StudentHomeMilestoneBody,
@@ -12,6 +14,11 @@ import type {
 
 import { editorSectionTo } from '~/app/constants/editorSections';
 import { ROUTES } from '~/app/constants/routes';
+
+import {
+  demoMidReportSubmissionId,
+  demoProposalReviewId,
+} from './studentFeedback';
 
 const CURRENT_PERIOD = '기간 : 20260928 ~ 20261012';
 const UPCOMING_PERIOD = '기간 : 20261013 ~ 20261026';
@@ -282,7 +289,11 @@ export function createStudentHomeDashboardWithProposalProgress(
   return {
     ...dashboard,
     milestones: dashboard.milestones.map(milestone => {
-      if (milestone.id !== 'proposal' || milestone.body?.kind !== 'proposal') {
+      if (
+        milestone.id !== 'proposal' ||
+        (milestone.body?.kind !== 'proposal' &&
+          milestone.body?.kind !== 'proposal-feedback')
+      ) {
         return milestone;
       }
 
@@ -301,9 +312,47 @@ export function createStudentHomeDashboardWithProposalProgress(
         to: editorSectionTo('proposal', block.key),
       }));
       const isSubmitted = proposal.status === 'SUBMITTED';
+      const isFeedbackRevision =
+        milestone.body.kind === 'proposal-feedback' &&
+        proposal.status === 'REVISION_REQUESTED';
+      const isFeedbackResubmitted =
+        milestone.body.kind === 'proposal-feedback' &&
+        isSubmitted &&
+        Boolean(proposal.revision?.resubmittedAt);
       const allCompleted = proposal.blocks.every(
         block => block.status === 'COMPLETED',
       );
+
+      if (milestone.body.kind === 'proposal-feedback') {
+        return {
+          ...milestone,
+          currentStepLabel: isFeedbackResubmitted ? '답변 작성' : '피드백 반영',
+          status: isFeedbackRevision ? 'revision-available' : 'in-progress',
+          statusLabel: isFeedbackRevision ? '수정 가능' : '답변 필요',
+          body: { ...milestone.body, sections },
+          rows: [
+            {
+              id: 'proposal-revision',
+              label: '제안서 수정',
+              value: isFeedbackRevision
+                ? allCompleted
+                  ? '수정 영역 완료'
+                  : '피드백 반영 중'
+                : '수정본 재제출 완료',
+              tone: isFeedbackRevision ? 'primary' : 'default',
+              actionLabel: isFeedbackRevision ? '수정하기' : '재제출 완료',
+              actionDisabled: !isFeedbackRevision,
+              actionTo: editorSectionTo(
+                'proposal',
+                proposal.revision?.affectedBlockKeys[0] ?? 'team-info',
+              ),
+              actionNotice: isFeedbackRevision
+                ? '피드백 대상 영역을 실제로 수정하고 완료 처리한 뒤 다시 제출해 주세요.'
+                : '수정본을 다시 제출했어요. 이제 반영 답변을 남길 수 있어요.',
+            },
+          ],
+        };
+      }
 
       return {
         ...milestone,
@@ -368,36 +417,89 @@ function withDocumentProgress(
       if (milestone.id !== milestoneId) return milestone;
       const body = milestone.body;
       const hasSections =
-        body?.kind === 'mid-review' || body?.kind === 'presentation-material';
+        body?.kind === 'mid-review' ||
+        body?.kind === 'mid-review-feedback' ||
+        body?.kind === 'presentation-material';
+      const isFeedbackRevision =
+        body?.kind === 'mid-review-feedback' &&
+        document.status === 'REVISION_REQUESTED';
+      const isFeedbackResubmitted =
+        body?.kind === 'mid-review-feedback' &&
+        submitted &&
+        Boolean(document.revision?.resubmittedAt);
       return {
         ...milestone,
-        currentStepLabel: submitted ? '제출 완료' : `${documentLabel} 작성`,
-        status: submitted ? 'completed' : milestone.status,
-        statusLabel: submitted ? '완료' : milestone.statusLabel,
+        currentStepLabel: isFeedbackResubmitted
+          ? '반영 기록 작성'
+          : isFeedbackRevision
+            ? '피드백 반영'
+            : submitted
+              ? '제출 완료'
+              : `${documentLabel} 작성`,
+        status: isFeedbackRevision
+          ? 'revision-available'
+          : isFeedbackResubmitted
+            ? 'in-progress'
+            : submitted
+              ? 'completed'
+              : milestone.status,
+        statusLabel: isFeedbackRevision
+          ? '수정 가능'
+          : isFeedbackResubmitted
+            ? '기록 필요'
+            : submitted
+              ? '완료'
+              : milestone.statusLabel,
         body: hasSections
           ? { ...body, sections: documentSections(document, milestoneId) }
           : body,
         rows: milestone.rows.map(row => {
+          const actionTo =
+            isFeedbackRevision && document.revision?.affectedBlockKeys[0]
+              ? editorSectionTo(
+                  milestoneId,
+                  document.revision.affectedBlockKeys[0],
+                )
+              : row.actionTo;
           const canOpenEditor =
-            row.actionDisabled !== true && Boolean(row.actionTo);
+            row.actionDisabled !== true && Boolean(actionTo);
 
           return {
             ...row,
-            value: submitted
-              ? '제출 완료'
-              : completed
-                ? '모든 영역 작성 완료'
-                : `작성 완료 ${document.blocks.filter(block => block.status === 'COMPLETED').length}/${document.blocks.length}`,
-            tone: submitted ? 'default' : completed ? 'primary' : 'muted',
-            actionLabel: submitted ? '제출 완료' : row.actionLabel,
-            actionDisabled: submitted || !canOpenEditor,
-            actionNotice: submitted
-              ? `제출된 ${documentLabel}는 읽기 전용으로 확인할 수 있어요.`
-              : canOpenEditor
-                ? completed
-                  ? `팀장은 작성 화면에서 ${documentLabel}를 제출할 수 있어요.`
-                  : '작성 영역을 모두 완료 처리하면 팀장이 제출할 수 있어요.'
-                : row.actionNotice,
+            actionTo,
+            value: isFeedbackRevision
+              ? completed
+                ? '수정 영역 완료'
+                : '피드백 반영 중'
+              : submitted
+                ? '제출 완료'
+                : completed
+                  ? '모든 영역 작성 완료'
+                  : `작성 완료 ${document.blocks.filter(block => block.status === 'COMPLETED').length}/${document.blocks.length}`,
+            tone:
+              submitted && !isFeedbackRevision
+                ? 'default'
+                : completed
+                  ? 'primary'
+                  : 'muted',
+            actionLabel: isFeedbackRevision
+              ? '수정하기'
+              : submitted
+                ? isFeedbackResubmitted
+                  ? '재제출 완료'
+                  : '제출 완료'
+                : row.actionLabel,
+            actionDisabled:
+              (submitted && !isFeedbackRevision) || !canOpenEditor,
+            actionNotice: isFeedbackRevision
+              ? '피드백 대상 영역을 실제로 수정하고 완료 처리한 뒤 다시 제출해 주세요.'
+              : submitted
+                ? `제출된 ${documentLabel}는 읽기 전용으로 확인할 수 있어요.`
+                : canOpenEditor
+                  ? completed
+                    ? `팀장은 작성 화면에서 ${documentLabel}를 제출할 수 있어요.`
+                    : '작성 영역을 모두 완료 처리하면 팀장이 제출할 수 있어요.'
+                  : row.actionNotice,
           };
         }),
       };
@@ -428,9 +530,11 @@ export const milestonePreviewScenarios = [
   'proposal-topic',
   'proposal-writing',
   'proposal-feedback',
+  'proposal-feedback-ready',
   'mid-report',
   'proposal-feedback-mid-report',
   'mid-feedback',
+  'mid-feedback-ready',
   'presentation-material',
   'presentation-evaluation',
   'final-report',
@@ -444,12 +548,20 @@ const previewTargetByScenario = {
   'proposal-topic': { milestoneId: 'proposal', stepLabel: '주제 선정' },
   'proposal-writing': { milestoneId: 'proposal', stepLabel: '제안서 작성' },
   'proposal-feedback': { milestoneId: 'proposal', stepLabel: '피드백 반영' },
+  'proposal-feedback-ready': {
+    milestoneId: 'proposal',
+    stepLabel: '답변 작성',
+  },
   'mid-report': { milestoneId: 'mid-review', stepLabel: '중간보고서 작성' },
   'proposal-feedback-mid-report': {
     milestoneId: 'mid-review',
     stepLabel: '중간보고서 작성',
   },
   'mid-feedback': { milestoneId: 'mid-review', stepLabel: '피드백 반영' },
+  'mid-feedback-ready': {
+    milestoneId: 'mid-review',
+    stepLabel: '반영 기록 작성',
+  },
   'presentation-material': {
     milestoneId: 'presentation',
     stepLabel: '발표 자료 작성',
@@ -503,6 +615,44 @@ const previewSections = [
     statusLabel: '작성 전',
     status: 'not-started' as const,
     to: editorSectionTo('proposal', 'team-operations'),
+  },
+];
+
+const midReportPreviewSections = [
+  {
+    id: 'topic',
+    label: '주제',
+    statusLabel: '작성 완료',
+    status: 'completed' as const,
+    to: editorSectionTo('mid-review', 'topic'),
+  },
+  {
+    id: 'gui-design',
+    label: '화면 GUI 설계',
+    statusLabel: '작성 완료',
+    status: 'completed' as const,
+    to: editorSectionTo('mid-review', 'gui-design'),
+  },
+  {
+    id: 'engine-design',
+    label: '엔진부 설계',
+    statusLabel: '작성 중',
+    status: 'in-progress' as const,
+    to: editorSectionTo('mid-review', 'engine-design'),
+  },
+  {
+    id: 'project-plan',
+    label: '팀프로젝트 진행 계획',
+    statusLabel: '작성 전',
+    status: 'not-started' as const,
+    to: editorSectionTo('mid-review', 'project-plan'),
+  },
+  {
+    id: 'mid-check-questions',
+    label: '중간 점검 질문',
+    statusLabel: '작성 전',
+    status: 'not-started' as const,
+    to: editorSectionTo('mid-review', 'mid-check-questions'),
   },
 ];
 
@@ -578,8 +728,10 @@ function createPreviewBody(
         sections: previewSections,
       };
     case 'proposal-feedback':
+    case 'proposal-feedback-ready':
       return {
         kind: 'proposal-feedback',
+        reviewId: demoProposalReviewId,
         feedback: [
           {
             id: 'proposal-feedback',
@@ -587,7 +739,10 @@ function createPreviewBody(
             content: '핵심 사용자와 문제 상황을 더 구체적으로 정리해 주세요.',
           },
         ],
-        replyPlaceholder: '피드백 답변은 후속 작업에서 제공돼요.',
+        canSubmitResponse: false,
+        responseBlockedReason:
+          '제안서를 수정해 다시 제출한 뒤 반영 답변을 남겨 주세요.',
+        replyPlaceholder: '피드백을 반영한 내용을 작성해 주세요.',
         sections: previewSections,
         guide: '피드백을 반영한 뒤 제안서를 다시 제출해 주세요.',
       };
@@ -596,20 +751,20 @@ function createPreviewBody(
       return {
         kind: 'mid-review',
         project: previewProject,
-        sections: previewSections,
+        sections: midReportPreviewSections,
       };
     case 'mid-feedback':
+    case 'mid-feedback-ready':
       return {
         kind: 'mid-review-feedback',
-        feedback: [
-          {
-            id: 'mid-feedback',
-            title: '이은정 교수님 (2026-10-27 17:25)',
-            content: '시연에서 확인한 보완 사항을 제출 이력에 남겨 주세요.',
-          },
-        ],
-        sections: previewSections,
-        guide: '피드백 반영 내용과 변경 사항을 확인해 주세요.',
+        submissionId: demoMidReportSubmissionId,
+        feedback: [],
+        canSubmitResponse: false,
+        responseBlockedReason:
+          '중간보고서를 수정해 다시 제출한 뒤 반영 내용을 남겨 주세요.',
+        sections: midReportPreviewSections,
+        guide:
+          '대면 피드백에서 들은 내용과 이를 어떻게 반영했는지 먼저 남겨 주세요.',
       };
     case 'presentation-material':
       return {
@@ -649,6 +804,71 @@ function createPreviewBody(
   }
 }
 
+export function createStudentHomeDashboardWithFeedbackSubmissions(
+  dashboard: StudentHomeDashboard,
+  proposalResponse: ProposalFeedbackResponse | undefined,
+  midReportFeedback: MidReportFeedback | undefined,
+  proposal: Proposal,
+  midReport: MidReport,
+): StudentHomeDashboard {
+  return {
+    ...dashboard,
+    milestones: dashboard.milestones.map(milestone => {
+      if (milestone.body?.kind === 'proposal-feedback') {
+        const isFeedbackComplete = Boolean(proposalResponse);
+        return {
+          ...milestone,
+          currentStepLabel: isFeedbackComplete
+            ? '답변 제출 완료'
+            : milestone.currentStepLabel,
+          status: isFeedbackComplete ? 'completed' : milestone.status,
+          statusLabel: isFeedbackComplete ? '반영 완료' : milestone.statusLabel,
+          body: {
+            ...milestone.body,
+            studentResponse: proposalResponse,
+            canSubmitResponse:
+              !proposalResponse &&
+              proposal.status === 'SUBMITTED' &&
+              Boolean(proposal.revision?.resubmittedAt),
+            responseBlockedReason:
+              proposalResponse ||
+              (proposal.status === 'SUBMITTED' &&
+                proposal.revision?.resubmittedAt)
+                ? undefined
+                : '제안서를 수정해 다시 제출한 뒤 반영 답변을 남겨 주세요.',
+          },
+        };
+      }
+      if (milestone.body?.kind === 'mid-review-feedback') {
+        const isFeedbackComplete = Boolean(midReportFeedback);
+        return {
+          ...milestone,
+          currentStepLabel: isFeedbackComplete
+            ? '반영 기록 완료'
+            : milestone.currentStepLabel,
+          status: isFeedbackComplete ? 'completed' : milestone.status,
+          statusLabel: isFeedbackComplete ? '반영 완료' : milestone.statusLabel,
+          body: {
+            ...milestone.body,
+            studentFeedback: midReportFeedback,
+            canSubmitResponse:
+              !midReportFeedback &&
+              midReport.status === 'SUBMITTED' &&
+              Boolean(midReport.revision?.resubmittedAt),
+            responseBlockedReason:
+              midReportFeedback ||
+              (midReport.status === 'SUBMITTED' &&
+                midReport.revision?.resubmittedAt)
+                ? undefined
+                : '중간보고서를 수정해 다시 제출한 뒤 반영 내용을 남겨 주세요.',
+          },
+        };
+      }
+      return milestone;
+    }),
+  };
+}
+
 export function isMilestonePreviewScenario(
   value: string | null,
 ): value is MilestonePreviewScenario {
@@ -671,6 +891,7 @@ export function createStudentHomeDashboardPreview(
       ...studentHomeDashboardFixture.hero,
       heading: `${target.stepLabel} 단계예요.`,
       description: '개발용 마일스톤 미리보기 상태입니다.',
+      ctaLabel: `${target.stepLabel} 확인`,
     },
     milestones: studentHomeDashboardFixture.milestones.map(
       (milestone, index) => {

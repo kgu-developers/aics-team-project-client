@@ -1,3 +1,8 @@
+import type {
+  MidReportFeedback,
+  ProposalFeedbackResponse,
+} from '../feedback/types';
+
 export type StudentHomeMilestoneStatus =
   'before-period' | 'in-progress' | 'revision-available' | 'completed';
 
@@ -74,7 +79,11 @@ export type StudentHomeMilestoneBody =
     }
   | {
       kind: 'proposal-feedback';
+      reviewId: string;
       feedback: StudentHomeFeedbackMessage[];
+      studentResponse?: ProposalFeedbackResponse;
+      canSubmitResponse: boolean;
+      responseBlockedReason?: string;
       replyPlaceholder: string;
       sections: StudentHomeSectionStatus[];
       guide: string;
@@ -86,7 +95,11 @@ export type StudentHomeMilestoneBody =
     }
   | {
       kind: 'mid-review-feedback';
+      submissionId: string;
       feedback: StudentHomeFeedbackMessage[];
+      studentFeedback?: MidReportFeedback;
+      canSubmitResponse: boolean;
+      responseBlockedReason?: string;
       sections: StudentHomeSectionStatus[];
       guide: string;
     }

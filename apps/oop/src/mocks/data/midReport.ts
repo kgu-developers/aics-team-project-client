@@ -3,7 +3,10 @@ import type { MidReport, MidReportBlock } from '@aics/core';
 import {
   areDocumentFieldsComplete,
   completeDocumentSessionBlock,
+  hasRequiredDocumentRevisionChanges,
   hasRequiredTextValues,
+  hasResubmittedDocumentRevision,
+  requestDocumentSessionRevision,
   saveDocumentSessionBlock,
   submitDocumentSession,
 } from './documentSession';
@@ -36,6 +39,7 @@ let midReport: MidReport = {
   teamLeaderName: 'OOP 데모 학생 A',
   submittedAt: null,
   submittedBy: null,
+  revision: null,
   blocks: [
     block(
       'topic',
@@ -242,6 +246,80 @@ export function submitCurrentMidReport(version: number, submitterName: string) {
   const submitted = submitDocumentSession(midReport, version, submitterName);
   if (submitted) midReport = submitted;
   return submitted;
+}
+
+export function requestCurrentMidReportRevision() {
+  const requested = requestDocumentSessionRevision(midReport, ['gui-design']);
+  if (requested) midReport = requested;
+  return requested;
+}
+
+export function ensureMidReportFeedbackRevision() {
+  if (midReport.status === 'DRAFT') {
+    const completedReport: MidReport = {
+      ...midReport,
+      blocks: midReport.blocks.map(item => ({
+        ...item,
+        status: 'COMPLETED',
+      })),
+    };
+    const submitted = submitDocumentSession(
+      completedReport,
+      completedReport.version,
+      completedReport.teamLeaderName,
+    );
+    if (submitted) midReport = submitted;
+  }
+  if (midReport.status === 'SUBMITTED' && !midReport.revision) {
+    requestCurrentMidReportRevision();
+  }
+  return midReport;
+}
+
+export function ensureMidReportFeedbackRevisionResubmitted() {
+  if (hasResubmittedMidReportRevision()) return midReport;
+
+  const requested = ensureMidReportFeedbackRevision();
+  if (requested.status !== 'REVISION_REQUESTED') return midReport;
+
+  const gui = requested.blocks.find(item => item.key === 'gui-design');
+  if (!gui) return midReport;
+
+  const saved = saveMidReportBlock(
+    gui.key,
+    requested.version,
+    gui.fields.map(field =>
+      field.key === 'guiScreens'
+        ? {
+            ...field,
+            value: field.value.replace(
+              '상영 일정과 예매 현황을 확인합니다.',
+              '검색 단계를 줄인 상영 일정과 예매 현황을 확인합니다.',
+            ),
+          }
+        : field,
+    ),
+    requested.teamLeaderName,
+  );
+  if (!saved) return midReport;
+
+  const completed = completeMidReportBlock(
+    gui.key,
+    saved.version,
+    requested.teamLeaderName,
+  );
+  if (!completed) return midReport;
+
+  submitCurrentMidReport(completed.version, requested.teamLeaderName);
+  return midReport;
+}
+
+export function hasRequiredMidReportRevisionChanges() {
+  return hasRequiredDocumentRevisionChanges(midReport);
+}
+
+export function hasResubmittedMidReportRevision() {
+  return hasResubmittedDocumentRevision(midReport);
 }
 
 export function resetMidReportMockData() {
