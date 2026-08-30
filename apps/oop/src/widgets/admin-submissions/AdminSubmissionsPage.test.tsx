@@ -26,7 +26,10 @@ import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
-import { adminPresentationEvaluationHandlers } from '~/mocks/handlers/adminPresentationEvaluations';
+import {
+  adminPresentationEvaluationHandlers,
+  resetPresentationEvaluationScenario,
+} from '~/mocks/handlers/adminPresentationEvaluations';
 
 const server = setupServer(
   ...adminMeetingHandlers,
@@ -37,6 +40,7 @@ const server = setupServer(
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  resetPresentationEvaluationScenario();
   setApiAccessToken(null);
   useAuthStore.setState({ accessToken: null, currentUser: null });
   server.resetHandlers();
