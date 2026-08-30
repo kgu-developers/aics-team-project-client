@@ -31,6 +31,7 @@ import {
   useAdminMilestoneSubmissionsQuery,
   useAdminPresentationEvaluationsQuery,
 } from '~/features/admin-milestone-review/queries';
+import * as readStateStyles from '~/features/admin-read-state/adminReadState.css';
 import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -173,7 +174,7 @@ export default function AdminSubmissionsPage() {
     effectiveSectionId && accessibleSectionIds.includes(effectiveSectionId),
   );
   const submissionsQuery = useAdminMilestoneSubmissionsQuery(
-    effectiveSectionId,
+    effectiveSectionId ?? '',
     activeMilestoneId,
     isAccessibleSection &&
       activeMilestoneId !== 'presentation-evaluate' &&
@@ -310,8 +311,15 @@ export default function AdminSubmissionsPage() {
                             align: 'start',
                             header: '팀',
                             key: 'teamName',
-                            renderCell: team =>
-                              team.submissionId ? (
+                            renderCell: team => {
+                              const unread = Boolean(
+                                team.submissionId &&
+                                !readState.isRead(
+                                  effectiveSectionId ?? '',
+                                  team.submissionId,
+                                ),
+                              );
+                              const label = team.submissionId ? (
                                 <Link
                                   params={{ submissionId: team.submissionId }}
                                   search={{
@@ -324,7 +332,19 @@ export default function AdminSubmissionsPage() {
                                 </Link>
                               ) : (
                                 team.teamName
-                              ),
+                              );
+                              return (
+                                <span>
+                                  {unread ? (
+                                    <span
+                                      aria-label='읽지 않음'
+                                      className={readStateStyles.unreadDot}
+                                    />
+                                  ) : null}
+                                  {label}
+                                </span>
+                              );
+                            },
                             width: proportional(1, { minWidth: 128 }),
                           },
                           {
