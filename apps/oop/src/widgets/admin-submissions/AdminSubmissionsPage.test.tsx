@@ -299,7 +299,9 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByText('AI 기반 팀 프로젝트 관리 서비스'),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('textbox', { name: '제안서 피드백' }),
+    ).toBeInTheDocument();
   });
 
   it('제출된 중간 점검을 읽기 전용으로 표시한다', async () => {
@@ -311,7 +313,9 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByRole('heading', { name: 'OOP-01 - 1팀 중간 점검' }),
     ).toBeInTheDocument();
     expect(screen.getByText('중점 시연 기능')).toBeInTheDocument();
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('textbox', { name: '중간 점검 피드백' }),
+    ).toBeInTheDocument();
   });
 
   it('제출된 발표 자료를 읽기 전용으로 표시한다', async () => {
