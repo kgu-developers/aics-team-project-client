@@ -3,6 +3,7 @@ import { ENDPOINTS } from '../constants/endpoints';
 
 export type AdminMeetingRecordSummaryDto = {
   createdAt: string;
+  authorName?: string;
   id: string;
   sectionId: string;
   sectionLabel: string;
