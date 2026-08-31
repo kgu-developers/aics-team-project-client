@@ -116,13 +116,13 @@ export default function AdminSubmissionDetailPage() {
   ]);
   const milestoneLabel =
     detail?.milestoneTitle ?? getMilestoneLabel(search.milestoneId);
-  const studentsQuery = useAdminStudentsQuery(
-    isRequestedSectionAccessible ? detail?.sectionId : undefined,
-  );
   const isAccessibleSection = Boolean(
     detail &&
     search.sectionId === detail.sectionId &&
     accessibleSectionIds.includes(detail.sectionId),
+  );
+  const studentsQuery = useAdminStudentsQuery(
+    isAccessibleSection ? detail?.sectionId : undefined,
   );
   const meetingRecordsQuery = useAdminMeetingRecordsQuery(
     accessibleSectionIds,
@@ -300,7 +300,10 @@ export default function AdminSubmissionDetailPage() {
             </div>
           </section>
         </Card>
-        <AdminProposalFeedbackPanel feedback={detail.proposalFeedback} />
+        <AdminProposalFeedbackPanel
+          feedback={detail.proposalFeedback}
+          key={detail.submissionId}
+        />
       </>
     );
   }
@@ -377,7 +380,10 @@ export default function AdminSubmissionDetailPage() {
             </section>
           ))}
         </Card>
-        <AdminMidtermFeedbackPanel feedback={detail.midtermFeedback} />
+        <AdminMidtermFeedbackPanel
+          feedback={detail.midtermFeedback}
+          key={detail.submissionId}
+        />
       </>
     );
   }

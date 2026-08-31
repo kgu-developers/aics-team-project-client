@@ -80,6 +80,7 @@ export function AdminTeamMeetingRecordList({
                   <span
                     aria-label='읽지 않음'
                     className={readStateStyles.unreadDot}
+                    role='img'
                   />
                 )}
                 <Text className={styles.team}>

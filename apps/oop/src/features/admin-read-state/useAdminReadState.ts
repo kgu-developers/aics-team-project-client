@@ -7,6 +7,7 @@ type Entry = { ids: Set<string> };
 const entries = new Map<string, Entry>();
 const listeners = new Map<string, Set<() => void>>();
 const versions = new Map<string, number>();
+let clearVersion = 0;
 
 function keyFor(
   adminId: string | null | undefined,
@@ -49,9 +50,19 @@ function emit(key: string) {
   listeners.get(scopeFor(key))?.forEach(listener => listener());
 }
 
+function emitAll() {
+  clearVersion += 1;
+  listeners.forEach(bucket => bucket.forEach(listener => listener()));
+}
+
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', event => {
-    if (!event.key?.startsWith(STORAGE_PREFIX)) return;
+    if (event.key === null) {
+      entries.clear();
+      emitAll();
+      return;
+    }
+    if (!event.key.startsWith(STORAGE_PREFIX)) return;
     entries.delete(event.key);
     emit(event.key);
   });
@@ -71,7 +82,7 @@ export function useAdminReadState(resource: Resource, { adminId }: Scope) {
   );
   const getSnapshot = useCallback(() => {
     if (!scope) return 0;
-    let version = 0;
+    let version = clearVersion;
     versions.forEach((value, key) => {
       if (scopeFor(key) === scope) version += value;
     });

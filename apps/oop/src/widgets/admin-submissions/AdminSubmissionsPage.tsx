@@ -339,6 +339,7 @@ export default function AdminSubmissionsPage() {
                                     <span
                                       aria-label='읽지 않음'
                                       className={readStateStyles.unreadDot}
+                                      role='img'
                                     />
                                   ) : null}
                                   {label}

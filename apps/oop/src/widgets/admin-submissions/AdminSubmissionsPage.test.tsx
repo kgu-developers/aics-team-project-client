@@ -8,7 +8,7 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -267,6 +267,37 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByText('접근할 수 없는 제출물입니다.'),
     ).toBeInTheDocument();
     expect(detailRequestCount).toBe(0);
+  });
+
+  it('상세 응답의 분반이 요청 분반과 다르면 학생 목록 요청을 보내지 않는다', async () => {
+    let studentRequestCount = 0;
+    const response = structuredClone(
+      getAdminMilestoneSubmissionDetailFixture('submission-oop-01-1-proposal')!,
+    );
+    response.section = { id: 'unexpected-section', label: '다른 분반' };
+
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSION_DETAIL('submission-oop-01-1-proposal')}`,
+        () => HttpResponse.json(response),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_STUDENTS(':sectionId')}`,
+        () => {
+          studentRequestCount += 1;
+          return HttpResponse.json([]);
+        },
+      ),
+    );
+
+    renderPage(
+      '/admin/submissions/submission-oop-01-1-proposal?milestoneId=proposal&sectionId=oop-2026-2-01',
+    );
+
+    expect(
+      await screen.findByText('접근할 수 없는 제출물입니다.'),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(studentRequestCount).toBe(0));
   });
 
   it('상호 평가 제출자 수에 따라 상세보기를 활성화한다', async () => {

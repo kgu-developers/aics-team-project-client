@@ -57,3 +57,34 @@ it('새 피드백 ID를 받은 뒤에는 작성 중인 draft를 최신 피드백
 
   expect(feedbackInput).toHaveValue('시연 흐름을 보완해 주세요.');
 });
+
+it('제출물 ID가 바뀌면 이전 제출물의 draft를 유지하지 않는다', async () => {
+  const user = userEvent.setup();
+  const { rerender } = render(
+    <AstryxThemeProvider>
+      <AdminMidtermFeedbackPanel
+        feedback={initialFeedback}
+        key='submission-1'
+      />
+    </AstryxThemeProvider>,
+  );
+  const feedbackInput = screen.getByRole('textbox', {
+    name: '중간 점검 피드백',
+  });
+
+  await user.clear(feedbackInput);
+  await user.type(feedbackInput, '1팀에만 작성 중인 피드백');
+
+  rerender(
+    <AstryxThemeProvider>
+      <AdminMidtermFeedbackPanel
+        feedback={initialFeedback}
+        key='submission-2'
+      />
+    </AstryxThemeProvider>,
+  );
+
+  expect(screen.getByRole('textbox', { name: '중간 점검 피드백' })).toHaveValue(
+    '시연 흐름을 보완해 주세요.',
+  );
+});

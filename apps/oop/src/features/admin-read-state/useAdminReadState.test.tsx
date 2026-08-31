@@ -9,6 +9,7 @@ const sectionB = 'oop-2026-2-02';
 
 afterEach(() => {
   localStorage.clear();
+  window.dispatchEvent(new StorageEvent('storage', { key: null }));
 });
 
 describe('useAdminReadState', () => {
@@ -62,6 +63,22 @@ describe('useAdminReadState', () => {
     const { result } = renderHook(() =>
       useAdminReadState('meetings', { adminId: malformedAdminId }),
     );
+    expect(result.current.isRead(sectionA, 'meeting-1')).toBe(false);
+  });
+
+  it('다른 탭에서 localStorage를 전체 초기화하면 읽음 상태를 갱신한다', () => {
+    const { result } = renderHook(() =>
+      useAdminReadState('meetings', { adminId }),
+    );
+
+    act(() => result.current.markAsRead(sectionA, 'meeting-1'));
+    expect(result.current.isRead(sectionA, 'meeting-1')).toBe(true);
+
+    act(() => {
+      localStorage.clear();
+      window.dispatchEvent(new StorageEvent('storage', { key: null }));
+    });
+
     expect(result.current.isRead(sectionA, 'meeting-1')).toBe(false);
   });
 });
