@@ -9,15 +9,13 @@ import type {
   AdminMilestoneScheduleSectionView,
 } from '~/features/admin-milestone-review/model';
 import { useAdminMilestoneScheduleQuery } from '~/features/admin-milestone-review/queries';
+import { useAdminNoticesQuery } from '~/features/admin-notices/queries';
 import * as readStateStyles from '~/features/admin-read-state/adminReadState.css';
 import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminHomeDashboard.css';
-import {
-  dashboardInbox,
-  dashboardNotices,
-} from '../../mocks/data/adminDashboard';
+import { dashboardInbox } from '../../mocks/data/adminDashboard';
 
 type DashboardListItem = {
   date: string;
@@ -192,6 +190,7 @@ export default function AdminHomeDashboard() {
   const milestoneScheduleQuery =
     useAdminMilestoneScheduleQuery(accessibleSectionIds);
   const meetingRecordsQuery = useAdminMeetingRecordsQuery(accessibleSectionIds);
+  const noticesQuery = useAdminNoticesQuery();
   const scheduleSections = milestoneScheduleQuery.data?.sections ?? [];
   const milestoneColumns = getMilestoneColumns(scheduleSections);
   const meetingItems: DashboardListItem[] = (
@@ -213,6 +212,19 @@ export default function AdminHomeDashboard() {
         : meetingRecordsQuery.isError
           ? '회의록을 불러오지 못했습니다.'
           : '등록된 회의록이 없습니다.';
+  const noticeItems: DashboardListItem[] = (noticesQuery.data?.notices ?? [])
+    .slice(0, 3)
+    .map(notice => ({
+      date: notice.date,
+      id: notice.id,
+      section: notice.section,
+      title: notice.title,
+    }));
+  const noticeEmptyMessage = noticesQuery.isPending
+    ? '공지사항을 불러오는 중입니다.'
+    : noticesQuery.isError
+      ? '공지사항을 불러오지 못했습니다.'
+      : '등록된 공지사항이 없습니다.';
 
   return (
     <div className={styles.content}>
@@ -301,7 +313,13 @@ export default function AdminHomeDashboard() {
         </div>
       </section>
       <div className={styles.grid}>
-        <Panel action isNoticePanel items={dashboardNotices} title='공지사항' />
+        <Panel
+          action
+          emptyMessage={noticeEmptyMessage}
+          isNoticePanel
+          items={noticeItems}
+          title='공지사항'
+        />
         <Panel
           emptyMessage={meetingEmptyMessage}
           isMeetingPanel

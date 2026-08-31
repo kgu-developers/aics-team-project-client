@@ -388,9 +388,9 @@ export default function AdminProfilePage() {
 
   return (
     <div className={styles.page}>
-      <HStack justify='between'>
+      <HStack className={styles.pageHeader} justify='between'>
         <Heading level={1}>마이페이지</Heading>
-        <HStack gap={2}>
+        <HStack className={styles.pageHeaderActions} gap={2}>
           <Button
             label='비밀번호 변경'
             onClick={() => setIsPasswordDialogOpen(true)}

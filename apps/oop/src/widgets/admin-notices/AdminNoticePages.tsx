@@ -170,9 +170,7 @@ function NoticeAttachmentField({
       />
       {existingFileName && !file ? (
         <>
-          <a className={styles.attachmentLink} href='#attachment'>
-            📎 {existingFileName}
-          </a>
+          <Text color='secondary'>📎 {existingFileName}</Text>
           {onRemoveExisting ? (
             <Button
               isDisabled={isRemoving}
@@ -253,10 +251,10 @@ export function AdminNoticeListPage() {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>날짜 ↕</th>
-              <th>분반</th>
-              <th>제목</th>
-              <th>작성자</th>
+              <th scope='col'>날짜 ↕</th>
+              <th scope='col'>분반</th>
+              <th scope='col'>제목</th>
+              <th scope='col'>작성자</th>
             </tr>
           </thead>
           <tbody>
@@ -322,8 +320,6 @@ export function AdminNoticeListPage() {
 
 export function AdminNoticeDetailPage() {
   const { noticeId } = useParams({ from: '/admin/notices/$noticeId/' });
-  const navigate = useNavigate();
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const noticeQuery = useAdminNoticeQuery(noticeId);
   const detail = noticeQuery.data;
   const notice = detail?.notice;
@@ -370,31 +366,19 @@ export function AdminNoticeDetailPage() {
         ))}
         <div className={styles.attachment}>
           <span>제출 파일</span>
-          <a href='#attachment'>📎 {detail.attachment}</a>
+          <Text color='secondary'>📎 {detail.attachment}</Text>
+          <Text color='secondary' type='supporting'>
+            파일 다운로드 API 연동 후 제공됩니다.
+          </Text>
         </div>
         <div className={styles.actions}>
-          <Button
-            label='삭제'
-            onClick={() => setIsDeleteDialogOpen(true)}
-            variant='secondary'
-          />
-          <Button
-            label='수정'
-            onClick={() =>
-              navigate({
-                to: ROUTES.ADMIN_NOTICE_EDIT,
-                params: { noticeId: notice.id },
-              })
-            }
-            variant='primary'
-          />
+          <Button isDisabled label='삭제' variant='secondary' />
+          <Button isDisabled label='수정' variant='primary' />
         </div>
+        <Text color='secondary' type='supporting'>
+          공지사항 수정·삭제 API 연동 후 사용할 수 있습니다.
+        </Text>
       </Card>
-      <DeleteNoticeDialog
-        isOpen={isDeleteDialogOpen}
-        detail={detail}
-        onClose={() => setIsDeleteDialogOpen(false)}
-      />
     </div>
   );
 }
@@ -516,12 +500,11 @@ export function AdminNoticeEditPage() {
             }
             variant='secondary'
           />
-          <Button
-            isDisabled={sections.length === 0}
-            label='저장'
-            variant='primary'
-          />
+          <Button isDisabled label='저장' variant='primary' />
         </div>
+        <Text color='secondary' type='supporting'>
+          공지사항 수정 API 연동 후 저장할 수 있습니다.
+        </Text>
       </Card>
     </div>
   );
@@ -585,12 +568,11 @@ export function AdminNoticeNewPage() {
             onClick={() => navigate({ to: ROUTES.ADMIN_NOTICES })}
             variant='secondary'
           />
-          <Button
-            isDisabled={sections.length === 0}
-            label='저장'
-            variant='primary'
-          />
+          <Button isDisabled label='저장' variant='primary' />
         </div>
+        <Text color='secondary' type='supporting'>
+          공지사항 작성 API 연동 후 저장할 수 있습니다.
+        </Text>
       </Card>
     </div>
   );

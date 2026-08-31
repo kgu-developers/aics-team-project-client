@@ -15,6 +15,27 @@ export const profileCard = style({
   width: '100%',
 });
 
+export const pageHeader = style({
+  minWidth: 0,
+  '@media': {
+    '(max-width: 480px)': {
+      alignItems: 'stretch',
+      flexDirection: 'column',
+      gap: tokens.spacing['2'],
+    },
+  },
+});
+
+export const pageHeaderActions = style({
+  flexShrink: 0,
+  '@media': {
+    '(max-width: 480px)': {
+      flexWrap: 'wrap',
+      justifyContent: 'flex-end',
+    },
+  },
+});
+
 export const uploadSection = style({
   width: '100%',
 });
@@ -103,7 +124,6 @@ export const sectionStatusList = style({
   listStyle: 'none',
   margin: '12px 0 0',
   padding: 0,
-  '@media': {},
 });
 
 export const statusGroups = style({
