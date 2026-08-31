@@ -22,6 +22,8 @@ export const empty = style({ color: tokens.color.text.secondary });
 export const response = style({
   background: tokens.color.background.muted,
   borderRadius: 8,
+  display: 'grid',
+  gap: 6,
   minHeight: 56,
   padding: 14,
   whiteSpace: 'pre-wrap',

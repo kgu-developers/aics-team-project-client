@@ -23,6 +23,7 @@ import {
   AdminSubmissionExternalLink,
   AdminSubmissionFileDownloadLink,
 } from '~/features/admin-milestone-review/components/AdminFinalReportDownloadSummary';
+import { toAdminPeerEvaluationRows } from '~/features/admin-milestone-review/model';
 import { useAdminMilestoneSubmissionDetailQuery } from '~/features/admin-milestone-review/queries';
 import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import StudentDetailDialog from '~/features/admin-student-team/components/StudentDetailDialog';
@@ -46,6 +47,19 @@ function getMilestoneLabel(milestoneId: string | undefined) {
   }
 
   return '제출물';
+}
+
+function SubmissionStatus({
+  resubmittedAt,
+}: {
+  resubmittedAt?: string | null;
+}) {
+  return (
+    <Text className={styles.metadata}>
+      제출 상태 ·{' '}
+      {resubmittedAt ? `재제출 완료 · ${resubmittedAt}` : '최초 제출'}
+    </Text>
+  );
 }
 
 export default function AdminSubmissionDetailPage() {
@@ -139,6 +153,7 @@ export default function AdminSubmissionDetailPage() {
             <Text className={styles.metadata}>
               {detail.sectionLabel} · 제출일 {detail.submittedAt} · 조회 전용
             </Text>
+            <SubmissionStatus resubmittedAt={detail.resubmittedAt} />
           </div>
 
           <section className={styles.section}>
@@ -285,7 +300,7 @@ export default function AdminSubmissionDetailPage() {
             </div>
           </section>
         </Card>
-        <AdminProposalFeedbackPanel />
+        <AdminProposalFeedbackPanel feedback={detail.proposalFeedback} />
       </>
     );
   }
@@ -313,6 +328,7 @@ export default function AdminSubmissionDetailPage() {
             <Text className={styles.metadata}>
               {detail.sectionLabel} · 제출일 {detail.submittedAt} · 조회 전용
             </Text>
+            <SubmissionStatus resubmittedAt={detail.resubmittedAt} />
           </div>
 
           {midterm.blocks.map(block => (
@@ -361,7 +377,7 @@ export default function AdminSubmissionDetailPage() {
             </section>
           ))}
         </Card>
-        <AdminMidtermFeedbackPanel />
+        <AdminMidtermFeedbackPanel feedback={detail.midtermFeedback} />
       </>
     );
   }
@@ -386,6 +402,7 @@ export default function AdminSubmissionDetailPage() {
           <Text className={styles.metadata}>
             {detail.sectionLabel} · 제출일 {detail.submittedAt} · 조회 전용
           </Text>
+          <SubmissionStatus resubmittedAt={detail.resubmittedAt} />
         </div>
         {presentation.blocks.map(block => (
           <section className={styles.section} key={block.title}>
@@ -458,10 +475,7 @@ export default function AdminSubmissionDetailPage() {
           title='표시할 평가가 없습니다.'
         />
       );
-    const scoreFor = (memberNumber: string, targetNumber: string) =>
-      peer.responses.find(
-        response => response.evaluatorStudentNumber === memberNumber,
-      )?.scores[targetNumber];
+    const peerRows = toAdminPeerEvaluationRows(peer);
     return (
       <Card className={styles.document}>
         <div className={styles.documentHeader}>
@@ -474,19 +488,19 @@ export default function AdminSubmissionDetailPage() {
           columns={[
             {
               align: 'start',
-              header: '이름',
-              key: 'name',
-              renderCell: member => (
+              header: '평가자',
+              key: 'evaluator',
+              renderCell: row => (
                 <button
                   className={styles.peerMemberButton}
                   type='button'
                   onClick={() =>
                     setSelectedPeerMember({
-                      ...member,
+                      ...row.evaluator,
                       evaluation: peer.responses.find(
                         response =>
                           response.evaluatorStudentNumber ===
-                          member.studentNumber,
+                          row.evaluator.studentNumber,
                       )?.projectEvaluation ?? {
                         reflection: '-',
                         roleSummary: '-',
@@ -495,46 +509,41 @@ export default function AdminSubmissionDetailPage() {
                     })
                   }
                 >
-                  {member.name}
+                  {row.evaluator.name}
                 </button>
               ),
               width: proportional(1, { minWidth: 120 }),
             },
-            ...peer.members.map(target => ({
-              align: 'center' as const,
-              header: target.name,
-              key: target.studentNumber,
-              renderCell: (member: (typeof peer.members)[number]) =>
-                target.studentNumber === member.studentNumber
-                  ? '-'
-                  : (scoreFor(target.studentNumber, member.studentNumber) ??
-                    '-'),
-              width: proportional(1, { minWidth: 112 }),
-            })),
             {
               align: 'center',
-              header: '평균',
+              header: '평가 제출 상태',
+              key: 'submissionStatus',
+              renderCell: row => (row.isSubmitted ? '제출 완료' : '미제출'),
+              width: proportional(0.9, { minWidth: 104 }),
+            },
+            {
+              align: 'center',
+              header: '평가 대상',
+              key: 'target',
+              renderCell: row => row.target.name,
+              width: proportional(1, { minWidth: 120 }),
+            },
+            {
+              align: 'center',
+              header: '점수',
+              key: 'score',
+              renderCell: row => row.score ?? '미평가',
+              width: proportional(0.8, { minWidth: 96 }),
+            },
+            {
+              align: 'center',
+              header: '평가 대상 평균',
               key: 'average',
-              renderCell: member => {
-                const values = peer.members
-                  .filter(
-                    target => target.studentNumber !== member.studentNumber,
-                  )
-                  .map(target =>
-                    scoreFor(target.studentNumber, member.studentNumber),
-                  )
-                  .filter((value): value is number => value !== undefined);
-                return values.length
-                  ? (
-                      values.reduce((sum, value) => sum + value, 0) /
-                      values.length
-                    ).toFixed(1)
-                  : '-';
-              },
+              renderCell: row => row.average?.toFixed(1) ?? '미평가',
               width: proportional(0.8, { minWidth: 96 }),
             },
           ]}
-          data={peer.members}
+          data={peerRows}
           dividers='rows'
           textOverflow='wrap'
           verticalAlign='middle'
@@ -631,6 +640,18 @@ export default function AdminSubmissionDetailPage() {
                   );
                 },
                 width: proportional(1, { minWidth: 120 }),
+              },
+              {
+                align: 'center',
+                header: '제출 상태',
+                key: 'submissionStatus',
+                renderCell: evaluator =>
+                  evaluator.isTargetTeamMember
+                    ? '-'
+                    : evaluator.total === undefined
+                      ? '미제출'
+                      : '제출 완료',
+                width: proportional(0.9, { minWidth: 104 }),
               },
               ...evaluation.criteria.map(criterion => ({
                 align: 'center' as const,

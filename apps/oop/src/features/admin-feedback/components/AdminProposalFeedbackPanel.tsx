@@ -1,24 +1,18 @@
+import type { AdminProposalFeedbackDto } from '@aics/api-client';
 import { Button, Card, Heading, Text, TextArea } from '@aics/design-system';
 import { useEffect, useState } from 'react';
 
 import * as styles from './AdminProposalFeedbackPanel.css';
 
-type FeedbackEntry = {
-  feedbackId: string;
-  authorName: string;
-  content: string;
-  createdAt: string;
-};
-
 type AdminProposalFeedbackPanelProps = {
-  history?: FeedbackEntry[];
-  latestStudentResponse?: string | null;
+  feedback?: AdminProposalFeedbackDto | null;
 };
 
 export function AdminProposalFeedbackPanel({
-  history = [],
-  latestStudentResponse = null,
+  feedback = null,
 }: AdminProposalFeedbackPanelProps) {
+  const history = feedback?.history ?? [];
+  const latestStudentResponse = feedback?.latestStudentResponse ?? null;
   const latestFeedback = history.at(-1);
   const initialContent = latestFeedback?.content ?? '';
   const [content, setContent] = useState(initialContent);
@@ -27,7 +21,11 @@ export function AdminProposalFeedbackPanel({
   useEffect(() => {
     setContent(initialContent);
     setSavedContent(initialContent);
-  }, [initialContent, latestStudentResponse, latestFeedback?.feedbackId]);
+  }, [
+    initialContent,
+    latestStudentResponse?.responseId,
+    latestFeedback?.feedbackId,
+  ]);
 
   return (
     <Card className={styles.panel}>
@@ -57,14 +55,22 @@ export function AdminProposalFeedbackPanel({
       </section>
 
       <section className={styles.section}>
-        <Heading level={3}>학생 최신 답변</Heading>
         <div className={styles.response}>
-          <Text>{latestStudentResponse ?? '학생 답변이 없습니다.'}</Text>
+          {latestStudentResponse ? (
+            <>
+              <Text className={styles.meta}>
+                {latestStudentResponse.authorName} ·{' '}
+                {latestStudentResponse.createdAt}
+              </Text>
+              <Text>{latestStudentResponse.content}</Text>
+            </>
+          ) : (
+            <Text>학생 답변이 없습니다.</Text>
+          )}
         </div>
       </section>
 
       <section className={styles.section}>
-        <Heading level={3}>피드백 작성·수정</Heading>
         <TextArea
           aria-label='제안서 피드백'
           label='제안서 피드백'
