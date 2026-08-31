@@ -9,17 +9,23 @@ import {
   Text,
 } from '@aics/design-system';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import {
+  AdminMidtermFeedbackPanel,
+  AdminProposalFeedbackPanel,
+} from '~/features/admin-feedback/components';
 import { AdminTeamMeetingRecordList } from '~/features/admin-meeting/components';
 import { useAdminMeetingRecordsQuery } from '~/features/admin-meeting/queries';
 import {
   AdminSubmissionExternalLink,
   AdminSubmissionFileDownloadLink,
 } from '~/features/admin-milestone-review/components/AdminFinalReportDownloadSummary';
+import { toAdminPeerEvaluationRows } from '~/features/admin-milestone-review/model';
 import { useAdminMilestoneSubmissionDetailQuery } from '~/features/admin-milestone-review/queries';
+import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import StudentDetailDialog from '~/features/admin-student-team/components/StudentDetailDialog';
 import { useAdminStudentsQuery } from '~/features/admin-student-team/queries/useAdminStudentsQuery';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -41,6 +47,19 @@ function getMilestoneLabel(milestoneId: string | undefined) {
   }
 
   return '제출물';
+}
+
+function SubmissionStatus({
+  resubmittedAt,
+}: {
+  resubmittedAt?: string | null;
+}) {
+  return (
+    <Text className={styles.metadata}>
+      제출 상태 ·{' '}
+      {resubmittedAt ? `재제출 완료 · ${resubmittedAt}` : '최초 제출'}
+    </Text>
+  );
 }
 
 export default function AdminSubmissionDetailPage() {
@@ -78,15 +97,32 @@ export default function AdminSubmissionDetailPage() {
     isRequestedSectionAccessible,
   );
   const detail = submissionQuery.data;
+  const { markAsRead } = useAdminReadState('submissions', {
+    adminId: currentUser?.id,
+  });
+  useEffect(() => {
+    if (
+      detail?.submissionId &&
+      search.sectionId &&
+      isRequestedSectionAccessible
+    ) {
+      markAsRead(search.sectionId, detail.submissionId);
+    }
+  }, [
+    detail?.submissionId,
+    search.sectionId,
+    isRequestedSectionAccessible,
+    markAsRead,
+  ]);
   const milestoneLabel =
     detail?.milestoneTitle ?? getMilestoneLabel(search.milestoneId);
-  const studentsQuery = useAdminStudentsQuery(
-    isRequestedSectionAccessible ? (detail?.sectionId ?? '') : '',
-  );
   const isAccessibleSection = Boolean(
     detail &&
     search.sectionId === detail.sectionId &&
     accessibleSectionIds.includes(detail.sectionId),
+  );
+  const studentsQuery = useAdminStudentsQuery(
+    isAccessibleSection ? detail?.sectionId : undefined,
   );
   const meetingRecordsQuery = useAdminMeetingRecordsQuery(
     accessibleSectionIds,
@@ -107,153 +143,168 @@ export default function AdminSubmissionDetailPage() {
     const proposal = detail.proposal;
 
     return (
-      <Card className={styles.document}>
-        <div className={styles.documentHeader}>
-          <Text className={styles.documentLabel}>DOC / PROPOSAL / FORM V1</Text>
-          <Heading level={2}>{detail.teamName} 제안서</Heading>
-          <Text className={styles.metadata}>
-            {detail.sectionLabel} · 제출일 {detail.submittedAt} · 조회 전용
-          </Text>
-        </div>
-
-        <section className={styles.section}>
-          <Heading level={3}>1. 팀 정보</Heading>
-          <Text className={styles.sectionDescription}>
-            팀 구성과 역할을 한눈에 볼 수 있게 정리합니다.
-          </Text>
-          <div className={styles.fieldGrid}>
-            <div className={styles.field}>
-              <Text className={styles.fieldLabel}>팀명</Text>
-              <Text className={styles.fieldValue}>{proposal.teamName}</Text>
-            </div>
-            <div className={styles.field}>
-              <Text className={styles.fieldLabel}>팀장</Text>
-              <Text className={styles.fieldValue}>
-                {proposal.teamLeaderName}
-              </Text>
-            </div>
-            <div className={`${styles.field} ${styles.fullWidthField}`}>
-              <Text className={styles.fieldLabel}>팀원</Text>
-              <Text className={styles.fieldValue}>
-                {proposal.members.join('\n')}
-              </Text>
-            </div>
-            <div className={`${styles.field} ${styles.fullWidthField}`}>
-              <Text className={styles.fieldLabel}>팀 소개</Text>
-              <Text className={styles.fieldValue}>{proposal.introduction}</Text>
-            </div>
+      <>
+        <Card className={styles.document}>
+          <div className={styles.documentHeader}>
+            <Text className={styles.documentLabel}>
+              DOC / PROPOSAL / FORM V1
+            </Text>
+            <Heading level={2}>{detail.teamName} 제안서</Heading>
+            <Text className={styles.metadata}>
+              {detail.sectionLabel} · 제출일 {detail.submittedAt} · 조회 전용
+            </Text>
+            <SubmissionStatus resubmittedAt={detail.resubmittedAt} />
           </div>
-        </section>
 
-        <section className={styles.section}>
-          <Heading level={3}>2. 주제</Heading>
-          <Text className={styles.sectionDescription}>
-            제안 주제와 기대 효과를 구체적으로 작성합니다.
-          </Text>
-          <div className={styles.fieldGrid}>
-            <div className={`${styles.field} ${styles.fullWidthField}`}>
-              <Text className={styles.fieldLabel}>프로젝트 제목</Text>
-              <Text className={styles.fieldValue}>{proposal.projectTitle}</Text>
-            </div>
-            <div className={`${styles.field} ${styles.fullWidthField}`}>
-              <Text className={styles.fieldLabel}>주제 설명</Text>
-              <Text className={styles.fieldValue}>
-                {proposal.projectDescription}
-              </Text>
-            </div>
-          </div>
-        </section>
-
-        <section className={styles.section}>
-          <Heading level={3}>3. 데이터 구성</Heading>
-          <Text className={styles.sectionDescription}>
-            데이터 단위별 예상 건수와 설명을 표로 정리합니다.
-          </Text>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={`${styles.tableCell} ${styles.tableHeader}`}>
-                  데이터 이름
-                </th>
-                <th className={`${styles.tableCell} ${styles.tableHeader}`}>
-                  데이터 설명
-                </th>
-                <th className={`${styles.tableCell} ${styles.tableHeader}`}>
-                  예상 개수
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {proposal.dataRows.map((row, index) => (
-                <tr
-                  className={
-                    index === proposal.dataRows.length - 1
-                      ? styles.lastTableRow
-                      : ''
-                  }
-                  key={row.name}
-                >
-                  <td className={styles.tableCell}>{row.name}</td>
-                  <td className={styles.tableCell}>{row.description}</td>
-                  <td className={styles.tableCell}>{row.count}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-
-        <section className={styles.section}>
-          <Heading level={3}>4. 화면 구성</Heading>
-          <Text className={styles.sectionDescription}>
-            핵심 화면과 사용자 행동을 화면별로 정리합니다.
-          </Text>
-          <div className={styles.fieldGrid}>
-            <div className={`${styles.field} ${styles.fullWidthField}`}>
-              <Text className={styles.fieldLabel}>와이어프레임 파일</Text>
-              <Text className={styles.fieldValue}>
-                {proposal.wireframeFileNames.join(', ')}
-              </Text>
-            </div>
-            <div className={`${styles.field} ${styles.fullWidthField}`}>
-              <Text className={styles.fieldLabel}>화면 구성 설명</Text>
-              <Text className={styles.fieldValue}>
-                {proposal.screenDescription}
-              </Text>
-            </div>
-          </div>
-          <div className={styles.screenList}>
-            {proposal.screens.map(screen => (
-              <div className={styles.field} key={screen.name}>
-                <Text className={styles.fieldLabel}>{screen.name}</Text>
-                <Text className={styles.fieldValue}>{screen.description}</Text>
+          <section className={styles.section}>
+            <Heading level={3}>1. 팀 정보</Heading>
+            <Text className={styles.sectionDescription}>
+              팀 구성과 역할을 한눈에 볼 수 있게 정리합니다.
+            </Text>
+            <div className={styles.fieldGrid}>
+              <div className={styles.field}>
+                <Text className={styles.fieldLabel}>팀명</Text>
+                <Text className={styles.fieldValue}>{proposal.teamName}</Text>
               </div>
-            ))}
-          </div>
-        </section>
+              <div className={styles.field}>
+                <Text className={styles.fieldLabel}>팀장</Text>
+                <Text className={styles.fieldValue}>
+                  {proposal.teamLeaderName}
+                </Text>
+              </div>
+              <div className={`${styles.field} ${styles.fullWidthField}`}>
+                <Text className={styles.fieldLabel}>팀원</Text>
+                <Text className={styles.fieldValue}>
+                  {proposal.members.join('\n')}
+                </Text>
+              </div>
+              <div className={`${styles.field} ${styles.fullWidthField}`}>
+                <Text className={styles.fieldLabel}>팀 소개</Text>
+                <Text className={styles.fieldValue}>
+                  {proposal.introduction}
+                </Text>
+              </div>
+            </div>
+          </section>
 
-        <section className={styles.section}>
-          <Heading level={3}>5. 팀 운영 방식</Heading>
-          <Text className={styles.sectionDescription}>
-            역할 분담과 협업 규칙, 진행 일정을 정리합니다.
-          </Text>
-          <div className={styles.fieldGrid}>
-            <div className={`${styles.field} ${styles.fullWidthField}`}>
-              <Text className={styles.fieldLabel}>역할 분담</Text>
-              <Text className={styles.fieldValue}>{proposal.roles}</Text>
+          <section className={styles.section}>
+            <Heading level={3}>2. 주제</Heading>
+            <Text className={styles.sectionDescription}>
+              제안 주제와 기대 효과를 구체적으로 작성합니다.
+            </Text>
+            <div className={styles.fieldGrid}>
+              <div className={`${styles.field} ${styles.fullWidthField}`}>
+                <Text className={styles.fieldLabel}>프로젝트 제목</Text>
+                <Text className={styles.fieldValue}>
+                  {proposal.projectTitle}
+                </Text>
+              </div>
+              <div className={`${styles.field} ${styles.fullWidthField}`}>
+                <Text className={styles.fieldLabel}>주제 설명</Text>
+                <Text className={styles.fieldValue}>
+                  {proposal.projectDescription}
+                </Text>
+              </div>
             </div>
-            <div className={`${styles.field} ${styles.fullWidthField}`}>
-              <Text className={styles.fieldLabel}>협업 방식</Text>
-              <Text className={styles.fieldValue}>
-                {proposal.collaboration}
-              </Text>
+          </section>
+
+          <section className={styles.section}>
+            <Heading level={3}>3. 데이터 구성</Heading>
+            <Text className={styles.sectionDescription}>
+              데이터 단위별 예상 건수와 설명을 표로 정리합니다.
+            </Text>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th className={`${styles.tableCell} ${styles.tableHeader}`}>
+                    데이터 이름
+                  </th>
+                  <th className={`${styles.tableCell} ${styles.tableHeader}`}>
+                    데이터 설명
+                  </th>
+                  <th className={`${styles.tableCell} ${styles.tableHeader}`}>
+                    예상 개수
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {proposal.dataRows.map((row, index) => (
+                  <tr
+                    className={
+                      index === proposal.dataRows.length - 1
+                        ? styles.lastTableRow
+                        : ''
+                    }
+                    key={row.name}
+                  >
+                    <td className={styles.tableCell}>{row.name}</td>
+                    <td className={styles.tableCell}>{row.description}</td>
+                    <td className={styles.tableCell}>{row.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+
+          <section className={styles.section}>
+            <Heading level={3}>4. 화면 구성</Heading>
+            <Text className={styles.sectionDescription}>
+              핵심 화면과 사용자 행동을 화면별로 정리합니다.
+            </Text>
+            <div className={styles.fieldGrid}>
+              <div className={`${styles.field} ${styles.fullWidthField}`}>
+                <Text className={styles.fieldLabel}>와이어프레임 파일</Text>
+                <Text className={styles.fieldValue}>
+                  {proposal.wireframeFileNames.join(', ')}
+                </Text>
+              </div>
+              <div className={`${styles.field} ${styles.fullWidthField}`}>
+                <Text className={styles.fieldLabel}>화면 구성 설명</Text>
+                <Text className={styles.fieldValue}>
+                  {proposal.screenDescription}
+                </Text>
+              </div>
             </div>
-            <div className={`${styles.field} ${styles.fullWidthField}`}>
-              <Text className={styles.fieldLabel}>진행 일정</Text>
-              <Text className={styles.fieldValue}>{proposal.schedule}</Text>
+            <div className={styles.screenList}>
+              {proposal.screens.map(screen => (
+                <div className={styles.field} key={screen.name}>
+                  <Text className={styles.fieldLabel}>{screen.name}</Text>
+                  <Text className={styles.fieldValue}>
+                    {screen.description}
+                  </Text>
+                </div>
+              ))}
             </div>
-          </div>
-        </section>
-      </Card>
+          </section>
+
+          <section className={styles.section}>
+            <Heading level={3}>5. 팀 운영 방식</Heading>
+            <Text className={styles.sectionDescription}>
+              역할 분담과 협업 규칙, 진행 일정을 정리합니다.
+            </Text>
+            <div className={styles.fieldGrid}>
+              <div className={`${styles.field} ${styles.fullWidthField}`}>
+                <Text className={styles.fieldLabel}>역할 분담</Text>
+                <Text className={styles.fieldValue}>{proposal.roles}</Text>
+              </div>
+              <div className={`${styles.field} ${styles.fullWidthField}`}>
+                <Text className={styles.fieldLabel}>협업 방식</Text>
+                <Text className={styles.fieldValue}>
+                  {proposal.collaboration}
+                </Text>
+              </div>
+              <div className={`${styles.field} ${styles.fullWidthField}`}>
+                <Text className={styles.fieldLabel}>진행 일정</Text>
+                <Text className={styles.fieldValue}>{proposal.schedule}</Text>
+              </div>
+            </div>
+          </section>
+        </Card>
+        <AdminProposalFeedbackPanel
+          feedback={detail.proposalFeedback}
+          key={detail.submissionId}
+        />
+      </>
     );
   }
 
@@ -270,37 +321,50 @@ export default function AdminSubmissionDetailPage() {
     const midterm = detail.midterm;
 
     return (
-      <Card className={styles.document}>
-        <div className={styles.documentHeader}>
-          <Text className={styles.documentLabel}>DOC / MIDTERM / FORM V1</Text>
-          <Heading level={2}>{detail.teamName} 중간 점검</Heading>
-          <Text className={styles.metadata}>
-            {detail.sectionLabel} · 제출일 {detail.submittedAt} · 조회 전용
-          </Text>
-        </div>
-
-        {midterm.blocks.map(block => (
-          <section className={styles.section} key={block.title}>
-            <Heading level={3}>{block.title}</Heading>
-            <Text className={styles.sectionDescription}>
-              {block.description}
+      <>
+        <Card className={styles.document}>
+          <div className={styles.documentHeader}>
+            <Text className={styles.documentLabel}>
+              DOC / MIDTERM / FORM V1
             </Text>
-            <div className={styles.fieldGrid}>
-              {block.fields.map(field => (
-                <div
-                  className={`${styles.field} ${styles.fullWidthField}`}
-                  key={field.label}
-                >
-                  <Text className={styles.fieldLabel}>{field.label}</Text>
-                  <Text className={styles.fieldValue}>{field.value}</Text>
-                  {field.attachment ? (
-                    field.attachment.contentType.startsWith('image/') ? (
-                      <div className={styles.attachment}>
-                        <img
-                          alt={`${field.label} 미리보기`}
-                          className={styles.imagePreview}
-                          src={field.attachment.downloadUrl}
-                        />
+            <Heading level={2}>{detail.teamName} 중간 점검</Heading>
+            <Text className={styles.metadata}>
+              {detail.sectionLabel} · 제출일 {detail.submittedAt} · 조회 전용
+            </Text>
+            <SubmissionStatus resubmittedAt={detail.resubmittedAt} />
+          </div>
+
+          {midterm.blocks.map(block => (
+            <section className={styles.section} key={block.title}>
+              <Heading level={3}>{block.title}</Heading>
+              <Text className={styles.sectionDescription}>
+                {block.description}
+              </Text>
+              <div className={styles.fieldGrid}>
+                {block.fields.map(field => (
+                  <div
+                    className={`${styles.field} ${styles.fullWidthField}`}
+                    key={field.label}
+                  >
+                    <Text className={styles.fieldLabel}>{field.label}</Text>
+                    <Text className={styles.fieldValue}>{field.value}</Text>
+                    {field.attachment ? (
+                      field.attachment.contentType.startsWith('image/') ? (
+                        <div className={styles.attachment}>
+                          <img
+                            alt={`${field.label} 미리보기`}
+                            className={styles.imagePreview}
+                            src={field.attachment.downloadUrl}
+                          />
+                          <a
+                            className={styles.downloadLink}
+                            download={field.attachment.fileName}
+                            href={field.attachment.downloadUrl}
+                          >
+                            {field.attachment.fileName} 다운로드
+                          </a>
+                        </div>
+                      ) : (
                         <a
                           className={styles.downloadLink}
                           download={field.attachment.fileName}
@@ -308,23 +372,19 @@ export default function AdminSubmissionDetailPage() {
                         >
                           {field.attachment.fileName} 다운로드
                         </a>
-                      </div>
-                    ) : (
-                      <a
-                        className={styles.downloadLink}
-                        download={field.attachment.fileName}
-                        href={field.attachment.downloadUrl}
-                      >
-                        {field.attachment.fileName} 다운로드
-                      </a>
-                    )
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
-      </Card>
+                      )
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </Card>
+        <AdminMidtermFeedbackPanel
+          feedback={detail.midtermFeedback}
+          key={detail.submissionId}
+        />
+      </>
     );
   }
 
@@ -348,6 +408,7 @@ export default function AdminSubmissionDetailPage() {
           <Text className={styles.metadata}>
             {detail.sectionLabel} · 제출일 {detail.submittedAt} · 조회 전용
           </Text>
+          <SubmissionStatus resubmittedAt={detail.resubmittedAt} />
         </div>
         {presentation.blocks.map(block => (
           <section className={styles.section} key={block.title}>
@@ -420,10 +481,7 @@ export default function AdminSubmissionDetailPage() {
           title='표시할 평가가 없습니다.'
         />
       );
-    const scoreFor = (memberNumber: string, targetNumber: string) =>
-      peer.responses.find(
-        response => response.evaluatorStudentNumber === memberNumber,
-      )?.scores[targetNumber];
+    const peerRows = toAdminPeerEvaluationRows(peer);
     return (
       <Card className={styles.document}>
         <div className={styles.documentHeader}>
@@ -436,19 +494,19 @@ export default function AdminSubmissionDetailPage() {
           columns={[
             {
               align: 'start',
-              header: '이름',
-              key: 'name',
-              renderCell: member => (
+              header: '평가자',
+              key: 'evaluator',
+              renderCell: row => (
                 <button
                   className={styles.peerMemberButton}
                   type='button'
                   onClick={() =>
                     setSelectedPeerMember({
-                      ...member,
+                      ...row.evaluator,
                       evaluation: peer.responses.find(
                         response =>
                           response.evaluatorStudentNumber ===
-                          member.studentNumber,
+                          row.evaluator.studentNumber,
                       )?.projectEvaluation ?? {
                         reflection: '-',
                         roleSummary: '-',
@@ -457,46 +515,41 @@ export default function AdminSubmissionDetailPage() {
                     })
                   }
                 >
-                  {member.name}
+                  {row.evaluator.name}
                 </button>
               ),
               width: proportional(1, { minWidth: 120 }),
             },
-            ...peer.members.map(target => ({
-              align: 'center' as const,
-              header: target.name,
-              key: target.studentNumber,
-              renderCell: (member: (typeof peer.members)[number]) =>
-                target.studentNumber === member.studentNumber
-                  ? '-'
-                  : (scoreFor(target.studentNumber, member.studentNumber) ??
-                    '-'),
-              width: proportional(1, { minWidth: 112 }),
-            })),
             {
               align: 'center',
-              header: '평균',
+              header: '평가 제출 상태',
+              key: 'submissionStatus',
+              renderCell: row => (row.isSubmitted ? '제출 완료' : '미제출'),
+              width: proportional(0.9, { minWidth: 104 }),
+            },
+            {
+              align: 'center',
+              header: '평가 대상',
+              key: 'target',
+              renderCell: row => row.target.name,
+              width: proportional(1, { minWidth: 120 }),
+            },
+            {
+              align: 'center',
+              header: '점수',
+              key: 'score',
+              renderCell: row => row.score ?? '미평가',
+              width: proportional(0.8, { minWidth: 96 }),
+            },
+            {
+              align: 'center',
+              header: '평가 대상 평균',
               key: 'average',
-              renderCell: member => {
-                const values = peer.members
-                  .filter(
-                    target => target.studentNumber !== member.studentNumber,
-                  )
-                  .map(target =>
-                    scoreFor(target.studentNumber, member.studentNumber),
-                  )
-                  .filter((value): value is number => value !== undefined);
-                return values.length
-                  ? (
-                      values.reduce((sum, value) => sum + value, 0) /
-                      values.length
-                    ).toFixed(1)
-                  : '-';
-              },
+              renderCell: row => row.average?.toFixed(1) ?? '미평가',
               width: proportional(0.8, { minWidth: 96 }),
             },
           ]}
-          data={peer.members}
+          data={peerRows}
           dividers='rows'
           textOverflow='wrap'
           verticalAlign='middle'
@@ -593,6 +646,18 @@ export default function AdminSubmissionDetailPage() {
                   );
                 },
                 width: proportional(1, { minWidth: 120 }),
+              },
+              {
+                align: 'center',
+                header: '제출 상태',
+                key: 'submissionStatus',
+                renderCell: evaluator =>
+                  evaluator.isTargetTeamMember
+                    ? '-'
+                    : evaluator.total === null
+                      ? '미제출'
+                      : '제출 완료',
+                width: proportional(0.9, { minWidth: 104 }),
               },
               ...evaluation.criteria.map(criterion => ({
                 align: 'center' as const,

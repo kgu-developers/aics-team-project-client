@@ -1,11 +1,12 @@
 import { Card, EmptyState, Heading, Text } from '@aics/design-system';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { getRichTextPlainText } from '~/features/admin-meeting/model';
 import { useAdminMeetingRecordQuery } from '~/features/admin-meeting/queries';
+import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import StudentDetailDialog from '~/features/admin-student-team/components/StudentDetailDialog';
 import { useAdminStudentsQuery } from '~/features/admin-student-team/queries/useAdminStudentsQuery';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -44,6 +45,14 @@ export default function AdminMeetingDetailPage() {
     search.sectionId,
     isAccessibleSection,
   );
+  const { markAsRead } = useAdminReadState('meetings', {
+    adminId: currentUser?.id,
+  });
+  useEffect(() => {
+    if (query.data?.id && search.sectionId && isAccessibleSection) {
+      markAsRead(search.sectionId, query.data.id);
+    }
+  }, [query.data?.id, search.sectionId, isAccessibleSection, markAsRead]);
   const studentsQuery = useAdminStudentsQuery(
     isAccessibleSection ? (search.sectionId ?? '') : '',
   );

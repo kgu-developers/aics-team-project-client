@@ -12,6 +12,7 @@ const proposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
     title: '제안서',
   },
   midterm: null,
+  midtermFeedback: null,
   presentation: null,
   proposal: {
     collaboration: '주 2회 대면 회의, GitHub PR 리뷰 후 병합',
@@ -55,6 +56,22 @@ const proposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
     teamName: 'OOP-01 - 1팀',
     wireframeFileNames: ['team-dashboard.png'],
   },
+  proposalFeedback: {
+    history: [
+      {
+        feedbackId: 'proposal-feedback-1',
+        authorName: '이은정',
+        content: '팀 역할과 프로젝트 범위를 구체적으로 정리해 주세요.',
+        createdAt: '2026/09/06',
+      },
+    ],
+    latestStudentResponse: {
+      responseId: 'proposal-response-1',
+      authorName: '김민준',
+      createdAt: '2026/09/07',
+      content: '역할 분담과 프로젝트 범위를 보완했습니다.',
+    },
+  },
   section: {
     id: 'oop-2026-2-01',
     label: 'OOP-01',
@@ -62,6 +79,7 @@ const proposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
   submittedAt: '2026/09/05',
   submission: {
     id: 'submission-oop-01-1-proposal',
+    revision: { resubmittedAt: '2026/09/07' },
     teamId: 'team-1151-1',
     teamName: 'OOP-01 - 1팀',
   },
@@ -161,6 +179,22 @@ const midtermSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
     teamLeaderName: '김민준',
     teamName: 'OOP-01 - 1팀',
   },
+  midtermFeedback: {
+    history: [
+      {
+        feedbackId: 'midterm-feedback-1',
+        authorName: '이은정',
+        content: '시연 흐름과 테스트 케이스를 보완해 주세요.',
+        createdAt: '2026/10/13',
+      },
+    ],
+    latestStudentResponse: {
+      responseId: 'midterm-response-1',
+      authorName: '김민준',
+      createdAt: '2026/10/14',
+      content: '시연 흐름과 테스트 케이스를 보완했습니다.',
+    },
+  },
   proposal: null,
   presentation: null,
   section: {
@@ -170,6 +204,7 @@ const midtermSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
   submittedAt: '2026/10/12',
   submission: {
     id: 'submission-oop-01-1-midterm',
+    revision: { resubmittedAt: null },
     teamId: 'team-1151-1',
     teamName: 'OOP-01 - 1팀',
   },
@@ -247,6 +282,7 @@ const presentationSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
   submittedAt: '2026/11/12',
   submission: {
     id: 'submission-oop-01-1-presentation-submit',
+    revision: { resubmittedAt: null },
     teamId: 'team-1151-1',
     teamName: 'OOP-01 - 1팀',
   },
@@ -323,6 +359,7 @@ const secondTeamPresentationSubmissionDetail: AdminMilestoneSubmissionDetailResp
     submittedAt: '2026/11/13',
     submission: {
       id: 'submission-oop-01-2-presentation-submit',
+      revision: { resubmittedAt: null },
       teamId: 'team-1151-2',
       teamName: 'OOP-01 - 2팀',
     },
@@ -338,9 +375,11 @@ const secondTeamProposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse
       teamLeaderName: '박지훈',
       teamName: 'OOP-01 - 2팀',
     },
+    proposalFeedback: null,
     submittedAt: '2026/09/06',
     submission: {
       id: 'submission-oop-01-2-proposal',
+      revision: { resubmittedAt: null },
       teamId: 'team-1151-2',
       teamName: 'OOP-01 - 2팀',
     },
@@ -366,9 +405,11 @@ const secondTeamMidtermSubmissionDetail: AdminMilestoneSubmissionDetailResponse 
       teamLeaderName: '박지훈',
       teamName: 'OOP-01 - 2팀',
     },
+    midtermFeedback: null,
     submittedAt: '2026/10/13',
     submission: {
       id: 'submission-oop-01-2-midterm',
+      revision: { resubmittedAt: null },
       teamId: 'team-1151-2',
       teamName: 'OOP-01 - 2팀',
     },
@@ -387,6 +428,7 @@ const peerEvaluationSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
   submittedAt: '2026/12/14',
   submission: {
     id: 'submission-oop-01-1-peer-review',
+    revision: { resubmittedAt: null },
     teamId: 'team-1151-1',
     teamName: 'OOP-01 - 1팀',
   },
@@ -453,6 +495,7 @@ const presentationEvaluationSubmissionDetail: AdminMilestoneSubmissionDetailResp
     submittedAt: '2026/11/26',
     submission: {
       id: 'submission-oop-01-1-presentation-evaluate',
+      revision: { resubmittedAt: null },
       teamId: 'team-1151-1',
       teamName: 'OOP-01 - 1팀',
     },
@@ -473,6 +516,7 @@ const secondTeamPresentationEvaluationSubmissionDetail: AdminMilestoneSubmission
     ...presentationEvaluationSubmissionDetail,
     submission: {
       id: 'submission-oop-01-2-presentation-evaluate',
+      revision: { resubmittedAt: null },
       teamId: 'team-1151-2',
       teamName: 'OOP-01 - 2팀',
     },

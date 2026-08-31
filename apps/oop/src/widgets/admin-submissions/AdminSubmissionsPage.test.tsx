@@ -8,7 +8,7 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -26,7 +26,10 @@ import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
-import { adminPresentationEvaluationHandlers } from '~/mocks/handlers/adminPresentationEvaluations';
+import {
+  adminPresentationEvaluationHandlers,
+  resetPresentationEvaluationScenario,
+} from '~/mocks/handlers/adminPresentationEvaluations';
 
 const server = setupServer(
   ...adminMeetingHandlers,
@@ -37,6 +40,7 @@ const server = setupServer(
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  resetPresentationEvaluationScenario();
   setApiAccessToken(null);
   useAuthStore.setState({ accessToken: null, currentUser: null });
   server.resetHandlers();
@@ -100,7 +104,8 @@ describe('AdminSubmissionsPage', () => {
       screen.getByRole('heading', { name: '중간 점검 목록' }),
     ).toBeInTheDocument();
     expect(await screen.findAllByText('첨부 파일 수: 1')).toHaveLength(2);
-    expect(screen.getAllByText('피드백: -')).toHaveLength(2);
+    expect(screen.getByText('피드백: 1개')).toBeInTheDocument();
+    expect(screen.getByText('피드백: 0개')).toBeInTheDocument();
   });
 
   it('팀별 공통 제출 요약의 제안서 주제와 최종 보고서 파일을 표시한다', async () => {
@@ -203,7 +208,7 @@ describe('AdminSubmissionsPage', () => {
     expect(screen.getByText('이서연')).toBeInTheDocument();
     expect(screen.getByText('박지훈')).toBeInTheDocument();
     expect(screen.getByText('최유진')).toBeInTheDocument();
-    expect(screen.getAllByText('-')).toHaveLength(8);
+    expect(screen.getAllByText('-')).toHaveLength(10);
   });
 
   it('발표 평가 상세 ID가 없으면 팀 이름을 링크로 표시하지 않는다', async () => {
@@ -264,6 +269,37 @@ describe('AdminSubmissionsPage', () => {
     expect(detailRequestCount).toBe(0);
   });
 
+  it('상세 응답의 분반이 요청 분반과 다르면 학생 목록 요청을 보내지 않는다', async () => {
+    let studentRequestCount = 0;
+    const response = structuredClone(
+      getAdminMilestoneSubmissionDetailFixture('submission-oop-01-1-proposal')!,
+    );
+    response.section = { id: 'unexpected-section', label: '다른 분반' };
+
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSION_DETAIL('submission-oop-01-1-proposal')}`,
+        () => HttpResponse.json(response),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_STUDENTS(':sectionId')}`,
+        () => {
+          studentRequestCount += 1;
+          return HttpResponse.json([]);
+        },
+      ),
+    );
+
+    renderPage(
+      '/admin/submissions/submission-oop-01-1-proposal?milestoneId=proposal&sectionId=oop-2026-2-01',
+    );
+
+    expect(
+      await screen.findByText('접근할 수 없는 제출물입니다.'),
+    ).toBeInTheDocument();
+    await waitFor(() => expect(studentRequestCount).toBe(0));
+  });
+
   it('상호 평가 제출자 수에 따라 상세보기를 활성화한다', async () => {
     const user = userEvent.setup();
 
@@ -285,6 +321,7 @@ describe('AdminSubmissionsPage', () => {
         name: 'OOP-01 - 2팀 발표 평가',
       }),
     ).toBeInTheDocument();
+    expect(screen.getAllByText('미제출')).toHaveLength(2);
     expect(screen.getAllByText('미평가')).toHaveLength(8);
   });
 
@@ -299,7 +336,16 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByText('AI 기반 팀 프로젝트 관리 서비스'),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('textbox', { name: '제안서 피드백' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('제출 상태 · 재제출 완료 · 2026/09/07'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('김민준 · 2026/09/07')).toBeInTheDocument();
+    expect(
+      screen.getByText('역할 분담과 프로젝트 범위를 보완했습니다.'),
+    ).toBeInTheDocument();
   });
 
   it('제출된 중간 점검을 읽기 전용으로 표시한다', async () => {
@@ -311,7 +357,14 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByRole('heading', { name: 'OOP-01 - 1팀 중간 점검' }),
     ).toBeInTheDocument();
     expect(screen.getByText('중점 시연 기능')).toBeInTheDocument();
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('textbox', { name: '중간 점검 피드백' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('제출 상태 · 최초 제출')).toBeInTheDocument();
+    expect(screen.getByText('김민준 · 2026/10/14')).toBeInTheDocument();
+    expect(
+      screen.getByText('시연 흐름과 테스트 케이스를 보완했습니다.'),
+    ).toBeInTheDocument();
   });
 
   it('제출된 발표 자료를 읽기 전용으로 표시한다', async () => {
@@ -337,6 +390,7 @@ describe('AdminSubmissionsPage', () => {
     ).toHaveAttribute('href', 'https://youtu.be/demo-oop-01-1');
     expect(screen.getByText('3. 주요 화면')).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByText('제출 상태 · 최초 제출')).toBeInTheDocument();
   });
 
   it('상세 응답의 마일스톤 이름을 주소의 임시 검색값보다 우선 표시한다', async () => {
@@ -366,8 +420,24 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByRole('heading', { name: 'OOP-01 - 1팀 상호 평가' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('columnheader', { name: '평균' }),
+      screen.getByRole('columnheader', { name: '평가자' }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '평가 제출 상태' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '평가 대상' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '점수' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '평가 대상 평균' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('제출 완료')).toBeInTheDocument();
+    expect(screen.getByText('미제출')).toBeInTheDocument();
+    expect(screen.getByText('30')).toBeInTheDocument();
+    expect(screen.getByText('30.0')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '김민준' }));
     expect(

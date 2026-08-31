@@ -37,3 +37,32 @@ export const adminPresentationEvaluationsFixture: AdminPresentationEvaluationsRe
       },
     ],
   };
+
+/** Reset mutable presentation-evaluation state between MSW scenarios. */
+export function resetAdminPresentationEvaluationsFixture() {
+  adminPresentationEvaluationsFixture.evaluationPeriod = {
+    ...adminPresentationEvaluationPeriodFixture,
+  };
+  adminPresentationEvaluationsFixture.teams = [
+    {
+      submissionId: 'submission-oop-01-1-presentation-evaluate',
+      teamId: 'team-1151-1',
+      teamName: 'OOP-01 - 1팀',
+      projectTopic: 'AI 기반 팀 프로젝트 관리 서비스',
+      presentationOrder: 1,
+      submittedEvaluatorCount: 2,
+      evaluatorCount: 2,
+      criteria: { completion: 5, implementation: 4, delivery: 5 },
+    },
+    {
+      submissionId: 'submission-oop-01-2-presentation-evaluate',
+      teamId: 'team-1151-2',
+      teamName: 'OOP-01 - 2팀',
+      projectTopic: '캠퍼스 학습 일정 관리 서비스',
+      presentationOrder: 2,
+      submittedEvaluatorCount: 0,
+      evaluatorCount: 2,
+      criteria: { completion: null, implementation: null, delivery: null },
+    },
+  ];
+}

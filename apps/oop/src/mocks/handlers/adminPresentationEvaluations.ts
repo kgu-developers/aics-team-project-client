@@ -3,9 +3,18 @@ import { http, HttpResponse } from 'msw';
 
 import { adminMilestoneDeadlineFixtures } from '../data/adminMilestoneDeadlines';
 import { adminMilestoneScheduleFixture } from '../data/adminMilestoneSchedule';
-import { adminPresentationEvaluationsFixture } from '../data/adminPresentationEvaluations';
+import {
+  adminPresentationEvaluationsFixture,
+  resetAdminPresentationEvaluationsFixture,
+} from '../data/adminPresentationEvaluations';
 import { adminTeamDashboardFixtures } from '../data/adminTeamDashboard';
 import { demoAdminAccessToken } from '../data/users';
+
+const initialDeadlineFixtures = structuredClone(adminMilestoneDeadlineFixtures);
+const initialScheduleFixture = structuredClone(adminMilestoneScheduleFixture);
+const initialTeamDashboardFixtures = structuredClone(
+  adminTeamDashboardFixtures,
+);
 
 function updatePresentationEvaluationDeadline(endsAt: string) {
   adminMilestoneDeadlineFixtures['presentation-evaluate'] = endsAt.slice(0, 10);
@@ -25,6 +34,19 @@ function updatePresentationEvaluationDeadline(endsAt: string) {
     );
     if (milestone) milestone.deadlineLabel = deadlineLabel;
   });
+}
+
+function resetPresentationEvaluationScenario() {
+  resetAdminPresentationEvaluationsFixture();
+  Object.assign(adminMilestoneDeadlineFixtures, initialDeadlineFixtures);
+  adminMilestoneScheduleFixture.sections = structuredClone(
+    initialScheduleFixture.sections,
+  );
+  adminTeamDashboardFixtures.splice(
+    0,
+    adminTeamDashboardFixtures.length,
+    ...structuredClone(initialTeamDashboardFixtures),
+  );
 }
 
 export const adminPresentationEvaluationHandlers = [
@@ -125,3 +147,5 @@ export const adminPresentationEvaluationHandlers = [
     },
   ),
 ];
+
+export { resetPresentationEvaluationScenario };

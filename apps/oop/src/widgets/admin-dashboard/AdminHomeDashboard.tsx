@@ -9,6 +9,8 @@ import type {
   AdminMilestoneScheduleSectionView,
 } from '~/features/admin-milestone-review/model';
 import { useAdminMilestoneScheduleQuery } from '~/features/admin-milestone-review/queries';
+import * as readStateStyles from '~/features/admin-read-state/adminReadState.css';
+import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminHomeDashboard.css';
@@ -54,16 +56,38 @@ function List({
   isMeetingList = false,
   isNoticeList = false,
   items,
+  meetingReadState,
 }: {
   isMeetingList?: boolean;
   isNoticeList?: boolean;
   items: readonly DashboardListItem[];
+  meetingReadState?: ReturnType<typeof useAdminReadState>;
 }) {
   return (
     <ul className={styles.list}>
       {items.map(item => (
-        <li className={styles.item} key={[item.section, item.title].join('-')}>
-          <span className={styles.label}>{item.section}</span>
+        <li
+          className={styles.item}
+          key={
+            isMeetingList && item.meetingId
+              ? item.meetingId
+              : [item.section, item.title].join('-')
+          }
+        >
+          <span className={styles.itemMeta}>
+            <span className={styles.label}>{item.section}</span>
+            {isMeetingList &&
+            item.meetingId &&
+            item.sectionId &&
+            meetingReadState &&
+            !meetingReadState.isRead(item.sectionId, item.meetingId) ? (
+              <span
+                aria-label='읽지 않음'
+                className={readStateStyles.unreadDot}
+                role='img'
+              />
+            ) : null}
+          </span>
           {isNoticeList && item.id ? (
             <Link
               className={styles.itemTitle}
@@ -84,7 +108,7 @@ function List({
           ) : (
             <span className={styles.itemTitle}>{item.title}</span>
           )}
-          <time>{item.date}</time>
+          <time className={styles.date}>{item.date}</time>
         </li>
       ))}
     </ul>
@@ -98,6 +122,7 @@ function Panel({
   items,
   action,
   isNoticePanel = false,
+  meetingReadState,
 }: {
   emptyMessage?: string;
   isMeetingPanel?: boolean;
@@ -105,6 +130,7 @@ function Panel({
   items: readonly DashboardListItem[];
   action?: boolean;
   isNoticePanel?: boolean;
+  meetingReadState?: ReturnType<typeof useAdminReadState>;
 }) {
   const navigate = useNavigate();
 
@@ -132,6 +158,7 @@ function Panel({
             isMeetingList={isMeetingPanel}
             isNoticeList={isNoticePanel}
             items={items}
+            meetingReadState={meetingReadState}
           />
         ) : emptyMessage ? (
           <p className={styles.panelState}>{emptyMessage}</p>
@@ -157,6 +184,9 @@ function Panel({
 export default function AdminHomeDashboard() {
   const navigate = useNavigate();
   const currentUser = useAuthStore(state => state.currentUser);
+  const meetingReadState = useAdminReadState('meetings', {
+    adminId: currentUser?.id,
+  });
   const accessibleSectionIds =
     currentUser?.sections.map(section => section.id) ?? [];
   const milestoneScheduleQuery =
@@ -275,6 +305,7 @@ export default function AdminHomeDashboard() {
         <Panel
           emptyMessage={meetingEmptyMessage}
           isMeetingPanel
+          meetingReadState={meetingReadState}
           items={meetingItems}
           title='회의록'
         />

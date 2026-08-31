@@ -43,11 +43,18 @@ export const record = style({
   },
 });
 
-export const recordContent = style({
+export const recordMain = style({
+  alignItems: 'center',
   display: 'flex',
-  flexDirection: 'column',
-  gap: 2,
+  gap: 8,
   minWidth: 0,
+});
+
+export const title = style({
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 });
 
 globalStyle(`${record} + ${record}`, {
@@ -63,4 +70,6 @@ export const date = style({
 export const team = style({
   color: tokens.color.text.secondary,
   fontSize: 13,
+  flexShrink: 0,
+  whiteSpace: 'nowrap',
 });

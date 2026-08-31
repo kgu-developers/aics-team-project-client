@@ -1,6 +1,10 @@
 export {
   fetchAdminMilestoneSubmissionDetail,
   type AdminMilestoneSubmissionDetailResponse,
+  type AdminFeedbackEntryDto,
+  type AdminStudentResponseDto,
+  type AdminProposalFeedbackDto,
+  type AdminMidtermFeedbackDto,
   type AdminMidtermSubmissionBlockDto,
   type AdminMidtermSubmissionDetailDto,
   type AdminMidtermSubmissionFieldDto,

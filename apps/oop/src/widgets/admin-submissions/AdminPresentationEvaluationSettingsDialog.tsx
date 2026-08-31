@@ -1,13 +1,13 @@
 import type { AdminPresentationEvaluationTeamDto } from '@aics/api-client';
 import {
   Button,
+  DateInput,
   Dialog,
   Heading,
   HStack,
   Selector,
   SelectorOption,
   Text,
-  TextInput,
   VStack,
 } from '@aics/design-system';
 import { useEffect, useMemo, useState } from 'react';
@@ -24,6 +24,24 @@ type Props = {
   endsAt: string | null;
   sectionId: string;
 };
+
+function toDatePart(value: string | null) {
+  return value?.slice(0, 10) ?? '';
+}
+
+function toTimePart(value: string | null) {
+  return value?.match(/T(\d{2}:\d{2})/)?.[1] ?? '';
+}
+
+function toIsoDateTime(date: string, time: string) {
+  return date && time ? `${date}T${time}:00+09:00` : '';
+}
+
+function asDateInputValue(value: string) {
+  return value
+    ? (value as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
+    : undefined;
+}
 
 export function AdminPresentationEvaluationSettingsDialog({
   isOpen,
@@ -45,15 +63,19 @@ export function AdminPresentationEvaluationSettingsDialog({
     [teams],
   );
   const [orders, setOrders] = useState<Record<string, number>>(initialOrders);
-  const [start, setStart] = useState(startsAt ?? '');
-  const [end, setEnd] = useState(endsAt ?? '');
+  const [startDate, setStartDate] = useState(toDatePart(startsAt));
+  const [startTime, setStartTime] = useState(toTimePart(startsAt));
+  const [endDate, setEndDate] = useState(toDatePart(endsAt));
+  const [endTime, setEndTime] = useState(toTimePart(endsAt));
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
     setOrders(initialOrders);
-    setStart(startsAt ?? '');
-    setEnd(endsAt ?? '');
+    setStartDate(toDatePart(startsAt));
+    setStartTime(toTimePart(startsAt));
+    setEndDate(toDatePart(endsAt));
+    setEndTime(toTimePart(endsAt));
     setError(null);
   }, [initialOrders, isOpen, startsAt, endsAt]);
 
@@ -70,6 +92,8 @@ export function AdminPresentationEvaluationSettingsDialog({
       setError('발표 순서는 중복될 수 없습니다.');
       return;
     }
+    const start = toIsoDateTime(startDate, startTime);
+    const end = toIsoDateTime(endDate, endTime);
     if (!start || !end) {
       setError('평가 시작일시와 종료일시를 입력해 주세요.');
       return;
@@ -140,20 +164,40 @@ export function AdminPresentationEvaluationSettingsDialog({
           ))}
         </VStack>
         <VStack gap={2}>
-          <TextInput
-            aria-label='발표 평가 시작일시'
-            label='발표 평가 시작일시'
-            onChange={setStart}
-            placeholder='YYYY-MM-DD HH:mm'
-            value={start}
-          />
-          <TextInput
-            aria-label='발표 평가 종료일시'
-            label='발표 평가 종료일시'
-            onChange={setEnd}
-            placeholder='YYYY-MM-DD HH:mm'
-            value={end}
-          />
+          <div className={styles.dateTimeRow}>
+            <DateInput
+              label='시작 날짜'
+              onChange={value => setStartDate(value ?? '')}
+              value={asDateInputValue(startDate)}
+            />
+            <label>
+              <Text type='supporting'>시작 시간</Text>
+              <input
+                aria-label='발표 평가 시작 시간'
+                className={styles.timeInput}
+                onChange={event => setStartTime(event.target.value)}
+                type='time'
+                value={startTime}
+              />
+            </label>
+          </div>
+          <div className={styles.dateTimeRow}>
+            <DateInput
+              label='종료 날짜'
+              onChange={value => setEndDate(value ?? '')}
+              value={asDateInputValue(endDate)}
+            />
+            <label>
+              <Text type='supporting'>종료 시간</Text>
+              <input
+                aria-label='발표 평가 종료 시간'
+                className={styles.timeInput}
+                onChange={event => setEndTime(event.target.value)}
+                type='time'
+                value={endTime}
+              />
+            </label>
+          </div>
         </VStack>
         {error ? <Text className={styles.errorText}>{error}</Text> : null}
         <HStack justify='end' gap={2}>

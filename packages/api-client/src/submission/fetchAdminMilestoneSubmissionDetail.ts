@@ -29,6 +29,29 @@ export type AdminProposalSubmissionDetailDto = {
   wireframeFileNames: string[];
 };
 
+export type AdminFeedbackEntryDto = {
+  feedbackId: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+};
+export type AdminStudentResponseDto = {
+  responseId: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+};
+
+export type AdminProposalFeedbackDto = {
+  history: AdminFeedbackEntryDto[];
+  latestStudentResponse: AdminStudentResponseDto | null;
+};
+
+export type AdminMidtermFeedbackDto = {
+  history: AdminFeedbackEntryDto[];
+  latestStudentResponse: AdminStudentResponseDto | null;
+};
+
 export type AdminMidtermSubmissionFieldDto = {
   attachment?: {
     contentType: string;
@@ -106,10 +129,12 @@ export type AdminMilestoneSubmissionDetailResponse = {
     title: string;
   };
   midterm: AdminMidtermSubmissionDetailDto | null;
+  midtermFeedback?: AdminMidtermFeedbackDto | null;
   peerEvaluation?: AdminPeerEvaluationDetailDto | null;
   presentationEvaluation?: AdminPresentationEvaluationDetailDto | null;
   presentation: AdminPresentationSubmissionDetailDto | null;
   proposal: AdminProposalSubmissionDetailDto | null;
+  proposalFeedback?: AdminProposalFeedbackDto | null;
   section: {
     id: string;
     label: string;
@@ -117,6 +142,9 @@ export type AdminMilestoneSubmissionDetailResponse = {
   submittedAt: string;
   submission: {
     id: string;
+    revision: {
+      resubmittedAt: string | null;
+    };
     teamId: string;
     teamName: string;
   };

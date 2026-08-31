@@ -227,18 +227,27 @@ export default function AdminMilestoneSetupPage() {
                               }
                               width='100%'
                             />
-                            <TextInput
-                              label={`${section.code} 공개 시작 시간`}
-                              onChange={time =>
-                                updateSectionSchedule(section.id, current => ({
-                                  ...current,
-                                  opensAt: { ...current.opensAt, time },
-                                }))
-                              }
-                              placeholder='HH:mm'
-                              value={schedule.opensAt.time}
-                              width='100%'
-                            />
+                            <label>
+                              <Text type='supporting'>{`${section.code} 공개 시작 시간`}</Text>
+                              <input
+                                aria-label={`${section.code} 공개 시작 시간`}
+                                className={styles.timeInput}
+                                onChange={event =>
+                                  updateSectionSchedule(
+                                    section.id,
+                                    current => ({
+                                      ...current,
+                                      opensAt: {
+                                        ...current.opensAt,
+                                        time: event.target.value,
+                                      },
+                                    }),
+                                  )
+                                }
+                                type='time'
+                                value={schedule.opensAt.time}
+                              />
+                            </label>
                           </div>
                         </div>
                         <div className={styles.scheduleField}>
@@ -262,18 +271,27 @@ export default function AdminMilestoneSetupPage() {
                               }
                               width='100%'
                             />
-                            <TextInput
-                              label={`${section.code} 제출 마감 시간`}
-                              onChange={time =>
-                                updateSectionSchedule(section.id, current => ({
-                                  ...current,
-                                  dueAt: { ...current.dueAt, time },
-                                }))
-                              }
-                              placeholder='HH:mm'
-                              value={schedule.dueAt.time}
-                              width='100%'
-                            />
+                            <label>
+                              <Text type='supporting'>{`${section.code} 제출 마감 시간`}</Text>
+                              <input
+                                aria-label={`${section.code} 제출 마감 시간`}
+                                className={styles.timeInput}
+                                onChange={event =>
+                                  updateSectionSchedule(
+                                    section.id,
+                                    current => ({
+                                      ...current,
+                                      dueAt: {
+                                        ...current.dueAt,
+                                        time: event.target.value,
+                                      },
+                                    }),
+                                  )
+                                }
+                                type='time'
+                                value={schedule.dueAt.time}
+                              />
+                            </label>
                           </div>
                         </div>
                       </div>

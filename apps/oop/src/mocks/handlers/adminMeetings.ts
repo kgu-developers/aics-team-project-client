@@ -39,6 +39,7 @@ export const adminMeetingHandlers = [
           .filter(record => !teamId || record.teamId === teamId)
           .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
           .map(record => ({
+            authorName: record.createdBy.name,
             createdAt: record.createdAt,
             id: record.id,
             sectionId: record.sectionId,

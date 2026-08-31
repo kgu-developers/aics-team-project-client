@@ -22,7 +22,7 @@ export const backLink = style({
 });
 export const filters = style({ display: 'flex', gap: 8 });
 const filterBase = {
-  background: tokens.color.background.gray,
+  background: tokens.color.background.muted,
   border: 0,
   borderRadius: tokens.radius.full,
   color: tokens.color.text.primary,
@@ -45,6 +45,11 @@ export const table = style({
 export const titleLink = style({
   color: tokens.color.text.primary,
   textDecoration: 'none',
+  ':hover': {
+    color: tokens.color.text.accent,
+    textDecoration: 'underline',
+    textUnderlineOffset: 3,
+  },
 });
 export const emptyCell = style({
   color: tokens.color.text.secondary,
@@ -133,7 +138,7 @@ export const fieldGroup = style({
   gap: 8,
 });
 globalStyle(table + ' th', {
-  background: tokens.color.background.gray,
+  background: tokens.color.background.card,
   color: tokens.color.text.secondary,
   fontSize: 13,
   fontWeight: 500,
@@ -144,6 +149,10 @@ globalStyle(table + ' td', {
   borderTop: '1px solid ' + tokens.color.border.base,
   fontSize: 14,
   padding: '14px 16px',
+});
+
+globalStyle(table + ' tbody tr:hover td', {
+  background: tokens.color.background.muted,
 });
 globalStyle(attachment + ' a', {
   color: tokens.color.text.accent,
