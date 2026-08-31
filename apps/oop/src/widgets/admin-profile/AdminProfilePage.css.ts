@@ -15,6 +15,27 @@ export const profileCard = style({
   width: '100%',
 });
 
+export const pageHeader = style({
+  minWidth: 0,
+  '@media': {
+    '(max-width: 480px)': {
+      alignItems: 'stretch',
+      flexDirection: 'column',
+      gap: tokens.spacing['2'],
+    },
+  },
+});
+
+export const pageHeaderActions = style({
+  flexShrink: 0,
+  '@media': {
+    '(max-width: 480px)': {
+      flexWrap: 'wrap',
+      justifyContent: 'flex-end',
+    },
+  },
+});
+
 export const uploadSection = style({
   width: '100%',
 });
@@ -38,17 +59,34 @@ export const introductionForm = style({
 
 export const actions = style({
   display: 'flex',
+  gap: tokens.spacing['2'],
   justifyContent: 'flex-end',
 });
 
-export const sectionSelect = style({
-  border: `1px solid ${tokens.color.border.base}`,
-  borderRadius: tokens.radius.element,
-  font: 'inherit',
-  marginTop: 6,
-  minHeight: 40,
-  padding: '8px 12px',
-  width: '100%',
+export const passwordForm = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['3'],
+});
+
+export const passwordTitle = style({
+  margin: 0,
+});
+
+export const passwordDescription = style({
+  margin: 0,
+});
+
+export const passwordActions = style({
+  display: 'flex',
+  gap: tokens.spacing['2'],
+  justifyContent: 'flex-end',
+  paddingBlockStart: tokens.spacing['1'],
+});
+
+export const passwordError = style({
+  color: tokens.color.text.red,
+  margin: 0,
 });
 
 export const fieldLabel = style({
@@ -57,7 +95,7 @@ export const fieldLabel = style({
 });
 
 export const introductionPreview = style({
-  background: tokens.color.background.gray,
+  background: tokens.color.background.muted,
   borderRadius: tokens.radius.element,
   minHeight: 96,
   padding: 12,
@@ -82,15 +120,10 @@ export const uploadCard = style({
 export const sectionStatusList = style({
   display: 'grid',
   gap: 8,
-  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  gridTemplateColumns: '1fr',
   listStyle: 'none',
   margin: '12px 0 0',
   padding: 0,
-  '@media': {
-    '(max-width: 720px)': {
-      gridTemplateColumns: '1fr',
-    },
-  },
 });
 
 export const statusGroups = style({
@@ -106,13 +139,22 @@ export const statusGroups = style({
 
 globalStyle(`${sectionStatusList} li`, {
   alignItems: 'center',
-  background: tokens.color.background.gray,
+  background: tokens.color.background.muted,
   borderRadius: tokens.radius.element,
-  display: 'flex',
+  display: 'grid',
   fontSize: 13,
   gap: 8,
-  justifyContent: 'space-between',
+  gridTemplateColumns: 'minmax(92px, auto) minmax(0, 1fr)',
   padding: '10px 12px',
+});
+
+export const sectionCode = style({
+  whiteSpace: 'nowrap',
+});
+
+export const sectionFile = style({
+  minWidth: 0,
+  overflowWrap: 'anywhere',
 });
 
 globalStyle(`${sectionStatusList} span`, {

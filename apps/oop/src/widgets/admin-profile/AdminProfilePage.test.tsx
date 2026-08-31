@@ -1,7 +1,7 @@
 import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -26,8 +26,9 @@ import {
 } from '~/mocks/data/adminProfile';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminProfileHandlers } from '~/mocks/handlers/adminProfile';
+import { authHandlers } from '~/mocks/handlers/auth';
 
-const server = setupServer(...adminProfileHandlers);
+const server = setupServer(...adminProfileHandlers, ...authHandlers);
 const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
   'close',
@@ -103,6 +104,55 @@ function renderPage() {
 }
 
 describe('AdminProfilePage', () => {
+  it('비밀번호 변경 Dialog에서 현재 비밀번호를 검증하고 저장한다', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: '비밀번호 변경' }));
+    const dialog = await screen.findByRole('dialog', { name: '비밀번호 변경' });
+
+    await user.click(
+      within(dialog).getByRole('button', { name: '비밀번호 변경' }),
+    );
+    expect(
+      await within(dialog).findByText('현재 비밀번호를 입력해 주세요.'),
+    ).toBeInTheDocument();
+
+    await user.type(
+      dialog.querySelector('input[name="currentPassword"]') as HTMLInputElement,
+      'oop-admin',
+    );
+    await user.type(
+      dialog.querySelector('input[name="newPassword"]') as HTMLInputElement,
+      'oop-admin2',
+    );
+    await user.type(
+      dialog.querySelector('input[name="confirmPassword"]') as HTMLInputElement,
+      'oop-admin2',
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: '비밀번호 변경' }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: '비밀번호 변경' }),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it('로그아웃하면 관리자 세션을 정리한다', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: '로그아웃' }));
+
+    await waitFor(() => {
+      expect(useAuthStore.getState().currentUser).toBeNull();
+      expect(useAuthStore.getState().accessToken).toBeNull();
+    });
+  });
+
   it('이름과 이메일은 읽기 전용으로 표시한다', () => {
     renderPage();
 
@@ -127,13 +177,13 @@ describe('AdminProfilePage', () => {
     expect(getAdminProfile().introduction).toBe('');
     await user.click(screen.getByRole('button', { name: '저장하기' }));
 
-    expect(
-      await screen.findByText('소개 메시지를 저장했습니다.'),
-    ).toBeInTheDocument();
     await waitFor(() =>
       expect(getAdminProfile().introduction).toBe(introductionText),
     );
     expect(screen.getByText(introductionText)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '수정하기' }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole('textbox', { name: '간단한 메시지' }),
     ).not.toBeInTheDocument();
@@ -168,7 +218,7 @@ describe('AdminProfilePage', () => {
     ).toBeInTheDocument();
   });
 
-  it('Excel 파일만 선택할 수 있고 선택한 파일을 제거할 수 있다', async () => {
+  it('Excel 파일만 임시로 선택할 수 있고 선택을 제거할 수 있다', async () => {
     const user = userEvent.setup({ applyAccept: false });
     renderPage();
 
@@ -193,15 +243,43 @@ describe('AdminProfilePage', () => {
     });
     await user.upload(fileInput, excelFile);
     expect(
-      await screen.findByText('1151.xlsx 선택됨 · 아직 업로드되지 않았습니다.'),
+      await screen.findByText('1151.xlsx 선택됨 · 서버 업로드 전'),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '선택한 파일 제거' }));
     expect(
-      screen.queryByText('1151.xlsx 선택됨 · 아직 업로드되지 않았습니다.'),
+      screen.queryByText('1151.xlsx 선택됨 · 서버 업로드 전'),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: '선택한 파일 제거' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('업로드 모달을 닫으면 임시 선택 파일을 초기화한다', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      screen.getByRole('button', { name: '학생 명단 파일 선택' }),
+    );
+    const dialog = screen.getByRole('dialog', { name: '학생 명단 업로드' });
+    const fileInput =
+      dialog.querySelector<HTMLInputElement>('input[type="file"]');
+
+    if (!fileInput) throw new Error('파일 선택 input을 찾을 수 없습니다.');
+
+    await user.upload(fileInput, new File(['excel data'], '1151.xlsx'));
+    expect(
+      await screen.findByText('1151.xlsx 선택됨 · 서버 업로드 전'),
+    ).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: '닫기' }));
+    await user.click(
+      screen.getByRole('button', { name: '학생 명단 파일 선택' }),
+    );
+
+    expect(
+      screen.queryByText('1151.xlsx 선택됨 · 서버 업로드 전'),
     ).not.toBeInTheDocument();
   });
 

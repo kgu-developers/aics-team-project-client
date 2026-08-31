@@ -4,18 +4,26 @@ import {
   Dialog,
   FileInput,
   Heading,
+  HStack,
+  Selector,
+  SelectorOption,
   Text,
   TextArea,
   TextInput,
+  useToast,
   VStack,
 } from '@aics/design-system';
-import { useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 
 import {
   useAdminProfileQuery,
   useUpdateAdminProfileMutation,
 } from '~/features/admin-profile/queries';
 import { useAuthStore } from '~/features/auth/authStore';
+import {
+  useLogoutMutation,
+  useUpdateMyPasswordMutation,
+} from '~/features/auth/queries';
 
 import * as styles from './AdminProfilePage.css';
 
@@ -103,24 +111,22 @@ function UploadDialog({
       <VStack gap={3}>
         <Heading level={2}>{copy.title} 업로드</Heading>
         <Text color='secondary' type='supporting'>
-          업로드할 분반을 선택한 뒤 Excel 파일을 선택해 주세요. 아직 서버에
-          업로드되지는 않습니다.
+          업로드할 분반을 선택한 뒤 Excel 파일을 선택해 주세요. 파일은 서버
+          업로드 API가 준비되기 전까지 임시로만 선택됩니다.
         </Text>
-        <label>
-          <Text>분반</Text>
-          <select
-            aria-label='업로드 분반'
-            className={styles.sectionSelect}
-            onChange={event => onSectionChange(event.target.value)}
-            value={sectionId}
-          >
-            {sections.map(section => (
-              <option key={section.id} value={section.id}>
-                {section.code} ({section.name})
-              </option>
-            ))}
-          </select>
-        </label>
+        <Selector
+          label='분반'
+          onChange={onSectionChange}
+          options={sections.map(section => ({
+            label: `${section.code} (${section.name})`,
+            value: section.id,
+          }))}
+          renderOption={option => (
+            <SelectorOption label={option.label ?? option.value} />
+          )}
+          value={sectionId}
+          width='100%'
+        />
         <FileInput
           accept='.xls,.xlsx'
           label={copy.label}
@@ -135,7 +141,7 @@ function UploadDialog({
         />
         {file ? (
           <Text color='secondary' role='status' type='supporting'>
-            {file.name} 선택됨 · 아직 업로드되지 않았습니다.
+            {file.name} 선택됨 · 서버 업로드 전
           </Text>
         ) : null}
         <div className={styles.actions}>
@@ -153,23 +159,197 @@ function UploadDialog({
   );
 }
 
+type PasswordValidationIssue = {
+  field: 'currentPassword' | 'newPassword' | 'confirmPassword';
+  message: string;
+} | null;
+
+function validatePasswordChange(
+  currentPassword: string,
+  newPassword: string,
+  confirmPassword: string,
+): PasswordValidationIssue {
+  if (!currentPassword)
+    return {
+      field: 'currentPassword',
+      message: '현재 비밀번호를 입력해 주세요.',
+    };
+  if (!newPassword)
+    return { field: 'newPassword', message: '새 비밀번호를 입력해 주세요.' };
+  if (newPassword.length < 8)
+    return {
+      field: 'newPassword',
+      message: '새 비밀번호는 8자 이상이어야 합니다.',
+    };
+  if (newPassword === currentPassword)
+    return {
+      field: 'newPassword',
+      message: '새 비밀번호는 현재 비밀번호와 달라야 합니다.',
+    };
+  if (!confirmPassword)
+    return {
+      field: 'confirmPassword',
+      message: '새 비밀번호를 한 번 더 입력해 주세요.',
+    };
+  if (newPassword !== confirmPassword)
+    return {
+      field: 'confirmPassword',
+      message: '새 비밀번호가 일치하지 않습니다.',
+    };
+  return null;
+}
+
+function PasswordChangeDialog({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const toast = useToast();
+  const passwordMutation = useUpdateMyPasswordMutation();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [validationIssue, setValidationIssue] =
+    useState<PasswordValidationIssue>(null);
+
+  const resetForm = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setValidationIssue(null);
+    passwordMutation.reset();
+  };
+
+  const close = () => {
+    resetForm();
+    onClose();
+  };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const issue = validatePasswordChange(
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    );
+    if (issue) {
+      setValidationIssue(issue);
+      return;
+    }
+    setValidationIssue(null);
+    passwordMutation.mutate(
+      { currentPassword, newPassword },
+      {
+        onSuccess: () => {
+          toast({ body: '비밀번호를 변경했어요.' });
+          close();
+        },
+      },
+    );
+  };
+
+  const handleFieldChange = (
+    setter: (value: string) => void,
+    value: string,
+  ) => {
+    setter(value);
+    if (validationIssue) setValidationIssue(null);
+    if (passwordMutation.isError) passwordMutation.reset();
+  };
+
+  return (
+    <Dialog
+      aria-label='비밀번호 변경'
+      isOpen={isOpen}
+      onOpenChange={nextIsOpen => {
+        if (!nextIsOpen) close();
+      }}
+      purpose='form'
+      width={440}
+    >
+      <form className={styles.passwordForm} onSubmit={handleSubmit}>
+        <Heading className={styles.passwordTitle} level={2}>
+          비밀번호 변경
+        </Heading>
+        <Text className={styles.passwordDescription} color='secondary'>
+          현재 비밀번호를 확인한 뒤 새 비밀번호를 설정해 주세요. 새 비밀번호는
+          8자 이상이어야 합니다.
+        </Text>
+        {(
+          [
+            [
+              'currentPassword',
+              '현재 비밀번호',
+              currentPassword,
+              setCurrentPassword,
+            ],
+            ['newPassword', '새 비밀번호', newPassword, setNewPassword],
+            [
+              'confirmPassword',
+              '새 비밀번호 확인',
+              confirmPassword,
+              setConfirmPassword,
+            ],
+          ] as const
+        ).map(([field, label, value, setter]) => (
+          <TextInput
+            htmlName={field}
+            isRequired
+            key={field}
+            label={label}
+            onChange={nextValue => handleFieldChange(setter, nextValue)}
+            status={
+              validationIssue?.field === field
+                ? { message: validationIssue.message, type: 'error' }
+                : undefined
+            }
+            type='password'
+            value={value}
+            width='100%'
+          />
+        ))}
+        {passwordMutation.isError ? (
+          <Text className={styles.passwordError} role='alert'>
+            비밀번호를 변경하지 못했어요. 현재 비밀번호를 확인해 주세요.
+          </Text>
+        ) : null}
+        <HStack className={styles.passwordActions} gap={2} justify='end'>
+          <Button label='취소' onClick={close} variant='secondary' />
+          <Button
+            isDisabled={passwordMutation.isPending}
+            isLoading={passwordMutation.isPending}
+            label='비밀번호 변경'
+            type='submit'
+            variant='primary'
+          />
+        </HStack>
+      </form>
+    </Dialog>
+  );
+}
+
 export default function AdminProfilePage() {
   const currentUser = useAuthStore(state => state.currentUser);
+  const toast = useToast();
+  const logoutMutation = useLogoutMutation();
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [isEditingIntroduction, setIsEditingIntroduction] = useState(false);
   const [uploadKind, setUploadKind] = useState<UploadFileKind | null>(null);
   const [uploadSectionId, setUploadSectionId] = useState('');
-  const [uploadFiles, setUploadFiles] = useState<
-    Record<UploadFileKind, Record<string, File | null>>
-  >({
-    studentRoster: {},
-    teamRoster: {},
-  });
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const sections = currentUser?.sections ?? [];
   const hasUploadSections = sections.length > 0;
   const profileQuery = useAdminProfileQuery();
   const updateProfileMutation = useUpdateAdminProfileMutation();
-  const savedIntroduction = profileQuery.data?.introduction ?? '';
+  const [savedIntroduction, setSavedIntroduction] = useState('');
+  useEffect(() => {
+    if (!updateProfileMutation.isSuccess) {
+      setSavedIntroduction(profileQuery.data?.introduction ?? '');
+    }
+  }, [profileQuery.data?.introduction, updateProfileMutation.isSuccess]);
   const hasSavedIntroduction = savedIntroduction.trim().length > 0;
   const showIntroductionEditor = isEditingIntroduction || !hasSavedIntroduction;
   const uploadSections = sections.map(section => ({
@@ -177,16 +357,18 @@ export default function AdminProfilePage() {
     id: section.id,
     name: section.name,
   }));
-  const selectedUploadFile =
-    uploadKind && uploadSectionId
-      ? (uploadFiles[uploadKind][uploadSectionId] ?? null)
-      : null;
-
   function openUploadDialog(kind: UploadFileKind) {
     if (!hasUploadSections) return;
 
     setUploadKind(kind);
     setUploadSectionId(uploadSections[0]?.id ?? '');
+    setUploadFile(null);
+  }
+
+  function closeUploadDialog() {
+    setUploadFile(null);
+    setUploadKind(null);
+    setUploadSectionId('');
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -196,7 +378,9 @@ export default function AdminProfilePage() {
       {
         onSuccess: profile => {
           setMessage(profile.introduction);
+          setSavedIntroduction(profile.introduction);
           setIsEditingIntroduction(false);
+          toast({ body: '소개 메시지를 저장했어요.' });
         },
       },
     );
@@ -204,7 +388,30 @@ export default function AdminProfilePage() {
 
   return (
     <div className={styles.page}>
-      <Heading level={1}>마이페이지</Heading>
+      <HStack className={styles.pageHeader} justify='between'>
+        <Heading level={1}>마이페이지</Heading>
+        <HStack className={styles.pageHeaderActions} gap={2}>
+          <Button
+            label='비밀번호 변경'
+            onClick={() => setIsPasswordDialogOpen(true)}
+            type='button'
+            variant='secondary'
+          />
+          <Button
+            isDisabled={logoutMutation.isPending}
+            isLoading={logoutMutation.isPending}
+            label='로그아웃'
+            onClick={() => logoutMutation.mutate()}
+            type='button'
+            variant='ghost'
+          />
+        </HStack>
+      </HStack>
+
+      <PasswordChangeDialog
+        isOpen={isPasswordDialogOpen}
+        onClose={() => setIsPasswordDialogOpen(false)}
+      />
 
       <Card className={styles.profileCard} padding={4}>
         <VStack gap={4}>
@@ -285,9 +492,6 @@ export default function AdminProfilePage() {
                 소개 메시지를 불러오지 못했습니다. 저장하면 다시 시도합니다.
               </Text>
             ) : null}
-            {updateProfileMutation.isSuccess ? (
-              <Text role='status'>소개 메시지를 저장했습니다.</Text>
-            ) : null}
             {updateProfileMutation.isError ? (
               <Text role='alert'>
                 소개 메시지를 저장하지 못했습니다. 다시 시도해 주세요.
@@ -335,12 +539,10 @@ export default function AdminProfilePage() {
                     <ul className={styles.sectionStatusList}>
                       {sections.map(section => (
                         <li key={section.id}>
-                          <strong>{section.code}</strong>
-                          <span>
-                            {uploadFiles[kind][section.id]
-                              ? '파일 선택됨 · 업로드 전'
-                              : '업로드 상태 확인 전'}
-                          </span>
+                          <strong className={styles.sectionCode}>
+                            {section.code}
+                          </strong>
+                          <span className={styles.sectionFile}>파일 없음</span>
                         </li>
                       ))}
                     </ul>
@@ -353,21 +555,15 @@ export default function AdminProfilePage() {
       </Card>
 
       <UploadDialog
-        file={selectedUploadFile}
+        file={uploadFile}
         isOpen={uploadKind !== null && uploadSectionId !== ''}
         kind={uploadKind}
-        onClose={() => setUploadKind(null)}
-        onFileChange={file => {
-          if (!uploadKind || !uploadSectionId) return;
-          setUploadFiles(current => ({
-            ...current,
-            [uploadKind]: {
-              ...current[uploadKind],
-              [uploadSectionId]: file,
-            },
-          }));
+        onClose={closeUploadDialog}
+        onFileChange={setUploadFile}
+        onSectionChange={sectionId => {
+          setUploadSectionId(sectionId);
+          setUploadFile(null);
         }}
-        onSectionChange={setUploadSectionId}
         sections={uploadSections}
         sectionId={uploadSectionId}
       />

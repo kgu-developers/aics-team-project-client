@@ -100,10 +100,6 @@ export const attachment = style({
   gap: 6,
   marginTop: 8,
 });
-export const attachmentLink = style({
-  color: tokens.color.text.accent,
-  fontSize: 13,
-});
 export const deleteTitle = style({ color: tokens.color.text.red });
 export const deletePreview = style({
   display: 'flex',
@@ -153,8 +149,4 @@ globalStyle(table + ' td', {
 
 globalStyle(table + ' tbody tr:hover td', {
   background: tokens.color.background.muted,
-});
-globalStyle(attachment + ' a', {
-  color: tokens.color.text.accent,
-  fontSize: 13,
 });

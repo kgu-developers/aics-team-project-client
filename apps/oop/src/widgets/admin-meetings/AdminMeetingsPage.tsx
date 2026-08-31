@@ -110,11 +110,11 @@ export default function AdminMeetingsPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>작성 일자</th>
-                <th>분반</th>
-                <th>팀</th>
-                <th>제목</th>
-                <th>작성자</th>
+                <th scope='col'>작성 일자</th>
+                <th scope='col'>분반</th>
+                <th scope='col'>팀</th>
+                <th scope='col'>제목</th>
+                <th scope='col'>작성자</th>
               </tr>
             </thead>
             <tbody>
@@ -125,6 +125,7 @@ export default function AdminMeetingsPage() {
                       <span
                         aria-label='읽지 않음'
                         className={readStateStyles.unreadDot}
+                        role='img'
                       />
                     ) : null}
                     {formatDate(record.createdAt)}
