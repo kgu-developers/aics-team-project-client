@@ -321,6 +321,7 @@ describe('AdminSubmissionsPage', () => {
         name: 'OOP-01 - 2팀 발표 평가',
       }),
     ).toBeInTheDocument();
+    expect(screen.getAllByText('미제출')).toHaveLength(2);
     expect(screen.getAllByText('미평가')).toHaveLength(8);
   });
 

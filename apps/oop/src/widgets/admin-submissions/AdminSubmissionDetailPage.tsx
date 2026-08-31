@@ -654,7 +654,7 @@ export default function AdminSubmissionDetailPage() {
                 renderCell: evaluator =>
                   evaluator.isTargetTeamMember
                     ? '-'
-                    : evaluator.total === undefined
+                    : evaluator.total === null
                       ? '미제출'
                       : '제출 완료',
                 width: proportional(0.9, { minWidth: 104 }),
