@@ -1,8 +1,10 @@
 export {
   toAdminMilestoneSubmissionDetailView,
+  toAdminPeerEvaluationRows,
   type AdminMilestoneSubmissionDetailView,
   type AdminProposalSubmissionDetailView,
   type AdminPeerEvaluationDetailView,
+  type AdminPeerEvaluationRowView,
 } from './adminMilestoneSubmissionDetail';
 export {
   toAdminMilestoneScheduleView,

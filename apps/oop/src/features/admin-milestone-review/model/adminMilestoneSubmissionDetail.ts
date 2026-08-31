@@ -6,6 +6,8 @@ import type {
   AdminPresentationSubmissionDetailDto,
   AdminPeerEvaluationDetailDto,
   AdminPresentationEvaluationDetailDto,
+  AdminMidtermFeedbackDto,
+  AdminProposalFeedbackDto,
 } from '@aics/api-client';
 
 export type AdminProposalSubmissionDetailView = {
@@ -33,6 +35,13 @@ export type AdminMidtermSubmissionDetailView = {
 export type AdminPresentationSubmissionDetailView =
   AdminPresentationSubmissionDetailDto;
 export type AdminPeerEvaluationDetailView = AdminPeerEvaluationDetailDto;
+export type AdminPeerEvaluationRowView = {
+  average: number | undefined;
+  evaluator: AdminPeerEvaluationDetailDto['members'][number];
+  isSubmitted: boolean;
+  score: number | undefined;
+  target: AdminPeerEvaluationDetailDto['members'][number];
+};
 export type AdminPresentationEvaluationDetailView =
   AdminPresentationEvaluationDetailDto;
 
@@ -40,12 +49,15 @@ export type AdminMilestoneSubmissionDetailView = {
   milestoneId: string;
   milestoneTitle: string;
   midterm: AdminMidtermSubmissionDetailView | null;
+  midtermFeedback: AdminMidtermFeedbackDto | null;
   peerEvaluation: AdminPeerEvaluationDetailView | null;
   presentationEvaluation: AdminPresentationEvaluationDetailView | null;
   presentation: AdminPresentationSubmissionDetailView | null;
   proposal: AdminProposalSubmissionDetailView | null;
+  proposalFeedback: AdminProposalFeedbackDto | null;
   sectionId: string;
   sectionLabel: string;
+  resubmittedAt: string | null;
   submittedAt: string;
   submissionId: string;
   teamId: string;
@@ -59,15 +71,55 @@ export function toAdminMilestoneSubmissionDetailView(
     milestoneId: response.milestone.id,
     milestoneTitle: response.milestone.title,
     midterm: response.midterm,
+    midtermFeedback: response.midtermFeedback ?? null,
     presentation: response.presentation,
     proposal: response.proposal,
+    proposalFeedback: response.proposalFeedback ?? null,
     peerEvaluation: response.peerEvaluation ?? null,
     presentationEvaluation: response.presentationEvaluation ?? null,
     sectionId: response.section.id,
     sectionLabel: response.section.label,
+    resubmittedAt: response.submission.revision.resubmittedAt,
     submittedAt: response.submittedAt,
     submissionId: response.submission.id,
     teamId: response.submission.teamId,
     teamName: response.submission.teamName,
   };
+}
+
+export function toAdminPeerEvaluationRows(
+  peer: AdminPeerEvaluationDetailView,
+): AdminPeerEvaluationRowView[] {
+  const responseByEvaluator = new Map(
+    peer.responses.map(response => [response.evaluatorStudentNumber, response]),
+  );
+
+  return peer.members.flatMap(target => {
+    const receivedScores = peer.members
+      .filter(member => member.studentNumber !== target.studentNumber)
+      .map(
+        member =>
+          responseByEvaluator.get(member.studentNumber)?.scores[
+            target.studentNumber
+          ],
+      )
+      .filter((score): score is number => score !== undefined);
+    const average = receivedScores.length
+      ? receivedScores.reduce((sum, score) => sum + score, 0) /
+        receivedScores.length
+      : undefined;
+
+    return peer.members
+      .filter(member => member.studentNumber !== target.studentNumber)
+      .map(evaluator => {
+        const response = responseByEvaluator.get(evaluator.studentNumber);
+        return {
+          average,
+          evaluator,
+          isSubmitted: response !== undefined,
+          score: response?.scores[target.studentNumber],
+          target,
+        };
+      });
+  });
 }
