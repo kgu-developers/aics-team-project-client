@@ -375,6 +375,7 @@ const secondTeamProposalSubmissionDetail: AdminMilestoneSubmissionDetailResponse
       teamLeaderName: '박지훈',
       teamName: 'OOP-01 - 2팀',
     },
+    proposalFeedback: null,
     submittedAt: '2026/09/06',
     submission: {
       id: 'submission-oop-01-2-proposal',
@@ -404,6 +405,7 @@ const secondTeamMidtermSubmissionDetail: AdminMilestoneSubmissionDetailResponse 
       teamLeaderName: '박지훈',
       teamName: 'OOP-01 - 2팀',
     },
+    midtermFeedback: null,
     submittedAt: '2026/10/13',
     submission: {
       id: 'submission-oop-01-2-midterm',

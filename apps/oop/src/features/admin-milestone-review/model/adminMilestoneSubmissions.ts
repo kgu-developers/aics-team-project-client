@@ -60,7 +60,7 @@ function toSubmissionView(
       feedbackCountLabel:
         submission.summary.feedbackCount === null
           ? null
-          : toCountLabel('피드백', submission.summary.feedbackCount),
+          : `피드백: ${submission.summary.feedbackCount}개`,
       leaderName: submission.summary.leaderName,
       linkLabel: submission.summary.linkLabel,
       presentationFileDownloadUrl:

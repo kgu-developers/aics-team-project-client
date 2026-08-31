@@ -104,7 +104,8 @@ describe('AdminSubmissionsPage', () => {
       screen.getByRole('heading', { name: '중간 점검 목록' }),
     ).toBeInTheDocument();
     expect(await screen.findAllByText('첨부 파일 수: 1')).toHaveLength(2);
-    expect(screen.getAllByText('피드백: -')).toHaveLength(2);
+    expect(screen.getByText('피드백: 1개')).toBeInTheDocument();
+    expect(screen.getByText('피드백: 0개')).toBeInTheDocument();
   });
 
   it('팀별 공통 제출 요약의 제안서 주제와 최종 보고서 파일을 표시한다', async () => {

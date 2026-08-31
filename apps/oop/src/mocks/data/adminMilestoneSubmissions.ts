@@ -123,7 +123,8 @@ export function getAdminMilestoneSubmissionsFixture(
             typedMilestoneId === 'midterm'
               ? (submissionFiles?.midterm.length ?? 0)
               : null,
-          feedbackCount: null,
+          feedbackCount:
+            typedMilestoneId === 'midterm' ? (index === 0 ? 1 : 0) : null,
           leaderName:
             typedMilestoneId === 'proposal'
               ? index === 0
