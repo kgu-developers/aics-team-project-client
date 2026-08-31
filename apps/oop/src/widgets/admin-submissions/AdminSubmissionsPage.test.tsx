@@ -207,7 +207,7 @@ describe('AdminSubmissionsPage', () => {
     expect(screen.getByText('이서연')).toBeInTheDocument();
     expect(screen.getByText('박지훈')).toBeInTheDocument();
     expect(screen.getByText('최유진')).toBeInTheDocument();
-    expect(screen.getAllByText('-')).toHaveLength(8);
+    expect(screen.getAllByText('-')).toHaveLength(10);
   });
 
   it('발표 평가 상세 ID가 없으면 팀 이름을 링크로 표시하지 않는다', async () => {
@@ -306,6 +306,13 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('textbox', { name: '제안서 피드백' }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText('제출 상태 · 재제출 완료 · 2026/09/07'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('김민준 · 2026/09/07')).toBeInTheDocument();
+    expect(
+      screen.getByText('역할 분담과 프로젝트 범위를 보완했습니다.'),
+    ).toBeInTheDocument();
   });
 
   it('제출된 중간 점검을 읽기 전용으로 표시한다', async () => {
@@ -319,6 +326,11 @@ describe('AdminSubmissionsPage', () => {
     expect(screen.getByText('중점 시연 기능')).toBeInTheDocument();
     expect(
       screen.getByRole('textbox', { name: '중간 점검 피드백' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('제출 상태 · 최초 제출')).toBeInTheDocument();
+    expect(screen.getByText('김민준 · 2026/10/14')).toBeInTheDocument();
+    expect(
+      screen.getByText('시연 흐름과 테스트 케이스를 보완했습니다.'),
     ).toBeInTheDocument();
   });
 
@@ -345,6 +357,7 @@ describe('AdminSubmissionsPage', () => {
     ).toHaveAttribute('href', 'https://youtu.be/demo-oop-01-1');
     expect(screen.getByText('3. 주요 화면')).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByText('제출 상태 · 최초 제출')).toBeInTheDocument();
   });
 
   it('상세 응답의 마일스톤 이름을 주소의 임시 검색값보다 우선 표시한다', async () => {
@@ -374,8 +387,24 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByRole('heading', { name: 'OOP-01 - 1팀 상호 평가' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('columnheader', { name: '평균' }),
+      screen.getByRole('columnheader', { name: '평가자' }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '평가 제출 상태' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '평가 대상' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '점수' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '평가 대상 평균' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('제출 완료')).toBeInTheDocument();
+    expect(screen.getByText('미제출')).toBeInTheDocument();
+    expect(screen.getByText('30')).toBeInTheDocument();
+    expect(screen.getByText('30.0')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '김민준' }));
     expect(
