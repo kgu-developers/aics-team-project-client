@@ -233,10 +233,16 @@ export default function AdminMilestoneSetupPage() {
                                 aria-label={`${section.code} 공개 시작 시간`}
                                 className={styles.timeInput}
                                 onChange={event =>
-                                  updateSectionSchedule(section.id, current => ({
-                                    ...current,
-                                    opensAt: { ...current.opensAt, time: event.target.value },
-                                  }))
+                                  updateSectionSchedule(
+                                    section.id,
+                                    current => ({
+                                      ...current,
+                                      opensAt: {
+                                        ...current.opensAt,
+                                        time: event.target.value,
+                                      },
+                                    }),
+                                  )
                                 }
                                 type='time'
                                 value={schedule.opensAt.time}
@@ -271,10 +277,16 @@ export default function AdminMilestoneSetupPage() {
                                 aria-label={`${section.code} 제출 마감 시간`}
                                 className={styles.timeInput}
                                 onChange={event =>
-                                  updateSectionSchedule(section.id, current => ({
-                                    ...current,
-                                    dueAt: { ...current.dueAt, time: event.target.value },
-                                  }))
+                                  updateSectionSchedule(
+                                    section.id,
+                                    current => ({
+                                      ...current,
+                                      dueAt: {
+                                        ...current.dueAt,
+                                        time: event.target.value,
+                                      },
+                                    }),
+                                  )
                                 }
                                 type='time'
                                 value={schedule.dueAt.time}

@@ -38,7 +38,9 @@ function toIsoDateTime(date: string, time: string) {
 }
 
 function asDateInputValue(value: string) {
-  return value ? (value as `${number}${number}${number}${number}-${number}${number}-${number}${number}`) : undefined;
+  return value
+    ? (value as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
+    : undefined;
 }
 
 export function AdminPresentationEvaluationSettingsDialog({
@@ -170,7 +172,13 @@ export function AdminPresentationEvaluationSettingsDialog({
             />
             <label>
               <Text type='supporting'>시작 시간</Text>
-              <input aria-label='발표 평가 시작 시간' className={styles.timeInput} onChange={event => setStartTime(event.target.value)} type='time' value={startTime} />
+              <input
+                aria-label='발표 평가 시작 시간'
+                className={styles.timeInput}
+                onChange={event => setStartTime(event.target.value)}
+                type='time'
+                value={startTime}
+              />
             </label>
           </div>
           <div className={styles.dateTimeRow}>
@@ -181,7 +189,13 @@ export function AdminPresentationEvaluationSettingsDialog({
             />
             <label>
               <Text type='supporting'>종료 시간</Text>
-              <input aria-label='발표 평가 종료 시간' className={styles.timeInput} onChange={event => setEndTime(event.target.value)} type='time' value={endTime} />
+              <input
+                aria-label='발표 평가 종료 시간'
+                className={styles.timeInput}
+                onChange={event => setEndTime(event.target.value)}
+                type='time'
+                value={endTime}
+              />
             </label>
           </div>
         </VStack>
