@@ -5,6 +5,8 @@ import {
   FileInput,
   Heading,
   HStack,
+  Selector,
+  SelectorOption,
   Text,
   TextArea,
   TextInput,
@@ -27,7 +29,6 @@ import * as styles from './AdminProfilePage.css';
 
 type UploadFileKind = 'studentRoster' | 'teamRoster';
 type Section = { id: string; code: string; name: string };
-type UploadedFile = { name: string; uploadedAt: string };
 
 const uploadCopy: Record<
   UploadFileKind,
@@ -77,23 +78,19 @@ function FileSelectionCard({
 
 function UploadDialog({
   file,
-  uploadedFile,
   isOpen,
   kind,
   onClose,
   onFileChange,
-  onUpload,
   onSectionChange,
   sections,
   sectionId,
 }: {
   file: File | null;
-  uploadedFile: UploadedFile | null;
   isOpen: boolean;
   kind: UploadFileKind | null;
   onClose: () => void;
   onFileChange: (file: File | null) => void;
-  onUpload: () => void;
   onSectionChange: (sectionId: string) => void;
   sections: Section[];
   sectionId: string;
@@ -114,24 +111,22 @@ function UploadDialog({
       <VStack gap={3}>
         <Heading level={2}>{copy.title} 업로드</Heading>
         <Text color='secondary' type='supporting'>
-          업로드할 분반을 선택한 뒤 Excel 파일을 선택해 주세요. 아직 서버에
-          업로드되지는 않습니다.
+          업로드할 분반을 선택한 뒤 Excel 파일을 선택해 주세요. 파일은 서버
+          업로드 API가 준비되기 전까지 임시로만 선택됩니다.
         </Text>
-        <label>
-          <Text>분반</Text>
-          <select
-            aria-label='업로드 분반'
-            className={styles.sectionSelect}
-            onChange={event => onSectionChange(event.target.value)}
-            value={sectionId}
-          >
-            {sections.map(section => (
-              <option key={section.id} value={section.id}>
-                {section.code} ({section.name})
-              </option>
-            ))}
-          </select>
-        </label>
+        <Selector
+          label='분반'
+          onChange={onSectionChange}
+          options={sections.map(section => ({
+            label: `${section.code} (${section.name})`,
+            value: section.id,
+          }))}
+          renderOption={option => (
+            <SelectorOption label={option.label ?? option.value} />
+          )}
+          value={sectionId}
+          width='100%'
+        />
         <FileInput
           accept='.xls,.xlsx'
           label={copy.label}
@@ -146,12 +141,7 @@ function UploadDialog({
         />
         {file ? (
           <Text color='secondary' role='status' type='supporting'>
-            {file.name} 선택됨 · 아직 업로드되지 않았습니다.
-          </Text>
-        ) : null}
-        {uploadedFile ? (
-          <Text color='secondary' type='supporting'>
-            현재 업로드 파일: {uploadedFile.name}
+            {file.name} 선택됨 · 서버 업로드 전
           </Text>
         ) : null}
         <div className={styles.actions}>
@@ -162,12 +152,6 @@ function UploadDialog({
               variant='secondary'
             />
           ) : null}
-          <Button
-            isDisabled={!file}
-            label={uploadedFile ? '파일 교체' : '업로드'}
-            onClick={onUpload}
-            variant='primary'
-          />
           <Button label='닫기' onClick={onClose} variant='secondary' />
         </div>
       </VStack>
@@ -355,18 +339,7 @@ export default function AdminProfilePage() {
   const [isEditingIntroduction, setIsEditingIntroduction] = useState(false);
   const [uploadKind, setUploadKind] = useState<UploadFileKind | null>(null);
   const [uploadSectionId, setUploadSectionId] = useState('');
-  const [uploadFiles, setUploadFiles] = useState<
-    Record<UploadFileKind, Record<string, File | null>>
-  >({
-    studentRoster: {},
-    teamRoster: {},
-  });
-  const [uploadedFiles, setUploadedFiles] = useState<
-    Record<UploadFileKind, Record<string, UploadedFile>>
-  >({
-    studentRoster: {},
-    teamRoster: {},
-  });
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const sections = currentUser?.sections ?? [];
   const hasUploadSections = sections.length > 0;
   const profileQuery = useAdminProfileQuery();
@@ -384,20 +357,18 @@ export default function AdminProfilePage() {
     id: section.id,
     name: section.name,
   }));
-  const selectedUploadFile =
-    uploadKind && uploadSectionId
-      ? (uploadFiles[uploadKind][uploadSectionId] ?? null)
-      : null;
-  const selectedUploadedFile =
-    uploadKind && uploadSectionId
-      ? (uploadedFiles[uploadKind][uploadSectionId] ?? null)
-      : null;
-
   function openUploadDialog(kind: UploadFileKind) {
     if (!hasUploadSections) return;
 
     setUploadKind(kind);
     setUploadSectionId(uploadSections[0]?.id ?? '');
+    setUploadFile(null);
+  }
+
+  function closeUploadDialog() {
+    setUploadFile(null);
+    setUploadKind(null);
+    setUploadSectionId('');
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -413,32 +384,6 @@ export default function AdminProfilePage() {
         },
       },
     );
-  }
-
-  function handleUpload() {
-    if (!uploadKind || !uploadSectionId) return;
-    const file = uploadFiles[uploadKind][uploadSectionId];
-    if (!file) return;
-    setUploadedFiles(current => ({
-      ...current,
-      [uploadKind]: {
-        ...current[uploadKind],
-        [uploadSectionId]: {
-          name: file.name,
-          uploadedAt: new Date().toISOString(),
-        },
-      },
-    }));
-    setUploadKind(null);
-    setUploadSectionId('');
-  }
-
-  function handleDeleteUpload(kind: UploadFileKind, sectionId: string) {
-    setUploadedFiles(current => {
-      const next = { ...current[kind] };
-      delete next[sectionId];
-      return { ...current, [kind]: next };
-    });
   }
 
   return (
@@ -597,39 +542,7 @@ export default function AdminProfilePage() {
                           <strong className={styles.sectionCode}>
                             {section.code}
                           </strong>
-                          <span className={styles.sectionFile}>
-                            {uploadedFiles[kind][section.id]
-                              ? `업로드 완료 · ${uploadedFiles[kind][section.id]?.name ?? ''}`
-                              : '파일 없음'}
-                          </span>
-                          {uploadedFiles[kind][section.id] ? (
-                            <HStack className={styles.statusActions} gap={1}>
-                              <Button
-                                label='수정'
-                                onClick={() => {
-                                  setUploadKind(kind);
-                                  setUploadSectionId(section.id);
-                                  setUploadFiles(current => ({
-                                    ...current,
-                                    [kind]: {
-                                      ...current[kind],
-                                      [section.id]: null,
-                                    },
-                                  }));
-                                }}
-                                type='button'
-                                variant='secondary'
-                              />
-                              <Button
-                                label='삭제'
-                                onClick={() =>
-                                  handleDeleteUpload(kind, section.id)
-                                }
-                                type='button'
-                                variant='ghost'
-                              />
-                            </HStack>
-                          ) : null}
+                          <span className={styles.sectionFile}>파일 없음</span>
                         </li>
                       ))}
                     </ul>
@@ -642,23 +555,15 @@ export default function AdminProfilePage() {
       </Card>
 
       <UploadDialog
-        file={selectedUploadFile}
-        onUpload={handleUpload}
-        uploadedFile={selectedUploadedFile}
+        file={uploadFile}
         isOpen={uploadKind !== null && uploadSectionId !== ''}
         kind={uploadKind}
-        onClose={() => setUploadKind(null)}
-        onFileChange={file => {
-          if (!uploadKind || !uploadSectionId) return;
-          setUploadFiles(current => ({
-            ...current,
-            [uploadKind]: {
-              ...current[uploadKind],
-              [uploadSectionId]: file,
-            },
-          }));
+        onClose={closeUploadDialog}
+        onFileChange={setUploadFile}
+        onSectionChange={sectionId => {
+          setUploadSectionId(sectionId);
+          setUploadFile(null);
         }}
-        onSectionChange={setUploadSectionId}
         sections={uploadSections}
         sectionId={uploadSectionId}
       />

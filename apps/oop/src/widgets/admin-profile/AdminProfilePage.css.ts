@@ -68,16 +68,6 @@ export const passwordError = style({
   margin: 0,
 });
 
-export const sectionSelect = style({
-  border: `1px solid ${tokens.color.border.base}`,
-  borderRadius: tokens.radius.element,
-  font: 'inherit',
-  marginTop: 6,
-  minHeight: 40,
-  padding: '8px 12px',
-  width: '100%',
-});
-
 export const fieldLabel = style({
   display: 'block',
   marginBottom: 6,
@@ -134,7 +124,7 @@ globalStyle(`${sectionStatusList} li`, {
   display: 'grid',
   fontSize: 13,
   gap: 8,
-  gridTemplateColumns: 'minmax(92px, auto) minmax(0, 1fr) auto',
+  gridTemplateColumns: 'minmax(92px, auto) minmax(0, 1fr)',
   padding: '10px 12px',
 });
 
@@ -145,10 +135,6 @@ export const sectionCode = style({
 export const sectionFile = style({
   minWidth: 0,
   overflowWrap: 'anywhere',
-});
-
-export const statusActions = style({
-  justifySelf: 'end',
 });
 
 globalStyle(`${sectionStatusList} span`, {

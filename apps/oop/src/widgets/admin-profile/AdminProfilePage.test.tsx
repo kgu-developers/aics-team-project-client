@@ -218,7 +218,7 @@ describe('AdminProfilePage', () => {
     ).toBeInTheDocument();
   });
 
-  it('Excel 파일만 선택할 수 있고 선택한 파일을 제거할 수 있다', async () => {
+  it('Excel 파일만 임시로 선택할 수 있고 선택을 제거할 수 있다', async () => {
     const user = userEvent.setup({ applyAccept: false });
     renderPage();
 
@@ -243,15 +243,43 @@ describe('AdminProfilePage', () => {
     });
     await user.upload(fileInput, excelFile);
     expect(
-      await screen.findByText('1151.xlsx 선택됨 · 아직 업로드되지 않았습니다.'),
+      await screen.findByText('1151.xlsx 선택됨 · 서버 업로드 전'),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '선택한 파일 제거' }));
     expect(
-      screen.queryByText('1151.xlsx 선택됨 · 아직 업로드되지 않았습니다.'),
+      screen.queryByText('1151.xlsx 선택됨 · 서버 업로드 전'),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: '선택한 파일 제거' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('업로드 모달을 닫으면 임시 선택 파일을 초기화한다', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      screen.getByRole('button', { name: '학생 명단 파일 선택' }),
+    );
+    const dialog = screen.getByRole('dialog', { name: '학생 명단 업로드' });
+    const fileInput =
+      dialog.querySelector<HTMLInputElement>('input[type="file"]');
+
+    if (!fileInput) throw new Error('파일 선택 input을 찾을 수 없습니다.');
+
+    await user.upload(fileInput, new File(['excel data'], '1151.xlsx'));
+    expect(
+      await screen.findByText('1151.xlsx 선택됨 · 서버 업로드 전'),
+    ).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: '닫기' }));
+    await user.click(
+      screen.getByRole('button', { name: '학생 명단 파일 선택' }),
+    );
+
+    expect(
+      screen.queryByText('1151.xlsx 선택됨 · 서버 업로드 전'),
     ).not.toBeInTheDocument();
   });
 
