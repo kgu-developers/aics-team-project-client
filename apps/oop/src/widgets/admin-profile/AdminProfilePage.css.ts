@@ -41,6 +41,32 @@ export const actions = style({
   justifyContent: 'flex-end',
 });
 
+export const passwordForm = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['3'],
+});
+
+export const passwordTitle = style({
+  margin: 0,
+});
+
+export const passwordDescription = style({
+  margin: 0,
+});
+
+export const passwordActions = style({
+  display: 'flex',
+  gap: tokens.spacing['2'],
+  justifyContent: 'flex-end',
+  paddingBlockStart: tokens.spacing['1'],
+});
+
+export const passwordError = style({
+  color: tokens.color.text.red,
+  margin: 0,
+});
+
 export const sectionSelect = style({
   border: `1px solid ${tokens.color.border.base}`,
   borderRadius: tokens.radius.element,

@@ -1,7 +1,7 @@
 import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -26,8 +26,10 @@ import {
 } from '~/mocks/data/adminProfile';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminProfileHandlers } from '~/mocks/handlers/adminProfile';
+import { authHandlers } from '~/mocks/handlers/auth';
 
-const server = setupServer(...adminProfileHandlers);
+
+const server = setupServer(...adminProfileHandlers, ...authHandlers);
 const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
   'close',
@@ -103,6 +105,55 @@ function renderPage() {
 }
 
 describe('AdminProfilePage', () => {
+  it('비밀번호 변경 Dialog에서 현재 비밀번호를 검증하고 저장한다', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: '비밀번호 변경' }));
+    const dialog = await screen.findByRole('dialog', { name: '비밀번호 변경' });
+
+    await user.click(
+      within(dialog).getByRole('button', { name: '비밀번호 변경' }),
+    );
+    expect(
+      await within(dialog).findByText('현재 비밀번호를 입력해 주세요.'),
+    ).toBeInTheDocument();
+
+    await user.type(
+      dialog.querySelector('input[name="currentPassword"]') as HTMLInputElement,
+      'oop-admin',
+    );
+    await user.type(
+      dialog.querySelector('input[name="newPassword"]') as HTMLInputElement,
+      'oop-admin2',
+    );
+    await user.type(
+      dialog.querySelector('input[name="confirmPassword"]') as HTMLInputElement,
+      'oop-admin2',
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: '비밀번호 변경' }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: '비밀번호 변경' }),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it('로그아웃하면 관리자 세션을 정리한다', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: '로그아웃' }));
+
+    await waitFor(() => {
+      expect(useAuthStore.getState().currentUser).toBeNull();
+      expect(useAuthStore.getState().accessToken).toBeNull();
+    });
+  });
+
   it('이름과 이메일은 읽기 전용으로 표시한다', () => {
     renderPage();
 

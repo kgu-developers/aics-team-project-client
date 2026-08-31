@@ -4,18 +4,24 @@ import {
   Dialog,
   FileInput,
   Heading,
+  HStack,
   Text,
   TextArea,
   TextInput,
+  useToast,
   VStack,
 } from '@aics/design-system';
-import { useState } from 'react';
+import { type FormEvent, useState } from 'react';
 
 import {
   useAdminProfileQuery,
   useUpdateAdminProfileMutation,
 } from '~/features/admin-profile/queries';
 import { useAuthStore } from '~/features/auth/authStore';
+import {
+  useLogoutMutation,
+  useUpdateMyPasswordMutation,
+} from '~/features/auth/queries';
 
 import * as styles from './AdminProfilePage.css';
 
@@ -153,8 +159,181 @@ function UploadDialog({
   );
 }
 
+type PasswordValidationIssue = {
+  field: 'currentPassword' | 'newPassword' | 'confirmPassword';
+  message: string;
+} | null;
+
+function validatePasswordChange(
+  currentPassword: string,
+  newPassword: string,
+  confirmPassword: string,
+): PasswordValidationIssue {
+  if (!currentPassword)
+    return {
+      field: 'currentPassword',
+      message: '현재 비밀번호를 입력해 주세요.',
+    };
+  if (!newPassword)
+    return { field: 'newPassword', message: '새 비밀번호를 입력해 주세요.' };
+  if (newPassword.length < 8)
+    return {
+      field: 'newPassword',
+      message: '새 비밀번호는 8자 이상이어야 합니다.',
+    };
+  if (newPassword === currentPassword)
+    return {
+      field: 'newPassword',
+      message: '새 비밀번호는 현재 비밀번호와 달라야 합니다.',
+    };
+  if (!confirmPassword)
+    return {
+      field: 'confirmPassword',
+      message: '새 비밀번호를 한 번 더 입력해 주세요.',
+    };
+  if (newPassword !== confirmPassword)
+    return {
+      field: 'confirmPassword',
+      message: '새 비밀번호가 일치하지 않습니다.',
+    };
+  return null;
+}
+
+function PasswordChangeDialog({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const toast = useToast();
+  const passwordMutation = useUpdateMyPasswordMutation();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [validationIssue, setValidationIssue] =
+    useState<PasswordValidationIssue>(null);
+
+  const resetForm = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setValidationIssue(null);
+    passwordMutation.reset();
+  };
+
+  const close = () => {
+    resetForm();
+    onClose();
+  };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const issue = validatePasswordChange(
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    );
+    if (issue) {
+      setValidationIssue(issue);
+      return;
+    }
+    setValidationIssue(null);
+    passwordMutation.mutate(
+      { currentPassword, newPassword },
+      {
+        onSuccess: () => {
+          toast({ body: '비밀번호를 변경했어요.' });
+          close();
+        },
+      },
+    );
+  };
+
+  const handleFieldChange = (
+    setter: (value: string) => void,
+    value: string,
+  ) => {
+    setter(value);
+    if (validationIssue) setValidationIssue(null);
+    if (passwordMutation.isError) passwordMutation.reset();
+  };
+
+  return (
+    <Dialog
+      aria-label='비밀번호 변경'
+      isOpen={isOpen}
+      onOpenChange={nextIsOpen => {
+        if (!nextIsOpen) close();
+      }}
+      purpose='form'
+      width={440}
+    >
+      <form className={styles.passwordForm} onSubmit={handleSubmit}>
+        <Heading className={styles.passwordTitle} level={2}>
+          비밀번호 변경
+        </Heading>
+        <Text className={styles.passwordDescription} color='secondary'>
+          현재 비밀번호를 확인한 뒤 새 비밀번호를 설정해 주세요. 새 비밀번호는
+          8자 이상이어야 합니다.
+        </Text>
+        {(
+          [
+            [
+              'currentPassword',
+              '현재 비밀번호',
+              currentPassword,
+              setCurrentPassword,
+            ],
+            ['newPassword', '새 비밀번호', newPassword, setNewPassword],
+            [
+              'confirmPassword',
+              '새 비밀번호 확인',
+              confirmPassword,
+              setConfirmPassword,
+            ],
+          ] as const
+        ).map(([field, label, value, setter]) => (
+          <TextInput
+            htmlName={field}
+            isRequired
+            key={field}
+            label={label}
+            onChange={nextValue => handleFieldChange(setter, nextValue)}
+            status={
+              validationIssue?.field === field
+                ? { message: validationIssue.message, type: 'error' }
+                : undefined
+            }
+            type='password'
+            value={value}
+            width='100%'
+          />
+        ))}
+        {passwordMutation.isError ? (
+          <Text className={styles.passwordError} role='alert'>
+            비밀번호를 변경하지 못했어요. 현재 비밀번호를 확인해 주세요.
+          </Text>
+        ) : null}
+        <HStack className={styles.passwordActions} gap={2} justify='end'>
+          <Button label='취소' onClick={close} variant='secondary' />
+          <Button
+            isDisabled={passwordMutation.isPending}
+            isLoading={passwordMutation.isPending}
+            label='비밀번호 변경'
+            type='submit'
+            variant='primary'
+          />
+        </HStack>
+      </form>
+    </Dialog>
+  );
+}
+
 export default function AdminProfilePage() {
   const currentUser = useAuthStore(state => state.currentUser);
+  const logoutMutation = useLogoutMutation();
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [isEditingIntroduction, setIsEditingIntroduction] = useState(false);
   const [uploadKind, setUploadKind] = useState<UploadFileKind | null>(null);
@@ -204,7 +383,30 @@ export default function AdminProfilePage() {
 
   return (
     <div className={styles.page}>
-      <Heading level={1}>마이페이지</Heading>
+      <HStack justify='between'>
+        <Heading level={1}>마이페이지</Heading>
+        <HStack gap={2}>
+          <Button
+            label='비밀번호 변경'
+            onClick={() => setIsPasswordDialogOpen(true)}
+            type='button'
+            variant='secondary'
+          />
+          <Button
+            isDisabled={logoutMutation.isPending}
+            isLoading={logoutMutation.isPending}
+            label='로그아웃'
+            onClick={() => logoutMutation.mutate()}
+            type='button'
+            variant='ghost'
+          />
+        </HStack>
+      </HStack>
+
+      <PasswordChangeDialog
+        isOpen={isPasswordDialogOpen}
+        onClose={() => setIsPasswordDialogOpen(false)}
+      />
 
       <Card className={styles.profileCard} padding={4}>
         <VStack gap={4}>
