@@ -11,7 +11,7 @@ import {
   useToast,
   VStack,
 } from '@aics/design-system';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 
 import {
   useAdminProfileQuery,
@@ -27,6 +27,7 @@ import * as styles from './AdminProfilePage.css';
 
 type UploadFileKind = 'studentRoster' | 'teamRoster';
 type Section = { id: string; code: string; name: string };
+type UploadedFile = { name: string; uploadedAt: string };
 
 const uploadCopy: Record<
   UploadFileKind,
@@ -76,19 +77,23 @@ function FileSelectionCard({
 
 function UploadDialog({
   file,
+  uploadedFile,
   isOpen,
   kind,
   onClose,
   onFileChange,
+  onUpload,
   onSectionChange,
   sections,
   sectionId,
 }: {
   file: File | null;
+  uploadedFile: UploadedFile | null;
   isOpen: boolean;
   kind: UploadFileKind | null;
   onClose: () => void;
   onFileChange: (file: File | null) => void;
+  onUpload: () => void;
   onSectionChange: (sectionId: string) => void;
   sections: Section[];
   sectionId: string;
@@ -144,6 +149,11 @@ function UploadDialog({
             {file.name} 선택됨 · 아직 업로드되지 않았습니다.
           </Text>
         ) : null}
+        {uploadedFile ? (
+          <Text color='secondary' type='supporting'>
+            현재 업로드 파일: {uploadedFile.name}
+          </Text>
+        ) : null}
         <div className={styles.actions}>
           {file ? (
             <Button
@@ -152,6 +162,12 @@ function UploadDialog({
               variant='secondary'
             />
           ) : null}
+          <Button
+            isDisabled={!file}
+            label={uploadedFile ? '파일 교체' : '업로드'}
+            onClick={onUpload}
+            variant='primary'
+          />
           <Button label='닫기' onClick={onClose} variant='secondary' />
         </div>
       </VStack>
@@ -332,6 +348,7 @@ function PasswordChangeDialog({
 
 export default function AdminProfilePage() {
   const currentUser = useAuthStore(state => state.currentUser);
+  const toast = useToast();
   const logoutMutation = useLogoutMutation();
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [message, setMessage] = useState('');
@@ -344,11 +361,22 @@ export default function AdminProfilePage() {
     studentRoster: {},
     teamRoster: {},
   });
+  const [uploadedFiles, setUploadedFiles] = useState<
+    Record<UploadFileKind, Record<string, UploadedFile>>
+  >({
+    studentRoster: {},
+    teamRoster: {},
+  });
   const sections = currentUser?.sections ?? [];
   const hasUploadSections = sections.length > 0;
   const profileQuery = useAdminProfileQuery();
   const updateProfileMutation = useUpdateAdminProfileMutation();
-  const savedIntroduction = profileQuery.data?.introduction ?? '';
+  const [savedIntroduction, setSavedIntroduction] = useState('');
+  useEffect(() => {
+    if (!updateProfileMutation.isSuccess) {
+      setSavedIntroduction(profileQuery.data?.introduction ?? '');
+    }
+  }, [profileQuery.data?.introduction, updateProfileMutation.isSuccess]);
   const hasSavedIntroduction = savedIntroduction.trim().length > 0;
   const showIntroductionEditor = isEditingIntroduction || !hasSavedIntroduction;
   const uploadSections = sections.map(section => ({
@@ -359,6 +387,10 @@ export default function AdminProfilePage() {
   const selectedUploadFile =
     uploadKind && uploadSectionId
       ? (uploadFiles[uploadKind][uploadSectionId] ?? null)
+      : null;
+  const selectedUploadedFile =
+    uploadKind && uploadSectionId
+      ? (uploadedFiles[uploadKind][uploadSectionId] ?? null)
       : null;
 
   function openUploadDialog(kind: UploadFileKind) {
@@ -375,10 +407,38 @@ export default function AdminProfilePage() {
       {
         onSuccess: profile => {
           setMessage(profile.introduction);
+          setSavedIntroduction(profile.introduction);
           setIsEditingIntroduction(false);
+          toast({ body: '소개 메시지를 저장했어요.' });
         },
       },
     );
+  }
+
+  function handleUpload() {
+    if (!uploadKind || !uploadSectionId) return;
+    const file = uploadFiles[uploadKind][uploadSectionId];
+    if (!file) return;
+    setUploadedFiles(current => ({
+      ...current,
+      [uploadKind]: {
+        ...current[uploadKind],
+        [uploadSectionId]: {
+          name: file.name,
+          uploadedAt: new Date().toISOString(),
+        },
+      },
+    }));
+    setUploadKind(null);
+    setUploadSectionId('');
+  }
+
+  function handleDeleteUpload(kind: UploadFileKind, sectionId: string) {
+    setUploadedFiles(current => {
+      const next = { ...current[kind] };
+      delete next[sectionId];
+      return { ...current, [kind]: next };
+    });
   }
 
   return (
@@ -487,9 +547,6 @@ export default function AdminProfilePage() {
                 소개 메시지를 불러오지 못했습니다. 저장하면 다시 시도합니다.
               </Text>
             ) : null}
-            {updateProfileMutation.isSuccess ? (
-              <Text role='status'>소개 메시지를 저장했습니다.</Text>
-            ) : null}
             {updateProfileMutation.isError ? (
               <Text role='alert'>
                 소개 메시지를 저장하지 못했습니다. 다시 시도해 주세요.
@@ -537,12 +594,42 @@ export default function AdminProfilePage() {
                     <ul className={styles.sectionStatusList}>
                       {sections.map(section => (
                         <li key={section.id}>
-                          <strong>{section.code}</strong>
-                          <span>
-                            {uploadFiles[kind][section.id]
-                              ? '파일 선택됨 · 업로드 전'
-                              : '업로드 상태 확인 전'}
+                          <strong className={styles.sectionCode}>
+                            {section.code}
+                          </strong>
+                          <span className={styles.sectionFile}>
+                            {uploadedFiles[kind][section.id]
+                              ? `업로드 완료 · ${uploadedFiles[kind][section.id]?.name ?? ''}`
+                              : '파일 없음'}
                           </span>
+                          {uploadedFiles[kind][section.id] ? (
+                            <HStack className={styles.statusActions} gap={1}>
+                              <Button
+                                label='수정'
+                                onClick={() => {
+                                  setUploadKind(kind);
+                                  setUploadSectionId(section.id);
+                                  setUploadFiles(current => ({
+                                    ...current,
+                                    [kind]: {
+                                      ...current[kind],
+                                      [section.id]: null,
+                                    },
+                                  }));
+                                }}
+                                type='button'
+                                variant='secondary'
+                              />
+                              <Button
+                                label='삭제'
+                                onClick={() =>
+                                  handleDeleteUpload(kind, section.id)
+                                }
+                                type='button'
+                                variant='ghost'
+                              />
+                            </HStack>
+                          ) : null}
                         </li>
                       ))}
                     </ul>
@@ -556,6 +643,8 @@ export default function AdminProfilePage() {
 
       <UploadDialog
         file={selectedUploadFile}
+        onUpload={handleUpload}
+        uploadedFile={selectedUploadedFile}
         isOpen={uploadKind !== null && uploadSectionId !== ''}
         kind={uploadKind}
         onClose={() => setUploadKind(null)}

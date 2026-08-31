@@ -38,6 +38,7 @@ export const introductionForm = style({
 
 export const actions = style({
   display: 'flex',
+  gap: tokens.spacing['2'],
   justifyContent: 'flex-end',
 });
 
@@ -83,7 +84,7 @@ export const fieldLabel = style({
 });
 
 export const introductionPreview = style({
-  background: tokens.color.background.gray,
+  background: tokens.color.background.muted,
   borderRadius: tokens.radius.element,
   minHeight: 96,
   padding: 12,
@@ -108,15 +109,11 @@ export const uploadCard = style({
 export const sectionStatusList = style({
   display: 'grid',
   gap: 8,
-  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  gridTemplateColumns: '1fr',
   listStyle: 'none',
   margin: '12px 0 0',
   padding: 0,
-  '@media': {
-    '(max-width: 720px)': {
-      gridTemplateColumns: '1fr',
-    },
-  },
+  '@media': {},
 });
 
 export const statusGroups = style({
@@ -132,13 +129,26 @@ export const statusGroups = style({
 
 globalStyle(`${sectionStatusList} li`, {
   alignItems: 'center',
-  background: tokens.color.background.gray,
+  background: tokens.color.background.muted,
   borderRadius: tokens.radius.element,
-  display: 'flex',
+  display: 'grid',
   fontSize: 13,
   gap: 8,
-  justifyContent: 'space-between',
+  gridTemplateColumns: 'minmax(92px, auto) minmax(0, 1fr) auto',
   padding: '10px 12px',
+});
+
+export const sectionCode = style({
+  whiteSpace: 'nowrap',
+});
+
+export const sectionFile = style({
+  minWidth: 0,
+  overflowWrap: 'anywhere',
+});
+
+export const statusActions = style({
+  justifySelf: 'end',
 });
 
 globalStyle(`${sectionStatusList} span`, {

@@ -28,7 +28,6 @@ import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminProfileHandlers } from '~/mocks/handlers/adminProfile';
 import { authHandlers } from '~/mocks/handlers/auth';
 
-
 const server = setupServer(...adminProfileHandlers, ...authHandlers);
 const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
@@ -178,13 +177,13 @@ describe('AdminProfilePage', () => {
     expect(getAdminProfile().introduction).toBe('');
     await user.click(screen.getByRole('button', { name: '저장하기' }));
 
-    expect(
-      await screen.findByText('소개 메시지를 저장했습니다.'),
-    ).toBeInTheDocument();
     await waitFor(() =>
       expect(getAdminProfile().introduction).toBe(introductionText),
     );
     expect(screen.getByText(introductionText)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '수정하기' }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole('textbox', { name: '간단한 메시지' }),
     ).not.toBeInTheDocument();
