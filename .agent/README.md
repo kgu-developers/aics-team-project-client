@@ -20,5 +20,6 @@ Use `.agent-local/` for:
 - team-learning proposals before approval.
 - private PRD pointers and local caches.
 - OpenAPI source pointers, snapshots, deployment evidence, and contract audits.
+- private operational handover and infrastructure reference documents.
 
 `.agent-local/` is intentionally gitignored. Shared team rules move into `.agent/rules/` only after human approval.

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "deploy": "pnpm build && wrangler pages deploy ./dist --project-name aics-oop --branch main --profile kgu-oop",
+    "deploy": "pnpm build && node ../../.agent/scripts/check-oop-deploy-readiness.mjs && wrangler pages deploy ./dist --project-name aics-oop --branch main --profile kgu-oop",
     "deploy:worker": "pnpm build && wrangler deploy --config wrangler.worker.jsonc --profile kgu-oop",
     "deploy:worker:dry-run": "pnpm build && wrangler deploy --dry-run --config wrangler.worker.jsonc --profile kgu-oop",
     "typecheck": "tsc --noEmit",

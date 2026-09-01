@@ -22,7 +22,7 @@ function RootRoute() {
       <QueryProvider>
         <ToastViewport position='bottomEnd'>
           <Outlet />
-          <TanStackRouterDevtools />
+          {import.meta.env.DEV ? <TanStackRouterDevtools /> : null}
         </ToastViewport>
       </QueryProvider>
     </AstryxThemeProvider>
