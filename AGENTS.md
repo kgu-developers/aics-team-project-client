@@ -11,6 +11,7 @@ The primary UX is **natural language**. Do not ask teammates to memorize or run 
 - PR 만들어줘 / PR 초안 써줘 / PR 설명 정리해줘 → read `.agent/skills/kd-pr/SKILL.md`
 - 리뷰 반영해줘 / 코멘트 반영해줘 / 리뷰 답변 써줘 → read `.agent/skills/kd-review-fix/SKILL.md`
 - 팀 컨벤션으로 남길 것 정리해줘 / 배운 점 정리해줘 / 규칙 후보 뽑아줘 → read `.agent/skills/kd-team-learning/SKILL.md`
+- Swagger/OpenAPI 읽어줘 / API 계약 갱신해줘 / 연동 가능 범위 확인해줘 / MSW 대비 체크해줘 → read `.agent/skills/kd-api-contract/SKILL.md`
 - 페이지/라우트/폴더 구조/파일 위치/어디에 둘지 판단 → read `.agent/rules/product-structure.md`
 - 디자인 시스템/Astryx/컴포넌트/테마/UI 작업 → read `.agent/rules/design-system.md` and `.agent/rules/astryx-inventory.md`
 - 로그인/세션/역할/접근 제어/라우트 가드 작업 → read `.agent/rules/routing-auth.md`

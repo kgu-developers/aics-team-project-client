@@ -12,6 +12,8 @@ const dirs = [
   '.agent-local/coaching-notes',
   '.agent-local/sources',
   '.agent-local/prd-cache',
+  '.agent-local/openapi-cache',
+  '.agent-local/openapi-audits',
 ];
 
 for (const dir of dirs) mkdirSync(dir, { recursive: true });
@@ -35,6 +37,8 @@ Use these folders:
 - coaching-notes/
 - sources/
 - prd-cache/
+- openapi-cache/
+- openapi-audits/
 `,
   );
 }

@@ -13,6 +13,9 @@
     "agent:init": "node .agent/scripts/init.mjs",
     "agent:check-local": "node .agent/scripts/check-local-files.mjs",
     "agent:check-diff": "node .agent/scripts/check-diff-hygiene.mjs",
+    "agent:api-contract:status": "node .agent/scripts/openapi-contract.mjs status",
+    "agent:api-contract:refresh": "node .agent/scripts/openapi-contract.mjs refresh",
+    "agent:api-contract:test": "node --test .agent/scripts/openapi-contract.test.mjs",
     "agent:suggest-verification": "node .agent/scripts/suggest-verification.mjs",
     "agent:collect-pr-evidence": "node .agent/scripts/collect-pr-evidence.mjs"
   },
