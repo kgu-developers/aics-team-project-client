@@ -3,13 +3,14 @@ import { execFileSync as nodeExecFileSync } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   readFileSync,
   renameSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
@@ -86,6 +87,9 @@ const ERROR_MESSAGES = Object.freeze({
   HTTP_404: 'OpenAPI endpoint was not found.',
   HTTP_ERROR: 'OpenAPI endpoint returned an error.',
   CACHE_INVALID: 'OpenAPI cache is invalid.',
+  LOCAL_PATH_INVALID:
+    'OpenAPI source and cache paths must stay under .agent-local.',
+  REFRESH_IN_PROGRESS: 'Another OpenAPI refresh is already in progress.',
   REFERENCE_INVALID:
     'OpenAPI document contains an unresolved or external reference.',
   INTERNAL_ERROR: 'OpenAPI contract helper failed.',
@@ -319,23 +323,80 @@ export function validateSource(source) {
   };
 }
 
-function stripDocumentation(value) {
-  if (Array.isArray(value)) return value.map(stripDocumentation);
+const DOCUMENTATION_KEYS = new Set([
+  'description',
+  'summary',
+  'example',
+  'examples',
+  'externalDocs',
+]);
+
+// Values below these keys are keyed by user-defined names rather than OpenAPI
+// annotation names. Only the map key itself is protected; its value is parsed
+// again as a normal schema, parameter, response, or media object.
+const NAME_MAP_KEYS = new Set([
+  '$defs',
+  'callbacks',
+  'content',
+  'definitions',
+  'dependentRequired',
+  'dependentSchemas',
+  'encoding',
+  'headers',
+  'links',
+  'mapping',
+  'parameters',
+  'paths',
+  'patternProperties',
+  'properties',
+  'requestBodies',
+  'responses',
+  'schemas',
+  'scopes',
+  'securityDefinitions',
+  'variables',
+]);
+
+// These JSON Schema values are contract data, not schema objects. Their
+// object keys must remain intact even when they match OpenAPI annotation keys.
+const LITERAL_VALUE_KEYS = new Set(['const', 'default', 'enum']);
+
+function stripDocumentation(value, context = 'object') {
+  if (Array.isArray(value)) {
+    const itemContext = context === 'literal' ? 'literal' : 'object';
+    return value.map(item => stripDocumentation(item, itemContext));
+  }
   if (!asObject(value)) return value;
+  const insideNameMap = context === 'name-map';
+  const insideLiteral = context === 'literal';
   return Object.fromEntries(
     Object.entries(value)
       .filter(
         ([key]) =>
-          ![
-            'description',
-            'summary',
-            'example',
-            'examples',
-            'externalDocs',
-          ].includes(key),
+          insideLiteral || insideNameMap || !DOCUMENTATION_KEYS.has(key),
       )
-      .map(([key, nested]) => [key, stripDocumentation(nested)]),
+      .map(([key, nested]) => [
+        key,
+        stripDocumentation(
+          nested,
+          insideLiteral
+            ? 'literal'
+            : insideNameMap
+              ? 'object'
+              : LITERAL_VALUE_KEYS.has(key)
+                ? 'literal'
+                : NAME_MAP_KEYS.has(key)
+                  ? 'name-map'
+                  : 'object',
+        ),
+      ]),
   );
+}
+
+function compareCodeUnits(left, right) {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
 }
 
 function stableValue(value) {
@@ -343,7 +404,7 @@ function stableValue(value) {
   if (!asObject(value)) return value;
   return Object.fromEntries(
     Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
+      .sort(([left], [right]) => compareCodeUnits(left, right))
       .map(([key, nested]) => [key, stableValue(nested)]),
   );
 }
@@ -431,26 +492,43 @@ function isSwaggerDocument(value) {
   return asObject(value) !== null && typeof value.swagger === 'string';
 }
 
-function schemaFingerprint(schema, document) {
-  if (schema === undefined) return undefined;
-  return sha256(schemaSummary(schema, document));
+function fingerprintSchemaSummary(summary) {
+  return summary === undefined ? undefined : sha256(summary);
 }
 
-function schemaSummary(schema, document, resolvingReferences = new Set()) {
+function schemaSummary(
+  schema,
+  document,
+  resolvingReferences = new Set(),
+  resolvedReferenceSummaries = new Map(),
+  documentationStripped = false,
+) {
   if (schema === undefined) return undefined;
   if (Array.isArray(schema)) {
     return schema.map(item =>
-      schemaSummary(item, document, resolvingReferences),
+      schemaSummary(
+        item,
+        document,
+        resolvingReferences,
+        resolvedReferenceSummaries,
+        documentationStripped,
+      ),
     );
   }
   const object = asObject(schema);
   if (!object) return schema;
 
-  const cleaned = stripDocumentation(object);
+  const cleaned = documentationStripped ? object : stripDocumentation(object);
   const result = Object.fromEntries(
     Object.entries(cleaned).map(([key, value]) => [
       key,
-      schemaSummary(value, document, resolvingReferences),
+      schemaSummary(
+        value,
+        document,
+        resolvingReferences,
+        resolvedReferenceSummaries,
+        true,
+      ),
     ]),
   );
   if (
@@ -458,70 +536,109 @@ function schemaSummary(schema, document, resolvingReferences = new Set()) {
     !resolvingReferences.has(cleaned.$ref)
   ) {
     const nextReferences = new Set(resolvingReferences).add(cleaned.$ref);
-    result.resolved = schemaSummary(
-      validateLocalReference(document, cleaned.$ref),
-      document,
-      nextReferences,
-    );
+    const cacheKey = canonicalJson([
+      cleaned.$ref,
+      [...nextReferences].sort(compareCodeUnits),
+    ]);
+    if (resolvedReferenceSummaries.has(cacheKey)) {
+      result.resolved = resolvedReferenceSummaries.get(cacheKey);
+    } else {
+      const resolved = schemaSummary(
+        validateLocalReference(document, cleaned.$ref),
+        document,
+        nextReferences,
+        resolvedReferenceSummaries,
+        false,
+      );
+      resolvedReferenceSummaries.set(cacheKey, resolved);
+      result.resolved = resolved;
+    }
   }
   return stableValue(result);
 }
 
-function contentSummary(content, document) {
+function contentSummary(content, document, resolvedReferenceSummaries) {
   const object = asObject(content);
   if (!object) return [];
   return Object.entries(object)
-    .sort(([left], [right]) => left.localeCompare(right))
+    .sort(([left], [right]) => compareCodeUnits(left, right))
     .map(([mediaType, media]) => {
       const schema = asObject(media)?.schema;
+      const summary =
+        schema === undefined
+          ? undefined
+          : schemaSummary(
+              schema,
+              document,
+              new Set(),
+              resolvedReferenceSummaries,
+            );
       return {
         mediaType,
-        ...(schema === undefined
-          ? {}
-          : { schema: schemaSummary(schema, document) }),
-        schemaFingerprint: schemaFingerprint(schema, document),
+        ...(summary === undefined ? {} : { schema: summary }),
+        schemaFingerprint: fingerprintSchemaSummary(summary),
       };
     });
 }
 
-function parameterSummary(parameters, document) {
+function parameterSummary(parameters, document, resolvedReferenceSummaries) {
   if (!Array.isArray(parameters)) return [];
   return parameters
     .filter(asObject)
-    .map(parameter => ({
-      name: typeof parameter.name === 'string' ? parameter.name : '',
-      in: typeof parameter.in === 'string' ? parameter.in : '',
-      required: Boolean(parameter.required),
-      style: typeof parameter.style === 'string' ? parameter.style : undefined,
-      explode:
-        typeof parameter.explode === 'boolean' ? parameter.explode : undefined,
-      allowEmptyValue:
-        typeof parameter.allowEmptyValue === 'boolean'
-          ? parameter.allowEmptyValue
-          : undefined,
-      ...(parameter.schema === undefined
-        ? {}
-        : { schema: schemaSummary(parameter.schema, document) }),
-      schemaFingerprint: schemaFingerprint(parameter.schema, document),
-      content: contentSummary(parameter.content, document),
-      contractFingerprint: sha256(stripDocumentation(parameter)),
-    }))
+    .map(parameter => {
+      const summary =
+        parameter.schema === undefined
+          ? undefined
+          : schemaSummary(
+              parameter.schema,
+              document,
+              new Set(),
+              resolvedReferenceSummaries,
+            );
+      return {
+        name: typeof parameter.name === 'string' ? parameter.name : '',
+        in: typeof parameter.in === 'string' ? parameter.in : '',
+        required: Boolean(parameter.required),
+        style:
+          typeof parameter.style === 'string' ? parameter.style : undefined,
+        explode:
+          typeof parameter.explode === 'boolean'
+            ? parameter.explode
+            : undefined,
+        allowEmptyValue:
+          typeof parameter.allowEmptyValue === 'boolean'
+            ? parameter.allowEmptyValue
+            : undefined,
+        ...(summary === undefined ? {} : { schema: summary }),
+        schemaFingerprint: fingerprintSchemaSummary(summary),
+        content: contentSummary(
+          parameter.content,
+          document,
+          resolvedReferenceSummaries,
+        ),
+        contractFingerprint: sha256(stripDocumentation(parameter)),
+      };
+    })
     .sort((left, right) =>
-      `${left.in}:${left.name}`.localeCompare(`${right.in}:${right.name}`),
+      compareCodeUnits(`${left.in}:${left.name}`, `${right.in}:${right.name}`),
     );
 }
 
-function requestSummary(requestBody, document) {
+function requestSummary(requestBody, document, resolvedReferenceSummaries) {
   const object = asObject(requestBody);
   if (!object) return null;
   return {
     required: Boolean(object.required),
-    content: contentSummary(object.content, document),
+    content: contentSummary(
+      object.content,
+      document,
+      resolvedReferenceSummaries,
+    ),
     contractFingerprint: sha256(stripDocumentation(object)),
   };
 }
 
-function responseSummary(responses, document) {
+function responseSummary(responses, document, resolvedReferenceSummaries) {
   const object = asObject(responses);
   if (!object) return [];
   return Object.entries(object)
@@ -532,10 +649,21 @@ function responseSummary(responses, document) {
       const responseObject = asObject(response) ?? {};
       return {
         status,
-        content: contentSummary(responseObject.content, document),
+        content: contentSummary(
+          responseObject.content,
+          document,
+          resolvedReferenceSummaries,
+        ),
         ...(responseObject.schema === undefined
           ? {}
-          : { schema: schemaSummary(responseObject.schema, document) }),
+          : {
+              schema: schemaSummary(
+                responseObject.schema,
+                document,
+                new Set(),
+                resolvedReferenceSummaries,
+              ),
+            }),
         headers: Object.keys(asObject(responseObject.headers) ?? {}).sort(),
         contractFingerprint: sha256(stripDocumentation(responseObject)),
       };
@@ -549,18 +677,62 @@ function securitySummary(security) {
     .map(requirement =>
       Object.fromEntries(
         Object.entries(requirement)
-          .sort(([left], [right]) => left.localeCompare(right))
+          .sort(([left], [right]) => compareCodeUnits(left, right))
           .map(([scheme, scopes]) => [
             scheme,
             Array.isArray(scopes)
-              ? scopes.filter(scope => typeof scope === 'string').sort()
+              ? scopes
+                  .filter(scope => typeof scope === 'string')
+                  .sort(compareCodeUnits)
               : [],
           ]),
       ),
     )
     .sort((left, right) =>
-      canonicalJson(left).localeCompare(canonicalJson(right)),
+      compareCodeUnits(canonicalJson(left), canonicalJson(right)),
     );
+}
+
+function resolveParameter(
+  parameter,
+  document,
+  resolvingReferences = new Set(),
+) {
+  const object = asObject(parameter);
+  if (!object) return null;
+  if (typeof object.$ref !== 'string') return object;
+  if (resolvingReferences.has(object.$ref)) fail('REFERENCE_INVALID');
+  const resolved = validateLocalReference(document, object.$ref);
+  if (!asObject(resolved)) fail('DOCUMENT_INVALID');
+  return resolveParameter(
+    resolved,
+    document,
+    new Set(resolvingReferences).add(object.$ref),
+  );
+}
+
+function mergeOperationParameters(
+  pathParameters,
+  operationParameters,
+  document,
+) {
+  const merged = new Map();
+  let anonymousIndex = 0;
+  for (const parameter of [
+    ...(Array.isArray(pathParameters) ? pathParameters : []),
+    ...(Array.isArray(operationParameters) ? operationParameters : []),
+  ]) {
+    const resolved = resolveParameter(parameter, document);
+    if (!resolved) continue;
+    const identity =
+      typeof resolved.in === 'string' && typeof resolved.name === 'string'
+        ? `${resolved.in}\u0000${resolved.name}`
+        : `\u0000anonymous-${anonymousIndex++}`;
+    // Operation parameters are appended last and therefore replace path-level
+    // entries with the same OpenAPI (in, name) identity.
+    merged.set(identity, resolved);
+  }
+  return [...merged.values()];
 }
 
 function operationSummary({
@@ -572,22 +744,34 @@ function operationSummary({
   document,
   documentHash,
   sourceMethod,
+  resolvedReferenceSummaries,
 }) {
   const operationObject = asObject(operation) ?? {};
   const pathObject = asObject(pathItem) ?? {};
-  const parameters = [
-    ...(Array.isArray(pathObject.parameters) ? pathObject.parameters : []),
-    ...(Array.isArray(operationObject.parameters)
-      ? operationObject.parameters
-      : []),
-  ];
+  const parameters = mergeOperationParameters(
+    pathObject.parameters,
+    operationObject.parameters,
+    document,
+  );
   const security = Object.hasOwn(operationObject, 'security')
     ? operationObject.security
     : document.security;
   const normalizedSecurity = securitySummary(security);
-  const parametersResult = parameterSummary(parameters, document);
-  const request = requestSummary(operationObject.requestBody, document);
-  const responses = responseSummary(operationObject.responses, document);
+  const parametersResult = parameterSummary(
+    parameters,
+    document,
+    resolvedReferenceSummaries,
+  );
+  const request = requestSummary(
+    operationObject.requestBody,
+    document,
+    resolvedReferenceSummaries,
+  );
+  const responses = responseSummary(
+    operationObject.responses,
+    document,
+    resolvedReferenceSummaries,
+  );
 
   const result = {
     group,
@@ -641,6 +825,7 @@ export function normalizeOpenApiDocuments(documents) {
 
   for (const entry of documents) {
     const document = validateOpenApiDocument(entry.document ?? entry);
+    const resolvedReferenceSummaries = new Map();
     const group = normalizeLabel(entry.group, 'default');
     const rawHash = entry.documentHash ?? sha256(canonicalJson(document));
     const dialect =
@@ -686,6 +871,7 @@ export function normalizeOpenApiDocuments(documents) {
             document,
             documentHash: rawHash,
             sourceMethod: method,
+            resolvedReferenceSummaries,
           }),
         );
         operationCount += 1;
@@ -703,22 +889,28 @@ export function normalizeOpenApiDocuments(documents) {
   }
 
   operations.sort((left, right) =>
-    [left.group, left.canonicalPath, left.method, left.path, left.operationId]
-      .join('\u0000')
-      .localeCompare(
-        [
-          right.group,
-          right.canonicalPath,
-          right.method,
-          right.path,
-          right.operationId,
-        ].join('\u0000'),
-      ),
+    compareCodeUnits(
+      [
+        left.group,
+        left.canonicalPath,
+        left.method,
+        left.path,
+        left.operationId,
+      ].join('\u0000'),
+      [
+        right.group,
+        right.canonicalPath,
+        right.method,
+        right.path,
+        right.operationId,
+      ].join('\u0000'),
+    ),
   );
   documentSummaries.sort((left, right) =>
-    [left.group, left.documentHash]
-      .join('\u0000')
-      .localeCompare([right.group, right.documentHash].join('\u0000')),
+    compareCodeUnits(
+      [left.group, left.documentHash].join('\u0000'),
+      [right.group, right.documentHash].join('\u0000'),
+    ),
   );
   const contractDocuments = documentSummaries.map(
     ({ group, contractHash, dialect, infoVersion, operationCount }) => ({
@@ -792,9 +984,10 @@ export function discoverDocumentEntries(
   });
 
   resolved.sort((left, right) =>
-    [left.group, left.url]
-      .join('\u0000')
-      .localeCompare([right.group, right.url].join('\u0000')),
+    compareCodeUnits(
+      [left.group, left.url].join('\u0000'),
+      [right.group, right.url].join('\u0000'),
+    ),
   );
   const seenGroups = new Map();
   return resolved.map(entry => {
@@ -804,18 +997,54 @@ export function discoverDocumentEntries(
   });
 }
 
+function isWithinDirectory(directory, candidate) {
+  const relativePath = relative(directory, candidate);
+  return (
+    relativePath === '' ||
+    (relativePath !== '..' &&
+      !relativePath.startsWith(`..${sep}`) &&
+      !isAbsolute(relativePath))
+  );
+}
+
+function assertNoSymbolicLinkComponents(root, candidate) {
+  let current = root;
+  const segments = relative(root, candidate).split(sep).filter(Boolean);
+  for (const segment of [undefined, ...segments]) {
+    if (segment !== undefined) current = join(current, segment);
+    try {
+      if (lstatSync(current).isSymbolicLink()) fail('LOCAL_PATH_INVALID');
+    } catch (error) {
+      if (error instanceof OpenApiContractError) throw error;
+      if (error?.code === 'ENOENT') return;
+      fail('LOCAL_PATH_INVALID');
+    }
+  }
+}
+
 function resolvePaths(options = {}) {
   const root = resolve(options.repoRoot ?? REPO_ROOT);
+  const localRoot = join(root, '.agent-local');
+  const sourcesRoot = join(localRoot, 'sources');
+  const cacheRoot = join(localRoot, 'openapi-cache');
   const sourcePath = options.sourcePath
     ? isAbsolute(options.sourcePath)
       ? options.sourcePath
       : resolve(root, options.sourcePath)
-    : join(root, '.agent-local', 'sources', 'openapi-source.json');
+    : join(sourcesRoot, 'openapi-source.json');
   const cacheDir = options.cacheDir
     ? isAbsolute(options.cacheDir)
       ? options.cacheDir
       : resolve(root, options.cacheDir)
-    : join(root, '.agent-local', 'openapi-cache');
+    : cacheRoot;
+  if (
+    !isWithinDirectory(sourcesRoot, sourcePath) ||
+    !isWithinDirectory(cacheRoot, cacheDir)
+  ) {
+    fail('LOCAL_PATH_INVALID');
+  }
+  assertNoSymbolicLinkComponents(root, sourcePath);
+  assertNoSymbolicLinkComponents(root, cacheDir);
   return { root, sourcePath, cacheDir };
 }
 
@@ -834,12 +1063,7 @@ function readJsonFile(path, code) {
 }
 
 export function loadSource({ sourcePath, repoRoot = REPO_ROOT } = {}) {
-  const resolvedSourcePath =
-    sourcePath ??
-    join(resolve(repoRoot), '.agent-local', 'sources', 'openapi-source.json');
-  const resolved = isAbsolute(resolvedSourcePath)
-    ? resolvedSourcePath
-    : resolve(repoRoot, resolvedSourcePath);
+  const { sourcePath: resolved } = resolvePaths({ repoRoot, sourcePath });
   return validateSource(readJsonFile(resolved, 'SOURCE_NOT_FOUND'));
 }
 
@@ -983,6 +1207,7 @@ function readCurrentCache(cacheDir) {
   const path = join(cacheDir, 'current.json');
   if (!existsSync(path)) return null;
   try {
+    assertNoSymbolicLinkComponents(cacheDir, path);
     const current = readJsonFile(path, 'CACHE_INVALID');
     if (
       !asObject(current) ||
@@ -1004,6 +1229,7 @@ function readCacheMetadata(cacheDir) {
   const path = join(cacheDir, 'metadata.json');
   if (!existsSync(path)) return null;
   try {
+    assertNoSymbolicLinkComponents(cacheDir, path);
     return readJsonFile(path, 'CACHE_INVALID');
   } catch {
     return null;
@@ -1015,6 +1241,7 @@ function readLatest(cacheDir) {
     const current = readCurrentCache(cacheDir);
     const path = join(cacheDir, 'latest.json');
     if (!current && !existsSync(path)) return null;
+    if (!current) assertNoSymbolicLinkComponents(cacheDir, path);
     const latest = current?.latest ?? readJsonFile(path, 'CACHE_INVALID');
     if (
       !asObject(latest) ||
@@ -1031,8 +1258,12 @@ function readLatest(cacheDir) {
   }
 }
 
-function atomicWrite(path, contents) {
-  mkdirSync(dirname(path), { recursive: true });
+function atomicWrite(path, contents, cacheDir) {
+  if (!isWithinDirectory(cacheDir, path)) fail('LOCAL_PATH_INVALID');
+  const parent = dirname(path);
+  assertNoSymbolicLinkComponents(cacheDir, parent);
+  mkdirSync(parent, { recursive: true });
+  assertNoSymbolicLinkComponents(cacheDir, parent);
   const temporaryPath = `${path}.${process.pid}.${randomUUID()}.tmp`;
   try {
     writeFileSync(temporaryPath, contents, { encoding: 'utf8', mode: 0o600 });
@@ -1048,21 +1279,65 @@ function atomicWrite(path, contents) {
   }
 }
 
-function atomicWriteJson(path, value) {
-  atomicWrite(path, `${JSON.stringify(value, null, 2)}\n`);
+function atomicWriteJson(path, value, cacheDir) {
+  atomicWrite(path, `${JSON.stringify(value, null, 2)}\n`, cacheDir);
+}
+
+function readRefreshLock(lockPath) {
+  try {
+    const value = JSON.parse(readFileSync(lockPath, 'utf8'));
+    return asObject(value);
+  } catch {
+    return null;
+  }
+}
+
+function acquireRefreshLock(root, cacheDir, now) {
+  assertNoSymbolicLinkComponents(root, cacheDir);
+  mkdirSync(cacheDir, { recursive: true });
+  assertNoSymbolicLinkComponents(root, cacheDir);
+  const lockPath = join(cacheDir, '.refresh.lock');
+  const token = randomUUID();
+  const owner = {
+    pid: process.pid,
+    token,
+    startedAt: iso(now),
+  };
+
+  try {
+    writeFileSync(lockPath, `${JSON.stringify(owner)}\n`, {
+      encoding: 'utf8',
+      flag: 'wx',
+      mode: 0o600,
+    });
+  } catch (error) {
+    if (error?.code === 'EEXIST') fail('REFRESH_IN_PROGRESS');
+    throw error;
+  }
+  return () => {
+    try {
+      if (readRefreshLock(lockPath)?.token === token) unlinkSync(lockPath);
+    } catch {
+      // A replaced or already removed lock belongs to no work in this run.
+    }
+  };
 }
 
 function commitCurrentCache(cacheDir, latest, metadata) {
   // One atomic pointer prevents a new index from being paired with metadata
   // from another refresh generation. Standalone files are compatibility mirrors.
-  atomicWriteJson(join(cacheDir, 'current.json'), {
-    schemaVersion: CACHE_SCHEMA_VERSION,
-    latest,
-    metadata,
-  });
+  atomicWriteJson(
+    join(cacheDir, 'current.json'),
+    {
+      schemaVersion: CACHE_SCHEMA_VERSION,
+      latest,
+      metadata,
+    },
+    cacheDir,
+  );
   try {
-    atomicWriteJson(join(cacheDir, 'latest.json'), latest);
-    atomicWriteJson(join(cacheDir, 'metadata.json'), metadata);
+    atomicWriteJson(join(cacheDir, 'latest.json'), latest, cacheDir);
+    atomicWriteJson(join(cacheDir, 'metadata.json'), metadata, cacheDir);
   } catch {
     // current.json remains a complete, authoritative generation.
   }
@@ -1229,6 +1504,7 @@ function failureState(existingLatest, error) {
     'REDIRECT_INVALID',
     'REDIRECT_LIMIT',
     'CROSS_ORIGIN_REDIRECT',
+    'REFRESH_IN_PROGRESS',
   ]);
   return unavailable.has(sanitizedFailureCode(error))
     ? 'unavailable'
@@ -1237,143 +1513,214 @@ function failureState(existingLatest, error) {
 
 /** Fetch, validate, normalize, and atomically cache all configured documents. */
 export async function refreshOpenApi(options = {}) {
-  const paths = resolvePaths(options);
   const checkedAt = nowDate(options.now);
-  const existingMetadata = readCacheMetadata(paths.cacheDir);
-  const existingLatest = readLatest(paths.cacheDir);
-  let source;
+  let paths;
   try {
-    source = loadSource({ sourcePath: paths.sourcePath, repoRoot: paths.root });
-    const sourceUrl = new URL(source.swaggerUiUrl);
-    const configUrl = source.swaggerConfigUrl
-      ? new URL(source.swaggerConfigUrl)
-      : new URL('/v3/api-docs/swagger-config', sourceUrl.origin);
-    const requestOptions = {
-      sourceOrigin: sourceUrl.origin,
-      auth: source.auth,
-      env: options.env,
-      fetchImpl: options.fetchImpl,
-      timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-      maxResponseBytes: options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES,
-      maxRedirects: options.maxRedirects ?? DEFAULT_MAX_REDIRECTS,
-    };
-    const configResponse = await fetchJson(configUrl.href, requestOptions);
-    const entries = discoverDocumentEntries(configResponse.value, {
-      configUrl: configUrl.href,
-      sourceOrigin: sourceUrl.origin,
-    });
-    const fetchedDocuments = [];
-    // The discovery document contains source URLs rather than the API contract.
-    // Do not persist it; only validated OpenAPI documents belong in raw history.
-    const rawDocuments = [];
-    for (const entry of entries) {
-      const response = await fetchJson(entry.url, requestOptions);
-      const document = validateOpenApiDocument(response.value);
-      const hash = sha256(response.text);
-      fetchedDocuments.push({
-        group: entry.group,
-        document,
-        documentHash: hash,
-      });
-      rawDocuments.push({ text: response.text, hash });
-    }
-    const normalized = normalizeOpenApiDocuments(fetchedDocuments);
-    const fetchedAt = checkedAt;
-    const freshUntil = new Date(
-      fetchedAt.getTime() + source.freshness.maxAgeSeconds * 1000,
-    );
-    const latest = {
-      schemaVersion: CACHE_SCHEMA_VERSION,
-      sourceId: source.sourceId,
-      targetEnvironment: source.targetEnvironment,
-      fetchedAt: iso(fetchedAt),
-      documents: normalized.documents,
-      operations: normalized.operations,
-      normalizedHash: normalized.normalizedHash,
-    };
-    const normalizedSnapshot = {
-      schemaVersion: CACHE_SCHEMA_VERSION,
-      sourceId: source.sourceId,
-      targetEnvironment: source.targetEnvironment,
-      documents: normalized.documents.map(
-        ({ group, contractHash, dialect, infoVersion, operationCount }) => ({
-          group,
-          contractHash,
-          dialect,
-          ...(infoVersion ? { infoVersion } : {}),
-          operationCount,
-        }),
-      ),
-      operations: normalized.operations,
-      normalizedHash: normalized.normalizedHash,
-    };
-    const metadata = {
-      schemaVersion: CACHE_SCHEMA_VERSION,
-      state: 'fresh',
-      sourceId: source.sourceId,
-      targetEnvironment: source.targetEnvironment,
-      checkedAt: iso(checkedAt),
-      fetchedAt: iso(fetchedAt),
-      freshUntil: iso(freshUntil),
-      documentHashes: fetchedDocuments.map(entry => entry.documentHash).sort(),
-      documentCount: fetchedDocuments.length,
-      operationCount: normalized.operations.length,
-      normalizedHash: normalized.normalizedHash,
-      ...(existingLatest?.normalizedHash &&
-      existingLatest.normalizedHash !== normalized.normalizedHash
-        ? { previousNormalizedHash: existingLatest.normalizedHash }
-        : existingMetadata?.previousNormalizedHash
-          ? { previousNormalizedHash: existingMetadata.previousNormalizedHash }
-          : {}),
-    };
-    const evidence = deploymentEvidence(source, {
-      repoRoot: paths.root,
-      execFileSyncImpl: options.execFileSyncImpl,
-    });
-    if (evidence) metadata.deploymentEvidence = evidence;
-
-    for (const raw of rawDocuments) {
-      const rawPath = join(paths.cacheDir, 'raw', `${raw.hash}.json`);
-      if (!existsSync(rawPath)) atomicWrite(rawPath, raw.text);
-    }
-    const normalizedPath = join(
-      paths.cacheDir,
-      'normalized',
-      `${normalized.normalizedHash}.json`,
-    );
-    if (!existsSync(normalizedPath)) {
-      atomicWriteJson(normalizedPath, normalizedSnapshot);
-    }
-    commitCurrentCache(paths.cacheDir, latest, metadata);
-    return { state: 'fresh', metadata, latest };
+    paths = resolvePaths(options);
   } catch (error) {
     const contractError =
       error instanceof OpenApiContractError
         ? error
         : new OpenApiContractError('INTERNAL_ERROR');
     const metadata = baseFailureMetadata({
-      existingMetadata,
-      existingLatest,
-      source,
+      existingMetadata: null,
+      existingLatest: null,
+      source: undefined,
       checkedAt,
-      state: failureState(existingLatest, contractError),
+      state: 'invalid',
       failureCode: sanitizedFailureCode(contractError),
     });
-    try {
-      if (existingLatest) {
-        commitCurrentCache(paths.cacheDir, existingLatest, metadata);
-      } else {
-        atomicWriteJson(join(paths.cacheDir, 'metadata.json'), metadata);
-      }
-    } catch {
-      // Preserve the original, sanitized failure for the caller.
-    }
+    return {
+      state: metadata.state,
+      metadata,
+      error: contractError,
+      preserved: false,
+    };
+  }
+
+  let releaseRefreshLock;
+  try {
+    releaseRefreshLock = acquireRefreshLock(
+      paths.root,
+      paths.cacheDir,
+      checkedAt,
+    );
+  } catch (error) {
+    const contractError =
+      error instanceof OpenApiContractError
+        ? error
+        : new OpenApiContractError('INTERNAL_ERROR');
+    const existingMetadata = readCacheMetadata(paths.cacheDir);
+    const existingLatest = readLatest(paths.cacheDir);
+    const metadata = baseFailureMetadata({
+      existingMetadata,
+      existingLatest,
+      source: undefined,
+      checkedAt,
+      state: 'unavailable',
+      failureCode: sanitizedFailureCode(contractError),
+    });
     return {
       state: metadata.state,
       metadata,
       error: contractError,
       preserved: Boolean(existingLatest),
     };
+  }
+
+  try {
+    const existingMetadata = readCacheMetadata(paths.cacheDir);
+    const existingLatest = readLatest(paths.cacheDir);
+    let source;
+    try {
+      source = loadSource({
+        sourcePath: paths.sourcePath,
+        repoRoot: paths.root,
+      });
+      const sourceUrl = new URL(source.swaggerUiUrl);
+      const configUrl = source.swaggerConfigUrl
+        ? new URL(source.swaggerConfigUrl)
+        : new URL('/v3/api-docs/swagger-config', sourceUrl.origin);
+      const requestOptions = {
+        sourceOrigin: sourceUrl.origin,
+        auth: source.auth,
+        env: options.env,
+        fetchImpl: options.fetchImpl,
+        timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+        maxResponseBytes:
+          options.maxResponseBytes ?? DEFAULT_MAX_RESPONSE_BYTES,
+        maxRedirects: options.maxRedirects ?? DEFAULT_MAX_REDIRECTS,
+      };
+      const configResponse = await fetchJson(configUrl.href, requestOptions);
+      const entries = discoverDocumentEntries(configResponse.value, {
+        configUrl: configUrl.href,
+        sourceOrigin: sourceUrl.origin,
+      });
+      const fetchedDocuments = [];
+      // The discovery document contains source URLs rather than the API contract.
+      // Do not persist it; only validated OpenAPI documents belong in raw history.
+      const rawDocuments = [];
+      for (const entry of entries) {
+        const response = await fetchJson(entry.url, requestOptions);
+        const document = validateOpenApiDocument(response.value);
+        const hash = sha256(response.text);
+        fetchedDocuments.push({
+          group: entry.group,
+          document,
+          documentHash: hash,
+        });
+        rawDocuments.push({ text: response.text, hash });
+      }
+      const normalized = normalizeOpenApiDocuments(fetchedDocuments);
+      const fetchedAt = checkedAt;
+      const freshUntil = new Date(
+        fetchedAt.getTime() + source.freshness.maxAgeSeconds * 1000,
+      );
+      const latest = {
+        schemaVersion: CACHE_SCHEMA_VERSION,
+        sourceId: source.sourceId,
+        targetEnvironment: source.targetEnvironment,
+        fetchedAt: iso(fetchedAt),
+        documents: normalized.documents,
+        operations: normalized.operations,
+        normalizedHash: normalized.normalizedHash,
+      };
+      const normalizedSnapshot = {
+        schemaVersion: CACHE_SCHEMA_VERSION,
+        sourceId: source.sourceId,
+        targetEnvironment: source.targetEnvironment,
+        documents: normalized.documents.map(
+          ({ group, contractHash, dialect, infoVersion, operationCount }) => ({
+            group,
+            contractHash,
+            dialect,
+            ...(infoVersion ? { infoVersion } : {}),
+            operationCount,
+          }),
+        ),
+        operations: normalized.operations,
+        normalizedHash: normalized.normalizedHash,
+      };
+      const metadata = {
+        schemaVersion: CACHE_SCHEMA_VERSION,
+        state: 'fresh',
+        sourceId: source.sourceId,
+        targetEnvironment: source.targetEnvironment,
+        checkedAt: iso(checkedAt),
+        fetchedAt: iso(fetchedAt),
+        freshUntil: iso(freshUntil),
+        documentHashes: fetchedDocuments
+          .map(entry => entry.documentHash)
+          .sort(compareCodeUnits),
+        documentCount: fetchedDocuments.length,
+        operationCount: normalized.operations.length,
+        normalizedHash: normalized.normalizedHash,
+        ...(existingLatest?.normalizedHash &&
+        existingLatest.normalizedHash !== normalized.normalizedHash
+          ? { previousNormalizedHash: existingLatest.normalizedHash }
+          : existingMetadata?.previousNormalizedHash
+            ? {
+                previousNormalizedHash: existingMetadata.previousNormalizedHash,
+              }
+            : {}),
+      };
+      const evidence = deploymentEvidence(source, {
+        repoRoot: paths.root,
+        execFileSyncImpl: options.execFileSyncImpl,
+      });
+      if (evidence) metadata.deploymentEvidence = evidence;
+
+      for (const raw of rawDocuments) {
+        const rawPath = join(paths.cacheDir, 'raw', `${raw.hash}.json`);
+        if (!existsSync(rawPath)) {
+          atomicWrite(rawPath, raw.text, paths.cacheDir);
+        }
+      }
+      const normalizedPath = join(
+        paths.cacheDir,
+        'normalized',
+        `${normalized.normalizedHash}.json`,
+      );
+      if (!existsSync(normalizedPath)) {
+        atomicWriteJson(normalizedPath, normalizedSnapshot, paths.cacheDir);
+      }
+      commitCurrentCache(paths.cacheDir, latest, metadata);
+      return { state: 'fresh', metadata, latest };
+    } catch (error) {
+      const contractError =
+        error instanceof OpenApiContractError
+          ? error
+          : new OpenApiContractError('INTERNAL_ERROR');
+      const metadata = baseFailureMetadata({
+        existingMetadata,
+        existingLatest,
+        source,
+        checkedAt,
+        state: failureState(existingLatest, contractError),
+        failureCode: sanitizedFailureCode(contractError),
+      });
+      try {
+        if (existingLatest) {
+          commitCurrentCache(paths.cacheDir, existingLatest, metadata);
+        } else {
+          atomicWriteJson(
+            join(paths.cacheDir, 'metadata.json'),
+            metadata,
+            paths.cacheDir,
+          );
+        }
+      } catch {
+        // Preserve the original, sanitized failure for the caller.
+      }
+      return {
+        state: metadata.state,
+        metadata,
+        error: contractError,
+        preserved: Boolean(existingLatest),
+      };
+    }
+  } finally {
+    releaseRefreshLock();
   }
 }
 
@@ -1459,7 +1806,13 @@ export function getCacheStatus(options = {}) {
       const nextMetadata = { ...metadata, state: summary.state };
       const latest = readLatest(paths.cacheDir);
       if (latest) commitCurrentCache(paths.cacheDir, latest, nextMetadata);
-      else atomicWriteJson(join(paths.cacheDir, 'metadata.json'), nextMetadata);
+      else {
+        atomicWriteJson(
+          join(paths.cacheDir, 'metadata.json'),
+          nextMetadata,
+          paths.cacheDir,
+        );
+      }
     } catch {
       // Status remains useful even if the freshness marker cannot be persisted.
     }

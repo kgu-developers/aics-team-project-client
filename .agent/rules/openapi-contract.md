@@ -111,6 +111,11 @@ it must reject HTML or YAML instead of guessing at an unsafe parser. Preserve th
 previous successful cache for comparison; never replace it with an error page or an
 incomplete document.
 
+A refresh never removes an existing `.refresh.lock` automatically. If
+`REFRESH_IN_PROGRESS` persists after the owning refresh has stopped, first verify that no
+refresh process is running and only then remove
+`.agent-local/openapi-cache/.refresh.lock` as a local recovery action.
+
 ## Normalization and comparison
 
 Build an operation index keyed by `METHOD normalized-path`. Preserve `operationId`,

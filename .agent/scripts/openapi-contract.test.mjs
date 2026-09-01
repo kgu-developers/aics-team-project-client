@@ -1,11 +1,19 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { after, before, test } from 'node:test';
 
 import {
+  canonicalJson,
   canonicalizePath,
   discoverDocumentEntries,
   getCacheStatus,
@@ -124,11 +132,16 @@ async function stopServer(server) {
 
 async function createTestWorkspace(name) {
   const root = await mkdtemp(join(tmpdir(), `openapi-contract-${name}-`));
-  const sourcePath = join(root, 'sources', 'openapi-source.json');
-  const cacheDir = join(root, 'cache');
-  await mkdir(join(root, 'sources'), { recursive: true });
+  const sourcePath = join(
+    root,
+    '.agent-local',
+    'sources',
+    'openapi-source.json',
+  );
+  const cacheDir = join(root, '.agent-local', 'openapi-cache');
+  await mkdir(dirname(sourcePath), { recursive: true });
   await writeSource(sourcePath);
-  return { root, sourcePath, cacheDir };
+  return { repoRoot: root, sourcePath, cacheDir };
 }
 
 async function writeSource(sourcePath, overrides = {}) {
@@ -326,6 +339,181 @@ test('canonicalization and normalized index are stable regardless of object inse
   );
 });
 
+test('canonical JSON uses locale-independent code-unit ordering', () => {
+  assert.equal(
+    canonicalJson({ 한: 4, ä: 3, a: 2, Z: 1 }),
+    '{"Z":1,"a":2,"ä":3,"한":4}',
+  );
+});
+
+test('documentation-like schema property names remain contract-significant', () => {
+  const original = fixtureDocument('Documentation-like properties');
+  Object.assign(original.components.schemas.TeamUpdate.properties, {
+    description: { type: 'string', description: 'ignored annotation' },
+    summary: { type: 'string' },
+    example: { type: 'string' },
+    examples: { type: 'array', items: { type: 'string' } },
+    externalDocs: { type: 'string' },
+  });
+  const typeChanged = structuredClone(original);
+  typeChanged.components.schemas.TeamUpdate.properties.description.type =
+    'integer';
+  const documentationChanged = structuredClone(original);
+  documentationChanged.components.schemas.TeamUpdate.properties.description.description =
+    'changed annotation only';
+
+  const normalize = (document, documentHash) =>
+    normalizeOpenApiDocuments([{ group: 'public', document, documentHash }]);
+  const originalIndex = normalize(original, 'd'.repeat(64));
+  const typeChangedIndex = normalize(typeChanged, 'e'.repeat(64));
+  const documentationChangedIndex = normalize(
+    documentationChanged,
+    'f'.repeat(64),
+  );
+  const updateOperation = originalIndex.operations.find(
+    operation => operation.operationId === 'updateTeam',
+  );
+  const properties =
+    updateOperation.request.content[0].schema.resolved.properties;
+
+  assert.deepEqual(
+    Object.keys(properties).filter(key =>
+      [
+        'description',
+        'summary',
+        'example',
+        'examples',
+        'externalDocs',
+      ].includes(key),
+    ),
+    ['description', 'example', 'examples', 'externalDocs', 'summary'],
+  );
+  assert.notEqual(
+    originalIndex.documents[0].contractHash,
+    typeChangedIndex.documents[0].contractHash,
+  );
+  assert.notEqual(
+    originalIndex.normalizedHash,
+    typeChangedIndex.normalizedHash,
+  );
+  assert.notEqual(
+    updateOperation.request.content[0].schemaFingerprint,
+    typeChangedIndex.operations.find(
+      operation => operation.operationId === 'updateTeam',
+    ).request.content[0].schemaFingerprint,
+  );
+  assert.equal(
+    originalIndex.normalizedHash,
+    documentationChangedIndex.normalizedHash,
+  );
+});
+
+test('object-valued enum, const, and default entries preserve documentation-like contract keys', () => {
+  const original = fixtureDocument('Literal schema values');
+  original.components.schemas.TeamUpdate.properties.payload = {
+    type: 'object',
+    enum: [{ description: 'alpha', nested: { summary: 'nested-alpha' } }],
+    const: { example: 'fixed-example' },
+    default: { externalDocs: 'fallback-docs' },
+  };
+  const changed = structuredClone(original);
+  changed.components.schemas.TeamUpdate.properties.payload.enum[0].description =
+    'beta';
+
+  const normalize = (document, documentHash) =>
+    normalizeOpenApiDocuments([{ group: 'public', document, documentHash }]);
+  const originalIndex = normalize(original, '2'.repeat(64));
+  const changedIndex = normalize(changed, '3'.repeat(64));
+  const updateOperation = originalIndex.operations.find(
+    operation => operation.operationId === 'updateTeam',
+  );
+  const changedOperation = changedIndex.operations.find(
+    operation => operation.operationId === 'updateTeam',
+  );
+  const payload =
+    updateOperation.request.content[0].schema.resolved.properties.payload;
+
+  assert.deepEqual(payload.enum, [
+    { description: 'alpha', nested: { summary: 'nested-alpha' } },
+  ]);
+  assert.deepEqual(payload.const, { example: 'fixed-example' });
+  assert.deepEqual(payload.default, { externalDocs: 'fallback-docs' });
+  assert.notEqual(
+    originalIndex.documents[0].contractHash,
+    changedIndex.documents[0].contractHash,
+  );
+  assert.notEqual(originalIndex.normalizedHash, changedIndex.normalizedHash);
+  assert.notEqual(
+    updateOperation.request.content[0].schemaFingerprint,
+    changedOperation.request.content[0].schemaFingerprint,
+  );
+});
+
+test('parameter references resolve and operation parameters override path parameters', () => {
+  const document = fixtureDocument('Parameter references');
+  document.components.parameters = {
+    TeamId: {
+      name: 'teamId',
+      in: 'path',
+      required: true,
+      schema: { type: 'string' },
+    },
+    TraceId: {
+      name: 'traceId',
+      in: 'header',
+      required: false,
+      schema: { type: 'string', format: 'uuid' },
+    },
+  };
+  const pathItem = document.paths['/teams/{teamId}/members/{memberId}'];
+  pathItem.parameters = [{ $ref: '#/components/parameters/TeamId' }];
+  pathItem.get.parameters.push(
+    {
+      name: 'teamId',
+      in: 'path',
+      required: true,
+      schema: { type: 'integer', format: 'int64' },
+    },
+    { $ref: '#/components/parameters/TraceId' },
+    {
+      name: 'teamId',
+      in: 'query',
+      required: false,
+      schema: { type: 'string' },
+    },
+  );
+
+  const index = normalizeOpenApiDocuments([
+    { group: 'public', document, documentHash: '1'.repeat(64) },
+  ]);
+  const operation = index.operations.find(
+    candidate => candidate.operationId === 'listMembers',
+  );
+  const pathTeamIds = operation.parameters.filter(
+    parameter => parameter.in === 'path' && parameter.name === 'teamId',
+  );
+
+  assert.equal(pathTeamIds.length, 1);
+  assert.deepEqual(pathTeamIds[0].schema, {
+    format: 'int64',
+    type: 'integer',
+  });
+  assert.deepEqual(
+    operation.parameters.find(parameter => parameter.name === 'traceId').schema,
+    { format: 'uuid', type: 'string' },
+  );
+  assert.ok(
+    operation.parameters.some(
+      parameter => parameter.in === 'query' && parameter.name === 'teamId',
+    ),
+  );
+  assert.ok(
+    operation.parameters.some(
+      parameter => parameter.in === 'path' && parameter.name === 'memberId',
+    ),
+  );
+});
+
 test('external and unresolved document references are rejected', () => {
   const external = fixtureDocument('External reference');
   external.paths['/teams/{teamId}'].post.requestBody.content[
@@ -415,6 +603,142 @@ test('the atomic current manifest remains authoritative over torn legacy mirrors
   assert.equal(failed.state, 'stale');
   assert.equal(failed.preserved, true);
   assert.equal(getCacheStatus(workspace).state, 'stale');
+});
+
+test('overlapping refreshes cannot overwrite the active cache generation', async () => {
+  primaryMode = 'valid';
+  const workspace = await createTestWorkspace('refresh-lock');
+  let markFetchStarted;
+  let releaseFetch;
+  const fetchStarted = new Promise(resolve => {
+    markFetchStarted = resolve;
+  });
+  const fetchGate = new Promise(resolve => {
+    releaseFetch = resolve;
+  });
+  const firstRefresh = refreshOpenApi({
+    ...workspace,
+    fetchImpl: async (...args) => {
+      markFetchStarted();
+      await fetchGate;
+      return fetch(...args);
+    },
+  });
+
+  await fetchStarted;
+  const overlapping = await refreshOpenApi(workspace);
+  releaseFetch();
+  const completed = await firstRefresh;
+
+  assert.equal(overlapping.state, 'unavailable');
+  assert.equal(overlapping.error.code, 'REFRESH_IN_PROGRESS');
+  assert.equal(completed.state, 'fresh');
+  assert.equal(getCacheStatus(workspace).state, 'fresh');
+});
+
+test('an existing refresh lock is never reclaimed by competing refreshes', async () => {
+  const workspace = await createTestWorkspace('existing-refresh-lock');
+  await mkdir(workspace.cacheDir, { recursive: true });
+  const lockPath = join(workspace.cacheDir, '.refresh.lock');
+  const existingLock = `${JSON.stringify({
+    pid: 999_999,
+    token: 'existing-owner',
+    startedAt: '2000-01-01T00:00:00.000Z',
+  })}\n`;
+  await writeFile(lockPath, existingLock);
+
+  const results = await Promise.all([
+    refreshOpenApi(workspace),
+    refreshOpenApi(workspace),
+  ]);
+
+  assert.deepEqual(
+    results.map(result => [result.state, result.error.code]),
+    [
+      ['unavailable', 'REFRESH_IN_PROGRESS'],
+      ['unavailable', 'REFRESH_IN_PROGRESS'],
+    ],
+  );
+  assert.equal(await readFile(lockPath, 'utf8'), existingLock);
+});
+
+test('source and cache overrides cannot escape the local agent workspace', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'openapi-contract-path-boundary-'));
+  const outsideSource = join(root, 'outside-source.json');
+  const outsideCache = join(root, 'outside-cache');
+  const invalidSource = await refreshOpenApi({
+    repoRoot: root,
+    sourcePath: outsideSource,
+  });
+  const invalidCache = await refreshOpenApi({
+    repoRoot: root,
+    cacheDir: outsideCache,
+  });
+
+  assert.equal(invalidSource.error.code, 'LOCAL_PATH_INVALID');
+  assert.equal(invalidSource.state, 'invalid');
+  assert.equal(invalidCache.error.code, 'LOCAL_PATH_INVALID');
+  assert.equal(invalidCache.state, 'invalid');
+  assert.throws(
+    () => getCacheStatus({ repoRoot: root, cacheDir: outsideCache }),
+    error => error.code === 'LOCAL_PATH_INVALID',
+  );
+});
+
+test('source and cache paths cannot escape through symbolic links', async () => {
+  const sourceRoot = await mkdtemp(
+    join(tmpdir(), 'openapi-contract-source-symlink-'),
+  );
+  const externalSources = await mkdtemp(
+    join(tmpdir(), 'openapi-contract-external-sources-'),
+  );
+  await mkdir(join(sourceRoot, '.agent-local'), { recursive: true });
+  await writeSource(join(externalSources, 'openapi-source.json'));
+  await symlink(externalSources, join(sourceRoot, '.agent-local', 'sources'));
+
+  const sourceResult = await refreshOpenApi({ repoRoot: sourceRoot });
+  assert.equal(sourceResult.state, 'invalid');
+  assert.equal(sourceResult.error.code, 'LOCAL_PATH_INVALID');
+
+  const cacheRoot = await mkdtemp(
+    join(tmpdir(), 'openapi-contract-cache-symlink-'),
+  );
+  const sourcePath = join(
+    cacheRoot,
+    '.agent-local',
+    'sources',
+    'openapi-source.json',
+  );
+  const externalCache = await mkdtemp(
+    join(tmpdir(), 'openapi-contract-external-cache-'),
+  );
+  await mkdir(dirname(sourcePath), { recursive: true });
+  await writeSource(sourcePath);
+  await symlink(
+    externalCache,
+    join(cacheRoot, '.agent-local', 'openapi-cache'),
+  );
+
+  const cacheResult = await refreshOpenApi({ repoRoot: cacheRoot });
+  assert.equal(cacheResult.state, 'invalid');
+  assert.equal(cacheResult.error.code, 'LOCAL_PATH_INVALID');
+  assert.deepEqual(await readdir(externalCache), []);
+});
+
+test('cache writes reject symbolic-link subdirectories', async () => {
+  primaryMode = 'valid';
+  const workspace = await createTestWorkspace('nested-cache-symlink');
+  const externalRaw = await mkdtemp(
+    join(tmpdir(), 'openapi-contract-external-raw-'),
+  );
+  await mkdir(workspace.cacheDir, { recursive: true });
+  await symlink(externalRaw, join(workspace.cacheDir, 'raw'));
+
+  const result = await refreshOpenApi(workspace);
+
+  assert.equal(result.state, 'invalid');
+  assert.equal(result.error.code, 'LOCAL_PATH_INVALID');
+  assert.deepEqual(await readdir(externalRaw), []);
 });
 
 test('bearer env values, source URLs, and upstream error bodies never enter metadata or status output', async () => {
