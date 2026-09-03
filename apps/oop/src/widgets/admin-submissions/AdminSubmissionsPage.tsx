@@ -293,7 +293,7 @@ export default function AdminSubmissionsPage() {
                       label='순서 배정 및 평가'
                       onClick={() => setIsEvaluationSettingsOpen(true)}
                     />
-                    <Button disabled label='일괄 다운로드' />
+                    <Button disabled label='엑셀 다운로드' />
                   </div>
                 </div>
                 {presentationEvaluationsQuery.isPending ? (
@@ -422,7 +422,7 @@ export default function AdminSubmissionsPage() {
               <div className={styles.evaluationHeader}>
                 <Heading level={2}>{activeTab.label} 목록</Heading>
                 {activeMilestoneId === 'peer-review' ? (
-                  <Button disabled label='일괄 다운로드' />
+                  <Button disabled label='엑셀 다운로드' />
                 ) : null}
               </div>
               {accessibleSectionIds.length === 0 ? (
@@ -481,8 +481,15 @@ export default function AdminSubmissionsPage() {
                           ),
                         )}
                         action={
-                          activeMilestoneId === 'final-report' ? (
-                            <AdminMilestoneSubmissionBulkDownloadAction />
+                          activeMilestoneId === 'final-report' ||
+                          activeMilestoneId === 'presentation-submit' ? (
+                            <AdminMilestoneSubmissionBulkDownloadAction
+                              label={
+                                activeMilestoneId === 'presentation-submit'
+                                  ? '일괄 다운로드'
+                                  : undefined
+                              }
+                            />
                           ) : (
                             <AdminMilestoneSubmissionDetailAction
                               milestoneId={activeTab.id}

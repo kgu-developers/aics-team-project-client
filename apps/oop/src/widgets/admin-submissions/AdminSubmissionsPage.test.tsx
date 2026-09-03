@@ -388,7 +388,8 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('link', { name: 'https://youtu.be/demo-oop-01-1' }),
     ).toHaveAttribute('href', 'https://youtu.be/demo-oop-01-1');
-    expect(screen.getByText('3. 주요 화면')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '시연 URL' })).toBeInTheDocument();
+    expect(screen.queryByText('3. 주요 화면')).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getByText('제출 상태 · 최초 제출')).toBeInTheDocument();
   });

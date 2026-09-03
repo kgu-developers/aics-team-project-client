@@ -413,35 +413,16 @@ export default function AdminSubmissionDetailPage() {
           </Text>
           <SubmissionStatus resubmittedAt={detail.resubmittedAt} />
         </div>
-        {presentation.blocks.map(block => (
-          <section className={styles.section} key={block.title}>
-            <Heading level={3}>{block.title}</Heading>
-            <Text className={styles.sectionDescription}>
-              {block.description}
-            </Text>
-            {block.title === '4. 시연 영상' && (
-              <div className={`${styles.field} ${styles.fullWidthField}`}>
-                <Text className={styles.fieldLabel}>시연 링크</Text>
-                {presentation.videoUrl ? (
-                  <AdminSubmissionExternalLink url={presentation.videoUrl} />
-                ) : (
-                  <Text className={styles.fieldValue}>-</Text>
-                )}
-              </div>
+        <section className={styles.section}>
+          <Heading level={3}>시연 URL</Heading>
+          <div className={`${styles.field} ${styles.fullWidthField}`}>
+            {presentation.videoUrl ? (
+              <AdminSubmissionExternalLink url={presentation.videoUrl} />
+            ) : (
+              <Text className={styles.fieldValue}>-</Text>
             )}
-            <div className={styles.fieldGrid}>
-              {block.fields.map(field => (
-                <div
-                  className={`${styles.field} ${styles.fullWidthField}`}
-                  key={field.label}
-                >
-                  <Text className={styles.fieldLabel}>{field.label}</Text>
-                  <Text className={styles.fieldValue}>{field.value}</Text>
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
+          </div>
+        </section>
         <section className={styles.section}>
           <Heading level={3}>제출 파일</Heading>
           <div className={styles.fieldGrid}>

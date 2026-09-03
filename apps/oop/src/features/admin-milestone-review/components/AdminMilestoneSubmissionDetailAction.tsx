@@ -39,14 +39,18 @@ export function AdminMilestoneSubmissionDetailAction({
   );
 }
 
-export function AdminMilestoneSubmissionBulkDownloadAction() {
+export function AdminMilestoneSubmissionBulkDownloadAction({
+  label = '일괄 다운로드',
+}: {
+  label?: string;
+}) {
   return (
     <button
       className={`${styles.detailLink} ${styles.detailButtonDisabled}`}
       disabled
       type='button'
     >
-      일괄 다운로드
+      {label}
     </button>
   );
 }
