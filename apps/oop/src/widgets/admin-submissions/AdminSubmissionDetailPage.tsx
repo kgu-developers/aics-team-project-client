@@ -73,6 +73,9 @@ export default function AdminSubmissionDetailPage() {
       reflection: string;
     };
   } | null>(null);
+  const [peerAverageSort, setPeerAverageSort] = useState<'asc' | 'desc' | null>(
+    null,
+  );
   const [selectedEvaluator, setSelectedEvaluator] = useState<{
     name: string;
     studentNumber: string;
@@ -482,6 +485,13 @@ export default function AdminSubmissionDetailPage() {
         />
       );
     const peerRows = toAdminPeerEvaluationRows(peer);
+    if (peerAverageSort) {
+      peerRows.sort((a, b) => {
+        const aValue = a.average ?? -1;
+        const bValue = b.average ?? -1;
+        return peerAverageSort === 'asc' ? aValue - bValue : bValue - aValue;
+      });
+    }
     return (
       <Card className={styles.document}>
         <div className={styles.documentHeader}>
@@ -490,70 +500,111 @@ export default function AdminSubmissionDetailPage() {
           </Text>
           <Heading level={2}>{detail.teamName} 상호 평가</Heading>
         </div>
-        <Table
-          columns={[
-            {
-              align: 'start',
-              header: '평가자',
-              key: 'evaluator',
-              renderCell: row => (
-                <button
-                  className={styles.peerMemberButton}
-                  type='button'
-                  onClick={() =>
-                    setSelectedPeerMember({
-                      ...row.evaluator,
-                      evaluation: peer.responses.find(
-                        response =>
-                          response.evaluatorStudentNumber ===
-                          row.evaluator.studentNumber,
-                      )?.projectEvaluation ?? {
-                        reflection: '-',
-                        roleSummary: '-',
-                        teamEvaluation: '-',
-                      },
-                    })
-                  }
-                >
-                  {row.evaluator.name}
-                </button>
-              ),
-              width: proportional(1, { minWidth: 120 }),
-            },
-            {
-              align: 'center',
-              header: '평가 제출 상태',
-              key: 'submissionStatus',
-              renderCell: row => (row.isSubmitted ? '제출 완료' : '미제출'),
-              width: proportional(0.9, { minWidth: 104 }),
-            },
-            {
-              align: 'center',
-              header: '평가 대상',
-              key: 'target',
-              renderCell: row => row.target.name,
-              width: proportional(1, { minWidth: 120 }),
-            },
-            {
-              align: 'center',
-              header: '점수',
-              key: 'score',
-              renderCell: row => row.score ?? '미평가',
-              width: proportional(0.8, { minWidth: 96 }),
-            },
-            {
-              align: 'center',
-              header: '평가 대상 평균',
-              key: 'average',
-              renderCell: row => row.average?.toFixed(1) ?? '미평가',
-              width: proportional(0.8, { minWidth: 96 }),
-            },
-          ]}
-          data={peerRows}
-          dividers='rows'
-          textOverflow='wrap'
-          verticalAlign='middle'
-        />
+        <div>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th className={styles.tableHeader} scope='col'>
+                  평가자
+                </th>
+                {peer.members.map(member => (
+                  <th
+                    className={styles.tableHeader}
+                    key={member.studentNumber}
+                    scope='col'
+                  >
+                    {member.name}
+                  </th>
+                ))}
+                <th className={styles.tableHeader} scope='col'>
+                  <button
+                    aria-label='평균 점수 정렬'
+                    type='button'
+                    onClick={() =>
+                      setPeerAverageSort(current =>
+                        current === 'asc' ? 'desc' : 'asc',
+                      )
+                    }
+                  >
+                    평균{' '}
+                    {peerAverageSort === 'asc'
+                      ? '↑'
+                      : peerAverageSort === 'desc'
+                        ? '↓'
+                        : '↕'}
+                  </button>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from(
+                new Map(
+                  peerRows.map(row => [
+                    row.evaluator.studentNumber,
+                    row.evaluator,
+                  ]),
+                ).values(),
+              ).map(evaluator => {
+                const evaluatorRows = peerRows.filter(
+                  row =>
+                    row.evaluator.studentNumber === evaluator.studentNumber,
+                );
+                const submittedScores = evaluatorRows
+                  .map(row => row.score)
+                  .filter((score): score is number => score !== undefined);
+                const average = submittedScores.length
+                  ? submittedScores.reduce((sum, score) => sum + score, 0) /
+                    submittedScores.length
+                  : undefined;
+                return (
+                  <tr key={evaluator.studentNumber}>
+                    <td className={styles.tableCell}>
+                      <button
+                        className={styles.peerMemberButton}
+                        type='button'
+                        onClick={() =>
+                          setSelectedPeerMember({
+                            ...evaluator,
+                            evaluation: peer.responses.find(
+                              response =>
+                                response.evaluatorStudentNumber ===
+                                evaluator.studentNumber,
+                            )?.projectEvaluation ?? {
+                              reflection: '-',
+                              roleSummary: '-',
+                              teamEvaluation: '-',
+                            },
+                          })
+                        }
+                      >
+                        {evaluator.name}
+                      </button>
+                    </td>
+                    {peer.members.map(target => {
+                      const row = evaluatorRows.find(
+                        item =>
+                          item.target.studentNumber === target.studentNumber,
+                      );
+                      const isSelf =
+                        evaluator.studentNumber === target.studentNumber;
+                      return (
+                        <td
+                          className={styles.tableCell}
+                          key={target.studentNumber}
+                        >
+                          {isSelf ? '-' : (row?.score ?? '미제출')}
+                        </td>
+                      );
+                    })}
+                    <td className={styles.tableCell}>
+                      {average?.toFixed(1) ?? '미제출'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
         <Dialog
           aria-label='프로젝트 평가'
           isOpen={selectedPeerMember !== null}

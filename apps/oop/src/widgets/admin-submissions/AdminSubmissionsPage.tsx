@@ -288,10 +288,13 @@ export default function AdminSubmissionsPage() {
               <>
                 <div className={styles.evaluationHeader}>
                   <Heading level={2}>발표 평가 목록</Heading>
-                  <Button
-                    label='순서 배정 및 평가'
-                    onClick={() => setIsEvaluationSettingsOpen(true)}
-                  />
+                  <div className={styles.evaluationActions}>
+                    <Button
+                      label='순서 배정 및 평가'
+                      onClick={() => setIsEvaluationSettingsOpen(true)}
+                    />
+                    <Button disabled label='일괄 다운로드' />
+                  </div>
                 </div>
                 {presentationEvaluationsQuery.isPending ? (
                   <Text aria-live='polite' role='status'>
@@ -416,7 +419,12 @@ export default function AdminSubmissionsPage() {
             )
           ) : activeTab.isListAvailable ? (
             <>
-              <Heading level={2}>{activeTab.label} 목록</Heading>
+              <div className={styles.evaluationHeader}>
+                <Heading level={2}>{activeTab.label} 목록</Heading>
+                {activeMilestoneId === 'peer-review' ? (
+                  <Button disabled label='일괄 다운로드' />
+                ) : null}
+              </div>
               {accessibleSectionIds.length === 0 ? (
                 <EmptyState
                   description='담당 분반이 없어 제출물을 조회할 수 없습니다.'
