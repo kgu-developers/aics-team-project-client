@@ -32,6 +32,8 @@ import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminSubmissionDetailPage.css';
 
+const HIDDEN_MIDTERM_BLOCK_TITLES = new Set(['5. 중간 점검 질문']);
+
 const milestoneLabels = {
   'final-report': '최종 보고서',
   midterm: '중간 점검',
@@ -337,28 +339,39 @@ export default function AdminSubmissionDetailPage() {
             <SubmissionStatus resubmittedAt={detail.resubmittedAt} />
           </div>
 
-          {midterm.blocks.map(block => (
-            <section className={styles.section} key={block.title}>
-              <Heading level={3}>{block.title}</Heading>
-              <Text className={styles.sectionDescription}>
-                {block.description}
-              </Text>
-              <div className={styles.fieldGrid}>
-                {block.fields.map(field => (
-                  <div
-                    className={`${styles.field} ${styles.fullWidthField}`}
-                    key={field.label}
-                  >
-                    <Text className={styles.fieldLabel}>{field.label}</Text>
-                    <Text className={styles.fieldValue}>{field.value}</Text>
-                    {field.attachment ? (
-                      field.attachment.contentType.startsWith('image/') ? (
-                        <div className={styles.attachment}>
-                          <img
-                            alt={`${field.label} 미리보기`}
-                            className={styles.imagePreview}
-                            src={field.attachment.downloadUrl}
-                          />
+          {midterm.blocks
+            .filter(block => !HIDDEN_MIDTERM_BLOCK_TITLES.has(block.title))
+            .map(block => (
+              <section className={styles.section} key={block.title}>
+                <Heading level={3}>{block.title}</Heading>
+                <Text className={styles.sectionDescription}>
+                  {block.description}
+                </Text>
+                <div className={styles.fieldGrid}>
+                  {block.fields.map(field => (
+                    <div
+                      className={`${styles.field} ${styles.fullWidthField}`}
+                      key={field.label}
+                    >
+                      <Text className={styles.fieldLabel}>{field.label}</Text>
+                      <Text className={styles.fieldValue}>{field.value}</Text>
+                      {field.attachment ? (
+                        field.attachment.contentType.startsWith('image/') ? (
+                          <div className={styles.attachment}>
+                            <img
+                              alt={`${field.label} 미리보기`}
+                              className={styles.imagePreview}
+                              src={field.attachment.downloadUrl}
+                            />
+                            <a
+                              className={styles.downloadLink}
+                              download={field.attachment.fileName}
+                              href={field.attachment.downloadUrl}
+                            >
+                              {field.attachment.fileName} 다운로드
+                            </a>
+                          </div>
+                        ) : (
                           <a
                             className={styles.downloadLink}
                             download={field.attachment.fileName}
@@ -366,22 +379,13 @@ export default function AdminSubmissionDetailPage() {
                           >
                             {field.attachment.fileName} 다운로드
                           </a>
-                        </div>
-                      ) : (
-                        <a
-                          className={styles.downloadLink}
-                          download={field.attachment.fileName}
-                          href={field.attachment.downloadUrl}
-                        >
-                          {field.attachment.fileName} 다운로드
-                        </a>
-                      )
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </section>
-          ))}
+                        )
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
         </Card>
         <AdminMidtermFeedbackPanel
           feedback={detail.midtermFeedback}

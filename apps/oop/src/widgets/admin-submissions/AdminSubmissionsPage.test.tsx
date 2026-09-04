@@ -356,7 +356,10 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'OOP-01 - 1팀 중간 점검' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('중점 시연 기능')).toBeInTheDocument();
+    expect(screen.getByText('프로젝트 제목')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: '5. 중간 점검 질문' }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole('textbox', { name: '중간 점검 피드백' }),
     ).toBeInTheDocument();
