@@ -522,6 +522,20 @@ export default function AdminSubmissionsPage() {
                         }
                         messageCountLabel={submission.messageCountLabel}
                         secondaryLabel={submission.submittedAtLabel}
+                        submissionMetadata={
+                          activeMilestoneId === 'final-report' ||
+                          activeMilestoneId === 'presentation-submit' ? (
+                            <>
+                              제출자: {submission.submittedBy ?? '-'}
+                              {submission.resubmittedAt ? (
+                                <>
+                                  <br />
+                                  재제출일: {submission.resubmittedAt}
+                                </>
+                              ) : null}
+                            </>
+                          ) : null
+                        }
                         summary={getSubmissionSummary(activeTab.id, submission)}
                       />
                     );

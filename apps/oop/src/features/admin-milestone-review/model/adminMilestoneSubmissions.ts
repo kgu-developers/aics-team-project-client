@@ -26,6 +26,8 @@ export type AdminMilestoneSubmissionView = {
   submissionId: string | null;
   submittedAt: string | null;
   submittedAtLabel: string;
+  submittedBy: string | null;
+  resubmittedAt: string | null;
   summary: AdminMilestoneSubmissionSummaryView;
   teamId: string;
   teamName: string;
@@ -52,6 +54,8 @@ function toSubmissionView(
     submissionId: submission.submissionId,
     submittedAt: submission.submittedAt,
     submittedAtLabel: submission.submittedAt ?? '-',
+    submittedBy: submission.submittedBy ?? null,
+    resubmittedAt: submission.resubmittedAt ?? null,
     summary: {
       attachmentCountLabel:
         submission.summary.attachmentCount === null

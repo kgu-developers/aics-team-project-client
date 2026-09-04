@@ -11,6 +11,7 @@ type AdminMilestoneSubmissionCardProps = {
   meetingCountLabel: ReactNode;
   messageCountLabel: string;
   secondaryLabel: string;
+  submissionMetadata?: ReactNode;
   summary: ReactNode;
   isUnread?: boolean;
 };
@@ -21,6 +22,7 @@ export function AdminMilestoneSubmissionCard({
   meetingCountLabel,
   messageCountLabel,
   secondaryLabel,
+  submissionMetadata,
   summary,
   isUnread = false,
 }: AdminMilestoneSubmissionCardProps) {
@@ -37,6 +39,9 @@ export function AdminMilestoneSubmissionCard({
           {label}
         </Text>
         <Text className={styles.secondaryLabel}>{secondaryLabel}</Text>
+        {submissionMetadata ? (
+          <Text className={styles.secondaryLabel}>{submissionMetadata}</Text>
+        ) : null}
       </div>
       <div className={styles.content}>
         <div className={styles.summary}>{summary}</div>
