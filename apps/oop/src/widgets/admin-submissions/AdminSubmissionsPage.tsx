@@ -293,7 +293,11 @@ export default function AdminSubmissionsPage() {
                       label='순서 배정 및 평가'
                       onClick={() => setIsEvaluationSettingsOpen(true)}
                     />
-                    <Button disabled label='엑셀 다운로드' />
+                    <Button
+                      isDisabled
+                      label='엑셀 다운로드'
+                      tooltip='백엔드 다운로드 API 연동 후 제공 예정입니다.'
+                    />
                   </div>
                 </div>
                 {presentationEvaluationsQuery.isPending ? (
@@ -422,7 +426,11 @@ export default function AdminSubmissionsPage() {
               <div className={styles.evaluationHeader}>
                 <Heading level={2}>{activeTab.label} 목록</Heading>
                 {activeMilestoneId === 'peer-review' ? (
-                  <Button disabled label='엑셀 다운로드' />
+                  <Button
+                    isDisabled
+                    label='엑셀 다운로드'
+                    tooltip='백엔드 다운로드 API 연동 후 제공 예정입니다.'
+                  />
                 ) : null}
               </div>
               {accessibleSectionIds.length === 0 ? (
