@@ -41,13 +41,16 @@ export function AdminMilestoneSubmissionDetailAction({
 
 export function AdminMilestoneSubmissionBulkDownloadAction({
   label = '일괄 다운로드',
+  onClick,
 }: {
   label?: string;
+  onClick?: () => void;
 }) {
   return (
     <button
       className={`${styles.detailLink} ${styles.detailButtonDisabled}`}
       disabled
+      onClick={onClick}
       type='button'
     >
       {label}

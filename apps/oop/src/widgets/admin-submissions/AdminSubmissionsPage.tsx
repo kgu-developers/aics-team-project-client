@@ -64,6 +64,7 @@ function isMilestoneTabId(value: string | undefined): value is MilestoneTabId {
 function getSubmissionSummary(
   milestoneId: MilestoneTabId,
   submission: AdminMilestoneSubmissionView,
+  onRead: () => void,
 ) {
   switch (milestoneId) {
     case 'midterm':
@@ -85,6 +86,7 @@ function getSubmissionSummary(
               <AdminSubmissionFileDownloadLink
                 downloadUrl={submission.summary.presentationFileDownloadUrl}
                 fileName={submission.summary.presentationFileName}
+                onClick={onRead}
               />
             ) : (
               '-'
@@ -97,6 +99,7 @@ function getSubmissionSummary(
               <AdminSubmissionFileDownloadLink
                 downloadUrl={submission.summary.sourceArchiveDownloadUrl}
                 fileName={submission.summary.sourceArchiveFileName}
+                onClick={onRead}
               />
             ) : (
               '-'
@@ -105,7 +108,10 @@ function getSubmissionSummary(
           <Text>
             링크:{' '}
             {submission.summary.linkLabel ? (
-              <AdminSubmissionExternalLink url={submission.summary.linkLabel} />
+              <AdminSubmissionExternalLink
+                onClick={onRead}
+                url={submission.summary.linkLabel}
+              />
             ) : (
               '-'
             )}
@@ -120,11 +126,13 @@ function getSubmissionSummary(
               downloadUrl: submission.summary.reportDownloadUrl,
               fileName: submission.summary.reportFileName,
               label: '보고서(pdf)',
+              onClick: onRead,
             },
             {
               downloadUrl: submission.summary.sourceArchiveDownloadUrl,
               fileName: submission.summary.sourceArchiveFileName,
               label: '전체 파일(zip)',
+              onClick: onRead,
             },
           ]}
         />
@@ -478,6 +486,14 @@ export default function AdminSubmissionsPage() {
                         ? '회의록: -'
                         : `회의록: ${meetingCount}개`;
                     const submissionSectionId = effectiveSectionId;
+                    const markSubmissionAsRead = () => {
+                      if (submissionSectionId && submission.submissionId) {
+                        readState.markAsRead(
+                          submissionSectionId,
+                          submission.submissionId,
+                        );
+                      }
+                    };
                     return (
                       <AdminMilestoneSubmissionCard
                         isUnread={Boolean(
@@ -497,6 +513,7 @@ export default function AdminSubmissionsPage() {
                                   ? '일괄 다운로드'
                                   : undefined
                               }
+                              onClick={markSubmissionAsRead}
                             />
                           ) : (
                             <AdminMilestoneSubmissionDetailAction
@@ -536,7 +553,11 @@ export default function AdminSubmissionsPage() {
                             </>
                           ) : null
                         }
-                        summary={getSubmissionSummary(activeTab.id, submission)}
+                        summary={getSubmissionSummary(
+                          activeTab.id,
+                          submission,
+                          markSubmissionAsRead,
+                        )}
                       />
                     );
                   })}
