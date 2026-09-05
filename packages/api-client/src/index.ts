@@ -14,10 +14,7 @@ export {
   updateMyProfile,
   type UpdateMyProfileInput,
 } from './profile/updateMyProfile';
-export {
-  updateMyPassword,
-  type UpdateMyPasswordInput,
-} from './profile/updateMyPassword';
+export { updateUserPassword, type UpdateUserPasswordInput } from './profile';
 export { API_BASE_URL, apiClient } from './client';
 export {
   fetchAdminMeetingRecord,

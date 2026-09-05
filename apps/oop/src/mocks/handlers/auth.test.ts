@@ -3,9 +3,17 @@ import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { authHandlers, resetDemoPasswordState } from './auth';
-import { demoAccessToken, demoCredentials, demoStudent } from '../data/users';
+import { mockCsrfHeaderName, mockCsrfToken } from '../authSession';
+import {
+  demoAccessToken,
+  demoCredentials,
+  demoPartnerStudent,
+  demoStudent,
+  demoUserAccounts,
+} from '../data/users';
 
 const server = setupServer(...authHandlers);
+const account = demoUserAccounts[0];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
@@ -14,102 +22,126 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
+function sessionHeaders({ csrf = true } = {}) {
+  return {
+    Cookie: [
+      `accessToken=${demoAccessToken}`,
+      `refreshToken=${account.refreshToken}`,
+      `XSRF-TOKEN=${mockCsrfToken}`,
+    ].join('; '),
+    ...(csrf ? { [mockCsrfHeaderName]: mockCsrfToken } : {}),
+  };
+}
+
+function login(password: string = demoCredentials.password) {
+  return fetch(`${API_BASE_URL}${ENDPOINTS.AUTH.LOGIN}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      studentNumber: demoStudent.studentNumber,
+      password,
+    }),
+  });
+}
+
 function updatePassword(
   input: Record<string, unknown>,
-  accessToken = demoAccessToken,
+  studentNumber = demoStudent.studentNumber,
+  headers = sessionHeaders(),
 ) {
-  return fetch(`${API_BASE_URL}${ENDPOINTS.PROFILE.PASSWORD}`, {
-    method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
+  return fetch(`${API_BASE_URL}${ENDPOINTS.PROFILE.PASSWORD(studentNumber)}`, {
+    method: 'PUT',
+    headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   });
 }
 
-describe('authHandlers password change', () => {
-  it('인증되지 않은 비밀번호 변경 요청을 거부한다', async () => {
-    const response = await fetch(
-      `${API_BASE_URL}${ENDPOINTS.PROFILE.PASSWORD}`,
+describe('authHandlers password contract', () => {
+  it('CSRF가 없으면 인증 쿠키가 있어도 비밀번호 변경을 거부한다', async () => {
+    const response = await updatePassword(
       {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          currentPassword: demoCredentials.password,
-          newPassword: 'new-password',
-        }),
+        currentPassword: demoCredentials.password,
+        password: 'new-password',
       },
+      demoStudent.studentNumber,
+      sessionHeaders({ csrf: false }),
     );
 
-    expect(response.status).toBe(401);
-    await expect(response.json()).resolves.toMatchObject({
-      code: 'UNAUTHORIZED',
+    expect(response.status).toBe(403);
+  });
+
+  it('다른 사용자의 학번으로 변경을 요청하면 403을 응답한다', async () => {
+    const response = await updatePassword(
+      {
+        currentPassword: demoCredentials.password,
+        password: 'new-password',
+      },
+      demoPartnerStudent.studentNumber,
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({
+      code: 'ACCESS_DENIED',
+      message: '본인의 비밀번호만 변경할 수 있습니다.',
     });
   });
 
-  it('현재 비밀번호가 틀리면 변경하지 않는다', async () => {
+  it('현재 비밀번호가 틀리면 INVALID_CREDENTIALS 401을 응답한다', async () => {
     const response = await updatePassword({
       currentPassword: 'wrong-password',
-      newPassword: 'new-password',
+      password: 'new-password',
     });
 
     expect(response.status).toBe(401);
-    await expect(response.json()).resolves.toMatchObject({
-      code: 'INVALID_CURRENT_PASSWORD',
+    await expect(response.json()).resolves.toEqual({
+      code: 'INVALID_CREDENTIALS',
     });
   });
 
-  it('8자 미만 또는 현재 비밀번호와 같은 새 비밀번호를 거부한다', async () => {
-    const tooShortResponse = await updatePassword({
-      currentPassword: demoCredentials.password,
-      newPassword: 'short',
-    });
-    const unchangedResponse = await updatePassword({
-      currentPassword: demoCredentials.password,
-      newPassword: demoCredentials.password,
-    });
+  it.each(['a'.repeat(7), 'a'.repeat(65), '가'.repeat(24) + 'a', '        '])(
+    '서버 비밀번호 제한을 벗어나면 400을 응답한다 (%s)',
+    async password => {
+      const response = await updatePassword({
+        currentPassword: demoCredentials.password,
+        password,
+      });
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({ code: 'INVALID_INPUT' });
+    },
+  );
 
-    expect(tooShortResponse.status).toBe(400);
-    await expect(tooShortResponse.json()).resolves.toMatchObject({
-      code: 'INVALID_NEW_PASSWORD',
-    });
-    expect(unchangedResponse.status).toBe(400);
-    await expect(unchangedResponse.json()).resolves.toMatchObject({
-      code: 'PASSWORD_UNCHANGED',
-    });
+  it('인증 세션이 없으면 비밀번호 변경을 거부한다', async () => {
+    const response = await updatePassword(
+      { currentPassword: demoCredentials.password, password: 'new-password' },
+      demoStudent.studentNumber,
+      {
+        Cookie: `XSRF-TOKEN=${mockCsrfToken}`,
+        [mockCsrfHeaderName]: mockCsrfToken,
+      },
+    );
+    expect(response.status).toBe(401);
   });
 
-  it('변경한 비밀번호는 다음 로그인에 사용된다', async () => {
+  it('성공 시 200 문자열을 응답하고 기존 세션을 폐기한다', async () => {
     const newPassword = 'oop-new-password';
-    const updateResponse = await updatePassword({
+    const updated = await updatePassword({
       currentPassword: demoCredentials.password,
-      newPassword,
+      password: newPassword,
     });
-    const oldPasswordLogin = await fetch(
-      `${API_BASE_URL}${ENDPOINTS.AUTH.LOGIN}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentNumber: demoStudent.studentNumber,
-          password: demoCredentials.password,
-        }),
-      },
+    const expiredMe = await fetch(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, {
+      headers: sessionHeaders(),
+    });
+    const expiredRefresh = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.AUTH.REFRESH}`,
+      { method: 'POST', headers: sessionHeaders() },
     );
-    const newPasswordLogin = await fetch(
-      `${API_BASE_URL}${ENDPOINTS.AUTH.LOGIN}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentNumber: demoStudent.studentNumber,
-          password: newPassword,
-        }),
-      },
-    );
+    expect(expiredMe.status).toBe(401);
+    expect(expiredRefresh.status).toBe(401);
+    const oldPasswordLogin = await login();
+    const newPasswordLogin = await login(newPassword);
 
-    expect(updateResponse.status).toBe(204);
+    expect(updated.status).toBe(200);
+    await expect(updated.text()).resolves.toBe('Password changed successfully');
     expect(oldPasswordLogin.status).toBe(401);
     expect(newPasswordLogin.status).toBe(200);
   });

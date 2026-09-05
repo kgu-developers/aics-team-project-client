@@ -9,7 +9,8 @@ export const ENDPOINTS = {
   },
   PROFILE: {
     ME: '/me/profile',
-    PASSWORD: '/me/password',
+    PASSWORD: (studentNumber: string) =>
+      `/api/v1/oop/users/${studentNumber}/password`,
   },
   ADMIN: {
     MEETING_RECORDS: '/admin/meeting-records',

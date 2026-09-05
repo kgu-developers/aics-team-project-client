@@ -17,6 +17,7 @@ import {
   mockSessionResponseHeaders,
   resetMockSessionState,
   revokeMockSession,
+  revokeMockAccountSession,
   rotateMockSession,
 } from '../authSession';
 import { demoUserAccounts } from '../data/users';
@@ -178,81 +179,54 @@ export const userHandlers = [
       : unauthorized();
   }),
 
-  http.patch(
-    `${API_BASE_URL}${ENDPOINTS.PROFILE.PASSWORD}`,
-    async ({ request }) => {
+  http.put(
+    `${API_BASE_URL}${ENDPOINTS.PROFILE.PASSWORD(':studentNumber')}`,
+    async ({ params, request }) => {
+      if (!hasValidMockCsrfToken(request)) return csrfForbidden();
+
       const account = getMockAuthenticatedAccount(request);
-      if (!account) {
+      if (!account) return unauthorized();
+
+      if (params.studentNumber !== account.credentials.studentNumber) {
         return HttpResponse.json(
-          { code: 'UNAUTHORIZED', message: '로그인이 필요합니다.' },
-          { status: 401 },
+          {
+            code: 'ACCESS_DENIED',
+            message: '본인의 비밀번호만 변경할 수 있습니다.',
+          },
+          { status: 403 },
         );
       }
 
-      let input: {
-        currentPassword?: unknown;
-        newPassword?: unknown;
-      };
+      let input: { currentPassword?: unknown; password?: unknown };
       try {
         input = (await request.json()) as typeof input;
       } catch {
-        return HttpResponse.json(
-          {
-            code: 'INVALID_PASSWORD_INPUT',
-            message: '비밀번호 변경 요청 형식이 올바르지 않습니다.',
-          },
-          { status: 400 },
-        );
+        return invalidInput();
       }
 
       if (
-        typeof input?.currentPassword !== 'string' ||
-        typeof input.newPassword !== 'string'
+        !input ||
+        !isNonBlankString(input.currentPassword) ||
+        !isNonBlankString(input.password) ||
+        input.password.length < 8 ||
+        input.password.length > 64 ||
+        new TextEncoder().encode(input.password).length > 72
       ) {
-        return HttpResponse.json(
-          {
-            code: 'INVALID_PASSWORD_INPUT',
-            message: '현재 비밀번호와 새 비밀번호를 입력해 주세요.',
-          },
-          { status: 400 },
-        );
-      }
-
-      if (input.newPassword.length < 8) {
-        return HttpResponse.json(
-          {
-            code: 'INVALID_NEW_PASSWORD',
-            message: '새 비밀번호는 8자 이상이어야 합니다.',
-          },
-          { status: 400 },
-        );
-      }
-
-      if (input.currentPassword === input.newPassword) {
-        return HttpResponse.json(
-          {
-            code: 'PASSWORD_UNCHANGED',
-            message: '새 비밀번호는 현재 비밀번호와 달라야 합니다.',
-          },
-          { status: 400 },
-        );
+        return invalidInput();
       }
 
       if (
         input.currentPassword !==
         demoPasswords.get(account.credentials.studentNumber)
       ) {
-        return HttpResponse.json(
-          {
-            code: 'INVALID_CURRENT_PASSWORD',
-            message: '현재 비밀번호가 올바르지 않습니다.',
-          },
-          { status: 401 },
-        );
+        return unauthorized('INVALID_CREDENTIALS');
       }
 
-      demoPasswords.set(account.credentials.studentNumber, input.newPassword);
-      return new HttpResponse(null, { status: 204 });
+      demoPasswords.set(account.credentials.studentNumber, input.password);
+      revokeMockAccountSession(account);
+      return HttpResponse.text('Password changed successfully', {
+        status: 200,
+      });
     },
   ),
 ];

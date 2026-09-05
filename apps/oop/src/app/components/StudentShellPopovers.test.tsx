@@ -1,3 +1,4 @@
+import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { AstryxThemeProvider, ToastViewport } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -6,30 +7,36 @@ import {
   createRootRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import type { PropsWithChildren } from 'react';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
-import {
-  StudentHeaderActions,
-  validatePasswordChange,
-} from './StudentShellPopovers';
+import StudentShell from './StudentShell';
 import * as styles from './StudentShellPopovers.css';
 
-import { demoAccessToken, demoStudent } from '~/mocks/data/users';
+import {
+  issueMockSession,
+  mockSessionResponseHeaders,
+  mockCsrfCookieName,
+} from '~/mocks/authSession';
+import { demoStudent, demoUserAccounts } from '~/mocks/data/users';
 import { authHandlers, resetDemoPasswordState } from '~/mocks/handlers/auth';
 
 const server = setupServer(...authHandlers);
+const queryClients: QueryClient[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   server.resetHandlers();
+  queryClients.splice(0).forEach(client => client.clear());
   resetDemoPasswordState();
   useAuthStore.getState().clearSession();
+  document.cookie = `${mockCsrfCookieName}=; Max-Age=0; Path=/`;
 });
 afterAll(() => server.close());
 
@@ -40,13 +47,14 @@ function createWrapper(initialPath = '/student') {
       queries: { retry: false, retryDelay: 0 },
     },
   });
+  queryClients.push(queryClient);
   const rootRoute = createRootRoute();
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: [initialPath] }),
     routeTree: rootRoute,
   });
 
-  return function Wrapper({ children }: PropsWithChildren) {
+  function Wrapper({ children }: PropsWithChildren) {
     return (
       <AstryxThemeProvider>
         <QueryClientProvider client={queryClient}>
@@ -58,15 +66,21 @@ function createWrapper(initialPath = '/student') {
         </QueryClientProvider>
       </AstryxThemeProvider>
     );
-  };
+  }
+  return { wrapper: Wrapper, router, queryClient };
 }
 
 function renderHeader(initialPath?: string) {
-  useAuthStore.getState().setAccessToken(demoAccessToken);
+  useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setCurrentUser(demoStudent);
-  return render(<StudentHeaderActions currentUser={demoStudent} />, {
-    wrapper: createWrapper(initialPath),
-  });
+  mockSessionResponseHeaders(issueMockSession(demoUserAccounts[0]));
+  const context = createWrapper(initialPath);
+  return {
+    ...render(<StudentShell />, {
+      wrapper: context.wrapper,
+    }),
+    ...context,
+  };
 }
 
 describe('StudentHeaderActions', () => {
@@ -170,9 +184,10 @@ describe('StudentHeaderActions', () => {
     ).toBeInTheDocument();
   });
 
-  it('비밀번호 변경 성공 시 완료 안내를 표시한다', async () => {
+  it('비밀번호 변경 성공 시 완료 안내와 로그인 이동, 세션 정리를 수행한다', async () => {
     const user = userEvent.setup();
-    renderHeader();
+    const { router, queryClient } = renderHeader();
+    queryClient.setQueryData(['private-data'], 'existing');
 
     await user.click(screen.getByRole('button', { name: '내 프로필 열기' }));
     await screen.findByRole('dialog', { name: '내 프로필' });
@@ -181,49 +196,147 @@ describe('StudentHeaderActions', () => {
       name: '비밀번호 변경',
     });
 
-    const getPasswordInput = (name: string) => {
-      const input = passwordDialog.querySelector<HTMLInputElement>(
-        `input[name="${name}"]`,
-      );
-      if (!input)
-        throw new Error(`비밀번호 입력 필드를 찾을 수 없습니다: ${name}`);
-      return input;
-    };
-
-    await user.type(getPasswordInput('currentPassword'), 'oop-demo-a');
-    await user.type(getPasswordInput('newPassword'), 'oop-demo-c-next');
-    await user.type(getPasswordInput('confirmPassword'), 'oop-demo-c-next');
+    await user.type(
+      within(passwordDialog).getByLabelText('현재 비밀번호', { exact: false }),
+      'oop-demo-a',
+    );
+    await user.type(
+      within(passwordDialog).getByLabelText(/^새 비밀번호(?! 확인)/),
+      'oop-demo-c-next',
+    );
+    await user.type(
+      within(passwordDialog).getByLabelText('새 비밀번호 확인', {
+        exact: false,
+      }),
+      'oop-demo-c-next',
+    );
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }));
 
     expect(
-      await screen.findByText('비밀번호를 변경했어요.'),
+      await screen.findByText('비밀번호를 변경했어요. 다시 로그인해 주세요.'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: '비밀번호 변경' })).toBeNull();
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
+    expect(useAuthStore.getState().currentUser).toBeNull();
+    expect(queryClient.getQueryData(['private-data'])).toBeUndefined();
   });
-});
 
-describe('validatePasswordChange', () => {
-  it('백엔드 정책과 일치하지 않는 새 비밀번호를 구분해 안내한다', () => {
-    expect(validatePasswordChange('', 'new-password', 'new-password')).toEqual({
-      field: 'currentPassword',
-      message: '현재 비밀번호를 입력해 주세요.',
+  it('요청 중 입력·취소·중복 제출을 막고 실패 후 다시 입력할 수 있다', async () => {
+    let release!: () => void;
+    const pending = new Promise<void>(resolve => {
+      release = resolve;
     });
-    expect(validatePasswordChange('current', 'short', 'short')).toEqual({
-      field: 'newPassword',
-      message: '새 비밀번호는 8자 이상이어야 합니다.',
-    });
-    expect(
-      validatePasswordChange('current-password', 'new-password', 'different'),
-    ).toEqual({
-      field: 'confirmPassword',
-      message: '새 비밀번호가 일치하지 않습니다.',
-    });
-    expect(
-      validatePasswordChange(
-        'current-password',
-        'new-password',
-        'new-password',
+    let requests = 0;
+    server.use(
+      http.put(
+        `${API_BASE_URL}${ENDPOINTS.PROFILE.PASSWORD(':studentNumber')}`,
+        async () => {
+          requests += 1;
+          await pending;
+          return HttpResponse.json({ code: 'UNAVAILABLE' }, { status: 503 });
+        },
       ),
-    ).toBeNull();
+    );
+    const user = userEvent.setup();
+    renderHeader();
+    await user.click(screen.getByRole('button', { name: '내 프로필 열기' }));
+    await user.click(screen.getByRole('button', { name: '비밀번호 변경' }));
+    const dialog = await screen.findByRole('dialog', { name: '비밀번호 변경' });
+    const currentInput = within(dialog).getByLabelText('현재 비밀번호', {
+      exact: false,
+    });
+    await user.type(currentInput, 'current-password');
+    await user.type(
+      within(dialog).getByLabelText(/^새 비밀번호(?! 확인)/),
+      'new-password',
+    );
+    await user.type(
+      within(dialog).getByLabelText('새 비밀번호 확인', { exact: false }),
+      'new-password',
+    );
+    const submit = within(dialog).getByRole('button', {
+      name: '비밀번호 변경',
+    });
+    await user.click(submit);
+    try {
+      await waitFor(() => expect(requests).toBe(1));
+      expect(currentInput).toBeDisabled();
+      expect(submit).toBeDisabled();
+      expect(
+        within(dialog).getByRole('button', { name: '취소' }),
+      ).toBeDisabled();
+      await user.click(submit);
+      expect(requests).toBe(1);
+    } finally {
+      release();
+    }
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      '잠시 후 다시 시도해 주세요.',
+    );
+    expect(currentInput).toBeEnabled();
+    expect(submit).toBeEnabled();
   });
+
+  it.each([
+    [401, 'INVALID_CREDENTIALS', '현재 비밀번호가 올바르지 않습니다.'],
+    [
+      401,
+      'UNAUTHORIZED',
+      '로그인 상태를 확인할 수 없어요. 다시 로그인해 주세요.',
+    ],
+    [
+      403,
+      'ACCESS_DENIED',
+      '비밀번호 변경 권한을 확인할 수 없어요. 다시 로그인한 뒤 시도해 주세요.',
+    ],
+    [
+      503,
+      'UNAVAILABLE',
+      '비밀번호를 변경하지 못했어요. 잠시 후 다시 시도해 주세요.',
+    ],
+    [0, '', '네트워크 연결을 확인한 뒤 다시 시도해 주세요.'],
+  ])(
+    '실패(%s, %s)는 원인에 맞게 안내하고 폼과 세션을 유지한다',
+    async (status, code, message) => {
+      server.use(
+        http.put(
+          `${API_BASE_URL}${ENDPOINTS.PROFILE.PASSWORD(':studentNumber')}`,
+          () =>
+            status
+              ? HttpResponse.json({ code }, { status })
+              : HttpResponse.error(),
+        ),
+      );
+      const user = userEvent.setup();
+      const { router } = renderHeader();
+      await user.click(screen.getByRole('button', { name: '내 프로필 열기' }));
+      await user.click(screen.getByRole('button', { name: '비밀번호 변경' }));
+      const dialog = await screen.findByRole('dialog', {
+        name: '비밀번호 변경',
+      });
+      await user.type(
+        within(dialog).getByLabelText('현재 비밀번호', { exact: false }),
+        'wrong-password',
+      );
+      await user.type(
+        within(dialog).getByLabelText(/^새 비밀번호(?! 확인)/),
+        'new-password',
+      );
+      await user.type(
+        within(dialog).getByLabelText('새 비밀번호 확인', { exact: false }),
+        'new-password',
+      );
+      await user.click(
+        within(dialog).getByRole('button', { name: '비밀번호 변경' }),
+      );
+      expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+        message,
+      );
+      expect(useAuthStore.getState().isAuthenticated).toBe(true);
+      expect(router.state.location.pathname).toBe('/student');
+      expect(
+        screen.queryByText('비밀번호를 변경했어요. 다시 로그인해 주세요.'),
+      ).not.toBeInTheDocument();
+    },
+  );
 });
