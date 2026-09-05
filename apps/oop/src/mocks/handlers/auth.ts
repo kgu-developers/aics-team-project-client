@@ -20,6 +20,7 @@ import {
   revokeMockAccountSession,
   rotateMockSession,
 } from '../authSession';
+import { getMockMySections } from '../data/sections';
 import { demoUserAccounts } from '../data/users';
 
 const initialDemoPasswords: ReadonlyMap<string, string> = new Map(
@@ -80,11 +81,7 @@ function toServerTeamId(teamId: string | undefined) {
 function toCurrentUserResponse(
   account: (typeof demoUserAccounts)[number],
 ): CurrentUserResponse {
-  const sections = account.user.sections.map((section, index) => ({
-    id: section.id.endsWith('02') ? 2 : index + 1,
-    code: section.code,
-    name: section.name,
-  }));
+  const sections = getMockMySections(account.credentials.studentNumber, {});
   const teamId = toServerTeamId(account.user.currentTeam?.id);
 
   return {

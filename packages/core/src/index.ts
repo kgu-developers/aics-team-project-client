@@ -13,6 +13,8 @@ export type {
 export type {
   SectionAnnouncement,
   SectionAnnouncementAttachment,
+  SectionAnnouncementResponse,
+  SectionAnnouncementListResponse,
 } from './notice/types';
 export type { Course } from './course/types';
 export type {
@@ -106,7 +108,7 @@ export { proposalBlockKeys } from './proposal/types';
 export type { Project } from './project/types';
 export type { Review } from './review/types';
 export type { Rubric } from './rubric/types';
-export type { Section } from './section/types';
+export * from './section';
 export type {
   Submission,
   SubmissionArtifact,

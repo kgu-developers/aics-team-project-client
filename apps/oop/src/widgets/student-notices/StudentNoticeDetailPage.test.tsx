@@ -1,4 +1,4 @@
-import type { SectionAnnouncement } from '@aics/core';
+import type { SectionResponse, SectionAnnouncement } from '@aics/core';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { screen, waitFor } from '@testing-library/react';
 import {
@@ -19,15 +19,34 @@ import StudentNoticeDetailPage from './StudentNoticeDetailPage';
 import { demoAccessToken, demoStudent } from '~/mocks/data/users';
 import { renderWithRouter } from '~/test/renderWithRouter';
 
+const mockMySectionsQuery = vi.hoisted(() => vi.fn());
+
+vi.mock('~/features/section/queries', () => ({
+  useMySectionsQuery: (...args: unknown[]) => mockMySectionsQuery(...args),
+}));
+
+const activeSection: SectionResponse = {
+  id: 1,
+  code: 'CS101',
+  name: '01',
+  classTime: '월123',
+  capacity: 40,
+  contactVisibleFrom: null,
+  contactVisibleUntil: null,
+  courseId: 1,
+  courseName: '객체지향프로그래밍',
+  year: 2026,
+  semester: 'SPRING',
+  status: 'ACTIVE',
+};
+
 const mySectionAnnouncements: SectionAnnouncement[] = [
   {
-    id: '1',
-    sectionId: 'oop-2026-2-01',
+    id: 1,
+    sectionId: 1,
     title: '우리 분반 공지',
     content: '분반 공지 내용\n두 번째 줄',
-    createdAt: '2025-12-17 09:00',
-    updatedAt: '2025-12-17 09:00',
-    authorName: '이은정',
+    publishedAt: '2025-12-17 09:00',
     attachments: [
       {
         id: 'attachment-image',
@@ -65,6 +84,12 @@ describe('StudentNoticeDetailPage', () => {
   });
 
   beforeEach(() => {
+    mockMySectionsQuery.mockReset();
+    mockMySectionsQuery.mockReturnValue({
+      data: [activeSection],
+      error: null,
+      isPending: false,
+    });
     mockSectionAnnouncementsQuery.mockReset();
     window.localStorage.clear();
   });
@@ -89,7 +114,7 @@ describe('StudentNoticeDetailPage', () => {
     expect(screen.getByText('두 번째 줄')).toBeInTheDocument();
   });
 
-  it('작성일과 분반 정보를 표시한다', () => {
+  it('게시일과 분반 정보를 표시한다', () => {
     mockSectionAnnouncementsQuery.mockReturnValue({
       data: mySectionAnnouncements,
       isError: false,
@@ -102,7 +127,7 @@ describe('StudentNoticeDetailPage', () => {
       </AstryxThemeProvider>,
     );
 
-    expect(screen.getByText(/작성일 : 2025-12-17/)).toBeInTheDocument();
+    expect(screen.getByText(/게시일 : 2025-12-17/)).toBeInTheDocument();
     expect(screen.getByText(/분반 :/)).toBeInTheDocument();
   });
 
@@ -152,7 +177,7 @@ describe('StudentNoticeDetailPage', () => {
     });
     const storageKey = getStudentNoticeReadStorageKey(
       demoStudent.id,
-      demoStudent.sections[0]?.id ?? '',
+      String(activeSection.id),
     );
     if (!storageKey) throw new Error('storage key is required');
 

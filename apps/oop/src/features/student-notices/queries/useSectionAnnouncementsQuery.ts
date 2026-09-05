@@ -4,10 +4,19 @@ import { useQuery } from '@tanstack/react-query';
 
 import { studentNoticeKeys } from './studentNoticeKeys';
 
-export function useSectionAnnouncementsQuery(sectionId: string) {
+export function useSectionAnnouncementsQuery(sectionId: number | undefined) {
+  const hasSectionId =
+    sectionId !== undefined && Number.isSafeInteger(sectionId) && sectionId > 0;
+
   return useQuery<SectionAnnouncement[]>({
-    enabled: Boolean(sectionId),
+    enabled: hasSectionId,
     queryKey: studentNoticeKeys.sectionAnnouncements(sectionId),
-    queryFn: () => fetchSectionAnnouncements(sectionId),
+    queryFn: () => {
+      if (!hasSectionId) {
+        throw new Error('공지사항 조회에는 유효한 분반 ID가 필요합니다.');
+      }
+
+      return fetchSectionAnnouncements(sectionId);
+    },
   });
 }

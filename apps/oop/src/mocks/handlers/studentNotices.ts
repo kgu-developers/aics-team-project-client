@@ -1,39 +1,56 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
+import type { SectionAnnouncementListResponse } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
-import { getMockAccessToken } from '../authSession';
+import {
+  getMockAuthenticatedAccount,
+  mockCsrfResponseHeaders,
+} from '../authSession';
+import { getMockMySections } from '../data/sections';
 import { studentNoticeAnnouncements } from '../data/studentNotices';
-import { getDemoStudentAccount } from '../data/users';
 
 export const studentNoticeHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ANNOUNCEMENTS.SECTION_LIST(':sectionId')}`,
     ({ params, request }) => {
-      const accessToken = getMockAccessToken(request);
-      const account = getDemoStudentAccount(accessToken);
+      const account = getMockAuthenticatedAccount(request);
 
       if (!account) {
+        return new HttpResponse(null, { status: 401 });
+      }
+
+      const sectionId = Number(params.sectionId);
+      if (!Number.isSafeInteger(sectionId) || sectionId <= 0) {
         return HttpResponse.json(
-          { code: 'UNAUTHORIZED', message: '학생 로그인이 필요합니다.' },
-          { status: 401 },
+          {
+            code: 'INVALID_INPUT',
+            message: '분반 ID 형식이 올바르지 않습니다.',
+          },
+          { status: 400 },
         );
       }
 
-      const sectionId = String(params.sectionId);
-      if (!account.user.sections.some(section => section.id === sectionId)) {
+      const accessibleSections = getMockMySections(
+        account.credentials.studentNumber,
+        { status: 'ACTIVE' },
+      );
+      if (!accessibleSections.some(section => section.id === sectionId)) {
         return HttpResponse.json(
           {
-            code: 'SECTION_ACCESS_DENIED',
+            code: 'ACCESS_DENIED',
             message: '이 분반의 공지사항에 접근할 수 없습니다.',
           },
           { status: 403 },
         );
       }
 
-      return HttpResponse.json(
-        studentNoticeAnnouncements.filter(
-          announcement => announcement.sectionId === sectionId,
-        ),
+      return HttpResponse.json<SectionAnnouncementListResponse>(
+        {
+          contents: studentNoticeAnnouncements.filter(
+            announcement => announcement.sectionId === sectionId,
+          ),
+        },
+        { headers: mockCsrfResponseHeaders() },
       );
     },
   ),

@@ -10,6 +10,9 @@ import { Link } from '@tanstack/react-router';
 import { forwardRef, useEffect, type ComponentPropsWithoutRef } from 'react';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import { useMySectionsQuery } from '~/features/section/queries';
+import SectionSelection from '~/features/section/SectionSelection';
+import { useSelectedSection } from '~/features/section/useSelectedSection';
 import { useSectionAnnouncementsQuery } from '~/features/student-notices/queries';
 import { useStudentNoticeReadState } from '~/features/student-notices/useStudentNoticeReadState';
 
@@ -55,44 +58,52 @@ export default function StudentNoticeDetailPage({
 }) {
   const currentUser = useAuthStore(state => state.currentUser);
   const userId = currentUser?.id ?? '';
-  const sectionId = currentUser?.sections[0]?.id ?? '';
-  const sectionName = currentUser?.sections[0]?.name ?? '';
+  const {
+    data: sections,
+    isPending: isSectionsPending,
+    error: sectionsError,
+  } = useMySectionsQuery({ status: 'ACTIVE' });
+  const { section, selectSection } = useSelectedSection(sections);
   const {
     data: announcements,
-    isPending,
-    error,
-  } = useSectionAnnouncementsQuery(sectionId);
-  const announcement = announcements?.find(item => item.id === noticeId);
-  const { markAsRead } = useStudentNoticeReadState(userId, sectionId);
+    isPending: isAnnouncementsPending,
+    error: announcementsError,
+  } = useSectionAnnouncementsQuery(section?.id);
+  const announcement = announcements?.find(
+    item => String(item.id) === noticeId,
+  );
+  const { markAsRead } = useStudentNoticeReadState(
+    userId,
+    section ? String(section.id) : '',
+  );
 
   useEffect(() => {
-    if (announcement) markAsRead(announcement.id);
+    if (announcement) markAsRead(String(announcement.id));
   }, [announcement, markAsRead]);
 
-  if (!sectionId) {
-    return (
-      <div className={styles.page}>
-        <Heading level={1}>공지사항을 찾을 수 없어요.</Heading>
-        <Link className={styles.backLink} to='/student/notices'>
-          ← 공지사항 목록으로
-        </Link>
-      </div>
-    );
-  }
-
-  if (isPending) {
+  if (isSectionsPending || (section && isAnnouncementsPending)) {
     return (
       <div className={styles.page}>
         <Heading level={1}>공지사항</Heading>
+        <SectionSelection
+          sections={sections}
+          selectedId={section?.id}
+          onSelect={selectSection}
+        />
         <Text color='secondary'>공지사항을 불러오는 중...</Text>
       </div>
     );
   }
 
-  if (error) {
+  if (sectionsError || announcementsError) {
     return (
       <div className={styles.page}>
         <Heading level={1}>공지사항</Heading>
+        <SectionSelection
+          sections={sections}
+          selectedId={section?.id}
+          onSelect={selectSection}
+        />
         <Text role='alert'>공지사항을 불러오지 못했어요.</Text>
         <Link className={styles.backLink} to='/student/notices'>
           ← 공지사항 목록으로
@@ -101,10 +112,19 @@ export default function StudentNoticeDetailPage({
     );
   }
 
-  if (!announcement) {
+  if (!section || !announcement) {
     return (
       <div className={styles.page}>
-        <Heading level={1}>공지사항을 찾을 수 없어요.</Heading>
+        <Heading level={1}>
+          {!section && sections?.length
+            ? '수강 분반을 선택해 주세요.'
+            : '공지사항을 찾을 수 없어요.'}
+        </Heading>
+        <SectionSelection
+          sections={sections}
+          selectedId={section?.id}
+          onSelect={selectSection}
+        />
         <Link className={styles.backLink} to='/student/notices'>
           ← 공지사항 목록으로
         </Link>
@@ -137,9 +157,9 @@ export default function StudentNoticeDetailPage({
       <Card className={styles.detailCard}>
         <Heading level={1}>{announcement.title}</Heading>
         <Text className={styles.meta} color='secondary'>
-          작성일 : {announcement.createdAt}
+          게시일 : {announcement.publishedAt}
         </Text>
-        <Text>분반 : {sectionName}</Text>
+        <Text>분반 : {section.name}</Text>
         <div className={styles.divider} />
         {announcement.content.split('\n').map((line, i) => (
           <Text key={`${announcement.id}-line-${i}`}>{line}</Text>

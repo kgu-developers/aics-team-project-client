@@ -139,3 +139,5 @@ export {
   searchPartnerCandidates,
   submitTeamAssignmentSurvey,
 } from './team-assignment';
+
+export { fetchMySections } from './section';
