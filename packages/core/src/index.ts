@@ -60,6 +60,7 @@ export type {
   CreateMeetingActionInput,
   CreateMeetingRecordInput,
   MeetingAction,
+  TeamMeetingAction,
   MeetingActionStatus,
   MeetingParticipant,
   MeetingRecord,
@@ -105,12 +106,15 @@ export type {
   Submission,
   SubmissionArtifact,
   SubmissionArtifactRule,
+  SubmissionConsentStatus,
   SubmissionFileArtifact,
+  SubmissionLinkRule,
   SubmissionLinkArtifact,
   SubmissionMilestoneKind,
   SubmissionStatus,
   SubmissionVersion,
   SubmitSubmissionFileArtifactInput,
+  SubmitSubmissionLinkArtifactInput,
   SubmitSubmissionVersionInput,
 } from './submission/types';
 export type {
@@ -151,6 +155,8 @@ export type {
   StudentHomeMilestoneStatus,
   StudentHomeProject,
   StudentHomeSectionStatus,
+  StudentHomeSubmissionMaterial,
+  StudentHomeSubmissionMetadata,
   StudentHomeTeamStatus,
   StudentHomeTopicCandidate,
 } from './studentHome/types';

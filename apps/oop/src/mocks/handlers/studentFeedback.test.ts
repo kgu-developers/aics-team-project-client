@@ -505,7 +505,6 @@ describe('student feedback handlers', () => {
       '/student/editor/mid-review/gui-design',
       '/student/editor/mid-review/engine-design',
       '/student/editor/mid-review/project-plan',
-      '/student/editor/mid-review/mid-check-questions',
     ]);
   });
 

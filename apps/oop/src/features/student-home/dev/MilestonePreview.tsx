@@ -15,6 +15,7 @@ const previewOptions = [
   },
   { value: 'mid-feedback', label: '중간 · 수정 전 차단' },
   { value: 'mid-feedback-ready', label: '중간 · 반영 기록 작성 가능' },
+  { value: 'presentation-material-empty', label: '발표 · 제출 전' },
   { value: 'presentation-material', label: '발표 · 자료 작성' },
   { value: 'presentation-evaluation', label: '발표 · 평가' },
   { value: 'final-report', label: '최종 · 제출' },

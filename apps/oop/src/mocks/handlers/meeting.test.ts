@@ -1,5 +1,10 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
-import type { CreateMeetingRecordInput, MeetingRecord } from '@aics/core';
+import type {
+  CreateMeetingRecordInput,
+  MeetingAction,
+  MeetingRecord,
+  TeamMeetingAction,
+} from '@aics/core';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
@@ -21,13 +26,7 @@ const validInput: CreateMeetingRecordInput = {
   location: '온라인',
   content: { type: 'doc', content: [{ type: 'paragraph' }] },
   participantUserIds: ['student-a', 'student-b'],
-  actions: [
-    {
-      content: '권한 계약 테스트 추가',
-      assigneeUserId: 'student-b',
-      dueDate: '2026-10-05',
-    },
-  ],
+  actions: [],
 };
 const server = setupServer(...meetingHandlers);
 
@@ -39,13 +38,61 @@ afterEach(() => {
 afterAll(() => server.close());
 
 describe('meetingHandlers', () => {
-  it('회의록과 액션 플랜을 한 요청에서 생성한다', async () => {
+  it('팀 액션 목록은 부모 회의록 제목과 담당자 정보를 반환한다', async () => {
+    const response = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.MEETING.ACTIONS('team-07')}`,
+      { headers: leaderHeaders },
+    );
+    const actions = (await response.json()) as TeamMeetingAction[];
+
+    expect(response.status).toBe(200);
+    expect(actions[0]).toMatchObject({
+      assignee: { userId: 'student-c', name: 'OOP 데모 학생 C' },
+      meetingRecord: { id: 'meeting-home-3', title: '화면 설계 검토' },
+    });
+  });
+
+  it('회의록에 액션을 생성하면 TODO 상태를 기본값으로 저장한다', async () => {
+    const response = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.MEETING.RECORD_ACTIONS('meeting-1')}`,
+      {
+        method: 'POST',
+        headers: leaderHeaders,
+        body: JSON.stringify({
+          assigneeUserId: 'student-b',
+          content: 'MSW 계약 검증',
+          dueDate: null,
+        }),
+      },
+    );
+    const action = (await response.json()) as MeetingAction;
+
+    expect(response.status).toBe(201);
+    expect(action).toMatchObject({
+      assignee: { userId: 'student-b' },
+      content: 'MSW 계약 검증',
+      meetingId: 'meeting-1',
+      status: 'TODO',
+    });
+    expect(getMeetingRecord('meeting-1')?.actions).toContainEqual(action);
+  });
+
+  it('회의록 생성은 액션 플랜 입력을 함께 저장한다', async () => {
     const response = await fetch(
       `${API_BASE_URL}${ENDPOINTS.MEETING.RECORDS('team-07')}`,
       {
         method: 'POST',
         headers: leaderHeaders,
-        body: JSON.stringify(validInput),
+        body: JSON.stringify({
+          ...validInput,
+          actions: [
+            {
+              assigneeUserId: 'student-b',
+              content: 'API 요청 shape 정리',
+              dueDate: '2026-10-07',
+            },
+          ],
+        }),
       },
     );
     const record = (await response.json()) as MeetingRecord;
@@ -56,14 +103,16 @@ describe('meetingHandlers', () => {
       createdBy: { userId: 'student-a' },
       actions: [
         {
-          content: '권한 계약 테스트 추가',
           assignee: { userId: 'student-b' },
+          content: 'API 요청 shape 정리',
+          dueDate: '2026-10-07',
+          status: 'TODO',
         },
       ],
     });
   });
 
-  it('잘못된 액션 플랜이 포함되면 회의록 전체를 생성하지 않는다', async () => {
+  it('회의록 요청에 잘못된 액션 플랜이 포함되면 전체를 생성하지 않는다', async () => {
     const response = await fetch(
       `${API_BASE_URL}${ENDPOINTS.MEETING.RECORDS('team-07')}`,
       {
@@ -71,7 +120,7 @@ describe('meetingHandlers', () => {
         headers: leaderHeaders,
         body: JSON.stringify({
           ...validInput,
-          actions: [{ ...validInput.actions[0], content: '   ' }],
+          actions: [{ content: '   ' }],
         }),
       },
     );
@@ -100,7 +149,7 @@ describe('meetingHandlers', () => {
     const response = await fetch(
       `${API_BASE_URL}${ENDPOINTS.MEETING.ACTION('meeting-action-1')}`,
       {
-        method: 'PUT',
+        method: 'PATCH',
         headers: leaderHeaders,
         body: JSON.stringify({ status: 'CANCELLED' }),
       },

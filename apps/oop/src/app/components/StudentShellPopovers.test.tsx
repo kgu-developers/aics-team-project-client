@@ -70,14 +70,20 @@ function renderHeader(initialPath?: string) {
 }
 
 describe('StudentHeaderActions', () => {
-  it('헤더는 홈·공지사항·회의록 텍스트 내비게이션과 현재 경로를 표시한다', () => {
+  it('헤더는 홈·액션 플랜·공지사항·회의록 텍스트 내비게이션과 현재 경로를 표시한다', () => {
     renderHeader('/student/notices/notice-1');
 
     const homeLink = screen.getByRole('link', { name: '홈' });
+    const actionPlansLink = screen.getByRole('link', { name: '액션 플랜' });
     const noticesLink = screen.getByRole('link', { name: '공지사항' });
     const meetingsLink = screen.getByRole('link', { name: '회의록' });
 
     expect(homeLink).not.toHaveAttribute('aria-current', 'page');
+    expect(actionPlansLink).not.toHaveAttribute('aria-current', 'page');
+    expect(actionPlansLink).toHaveAttribute(
+      'href',
+      '/student/team/action-plans',
+    );
     expect(noticesLink).toHaveAttribute('aria-current', 'page');
     expect(noticesLink).toHaveClass(styles.navLinkActive);
     expect(meetingsLink).not.toHaveAttribute('aria-current', 'page');
@@ -116,6 +122,9 @@ describe('StudentHeaderActions', () => {
     expect(screen.queryByLabelText('학생 정보')).toBeNull();
     expect(within(navigation).getByRole('link', { name: '홈' })).toBeVisible();
     expect(
+      within(navigation).getByRole('link', { name: '액션 플랜' }),
+    ).toBeVisible();
+    expect(
       within(navigation).getByRole('link', { name: '공지사항' }),
     ).toBeVisible();
     expect(
@@ -146,9 +155,7 @@ describe('StudentHeaderActions', () => {
       name: '내 프로필',
     });
     expect(profileDialog).toBeInTheDocument();
-    expect(
-      within(profileDialog).getByText('객체지향프로그래밍 01분반'),
-    ).toBeInTheDocument();
+    expect(within(profileDialog).getByText('월8/1151')).toBeInTheDocument();
     expect(
       within(profileDialog).getByText('CineFlow (7팀)'),
     ).toBeInTheDocument();

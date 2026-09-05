@@ -213,9 +213,9 @@ describe('edit lock handler contract', () => {
       label: 'presentation',
       target: editLockTarget(
         'PRESENTATION_CONTENT_BLOCK',
-        'presentation-team-07:demo-video',
+        'presentation-team-07:main-screens',
       ),
-      lockedBlockKey: 'demo-video',
+      lockedBlockKey: 'main-screens',
       getDocument: getCurrentPresentation,
       saveUrl: (id: string, blockKey: string) =>
         `${API_BASE_URL}${ENDPOINTS.PRESENTATION.BLOCK(id, blockKey)}`,
@@ -547,7 +547,7 @@ describe('edit lock handler contract', () => {
       label: 'presentation',
       target: editLockTarget(
         'PRESENTATION_CONTENT_BLOCK',
-        'presentation-team-07:demo-video',
+        'presentation-team-07:main-screens',
       ),
       request: () => {
         const document = getCurrentPresentation();

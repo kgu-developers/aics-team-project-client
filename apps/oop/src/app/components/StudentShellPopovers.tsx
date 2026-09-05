@@ -291,7 +291,7 @@ function StudentProfilePopover({
         </div>
         <div className={styles.profileDetailRow}>
           <dt>분반</dt>
-          <dd>{section?.name ?? section?.code ?? '미배정'}</dd>
+          <dd>{section?.code ?? section?.name ?? '미배정'}</dd>
         </div>
         <div className={styles.profileDetailRow}>
           <dt>이메일</dt>
@@ -362,6 +362,7 @@ function StudentProfilePopover({
 
 const studentNavigationItems = [
   { label: '홈', to: ROUTES.STUDENT.HOME },
+  { label: '액션 플랜', to: ROUTES.STUDENT.TEAM_ACTION_PLANS },
   { label: '공지사항', to: ROUTES.STUDENT.NOTICES },
   { label: '회의록', to: ROUTES.STUDENT.MEETINGS },
 ] as const;

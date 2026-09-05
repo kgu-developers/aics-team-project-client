@@ -31,6 +31,7 @@ export type SubmissionVersion = {
     name: string;
   };
   submittedAt: string;
+  updatedAt: string;
   artifacts: SubmissionArtifact[];
 };
 
@@ -40,6 +41,19 @@ export type SubmissionArtifactRule = {
   required: true;
   allowedExtensions: string[];
   maxSize: number;
+};
+
+export type SubmissionLinkRule = {
+  key: 'PRESENTATION_DEMO_URL';
+  label: string;
+  required: true;
+  allowedProtocols: string[];
+};
+
+export type SubmissionConsentStatus = {
+  confirmedCount: number;
+  totalCount: number;
+  isConfirmedByMe: boolean;
 };
 
 export type Submission = {
@@ -54,6 +68,8 @@ export type Submission = {
   canSubmitNow: boolean;
   submitDisabledReason?: string;
   artifactRules: SubmissionArtifactRule[];
+  linkRules?: SubmissionLinkRule[];
+  memberConsent?: SubmissionConsentStatus;
   currentVersion: SubmissionVersion | null;
   versions: SubmissionVersion[];
 };
@@ -65,8 +81,16 @@ export type SubmitSubmissionFileArtifactInput = {
   mimeType: string;
 };
 
+export type SubmitSubmissionLinkArtifactInput = {
+  kind: 'LINK';
+  label: string;
+  url: string;
+};
+
 export type SubmitSubmissionVersionInput = {
   description?: string;
   changeNote?: string;
-  artifacts: SubmitSubmissionFileArtifactInput[];
+  artifacts: Array<
+    SubmitSubmissionFileArtifactInput | SubmitSubmissionLinkArtifactInput
+  >;
 };

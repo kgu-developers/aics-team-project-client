@@ -1,11 +1,13 @@
 import type { StudentHomeMilestone } from '@aics/core';
-import { Button, Collapsible, StatusDot } from '@aics/design-system';
+import { Button, Collapsible, StatusDot, useToast } from '@aics/design-system';
 import { useNavigate } from '@tanstack/react-router';
 
 import { cx } from '~/shared/lib/cx';
 
+import { useAuthStore } from '~/features/auth/authStore';
 import { useTopicCandidateDialog } from '~/features/project-topic/TopicCandidateDialogContext';
-import { useFinalReportSubmissionDialog } from '~/features/submission/FinalReportSubmissionDialogContext';
+import { useUpdateSubmissionConfirmationMutation } from '~/features/submission/queries';
+import { useSubmissionDialog } from '~/features/submission/SubmissionDialogContext';
 
 import * as styles from './MilestoneCard.css';
 import MilestoneDetails from './MilestoneDetails';
@@ -33,9 +35,24 @@ export default function MilestoneCard({
   isOpen,
 }: MilestoneCardProps) {
   const navigate = useNavigate();
+  const toast = useToast();
+  const currentUser = useAuthStore(state => state.currentUser);
   const { setIsOpen: setTopicCandidateDialogOpen } = useTopicCandidateDialog();
-  const { setIsOpen: setFinalReportSubmissionDialogOpen } =
-    useFinalReportSubmissionDialog();
+  const { openDialog: openSubmissionDialog } = useSubmissionDialog();
+  const sectionId =
+    currentUser?.sections.find(section => section.role === 'STUDENT')?.id ?? '';
+  const userId = currentUser?.studentNumber ?? '';
+  const confirmationMutation = useUpdateSubmissionConfirmationMutation(
+    sectionId,
+    userId,
+  );
+  const isTeamLeader = Boolean(
+    currentUser?.currentTeam?.members.find(
+      member => member.id === currentUser.id,
+    )?.isLeader,
+  );
+  const finalReportBody =
+    milestone.body?.kind === 'final-report' ? milestone.body : null;
   const isCollapsible =
     milestone.isDetailAvailable && milestone.interaction === 'collapsible';
   const statusVariant = STATUS_VARIANT[milestone.status];
@@ -51,6 +68,34 @@ export default function MilestoneCard({
     milestone.isDetailAvailable && milestone.body ? (
       <MilestoneDetails body={milestone.body} />
     ) : null;
+
+  function handleFinalReportAction() {
+    if (isTeamLeader) {
+      openSubmissionDialog('final-report');
+      return;
+    }
+    if (!finalReportBody?.submissionId || !finalReportBody.memberConsent) {
+      return;
+    }
+
+    const confirmed = !finalReportBody.memberConsent.isConfirmedByMe;
+    confirmationMutation.mutate(
+      { submissionId: finalReportBody.submissionId, confirmed },
+      {
+        onError: () =>
+          toast({
+            body: '최종보고서 승인 상태를 변경하지 못했어요.',
+            type: 'error',
+          }),
+        onSuccess: () =>
+          toast({
+            body: confirmed
+              ? '최종보고서를 승인했어요.'
+              : '최종보고서 승인을 취소했어요.',
+          }),
+      },
+    );
+  }
 
   return (
     <article
@@ -105,16 +150,28 @@ export default function MilestoneCard({
                   <>
                     <Button
                       className={styles.rowAction}
-                      isDisabled={row.actionDisabled}
+                      isDisabled={
+                        row.actionDisabled ||
+                        (row.id === 'final-report-submission' &&
+                          confirmationMutation.isPending)
+                      }
+                      isLoading={
+                        row.id === 'final-report-submission' &&
+                        confirmationMutation.isPending
+                      }
                       label={row.actionLabel}
                       onClick={
                         row.id === 'proposal-topic-selection'
                           ? () => setTopicCandidateDialogOpen(true)
                           : row.id === 'final-report-submission'
-                            ? () => setFinalReportSubmissionDialogOpen(true)
-                            : row.actionTo
-                              ? () => navigate({ to: row.actionTo })
-                              : undefined
+                            ? handleFinalReportAction
+                            : milestone.body?.kind ===
+                                  'presentation-material' &&
+                                row.id === 'presentation-material'
+                              ? () => openSubmissionDialog('presentation')
+                              : row.actionTo
+                                ? () => navigate({ to: row.actionTo })
+                                : undefined
                       }
                       size='md'
                       tooltip={row.actionNotice}

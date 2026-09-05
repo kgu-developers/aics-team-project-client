@@ -9,6 +9,7 @@ import type {
   Submission,
   StudentHomeDashboard,
   StudentHomeMilestoneBody,
+  StudentHomeSubmissionMaterial,
   TopicBoard,
 } from '@aics/core';
 
@@ -389,7 +390,12 @@ function documentSections(
   document: MidReport | Presentation,
   docId: 'mid-review' | 'presentation',
 ) {
-  return document.blocks.map(block => ({
+  const visibleBlocks =
+    docId === 'presentation'
+      ? document.blocks.filter(block => block.key === 'presentation-material')
+      : document.blocks;
+
+  return visibleBlocks.map(block => ({
     id: block.key,
     label: block.title.replace(/^\d+\.\s*/, ''),
     statusLabel: block.status === 'COMPLETED' ? '작성 완료' : '작성 중',
@@ -407,10 +413,12 @@ function withDocumentProgress(
   document: MidReport | Presentation,
   documentLabel: string,
 ): StudentHomeDashboard {
+  const visibleBlocks =
+    milestoneId === 'presentation'
+      ? document.blocks.filter(block => block.key === 'presentation-material')
+      : document.blocks;
   const submitted = document.status === 'SUBMITTED';
-  const completed = document.blocks.every(
-    block => block.status === 'COMPLETED',
-  );
+  const completed = visibleBlocks.every(block => block.status === 'COMPLETED');
   return {
     ...dashboard,
     milestones: dashboard.milestones.map(milestone => {
@@ -435,7 +443,9 @@ function withDocumentProgress(
             ? '피드백 반영'
             : submitted
               ? '제출 완료'
-              : `${documentLabel} 작성`,
+              : milestoneId === 'presentation'
+                ? '발표 자료 제출'
+                : `${documentLabel} 작성`,
         status: isFeedbackRevision
           ? 'revision-available'
           : isFeedbackResubmitted
@@ -475,7 +485,7 @@ function withDocumentProgress(
                 ? '제출 완료'
                 : completed
                   ? '모든 영역 작성 완료'
-                  : `작성 완료 ${document.blocks.filter(block => block.status === 'COMPLETED').length}/${document.blocks.length}`,
+                  : `작성 완료 ${visibleBlocks.filter(block => block.status === 'COMPLETED').length}/${visibleBlocks.length}`,
             tone:
               submitted && !isFeedbackRevision
                 ? 'default'
@@ -522,7 +532,7 @@ export function createStudentHomeDashboardWithPresentationProgress(
     dashboard,
     'presentation',
     presentation,
-    '발표 문서',
+    '발표 자료',
   );
 }
 
@@ -535,6 +545,7 @@ export const milestonePreviewScenarios = [
   'proposal-feedback-mid-report',
   'mid-feedback',
   'mid-feedback-ready',
+  'presentation-material-empty',
   'presentation-material',
   'presentation-evaluation',
   'final-report',
@@ -564,7 +575,11 @@ const previewTargetByScenario = {
   },
   'presentation-material': {
     milestoneId: 'presentation',
-    stepLabel: '발표 자료 작성',
+    stepLabel: '발표 자료 제출',
+  },
+  'presentation-material-empty': {
+    milestoneId: 'presentation',
+    stepLabel: '발표 자료 제출',
   },
   'presentation-evaluation': {
     milestoneId: 'presentation',
@@ -647,50 +662,15 @@ const midReportPreviewSections = [
     status: 'not-started' as const,
     to: editorSectionTo('mid-review', 'project-plan'),
   },
-  {
-    id: 'mid-check-questions',
-    label: '중간 점검 질문',
-    statusLabel: '작성 전',
-    status: 'not-started' as const,
-    to: editorSectionTo('mid-review', 'mid-check-questions'),
-  },
 ];
 
 const presentationPreviewSections = [
   {
-    id: 'project-overview',
-    label: '프로젝트 개요',
-    statusLabel: '작성 완료',
-    status: 'completed' as const,
-    to: editorSectionTo('presentation', 'project-overview'),
-  },
-  {
     id: 'presentation-material',
-    label: '프레젠테이션 자료',
+    label: '발표 자료 제출',
     statusLabel: '작성 중',
     status: 'in-progress' as const,
     to: editorSectionTo('presentation', 'presentation-material'),
-  },
-  {
-    id: 'main-features',
-    label: '주요 기능',
-    statusLabel: '작성 전',
-    status: 'not-started' as const,
-    to: editorSectionTo('presentation', 'main-features'),
-  },
-  {
-    id: 'main-screens',
-    label: '주요 화면',
-    statusLabel: '작성 전',
-    status: 'not-started' as const,
-    to: editorSectionTo('presentation', 'main-screens'),
-  },
-  {
-    id: 'demo-video',
-    label: '시연 영상',
-    statusLabel: '작성 전',
-    status: 'not-started' as const,
-    to: editorSectionTo('presentation', 'demo-video'),
   },
 ];
 
@@ -767,15 +747,39 @@ function createPreviewBody(
           '대면 피드백에서 들은 내용과 이를 어떻게 반영했는지 먼저 남겨 주세요.',
       };
     case 'presentation-material':
+    case 'presentation-material-empty':
       return {
         kind: 'presentation-material',
         project: previewProject,
         sections: presentationPreviewSections,
-        recentFile: {
-          id: 'presentation-file',
-          extension: 'PDF',
-          name: 'cineflow-presentation.pdf',
-          meta: '서진규 · 2026-11-04 18:20 업로드',
+        materials: [
+          {
+            id: 'PRESENTATION_DEMO_URL',
+            kind: 'LINK',
+            label: '시연 URL',
+            extension: 'URL',
+            value: 'https://demo.example.com/cineflow',
+            href: 'https://demo.example.com/cineflow',
+          },
+          {
+            id: 'PRESENTATION_PDF',
+            kind: 'FILE',
+            label: '발표 자료 PDF',
+            extension: 'PDF',
+            value: 'cineflow-presentation.pdf',
+          },
+          {
+            id: 'SOURCE_CODE_ZIP',
+            kind: 'FILE',
+            label: '실행 소스 ZIP',
+            extension: 'ZIP',
+            value: 'cineflow-demo.zip',
+          },
+        ],
+        submission: {
+          submittedBy: '서진규',
+          submittedAt: '2026-11-04T18:20:00+09:00',
+          updatedAt: '2026-11-04T18:30:00+09:00',
         },
       };
     case 'presentation-evaluation':
@@ -795,6 +799,20 @@ function createPreviewBody(
         notice: {
           description: '최종보고서와 필수 소스코드 ZIP을 제출해 주세요.',
         },
+        materials: [
+          {
+            id: 'FINAL_REPORT_PDF',
+            kind: 'FILE',
+            label: '최종보고서 PDF',
+            extension: 'PDF',
+          },
+          {
+            id: 'SOURCE_CODE_ZIP',
+            kind: 'FILE',
+            label: '최종 소스코드 ZIP',
+            extension: 'ZIP',
+          },
+        ],
       };
     case 'peer-evaluation':
       return {
@@ -970,7 +988,7 @@ export function createStudentHomeDashboardPreview(
                       actionLabel: '작성하기',
                       actionTo: editorSectionTo('mid-review', 'topic'),
                       actionNotice:
-                        '중간보고서의 다섯 작성 영역을 차례로 작성합니다.',
+                        '중간보고서의 네 작성 영역을 차례로 작성합니다.',
                       tone: 'primary',
                       value: '작성 가능',
                     }))
@@ -991,13 +1009,13 @@ export function createStudentHomeDashboardPreview(
                       ? milestone.rows.map(row => ({
                           ...row,
                           actionDisabled: false,
-                          actionLabel: '작성하기',
+                          actionLabel: '제출하기',
                           actionTo: editorSectionTo(
                             'presentation',
                             'presentation-material',
                           ),
                           actionNotice:
-                            '발표 에디터에서 평가용 PDF를 등록하거나 교체합니다.',
+                            '시연 URL, PDF, ZIP을 등록하거나 교체합니다.',
                           tone: 'primary',
                           value: '작성 가능',
                         }))
@@ -1238,24 +1256,86 @@ export function createStudentHomeDashboardWithEvaluationProgress(
   };
 }
 
-export function createStudentHomeDashboardWithFinalReportSubmission(
+function createSubmissionMaterials(
+  submission: Submission,
+): StudentHomeSubmissionMaterial[] {
+  const artifacts = submission.currentVersion?.artifacts ?? [];
+  const fileArtifacts = artifacts.filter(artifact => artifact.kind === 'FILE');
+  const usedFileIds = new Set<string>();
+
+  const linkMaterials = (submission.linkRules ?? []).map(rule => {
+    const artifact = artifacts.find(
+      candidate => candidate.kind === 'LINK' && candidate.label === rule.label,
+    );
+
+    return {
+      id: rule.key,
+      kind: 'LINK' as const,
+      label: rule.label,
+      extension: 'URL',
+      value: artifact?.kind === 'LINK' ? artifact.url : undefined,
+      href: artifact?.kind === 'LINK' ? artifact.url : undefined,
+    };
+  });
+
+  const fileMaterials = submission.artifactRules.map(rule => {
+    const artifact = fileArtifacts.find(candidate => {
+      if (usedFileIds.has(candidate.id)) return false;
+      const extension = candidate.name.split('.').pop()?.toLowerCase();
+      return extension ? rule.allowedExtensions.includes(extension) : false;
+    });
+    if (artifact) usedFileIds.add(artifact.id);
+
+    return {
+      id: rule.key,
+      kind: 'FILE' as const,
+      label: rule.label,
+      extension: rule.allowedExtensions[0]?.toUpperCase() ?? 'FILE',
+      value: artifact?.name,
+    };
+  });
+
+  return [...linkMaterials, ...fileMaterials];
+}
+
+export function createStudentHomeDashboardWithPresentationSubmission(
   dashboard: StudentHomeDashboard,
   submission: Submission | undefined,
 ): StudentHomeDashboard {
-  const version = submission?.currentVersion;
-  if (!version) return dashboard;
+  if (!submission) return dashboard;
 
-  const submittedFiles = version.artifacts
-    .filter(artifact => artifact.kind === 'FILE')
-    .map(artifact => ({
-      id: artifact.id,
-      extension: artifact.name.split('.').pop()?.toUpperCase() ?? 'FILE',
-      name: artifact.name,
-      meta: `${version.submittedBy.name} · ${new Intl.DateTimeFormat('ko-KR', {
-        dateStyle: 'short',
-        timeStyle: 'short',
-      }).format(new Date(version.submittedAt))} 제출`,
-    }));
+  const version = submission.currentVersion;
+
+  return {
+    ...dashboard,
+    milestones: dashboard.milestones.map(milestone =>
+      milestone.body?.kind === 'presentation-material'
+        ? {
+            ...milestone,
+            body: {
+              ...milestone.body,
+              materials: createSubmissionMaterials(submission),
+              submission: version
+                ? {
+                    submittedBy: version.submittedBy.name,
+                    submittedAt: version.submittedAt,
+                    updatedAt: version.updatedAt,
+                  }
+                : undefined,
+            },
+          }
+        : milestone,
+    ),
+  };
+}
+
+export function createStudentHomeDashboardWithFinalReportSubmission(
+  dashboard: StudentHomeDashboard,
+  submission: Submission | undefined,
+  isTeamLeader = true,
+): StudentHomeDashboard {
+  const version = submission?.currentVersion;
+  if (!submission) return dashboard;
 
   return {
     ...dashboard,
@@ -1264,23 +1344,63 @@ export function createStudentHomeDashboardWithFinalReportSubmission(
 
       return {
         ...milestone,
+        currentStepLabel: isTeamLeader
+          ? milestone.currentStepLabel
+          : version
+            ? '최종보고서 승인'
+            : '최종보고서 제출 대기',
         rows: milestone.rows.map(row =>
           row.id === 'final-report-submission'
-            ? {
-                ...row,
-                actionDisabled: !submission.canSubmitNow,
-                actionLabel: submission.canSubmitNow ? '파일 교체' : undefined,
-                actionNotice: submission.canSubmitNow
-                  ? '최종보고서 PDF와 소스코드 ZIP을 교체합니다.'
-                  : submission.submitDisabledReason,
-                tone: 'primary',
-                value: '제출 완료',
-              }
+            ? isTeamLeader
+              ? {
+                  ...row,
+                  actionDisabled: !submission.canSubmitNow,
+                  actionLabel: version ? '파일 교체' : '파일 제출',
+                  actionNotice: submission.canSubmitNow
+                    ? version
+                      ? '최종보고서 PDF와 소스코드 ZIP을 교체합니다.'
+                      : '최종보고서 PDF와 소스코드 ZIP을 제출합니다.'
+                    : submission.submitDisabledReason,
+                  tone: version ? ('primary' as const) : row.tone,
+                  value: version ? '제출 완료' : '미제출',
+                }
+              : {
+                  ...row,
+                  label: version ? '최종보고서 승인' : '최종보고서 제출 대기',
+                  actionDisabled: !version || !submission.memberConsent,
+                  actionLabel: version
+                    ? submission.memberConsent?.isConfirmedByMe
+                      ? '승인 취소'
+                      : '승인하기'
+                    : '제출 대기',
+                  actionNotice: version
+                    ? submission.memberConsent?.isConfirmedByMe
+                      ? '최종보고서 승인을 취소합니다.'
+                      : '팀장이 제출한 최종보고서를 확인하고 승인합니다.'
+                    : '팀장이 최종보고서를 제출한 뒤 승인할 수 있어요.',
+                  tone: version ? ('primary' as const) : ('muted' as const),
+                  value:
+                    version && submission.memberConsent
+                      ? `팀원 승인 ${submission.memberConsent.confirmedCount}/${submission.memberConsent.totalCount}`
+                      : '파일 제출 전',
+                }
             : row,
         ),
         body:
           milestone.body?.kind === 'final-report'
-            ? { ...milestone.body, submittedFiles }
+            ? {
+                ...milestone.body,
+                submissionId: version ? submission.id : undefined,
+                memberConsent: version ? submission.memberConsent : undefined,
+                materials: createSubmissionMaterials(submission),
+                submission: version
+                  ? {
+                      submittedBy: version.submittedBy.name,
+                      submittedAt: version.submittedAt,
+                      updatedAt: version.updatedAt,
+                    }
+                  : undefined,
+              }
             : milestone.body,
       };
     }),

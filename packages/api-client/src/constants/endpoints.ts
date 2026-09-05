@@ -42,7 +42,10 @@ export const ENDPOINTS = {
   },
   MEETING: {
     RECORDS: (teamId: string) => `/teams/${teamId}/meeting-records`,
+    ACTIONS: (teamId: string) => `/teams/${teamId}/actions`,
     RECORD: (meetingId: string) => `/meeting-records/${meetingId}`,
+    RECORD_ACTIONS: (meetingId: string) =>
+      `/meeting-records/${meetingId}/actions`,
     ACTION: (actionId: string) => `/meeting-actions/${actionId}`,
   },
   EDIT_LOCKS: {
@@ -70,6 +73,8 @@ export const ENDPOINTS = {
       `/milestones/${milestoneId}/my-team-submission`,
     DETAIL: (submissionId: string) => `/submissions/${submissionId}`,
     VERSIONS: (submissionId: string) => `/submissions/${submissionId}/versions`,
+    CONFIRMATION: (submissionId: string) =>
+      `/submissions/${submissionId}/confirmation`,
     MID_REPORT_FEEDBACK: (submissionId: string) =>
       `/submissions/${submissionId}/mid-report-feedback`,
   },

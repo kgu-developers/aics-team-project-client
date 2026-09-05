@@ -8,7 +8,6 @@ export const presentationBlockKeys = [
   'presentation-material',
   'main-features',
   'main-screens',
-  'demo-video',
 ] as const;
 
 export type PresentationBlockKey = (typeof presentationBlockKeys)[number];

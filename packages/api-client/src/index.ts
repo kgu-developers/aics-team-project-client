@@ -65,7 +65,9 @@ export {
 export {
   fetchMeetingRecord,
   fetchMeetingRecords,
+  fetchTeamMeetingActions,
   removeMeetingRecord,
+  submitMeetingAction,
   submitMeetingRecord,
   updateMeetingAction,
   updateMeetingRecord,
@@ -96,6 +98,8 @@ export {
   fetchMyTeamSubmission,
   fetchSubmission,
   submitSubmissionVersion,
+  confirmSubmission,
+  withdrawSubmissionConfirmation,
   type AdminSectionMilestoneSubmissionItemDto,
   type AdminSectionMilestoneSubmissionSummaryDto,
   type AdminSectionMilestoneSubmissionsResponse,

@@ -1,21 +1,20 @@
-import { updateMeetingAction } from '@aics/api-client';
-import type { UpdateMeetingActionInput } from '@aics/core';
+import { submitMeetingAction } from '@aics/api-client';
+import type { CreateMeetingActionInput } from '@aics/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { meetingKeys } from './meetingKeys';
 
-export function useUpdateMeetingActionMutation() {
+export function useSubmitMeetingActionMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
-      actionId,
       input,
+      meetingId,
     }: {
-      actionId: string;
-      input: UpdateMeetingActionInput;
+      input: CreateMeetingActionInput;
       meetingId: string;
       teamId: string;
-    }) => updateMeetingAction(actionId, input),
+    }) => submitMeetingAction(meetingId, input),
     onSuccess: (_, { meetingId, teamId }) => {
       void queryClient.invalidateQueries({
         queryKey: meetingKeys.detail(meetingId),

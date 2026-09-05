@@ -5,6 +5,7 @@ import {
   FileInput,
   Heading,
   Text,
+  TextInput,
   VStack,
 } from '@aics/design-system';
 import { useEffect, useState } from 'react';
@@ -19,11 +20,15 @@ import {
 import * as styles from './SubmissionFilePanel.css';
 import {
   formatFileSize,
+  validateSubmissionLinks,
   validateSubmissionFiles,
 } from './validateSubmissionFiles';
 
 type SelectedFiles = Partial<
   Record<SubmissionArtifactRule['key'], File | null>
+>;
+type LinkValues = Partial<
+  Record<NonNullable<Submission['linkRules']>[number]['key'], string>
 >;
 
 type SubmissionFilePanelProps = {
@@ -57,11 +62,13 @@ function SubmittedFileSummary({ submission }: { submission: Submission }) {
         <Text color='secondary' key={artifact.id} type='supporting'>
           {artifact.kind === 'FILE'
             ? `${artifact.name} · ${formatFileSize(artifact.size)}`
-            : artifact.label}
+            : `${artifact.label} · ${artifact.url}`}
         </Text>
       ))}
       <Text color='secondary' type='supporting'>
-        {formatSubmittedAt(version.submittedAt)} · {version.submittedBy.name}
+        제출자 {version.submittedBy.name} · 제출{' '}
+        {formatSubmittedAt(version.submittedAt)} · 수정{' '}
+        {formatSubmittedAt(version.updatedAt)}
       </Text>
     </VStack>
   );
@@ -84,12 +91,14 @@ export default function SubmissionFilePanel({
   );
   const submitMutation = useSubmitSubmissionVersionMutation(sectionId, userId);
   const [files, setFiles] = useState<SelectedFiles>({});
+  const [links, setLinks] = useState<LinkValues>({});
   const [clientError, setClientError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!submissionQuery.data) return;
     setFiles({});
+    setLinks({});
     setClientError(null);
     setSuccessMessage(null);
   }, [submissionQuery.data?.id]);
@@ -125,10 +134,11 @@ export default function SubmissionFilePanel({
 
   const submission = submissionQuery.data;
   const mutationDisabled = isReadOnly || submitMutation.isPending;
+  const linkRules = submission.linkRules ?? [];
 
   return (
     <VStack className={styles.root} gap={4}>
-      <Heading level={3}>{title} 파일</Heading>
+      <Heading level={3}>{title}</Heading>
       {showCurrentFiles ? (
         <SubmittedFileSummary submission={submission} />
       ) : null}
@@ -152,25 +162,38 @@ export default function SubmissionFilePanel({
               setClientError(fileError);
               return;
             }
+            const linkError = validateSubmissionLinks(linkRules, links);
+            if (linkError) {
+              setClientError(linkError);
+              return;
+            }
             setClientError(null);
             submitMutation.mutate(
               {
                 submissionId: submission.id,
                 input: {
-                  artifacts: submission.artifactRules.map(rule => {
-                    const file = files[rule.key]!;
-                    return {
-                      kind: 'FILE' as const,
-                      name: file.name,
-                      size: file.size,
-                      mimeType: file.type || 'application/octet-stream',
-                    };
-                  }),
+                  artifacts: [
+                    ...linkRules.map(rule => ({
+                      kind: 'LINK' as const,
+                      label: rule.label,
+                      url: links[rule.key]!.trim(),
+                    })),
+                    ...submission.artifactRules.map(rule => {
+                      const file = files[rule.key]!;
+                      return {
+                        kind: 'FILE' as const,
+                        name: file.name,
+                        size: file.size,
+                        mimeType: file.type || 'application/octet-stream',
+                      };
+                    }),
+                  ],
                 },
               },
               {
                 onSuccess: result => {
                   setFiles({});
+                  setLinks({});
                   setSuccessMessage(
                     `파일 제출을 저장했어요. (v${result.currentVersion?.versionNumber})`,
                   );
@@ -179,6 +202,21 @@ export default function SubmissionFilePanel({
             );
           }}
         >
+          {linkRules.map(rule => (
+            <TextInput
+              isDisabled={mutationDisabled}
+              isRequired
+              key={rule.key}
+              label={rule.label}
+              onChange={value => {
+                setLinks(current => ({ ...current, [rule.key]: value }));
+                setClientError(null);
+              }}
+              placeholder='https://example.com/demo'
+              value={links[rule.key] ?? ''}
+              width='100%'
+            />
+          ))}
           {submission.artifactRules.map(rule => (
             <FileInput
               accept={rule.allowedExtensions

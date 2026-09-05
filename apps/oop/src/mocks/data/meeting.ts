@@ -1,8 +1,9 @@
 import type {
+  CreateMeetingActionInput,
   CreateMeetingRecordInput,
-  MeetingAction,
   MeetingParticipant,
   MeetingRecord,
+  SaveMeetingActionInput,
   UpdateMeetingActionInput,
   UpdateMeetingRecordInput,
 } from '@aics/core';
@@ -174,12 +175,49 @@ export function resetMeetingMockData() {
 
 export const getMeetingRecords = (teamId: string) =>
   clone(records.filter(record => record.teamId === teamId));
+export const getTeamMeetingActions = (teamId: string) =>
+  clone(
+    records
+      .filter(record => record.teamId === teamId)
+      .flatMap(record =>
+        record.actions.map(action => ({
+          ...action,
+          meetingRecord: { id: record.id, title: record.title },
+        })),
+      ),
+  );
 export const getMeetingRecord = (id: string) => {
   const record = records.find(value => value.id === id);
   return record && clone(record);
 };
 const participants = (ids: string[]) =>
   members.filter(member => ids.includes(member.userId));
+const assignee = (id: string | null | undefined) =>
+  id ? (members.find(member => member.userId === id) ?? null) : null;
+function buildActions(
+  meetingId: string,
+  inputActions: SaveMeetingActionInput[],
+  existingActions: MeetingRecord['actions'] = [],
+) {
+  const now = new Date().toISOString();
+
+  return inputActions.map(input => {
+    const existing = input.id
+      ? existingActions.find(action => action.id === input.id)
+      : undefined;
+
+    return {
+      id: existing?.id ?? `meeting-action-${nextAction++}`,
+      meetingId,
+      content: input.content.trim(),
+      status: existing?.status ?? 'TODO',
+      assignee: assignee(input.assigneeUserId),
+      dueDate: input.dueDate || null,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    };
+  });
+}
 export function createMeetingRecord(
   teamId: string,
   author: MeetingParticipant,
@@ -195,17 +233,7 @@ export function createMeetingRecord(
     location: input.location?.trim() || null,
     content: clone(input.content),
     participants: participants(input.participantUserIds),
-    actions: input.actions.map(action => ({
-      id: `meeting-action-${nextAction++}`,
-      meetingId,
-      content: action.content.trim(),
-      status: 'TODO',
-      assignee:
-        members.find(member => member.userId === action.assigneeUserId) ?? null,
-      dueDate: action.dueDate || null,
-      createdAt: now,
-      updatedAt: now,
-    })),
+    actions: buildActions(meetingId, input.actions),
     createdBy: author,
     createdAt: now,
     updatedAt: now,
@@ -220,28 +248,14 @@ export function updateMeetingRecord(
   const index = records.findIndex(record => record.id === id);
   if (index < 0) return undefined;
   const record = records[index]!;
-  const existingActions = new Map(
-    record.actions.map(action => [action.id, action] as const),
-  );
+  const existingActionIds = new Set(record.actions.map(action => action.id));
   if (
-    input.actions.some(action => action.id && !existingActions.has(action.id))
+    input.actions.some(
+      action => action.id !== undefined && !existingActionIds.has(action.id),
+    )
   )
     return undefined;
   const now = new Date().toISOString();
-  const actions: MeetingAction[] = input.actions.map(action => {
-    const existing = action.id ? existingActions.get(action.id) : undefined;
-    return {
-      id: existing?.id ?? `meeting-action-${nextAction++}`,
-      meetingId: id,
-      content: action.content.trim(),
-      status: existing?.status ?? 'TODO',
-      assignee:
-        members.find(member => member.userId === action.assigneeUserId) ?? null,
-      dueDate: action.dueDate || null,
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
-    };
-  });
   const next: MeetingRecord = {
     ...record,
     title: input.title.trim(),
@@ -249,7 +263,7 @@ export function updateMeetingRecord(
     location: input.location?.trim() || null,
     content: clone(input.content),
     participants: participants(input.participantUserIds),
-    actions,
+    actions: buildActions(id, input.actions, record.actions),
     updatedAt: now,
   };
   records[index] = next;
@@ -277,6 +291,19 @@ export function updateMeetingAction(
   const now = new Date().toISOString();
   action.updatedAt = now;
   record!.updatedAt = now;
+  return clone(action);
+}
+
+export function createMeetingAction(
+  meetingId: string,
+  input: CreateMeetingActionInput,
+) {
+  const record = records.find(value => value.id === meetingId);
+  if (!record) return undefined;
+  const [action] = buildActions(meetingId, [input]);
+  if (!action) return undefined;
+  record.actions.push(action);
+  record.updatedAt = action.updatedAt;
   return clone(action);
 }
 

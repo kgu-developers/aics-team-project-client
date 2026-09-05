@@ -1,7 +1,10 @@
-import type { SubmissionArtifactRule } from '@aics/core';
+import type { SubmissionArtifactRule, SubmissionLinkRule } from '@aics/core';
 import { describe, expect, it } from 'vitest';
 
-import { validateSubmissionFiles } from './validateSubmissionFiles';
+import {
+  validateSubmissionFiles,
+  validateSubmissionLinks,
+} from './validateSubmissionFiles';
 
 const rule: SubmissionArtifactRule = {
   key: 'PRESENTATION_PDF',
@@ -31,5 +34,30 @@ describe('validateSubmissionFiles', () => {
         PRESENTATION_PDF: new File(['text'], 'notes.txt'),
       }),
     ).toContain('.pdf 형식만');
+  });
+});
+
+describe('validateSubmissionLinks', () => {
+  const linkRule: SubmissionLinkRule = {
+    key: 'PRESENTATION_DEMO_URL',
+    label: '시연 URL',
+    required: true,
+    allowedProtocols: ['http:', 'https:'],
+  };
+
+  it('시연 URL은 HTTP(S) 주소만 허용한다', () => {
+    expect(
+      validateSubmissionLinks([linkRule], {
+        PRESENTATION_DEMO_URL: 'https://example.com/demo',
+      }),
+    ).toBeNull();
+    expect(
+      validateSubmissionLinks([linkRule], {
+        PRESENTATION_DEMO_URL: 'ftp://example.com/demo',
+      }),
+    ).toContain('http:, https: 주소만');
+    expect(validateSubmissionLinks([linkRule], {})).toBe(
+      '시연 URL을(를) 입력해 주세요.',
+    );
   });
 });
