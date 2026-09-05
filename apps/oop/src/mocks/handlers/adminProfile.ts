@@ -1,15 +1,11 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAuthenticatedAccount } from '../authSession';
 import { getAdminProfile, updateAdminProfile } from '../data/adminProfile';
-import { getDemoUserAccount } from '../data/users';
-
-function getAccessToken(request: Request) {
-  return request.headers.get('authorization')?.replace('Bearer ', '') ?? null;
-}
 
 function guardAdmin(request: Request) {
-  const account = getDemoUserAccount(getAccessToken(request));
+  const account = getMockAuthenticatedAccount(request);
 
   if (!account) {
     return HttpResponse.json({ code: 'UNAUTHORIZED' }, { status: 401 });

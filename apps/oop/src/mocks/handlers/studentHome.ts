@@ -1,6 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAuthenticatedAccount } from '../authSession';
 import {
   getPeerResponse,
   getPeerTargets,
@@ -45,7 +46,6 @@ import {
   resetSubmissionMockData,
 } from '../data/submission';
 import { getTopicBoard } from '../data/topic';
-import { getDemoStudentAccount } from '../data/users';
 
 const demoStudentSectionId = 'oop-2026-2-01';
 
@@ -96,11 +96,8 @@ export const studentHomeHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.SECTION.STUDENT_DASHBOARD(':sectionId')}`,
     ({ params, request }) => {
-      const authorization = request.headers.get('authorization');
-
-      const accessToken = authorization?.replace('Bearer ', '') ?? null;
-      const account = getDemoStudentAccount(accessToken);
-      if (!account) {
+      const account = getMockAuthenticatedAccount(request);
+      if (!account || account.user.globalRole !== 'STUDENT') {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '학생 대시보드에 로그인해 주세요.' },
           { status: 401 },

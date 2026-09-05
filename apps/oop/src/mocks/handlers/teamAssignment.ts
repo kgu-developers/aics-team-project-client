@@ -6,6 +6,7 @@ import type {
 } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAccessToken } from '../authSession';
 import {
   assignedFixture,
   demoTeamAssignmentSectionId,
@@ -58,7 +59,7 @@ function createInitialProjections(): Record<string, TeamAssignmentProjection> {
 let projectionsByAccessToken = createInitialProjections();
 
 function getAccessToken(request: Request) {
-  return request.headers.get('authorization')?.replace('Bearer ', '') ?? null;
+  return getMockAccessToken(request);
 }
 
 function getProjection(request: Request) {

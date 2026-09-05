@@ -1,6 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAccessToken } from '../authSession';
 import {
   addTopicCandidate,
   cancelTopicVote,
@@ -12,7 +13,7 @@ import {
 import { getDemoStudentAccount } from '../data/users';
 
 function getAccessToken(request: Request) {
-  return request.headers.get('authorization')?.replace('Bearer ', '') ?? null;
+  return getMockAccessToken(request);
 }
 
 function guard(request: Request, sectionId: string) {

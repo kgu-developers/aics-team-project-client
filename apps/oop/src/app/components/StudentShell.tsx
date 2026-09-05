@@ -3,7 +3,10 @@ import { Link, Navigate, Outlet } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { useAuthStore } from '~/features/auth/authStore';
+import {
+  selectHasAuthenticatedSession,
+  useAuthStore,
+} from '~/features/auth/authStore';
 
 import { oopCourseConfig } from '~/course/config';
 
@@ -11,10 +14,10 @@ import * as styles from './StudentShell.css';
 import { StudentHeaderActions } from './StudentShellPopovers';
 
 export default function StudentShell() {
-  const accessToken = useAuthStore(state => state.accessToken);
+  const hasSession = useAuthStore(selectHasAuthenticatedSession);
   const currentUser = useAuthStore(state => state.currentUser);
 
-  if (!accessToken || !currentUser) {
+  if (!hasSession || !currentUser) {
     return <Navigate to={ROUTES.LOGIN} />;
   }
 

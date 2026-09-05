@@ -1,6 +1,11 @@
 export type {
   AuthLoginInput,
   AuthLoginResponse,
+  AuthRefreshResponse,
+  AuthLogoutResponse,
+  AuthSessionRole,
+  AuthSessionResponse,
+  CurrentUserResponse,
   CurrentUser,
   CurrentUserSection,
   UserGlobalRole,

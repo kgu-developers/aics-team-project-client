@@ -1,19 +1,18 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAuthenticatedAccount } from '../authSession';
 import {
   adminNoticeDetails,
   adminNotices,
   noticeListPageSize,
   noticeSectionFilters,
 } from '../data/adminNotices';
-import { demoAdminAccessToken } from '../data/users';
+import { demoAdmin } from '../data/users';
 
 export const adminNoticeHandlers = [
   http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.NOTICES}`, ({ request }) => {
-    if (
-      request.headers.get('authorization') !== `Bearer ${demoAdminAccessToken}`
-    ) {
+    if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
       return HttpResponse.json(
         { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
         { status: 401 },
@@ -29,10 +28,7 @@ export const adminNoticeHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.NOTICE_DETAIL(':noticeId')}`,
     ({ params, request }) => {
-      if (
-        request.headers.get('authorization') !==
-        `Bearer ${demoAdminAccessToken}`
-      ) {
+      if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },
@@ -57,10 +53,7 @@ export const adminNoticeHandlers = [
   http.delete(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.NOTICE_ATTACHMENT(':noticeId')}`,
     ({ params, request }) => {
-      if (
-        request.headers.get('authorization') !==
-        `Bearer ${demoAdminAccessToken}`
-      ) {
+      if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },

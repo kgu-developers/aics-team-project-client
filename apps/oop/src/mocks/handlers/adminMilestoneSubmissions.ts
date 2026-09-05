@@ -1,8 +1,9 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAuthenticatedAccount } from '../authSession';
 import { getAdminMilestoneSubmissionsFixture } from '../data/adminMilestoneSubmissions';
-import { demoAdminAccessToken } from '../data/users';
+import { demoAdmin } from '../data/users';
 
 export const adminMilestoneSubmissionsHandlers = [
   http.get(
@@ -11,9 +12,9 @@ export const adminMilestoneSubmissionsHandlers = [
       ':milestoneId',
     )}`,
     ({ params, request }) => {
-      const authorization = request.headers.get('authorization');
+      const account = getMockAuthenticatedAccount(request);
 
-      if (authorization !== `Bearer ${demoAdminAccessToken}`) {
+      if (account?.user.id !== demoAdmin.id) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },

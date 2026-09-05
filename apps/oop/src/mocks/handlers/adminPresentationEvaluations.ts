@@ -1,6 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAuthenticatedAccount } from '../authSession';
 import { adminMilestoneDeadlineFixtures } from '../data/adminMilestoneDeadlines';
 import { adminMilestoneScheduleFixture } from '../data/adminMilestoneSchedule';
 import {
@@ -8,7 +9,7 @@ import {
   resetAdminPresentationEvaluationsFixture,
 } from '../data/adminPresentationEvaluations';
 import { adminTeamDashboardFixtures } from '../data/adminTeamDashboard';
-import { demoAdminAccessToken } from '../data/users';
+import { demoAdmin } from '../data/users';
 
 const initialDeadlineFixtures = structuredClone(adminMilestoneDeadlineFixtures);
 const initialScheduleFixture = structuredClone(adminMilestoneScheduleFixture);
@@ -53,10 +54,7 @@ export const adminPresentationEvaluationHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_PRESENTATION_EVALUATIONS(':sectionId')}`,
     ({ params, request }) => {
-      if (
-        request.headers.get('authorization') !==
-        `Bearer ${demoAdminAccessToken}`
-      ) {
+      if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
         return HttpResponse.json(
           { message: '관리자 로그인이 필요합니다.' },
           { status: 401 },
@@ -76,10 +74,7 @@ export const adminPresentationEvaluationHandlers = [
   http.patch(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_PRESENTATION_EVALUATION_SETTINGS(':sectionId')}`,
     async ({ params, request }) => {
-      if (
-        request.headers.get('authorization') !==
-        `Bearer ${demoAdminAccessToken}`
-      ) {
+      if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
         return HttpResponse.json(
           { message: '관리자 로그인이 필요합니다.' },
           { status: 401 },

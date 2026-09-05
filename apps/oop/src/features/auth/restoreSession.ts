@@ -1,15 +1,18 @@
-import { fetchCurrentUser, submitRefresh } from '@aics/api-client';
+import { submitRefresh } from '@aics/api-client';
 
 import { useAuthStore } from './authStore';
+import { fetchSessionUser } from './fetchSessionUser';
+import { requireSessionRole } from './requireSessionRole';
 
 export async function restoreSession() {
+  const session = useAuthStore.getState();
+  session.clearSession();
   try {
-    const response = await submitRefresh();
-    const { setAccessToken, setCurrentUser } = useAuthStore.getState();
-
-    setAccessToken(response.accessToken);
-    setCurrentUser(await fetchCurrentUser());
+    const role = requireSessionRole(await submitRefresh());
+    const currentUser = await fetchSessionUser(role);
+    session.setCurrentUser(currentUser);
+    session.markAuthenticated(role);
   } catch {
-    useAuthStore.getState().clearSession();
+    session.clearSession();
   }
 }

@@ -9,6 +9,7 @@ import {
 } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAccessToken } from '../authSession';
 import {
   createMeetingAction,
   createMeetingRecord,
@@ -26,9 +27,7 @@ import { getDemoStudentAccount } from '../data/users';
 const error = (code: string, status: number) =>
   HttpResponse.json({ code }, { status });
 function guard(request: Request) {
-  const account = getDemoStudentAccount(
-    request.headers.get('authorization')?.replace('Bearer ', '') ?? null,
-  );
+  const account = getDemoStudentAccount(getMockAccessToken(request));
   if (!account) return { response: error('UNAUTHORIZED', 401) } as const;
   if (!account.user.currentTeam)
     return { response: error('TEAM_REQUIRED', 403) } as const;

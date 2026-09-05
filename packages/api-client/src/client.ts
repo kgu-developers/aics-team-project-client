@@ -8,6 +8,9 @@ export const API_BASE_URL =
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
+  withXSRFToken: true,
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
   headers: {
     'Content-Type': 'application/json',
   },
@@ -16,7 +19,7 @@ export const apiClient = axios.create({
 apiClient.interceptors.request.use(config => {
   const accessToken = getApiAccessToken();
 
-  if (accessToken) {
+  if (import.meta.env.DEV && accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
 
