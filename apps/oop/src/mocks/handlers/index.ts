@@ -14,6 +14,7 @@ import { meetingHandlers } from './meeting';
 import { midReportHandlers } from './midReport';
 import { presentationHandlers } from './presentation';
 import { proposalHandlers } from './proposal';
+import { sectionHandlers } from './section';
 import { studentFeedbackHandlers } from './studentFeedback';
 import { studentHomeHandlers } from './studentHome';
 import { studentNoticeHandlers } from './studentNotices';
@@ -22,6 +23,7 @@ import { teamAssignmentHandlers } from './teamAssignment';
 import { topicHandlers } from './topic';
 
 export const handlers = [
+  ...sectionHandlers,
   ...authHandlers,
   ...adminMilestoneScheduleHandlers,
   ...adminMilestoneSubmissionDetailHandlers,

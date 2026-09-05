@@ -6,13 +6,18 @@ export type SectionAnnouncementAttachment = {
   url: string;
 };
 
-export type SectionAnnouncement = {
-  id: string;
-  sectionId: string;
+export type SectionAnnouncementResponse = {
+  id: number;
+  sectionId: number;
   title: string;
   content: string;
-  createdAt: string;
-  updatedAt: string;
-  authorName: string;
+  publishedAt: string;
+};
+
+export type SectionAnnouncementListResponse = {
+  contents: SectionAnnouncementResponse[];
+};
+
+export type SectionAnnouncement = SectionAnnouncementResponse & {
   attachments?: SectionAnnouncementAttachment[];
 };

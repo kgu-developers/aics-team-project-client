@@ -37,6 +37,7 @@ export const ENDPOINTS = {
     SECTION_LIST: (sectionId: string) => `/sections/${sectionId}/announcements`,
   },
   SECTION: {
+    MY_SECTIONS: '/api/v1/oop/sections',
     STUDENT_DASHBOARD: (sectionId: string) =>
       `/sections/${sectionId}/dashboard/student`,
   },

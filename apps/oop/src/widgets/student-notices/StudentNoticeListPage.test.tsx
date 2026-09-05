@@ -1,4 +1,4 @@
-import type { SectionAnnouncement } from '@aics/core';
+import type { SectionResponse, SectionAnnouncement } from '@aics/core';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -21,6 +21,7 @@ import { demoAccessToken, demoStudent } from '~/mocks/data/users';
 import { renderWithRouter } from '~/test/renderWithRouter';
 
 const mockNavigate = vi.hoisted(() => vi.fn());
+const mockMySectionsQuery = vi.hoisted(() => vi.fn());
 
 vi.mock('@tanstack/react-router', async importOriginal => {
   const actual =
@@ -28,15 +29,32 @@ vi.mock('@tanstack/react-router', async importOriginal => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
+vi.mock('~/features/section/queries', () => ({
+  useMySectionsQuery: (...args: unknown[]) => mockMySectionsQuery(...args),
+}));
+
+const activeSection: SectionResponse = {
+  id: 1,
+  code: 'CS101',
+  name: '01',
+  classTime: '월123',
+  capacity: 40,
+  contactVisibleFrom: null,
+  contactVisibleUntil: null,
+  courseId: 1,
+  courseName: '객체지향프로그래밍',
+  year: 2026,
+  semester: 'SPRING',
+  status: 'ACTIVE',
+};
+
 const mySectionAnnouncements: SectionAnnouncement[] = [
   {
-    id: '1',
-    sectionId: 'oop-2026-2-01',
+    id: 1,
+    sectionId: 1,
     title: '우리 분반 공지',
     content: '분반 공지 내용',
-    createdAt: '2025-12-17 09:00',
-    updatedAt: '2025-12-17 09:00',
-    authorName: '이은정',
+    publishedAt: '2025-12-17 09:00',
   },
 ];
 
@@ -58,6 +76,12 @@ describe('StudentNoticeListPage', () => {
   });
 
   beforeEach(() => {
+    mockMySectionsQuery.mockReset();
+    mockMySectionsQuery.mockReturnValue({
+      data: [activeSection],
+      error: null,
+      isPending: false,
+    });
     mockSectionAnnouncementsQuery.mockReset();
     mockNavigate.mockReset();
     window.localStorage.clear();
@@ -85,7 +109,7 @@ describe('StudentNoticeListPage', () => {
   it('로컬에 저장된 공지는 새 글로 표시하지 않는다', () => {
     const storageKey = getStudentNoticeReadStorageKey(
       demoStudent.id,
-      demoStudent.sections[0]?.id ?? '',
+      String(activeSection.id),
     );
     if (!storageKey) throw new Error('storage key is required');
     window.localStorage.setItem(storageKey, JSON.stringify(['1']));
@@ -118,7 +142,7 @@ describe('StudentNoticeListPage', () => {
     );
 
     expect(mockSectionAnnouncementsQuery).toHaveBeenCalledWith(
-      demoStudent.sections[0]?.id,
+      activeSection.id,
     );
   });
 
@@ -152,7 +176,29 @@ describe('StudentNoticeListPage', () => {
 
     expect(screen.getAllByRole('table')).toHaveLength(1);
     expect(
-      screen.getByRole('columnheader', { name: '작성자' }),
-    ).toBeInTheDocument();
+      screen.queryByRole('columnheader', { name: '작성자' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('활성 분반이 없으면 공지 조회 대신 선행조건 안내를 표시한다', () => {
+    mockMySectionsQuery.mockReturnValue({
+      data: [],
+      error: null,
+      isPending: false,
+    });
+    mockSectionAnnouncementsQuery.mockReturnValue({
+      data: undefined,
+      error: null,
+      isPending: true,
+    });
+
+    renderWithRouter(
+      <AstryxThemeProvider>
+        <StudentNoticeListPage />
+      </AstryxThemeProvider>,
+    );
+
+    expect(screen.getByText('소속 분반이 없어요.')).toBeInTheDocument();
+    expect(mockSectionAnnouncementsQuery).toHaveBeenCalledWith(undefined);
   });
 });
