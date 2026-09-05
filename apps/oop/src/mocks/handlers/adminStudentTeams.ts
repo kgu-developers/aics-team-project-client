@@ -2,12 +2,12 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import type { Team } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
-import { getMockAuthorization } from '../authSession';
+import { getMockAuthenticatedAccount } from '../authSession';
 import {
   adminStudentsFixture,
   adminTeamsFixture,
 } from '../data/adminStudentTeams';
-import { demoAdminAccessToken } from '../data/users';
+import { demoAdmin } from '../data/users';
 
 const studentsById = new Map(
   adminStudentsFixture.map(student => [student.id, student]),
@@ -60,9 +60,9 @@ export const adminStudentTeamHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_STUDENTS(':sectionId')}`,
     ({ params, request }) => {
-      const authorization = getMockAuthorization(request);
+      const account = getMockAuthenticatedAccount(request);
 
-      if (authorization !== `Bearer ${demoAdminAccessToken}`) {
+      if (account?.user.id !== demoAdmin.id) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },
@@ -97,9 +97,9 @@ export const adminStudentTeamHandlers = [
   ),
 
   http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.ROOT}`, ({ request }) => {
-    const authorization = getMockAuthorization(request);
+    const account = getMockAuthenticatedAccount(request);
 
-    if (authorization !== `Bearer ${demoAdminAccessToken}`) {
+    if (account?.user.id !== demoAdmin.id) {
       return HttpResponse.json(
         { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
         { status: 401 },

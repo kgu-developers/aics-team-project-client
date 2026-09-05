@@ -261,8 +261,3 @@ restoreMockSessions();
 export function getMockAccessToken(request: Request): string | null {
   return getMockAuthenticatedAccount(request)?.accessToken ?? null;
 }
-
-export function getMockAuthorization(request: Request): string | null {
-  const token = getMockAccessToken(request);
-  return token ? `Bearer ${token}` : null;
-}

@@ -1,13 +1,11 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
-import { getMockAuthorization } from '../authSession';
+import { getMockAuthenticatedAccount } from '../authSession';
 import { adminMeetingRecordsFixture } from '../data/adminMeetings';
-import { getDemoUserAccount } from '../data/users';
 
-function getAccessibleSectionIds(authorization: string | null) {
-  const accessToken = authorization?.replace('Bearer ', '') ?? null;
-  const account = getDemoUserAccount(accessToken);
+function getAccessibleSectionIds(request: Request) {
+  const account = getMockAuthenticatedAccount(request);
 
   if (!account || account.user.globalRole === 'STUDENT') return null;
 
@@ -18,9 +16,7 @@ export const adminMeetingHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`,
     ({ request }) => {
-      const accessibleSectionIds = getAccessibleSectionIds(
-        getMockAuthorization(request),
-      );
+      const accessibleSectionIds = getAccessibleSectionIds(request);
 
       if (!accessibleSectionIds) {
         return HttpResponse.json(
@@ -56,9 +52,7 @@ export const adminMeetingHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORD(':meetingId')}`,
     ({ params, request }) => {
-      const accessibleSectionIds = getAccessibleSectionIds(
-        getMockAuthorization(request),
-      );
+      const accessibleSectionIds = getAccessibleSectionIds(request);
 
       if (!accessibleSectionIds) {
         return HttpResponse.json(
