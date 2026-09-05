@@ -126,6 +126,19 @@ function validateArtifacts(input: unknown, rules: SubmissionArtifactRule[]) {
     );
   }
 
+  const hasUnexpectedArtifact = input.artifacts.some(
+    artifact =>
+      !isArtifactInput(artifact) ||
+      (artifact.kind !== 'FILE' && artifact.kind !== 'LINK'),
+  );
+  if (hasUnexpectedArtifact) {
+    return errorResponse(
+      'ARTIFACT_TYPE_NOT_ALLOWED',
+      '허용되지 않은 제출 자료가 포함되어 있어요.',
+      400,
+    );
+  }
+
   const remaining = input.artifacts.filter(
     artifact => isArtifactInput(artifact) && artifact.kind === 'FILE',
   );
@@ -188,13 +201,17 @@ function validateLinks(input: unknown, rules: SubmissionLinkRule[]) {
     );
   }
 
+  const remaining = artifacts.filter(
+    artifact => isArtifactInput(artifact) && artifact.kind === 'LINK',
+  );
   for (const rule of rules) {
-    const artifact = artifacts.find(
+    const index = remaining.findIndex(
       item =>
         isArtifactInput(item) &&
         item.kind === 'LINK' &&
         item.label === rule.label,
     );
+    const artifact = index >= 0 ? remaining.splice(index, 1)[0] : undefined;
     if (
       !isArtifactInput(artifact) ||
       typeof artifact.url !== 'string' ||
@@ -223,15 +240,7 @@ function validateLinks(input: unknown, rules: SubmissionLinkRule[]) {
       );
     }
   }
-  const allowedLabels = new Set(rules.map(rule => rule.label));
-  const unexpectedLink = artifacts.find(
-    item =>
-      isArtifactInput(item) &&
-      item.kind === 'LINK' &&
-      typeof item.label === 'string' &&
-      !allowedLabels.has(item.label),
-  );
-  if (unexpectedLink) {
+  if (remaining.length > 0) {
     return errorResponse(
       'ARTIFACT_TYPE_NOT_ALLOWED',
       '허용되지 않은 링크가 포함되어 있어요.',

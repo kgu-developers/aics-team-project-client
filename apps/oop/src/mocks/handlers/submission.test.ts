@@ -168,6 +168,46 @@ describe('submissionHandlers', () => {
     });
   });
 
+  it('필수 자료와 함께 알 수 없는 종류의 자료가 포함되면 거부한다', async () => {
+    const body = presentationBody('알 수 없는 자료 종류가 포함됐습니다.');
+    const response = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.SUBMISSION.VERSIONS('submission-presentation')}`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          ...body,
+          artifacts: [...body.artifacts, { kind: 'OTHER', value: 'unknown' }],
+        }),
+      },
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'ARTIFACT_TYPE_NOT_ALLOWED',
+    });
+  });
+
+  it('같은 제출 링크가 중복되면 거부한다', async () => {
+    const body = presentationBody('시연 URL이 중복됐습니다.');
+    const response = await postVersion('submission-presentation', {
+      ...body,
+      artifacts: [
+        ...body.artifacts,
+        {
+          kind: 'LINK',
+          label: '시연 URL',
+          url: 'https://example.com/duplicate-demo',
+        },
+      ],
+    });
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'ARTIFACT_TYPE_NOT_ALLOWED',
+    });
+  });
+
   it('같은 마일스톤에서도 팀 범위의 제출물만 조회한다', () => {
     expect(getSubmissionByMilestone('team-07', 'presentation')).toMatchObject({
       id: 'submission-presentation',
@@ -424,7 +464,7 @@ describe('submissionHandlers', () => {
     });
     expect(nullArtifact.status).toBe(400);
     await expect(nullArtifact.json()).resolves.toMatchObject({
-      code: 'REQUIRED_ARTIFACT_MISSING',
+      code: 'ARTIFACT_TYPE_NOT_ALLOWED',
     });
   });
 
