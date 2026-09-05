@@ -8,7 +8,7 @@ import {
   Text,
   VStack,
 } from '@aics/design-system';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
@@ -34,6 +34,19 @@ function formatPreferredRoles(roles: string[]) {
 
 export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
   const [sectionId, setSectionId] = useState(sections[0]?.id ?? '');
+
+  useEffect(() => {
+    setSectionId(currentSectionId => {
+      const isCurrentSectionAvailable = sections.some(
+        section => section.id === currentSectionId,
+      );
+
+      return isCurrentSectionAvailable
+        ? currentSectionId
+        : (sections[0]?.id ?? '');
+    });
+  }, [sections]);
+
   const responses = adminPreSurveyResponsesBySection[sectionId] ?? [];
 
   return (

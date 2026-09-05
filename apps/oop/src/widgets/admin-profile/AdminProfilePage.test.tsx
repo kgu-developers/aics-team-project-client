@@ -18,6 +18,7 @@ import {
 
 import { useAuthStore } from '~/features/auth/authStore';
 
+import { AdminPreSurveyResponses } from './AdminPreSurveyResponses';
 import AdminProfilePage from './AdminProfilePage';
 
 import {
@@ -331,5 +332,31 @@ describe('AdminProfilePage', () => {
     expect(
       screen.queryByRole('columnheader', { name: '이름' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('분반 목록이 나중에 들어오면 첫 분반의 사전 정보를 표시한다', async () => {
+    const { rerender } = render(
+      <AstryxThemeProvider>
+        <AdminPreSurveyResponses sections={[]} />
+      </AstryxThemeProvider>,
+    );
+
+    expect(
+      screen.getByText('담당 분반이 없어 사전 정보를 조회할 수 없습니다.'),
+    ).toBeInTheDocument();
+
+    rerender(
+      <AstryxThemeProvider>
+        <AdminPreSurveyResponses
+          sections={[{ code: 'OOP-01', id: 'oop-2026-2-01', name: '분반 1' }]}
+        />
+      </AstryxThemeProvider>,
+    );
+
+    expect(
+      await screen.findByText(
+        '응답 수: 2명 · 미응답 학생은 현재 API 응답에 포함되지 않습니다.',
+      ),
+    ).toBeInTheDocument();
   });
 });
