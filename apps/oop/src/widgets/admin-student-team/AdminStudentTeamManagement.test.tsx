@@ -167,13 +167,12 @@ describe('AdminStudentTeamManagement', () => {
     renderPage();
 
     const studentCell = (await screen.findAllByText('김민준')).find(
-      (element) => element.tagName === 'TD',
+      element => element.tagName === 'TD',
     );
     expect(studentCell).toBeDefined();
-    const withdrawButton = within(studentCell!.closest('tr') as HTMLElement).getByRole(
-      'button',
-      { name: '제외' },
-    );
+    const withdrawButton = within(
+      studentCell!.closest('tr') as HTMLElement,
+    ).getByRole('button', { name: '제외' });
     await user.click(withdrawButton);
 
     const dialog = await screen.findByRole('alertdialog', {

@@ -391,7 +391,9 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('link', { name: 'https://youtu.be/demo-oop-01-1' }),
     ).toHaveAttribute('href', 'https://youtu.be/demo-oop-01-1');
-    expect(screen.getByRole('heading', { name: '시연 URL' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: '시연 URL' }),
+    ).toBeInTheDocument();
     expect(screen.queryByText('3. 주요 화면')).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getByText('제출 상태 · 최초 제출')).toBeInTheDocument();
@@ -410,7 +412,9 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('link', { name: '← 발표 자료 제출 목록으로' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '시연 URL' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: '시연 URL' }),
+    ).toBeInTheDocument();
   });
 
   it('상호 평가 상세를 디자인 시스템 표로 표시하고 평가자 정보를 연다', async () => {
@@ -426,9 +430,15 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('columnheader', { name: '평가자' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: '김민준' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: '이서연' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: /평균/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '김민준' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '이서연' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: /평균/ }),
+    ).toBeInTheDocument();
     expect(screen.getAllByText('미제출')).not.toHaveLength(0);
     expect(screen.getByText('30')).toBeInTheDocument();
     expect(screen.getByText('30.0')).toBeInTheDocument();
