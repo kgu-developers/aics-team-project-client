@@ -10,10 +10,11 @@ import {
 } from '@aics/design-system';
 import { useState } from 'react';
 
-import { adminPreSurveyResponsesBySection } from '~/mocks/data/adminPreSurveyResponses';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import * as styles from './AdminPreSurveyResponses.css';
+
+import { adminPreSurveyResponsesBySection } from '~/mocks/data/adminPreSurveyResponses';
 
 type Section = { code: string; id: string; name: string };
 
