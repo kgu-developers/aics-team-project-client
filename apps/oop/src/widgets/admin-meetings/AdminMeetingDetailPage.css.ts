@@ -1,5 +1,5 @@
 import { tokens } from '@aics/design-system';
-import { globalStyle, style } from '@vanilla-extract/css';
+import { style } from '@vanilla-extract/css';
 
 export const page = style({
   display: 'flex',
@@ -63,31 +63,4 @@ export const content = style({
   lineHeight: 1.7,
   margin: '10px 0 0',
   whiteSpace: 'pre-wrap',
-});
-
-export const actionTable = style({
-  marginTop: 10,
-  width: '100%',
-});
-
-globalStyle(actionTable + ' table', {
-  borderCollapse: 'collapse',
-  tableLayout: 'fixed',
-  width: '100%',
-});
-
-globalStyle(actionTable + ' th', {
-  background: tokens.color.background.card,
-  color: tokens.color.text.secondary,
-  fontSize: 13,
-  fontWeight: 500,
-  padding: '12px 16px',
-  textAlign: 'left',
-});
-
-globalStyle(actionTable + ' td', {
-  borderTop: '1px solid ' + tokens.color.border.base,
-  fontSize: 14,
-  overflowWrap: 'anywhere',
-  padding: '14px 16px',
 });

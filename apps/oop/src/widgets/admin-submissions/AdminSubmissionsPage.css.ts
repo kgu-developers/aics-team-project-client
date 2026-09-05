@@ -68,6 +68,12 @@ export const evaluationHeader = style({
   justifyContent: 'space-between',
 });
 
+export const evaluationActions = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: 8,
+});
+
 export const list = style({
   display: 'flex',
   flexDirection: 'column',

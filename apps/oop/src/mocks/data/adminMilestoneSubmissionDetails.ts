@@ -160,21 +160,6 @@ const midtermSubmissionDetail: AdminMilestoneSubmissionDetailResponse = {
         ],
         title: '4. 팀프로젝트 진행 계획',
       },
-      {
-        description:
-          '대면 점검에서 확인받고 싶은 질문과 시연 초점을 작성합니다.',
-        fields: [
-          {
-            label: '중점 시연 기능',
-            value: '분반별 팀 제출물 조회부터 상세보기 이동까지의 흐름',
-          },
-          {
-            label: '교수님께 질문할 내용',
-            value: '마일스톤별 제출물 파일 다운로드 정책을 확인하고 싶습니다.',
-          },
-        ],
-        title: '5. 중간 점검 질문',
-      },
     ],
     teamLeaderName: '김민준',
     teamName: 'OOP-01 - 1팀',

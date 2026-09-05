@@ -1,4 +1,4 @@
-import { Heading } from '@aics/design-system';
+import { Button, Dialog, Heading, HStack, Text } from '@aics/design-system';
 import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 
@@ -18,6 +18,9 @@ export default function AdminStudentTeamManagement() {
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
     null,
   );
+  const [studentToWithdraw, setStudentToWithdraw] = useState<
+    (typeof students)[number] | null
+  >(null);
   const sections = currentUser?.sections ?? [];
   const selectedSection =
     sections.find(section => section.id === selectedSectionId) ??
@@ -36,6 +39,14 @@ export default function AdminStudentTeamManagement() {
   const selectedStudent = selectedStudentId
     ? (studentsById.get(selectedStudentId) ?? null)
     : null;
+  const withdrawingStudentIsLeader = studentToWithdraw
+    ? teams.some(team =>
+        team.members.some(
+          member =>
+            member.id === studentToWithdraw.id && member.isLeader === true,
+        ),
+      )
+    : false;
 
   const isPending = studentsQuery.isPending || teamsQuery.isPending;
   const error = studentsQuery.error ?? teamsQuery.error;
@@ -97,6 +108,7 @@ export default function AdminStudentTeamManagement() {
                       <th scope='col'>학번</th>
                       <th scope='col'>전공</th>
                       <th scope='col'>팀</th>
+                      <th scope='col'>관리</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -106,6 +118,14 @@ export default function AdminStudentTeamManagement() {
                         <td>{student.studentNumber}</td>
                         <td>{student.major}</td>
                         <td>{student.team?.name ?? '미배정'}</td>
+                        <td>
+                          <Button
+                            label='제외'
+                            onClick={() => setStudentToWithdraw(student)}
+                            size='sm'
+                            variant='ghost'
+                          />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -164,6 +184,45 @@ export default function AdminStudentTeamManagement() {
         onClose={() => setSelectedStudentId(null)}
         student={selectedStudent}
       />
+      <Dialog
+        aria-label='수강생 제외 확인'
+        isOpen={studentToWithdraw !== null}
+        onOpenChange={open => {
+          if (!open) setStudentToWithdraw(null);
+        }}
+        purpose='required'
+        width={440}
+      >
+        {studentToWithdraw ? (
+          <div className={styles.withdrawDialogContent}>
+            <Heading level={2}>수강생을 분반에서 제외할까요?</Heading>
+            <Text>
+              {withdrawingStudentIsLeader
+                ? `${studentToWithdraw.name} 학생은 현재 팀장입니다. 제외하면 팀장 권한이 해제되고 팀 상태가 모집 중으로 변경됩니다.`
+                : `${studentToWithdraw.name} 학생을 제외하면 수강 상태가 변경되고 팀 구성에서도 제외됩니다.`}
+            </Text>
+            {withdrawingStudentIsLeader ? (
+              <Text>
+                이후 팀원들이 기존 팀장 선출 흐름에서 새 팀장을 자진해서 정하게
+                됩니다.
+              </Text>
+            ) : null}
+            <Text>제외 처리는 백엔드 API 연동 후 사용할 수 있습니다.</Text>
+            <HStack gap={2} justify='end'>
+              <Button
+                label='취소'
+                onClick={() => setStudentToWithdraw(null)}
+                variant='secondary'
+              />
+              <Button
+                isDisabled
+                label='제외 확인'
+                tooltip='백엔드 수강 상태 변경 API 연동 후 제공 예정입니다.'
+              />
+            </HStack>
+          </div>
+        ) : null}
+      </Dialog>
     </div>
   );
 }

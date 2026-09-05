@@ -5,6 +5,7 @@ export type AdminStudentFixture = {
   major: string;
   sectionId: string;
   teamId: string | null;
+  isLeader: boolean;
 };
 
 export type AdminTeamFixture = {
@@ -24,6 +25,7 @@ export const adminStudentsFixture: AdminStudentFixture[] = [
     major: '컴퓨터공학과',
     sectionId: adminStudentTeamDemoSectionId,
     teamId: 'team-1151-1',
+    isLeader: true,
   },
   {
     id: 'student-1151-2',
@@ -32,6 +34,7 @@ export const adminStudentsFixture: AdminStudentFixture[] = [
     major: '소프트웨어학과',
     sectionId: adminStudentTeamDemoSectionId,
     teamId: 'team-1151-1',
+    isLeader: false,
   },
   {
     id: 'student-1151-3',
@@ -40,6 +43,7 @@ export const adminStudentsFixture: AdminStudentFixture[] = [
     major: '컴퓨터공학과',
     sectionId: adminStudentTeamDemoSectionId,
     teamId: 'team-1151-2',
+    isLeader: true,
   },
   {
     id: 'student-1151-4',
@@ -48,6 +52,7 @@ export const adminStudentsFixture: AdminStudentFixture[] = [
     major: '인공지능학과',
     sectionId: adminStudentTeamDemoSectionId,
     teamId: 'team-1151-2',
+    isLeader: false,
   },
 ];
 

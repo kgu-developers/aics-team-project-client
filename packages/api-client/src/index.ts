@@ -20,6 +20,23 @@ export {
 } from './profile/updateMyPassword';
 export { API_BASE_URL, apiClient } from './client';
 export {
+  createAdminPeerEvaluationForm,
+  type AdminPeerEvaluationFormCreateInput,
+  type AdminPeerEvaluationFormPersistResponse,
+} from './adminEvaluation';
+export {
+  fetchAdminOopCourses,
+  type AdminOopCoursesResponse,
+} from './adminCourse';
+export {
+  fetchAdminOopSections,
+  type AdminOopCourseDto,
+  type AdminOopSectionDto,
+  type AdminOopSectionsFilter,
+  type AdminOopSectionsResponse,
+  type AdminOopUserDto,
+} from './adminSection';
+export {
   fetchAdminMeetingRecord,
   fetchAdminMeetingRecords,
   type AdminMeetingRecordDetailDto,
