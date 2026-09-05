@@ -8,6 +8,7 @@ import type {
 } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAccessToken } from '../authSession';
 import {
   evaluationSectionId,
   getEvaluationMembership,
@@ -31,8 +32,7 @@ function error(code: string, message: string, status: number) {
 }
 
 function requireEvaluationStudent(request: Request) {
-  const token =
-    request.headers.get('authorization')?.replace('Bearer ', '') ?? null;
+  const token = getMockAccessToken(request);
   const account = getDemoUserAccount(token);
   if (!account)
     return {

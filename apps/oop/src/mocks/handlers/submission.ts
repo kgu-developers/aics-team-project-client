@@ -7,6 +7,7 @@ import type {
 } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAccessToken } from '../authSession';
 import { isEditLockHeldByOther } from './editLock';
 import {
   getCurrentPresentation,
@@ -37,7 +38,7 @@ function errorResponse(code: string, message: string, status: number) {
 }
 
 function getAccessToken(request: Request) {
-  return request.headers.get('authorization')?.replace('Bearer ', '') ?? null;
+  return getMockAccessToken(request);
 }
 
 function guard(request: Request): GuardResult {

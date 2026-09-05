@@ -1,6 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAuthorization } from '../authSession';
 import { getAdminMilestoneSubmissionDetailFixture } from '../data/adminMilestoneSubmissionDetails';
 import { demoAdmin, demoAdminAccessToken } from '../data/users';
 
@@ -8,7 +9,7 @@ export const adminMilestoneSubmissionDetailHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSION_DETAIL(':submissionId')}`,
     ({ params, request }) => {
-      const authorization = request.headers.get('authorization');
+      const authorization = getMockAuthorization(request);
 
       if (authorization !== `Bearer ${demoAdminAccessToken}`) {
         return HttpResponse.json(

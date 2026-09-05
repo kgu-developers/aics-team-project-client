@@ -89,3 +89,27 @@ Pages는 최상위 `404.html`이 없는 정적 앱을 SPA로 처리합니다. Ta
 - 작업 계획은 Notion 티켓을 기준으로 합니다.
 - 브랜치 이름은 `<type>/KD3-<number>` 형식입니다. 예: `chore/KD3-129`
 - PR 제목은 `[KD3-<number>] 작업명` 형식입니다.
+
+### 개발 API 모드
+
+기본 `pnpm dev`는 MSW 데모 모드입니다. 실서버 연결은 `apps/oop/.env.local`에
+`VITE_ENABLE_MSW=false`, `VITE_API_BASE_URL=` (빈 값), `VITE_API_PROXY_TARGET=<개발 API origin>`을 지정하고 재시작합니다.
+Vite는 개발 중에만 API 요청을 프록시합니다. 운영 빌드는 `.env.production`에
+지정된 API 서버를 직접 호출합니다.
+실서버 검증은 백엔드 CORS가 허용한 `http://localhost:5173`에서 진행합니다.
+로그인/갱신 응답의 역할과 `/users/me`로 세션을 복원하며 토큰은 HttpOnly 쿠키로 관리합니다.
+실서버 모드는 아직 전환되지 않은 화면 API까지 지원한다는 의미가 아닙니다.
+운영 화면과 API의 호스트가 다르므로 백엔드와 CSRF 토큰 전달 계약을 확인해야 합니다.
+운영 도메인의 로그인·갱신·로그아웃은 별도 검증이 필요합니다.
+MSW의 기존 화면 fixture 문맥 보충은 `mocks/resolveDemoCurrentUser`에 한정되며 실서버 데이터에는 적용되지 않습니다.
+
+`/users/me.globalRole`은 `ADMIN | USER`이고 로그인·갱신의 `role`은
+`ADMIN | STUDENT | ASSISTANT`입니다. 정상 조교는 `USER + ASSISTANT`이므로
+로그인 역할을 보존하되 두 응답의 조합이 모순되면 세션 복원을 거부합니다.
+이 계약은 [서버 역할 계산](https://github.com/kgu-developers/aics-team-project-server/blob/09e1f30169327252e1e4880424ce6e714f3e6f40/aics-domain/src/main/java/kgu/developers/domain/user/application/query/UserQueryService.java#L35-L43),
+[`/users/me` 구현](https://github.com/kgu-developers/aics-team-project-server/blob/09e1f30169327252e1e4880424ce6e714f3e6f40/aics-api/src/main/java/kgu/developers/api/user/presentation/UserControllerImpl.java#L21-L31),
+[2026-09-05 성공 배포](https://github.com/kgu-developers/aics-team-project-server/actions/runs/33933839982)를 기준으로 합니다.
+배포 이력은 현재 서버의 가용성이나 실제 계정 검증을 대신하지 않습니다.
+
+MSW는 새 탭에서도 세션을 복원할 수 있도록 데모 계정 ID와 토큰 세대 번호만
+localStorage에 공유합니다. 실제 인증 토큰은 저장하지 않습니다.

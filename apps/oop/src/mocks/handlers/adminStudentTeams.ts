@@ -2,6 +2,7 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import type { Team } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAuthorization } from '../authSession';
 import {
   adminStudentsFixture,
   adminTeamsFixture,
@@ -59,7 +60,7 @@ export const adminStudentTeamHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_STUDENTS(':sectionId')}`,
     ({ params, request }) => {
-      const authorization = request.headers.get('authorization');
+      const authorization = getMockAuthorization(request);
 
       if (authorization !== `Bearer ${demoAdminAccessToken}`) {
         return HttpResponse.json(
@@ -96,7 +97,7 @@ export const adminStudentTeamHandlers = [
   ),
 
   http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.ROOT}`, ({ request }) => {
-    const authorization = request.headers.get('authorization');
+    const authorization = getMockAuthorization(request);
 
     if (authorization !== `Bearer ${demoAdminAccessToken}`) {
       return HttpResponse.json(

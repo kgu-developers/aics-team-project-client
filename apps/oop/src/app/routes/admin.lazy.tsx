@@ -3,17 +3,20 @@ import { Navigate, createLazyFileRoute } from '@tanstack/react-router';
 import AdminShell from '~/app/components/AdminShell';
 import { ROUTES } from '~/app/constants/routes';
 
-import { useAuthStore } from '~/features/auth/authStore';
+import {
+  selectHasAuthenticatedSession,
+  useAuthStore,
+} from '~/features/auth/authStore';
 
 export const Route = createLazyFileRoute('/admin')({
   component: AdminHomePage,
 });
 
 function AdminHomePage() {
-  const accessToken = useAuthStore(state => state.accessToken);
+  const hasSession = useAuthStore(selectHasAuthenticatedSession);
   const currentUser = useAuthStore(state => state.currentUser);
 
-  if (!accessToken || !currentUser) {
+  if (!hasSession || !currentUser) {
     return <Navigate to={ROUTES.LOGIN} />;
   }
 

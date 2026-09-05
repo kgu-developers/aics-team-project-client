@@ -1,6 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAuthorization } from '../authSession';
 import {
   getPeerResponse,
   getPeerTargets,
@@ -96,7 +97,7 @@ export const studentHomeHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.SECTION.STUDENT_DASHBOARD(':sectionId')}`,
     ({ params, request }) => {
-      const authorization = request.headers.get('authorization');
+      const authorization = getMockAuthorization(request);
 
       const accessToken = authorization?.replace('Bearer ', '') ?? null;
       const account = getDemoStudentAccount(accessToken);

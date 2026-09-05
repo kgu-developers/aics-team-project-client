@@ -145,3 +145,5 @@ export function getDemoStudentAccount(accessToken: string | null) {
   const account = getDemoUserAccount(accessToken);
   return account?.user.globalRole === 'STUDENT' ? account : undefined;
 }
+
+export type DemoUserAccount = (typeof demoUserAccounts)[number];

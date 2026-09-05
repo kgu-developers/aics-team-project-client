@@ -1,8 +1,11 @@
-export { setApiAccessToken } from './auth/accessToken';
-export { fetchCurrentUser } from './auth/fetchCurrentUser';
-export { submitLogin } from './auth/submitLogin';
-export { submitLogout } from './auth/submitLogout';
-export { submitRefresh } from './auth/submitRefresh';
+export {
+  fetchCurrentUser,
+  mapCurrentUserResponse,
+  setApiAccessToken,
+  submitLogin,
+  submitLogout,
+  submitRefresh,
+} from './auth';
 export {
   fetchMyProfile,
   type MyProfileResponse,

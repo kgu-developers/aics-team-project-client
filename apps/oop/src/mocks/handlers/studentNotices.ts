@@ -1,6 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAccessToken } from '../authSession';
 import { studentNoticeAnnouncements } from '../data/studentNotices';
 import { getDemoStudentAccount } from '../data/users';
 
@@ -8,8 +9,7 @@ export const studentNoticeHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ANNOUNCEMENTS.SECTION_LIST(':sectionId')}`,
     ({ params, request }) => {
-      const accessToken =
-        request.headers.get('authorization')?.replace('Bearer ', '') ?? null;
+      const accessToken = getMockAccessToken(request);
       const account = getDemoStudentAccount(accessToken);
 
       if (!account) {

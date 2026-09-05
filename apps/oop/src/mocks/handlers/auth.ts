@@ -1,128 +1,187 @@
-import { ENDPOINTS } from '@aics/api-client';
+import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
+import type {
+  AuthLoginResponse,
+  AuthLogoutResponse,
+  AuthRefreshResponse,
+  AuthSessionRole,
+  CurrentUserResponse,
+  UserGlobalRole,
+} from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
+import {
+  expiredMockSessionResponseHeaders,
+  getMockAuthenticatedAccount,
+  hasValidMockCsrfToken,
+  issueMockSession,
+  mockSessionResponseHeaders,
+  resetMockSessionState,
+  revokeMockSession,
+  rotateMockSession,
+} from '../authSession';
 import { demoUserAccounts } from '../data/users';
-
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
-const refreshCookieName = 'oop_refresh_token';
 
 const initialDemoPasswords: ReadonlyMap<string, string> = new Map(
   demoUserAccounts.map(account => [
-    account.accessToken,
+    account.credentials.studentNumber,
     account.credentials.password,
   ]),
 );
 const demoPasswords = new Map<string, string>(initialDemoPasswords);
 
-/** Reset mutable password state between mock scenarios/tests. */
+/** Reset mutable authentication state between mock scenarios/tests. */
 export function resetDemoPasswordState() {
   demoPasswords.clear();
-  initialDemoPasswords.forEach((password, accessToken) => {
-    demoPasswords.set(accessToken, password);
+  initialDemoPasswords.forEach((password, studentNumber) => {
+    demoPasswords.set(studentNumber, password);
   });
+  resetMockSessionState();
 }
 
-function getRefreshCookieHeader(value: string) {
-  return `${refreshCookieName}=${value}; HttpOnly; Path=/auth; SameSite=Lax`;
+function csrfForbidden() {
+  return new HttpResponse(null, { status: 403 });
 }
 
-function getRefreshToken(request: Request) {
-  return request.headers
-    .get('cookie')
-    ?.split(';')
-    .map(cookie => cookie.trim())
-    .find(cookie => cookie.startsWith(`${refreshCookieName}=`))
-    ?.slice(`${refreshCookieName}=`.length);
+function unauthorized(code?: string) {
+  return code
+    ? HttpResponse.json({ code }, { status: 401 })
+    : new HttpResponse(null, { status: 401 });
 }
 
-function getAuthenticatedAccount(request: Request) {
-  const authorization = request.headers.get('authorization');
-  return demoUserAccounts.find(
-    ({ accessToken }) => authorization === `Bearer ${accessToken}`,
-  );
+function invalidInput() {
+  return HttpResponse.json({ code: 'INVALID_INPUT' }, { status: 400 });
 }
 
-export const authHandlers = [
-  http.post(`${apiBaseUrl}${ENDPOINTS.AUTH.LOGIN}`, async ({ request }) => {
-    const input = (await request.json()) as {
-      studentNumber?: string;
-      password?: string;
-    };
+function isNonBlankString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
 
-    if (input.studentNumber === 'network-error') {
-      return HttpResponse.error();
+function toAuthSessionRole(role: UserGlobalRole): AuthSessionRole {
+  return role === 'PROFESSOR' ? 'ADMIN' : role;
+}
+
+function toServerGlobalRole(
+  role: UserGlobalRole,
+): CurrentUserResponse['globalRole'] {
+  return role === 'PROFESSOR' ? 'ADMIN' : 'USER';
+}
+
+function toServerTeamId(teamId: string | undefined) {
+  if (!teamId) return undefined;
+
+  const numericId = teamId.match(/\d+$/)?.[0];
+  if (!numericId) return undefined;
+
+  const id = Number(numericId);
+  return Number.isSafeInteger(id) && id > 0 ? id : undefined;
+}
+
+function toCurrentUserResponse(
+  account: (typeof demoUserAccounts)[number],
+): CurrentUserResponse {
+  const sections = account.user.sections.map((section, index) => ({
+    id: section.id.endsWith('02') ? 2 : index + 1,
+    code: section.code,
+    name: section.name,
+  }));
+  const teamId = toServerTeamId(account.user.currentTeam?.id);
+
+  return {
+    studentNumber: account.user.studentNumber,
+    email: account.user.email,
+    name: account.user.name,
+    globalRole: toServerGlobalRole(account.user.globalRole),
+    phone: '010-0000-0000',
+    sections,
+    ...(teamId ? { teamId } : {}),
+  };
+}
+
+/** Cookie-session operations that can be switched to the real backend. */
+export const authSessionHandlers = [
+  http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.LOGIN}`, async ({ request }) => {
+    let input: { studentNumber?: unknown; password?: unknown };
+    try {
+      input = (await request.json()) as typeof input;
+    } catch {
+      return invalidInput();
     }
 
-    if (input.studentNumber === '40300000') {
-      return HttpResponse.json(
-        {
-          code: 'ACCOUNT_ACCESS_DENIED',
-          message: '현재 계정은 이 OOP 분반에 접근할 수 없습니다.',
-        },
-        { status: 403 },
-      );
+    if (
+      !isNonBlankString(input.studentNumber) ||
+      !isNonBlankString(input.password)
+    ) {
+      return invalidInput();
     }
 
     const account = demoUserAccounts.find(
-      ({ accessToken, credentials }) =>
-        input.studentNumber === credentials.studentNumber &&
-        input.password === demoPasswords.get(accessToken),
+      candidate =>
+        input.studentNumber === candidate.credentials.studentNumber &&
+        input.password ===
+          demoPasswords.get(candidate.credentials.studentNumber),
     );
 
     if (!account) {
-      return HttpResponse.json(
-        {
-          code: 'INVALID_CREDENTIALS',
-          message: '학번 또는 비밀번호를 확인해 주세요.',
-        },
+      return HttpResponse.json<AuthLoginResponse>(
+        { message: '학번 또는 비밀번호가 올바르지 않습니다.' },
         { status: 401 },
       );
     }
 
-    return HttpResponse.json(
-      { accessToken: account.accessToken },
+    const session = issueMockSession(account);
+    return HttpResponse.json<AuthLoginResponse>(
       {
-        headers: { 'Set-Cookie': getRefreshCookieHeader(account.refreshToken) },
+        message: 'Login Successfully',
+        role: toAuthSessionRole(account.user.globalRole),
       },
+      { headers: mockSessionResponseHeaders(session), status: 200 },
     );
   }),
 
-  http.post(`${apiBaseUrl}${ENDPOINTS.AUTH.REFRESH}`, ({ request }) => {
-    const refreshToken = getRefreshToken(request);
-    const account = demoUserAccounts.find(
-      candidate => candidate.refreshToken === refreshToken,
-    );
+  http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.REFRESH}`, ({ request }) => {
+    if (!hasValidMockCsrfToken(request)) return csrfForbidden();
 
-    if (!account) {
-      return HttpResponse.json(
-        {
-          code: 'REFRESH_TOKEN_MISSING',
-          message: '세션이 만료되었습니다. 다시 로그인해 주세요.',
-        },
+    const session = rotateMockSession(request);
+    if (!session) {
+      return HttpResponse.json<AuthRefreshResponse>(
+        { message: 'refreshToken이 없거나 유효하지 않습니다.' },
         { status: 401 },
       );
     }
 
-    return HttpResponse.json(
-      { accessToken: account.accessToken },
+    return HttpResponse.json<AuthRefreshResponse>(
       {
-        headers: { 'Set-Cookie': getRefreshCookieHeader(account.refreshToken) },
+        message: 'Refresh Successfully',
+        role: toAuthSessionRole(session.account.user.globalRole),
       },
+      { headers: mockSessionResponseHeaders(session), status: 200 },
     );
   }),
 
-  http.post(`${apiBaseUrl}${ENDPOINTS.AUTH.LOGOUT}`, () =>
-    HttpResponse.json(null, {
-      headers: {
-        'Set-Cookie': `${refreshCookieName}=; HttpOnly; Max-Age=0; Path=/auth; SameSite=Lax`,
-      },
-    }),
-  ),
+  http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.LOGOUT}`, ({ request }) => {
+    if (!hasValidMockCsrfToken(request)) return csrfForbidden();
+
+    revokeMockSession(request);
+    return HttpResponse.json<AuthLogoutResponse>(
+      { message: 'Logout Successfully' },
+      { headers: expiredMockSessionResponseHeaders(), status: 200 },
+    );
+  }),
+];
+
+/** Account operations that can be switched to the real backend independently. */
+export const userHandlers = [
+  http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, ({ request }) => {
+    const account = getMockAuthenticatedAccount(request);
+    return account
+      ? HttpResponse.json<CurrentUserResponse>(toCurrentUserResponse(account))
+      : unauthorized();
+  }),
 
   http.patch(
-    `${apiBaseUrl}${ENDPOINTS.PROFILE.PASSWORD}`,
+    `${API_BASE_URL}${ENDPOINTS.PROFILE.PASSWORD}`,
     async ({ request }) => {
-      const account = getAuthenticatedAccount(request);
+      const account = getMockAuthenticatedAccount(request);
       if (!account) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '로그인이 필요합니다.' },
@@ -179,7 +238,10 @@ export const authHandlers = [
         );
       }
 
-      if (input.currentPassword !== demoPasswords.get(account.accessToken)) {
+      if (
+        input.currentPassword !==
+        demoPasswords.get(account.credentials.studentNumber)
+      ) {
         return HttpResponse.json(
           {
             code: 'INVALID_CURRENT_PASSWORD',
@@ -189,25 +251,11 @@ export const authHandlers = [
         );
       }
 
-      demoPasswords.set(account.accessToken, input.newPassword);
+      demoPasswords.set(account.credentials.studentNumber, input.newPassword);
       return new HttpResponse(null, { status: 204 });
     },
   ),
-
-  http.get(`${apiBaseUrl}${ENDPOINTS.AUTH.ME}`, ({ request }) => {
-    const authorization = request.headers.get('authorization');
-
-    const account = demoUserAccounts.find(
-      ({ accessToken }) => authorization === `Bearer ${accessToken}`,
-    );
-
-    if (!account) {
-      return HttpResponse.json(
-        { code: 'UNAUTHORIZED', message: '로그인이 필요합니다.' },
-        { status: 401 },
-      );
-    }
-
-    return HttpResponse.json(account.user);
-  }),
 ];
+
+/** Backward-compatible full auth fixture collection for existing tests. */
+export const authHandlers = [...authSessionHandlers, ...userHandlers];

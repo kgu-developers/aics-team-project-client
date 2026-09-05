@@ -7,8 +7,8 @@ export function useLogoutMutation() {
   const queryClient = useQueryClient();
   const clearSession = useAuthStore(state => state.clearSession);
 
-  return useMutation<void, unknown, void>({
-    mutationFn: () => submitLogout(),
+  return useMutation({
+    mutationFn: submitLogout,
     onSettled: () => {
       clearSession();
       queryClient.clear();

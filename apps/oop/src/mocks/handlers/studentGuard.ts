@@ -1,5 +1,6 @@
 import { HttpResponse } from 'msw';
 
+import { getMockAccessToken } from '../authSession';
 import { getDemoUserAccount } from '../data/users';
 
 export type StudentGuardResult = { response: Response } | { name: string };
@@ -13,8 +14,7 @@ export function requireStudent(
   request: Request,
   resourceLabel: string,
 ): StudentGuardResult {
-  const token =
-    request.headers.get('authorization')?.replace('Bearer ', '') ?? null;
+  const token = getMockAccessToken(request);
   const account = getDemoUserAccount(token);
   if (!account)
     return {

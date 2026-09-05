@@ -1,6 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAuthorization } from '../authSession';
 import { adminMeetingRecordsFixture } from '../data/adminMeetings';
 import { getDemoUserAccount } from '../data/users';
 
@@ -18,7 +19,7 @@ export const adminMeetingHandlers = [
     `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`,
     ({ request }) => {
       const accessibleSectionIds = getAccessibleSectionIds(
-        request.headers.get('authorization'),
+        getMockAuthorization(request),
       );
 
       if (!accessibleSectionIds) {
@@ -56,7 +57,7 @@ export const adminMeetingHandlers = [
     `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORD(':meetingId')}`,
     ({ params, request }) => {
       const accessibleSectionIds = getAccessibleSectionIds(
-        request.headers.get('authorization'),
+        getMockAuthorization(request),
       );
 
       if (!accessibleSectionIds) {

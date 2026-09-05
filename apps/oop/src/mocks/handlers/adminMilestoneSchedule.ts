@@ -1,6 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAuthorization } from '../authSession';
 import { adminMilestoneScheduleFixture } from '../data/adminMilestoneSchedule';
 import { demoAdminAccessToken } from '../data/users';
 
@@ -8,7 +9,7 @@ export const adminMilestoneScheduleHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SCHEDULE}`,
     ({ request }) => {
-      const authorization = request.headers.get('authorization');
+      const authorization = getMockAuthorization(request);
 
       if (authorization !== `Bearer ${demoAdminAccessToken}`) {
         return HttpResponse.json(

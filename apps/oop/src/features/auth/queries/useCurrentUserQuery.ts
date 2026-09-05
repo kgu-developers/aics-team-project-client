@@ -1,16 +1,19 @@
-import { fetchCurrentUser } from '@aics/api-client';
 import { useQuery } from '@tanstack/react-query';
 
-import { useAuthStore } from '../authStore';
+import { selectHasAuthenticatedSession, useAuthStore } from '../authStore';
+import { fetchSessionUser } from '../fetchSessionUser';
 import { authKeys } from './authKeys';
 
 export function useCurrentUserQuery() {
-  const accessToken = useAuthStore(state => state.accessToken);
-
+  const authenticated = useAuthStore(selectHasAuthenticatedSession);
+  const role = useAuthStore(state => state.sessionRole);
   return useQuery({
     queryKey: authKeys.currentUser(),
-    queryFn: fetchCurrentUser,
-    enabled: Boolean(accessToken),
+    queryFn: () => {
+      if (!role) throw new Error('사용자 역할 확인이 필요합니다.');
+      return fetchSessionUser(role);
+    },
+    enabled: authenticated && role !== null,
     retry: false,
   });
 }

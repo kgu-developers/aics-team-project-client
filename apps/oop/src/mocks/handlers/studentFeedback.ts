@@ -5,6 +5,7 @@ import type {
 } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAccessToken } from '../authSession';
 import { requireStudent } from './studentGuard';
 import { hasResubmittedMidReportRevision } from '../data/midReport';
 import { hasResubmittedProposalRevision } from '../data/proposal';
@@ -27,8 +28,7 @@ function getStudentTeam(request: Request, resourceLabel: string) {
   const student = requireStudent(request, resourceLabel);
   if ('response' in student) return student;
 
-  const accessToken =
-    request.headers.get('authorization')?.replace('Bearer ', '') ?? null;
+  const accessToken = getMockAccessToken(request);
   const account = getDemoStudentAccount(accessToken);
   const team = account?.user.currentTeam;
   if (!team || team.id !== demoFeedbackTeamId) {
