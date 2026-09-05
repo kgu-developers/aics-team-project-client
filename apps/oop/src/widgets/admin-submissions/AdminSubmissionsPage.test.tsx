@@ -439,9 +439,19 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('columnheader', { name: /평균/ }),
     ).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: /평균/ })).toHaveAttribute(
+      'aria-sort',
+      'none',
+    );
     expect(screen.getAllByText('미제출')).not.toHaveLength(0);
     expect(screen.getByText('30')).toBeInTheDocument();
     expect(screen.getByText('30.0')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '평균 점수 정렬' }));
+    expect(screen.getByRole('columnheader', { name: /평균/ })).toHaveAttribute(
+      'aria-sort',
+      'ascending',
+    );
 
     await user.click(screen.getByRole('button', { name: '김민준' }));
     expect(

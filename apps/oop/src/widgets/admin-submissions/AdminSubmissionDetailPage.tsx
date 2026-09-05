@@ -23,7 +23,7 @@ import {
   AdminSubmissionExternalLink,
   AdminSubmissionFileDownloadLink,
 } from '~/features/admin-milestone-review/components/AdminFinalReportDownloadSummary';
-import { toAdminPeerEvaluationRows } from '~/features/admin-milestone-review/model';
+import { toAdminPeerEvaluatorRows } from '~/features/admin-milestone-review/model';
 import { useAdminMilestoneSubmissionDetailQuery } from '~/features/admin-milestone-review/queries';
 import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import StudentDetailDialog from '~/features/admin-student-team/components/StudentDetailDialog';
@@ -469,14 +469,14 @@ export default function AdminSubmissionDetailPage() {
           title='표시할 평가가 없습니다.'
         />
       );
-    const peerRows = toAdminPeerEvaluationRows(peer);
-    if (peerAverageSort) {
-      peerRows.sort((a, b) => {
-        const aValue = a.average ?? -1;
-        const bValue = b.average ?? -1;
-        return peerAverageSort === 'asc' ? aValue - bValue : bValue - aValue;
-      });
-    }
+    const evaluatorRows = toAdminPeerEvaluatorRows(peer);
+    const sortedEvaluatorRows = peerAverageSort
+      ? [...evaluatorRows].sort((a, b) => {
+          const aValue = a.average ?? -1;
+          const bValue = b.average ?? -1;
+          return peerAverageSort === 'asc' ? aValue - bValue : bValue - aValue;
+        })
+      : evaluatorRows;
     return (
       <Card className={styles.document}>
         <div className={styles.documentHeader}>
@@ -501,7 +501,17 @@ export default function AdminSubmissionDetailPage() {
                     {member.name}
                   </th>
                 ))}
-                <th className={styles.tableHeader} scope='col'>
+                <th
+                  aria-sort={
+                    peerAverageSort === 'asc'
+                      ? 'ascending'
+                      : peerAverageSort === 'desc'
+                        ? 'descending'
+                        : 'none'
+                  }
+                  className={styles.tableHeader}
+                  scope='col'
+                >
                   <button
                     aria-label='평균 점수 정렬'
                     type='button'
@@ -522,25 +532,7 @@ export default function AdminSubmissionDetailPage() {
               </tr>
             </thead>
             <tbody>
-              {Array.from(
-                new Map(
-                  peerRows.map(row => [
-                    row.evaluator.studentNumber,
-                    row.evaluator,
-                  ]),
-                ).values(),
-              ).map(evaluator => {
-                const evaluatorRows = peerRows.filter(
-                  row =>
-                    row.evaluator.studentNumber === evaluator.studentNumber,
-                );
-                const submittedScores = evaluatorRows
-                  .map(row => row.score)
-                  .filter((score): score is number => score !== undefined);
-                const average = submittedScores.length
-                  ? submittedScores.reduce((sum, score) => sum + score, 0) /
-                    submittedScores.length
-                  : undefined;
+              {sortedEvaluatorRows.map(({ average, evaluator, rows }) => {
                 return (
                   <tr key={evaluator.studentNumber}>
                     <td className={styles.tableCell}>
@@ -566,7 +558,7 @@ export default function AdminSubmissionDetailPage() {
                       </button>
                     </td>
                     {peer.members.map(target => {
-                      const row = evaluatorRows.find(
+                      const row = rows.find(
                         item =>
                           item.target.studentNumber === target.studentNumber,
                       );
