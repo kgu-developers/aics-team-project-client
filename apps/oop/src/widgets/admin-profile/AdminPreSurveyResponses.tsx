@@ -1,6 +1,7 @@
 import {
   Card,
   Heading,
+  proportional,
   Selector,
   SelectorOption,
   Table,
@@ -9,10 +10,10 @@ import {
 } from '@aics/design-system';
 import { useState } from 'react';
 
+import * as styles from './AdminPreSurveyResponses.css';
+
 import { adminPreSurveyResponsesBySection } from '~/mocks/data/adminPreSurveyResponses';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
-
-import * as styles from './AdminPreSurveyResponses.css';
 
 type Section = { code: string; id: string; name: string };
 
@@ -77,7 +78,7 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
                     align: 'start',
                     header: '학번',
                     key: 'userId',
-                    width: 120,
+                    width: proportional(0.7, { minWidth: 120 }),
                   },
                   {
                     align: 'start',
@@ -85,27 +86,27 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
                     key: 'preferredRoles',
                     renderCell: response =>
                       formatPreferredRoles(response.preferredRoles),
-                    width: 220,
+                    width: proportional(1.1, { minWidth: 180 }),
                   },
                   {
                     align: 'start',
                     header: '주제 의견',
                     key: 'topicOpinion',
                     renderCell: response => response.topicOpinion ?? '-',
-                    width: 280,
+                    width: proportional(1.4, { minWidth: 220 }),
                   },
                   {
                     align: 'start',
                     header: '기타 의견',
                     key: 'etcOpinion',
                     renderCell: response => response.etcOpinion ?? '-',
-                    width: 280,
+                    width: proportional(1.4, { minWidth: 220 }),
                   },
                   {
                     align: 'start',
                     header: '제출일',
                     key: 'submittedAt',
-                    width: 160,
+                    width: proportional(0.9, { minWidth: 160 }),
                   },
                 ]}
                 data={responses}
