@@ -1,5 +1,5 @@
 import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
-import { AstryxThemeProvider } from '@aics/design-system';
+import { AstryxThemeProvider, ToastViewport } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -21,14 +21,23 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminProfilePage from './AdminProfilePage';
 
 import {
+  mockSessionResponseHeaders,
+  issueMockSession,
+} from '~/mocks/authSession';
+import {
   getAdminProfile,
   resetAdminProfileMockData,
 } from '~/mocks/data/adminProfile';
-import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import {
+  demoAdmin,
+  demoAdminAccessToken,
+  demoUserAccounts,
+} from '~/mocks/data/users';
 import { adminProfileHandlers } from '~/mocks/handlers/adminProfile';
-import { authHandlers } from '~/mocks/handlers/auth';
+import { authHandlers, resetDemoPasswordState } from '~/mocks/handlers/auth';
 
 const server = setupServer(...adminProfileHandlers, ...authHandlers);
+const queryClients: QueryClient[] = [];
 const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
   'close',
@@ -56,12 +65,23 @@ beforeAll(() => {
 });
 beforeEach(() => {
   resetAdminProfileMockData();
+  resetDemoPasswordState();
+  mockSessionResponseHeaders(
+    issueMockSession(
+      demoUserAccounts.find(
+        account => account.user.studentNumber === demoAdmin.studentNumber,
+      )!,
+    ),
+  );
   setApiAccessToken(demoAdminAccessToken);
   useAuthStore.getState().setAccessToken(demoAdminAccessToken);
   useAuthStore.getState().setCurrentUser(demoAdmin);
 });
 afterEach(() => {
   server.resetHandlers();
+  queryClients.splice(0).forEach(client => client.clear());
+  resetDemoPasswordState();
+  document.cookie = 'XSRF-TOKEN=; Max-Age=0; Path=/';
   setApiAccessToken(null);
   useAuthStore.getState().clearSession();
 });
@@ -90,23 +110,25 @@ function renderPage() {
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
 
+  queryClients.push(queryClient);
   function Wrapper({ children }: PropsWithChildren) {
     return (
       <AstryxThemeProvider>
         <QueryClientProvider client={queryClient}>
-          {children}
+          <ToastViewport>{children}</ToastViewport>
         </QueryClientProvider>
       </AstryxThemeProvider>
     );
   }
 
-  return render(<AdminProfilePage />, { wrapper: Wrapper });
+  return { ...render(<AdminProfilePage />, { wrapper: Wrapper }), queryClient };
 }
 
 describe('AdminProfilePage', () => {
   it('비밀번호 변경 Dialog에서 현재 비밀번호를 검증하고 저장한다', async () => {
     const user = userEvent.setup();
-    renderPage();
+    const { queryClient } = renderPage();
+    queryClient.setQueryData(['private-data'], 'existing');
 
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }));
     const dialog = await screen.findByRole('dialog', { name: '비밀번호 변경' });
@@ -119,15 +141,15 @@ describe('AdminProfilePage', () => {
     ).toBeInTheDocument();
 
     await user.type(
-      dialog.querySelector('input[name="currentPassword"]') as HTMLInputElement,
+      within(dialog).getByLabelText('현재 비밀번호', { exact: false }),
       'oop-admin',
     );
     await user.type(
-      dialog.querySelector('input[name="newPassword"]') as HTMLInputElement,
+      within(dialog).getByLabelText(/^새 비밀번호(?! 확인)/),
       'oop-admin2',
     );
     await user.type(
-      dialog.querySelector('input[name="confirmPassword"]') as HTMLInputElement,
+      within(dialog).getByLabelText('새 비밀번호 확인', { exact: false }),
       'oop-admin2',
     );
     await user.click(
@@ -139,6 +161,11 @@ describe('AdminProfilePage', () => {
         screen.queryByRole('dialog', { name: '비밀번호 변경' }),
       ).not.toBeInTheDocument(),
     );
+    expect(
+      await screen.findByText('비밀번호를 변경했어요. 다시 로그인해 주세요.'),
+    ).toBeInTheDocument();
+    expect(useAuthStore.getState().currentUser).toBeNull();
+    expect(queryClient.getQueryData(['private-data'])).toBeUndefined();
   });
 
   it('로그아웃하면 관리자 세션을 정리한다', async () => {

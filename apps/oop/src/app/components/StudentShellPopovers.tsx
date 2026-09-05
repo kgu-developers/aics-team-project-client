@@ -19,71 +19,19 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 
+import { getPasswordChangeErrorMessage } from '~/features/auth/getPasswordChangeErrorMessage';
 import {
   useLogoutMutation,
   useUpdateMyPasswordMutation,
 } from '~/features/auth/queries';
+import {
+  validatePasswordChange,
+  type PasswordValidationIssue,
+} from '~/features/auth/validatePasswordChange';
 
 import { oopCourseConfig } from '~/course/config';
 
 import * as styles from './StudentShellPopovers.css';
-
-type PasswordField = 'currentPassword' | 'newPassword' | 'confirmPassword';
-
-type PasswordValidationIssue = {
-  field: PasswordField;
-  message: string;
-} | null;
-
-export function validatePasswordChange(
-  currentPassword: string,
-  newPassword: string,
-  confirmPassword: string,
-): PasswordValidationIssue {
-  if (!currentPassword) {
-    return {
-      field: 'currentPassword',
-      message: '현재 비밀번호를 입력해 주세요.',
-    };
-  }
-
-  if (!newPassword) {
-    return {
-      field: 'newPassword',
-      message: '새 비밀번호를 입력해 주세요.',
-    };
-  }
-
-  if (newPassword.length < 8) {
-    return {
-      field: 'newPassword',
-      message: '새 비밀번호는 8자 이상이어야 합니다.',
-    };
-  }
-
-  if (newPassword === currentPassword) {
-    return {
-      field: 'newPassword',
-      message: '새 비밀번호는 현재 비밀번호와 달라야 합니다.',
-    };
-  }
-
-  if (!confirmPassword) {
-    return {
-      field: 'confirmPassword',
-      message: '새 비밀번호를 한 번 더 입력해 주세요.',
-    };
-  }
-
-  if (newPassword !== confirmPassword) {
-    return {
-      field: 'confirmPassword',
-      message: '새 비밀번호가 일치하지 않습니다.',
-    };
-  }
-
-  return null;
-}
 
 function PasswordChangeDialog({
   isOpen,
@@ -92,8 +40,15 @@ function PasswordChangeDialog({
   isOpen: boolean;
   onClose: () => void;
 }) {
+  const navigate = useNavigate();
   const toast = useToast();
-  const passwordMutation = useUpdateMyPasswordMutation();
+  const passwordMutation = useUpdateMyPasswordMutation({
+    onSuccess: () => {
+      toast({ body: '비밀번호를 변경했어요. 다시 로그인해 주세요.' });
+      close();
+      void navigate({ to: ROUTES.LOGIN, replace: true });
+    },
+  });
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -115,6 +70,7 @@ function PasswordChangeDialog({
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (passwordMutation.isPending) return;
 
     const issue = validatePasswordChange(
       currentPassword,
@@ -127,15 +83,7 @@ function PasswordChangeDialog({
     }
 
     setValidationIssue(null);
-    passwordMutation.mutate(
-      { currentPassword, newPassword },
-      {
-        onSuccess: () => {
-          toast({ body: '비밀번호를 변경했어요.' });
-          close();
-        },
-      },
-    );
+    passwordMutation.mutate({ currentPassword, newPassword });
   };
 
   const handleFieldChange = (
@@ -152,7 +100,7 @@ function PasswordChangeDialog({
       aria-label='비밀번호 변경'
       isOpen={isOpen}
       onOpenChange={nextIsOpen => {
-        if (!nextIsOpen) close();
+        if (!nextIsOpen && !passwordMutation.isPending) close();
       }}
       purpose='form'
       width={440}
@@ -163,9 +111,10 @@ function PasswordChangeDialog({
         </Heading>
         <Text className={styles.passwordDescription} color='secondary'>
           현재 비밀번호를 확인한 뒤 새 비밀번호를 설정해 주세요. 새 비밀번호는
-          8자 이상이어야 합니다.
+          8자 이상 입력해 주세요.
         </Text>
         <TextInput
+          isDisabled={passwordMutation.isPending}
           htmlName='currentPassword'
           isRequired
           label='현재 비밀번호'
@@ -180,6 +129,7 @@ function PasswordChangeDialog({
           width='100%'
         />
         <TextInput
+          isDisabled={passwordMutation.isPending}
           htmlName='newPassword'
           isRequired
           label='새 비밀번호'
@@ -194,6 +144,7 @@ function PasswordChangeDialog({
           width='100%'
         />
         <TextInput
+          isDisabled={passwordMutation.isPending}
           htmlName='confirmPassword'
           isRequired
           label='새 비밀번호 확인'
@@ -209,11 +160,16 @@ function PasswordChangeDialog({
         />
         {passwordMutation.isError ? (
           <Text className={styles.passwordError} role='alert'>
-            비밀번호를 변경하지 못했어요. 현재 비밀번호를 확인해 주세요.
+            {getPasswordChangeErrorMessage(passwordMutation.error)}
           </Text>
         ) : null}
         <HStack className={styles.passwordActions} gap={2} justify='end'>
-          <Button label='취소' onClick={close} variant='secondary' />
+          <Button
+            isDisabled={passwordMutation.isPending}
+            label='취소'
+            onClick={close}
+            variant='secondary'
+          />
           <Button
             isDisabled={passwordMutation.isPending}
             isLoading={passwordMutation.isPending}

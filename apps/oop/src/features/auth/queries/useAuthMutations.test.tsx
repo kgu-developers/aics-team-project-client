@@ -1,6 +1,6 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import type { PropsWithChildren } from 'react';
@@ -20,22 +20,26 @@ import { useLogoutMutation } from './useLogoutMutation';
 import { useUpdateMyPasswordMutation } from './useUpdateMyPasswordMutation';
 
 const server = setupServer(...authHandlers);
+const queryClients: QueryClient[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   server.resetHandlers();
+  queryClients.splice(0).forEach(client => client.clear());
   resetDemoPasswordState();
   useAuthStore.getState().clearSession();
 });
 afterAll(() => server.close());
 
 function createQueryClient() {
-  return new QueryClient({
+  const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
       mutations: { retry: false },
     },
   });
+  queryClients.push(client);
+  return client;
 }
 
 function createWrapper(queryClient: QueryClient) {
@@ -47,23 +51,116 @@ function createWrapper(queryClient: QueryClient) {
 }
 
 describe('auth mutations', () => {
-  it('비밀번호 변경 요청을 API에 전달한다', async () => {
-    useAuthStore.getState().setAccessToken(demoAccessToken);
+  it('비밀번호 변경을 실제 학번 path와 password body로 요청하고 세션을 정리한다', async () => {
+    let receivedBody: unknown;
+    let receivedStudentNumber: string | readonly string[] | undefined;
+    server.use(
+      http.put(
+        `${API_BASE_URL}${ENDPOINTS.PROFILE.PASSWORD(':studentNumber')}`,
+        async ({ params, request }) => {
+          receivedStudentNumber = params.studentNumber;
+          receivedBody = await request.json();
+          return HttpResponse.text('Password changed successfully');
+        },
+      ),
+    );
+    useAuthStore.getState().markAuthenticated('STUDENT');
+    useAuthStore.getState().setCurrentUser(demoStudent);
     const queryClient = createQueryClient();
+    queryClient.setQueryData(['private-data'], { shouldNotSurvive: true });
     const { result } = renderHook(() => useUpdateMyPasswordMutation(), {
       wrapper: createWrapper(queryClient),
     });
 
-    act(() => {
-      result.current.mutate({
-        currentPassword: demoCredentials.password,
-        newPassword: 'oop-new-password',
-      });
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          currentPassword: demoCredentials.password,
+          newPassword: 'oop-new-password',
+        }),
+      ).resolves.toBe('Password changed successfully');
     });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    queryClient.clear();
+    expect(receivedStudentNumber).toBe(demoStudent.studentNumber);
+    expect(receivedBody).toEqual({
+      currentPassword: demoCredentials.password,
+      password: 'oop-new-password',
+    });
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(queryClient.getQueryData(['private-data'])).toBeUndefined();
   });
+
+  it.each(['사용자 없음', '빈 학번', '공백 학번', '로그아웃 상태'])(
+    '%s이면 비밀번호 변경 API를 호출하지 않는다',
+    async condition => {
+      let requests = 0;
+      server.use(
+        http.put(
+          `${API_BASE_URL}${ENDPOINTS.PROFILE.PASSWORD(':studentNumber')}`,
+          () => {
+            requests += 1;
+            return HttpResponse.text('unexpected');
+          },
+        ),
+      );
+      const state = useAuthStore.getState();
+      state.markAuthenticated('STUDENT');
+      if (condition !== '사용자 없음') {
+        state.setCurrentUser({
+          ...demoStudent,
+          studentNumber:
+            condition === '빈 학번'
+              ? ''
+              : condition === '공백 학번'
+                ? '   '
+                : demoStudent.studentNumber,
+        });
+      }
+      const { result } = renderHook(() => useUpdateMyPasswordMutation(), {
+        wrapper: createWrapper(createQueryClient()),
+      });
+      await act(async () => {
+        if (condition === '로그아웃 상태') state.clearSession();
+        await expect(
+          result.current.mutateAsync({
+            currentPassword: 'current-password',
+            newPassword: 'new-password',
+          }),
+        ).rejects.toThrow('현재 사용자 정보가 필요합니다');
+      });
+      expect(requests).toBe(0);
+    },
+  );
+
+  it.each([400, 401, 403, 503])(
+    '변경 실패(%i) 시 기존 세션과 개인 캐시를 보존한다',
+    async status => {
+      server.use(
+        http.put(
+          `${API_BASE_URL}${ENDPOINTS.PROFILE.PASSWORD(':studentNumber')}`,
+          () => HttpResponse.json({ code: 'CHANGE_FAILED' }, { status }),
+        ),
+      );
+      useAuthStore.getState().markAuthenticated('STUDENT');
+      useAuthStore.getState().setCurrentUser(demoStudent);
+      const queryClient = createQueryClient();
+      queryClient.setQueryData(['private-data'], 'existing');
+      const { result } = renderHook(() => useUpdateMyPasswordMutation(), {
+        wrapper: createWrapper(queryClient),
+      });
+      await act(async () => {
+        await expect(
+          result.current.mutateAsync({
+            currentPassword: 'current-password',
+            newPassword: 'new-password',
+          }),
+        ).rejects.toBeDefined();
+      });
+      expect(useAuthStore.getState().isAuthenticated).toBe(true);
+      expect(useAuthStore.getState().currentUser).toEqual(demoStudent);
+      expect(queryClient.getQueryData(['private-data'])).toBe('existing');
+    },
+  );
 
   it('로그아웃 서버 오류에도 로컬 세션과 QueryClient를 정리한다', async () => {
     useAuthStore.getState().setAccessToken(demoAccessToken);
