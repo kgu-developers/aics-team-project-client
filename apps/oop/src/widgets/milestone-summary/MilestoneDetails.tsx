@@ -27,6 +27,7 @@ import {
 } from '~/features/student-feedback/queries';
 
 import * as styles from './MilestoneDetails.css';
+import SubmissionMaterials from './SubmissionMaterials';
 
 type MilestoneDetailsProps = {
   body: StudentHomeMilestoneBody;
@@ -372,13 +373,7 @@ function TeamList({ teams }: { teams: StudentHomeTeamStatus[] }) {
   );
 }
 
-function FileRow({
-  file,
-  showDownload = false,
-}: {
-  file: StudentHomeFile;
-  showDownload?: boolean;
-}) {
+function FileRow({ file }: { file: StudentHomeFile }) {
   return (
     <div className={styles.fileRow}>
       <span aria-hidden='true' className={styles.fileIcon}>
@@ -386,17 +381,7 @@ function FileRow({
       </span>
       <span className={styles.fileInfo}>
         <span className={styles.fileName}>{file.name}</span>
-        <span className={styles.fileMeta}>{file.meta}</span>
       </span>
-      {showDownload ? (
-        <Button
-          isDisabled
-          label='다운로드'
-          size='sm'
-          tooltip='파일 저장소 연동 후 제공돼요.'
-          variant='secondary'
-        />
-      ) : null}
     </div>
   );
 }
@@ -503,9 +488,12 @@ function PresentationMaterialBody({
         description={body.project.description}
         title={body.project.title}
       />
-      <SectionBanner title='작성 영역별 상태' />
-      <SectionStatusList sections={body.sections} />
-      {body.recentFile ? <FileRow file={body.recentFile} /> : null}
+      <SectionBanner title='제출 자료' />
+      <SubmissionMaterials
+        materials={body.materials}
+        metadata={body.submission}
+        showMetadataTitle={false}
+      />
     </div>
   );
 }
@@ -540,9 +528,10 @@ function FinalReportBody({
       <SectionBanner title='최종보고서 작성 공지사항' />
       <ProjectSummary description={body.notice.description} />
       {body.notice.file ? <FileRow file={body.notice.file} /> : null}
-      {body.submittedFiles?.map(file => (
-        <FileRow file={file} key={file.id} showDownload />
-      ))}
+      <SubmissionMaterials
+        materials={body.materials}
+        metadata={body.submission}
+      />
     </div>
   );
 }

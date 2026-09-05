@@ -188,9 +188,7 @@ export const presentationHandlers = [
         const message =
           currentBlock.key === 'presentation-material'
             ? '발표 자료 파일을 제출한 뒤 완료 처리해 주세요.'
-            : currentBlock.key === 'demo-video'
-              ? 'YouTube 시연 영상 URL을 작성한 뒤 완료 처리해 주세요.'
-              : '모든 항목을 작성한 뒤 완료 처리해 주세요.';
+            : '모든 항목을 작성한 뒤 완료 처리해 주세요.';
         return error('BLOCK_INCOMPLETE', message, 422);
       }
       const completed = completePresentationBlock(

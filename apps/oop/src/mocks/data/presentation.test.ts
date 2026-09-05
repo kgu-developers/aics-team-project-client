@@ -26,7 +26,7 @@ describe('presentation fixture', () => {
     expect(getCurrentPresentation().version).toBe(presentation.version);
   });
 
-  it('exposes the five presentation sections in document order', () => {
+  it('exposes the four presentation sections in document order', () => {
     const keys = getCurrentPresentation().blocks.map(block => block.key);
 
     expect(keys).toEqual([
@@ -34,26 +34,17 @@ describe('presentation fixture', () => {
       'presentation-material',
       'main-features',
       'main-screens',
-      'demo-video',
     ]);
   });
 
-  it('keeps presentation-material field-free and requires a YouTube URL field for demo-video', () => {
+  it('keeps presentation-material field-free because submission owns demo URL and files', () => {
     const blocks = getCurrentPresentation().blocks;
     const material = blocks.find(
       block => block.key === 'presentation-material',
     );
-    const demoVideo = blocks.find(block => block.key === 'demo-video');
 
     expect(material?.fields).toEqual([]);
-    expect(demoVideo?.fields).toEqual([
-      expect.objectContaining({
-        key: 'youtubeUrl',
-        value: expect.stringMatching(
-          /^https:\/\/(www\.)?(youtube\.com|youtu\.be)\//,
-        ),
-      }),
-    ]);
+    expect(blocks.map(block => block.key)).not.toContain('demo-video');
   });
 
   it.each([

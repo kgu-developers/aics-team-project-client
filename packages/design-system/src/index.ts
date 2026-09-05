@@ -34,6 +34,16 @@ export type { FileInputProps } from '@astryxdesign/core/FileInput';
 export { HStack, VStack } from '@astryxdesign/core/Layout';
 export { IconButton } from '@astryxdesign/core/IconButton';
 export type { IconButtonProps } from '@astryxdesign/core/IconButton';
+export {
+  MetadataList,
+  MetadataListItem,
+} from '@astryxdesign/core/MetadataList';
+export type {
+  MetadataListColumns,
+  MetadataListItemProps,
+  MetadataListLabelConfig,
+  MetadataListProps,
+} from '@astryxdesign/core/MetadataList';
 export { Popover } from '@astryxdesign/core/Popover';
 export type {
   PopoverProps,
@@ -83,6 +93,8 @@ export type {
 } from '@astryxdesign/core/Selector';
 export { ToastViewport, useToast } from '@astryxdesign/core/Toast';
 export type { ToastOptions, ToastType } from '@astryxdesign/core/Toast';
+export { Tooltip } from '@astryxdesign/core/Tooltip';
+export type { TooltipProps } from '@astryxdesign/core/Tooltip';
 
 export { default as AstryxThemeProvider } from './provider/AstryxThemeProvider';
 export { oopTheme } from './theme/oopTheme';

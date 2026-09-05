@@ -29,6 +29,7 @@ import {
   createStudentHomeDashboardWithFeedbackSubmissions,
   createStudentHomeDashboardWithFinalReportSubmission,
   createStudentHomeDashboardWithMidReportProgress,
+  createStudentHomeDashboardWithPresentationSubmission,
   createStudentHomeDashboardWithPresentationProgress,
   createStudentHomeDashboardWithProposalProgress,
   createStudentHomeDashboardWithTopicBoard,
@@ -38,7 +39,10 @@ import {
 } from '../data/studentHome';
 import {
   demoSubmissionTeamId,
+  ensureFinalReportSubmitted,
+  ensurePresentationNotSubmitted,
   getSubmissionByMilestone,
+  resetSubmissionMockData,
 } from '../data/submission';
 import { getTopicBoard } from '../data/topic';
 import { getDemoStudentAccount } from '../data/users';
@@ -61,6 +65,7 @@ function prepareMilestonePreview(
     resetProposalFixture();
     resetMidReportMockData();
     resetStudentFeedbackMockData();
+    resetSubmissionMockData();
   }
   activeMilestonePreview = previewScenario;
 
@@ -78,6 +83,12 @@ function prepareMilestonePreview(
   }
   if (previewScenario === 'mid-feedback-ready') {
     ensureMidReportFeedbackRevisionResubmitted();
+  }
+  if (previewScenario === 'final-report') {
+    ensureFinalReportSubmitted();
+  }
+  if (previewScenario === 'presentation-material-empty') {
+    ensurePresentationNotSubmitted();
   }
 }
 
@@ -157,10 +168,28 @@ export const studentHomeHandlers = [
           ),
           getCurrentPresentation(),
         );
+      const withPresentationSubmission =
+        createStudentHomeDashboardWithPresentationSubmission(
+          withDocumentProgress,
+          getSubmissionByMilestone(
+            demoSubmissionTeamId,
+            'presentation',
+            account.user.id,
+          ),
+        );
       const withSubmissionProgress =
         createStudentHomeDashboardWithFinalReportSubmission(
-          withDocumentProgress,
-          getSubmissionByMilestone(demoSubmissionTeamId, 'final-report'),
+          withPresentationSubmission,
+          getSubmissionByMilestone(
+            demoSubmissionTeamId,
+            'final-report',
+            account.user.id,
+          ),
+          Boolean(
+            account.user.currentTeam?.members.find(
+              member => member.id === account.user.id,
+            )?.isLeader,
+          ),
         );
       const userId = account.user.studentNumber;
 

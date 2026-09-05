@@ -57,12 +57,12 @@ let presentation: Presentation = {
         },
       ],
     ),
-    // 프레젠테이션 자료는 KD3-90 제출 계약(SubmissionFilePanel)으로
-    // PDF를 등록·교체한다. 문서 필드 블록으로 위조하지 않는다.
+    // 프레젠테이션 자료는 제출 계약(SubmissionFilePanel)으로
+    // 시연 URL, PDF, ZIP을 등록·교체한다. 문서 필드 블록으로 위조하지 않는다.
     block(
       'presentation-material',
       '2. 프레젠테이션 자료',
-      '평가와 공유에 사용할 발표 자료 PDF를 등록하거나 교체합니다.',
+      '평가와 공유에 사용할 시연 URL, 발표 PDF, 실행 ZIP을 등록하거나 교체합니다.',
       [],
     ),
     block(
@@ -112,19 +112,6 @@ let presentation: Presentation = {
         },
       ],
     ),
-    // 시연 영상은 파일 저장소 계약이 없어 이번 범위에서 등록할 수 없다.
-    block(
-      'demo-video',
-      '5. 시연 영상',
-      'YouTube 시연 영상 링크를 등록합니다.',
-      [
-        {
-          key: 'youtubeUrl',
-          label: 'YouTube 시연 영상 URL',
-          value: 'https://youtu.be/dQw4w9WgXcQ',
-        },
-      ],
-    ),
   ],
 };
 
@@ -138,7 +125,6 @@ const requiredFieldKeysByBlock: Record<
   'presentation-material': [],
   'main-features': ['featureItems'],
   'main-screens': ['screenItems'],
-  'demo-video': ['youtubeUrl'],
 };
 
 export function getCurrentPresentation() {
@@ -191,34 +177,12 @@ export function savePresentationBlock(
   return saved;
 }
 
-function isYouTubeUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return ['youtube.com', 'www.youtube.com', 'youtu.be'].includes(
-      url.hostname,
-    );
-  } catch {
-    return false;
-  }
-}
-
 export function canCompletePresentationBlock(block: PresentationBlock) {
   if (block.key === 'presentation-material') {
     return Boolean(
       block.fields.length === 0 &&
       getSubmissionByMilestone(demoPresentationTeamId, 'presentation')
         ?.currentVersion,
-    );
-  }
-  if (block.key === 'demo-video') {
-    return Boolean(
-      areDocumentFieldsComplete(
-        block.fields,
-        requiredFieldKeysByBlock[block.key],
-      ) &&
-      block.fields.find(
-        field => field.key === 'youtubeUrl' && isYouTubeUrl(field.value),
-      ),
     );
   }
   if (block.key === 'main-features')

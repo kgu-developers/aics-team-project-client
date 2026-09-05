@@ -17,6 +17,7 @@ export const ROUTES = {
   STUDENT: {
     HOME: '/student',
     TEAM: '/student/team',
+    TEAM_ACTION_PLANS: '/student/team/action-plans',
     MEETINGS: '/student/meetings',
     MEETING_NEW: '/student/meetings/new',
     NOTICES: '/student/notices',

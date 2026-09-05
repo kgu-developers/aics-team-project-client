@@ -19,6 +19,7 @@ import {
 import {
   demoAccessToken,
   demoAdminAccessToken,
+  demoCompletedAccessToken,
   demoPartnerAccessToken,
 } from '../data/users';
 
@@ -28,6 +29,10 @@ const headers = {
 };
 const partnerHeaders = {
   Authorization: `Bearer ${demoPartnerAccessToken}`,
+  'Content-Type': 'application/json',
+};
+const completedStudentHeaders = {
+  Authorization: `Bearer ${demoCompletedAccessToken}`,
   'Content-Type': 'application/json',
 };
 const presentationMaterialLock = {
@@ -49,13 +54,41 @@ function postVersion(
   submissionId: string,
   body: {
     description: string;
-    artifacts: { kind: 'FILE'; name: string; size: number; mimeType: string }[];
+    artifacts: Array<
+      | { kind: 'FILE'; name: string; size: number; mimeType: string }
+      | { kind: 'LINK'; label: string; url: string }
+    >;
   },
 ) {
   return fetch(
     `${API_BASE_URL}${ENDPOINTS.SUBMISSION.VERSIONS(submissionId)}`,
     { method: 'POST', headers, body: JSON.stringify(body) },
   );
+}
+
+function presentationBody(description: string, pdfName = 'presentation.pdf') {
+  return {
+    description,
+    artifacts: [
+      {
+        kind: 'LINK' as const,
+        label: '시연 URL',
+        url: 'https://example.com/demo',
+      },
+      {
+        kind: 'FILE' as const,
+        name: pdfName,
+        size: 1024,
+        mimeType: 'application/pdf',
+      },
+      {
+        kind: 'FILE' as const,
+        name: 'presentation-source.zip',
+        size: 2048,
+        mimeType: 'application/zip',
+      },
+    ],
+  };
 }
 
 function markPresentationMaterialCompleted() {
@@ -114,7 +147,7 @@ describe('submissionHandlers', () => {
     expect(detail.currentVersion?.versionNumber).toBe(1);
   });
 
-  it('발표 자료는 PDF만 허용한다', async () => {
+  it('발표 자료는 시연 URL, PDF, ZIP만 허용한다', async () => {
     const response = await postVersion('submission-presentation', {
       description: '허용되지 않은 원본 형식입니다.',
       artifacts: [
@@ -147,17 +180,7 @@ describe('submissionHandlers', () => {
   });
 
   it('공식 리뷰가 있는 발표 제출은 새 버전을 만들고 이후 수정은 같은 버전을 덮어쓴다', async () => {
-    const body = {
-      description: '발표 자료를 수정했습니다.',
-      artifacts: [
-        {
-          kind: 'FILE' as const,
-          name: 'presentation.pdf',
-          size: 1024,
-          mimeType: 'application/pdf',
-        },
-      ],
-    };
+    const body = presentationBody('발표 자료를 수정했습니다.');
     const created = await postVersion('submission-presentation', body);
     const createdSubmission = (await created.json()) as Submission;
     const overwritten = await postVersion('submission-presentation', {
@@ -180,15 +203,10 @@ describe('submissionHandlers', () => {
     const before = getSubmissionById('submission-presentation');
 
     const response = await postVersion('submission-presentation', {
-      description: '제출 후 파일 교체 시도입니다.',
-      artifacts: [
-        {
-          kind: 'FILE',
-          name: 'presentation-after-submit.pdf',
-          size: 1024,
-          mimeType: 'application/pdf',
-        },
-      ],
+      ...presentationBody(
+        '제출 후 파일 교체 시도입니다.',
+        'presentation-after-submit.pdf',
+      ),
     });
 
     expect(response.status).toBe(409);
@@ -212,15 +230,10 @@ describe('submissionHandlers', () => {
 
     const before = getSubmissionById('submission-presentation');
     const response = await postVersion('submission-presentation', {
-      description: '잠금 중 파일 교체 시도입니다.',
-      artifacts: [
-        {
-          kind: 'FILE',
-          name: 'presentation-locked.pdf',
-          size: 1024,
-          mimeType: 'application/pdf',
-        },
-      ],
+      ...presentationBody(
+        '잠금 중 파일 교체 시도입니다.',
+        'presentation-locked.pdf',
+      ),
     });
 
     expect(response.status).toBe(409);
@@ -244,15 +257,10 @@ describe('submissionHandlers', () => {
     const beforeSubmission = getSubmissionById('submission-presentation');
 
     const response = await postVersion('submission-presentation', {
-      description: '발표 자료를 교체했습니다.',
-      artifacts: [
-        {
-          kind: 'FILE',
-          name: 'presentation-replaced.pdf',
-          size: 1024,
-          mimeType: 'application/pdf',
-        },
-      ],
+      ...presentationBody(
+        '발표 자료를 교체했습니다.',
+        'presentation-replaced.pdf',
+      ),
     });
     const currentPresentation = getCurrentPresentation();
     const currentSubmission = getSubmissionById('submission-presentation');
@@ -297,6 +305,106 @@ describe('submissionHandlers', () => {
     expect(oversizedPdf.status).toBe(413);
     await expect(oversizedPdf.json()).resolves.toMatchObject({
       code: 'ARTIFACT_TOO_LARGE',
+    });
+  });
+
+  it('팀장은 승인 입력 없이 최종보고서를 제출한다', async () => {
+    const response = await postVersion('submission-final-report', {
+      description: '최종 제출입니다.',
+      artifacts: [
+        {
+          kind: 'FILE',
+          name: 'report.pdf',
+          size: 1024,
+          mimeType: 'application/pdf',
+        },
+        {
+          kind: 'FILE',
+          name: 'source.zip',
+          size: 1024,
+          mimeType: 'application/zip',
+        },
+      ],
+    });
+    const submitted = (await response.json()) as Submission;
+
+    expect(response.status).toBe(200);
+    expect(submitted.memberConsent).toMatchObject({
+      confirmedCount: 1,
+      isConfirmedByMe: false,
+    });
+  });
+
+  it('팀원은 최종보고서 제출 후 승인하고 승인 취소할 수 있다', async () => {
+    const beforeSubmission = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.SUBMISSION.CONFIRMATION('submission-final-report')}`,
+      { method: 'PUT', headers: completedStudentHeaders },
+    );
+    expect(beforeSubmission.status).toBe(409);
+
+    await postVersion('submission-final-report', {
+      description: '최종 제출입니다.',
+      artifacts: [
+        {
+          kind: 'FILE',
+          name: 'report.pdf',
+          size: 1024,
+          mimeType: 'application/pdf',
+        },
+        {
+          kind: 'FILE',
+          name: 'source.zip',
+          size: 1024,
+          mimeType: 'application/zip',
+        },
+      ],
+    });
+
+    const confirmationUrl = `${API_BASE_URL}${ENDPOINTS.SUBMISSION.CONFIRMATION('submission-final-report')}`;
+    const confirmedResponse = await fetch(confirmationUrl, {
+      method: 'PUT',
+      headers: completedStudentHeaders,
+    });
+    const confirmed = (await confirmedResponse.json()) as Submission;
+    const withdrawnResponse = await fetch(confirmationUrl, {
+      method: 'DELETE',
+      headers: completedStudentHeaders,
+    });
+    const withdrawn = (await withdrawnResponse.json()) as Submission;
+
+    expect(confirmedResponse.status).toBe(200);
+    expect(confirmed.memberConsent).toMatchObject({
+      confirmedCount: 2,
+      isConfirmedByMe: true,
+    });
+    expect(withdrawnResponse.status).toBe(200);
+    expect(withdrawn.memberConsent).toMatchObject({
+      confirmedCount: 1,
+      isConfirmedByMe: false,
+    });
+  });
+
+  it('팀원 제출과 팀장 승인을 역할 오류로 거부한다', async () => {
+    const memberSubmission = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.SUBMISSION.VERSIONS('submission-final-report')}`,
+      {
+        method: 'POST',
+        headers: partnerHeaders,
+        body: JSON.stringify({ artifacts: [] }),
+      },
+    );
+    const leaderConfirmation = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.SUBMISSION.CONFIRMATION('submission-final-report')}`,
+      { method: 'PUT', headers },
+    );
+
+    expect(memberSubmission.status).toBe(403);
+    await expect(memberSubmission.json()).resolves.toMatchObject({
+      code: 'TEAM_LEADER_REQUIRED',
+    });
+    expect(leaderConfirmation.status).toBe(403);
+    await expect(leaderConfirmation.json()).resolves.toMatchObject({
+      code: 'TEAM_MEMBER_CONFIRMATION_ONLY',
     });
   });
 

@@ -258,9 +258,9 @@ export const fileIcon = style({
 });
 
 export const fileInfo = style({
+  flex: 1,
   display: 'flex',
   flexDirection: 'column',
-  gap: 2,
   minWidth: 0,
 });
 
@@ -272,10 +272,4 @@ export const fileName = style({
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
-});
-
-export const fileMeta = style({
-  color: tokens.color.text.secondary,
-  fontSize: 11,
-  margin: 0,
 });

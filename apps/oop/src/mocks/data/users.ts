@@ -2,15 +2,15 @@ import type { CurrentUser } from '@aics/core';
 
 const demoStudentSection = {
   id: 'oop-2026-2-01',
-  code: 'OOP-01',
-  name: '객체지향프로그래밍 01분반',
+  code: '월8/1151',
+  name: '객체지향프로그래밍',
   role: 'STUDENT' as const,
 };
 
 const demoOtherStudentSection = {
   id: 'oop-2026-2-02',
-  code: 'OOP-02',
-  name: '객체지향프로그래밍 02분반',
+  code: '화8/1151',
+  name: '객체지향프로그래밍',
   role: 'STUDENT' as const,
 };
 
@@ -69,7 +69,14 @@ export const demoAdmin: CurrentUser = {
   name: 'OOP 데모 조교',
   email: 'assistant@example.com',
   globalRole: 'ASSISTANT',
-  sections: [{ ...demoStudentSection, role: 'ASSISTANT' }],
+  sections: [
+    {
+      id: demoStudentSection.id,
+      code: 'OOP-01',
+      name: '객체지향프로그래밍 01분반',
+      role: 'ASSISTANT',
+    },
+  ],
   currentTeam: null,
 };
 

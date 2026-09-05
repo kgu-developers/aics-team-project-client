@@ -1,6 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import {
   meetingActionStatuses,
+  type CreateMeetingActionInput,
   type CreateMeetingRecordInput,
   type MeetingRecord,
   type UpdateMeetingActionInput,
@@ -9,11 +10,13 @@ import {
 import { http, HttpResponse } from 'msw';
 
 import {
+  createMeetingAction,
   createMeetingRecord,
   deleteMeetingRecord,
   getMeetingRecord,
   getMeetingRecordByActionId,
   getMeetingRecords,
+  getTeamMeetingActions,
   isMeetingMemberId,
   updateMeetingAction,
   updateMeetingRecord,
@@ -79,6 +82,16 @@ function validRecord(
 }
 export const meetingHandlers = [
   http.get(
+    `${API_BASE_URL}${ENDPOINTS.MEETING.ACTIONS(':teamId')}`,
+    ({ params, request }) => {
+      const result = guard(request);
+      if ('response' in result) return result.response;
+      return String(params.teamId) === result.teamId
+        ? HttpResponse.json(getTeamMeetingActions(result.teamId))
+        : error('TEAM_ACCESS_DENIED', 403);
+    },
+  ),
+  http.get(
     `${API_BASE_URL}${ENDPOINTS.MEETING.RECORDS(':teamId')}`,
     ({ params, request }) => {
       const result = guard(request);
@@ -138,7 +151,24 @@ export const meetingHandlers = [
         : error('MEETING_NOT_FOUND', 404);
     },
   ),
-  http.put(
+  http.post(
+    `${API_BASE_URL}${ENDPOINTS.MEETING.RECORD_ACTIONS(':meetingId')}`,
+    async ({ params, request }) => {
+      const result = owned(request, String(params.meetingId));
+      if ('response' in result) return result.response;
+      const input = (await request.json()) as CreateMeetingActionInput;
+      if (
+        !input.content?.trim() ||
+        (input.assigneeUserId && !isMeetingMemberId(input.assigneeUserId))
+      )
+        return error('INVALID_MEETING_ACTION', 400);
+      const record = (result as { record: MeetingRecord }).record;
+      return HttpResponse.json(createMeetingAction(record.id, input), {
+        status: 201,
+      });
+    },
+  ),
+  http.patch(
     `${API_BASE_URL}${ENDPOINTS.MEETING.ACTION(':actionId')}`,
     async ({ params, request }) => {
       const actionId = String(params.actionId);

@@ -7,8 +7,8 @@ import { useMeetingHomeSummaryQuery } from '~/features/meeting/queries';
 import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog';
 import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
 import { useStudentHomeDashboardQuery } from '~/features/student-home/queries';
-import FinalReportSubmissionDialog from '~/features/submission/FinalReportSubmissionDialog';
-import { FinalReportSubmissionDialogProvider } from '~/features/submission/FinalReportSubmissionDialogContext';
+import SubmissionDialog from '~/features/submission/SubmissionDialog';
+import { SubmissionDialogProvider } from '~/features/submission/SubmissionDialogContext';
 
 import MilestoneList from '~/widgets/milestone-summary/MilestoneList';
 
@@ -170,14 +170,14 @@ export default function StudentHomePage() {
         </Suspense>
       ) : null}
       <TopicCandidateDialogProvider>
-        <FinalReportSubmissionDialogProvider>
+        <SubmissionDialogProvider>
           <TopicCandidateDialog />
-          <FinalReportSubmissionDialog />
+          <SubmissionDialog />
           <MilestoneList
             milestones={data.milestones}
             persistenceKey={`${currentUser?.studentNumber ?? 'anonymous'}:${sectionId}`}
           />
-        </FinalReportSubmissionDialogProvider>
+        </SubmissionDialogProvider>
       </TopicCandidateDialogProvider>
     </div>
   );

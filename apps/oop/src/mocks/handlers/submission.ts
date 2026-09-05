@@ -2,6 +2,7 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import type {
   Submission,
   SubmissionArtifactRule,
+  SubmissionLinkRule,
   SubmitSubmissionVersionInput,
 } from '@aics/core';
 import { http, HttpResponse } from 'msw';
@@ -18,11 +19,18 @@ import {
   getSubmissionById,
   getSubmissionByMilestone,
   submitMockSubmissionVersion,
+  updateMockSubmissionConfirmation,
 } from '../data/submission';
 import { getDemoUserAccount } from '../data/users';
 
 type GuardResult =
-  { response: Response } | { userId: string; userName: string; teamId: string };
+  | { response: Response }
+  | {
+      userId: string;
+      userName: string;
+      teamId: string;
+      isTeamLeader: boolean;
+    };
 
 function errorResponse(code: string, message: string, status: number) {
   return HttpResponse.json({ code, message }, { status });
@@ -76,6 +84,11 @@ function guard(request: Request): GuardResult {
     userId,
     userName: account.user.name,
     teamId: demoSubmissionTeamId,
+    isTeamLeader: Boolean(
+      account.user.currentTeam?.members.find(
+        member => member.id === account.user.id,
+      )?.isLeader,
+    ),
   };
 }
 
@@ -113,7 +126,9 @@ function validateArtifacts(input: unknown, rules: SubmissionArtifactRule[]) {
     );
   }
 
-  const remaining = [...input.artifacts];
+  const remaining = input.artifacts.filter(
+    artifact => isArtifactInput(artifact) && artifact.kind === 'FILE',
+  );
   for (const rule of rules) {
     const index = remaining.findIndex(
       artifact =>
@@ -160,6 +175,73 @@ function validateArtifacts(input: unknown, rules: SubmissionArtifactRule[]) {
   return null;
 }
 
+function validateLinks(input: unknown, rules: SubmissionLinkRule[]) {
+  const artifacts =
+    input && typeof input === 'object' && 'artifacts' in input
+      ? input.artifacts
+      : null;
+  if (!Array.isArray(artifacts)) {
+    return errorResponse(
+      'ARTIFACTS_REQUIRED',
+      '필수 제출 정보를 모두 입력해 주세요.',
+      400,
+    );
+  }
+
+  for (const rule of rules) {
+    const artifact = artifacts.find(
+      item =>
+        isArtifactInput(item) &&
+        item.kind === 'LINK' &&
+        item.label === rule.label,
+    );
+    if (
+      !isArtifactInput(artifact) ||
+      typeof artifact.url !== 'string' ||
+      typeof artifact.label !== 'string'
+    ) {
+      return errorResponse(
+        'REQUIRED_ARTIFACT_MISSING',
+        `${rule.label}이 필요해요.`,
+        400,
+      );
+    }
+    try {
+      const url = new URL(artifact.url);
+      if (!rule.allowedProtocols.includes(url.protocol)) {
+        return errorResponse(
+          'INVALID_ARTIFACT',
+          `${rule.label} 주소가 올바르지 않아요.`,
+          400,
+        );
+      }
+    } catch {
+      return errorResponse(
+        'INVALID_ARTIFACT',
+        `${rule.label} 주소가 올바르지 않아요.`,
+        400,
+      );
+    }
+  }
+  const allowedLabels = new Set(rules.map(rule => rule.label));
+  const unexpectedLink = artifacts.find(
+    item =>
+      isArtifactInput(item) &&
+      item.kind === 'LINK' &&
+      typeof item.label === 'string' &&
+      !allowedLabels.has(item.label),
+  );
+  if (unexpectedLink) {
+    return errorResponse(
+      'ARTIFACT_TYPE_NOT_ALLOWED',
+      '허용되지 않은 링크가 포함되어 있어요.',
+      400,
+    );
+  }
+
+  return null;
+}
+
 export const submissionHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MY_TEAM_BY_MILESTONE(':milestoneId')}`,
@@ -169,6 +251,7 @@ export const submissionHandlers = [
       const submission = getSubmissionByMilestone(
         result.teamId,
         String(params.milestoneId),
+        result.userId,
       );
       if (!submission) {
         return errorResponse(
@@ -186,7 +269,10 @@ export const submissionHandlers = [
     ({ params, request }) => {
       const result = guard(request);
       if ('response' in result) return result.response;
-      const submission = getSubmissionById(String(params.submissionId));
+      const submission = getSubmissionById(
+        String(params.submissionId),
+        result.userId,
+      );
       if (!submission) {
         return errorResponse(
           'SUBMISSION_NOT_FOUND',
@@ -204,7 +290,7 @@ export const submissionHandlers = [
       const result = guard(request);
       if ('response' in result) return result.response;
       const submissionId = String(params.submissionId);
-      const submission = getSubmissionById(submissionId);
+      const submission = getSubmissionById(submissionId, result.userId);
       if (!submission) {
         return errorResponse(
           'SUBMISSION_NOT_FOUND',
@@ -214,6 +300,13 @@ export const submissionHandlers = [
       }
       const scopeError = requireTeamScope(result, submission);
       if (scopeError) return scopeError;
+      if (submission.milestoneKind === 'FINAL_REPORT' && !result.isTeamLeader) {
+        return errorResponse(
+          'TEAM_LEADER_REQUIRED',
+          '최종보고서는 팀장만 제출할 수 있어요.',
+          403,
+        );
+      }
       if (!submission.canSubmitNow) {
         return errorResponse(
           'SUBMISSION_NOT_ALLOWED',
@@ -236,7 +329,11 @@ export const submissionHandlers = [
         submission.artifactRules,
       );
       if (validationError) return validationError;
-
+      const linkValidationError = validateLinks(
+        input,
+        submission.linkRules ?? [],
+      );
+      if (linkValidationError) return linkValidationError;
       if (submission.milestoneKind === 'PRESENTATION') {
         if (isPresentationSubmitted()) {
           return errorResponse(
@@ -270,6 +367,92 @@ export const submissionHandlers = [
         markPresentationMaterialChanged(result.userName);
       }
       return HttpResponse.json(submitted);
+    },
+  ),
+  http.put(
+    `${API_BASE_URL}${ENDPOINTS.SUBMISSION.CONFIRMATION(':submissionId')}`,
+    ({ params, request }) => {
+      const result = guard(request);
+      if ('response' in result) return result.response;
+      const submissionId = String(params.submissionId);
+      const submission = getSubmissionById(submissionId);
+      if (!submission) {
+        return errorResponse(
+          'SUBMISSION_NOT_FOUND',
+          '제출물을 찾을 수 없어요.',
+          404,
+        );
+      }
+      const scopeError = requireTeamScope(result, submission);
+      if (scopeError) return scopeError;
+      if (submission.milestoneKind !== 'FINAL_REPORT') {
+        return errorResponse(
+          'CONFIRMATION_NOT_SUPPORTED',
+          '최종보고서만 승인할 수 있어요.',
+          400,
+        );
+      }
+      if (result.isTeamLeader) {
+        return errorResponse(
+          'TEAM_MEMBER_CONFIRMATION_ONLY',
+          '팀원만 최종보고서를 승인할 수 있어요.',
+          403,
+        );
+      }
+      if (!submission.currentVersion) {
+        return errorResponse(
+          'SUBMISSION_NOT_SUBMITTED',
+          '최종보고서가 제출된 뒤 승인할 수 있어요.',
+          409,
+        );
+      }
+
+      return HttpResponse.json(
+        updateMockSubmissionConfirmation(submissionId, result.userId, true),
+      );
+    },
+  ),
+  http.delete(
+    `${API_BASE_URL}${ENDPOINTS.SUBMISSION.CONFIRMATION(':submissionId')}`,
+    ({ params, request }) => {
+      const result = guard(request);
+      if ('response' in result) return result.response;
+      const submissionId = String(params.submissionId);
+      const submission = getSubmissionById(submissionId, result.userId);
+      if (!submission) {
+        return errorResponse(
+          'SUBMISSION_NOT_FOUND',
+          '제출물을 찾을 수 없어요.',
+          404,
+        );
+      }
+      const scopeError = requireTeamScope(result, submission);
+      if (scopeError) return scopeError;
+      if (submission.milestoneKind !== 'FINAL_REPORT') {
+        return errorResponse(
+          'CONFIRMATION_NOT_SUPPORTED',
+          '최종보고서만 승인할 수 있어요.',
+          400,
+        );
+      }
+      if (result.isTeamLeader) {
+        return errorResponse(
+          'TEAM_MEMBER_CONFIRMATION_ONLY',
+          '팀원만 최종보고서 승인을 취소할 수 있어요.',
+          403,
+        );
+      }
+      if (!submission.currentVersion) {
+        return errorResponse(
+          'SUBMISSION_NOT_SUBMITTED',
+          '최종보고서가 제출된 뒤 승인을 취소할 수 있어요.',
+          409,
+        );
+      }
+
+      return HttpResponse.json(
+        updateMockSubmissionConfirmation(submissionId, result.userId, false),
+      );
     },
   ),
 ];

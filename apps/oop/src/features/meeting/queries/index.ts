@@ -1,6 +1,8 @@
 export { meetingKeys } from './meetingKeys';
 export { useMeetingRecordQuery } from './useMeetingRecordQuery';
 export { useMeetingRecordsQuery } from './useMeetingRecordsQuery';
+export { useTeamMeetingActionsQuery } from './useTeamMeetingActionsQuery';
+export { useSubmitMeetingActionMutation } from './useSubmitMeetingActionMutation';
 export {
   type MeetingHomeSummary,
   useMeetingHomeSummaryQuery,

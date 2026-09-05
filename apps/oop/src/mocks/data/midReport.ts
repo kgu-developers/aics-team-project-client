@@ -144,26 +144,6 @@ let midReport: MidReport = {
         },
       ],
     ),
-    block(
-      'mid-check-questions',
-      '5. 중간 점검 질문',
-      '대면 점검에서 확인받고 싶은 질문과 시연 초점을 작성합니다.',
-      [
-        {
-          key: 'demo',
-          label: '중점 시연 기능',
-          value: '상영 등록부터 좌석 선택·예매 완료 흐름',
-          multiline: true,
-        },
-        {
-          key: 'questions',
-          label: '교수님께 질문할 내용',
-          value:
-            '예약 취소와 좌석 상태 갱신 책임을 어떻게 분리할지 검토 받고 싶습니다.',
-          multiline: true,
-        },
-      ],
-    ),
   ],
 };
 
@@ -177,7 +157,6 @@ const requiredFieldKeysByBlock: Record<
   'gui-design': ['guiScreens'],
   'engine-design': ['features', 'architecture', 'testCases'],
   'project-plan': ['completed', 'inProgress', 'remaining', 'help'],
-  'mid-check-questions': ['demo', 'questions'],
 };
 
 export function getCurrentMidReport() {

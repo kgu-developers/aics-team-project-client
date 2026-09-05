@@ -53,13 +53,27 @@ export type StudentHomeFile = {
   id: string;
   extension: string;
   name: string;
-  meta: string;
+};
+
+export type StudentHomeSubmissionMaterial = {
+  id: string;
+  kind: 'FILE' | 'LINK';
+  label: string;
+  extension: string;
+  value?: string;
+  href?: string;
 };
 
 export type StudentHomeTeamStatus = {
   id: string;
   label: string;
   isMine: boolean;
+};
+
+export type StudentHomeSubmissionMetadata = {
+  submittedBy: string;
+  submittedAt: string;
+  updatedAt: string;
 };
 
 export type StudentHomeMilestoneBody =
@@ -107,7 +121,8 @@ export type StudentHomeMilestoneBody =
       kind: 'presentation-material';
       project: StudentHomeProject;
       sections: StudentHomeSectionStatus[];
-      recentFile?: StudentHomeFile;
+      materials: StudentHomeSubmissionMaterial[];
+      submission?: StudentHomeSubmissionMetadata;
     }
   | {
       kind: 'presentation-evaluation';
@@ -118,11 +133,18 @@ export type StudentHomeMilestoneBody =
     }
   | {
       kind: 'final-report';
+      submissionId?: string;
       notice: {
         description: string;
         file?: StudentHomeFile;
       };
-      submittedFiles?: StudentHomeFile[];
+      materials: StudentHomeSubmissionMaterial[];
+      submission?: StudentHomeSubmissionMetadata;
+      memberConsent?: {
+        confirmedCount: number;
+        totalCount: number;
+        isConfirmedByMe: boolean;
+      };
     }
   | {
       kind: 'peer-evaluation';

@@ -94,10 +94,21 @@ describe('useSubmitSubmissionVersionMutation', () => {
         description: '파일을 교체했습니다.',
         artifacts: [
           {
+            kind: 'LINK',
+            label: '시연 URL',
+            url: 'https://example.com/demo',
+          },
+          {
             kind: 'FILE',
             name: 'presentation-replaced.pdf',
             size: 1024,
             mimeType: 'application/pdf',
+          },
+          {
+            kind: 'FILE',
+            name: 'presentation-source.zip',
+            size: 2048,
+            mimeType: 'application/zip',
           },
         ],
       },

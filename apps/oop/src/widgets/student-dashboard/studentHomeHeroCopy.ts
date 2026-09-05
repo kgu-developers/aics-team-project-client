@@ -37,11 +37,11 @@ const milestoneHeroCopy: Record<string, MilestoneHeroCopy> = {
     heading: '중간보고서 피드백을 반영해 주세요.',
     description: '피드백 반영 내용과 변경 사항을 확인해 주세요.',
   },
-  'presentation:발표 자료 작성': {
-    task: '발표 자료를 작성',
-    actionLabel: '발표 자료 작성',
-    heading: '발표 자료를 준비하고 있어요.',
-    description: '프로젝트 소개와 발표 자료를 작성해 주세요.',
+  'presentation:발표 자료 제출': {
+    task: '발표 자료를 제출',
+    actionLabel: '발표 자료 제출',
+    heading: '발표 자료를 제출해 주세요.',
+    description: '시연 URL과 발표 자료 PDF, 실행 소스 ZIP을 확인해 주세요.',
   },
   'presentation:발표 평가': {
     task: '발표 평가를 진행',
@@ -54,6 +54,19 @@ const milestoneHeroCopy: Record<string, MilestoneHeroCopy> = {
     actionLabel: '최종보고서 제출',
     heading: '최종보고서를 제출해 주세요.',
     description: '최종보고서와 필수 소스코드 파일을 확인해 주세요.',
+  },
+  'final-report:최종보고서 승인': {
+    task: '최종보고서를 승인',
+    actionLabel: '최종보고서 승인하기',
+    heading: '최종보고서를 확인해 주세요.',
+    description:
+      '팀장이 제출한 최종보고서와 소스코드 파일을 확인한 뒤 승인해 주세요.',
+  },
+  'final-report:최종보고서 제출 대기': {
+    task: '최종보고서 제출을 대기',
+    actionLabel: '최종보고서 제출 대기',
+    heading: '팀장의 최종보고서 제출을 기다리고 있어요.',
+    description: '파일이 제출되면 최종보고서를 확인하고 승인할 수 있어요.',
   },
   'peer-evaluation:상호 평가': {
     task: '상호 평가를 작성',

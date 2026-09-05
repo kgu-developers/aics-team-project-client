@@ -19,13 +19,21 @@ import {
   createStudentHomeDashboardPreview,
   milestonePreviewScenarios,
 } from './studentHome';
+import { resetSubmissionMockData } from './submission';
 import { demoAccessToken } from './users';
-import { studentHomeHandlers } from '../handlers/studentHome';
+import {
+  resetStudentHomePreviewTransitionState,
+  studentHomeHandlers,
+} from '../handlers/studentHome';
 
 const server = setupServer(...studentHomeHandlers);
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-beforeEach(() => resetEvaluationMockData());
+beforeEach(() => {
+  resetEvaluationMockData();
+  resetSubmissionMockData();
+  resetStudentHomePreviewTransitionState();
+});
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
@@ -38,6 +46,7 @@ const expectedDetailMilestone = {
   'proposal-feedback-mid-report': 'mid-review',
   'mid-feedback': 'mid-review',
   'mid-feedback-ready': 'mid-review',
+  'presentation-material-empty': 'presentation',
   'presentation-material': 'presentation',
   'presentation-evaluation': 'presentation',
   'final-report': 'final-report',
@@ -51,6 +60,23 @@ async function fetchPresentationEvaluationDashboard() {
       headers: {
         Authorization: `Bearer ${demoAccessToken}`,
         'X-OOP-Milestone-Preview': 'presentation-evaluation',
+      },
+    },
+  );
+
+  return {
+    dashboard: (await response.json()) as StudentHomeDashboard,
+    response,
+  };
+}
+
+async function fetchPreviewDashboard(preview: string) {
+  const response = await fetch(
+    `${API_BASE_URL}${ENDPOINTS.SECTION.STUDENT_DASHBOARD('oop-2026-2-01')}`,
+    {
+      headers: {
+        Authorization: `Bearer ${demoAccessToken}`,
+        'X-OOP-Milestone-Preview': preview,
       },
     },
   );
@@ -129,6 +155,28 @@ describe('createStudentHomeDashboardPreview', () => {
     });
   });
 
+  it('중간보고서 상세는 피드백 소유 질문 항목을 학생 작성 영역에서 제외한다', () => {
+    const dashboard = createStudentHomeDashboardPreview('mid-report');
+    const midReview = dashboard.milestones.find(
+      milestone => milestone.id === 'mid-review',
+    );
+
+    expect(midReview?.body).toMatchObject({
+      kind: 'mid-review',
+      sections: [
+        expect.objectContaining({ id: 'topic' }),
+        expect.objectContaining({ id: 'gui-design' }),
+        expect.objectContaining({ id: 'engine-design' }),
+        expect.objectContaining({ id: 'project-plan' }),
+      ],
+    });
+    expect(
+      midReview?.body?.kind === 'mid-review'
+        ? midReview.body.sections.map(section => section.id)
+        : [],
+    ).not.toContain('mid-check-questions');
+  });
+
   it('MSW는 개발 preview 헤더에 맞는 fixture를 반환한다', async () => {
     const { dashboard, response } =
       await fetchPresentationEvaluationDashboard();
@@ -149,6 +197,33 @@ describe('createStudentHomeDashboardPreview', () => {
         ]),
       },
     });
+  });
+
+  it('발표 제출 전 preview는 모든 필수 자료를 빈 슬롯으로 반환한다', async () => {
+    const { dashboard, response } = await fetchPreviewDashboard(
+      'presentation-material-empty',
+    );
+    const body = dashboard.milestones.find(
+      milestone => milestone.id === 'presentation',
+    )?.body;
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      kind: 'presentation-material',
+      materials: [
+        { label: '시연 URL' },
+        { label: '발표 자료 PDF' },
+        { label: '실행 소스 ZIP' },
+      ],
+    });
+    expect(
+      body?.kind === 'presentation-material'
+        ? body.materials.every(material => !material.value)
+        : false,
+    ).toBe(true);
+    expect(
+      body?.kind === 'presentation-material' ? body.submission : null,
+    ).toBeUndefined();
   });
 
   it.each([

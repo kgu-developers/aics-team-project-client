@@ -8,7 +8,6 @@ export const midReportBlockKeys = [
   'gui-design',
   'engine-design',
   'project-plan',
-  'mid-check-questions',
 ] as const;
 
 export type MidReportBlockKey = (typeof midReportBlockKeys)[number];

@@ -12,6 +12,7 @@ const {
   feedbackMutationState,
   resetMidMutation,
   resetProposalMutation,
+  updateSubmissionConfirmation,
   toast,
 } = vi.hoisted(() => ({
   feedbackMutationState: {
@@ -20,6 +21,7 @@ const {
   },
   resetMidMutation: vi.fn(),
   resetProposalMutation: vi.fn(),
+  updateSubmissionConfirmation: vi.fn(),
   toast: vi.fn(),
 }));
 
@@ -51,6 +53,13 @@ vi.mock('~/features/student-feedback/queries', () => ({
   }),
 }));
 
+vi.mock('~/features/submission/queries', () => ({
+  useUpdateSubmissionConfirmationMutation: () => ({
+    isPending: false,
+    mutate: updateSubmissionConfirmation,
+  }),
+}));
+
 import { useAuthStore } from '~/features/auth/authStore';
 
 import MilestoneDetails from './MilestoneDetails';
@@ -62,9 +71,14 @@ import {
   createStudentHomeDashboardPreview,
   createStudentHomeDashboardWithMidReportProgress,
   createStudentHomeDashboardWithPresentationProgress,
+  createStudentHomeDashboardWithFinalReportSubmission,
   studentHomeDashboardFixture,
 } from '~/mocks/data/studentHome';
-import { demoStudent } from '~/mocks/data/users';
+import {
+  ensureFinalReportSubmitted,
+  resetSubmissionMockData,
+} from '~/mocks/data/submission';
+import { demoCompletedStudent, demoStudent } from '~/mocks/data/users';
 import { renderWithRouter } from '~/test/renderWithRouter';
 
 const PERSISTENCE_KEY = 'student-a:oop-section-1';
@@ -78,7 +92,9 @@ describe('MilestoneList', () => {
     feedbackMutationState.proposalError = null;
     resetMidMutation.mockReset();
     resetProposalMutation.mockReset();
+    updateSubmissionConfirmation.mockReset();
     toast.mockReset();
+    resetSubmissionMockData();
     useAuthStore.setState({ currentUser: demoStudent });
   });
 
@@ -255,6 +271,37 @@ describe('MilestoneList', () => {
         button.hasAttribute('disabled') ||
           button.getAttribute('aria-disabled') === 'true',
       ).toBe(true),
+    );
+  });
+
+  it('일반 팀원의 최종보고서 CTA는 제출 다이얼로그 대신 승인 요청을 보낸다', async () => {
+    const user = userEvent.setup();
+    const submission = ensureFinalReportSubmitted();
+    const dashboard = createStudentHomeDashboardWithFinalReportSubmission(
+      createStudentHomeDashboardPreview('final-report'),
+      submission,
+      false,
+    );
+    useAuthStore.setState({ currentUser: demoCompletedStudent });
+
+    renderWithRouter(
+      <MilestoneList
+        milestones={dashboard.milestones}
+        persistenceKey={PERSISTENCE_KEY}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: '승인하기' }));
+
+    expect(updateSubmissionConfirmation).toHaveBeenCalledWith(
+      {
+        submissionId: 'submission-final-report',
+        confirmed: true,
+      },
+      expect.objectContaining({
+        onError: expect.any(Function),
+        onSuccess: expect.any(Function),
+      }),
     );
   });
 
@@ -486,4 +533,102 @@ describe('MilestoneDetails', () => {
       ).toBe(true);
     },
   );
+
+  it('발표 자료 상세는 제출 자료 제목 아래에 메타데이터를 1회만 표시한다', () => {
+    const body = createStudentHomeDashboardPreview(
+      'presentation-material',
+    ).milestones.find(milestone => milestone.isDetailAvailable)?.body;
+    if (!body || body.kind !== 'presentation-material') {
+      throw new Error('presentation material body 없음');
+    }
+
+    renderWithRouter(<MilestoneDetails body={body} />);
+
+    expect(screen.getByText('제출 자료')).toBeVisible();
+    expect(screen.queryByText('제출 정보')).not.toBeInTheDocument();
+    expect(screen.getByText('제출자')).toBeVisible();
+    expect(screen.getByText('제출 일시')).toBeVisible();
+    expect(screen.getByText('변경 일시')).toBeVisible();
+  });
+
+  it('발표 자료를 제출하기 전에는 필수 자료별 안내를 표시한다', () => {
+    renderWithRouter(
+      <MilestoneDetails
+        body={{
+          kind: 'presentation-material',
+          project: {
+            title: 'CineFlow',
+            description: '영화관 통합 관리 시스템',
+          },
+          sections: [],
+          materials: [
+            {
+              id: 'PRESENTATION_DEMO_URL',
+              kind: 'LINK',
+              label: '시연 URL',
+              extension: 'URL',
+            },
+            {
+              id: 'PRESENTATION_PDF',
+              kind: 'FILE',
+              label: '발표 자료 PDF',
+              extension: 'PDF',
+            },
+            {
+              id: 'SOURCE_CODE_ZIP',
+              kind: 'FILE',
+              label: '실행 소스 ZIP',
+              extension: 'ZIP',
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText('URL을 입력해 주세요.')).toBeVisible();
+    expect(screen.getByText('PDF 파일을 제출해 주세요.')).toBeVisible();
+    expect(screen.getByText('ZIP 파일을 제출해 주세요.')).toBeVisible();
+  });
+
+  it('최종보고서 상세에는 승인 현황을 중복하지 않고 제출 메타데이터만 표시한다', () => {
+    renderWithRouter(
+      <MilestoneDetails
+        body={{
+          kind: 'final-report',
+          memberConsent: {
+            confirmedCount: 4,
+            totalCount: 5,
+            isConfirmedByMe: true,
+          },
+          notice: {
+            description: '최종보고서와 필수 소스코드 ZIP을 제출해 주세요.',
+          },
+          submission: {
+            submittedBy: '서진규',
+            submittedAt: '2026-12-07T12:00:00+09:00',
+            updatedAt: '2026-12-07T13:00:00+09:00',
+          },
+          materials: [
+            {
+              id: 'final-pdf',
+              kind: 'FILE',
+              label: '최종보고서 PDF',
+              extension: 'PDF',
+              value: 'final-report.pdf',
+            },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.queryByText('팀원 승인')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('승인 4/5 · 내 승인 완료'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('제출 정보')).toBeVisible();
+    expect(screen.getByText('제출자')).toBeVisible();
+    expect(screen.getByText('서진규')).toBeVisible();
+    expect(screen.getByText('제출 일시')).toBeVisible();
+    expect(screen.getByText('변경 일시')).toBeVisible();
+  });
 });

@@ -39,7 +39,10 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderPanel(isReadOnly = false) {
+function renderPanel(
+  isReadOnly = false,
+  milestoneId: 'presentation' | 'final-report' = 'presentation',
+) {
   useAuthStore.getState().setAccessToken(demoAccessToken);
   useAuthStore.getState().setCurrentUser(demoStudent);
   const queryClient = new QueryClient({
@@ -59,8 +62,8 @@ function renderPanel(isReadOnly = false) {
   return render(
     <SubmissionFilePanel
       isReadOnly={isReadOnly}
-      milestoneId='presentation'
-      title='프레젠테이션 자료'
+      milestoneId={milestoneId}
+      title={milestoneId === 'presentation' ? '프레젠테이션 자료' : '최종 파일'}
     />,
     { wrapper: Wrapper },
   );
@@ -117,5 +120,100 @@ describe('SubmissionFilePanel', () => {
 
     expect(submitRequest).not.toHaveBeenCalled();
     expect(screen.getByText(file.name)).toBeInTheDocument();
+  });
+
+  it('시연 URL, PDF, ZIP을 발표 제출 payload로 보낸다', async () => {
+    const user = userEvent.setup();
+    let requestBody: unknown = null;
+    server.use(
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.SUBMISSION.VERSIONS(':submissionId')}`,
+        async ({ request }) => {
+          submitRequest();
+          requestBody = await request.json();
+          return HttpResponse.json(
+            getSubmissionById('submission-presentation'),
+          );
+        },
+      ),
+    );
+    const { container } = renderPanel();
+
+    await user.type(
+      await screen.findByRole('textbox', { name: /시연 URL/ }),
+      'https://example.com/demo',
+    );
+    const fileInputs =
+      container.querySelectorAll<HTMLInputElement>('input[type="file"]');
+    expect(fileInputs).toHaveLength(2);
+    expect(fileInputs[0]).toHaveAttribute('accept', '.pdf');
+    expect(fileInputs[1]).toHaveAttribute('accept', '.zip');
+    await user.upload(
+      fileInputs[0]!,
+      new File(['slides'], 'cineflow.pdf', { type: 'application/pdf' }),
+    );
+    await user.upload(
+      fileInputs[1]!,
+      new File(['source'], 'cineflow.zip', { type: 'application/zip' }),
+    );
+    await user.click(screen.getByRole('button', { name: '파일 교체' }));
+
+    expect(submitRequest).toHaveBeenCalledOnce();
+    expect(requestBody).toMatchObject({
+      artifacts: [
+        {
+          kind: 'LINK',
+          label: '시연 URL',
+          url: 'https://example.com/demo',
+        },
+        { kind: 'FILE', name: 'cineflow.pdf' },
+        { kind: 'FILE', name: 'cineflow.zip' },
+      ],
+    });
+  });
+
+  it('최종 파일은 승인 입력 없이 PDF와 ZIP만 제출한다', async () => {
+    const user = userEvent.setup();
+    let requestBody: Record<string, unknown> | null = null;
+    server.use(
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.SUBMISSION.VERSIONS(':submissionId')}`,
+        async ({ request }) => {
+          submitRequest();
+          requestBody = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json(
+            getSubmissionById('submission-final-report'),
+          );
+        },
+      ),
+    );
+    const { container } = renderPanel(false, 'final-report');
+
+    expect(
+      screen.queryByRole('checkbox', {
+        name: '최종 제출 내용에 동의합니다.',
+      }),
+    ).not.toBeInTheDocument();
+    await screen.findByRole('button', { name: '파일 제출' });
+    const fileInputs =
+      container.querySelectorAll<HTMLInputElement>('input[type="file"]');
+    await user.upload(
+      fileInputs[0]!,
+      new File(['report'], 'final.pdf', { type: 'application/pdf' }),
+    );
+    await user.upload(
+      fileInputs[1]!,
+      new File(['source'], 'source.zip', { type: 'application/zip' }),
+    );
+    await user.click(screen.getByRole('button', { name: '파일 제출' }));
+
+    expect(submitRequest).toHaveBeenCalledOnce();
+    expect(requestBody).toMatchObject({
+      artifacts: [
+        { kind: 'FILE', name: 'final.pdf' },
+        { kind: 'FILE', name: 'source.zip' },
+      ],
+    });
+    expect(requestBody).not.toHaveProperty('consentConfirmed');
   });
 });

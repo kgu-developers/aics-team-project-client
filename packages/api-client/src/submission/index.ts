@@ -35,3 +35,7 @@ export {
 export { fetchMyTeamSubmission } from './fetchMyTeamSubmission';
 export { fetchSubmission } from './fetchSubmission';
 export { submitSubmissionVersion } from './submitSubmissionVersion';
+export {
+  confirmSubmission,
+  withdrawSubmissionConfirmation,
+} from './updateSubmissionConfirmation';

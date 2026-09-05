@@ -23,6 +23,13 @@ export type MeetingAction = {
   updatedAt: string;
 };
 
+export type TeamMeetingAction = MeetingAction & {
+  meetingRecord: {
+    id: string;
+    title: string;
+  };
+};
+
 export type MeetingRecord = {
   id: string;
   teamId: string;

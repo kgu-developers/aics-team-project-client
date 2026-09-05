@@ -12,7 +12,7 @@ src/tokens.ts                     typed Astryx semantic token contract (createGl
 src/index.ts                      audited public re-exports
 ```
 
-The current runtime is `@astryxdesign/core@0.2.0`. The package exports real Astryx `Avatar`, `Badge`, `Breadcrumbs`, `BreadcrumbItem`, `Button`, `Card`, `Carousel`, `CheckboxList`, `CheckboxListItem`, `Collapsible`, `CollapsibleGroup`, `Dialog`, `Divider`, `EmptyState`, `Field`, `FileInput`, `IconButton`, `Popover`, `RadioList`, `RadioListItem`, `StatusDot`, `HStack`, `VStack`, `Text`, `Heading`, `Tab`, `TabList`, `TextInput`, `TextArea`, `Table`, `ToastViewport`, and `useToast`, plus `AstryxThemeProvider`, `oopTheme`, and `tokens`.
+The current runtime is `@astryxdesign/core@0.2.0`. The package exports real Astryx `Avatar`, `Badge`, `Breadcrumbs`, `BreadcrumbItem`, `Button`, `Card`, `Carousel`, `CheckboxList`, `CheckboxListItem`, `Collapsible`, `CollapsibleGroup`, `Dialog`, `Divider`, `EmptyState`, `Field`, `FileInput`, `IconButton`, `MetadataList`, `MetadataListItem`, `Popover`, `RadioList`, `RadioListItem`, `StatusDot`, `Tooltip`, `HStack`, `VStack`, `Text`, `Heading`, `Tab`, `TabList`, `TextInput`, `TextArea`, `Table`, `ToastViewport`, and `useToast`, plus `AstryxThemeProvider`, `oopTheme`, and `tokens`.
 
 `tokens` is a typed reference over Astryx CSS variables (Figma collection 01-05, 133 variables, plus `color.border.base` which exists in Astryx but not the Figma export). It emits no CSS and declares no values — Astryx supplies them at runtime. It is not a parallel token system; do not add values or new names to it unless they exist in Astryx. OOP-only layout tokens (Figma collection 06) live in `apps/oop/src/app/tokens.css.ts`, not here.
 
