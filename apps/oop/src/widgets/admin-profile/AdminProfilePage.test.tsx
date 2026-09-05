@@ -296,5 +296,40 @@ describe('AdminProfilePage', () => {
     expect(
       screen.getByText('담당 분반이 없어 명단 파일을 선택할 수 없습니다.'),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText('담당 분반이 없어 사전 정보를 조회할 수 없습니다.'),
+    ).toBeInTheDocument();
+  });
+
+  it('팀 구성 사전 정보에서 계약된 응답 항목만 표시한다', () => {
+    renderPage();
+
+    expect(
+      screen.getByRole('heading', { name: '팀 구성 사전 정보' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        '응답 수: 2명 · 미응답 학생은 현재 API 응답에 포함되지 않습니다.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '학번' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '희망 역할' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '주제 의견' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '기타 의견' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '제출일' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('20260001')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('columnheader', { name: '이름' }),
+    ).not.toBeInTheDocument();
   });
 });
