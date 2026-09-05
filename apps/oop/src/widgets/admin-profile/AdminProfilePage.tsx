@@ -238,7 +238,7 @@ function PasswordChangeDialog({
         </Heading>
         <Text className={styles.passwordDescription} color='secondary'>
           현재 비밀번호를 확인한 뒤 새 비밀번호를 설정해 주세요. 새 비밀번호는
-          8~64자, UTF-8 기준 72바이트 이하여야 합니다.
+          8자 이상 입력해 주세요.
         </Text>
         {(
           [
