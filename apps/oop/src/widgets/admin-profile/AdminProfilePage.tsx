@@ -30,6 +30,7 @@ import {
   type PasswordValidationIssue,
 } from '~/features/auth/validatePasswordChange';
 
+import { AdminPreSurveyResponses } from './AdminPreSurveyResponses';
 import * as styles from './AdminProfilePage.css';
 
 type UploadFileKind = 'studentRoster' | 'teamRoster';
@@ -522,6 +523,8 @@ export default function AdminProfilePage() {
           </section>
         </VStack>
       </Card>
+
+      <AdminPreSurveyResponses sections={uploadSections} />
 
       <UploadDialog
         file={uploadFile}
