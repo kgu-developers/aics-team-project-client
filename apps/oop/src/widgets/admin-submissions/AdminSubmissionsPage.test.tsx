@@ -229,8 +229,12 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByRole('heading', { name: '발표 순서 설정' }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText('OOP-01 - 1팀 발표 순서')).toBeInTheDocument();
-    expect(screen.queryByLabelText('발표 평가 시작 시간')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('발표 평가 종료 시간')).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('발표 평가 시작 시간'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText('발표 평가 종료 시간'),
+    ).not.toBeInTheDocument();
   });
 
   it('발표 순서를 발표 평가 마일스톤에 일괄 저장한다', async () => {

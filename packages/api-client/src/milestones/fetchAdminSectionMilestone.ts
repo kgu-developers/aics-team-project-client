@@ -2,7 +2,6 @@ import { apiClient } from '../client';
 import type { AdminSectionMilestoneDto } from './types';
 import { ENDPOINTS } from '../constants/endpoints';
 
-
 export async function fetchAdminSectionMilestone(
   sectionId: string,
   milestoneId: string,
