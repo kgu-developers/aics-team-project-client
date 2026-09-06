@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createAdminMilestoneSectionScheduleDraft,
   syncAdminMilestoneSectionScheduleDrafts,
+  toAdminMilestoneDateTime,
 } from './adminMilestoneSetupDraft';
 
 describe('syncAdminMilestoneSectionScheduleDrafts', () => {
@@ -58,5 +59,19 @@ describe('syncAdminMilestoneSectionScheduleDrafts', () => {
       allowLateSubmission: false,
       allowSubmissionEditBeforeDueAt: false,
     });
+  });
+});
+
+describe('toAdminMilestoneDateTime', () => {
+  it('날짜와 시간을 API date-time 형식으로 변환한다', () => {
+    expect(
+      toAdminMilestoneDateTime({ date: '2026-09-10', time: '23:59' }),
+    ).toBe('2026-09-10T23:59:00');
+  });
+
+  it('날짜나 시간이 없으면 API 값으로 만들지 않는다', () => {
+    expect(toAdminMilestoneDateTime({ date: '2026-09-10', time: '' })).toBe(
+      undefined,
+    );
   });
 });

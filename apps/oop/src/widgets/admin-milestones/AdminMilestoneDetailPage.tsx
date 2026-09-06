@@ -8,17 +8,15 @@ import {
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { findMilestoneTemplate } from '~/features/admin-milestone-review/model';
-import { useAdminMilestoneScheduleQuery } from '~/features/admin-milestone-review/queries';
+import {
+  formatAdminMilestoneDate,
+  getAdminMilestoneStatusLabel,
+  getAdminMilestoneTypeLabel,
+} from '~/features/admin-milestone-review/model';
+import { useAdminSectionMilestoneQuery } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMilestoneDetailPage.css';
-
-function getDeadlineLabel(summary: string) {
-  const [deadline] = summary.split('\n');
-
-  return deadline?.replace(/^~/, '') ?? '-';
-}
 
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
@@ -42,17 +40,17 @@ export default function AdminMilestoneDetailPage() {
   const search = useSearch({
     from: '/admin/milestones/$milestoneId',
   }) as { sectionId?: string };
-  const accessibleSectionIds =
-    currentUser?.sections.map(section => section.id) ?? [];
+  const accessibleSections = currentUser?.sections ?? [];
+  const accessibleSectionIds = accessibleSections.map(section => section.id);
   const isAccessibleSection = Boolean(
     search.sectionId && accessibleSectionIds.includes(search.sectionId),
   );
-  const scheduleQuery = useAdminMilestoneScheduleQuery(accessibleSectionIds);
-  const section = scheduleQuery.data?.sections.find(
-    item => item.sectionId === search.sectionId,
+  const section = accessibleSections.find(item => item.id === search.sectionId);
+  const milestoneQuery = useAdminSectionMilestoneQuery(
+    isAccessibleSection ? search.sectionId : undefined,
+    isAccessibleSection ? milestoneId : undefined,
   );
-  const milestone = section?.milestones.find(item => item.id === milestoneId);
-  const template = findMilestoneTemplate(milestone?.id);
+  const milestone = milestoneQuery.data;
 
   if (!search.sectionId || !isAccessibleSection) {
     return (
@@ -65,7 +63,7 @@ export default function AdminMilestoneDetailPage() {
     );
   }
 
-  if (scheduleQuery.isPending) {
+  if (milestoneQuery.isPending) {
     return (
       <div className={styles.page}>
         <Text aria-live='polite' role='status'>
@@ -75,7 +73,7 @@ export default function AdminMilestoneDetailPage() {
     );
   }
 
-  if (scheduleQuery.isError) {
+  if (milestoneQuery.isError) {
     return (
       <div className={styles.page}>
         <EmptyState
@@ -96,11 +94,6 @@ export default function AdminMilestoneDetailPage() {
       </div>
     );
   }
-
-  const templateLabel = template?.label ?? '기본 양식 정보 없음';
-  const templateDescription =
-    template?.description ??
-    '현재 마일스톤 API 응답에는 양식 설명이 포함되지 않았습니다.';
 
   return (
     <div className={styles.page}>
@@ -126,11 +119,18 @@ export default function AdminMilestoneDetailPage() {
             기본 설정
           </Heading>
           <div className={styles.readOnlyGrid}>
-            <ReadOnlyField label='대상 분반' value={section.sectionLabel} />
-            <ReadOnlyField label='마일스톤 기본 양식' value={templateLabel} />
+            <ReadOnlyField label='대상 분반' value={section.code} />
+            <ReadOnlyField
+              label='마일스톤 유형'
+              value={getAdminMilestoneTypeLabel(milestone.type)}
+            />
+            <ReadOnlyField
+              label='진행 주차'
+              value={`${milestone.weekNumber}주차`}
+            />
           </div>
           <ReadOnlyField label='제목' value={milestone.title} />
-          <ReadOnlyField label='설명' value={templateDescription} />
+          <ReadOnlyField label='설명' value={milestone.description ?? '-'} />
         </section>
 
         <section className={styles.section}>
@@ -138,19 +138,19 @@ export default function AdminMilestoneDetailPage() {
             공개 및 제출 일정
           </Heading>
           <article className={styles.sectionSchedule}>
-            <Heading level={3}>{section.sectionLabel}</Heading>
+            <Heading level={3}>{section.code}</Heading>
             <div className={styles.readOnlyGrid}>
               <ReadOnlyField
                 label='공개 시작 일시'
-                value='현재 일정 조회 응답에 포함되지 않음'
+                value={formatAdminMilestoneDate(milestone.schedule.opensAt)}
               />
               <ReadOnlyField
                 label='제출 마감 일시'
-                value={getDeadlineLabel(milestone.summary)}
+                value={formatAdminMilestoneDate(milestone.schedule.dueAt)}
               />
               <ReadOnlyField
                 label='공개 상태'
-                value={milestone.isPublished ? '공개' : '미공개'}
+                value={getAdminMilestoneStatusLabel(milestone.status)}
               />
             </div>
             <div>
@@ -159,69 +159,18 @@ export default function AdminMilestoneDetailPage() {
               </Text>
               <div className={styles.policyList}>
                 <Text color='secondary' type='supporting'>
-                  제출 마감 전 수정 허용: 현재 일정 조회 응답에 포함되지 않음
+                  수정 가능 기한:{' '}
+                  {formatAdminMilestoneDate(milestone.schedule.revisionUntil)}
                 </Text>
                 <Text color='secondary' type='supporting'>
-                  지각 제출 허용: 현재 일정 조회 응답에 포함되지 않음
+                  지각 제출 가능 기한:{' '}
+                  {formatAdminMilestoneDate(
+                    milestone.schedule.lateSubmissionUntil,
+                  )}
                 </Text>
               </div>
             </div>
           </article>
-        </section>
-
-        <section className={styles.section}>
-          <Heading className={styles.sectionTitle} level={2}>
-            기본 양식 미리보기
-          </Heading>
-          <div className={styles.preview}>
-            <Text className={styles.previewEyebrow} type='supporting'>
-              학생 화면 기본 양식 미리보기
-            </Text>
-            <Heading className={styles.previewTitle} level={3}>
-              {milestone.title}
-            </Heading>
-            <Text className={styles.previewTemplate} weight='medium'>
-              기본 양식: {templateLabel}
-            </Text>
-            <Text className={styles.previewDescription} color='secondary'>
-              {templateDescription}
-            </Text>
-            <Text className={styles.previewBlocksTitle} weight='medium'>
-              학생에게 표시되는 고정 블록
-            </Text>
-            {template ? (
-              <ol className={styles.previewList}>
-                {template.fields.map((field, index) => (
-                  <li className={styles.previewItem} key={field}>
-                    <span className={styles.previewItemNumber}>
-                      {index + 1}
-                    </span>
-                    <span>{field}</span>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <Text color='secondary' type='supporting'>
-                현재 선택된 양식의 고정 블록 정보를 확인할 수 없습니다.
-              </Text>
-            )}
-            <Text
-              className={styles.previewNote}
-              color='secondary'
-              type='supporting'
-            >
-              기본 양식의 블록 구성은 현재 학생 화면과 동일한 고정 구조입니다.
-              블록 추가·삭제·순서 변경과 실제 저장은 양식 API 계약 확정 후
-              지원합니다.
-            </Text>
-          </div>
-        </section>
-
-        <section className={styles.section}>
-          <Heading className={styles.sectionTitle} level={2}>
-            현재 진행 현황
-          </Heading>
-          <Text className={styles.summary}>{milestone.summary}</Text>
         </section>
 
         <div className={styles.actions}>

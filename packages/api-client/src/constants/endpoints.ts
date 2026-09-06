@@ -23,6 +23,14 @@ export const ENDPOINTS = {
     MEETING_RECORD: (meetingId: string) =>
       `/admin/meeting-records/${meetingId}`,
     MILESTONE_SCHEDULE: '/admin/milestone-schedule',
+    SECTION_MILESTONES: (sectionId: string) =>
+      `/api/v1/admin/oop/sections/${sectionId}/milestones`,
+    SECTION_MILESTONE: (sectionId: string, milestoneId: string) =>
+      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}`,
+    SECTION_MILESTONE_STATUS: (sectionId: string, milestoneId: string) =>
+      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/status`,
+    SECTION_MILESTONE_WEEK_NUMBERS: (sectionId: string) =>
+      `/api/v1/admin/oop/sections/${sectionId}/milestones/week-numbers`,
     MILESTONE_SUBMISSION_DETAIL: (submissionId: string) =>
       `/admin/submissions/${submissionId}`,
     SECTION_MILESTONE_SUBMISSIONS: (sectionId: string, milestoneId: string) =>
@@ -79,6 +87,8 @@ export const ENDPOINTS = {
     VOTE: (sectionId: string) => `/sections/${sectionId}/project-topic/vote`,
   },
   SUBMISSION: {
+    PRESENTATION_ORDER: (milestoneId: string) =>
+      `/milestones/${milestoneId}/presentation-order`,
     MY_TEAM_BY_MILESTONE: (milestoneId: string) =>
       `/milestones/${milestoneId}/my-team-submission`,
     DETAIL: (submissionId: string) => `/submissions/${submissionId}`,

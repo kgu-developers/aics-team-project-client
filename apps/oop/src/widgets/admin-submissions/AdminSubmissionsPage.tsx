@@ -30,6 +30,7 @@ import type { AdminMilestoneSubmissionView } from '~/features/admin-milestone-re
 import {
   useAdminMilestoneSubmissionsQuery,
   useAdminPresentationEvaluationsQuery,
+  useAdminSectionMilestonesQuery,
 } from '~/features/admin-milestone-review/queries';
 import * as readStateStyles from '~/features/admin-read-state/adminReadState.css';
 import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
@@ -201,6 +202,19 @@ export default function AdminSubmissionsPage() {
       ? effectiveSectionId
       : undefined,
   );
+  const sectionMilestonesQuery = useAdminSectionMilestonesQuery(
+    activeMilestoneId === 'presentation-evaluate' && isAccessibleSection
+      ? effectiveSectionId
+      : undefined,
+  );
+  const presentationEvaluationMilestone =
+    sectionMilestonesQuery.data?.content.find(
+      milestone => milestone.type === 'PRESENTATION',
+    );
+  const isPresentationMilestoneLoading = sectionMilestonesQuery.isPending;
+  const isPresentationMilestoneError = sectionMilestonesQuery.isError;
+  const isPresentationMilestoneMissing =
+    sectionMilestonesQuery.isSuccess && !presentationEvaluationMilestone;
   const sectionLabel =
     submissionsQuery.data?.sectionLabel ??
     accessibleSections.find(section => section.id === effectiveSectionId)
@@ -298,8 +312,22 @@ export default function AdminSubmissionsPage() {
                   <Heading level={2}>발표 평가 목록</Heading>
                   <div className={styles.evaluationActions}>
                     <Button
+                      isDisabled={
+                        isPresentationMilestoneLoading ||
+                        isPresentationMilestoneError ||
+                        isPresentationMilestoneMissing
+                      }
                       label='순서 배정 및 평가'
                       onClick={() => setIsEvaluationSettingsOpen(true)}
+                      tooltip={
+                        isPresentationMilestoneLoading
+                          ? '발표 평가 마일스톤을 불러오는 중입니다.'
+                          : isPresentationMilestoneError
+                            ? '발표 평가 마일스톤을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+                            : isPresentationMilestoneMissing
+                              ? '발표 평가 마일스톤을 먼저 설정해 주세요.'
+                              : undefined
+                      }
                     />
                     <Button
                       isDisabled
@@ -409,19 +437,12 @@ export default function AdminSubmissionsPage() {
                         verticalAlign='middle'
                       />
                     </Card>
-                    {effectiveSectionId ? (
+                    {effectiveSectionId && presentationEvaluationMilestone ? (
                       <AdminPresentationEvaluationSettingsDialog
-                        endsAt={
-                          presentationEvaluationsQuery.data.evaluationPeriod
-                            .endsAt
-                        }
                         isOpen={isEvaluationSettingsOpen}
+                        milestoneId={String(presentationEvaluationMilestone.id)}
                         sectionId={effectiveSectionId}
                         onClose={() => setIsEvaluationSettingsOpen(false)}
-                        startsAt={
-                          presentationEvaluationsQuery.data.evaluationPeriod
-                            .startsAt
-                        }
                         teams={presentationEvaluationsQuery.data.teams}
                       />
                     ) : null}

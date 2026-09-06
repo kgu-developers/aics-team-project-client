@@ -3,18 +3,16 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { useAdminMilestoneScheduleQuery } from '~/features/admin-milestone-review/queries';
+import {
+  formatAdminMilestoneDate,
+  getAdminMilestoneStatusLabel,
+} from '~/features/admin-milestone-review/model';
+import { useAdminAccessibleSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMilestonesPage.css';
 
 const allSectionsValue = 'all';
-
-function getDeadlineLabel(summary: string) {
-  const [deadline] = summary.split('\n');
-
-  return deadline?.replace(/^~/, '') ?? '-';
-}
 
 export default function AdminMilestonesPage() {
   const currentUser = useAuthStore(state => state.currentUser);
@@ -28,20 +26,26 @@ export default function AdminMilestonesPage() {
     search.sectionId && accessibleSectionIds.includes(search.sectionId)
       ? search.sectionId
       : allSectionsValue;
-  const scheduleQuery = useAdminMilestoneScheduleQuery(accessibleSectionIds);
-  const milestones = (scheduleQuery.data?.sections ?? [])
-    .filter(
-      section =>
-        selectedSectionId === allSectionsValue ||
-        section.sectionId === selectedSectionId,
-    )
-    .flatMap(section =>
-      section.milestones.map(milestone => ({
-        ...milestone,
-        sectionId: section.sectionId,
-        sectionLabel: section.sectionLabel,
-      })),
-    );
+  const displayedSections = accessibleSections.filter(
+    section =>
+      selectedSectionId === allSectionsValue ||
+      section.id === selectedSectionId,
+  );
+  const milestoneQueries = useAdminAccessibleSectionMilestonesQuery(
+    displayedSections.map(section => section.id),
+  );
+  const isLoading = milestoneQueries.some(query => query.isPending);
+  const hasSuccessfulQuery = milestoneQueries.some(query => query.isSuccess);
+  const failedSectionLabels = displayedSections.flatMap((section, index) =>
+    milestoneQueries[index]?.isError ? [section.code] : [],
+  );
+  const milestones = displayedSections.flatMap((section, index) => {
+    return (milestoneQueries[index]?.data?.content ?? []).map(milestone => ({
+      ...milestone,
+      sectionKey: section.id,
+      sectionLabel: section.code,
+    }));
+  });
 
   function selectSection(sectionId: string) {
     void navigate({
@@ -98,52 +102,68 @@ export default function AdminMilestonesPage() {
           description='담당 분반이 없어 마일스톤을 조회할 수 없습니다.'
           title='표시할 마일스톤이 없습니다.'
         />
-      ) : scheduleQuery.isPending ? (
+      ) : isLoading && !hasSuccessfulQuery ? (
         <Text aria-live='polite' role='status'>
           마일스톤을 불러오는 중입니다.
         </Text>
-      ) : scheduleQuery.isError ? (
+      ) : !hasSuccessfulQuery && failedSectionLabels.length > 0 ? (
         <EmptyState
           description='잠시 후 다시 시도해 주세요.'
           title='마일스톤을 불러오지 못했습니다.'
         />
-      ) : milestones.length === 0 ? (
-        <EmptyState
-          description='마일스톤 추가 버튼으로 새 일정을 설정할 수 있습니다.'
-          title='등록된 마일스톤이 없습니다.'
-        />
       ) : (
-        <Card className={styles.tableCard}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>적용 분반</th>
-                <th>마감일</th>
-                <th>공개 상태</th>
-                <th>제목</th>
-              </tr>
-            </thead>
-            <tbody>
-              {milestones.map(milestone => (
-                <tr key={`${milestone.sectionId}-${milestone.id}`}>
-                  <td>{milestone.sectionLabel}</td>
-                  <td>{getDeadlineLabel(milestone.summary)}</td>
-                  <td>{milestone.isPublished ? '공개' : '미공개'}</td>
-                  <td>
-                    <Link
-                      className={styles.titleLink}
-                      params={{ milestoneId: milestone.id }}
-                      search={{ sectionId: milestone.sectionId }}
-                      to={ROUTES.ADMIN_MILESTONE_DETAIL}
+        <>
+          {failedSectionLabels.length > 0 ? (
+            <Text aria-live='polite' role='status' type='supporting'>
+              {failedSectionLabels.join(', ')} 분반의 마일스톤을 불러오지
+              못했습니다.
+            </Text>
+          ) : null}
+          {milestones.length === 0 ? (
+            <EmptyState
+              description='마일스톤 추가 버튼으로 새 일정을 설정할 수 있습니다.'
+              title='등록된 마일스톤이 없습니다.'
+            />
+          ) : (
+            <Card className={styles.tableCard}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>적용 분반</th>
+                    <th>제목</th>
+                    <th>마감일</th>
+                    <th>공개 상태</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {milestones.map(milestone => (
+                    <tr
+                      key={`${milestone.sectionId}-${milestone.id}-${milestone.sectionLabel}`}
                     >
-                      {milestone.title}
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+                      <td>{milestone.sectionLabel}</td>
+                      <td>
+                        <Link
+                          className={styles.titleLink}
+                          params={{ milestoneId: String(milestone.id) }}
+                          search={{
+                            sectionId: milestone.sectionKey,
+                          }}
+                          to={ROUTES.ADMIN_MILESTONE_DETAIL}
+                        >
+                          {milestone.title}
+                        </Link>
+                      </td>
+                      <td>
+                        {formatAdminMilestoneDate(milestone.schedule.dueAt)}
+                      </td>
+                      <td>{getAdminMilestoneStatusLabel(milestone.status)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );

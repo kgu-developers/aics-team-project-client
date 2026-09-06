@@ -1,5 +1,5 @@
 import { tokens } from '@aics/design-system';
-import { style } from '@vanilla-extract/css';
+import { globalStyle, style } from '@vanilla-extract/css';
 
 export const page = style({
   display: 'flex',
@@ -29,6 +29,7 @@ export const detailCard = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 28,
+  padding: 'clamp(20px, 4vw, 32px)',
 });
 
 export const section = style({
@@ -47,14 +48,10 @@ export const readOnlyGrid = style({
 });
 
 export const readOnlyField = style({
-  background: tokens.color.background.muted,
-  border: `1px solid ${tokens.color.border.base}`,
-  borderRadius: tokens.radius.element,
   display: 'flex',
   flexDirection: 'column',
   gap: 6,
   minWidth: 0,
-  padding: 16,
 });
 
 export const readOnlyValue = style({
@@ -63,12 +60,9 @@ export const readOnlyValue = style({
 });
 
 export const sectionSchedule = style({
-  border: `1px solid ${tokens.color.border.base}`,
-  borderRadius: tokens.radius.container,
   display: 'flex',
   flexDirection: 'column',
   gap: 16,
-  padding: 20,
 });
 
 export const policyTitle = style({ margin: 0 });
@@ -80,75 +74,12 @@ export const policyList = style({
   marginTop: 8,
 });
 
-export const preview = style({
-  background: tokens.color.background.muted,
-  border: `1px solid ${tokens.color.border.base}`,
-  borderRadius: tokens.radius.container,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 12,
-  padding: 20,
-});
-
-export const previewEyebrow = style({ margin: 0 });
-
-export const previewTitle = style({
-  margin: 0,
-  overflowWrap: 'anywhere',
-});
-
-export const previewTemplate = style({ margin: 0 });
-
-export const previewDescription = style({
-  margin: 0,
-  overflowWrap: 'anywhere',
-  whiteSpace: 'pre-wrap',
-});
-
-export const previewBlocksTitle = style({ margin: '4px 0 0' });
-
-export const previewList = style({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 8,
-  margin: 0,
-  padding: 0,
-});
-
-export const previewItem = style({
-  alignItems: 'center',
-  display: 'flex',
-  gap: 10,
-  minWidth: 0,
-  overflowWrap: 'anywhere',
-});
-
-export const previewItemNumber = style({
-  alignItems: 'center',
-  background: tokens.color.background.muted,
-  border: `1px solid ${tokens.color.border.base}`,
-  borderRadius: tokens.radius.full,
-  display: 'inline-flex',
-  flex: '0 0 24px',
-  height: 24,
-  justifyContent: 'center',
-  width: 24,
-});
-
-export const previewNote = style({
-  borderTop: `1px solid ${tokens.color.border.base}`,
-  margin: '8px 0 0',
-  overflowWrap: 'anywhere',
-  paddingTop: 12,
-});
-
-export const summary = style({
-  lineHeight: 1.6,
-  margin: 0,
-  whiteSpace: 'pre-line',
-});
-
 export const actions = style({
   display: 'flex',
   justifyContent: 'flex-end',
+});
+
+globalStyle(`${detailCard} > section + section`, {
+  borderTop: `1px solid ${tokens.color.border.base}`,
+  paddingTop: 28,
 });

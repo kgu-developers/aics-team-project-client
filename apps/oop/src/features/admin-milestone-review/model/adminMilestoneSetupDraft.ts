@@ -5,7 +5,19 @@ export type AdminMilestoneSectionScheduleDraft = {
     date: string;
     time: string;
   };
+  evaluationClosesAt: {
+    date: string;
+    time: string;
+  };
+  evaluationOpensAt: {
+    date: string;
+    time: string;
+  };
   isPublished: boolean;
+  lateSubmissionUntil: {
+    date: string;
+    time: string;
+  };
   opensAt: {
     date: string;
     time: string;
@@ -21,9 +33,54 @@ export function createAdminMilestoneSectionScheduleDraft(): AdminMilestoneSectio
     allowLateSubmission: false,
     allowSubmissionEditBeforeDueAt: false,
     dueAt: createDateTimeDraft(),
+    evaluationClosesAt: createDateTimeDraft(),
+    evaluationOpensAt: createDateTimeDraft(),
     isPublished: false,
+    lateSubmissionUntil: createDateTimeDraft(),
     opensAt: createDateTimeDraft(),
   };
+}
+
+export function toAdminMilestoneDateTime(
+  dateTime: Readonly<{ date: string; time: string }>,
+) {
+  if (!dateTime.date || !dateTime.time) return undefined;
+
+  return `${dateTime.date}T${dateTime.time}:00`;
+}
+
+export function assertAdminMilestoneScheduleOrder({
+  dueAt,
+  evaluationClosesAt,
+  evaluationOpensAt,
+  lateSubmissionUntil,
+  opensAt,
+}: {
+  dueAt: string;
+  evaluationClosesAt?: string;
+  evaluationOpensAt?: string;
+  lateSubmissionUntil?: string;
+  opensAt?: string;
+}) {
+  if (opensAt && opensAt >= dueAt) {
+    throw new Error('공개 시작 일시는 제출 마감 일시보다 앞서야 합니다.');
+  }
+  if (lateSubmissionUntil && lateSubmissionUntil <= dueAt) {
+    throw new Error('지각 제출 마감 일시는 제출 마감 일시보다 뒤여야 합니다.');
+  }
+  if (evaluationOpensAt && !evaluationClosesAt) {
+    throw new Error('평가 종료 일시를 입력해주세요.');
+  }
+  if (!evaluationOpensAt && evaluationClosesAt) {
+    throw new Error('평가 시작 일시를 입력해주세요.');
+  }
+  if (
+    evaluationOpensAt &&
+    evaluationClosesAt &&
+    evaluationOpensAt >= evaluationClosesAt
+  ) {
+    throw new Error('평가 종료 일시는 평가 시작 일시보다 늦어야 합니다.');
+  }
 }
 
 export function syncAdminMilestoneSectionScheduleDrafts(

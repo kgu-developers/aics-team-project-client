@@ -1,4 +1,9 @@
 export {
+  formatAdminMilestoneDate,
+  getAdminMilestoneStatusLabel,
+  getAdminMilestoneTypeLabel,
+} from './adminSectionMilestone';
+export {
   toAdminMilestoneSubmissionDetailView,
   toAdminPeerEvaluatorRows,
   toAdminPeerEvaluationRows,
@@ -17,8 +22,17 @@ export {
 export {
   createAdminMilestoneSectionScheduleDraft,
   syncAdminMilestoneSectionScheduleDrafts,
+  toAdminMilestoneDateTime,
   type AdminMilestoneSectionScheduleDraft,
 } from './adminMilestoneSetupDraft';
+export {
+  createAdminMilestoneCreateInput,
+  isSupportedMilestoneCreationTemplate,
+} from './adminMilestoneCreation';
+export {
+  createAdminMilestoneSectionScheduleDraftFromDto,
+  createAdminMilestoneUpdateInput,
+} from './adminMilestoneEdit';
 export {
   findMilestoneTemplate,
   isMilestoneTemplateId,
