@@ -93,7 +93,8 @@ export function AdminPresentationEvaluationSettingsDialog({
       <VStack className={styles.content} gap={4}>
         <Heading level={2}>발표 순서 설정</Heading>
         <Text color='secondary' type='supporting'>
-          팀별 발표 순서를 설정해 주세요. 평가 기간은 마일스톤 설정에서 수정합니다.
+          팀별 발표 순서를 설정해 주세요. 평가 기간은 마일스톤 설정에서
+          수정합니다.
         </Text>
         <VStack gap={3}>
           {teams.map(team => (

@@ -42,7 +42,9 @@ export function createAdminMilestoneCreateInput({
 
   const isPresentationEvaluation = templateId === 'presentation-evaluate';
   const opensAt = toAdminMilestoneDateTime(schedule.opensAt);
-  const evaluationOpensAt = toAdminMilestoneDateTime(schedule.evaluationOpensAt);
+  const evaluationOpensAt = toAdminMilestoneDateTime(
+    schedule.evaluationOpensAt,
+  );
   const evaluationClosesAt = toAdminMilestoneDateTime(
     schedule.evaluationClosesAt,
   );

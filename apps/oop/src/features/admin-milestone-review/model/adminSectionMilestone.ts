@@ -1,4 +1,7 @@
-import type { AdminMilestoneStatus, AdminMilestoneType } from '@aics/api-client';
+import type {
+  AdminMilestoneStatus,
+  AdminMilestoneType,
+} from '@aics/api-client';
 
 const milestoneTypeLabels: Record<AdminMilestoneType, string> = {
   FINAL_REPORT: '최종 보고서',

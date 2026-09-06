@@ -53,7 +53,11 @@ export function useUpdateAdminSectionMilestoneMutation() {
       let statusUpdated = true;
       if (currentStatus !== status) {
         try {
-          await updateAdminSectionMilestoneStatus(sectionId, milestoneId, status);
+          await updateAdminSectionMilestoneStatus(
+            sectionId,
+            milestoneId,
+            status,
+          );
         } catch {
           statusUpdated = false;
         }

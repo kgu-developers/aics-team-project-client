@@ -144,9 +144,7 @@ export default function AdminMilestonesPage() {
                     </Link>
                   </td>
                   <td>{formatAdminMilestoneDate(milestone.schedule.dueAt)}</td>
-                  <td>
-                    {getAdminMilestoneStatusLabel(milestone.status)}
-                  </td>
+                  <td>{getAdminMilestoneStatusLabel(milestone.status)}</td>
                 </tr>
               ))}
             </tbody>

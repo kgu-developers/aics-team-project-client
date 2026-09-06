@@ -74,7 +74,11 @@ export function assertAdminMilestoneScheduleOrder({
   if (!evaluationOpensAt && evaluationClosesAt) {
     throw new Error('평가 시작 일시를 입력해주세요.');
   }
-  if (evaluationOpensAt && evaluationClosesAt && evaluationOpensAt >= evaluationClosesAt) {
+  if (
+    evaluationOpensAt &&
+    evaluationClosesAt &&
+    evaluationOpensAt >= evaluationClosesAt
+  ) {
     throw new Error('평가 종료 일시는 평가 시작 일시보다 늦어야 합니다.');
   }
 }

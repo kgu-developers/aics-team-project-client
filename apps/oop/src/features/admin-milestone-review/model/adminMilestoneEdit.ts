@@ -11,9 +11,10 @@ import {
   type AdminMilestoneSectionScheduleDraft,
 } from './adminMilestoneSetupDraft';
 
-function toDateTimeDraft(
-  value: string | null | undefined,
-): { date: string; time: string } {
+function toDateTimeDraft(value: string | null | undefined): {
+  date: string;
+  time: string;
+} {
   if (!value) return { date: '', time: '' };
 
   const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(value);
@@ -59,7 +60,9 @@ export function createAdminMilestoneUpdateInput({
   }
 
   const opensAt = toAdminMilestoneDateTime(schedule.opensAt);
-  const evaluationOpensAt = toAdminMilestoneDateTime(schedule.evaluationOpensAt);
+  const evaluationOpensAt = toAdminMilestoneDateTime(
+    schedule.evaluationOpensAt,
+  );
   const evaluationClosesAt = toAdminMilestoneDateTime(
     schedule.evaluationClosesAt,
   );
