@@ -79,8 +79,7 @@ export function createAdminMilestoneCreateInput({
   });
 
   return {
-    allowResubmissionBeforeDueAt:
-      schedule.allowSubmissionEditBeforeDueAt,
+    allowResubmissionBeforeDueAt: schedule.allowSubmissionEditBeforeDueAt,
     description: description.trim() || undefined,
     schedule: {
       dueAt,
