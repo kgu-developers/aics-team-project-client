@@ -29,9 +29,9 @@ export {
   type AdminPresentationEvaluationsResponse,
 } from './fetchAdminPresentationEvaluations';
 export {
-  updateAdminPresentationEvaluationSettings,
-  type UpdateAdminPresentationEvaluationSettingsInput,
-} from './updateAdminPresentationEvaluationSettings';
+  updatePresentationOrder,
+  type UpdatePresentationOrderInput,
+} from './updatePresentationOrder';
 export { fetchMyTeamSubmission } from './fetchMyTeamSubmission';
 export { fetchSubmission } from './fetchSubmission';
 export { submitSubmissionVersion } from './submitSubmissionVersion';

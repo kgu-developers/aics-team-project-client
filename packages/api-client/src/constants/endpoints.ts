@@ -87,6 +87,8 @@ export const ENDPOINTS = {
     VOTE: (sectionId: string) => `/sections/${sectionId}/project-topic/vote`,
   },
   SUBMISSION: {
+    PRESENTATION_ORDER: (milestoneId: string) =>
+      `/milestones/${milestoneId}/presentation-order`,
     MY_TEAM_BY_MILESTONE: (milestoneId: string) =>
       `/milestones/${milestoneId}/my-team-submission`,
     DETAIL: (submissionId: string) => `/submissions/${submissionId}`,

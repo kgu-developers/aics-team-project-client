@@ -109,6 +109,9 @@ export default function AdminMilestoneSetupPage() {
     editingSectionId,
     editingMilestoneId,
   );
+  const isPresentationEvaluation = isEditing
+    ? milestoneQuery.data?.type === 'PRESENTATION'
+    : templateId === 'presentation-evaluate';
   const sectionMilestonesQuery = useAdminSectionMilestonesQuery(
     editingSectionId,
   );
@@ -348,8 +351,10 @@ export default function AdminMilestoneSetupPage() {
           </Heading>
           <Text color='secondary' type='supporting'>
             {isEditing
-              ? '선택한 분반의 마일스톤 내용과 공개·제출 일정을 수정합니다.'
-              : '기본 양식을 선택하고 담당 분반의 공개 일정과 마감 일시를 준비합니다.'}
+              ? '선택한 분반의 마일스톤 내용과 운영 일정을 수정합니다.'
+              : isPresentationEvaluation
+                ? '기본 양식을 선택하고 담당 분반의 발표 평가 기간과 공개 상태를 준비합니다.'
+                : '기본 양식을 선택하고 담당 분반의 공개 일정과 마감 일시를 준비합니다.'}
           </Text>
         </div>
         <Link className={styles.backLink} to={ROUTES.ADMIN_MILESTONES}>
@@ -391,7 +396,9 @@ export default function AdminMilestoneSetupPage() {
                   width='100%'
                 />
                 <Text color='secondary' type='supporting'>
-                  선택한 분반마다 공개 일정과 공개 상태를 따로 설정합니다.
+                  {isPresentationEvaluation
+                    ? '선택한 분반마다 발표 평가 기간과 공개 상태를 따로 설정합니다.'
+                    : '선택한 분반마다 공개 일정과 공개 상태를 따로 설정합니다.'}{' '}
                   저장하면 선택한 분반별로 독립된 요청이 전송됩니다.
                 </Text>
                 <Selector
@@ -443,7 +450,7 @@ export default function AdminMilestoneSetupPage() {
 
           <section className={styles.section}>
             <Heading className={styles.sectionTitle} level={2}>
-              공개 및 제출 일정
+              {isPresentationEvaluation ? '공개 및 평가 일정' : '공개 및 제출 일정'}
             </Heading>
             {selectedSections.length === 0 ? (
               <Text color='secondary' type='supporting'>
@@ -464,9 +471,9 @@ export default function AdminMilestoneSetupPage() {
                       <Heading
                         level={3}
                       >{`${section.code} · ${section.name}`}</Heading>
-                      <div className={styles.scheduleGrid}>
+                      {!isPresentationEvaluation ? (
+                        <div className={styles.scheduleGrid}>
                         <div className={styles.scheduleField}>
-                          <Text weight='medium'>공개 시작 일시</Text>
                           <div className={styles.scheduleInputs}>
                             <DateInput
                               hasClear
@@ -513,7 +520,6 @@ export default function AdminMilestoneSetupPage() {
                           </div>
                         </div>
                         <div className={styles.scheduleField}>
-                          <Text weight='medium'>제출 마감 일시</Text>
                           <div className={styles.scheduleInputs}>
                             <DateInput
                               hasClear
@@ -556,7 +562,111 @@ export default function AdminMilestoneSetupPage() {
                             </label>
                           </div>
                         </div>
-                      </div>
+                        </div>
+                      ) : null}
+                      {isPresentationEvaluation ? (
+                        <div className={styles.scheduleField}>
+                          <Text weight='medium'>발표 평가 기간</Text>
+                          <Text color='secondary' type='supporting'>
+                            학생이 다른 팀의 발표를 평가할 수 있는 기간입니다.
+                            팀별 발표 순서는 제출물 관리 화면에서 설정합니다.
+                          </Text>
+                          <div className={styles.scheduleGrid}>
+                            <div className={styles.scheduleField}>
+                              <div className={styles.scheduleInputs}>
+                                <DateInput
+                                  hasClear
+                                  label={`${section.code} 평가 시작일`}
+                                  onChange={date =>
+                                    updateSectionSchedule(section.id, current => ({
+                                      ...current,
+                                      evaluationOpensAt: {
+                                        ...current.evaluationOpensAt,
+                                        date: date ?? '',
+                                      },
+                                    }))
+                                  }
+                                  placeholder='날짜 선택'
+                                  value={
+                                    schedule.evaluationOpensAt.date
+                                      ? (schedule.evaluationOpensAt
+                                          .date as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
+                                      : undefined
+                                  }
+                                  width='100%'
+                                />
+                                <label>
+                                  <Text type='supporting'>{`${section.code} 평가 시작 시간`}</Text>
+                                  <input
+                                    aria-label={`${section.code} 평가 시작 시간`}
+                                    className={styles.timeInput}
+                                    onChange={event =>
+                                      updateSectionSchedule(
+                                        section.id,
+                                        current => ({
+                                          ...current,
+                                          evaluationOpensAt: {
+                                            ...current.evaluationOpensAt,
+                                            time: event.target.value,
+                                          },
+                                        }),
+                                      )
+                                    }
+                                    type='time'
+                                    value={schedule.evaluationOpensAt.time}
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                            <div className={styles.scheduleField}>
+                              <div className={styles.scheduleInputs}>
+                                <DateInput
+                                  hasClear
+                                  label={`${section.code} 평가 종료일`}
+                                  onChange={date =>
+                                    updateSectionSchedule(section.id, current => ({
+                                      ...current,
+                                      evaluationClosesAt: {
+                                        ...current.evaluationClosesAt,
+                                        date: date ?? '',
+                                      },
+                                    }))
+                                  }
+                                  placeholder='날짜 선택'
+                                  value={
+                                    schedule.evaluationClosesAt.date
+                                      ? (schedule.evaluationClosesAt
+                                          .date as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
+                                      : undefined
+                                  }
+                                  width='100%'
+                                />
+                                <label>
+                                  <Text type='supporting'>{`${section.code} 평가 종료 시간`}</Text>
+                                  <input
+                                    aria-label={`${section.code} 평가 종료 시간`}
+                                    className={styles.timeInput}
+                                    onChange={event =>
+                                      updateSectionSchedule(
+                                        section.id,
+                                        current => ({
+                                          ...current,
+                                          evaluationClosesAt: {
+                                            ...current.evaluationClosesAt,
+                                            time: event.target.value,
+                                          },
+                                        }),
+                                      )
+                                    }
+                                    type='time'
+                                    value={schedule.evaluationClosesAt.time}
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
                       {isEditing && milestoneQuery.data?.status === 'CLOSED' ? (
                         <div className={styles.scheduleField}>
                           <Text weight='medium'>공개 상태</Text>
@@ -590,7 +700,8 @@ export default function AdminMilestoneSetupPage() {
                           width={180}
                         />
                       )}
-                      <CheckboxList
+                      {!isPresentationEvaluation ? (
+                        <CheckboxList
                         description='마감 일시와 지각 제출 정책은 선택한 분반별로 따로 설정됩니다.'
                         label='제출 정책'
                         onChange={values =>
@@ -623,8 +734,9 @@ export default function AdminMilestoneSetupPage() {
                           label='지각 제출 허용'
                           value='allow-late-submission'
                         />
-                      </CheckboxList>
-                      {schedule.allowLateSubmission ? (
+                        </CheckboxList>
+                      ) : null}
+                      {!isPresentationEvaluation && schedule.allowLateSubmission ? (
                         <div className={styles.scheduleField}>
                           <Text weight='medium'>지각 제출 마감 일시</Text>
                           <div className={styles.scheduleInputs}>

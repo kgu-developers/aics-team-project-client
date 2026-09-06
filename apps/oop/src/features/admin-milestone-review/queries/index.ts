@@ -11,4 +11,4 @@ export {
 export { useAdminMilestoneSubmissionDetailQuery } from './useAdminMilestoneSubmissionDetailQuery';
 export { useAdminMilestoneSubmissionsQuery } from './useAdminMilestoneSubmissionsQuery';
 export { useAdminPresentationEvaluationsQuery } from './useAdminPresentationEvaluationsQuery';
-export { useUpdateAdminPresentationEvaluationSettingsMutation } from './useUpdateAdminPresentationEvaluationSettingsMutation';
+export { useUpdatePresentationOrderMutation } from './useUpdatePresentationOrderMutation';

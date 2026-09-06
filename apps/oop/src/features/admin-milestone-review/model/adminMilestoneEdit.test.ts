@@ -11,6 +11,8 @@ describe('adminMilestoneEdit', () => {
       createAdminMilestoneSectionScheduleDraftFromDto(
         {
           dueAt: '2026-09-10T23:59:00',
+          evaluationClosesAt: '2026-09-14T23:59:00',
+          evaluationOpensAt: '2026-09-12T09:00:00',
           lateSubmissionUntil: '2026-09-11T23:59:00',
           opensAt: '2026-09-01T09:00:00',
           revisionUntil: '2026-09-10T23:59:00',
@@ -21,6 +23,8 @@ describe('adminMilestoneEdit', () => {
       allowLateSubmission: true,
       allowSubmissionEditBeforeDueAt: true,
       dueAt: { date: '2026-09-10', time: '23:59' },
+      evaluationClosesAt: { date: '2026-09-14', time: '23:59' },
+      evaluationOpensAt: { date: '2026-09-12', time: '09:00' },
       isPublished: true,
       lateSubmissionUntil: { date: '2026-09-11', time: '23:59' },
       opensAt: { date: '2026-09-01', time: '09:00' },
@@ -65,5 +69,33 @@ describe('adminMilestoneEdit', () => {
         type: 'PROPOSAL',
       }),
     ).toThrow('지각 제출 마감 일시는 제출 마감 일시보다 뒤여야 합니다.');
+  });
+
+  it('발표 평가는 평가 기간을 기본 운영 기간에도 함께 저장한다', () => {
+    const schedule = createAdminMilestoneSectionScheduleDraftFromDto(
+      {
+        dueAt: '2026-11-25T18:00:00',
+        evaluationClosesAt: '2026-11-25T18:00:00',
+        evaluationOpensAt: '2026-11-21T09:00:00',
+        opensAt: '2026-11-21T09:00:00',
+      },
+      'DRAFT',
+    );
+
+    expect(
+      createAdminMilestoneUpdateInput({
+        description: '발표 평가',
+        schedule,
+        title: '발표 평가',
+        type: 'PRESENTATION',
+      }),
+    ).toMatchObject({
+      schedule: {
+        dueAt: '2026-11-25T18:00:00',
+        evaluationClosesAt: '2026-11-25T18:00:00',
+        evaluationOpensAt: '2026-11-21T09:00:00',
+        opensAt: '2026-11-21T09:00:00',
+      },
+    });
   });
 });

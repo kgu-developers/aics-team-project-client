@@ -2,52 +2,14 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
-import { adminMilestoneDeadlineFixtures } from '../data/adminMilestoneDeadlines';
-import { adminMilestoneScheduleFixture } from '../data/adminMilestoneSchedule';
 import {
   adminPresentationEvaluationsFixture,
   resetAdminPresentationEvaluationsFixture,
 } from '../data/adminPresentationEvaluations';
-import { adminTeamDashboardFixtures } from '../data/adminTeamDashboard';
 import { demoAdmin } from '../data/users';
-
-const initialDeadlineFixtures = structuredClone(adminMilestoneDeadlineFixtures);
-const initialScheduleFixture = structuredClone(adminMilestoneScheduleFixture);
-const initialTeamDashboardFixtures = structuredClone(
-  adminTeamDashboardFixtures,
-);
-
-function updatePresentationEvaluationDeadline(endsAt: string) {
-  adminMilestoneDeadlineFixtures['presentation-evaluate'] = endsAt.slice(0, 10);
-  const deadlineLabel = endsAt.slice(0, 10);
-  const scheduleSummary = `~${deadlineLabel.replaceAll('-', '/')}\n평가 완료`;
-
-  adminMilestoneScheduleFixture.sections.forEach(section => {
-    const milestone = section.milestones.find(
-      item => item.id === 'presentation-evaluate',
-    );
-    if (milestone) milestone.summary = scheduleSummary;
-  });
-
-  adminTeamDashboardFixtures.forEach(teamDashboard => {
-    const milestone = teamDashboard.milestones.find(
-      item => item.id === 'presentation-evaluate',
-    );
-    if (milestone) milestone.deadlineLabel = deadlineLabel;
-  });
-}
 
 function resetPresentationEvaluationScenario() {
   resetAdminPresentationEvaluationsFixture();
-  Object.assign(adminMilestoneDeadlineFixtures, initialDeadlineFixtures);
-  adminMilestoneScheduleFixture.sections = structuredClone(
-    initialScheduleFixture.sections,
-  );
-  adminTeamDashboardFixtures.splice(
-    0,
-    adminTeamDashboardFixtures.length,
-    ...structuredClone(initialTeamDashboardFixtures),
-  );
 }
 
 export const adminPresentationEvaluationHandlers = [
@@ -72,7 +34,7 @@ export const adminPresentationEvaluationHandlers = [
     },
   ),
   http.patch(
-    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_PRESENTATION_EVALUATION_SETTINGS(':sectionId')}`,
+    `${API_BASE_URL}${ENDPOINTS.SUBMISSION.PRESENTATION_ORDER(':milestoneId')}`,
     async ({ params, request }) => {
       if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
         return HttpResponse.json(
@@ -80,28 +42,28 @@ export const adminPresentationEvaluationHandlers = [
           { status: 401 },
         );
       }
-      if (params.sectionId !== adminPresentationEvaluationsFixture.section.id) {
+      if (params.milestoneId !== '103') {
         return HttpResponse.json(
-          { message: '담당 분반만 수정할 수 있습니다.' },
-          { status: 403 },
+          { message: '발표 평가 마일스톤을 찾을 수 없습니다.' },
+          { status: 404 },
         );
       }
+
       const body = (await request.json()) as {
-        teams?: Array<{ teamId: string; presentationOrder: number }>;
-        startsAt?: string;
-        endsAt?: string;
+        teamOrders?: Array<{ teamId: number; order: number }>;
       };
-      if (!body.teams || !body.startsAt || !body.endsAt) {
+      if (!body.teamOrders) {
         return HttpResponse.json(
           { message: '필수 설정이 없습니다.' },
           { status: 400 },
         );
       }
+
       const expectedTeamIds = adminPresentationEvaluationsFixture.teams.map(
         team => team.teamId,
       );
-      const submittedTeamIds = body.teams.map(team => team.teamId);
-      const orders = body.teams.map(team => team.presentationOrder);
+      const submittedTeamIds = body.teamOrders.map(team => team.teamId);
+      const orders = body.teamOrders.map(team => team.order);
       const hasValidTeams =
         submittedTeamIds.length === expectedTeamIds.length &&
         new Set(submittedTeamIds).size === expectedTeamIds.length &&
@@ -109,36 +71,25 @@ export const adminPresentationEvaluationHandlers = [
       const hasValidOrders =
         orders.every(order => Number.isInteger(order) && order > 0) &&
         new Set(orders).size === orders.length;
-      const startsAtTime = Date.parse(body.startsAt);
-      const endsAtTime = Date.parse(body.endsAt);
 
-      if (
-        !hasValidTeams ||
-        !hasValidOrders ||
-        Number.isNaN(startsAtTime) ||
-        Number.isNaN(endsAtTime) ||
-        startsAtTime >= endsAtTime
-      ) {
+      if (!hasValidTeams || !hasValidOrders) {
         return HttpResponse.json(
-          { message: '발표 순서 또는 평가 기간이 올바르지 않습니다.' },
+          { message: '발표 순서가 올바르지 않습니다.' },
           { status: 400 },
         );
       }
+
       const teamOrders = new Map(
-        body.teams.map(team => [team.teamId, team.presentationOrder]),
+        body.teamOrders.map(team => [team.teamId, team.order]),
       );
-      adminPresentationEvaluationsFixture.evaluationPeriod = {
-        startsAt: body.startsAt,
-        endsAt: body.endsAt,
-      };
       adminPresentationEvaluationsFixture.teams =
         adminPresentationEvaluationsFixture.teams.map(team => ({
           ...team,
           presentationOrder:
             teamOrders.get(team.teamId) ?? team.presentationOrder,
         }));
-      updatePresentationEvaluationDeadline(body.endsAt);
-      return HttpResponse.json({ ok: true });
+
+      return new HttpResponse(null, { status: 204 });
     },
   ),
 ];

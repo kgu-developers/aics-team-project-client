@@ -5,7 +5,7 @@ const milestoneTypeLabels: Record<AdminMilestoneType, string> = {
   GENERAL: '일반',
   MID_REPORT: '중간 점검',
   PEER_EVALUATION: '상호 평가',
-  PRESENTATION: '발표 자료 제출',
+  PRESENTATION: '발표 평가',
   PROPOSAL: '제안서',
 };
 

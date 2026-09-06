@@ -22,6 +22,21 @@ const sectionOneMilestones: AdminSectionMilestoneDto[] = [
     weekNumber: 3,
   },
   {
+    description: '팀별 발표 순서와 동료 평가 기간을 관리합니다.',
+    id: 103,
+    schedule: {
+      dueAt: '2026-11-26T09:00:00+09:00',
+      evaluationClosesAt: '2026-11-26T09:00:00+09:00',
+      evaluationOpensAt: '2026-11-19T09:00:00+09:00',
+      opensAt: '2026-11-19T09:00:00+09:00',
+    },
+    sectionId: 1,
+    status: 'PUBLISHED',
+    title: '발표 평가',
+    type: 'PRESENTATION',
+    weekNumber: 10,
+  },
+  {
     description: '프로젝트 진행 상황과 설계 내용을 점검합니다.',
     id: 102,
     schedule: {

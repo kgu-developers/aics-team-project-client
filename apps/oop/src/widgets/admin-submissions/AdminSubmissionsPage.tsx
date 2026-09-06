@@ -30,6 +30,7 @@ import type { AdminMilestoneSubmissionView } from '~/features/admin-milestone-re
 import {
   useAdminMilestoneSubmissionsQuery,
   useAdminPresentationEvaluationsQuery,
+  useAdminSectionMilestonesQuery,
 } from '~/features/admin-milestone-review/queries';
 import * as readStateStyles from '~/features/admin-read-state/adminReadState.css';
 import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
@@ -201,6 +202,15 @@ export default function AdminSubmissionsPage() {
       ? effectiveSectionId
       : undefined,
   );
+  const sectionMilestonesQuery = useAdminSectionMilestonesQuery(
+    activeMilestoneId === 'presentation-evaluate' && isAccessibleSection
+      ? effectiveSectionId
+      : undefined,
+  );
+  const presentationEvaluationMilestone =
+    sectionMilestonesQuery.data?.content.find(
+      milestone => milestone.type === 'PRESENTATION',
+    );
   const sectionLabel =
     submissionsQuery.data?.sectionLabel ??
     accessibleSections.find(section => section.id === effectiveSectionId)
@@ -298,8 +308,14 @@ export default function AdminSubmissionsPage() {
                   <Heading level={2}>발표 평가 목록</Heading>
                   <div className={styles.evaluationActions}>
                     <Button
+                      isDisabled={!presentationEvaluationMilestone}
                       label='순서 배정 및 평가'
                       onClick={() => setIsEvaluationSettingsOpen(true)}
+                      tooltip={
+                        presentationEvaluationMilestone
+                          ? undefined
+                          : '발표 평가 마일스톤을 먼저 설정해 주세요.'
+                      }
                     />
                     <Button
                       isDisabled
@@ -409,19 +425,12 @@ export default function AdminSubmissionsPage() {
                         verticalAlign='middle'
                       />
                     </Card>
-                    {effectiveSectionId ? (
+                    {effectiveSectionId && presentationEvaluationMilestone ? (
                       <AdminPresentationEvaluationSettingsDialog
-                        endsAt={
-                          presentationEvaluationsQuery.data.evaluationPeriod
-                            .endsAt
-                        }
                         isOpen={isEvaluationSettingsOpen}
+                        milestoneId={String(presentationEvaluationMilestone.id)}
                         sectionId={effectiveSectionId}
                         onClose={() => setIsEvaluationSettingsOpen(false)}
-                        startsAt={
-                          presentationEvaluationsQuery.data.evaluationPeriod
-                            .startsAt
-                        }
                         teams={presentationEvaluationsQuery.data.teams}
                       />
                     ) : null}

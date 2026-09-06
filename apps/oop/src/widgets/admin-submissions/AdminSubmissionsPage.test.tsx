@@ -26,6 +26,7 @@ import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
+import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 import {
   adminPresentationEvaluationHandlers,
   resetPresentationEvaluationScenario,
@@ -36,6 +37,7 @@ const server = setupServer(
   ...adminMilestoneSubmissionDetailHandlers,
   ...adminMilestoneSubmissionsHandlers,
   ...adminPresentationEvaluationHandlers,
+  ...adminSectionMilestoneHandlers,
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -209,6 +211,60 @@ describe('AdminSubmissionsPage', () => {
     expect(screen.getByText('박지훈')).toBeInTheDocument();
     expect(screen.getByText('최유진')).toBeInTheDocument();
     expect(screen.getAllByText('-')).toHaveLength(10);
+  });
+
+  it('발표 순서 설정은 평가 기간 입력 없이 연다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    const settingsButton = await screen.findByRole('button', {
+      name: '순서 배정 및 평가',
+    });
+    await waitFor(() => expect(settingsButton).toBeEnabled());
+    await user.click(settingsButton);
+
+    expect(
+      await screen.findByRole('heading', { name: '발표 순서 설정' }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('OOP-01 - 1팀 발표 순서')).toBeInTheDocument();
+    expect(screen.queryByLabelText('발표 평가 시작 시간')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('발표 평가 종료 시간')).not.toBeInTheDocument();
+  });
+
+  it('발표 순서를 발표 평가 마일스톤에 일괄 저장한다', async () => {
+    const user = userEvent.setup();
+    let requestBody: unknown;
+
+    server.use(
+      http.patch(
+        `${API_BASE_URL}${ENDPOINTS.SUBMISSION.PRESENTATION_ORDER('103')}`,
+        async ({ request }) => {
+          requestBody = await request.json();
+          return new HttpResponse(null, { status: 204 });
+        },
+      ),
+    );
+
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    const settingsButton = await screen.findByRole('button', {
+      name: '순서 배정 및 평가',
+    });
+    await waitFor(() => expect(settingsButton).toBeEnabled());
+    await user.click(settingsButton);
+    await user.click(screen.getByRole('button', { name: '저장' }));
+
+    await waitFor(() =>
+      expect(requestBody).toEqual({
+        teamOrders: [
+          { order: 1, teamId: 1 },
+          { order: 2, teamId: 2 },
+        ],
+      }),
+    );
   });
 
   it('발표 평가 상세 ID가 없으면 팀 이름을 링크로 표시하지 않는다', async () => {

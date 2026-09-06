@@ -77,4 +77,29 @@ describe('createAdminMilestoneCreateInput', () => {
       }),
     ).toThrow('아직 생성할 수 없는 마일스톤 양식입니다.');
   });
+
+  it('발표 평가 양식은 평가 기간을 포함해 PRESENTATION 마일스톤으로 생성한다', () => {
+    const schedule = createAdminMilestoneSectionScheduleDraft();
+    schedule.dueAt = { date: '2026-11-20', time: '18:00' };
+    schedule.evaluationOpensAt = { date: '2026-11-21', time: '09:00' };
+    schedule.evaluationClosesAt = { date: '2026-11-25', time: '18:00' };
+
+    expect(
+      createAdminMilestoneCreateInput({
+        description: '발표 평가를 진행합니다.',
+        schedule,
+        templateId: 'presentation-evaluate',
+        title: '발표 평가',
+        weekNumber: 12,
+      }),
+    ).toMatchObject({
+      schedule: {
+        dueAt: '2026-11-25T18:00:00',
+        evaluationClosesAt: '2026-11-25T18:00:00',
+        evaluationOpensAt: '2026-11-21T09:00:00',
+        opensAt: '2026-11-21T09:00:00',
+      },
+      type: 'PRESENTATION',
+    });
+  });
 });
