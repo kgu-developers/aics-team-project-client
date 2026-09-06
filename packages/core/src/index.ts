@@ -167,3 +167,5 @@ export type {
   StudentHomeTeamStatus,
   StudentHomeTopicCandidate,
 } from './studentHome/types';
+
+export * from './meeting/apiTypes';
