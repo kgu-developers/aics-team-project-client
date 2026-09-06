@@ -29,6 +29,10 @@ export {
   isSupportedMilestoneCreationTemplate,
 } from './adminMilestoneCreation';
 export {
+  createAdminMilestoneSectionScheduleDraftFromDto,
+  createAdminMilestoneUpdateInput,
+} from './adminMilestoneEdit';
+export {
   findMilestoneTemplate,
   isMilestoneTemplateId,
   milestoneTemplates,

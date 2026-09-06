@@ -49,6 +49,14 @@ export type AdminMilestoneCreateInput = {
   weekNumber: number;
 };
 
+/** 기존 마일스톤의 내용·제출 일정 변경 요청이다. 주차는 전용 일괄 변경 API로 관리한다. */
+export type AdminMilestoneUpdateInput = {
+  description?: string;
+  schedule: AdminMilestoneScheduleRequest;
+  title: string;
+  type: AdminMilestoneType;
+};
+
 export type AdminMilestonePersistResponse = {
   id: number;
 };

@@ -4,6 +4,7 @@ import {
   CheckboxList,
   CheckboxListItem,
   DateInput,
+  EmptyState,
   Heading,
   MultiSelector,
   Selector,
@@ -12,15 +13,18 @@ import {
   TextArea,
   TextInput,
 } from '@aics/design-system';
-import { Link, useSearch } from '@tanstack/react-router';
-import { useMemo, useState, type FormEvent } from 'react';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import {
   createAdminMilestoneSectionScheduleDraft,
+  createAdminMilestoneSectionScheduleDraftFromDto,
   createAdminMilestoneCreateInput,
+  createAdminMilestoneUpdateInput,
   findMilestoneTemplate,
+  getAdminMilestoneTypeLabel,
   isMilestoneTemplateId,
   isSupportedMilestoneCreationTemplate,
   milestoneTemplates,
@@ -30,6 +34,8 @@ import {
 } from '~/features/admin-milestone-review/model';
 import {
   useSubmitAdminSectionMilestonesMutation,
+  useAdminSectionMilestoneQuery,
+  useUpdateAdminSectionMilestoneMutation,
   type SubmitAdminSectionMilestonesResult,
 } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -48,11 +54,23 @@ function getTemplate(templateId: MilestoneTemplateId) {
 
 export default function AdminMilestoneSetupPage() {
   const currentUser = useAuthStore(state => state.currentUser);
+  const navigate = useNavigate();
   const search = useSearch({ from: '/admin/milestones/new' }) as {
     milestoneId?: string;
     sectionId?: string;
   };
   const sections = currentUser?.sections ?? [];
+  const editingMilestoneId =
+    search.milestoneId && /^\d+$/.test(search.milestoneId)
+      ? search.milestoneId
+      : undefined;
+  const editingSectionId =
+    editingMilestoneId &&
+    search.sectionId &&
+    sections.some(section => section.id === search.sectionId)
+      ? search.sectionId
+      : undefined;
+  const isEditing = Boolean(editingMilestoneId && editingSectionId);
   const initialTemplateId =
     isMilestoneTemplateId(search.milestoneId) &&
     isSupportedMilestoneCreationTemplate(search.milestoneId)
@@ -85,6 +103,12 @@ export default function AdminMilestoneSetupPage() {
 
   const template = useMemo(() => getTemplate(templateId), [templateId]);
   const submitMilestonesMutation = useSubmitAdminSectionMilestonesMutation();
+  const updateMilestoneMutation = useUpdateAdminSectionMilestoneMutation();
+  const milestoneQuery = useAdminSectionMilestoneQuery(
+    editingSectionId,
+    editingMilestoneId,
+  );
+  const hydratedMilestoneKey = useRef<string>();
   const sectionOptions = sections.map(section => ({
     label: `${section.code} · ${section.name}`,
     value: section.id,
@@ -93,6 +117,27 @@ export default function AdminMilestoneSetupPage() {
   const selectedSections = sections.filter(section =>
     sectionIds.includes(section.id),
   );
+
+  useEffect(() => {
+    const milestone = milestoneQuery.data;
+    if (!isEditing || !milestone || !editingSectionId || !editingMilestoneId) {
+      return;
+    }
+
+    const milestoneKey = `${editingSectionId}:${editingMilestoneId}`;
+    if (hydratedMilestoneKey.current === milestoneKey) return;
+
+    hydratedMilestoneKey.current = milestoneKey;
+    setTitle(milestone.title);
+    setDescription(milestone.description ?? '');
+    setSectionIds([editingSectionId]);
+    setSectionSchedules({
+      [editingSectionId]: createAdminMilestoneSectionScheduleDraftFromDto(
+        milestone.schedule,
+        milestone.status,
+      ),
+    });
+  }, [editingMilestoneId, editingSectionId, isEditing, milestoneQuery.data]);
 
   const handleSectionChange = (nextSectionIds: string[]) => {
     const accessibleSectionIds = nextSectionIds.filter(sectionId =>
@@ -135,11 +180,61 @@ export default function AdminMilestoneSetupPage() {
     setFormError(undefined);
     setSubmissionResults(undefined);
 
-    const parsedWeekNumber = Number(weekNumber);
     if (!title.trim()) {
       setFormError('마일스톤 제목을 입력해주세요.');
       return;
     }
+    if (isEditing) {
+      const milestone = milestoneQuery.data;
+      const schedule = editingSectionId
+        ? sectionSchedules[editingSectionId]
+        : undefined;
+      if (!milestone || !editingSectionId || !editingMilestoneId || !schedule) {
+        setFormError('수정할 마일스톤 정보를 불러오지 못했습니다.');
+        return;
+      }
+
+      try {
+        const result = await updateMilestoneMutation.mutateAsync({
+          currentStatus: milestone.status,
+          input: createAdminMilestoneUpdateInput({
+            description,
+            schedule,
+            title,
+            type: milestone.type,
+          }),
+          milestoneId: editingMilestoneId,
+          sectionId: editingSectionId,
+          status:
+            milestone.status === 'CLOSED'
+              ? 'CLOSED'
+              : schedule.isPublished
+                ? 'PUBLISHED'
+                : 'DRAFT',
+        });
+        setFormError(
+          result.statusUpdated
+            ? undefined
+            : '내용과 일정은 저장했지만 공개 상태 변경에 실패했습니다. 상세 화면에서 다시 시도해주세요.',
+        );
+        if (result.statusUpdated) {
+          await navigate({
+            params: { milestoneId: editingMilestoneId },
+            search: { sectionId: editingSectionId },
+            to: ROUTES.ADMIN_MILESTONE_DETAIL,
+          });
+        }
+      } catch (error) {
+        setFormError(
+          error instanceof Error
+            ? error.message
+            : '마일스톤을 수정하지 못했습니다.',
+        );
+      }
+      return;
+    }
+
+    const parsedWeekNumber = Number(weekNumber);
     if (!Number.isInteger(parsedWeekNumber) || parsedWeekNumber < 1) {
       setFormError('진행 주차는 1 이상의 정수로 입력해주세요.');
       return;
@@ -180,13 +275,49 @@ export default function AdminMilestoneSetupPage() {
     return section ? `${section.code} · ${section.name}` : sectionId;
   };
 
+  if (editingMilestoneId && !editingSectionId) {
+    return (
+      <div className={styles.page}>
+        <EmptyState
+          description='담당 분반의 마일스톤만 수정할 수 있습니다.'
+          title='수정할 수 없는 분반입니다.'
+        />
+      </div>
+    );
+  }
+
+  if (isEditing && milestoneQuery.isPending) {
+    return (
+      <div className={styles.page}>
+        <Text aria-live='polite' role='status'>
+          마일스톤 정보를 불러오는 중입니다.
+        </Text>
+      </div>
+    );
+  }
+
+  if (isEditing && milestoneQuery.isError) {
+    return (
+      <div className={styles.page}>
+        <EmptyState
+          description='잠시 후 다시 시도해주세요.'
+          title='마일스톤 정보를 불러오지 못했습니다.'
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <div>
-          <Heading level={1}>마일스톤 설정</Heading>
+          <Heading level={1}>
+            {isEditing ? '마일스톤 수정' : '마일스톤 설정'}
+          </Heading>
           <Text color='secondary' type='supporting'>
-            기본 양식을 선택하고 담당 분반의 공개 일정과 마감 일시를 준비합니다.
+            {isEditing
+              ? '선택한 분반의 마일스톤 내용과 공개·제출 일정을 수정합니다.'
+              : '기본 양식을 선택하고 담당 분반의 공개 일정과 마감 일시를 준비합니다.'}
           </Text>
         </div>
         <Link className={styles.backLink} to={ROUTES.ADMIN_MILESTONES}>
@@ -200,53 +331,75 @@ export default function AdminMilestoneSetupPage() {
             <Heading className={styles.sectionTitle} level={2}>
               기본 설정
             </Heading>
-            <MultiSelector
-              hasClear
-              hasSelectAll
-              label='대상 분반'
-              onChange={handleSectionChange}
-              options={sectionOptions}
-              placeholder='분반을 선택해주세요.'
-              selectAllLabel='전체 선택'
-              triggerDisplay='labels'
-              value={sectionIds}
-              width='100%'
-            />
-            <Text color='secondary' type='supporting'>
-              선택한 분반마다 공개 일정과 공개 상태를 따로 설정합니다. 저장하면
-              선택한 분반별로 독립된 요청이 전송됩니다.
-            </Text>
-            <Selector
-              aria-label='마일스톤 기본 양식'
-              label='마일스톤 기본 양식'
-              onChange={handleTemplateChange}
-              options={milestoneTemplates
-                .filter(templateOption =>
-                  isSupportedMilestoneCreationTemplate(templateOption.id),
-                )
-                .map(templateOption => ({
-                  label: templateOption.label,
-                  value: templateOption.id,
-                }))}
-              renderOption={option => (
-                <SelectorOption label={option.label ?? option.value} />
-              )}
-              value={templateId}
-              width='100%'
-            />
+            {isEditing ? (
+              <>
+                <Text weight='medium'>대상 분반</Text>
+                <Text color='secondary' type='supporting'>
+                  {editingSectionId ? getSectionLabel(editingSectionId) : '-'}
+                </Text>
+                <Text weight='medium'>마일스톤 유형</Text>
+                <Text color='secondary' type='supporting'>
+                  {milestoneQuery.data
+                    ? getAdminMilestoneTypeLabel(milestoneQuery.data.type)
+                    : '-'}
+                </Text>
+                <Text color='secondary' type='supporting'>
+                  진행 주차와 유형은 별도 주차 변경 기능에서 관리합니다.
+                </Text>
+              </>
+            ) : (
+              <>
+                <MultiSelector
+                  hasClear
+                  hasSelectAll
+                  label='대상 분반'
+                  onChange={handleSectionChange}
+                  options={sectionOptions}
+                  placeholder='분반을 선택해주세요.'
+                  selectAllLabel='전체 선택'
+                  triggerDisplay='labels'
+                  value={sectionIds}
+                  width='100%'
+                />
+                <Text color='secondary' type='supporting'>
+                  선택한 분반마다 공개 일정과 공개 상태를 따로 설정합니다.
+                  저장하면 선택한 분반별로 독립된 요청이 전송됩니다.
+                </Text>
+                <Selector
+                  aria-label='마일스톤 기본 양식'
+                  label='마일스톤 기본 양식'
+                  onChange={handleTemplateChange}
+                  options={milestoneTemplates
+                    .filter(templateOption =>
+                      isSupportedMilestoneCreationTemplate(templateOption.id),
+                    )
+                    .map(templateOption => ({
+                      label: templateOption.label,
+                      value: templateOption.id,
+                    }))}
+                  renderOption={option => (
+                    <SelectorOption label={option.label ?? option.value} />
+                  )}
+                  value={templateId}
+                  width='100%'
+                />
+              </>
+            )}
             <TextInput label='제목' onChange={setTitle} value={title} />
-            <label className={styles.weekNumberField}>
-              <Text weight='medium'>진행 주차</Text>
-              <input
-                aria-label='진행 주차'
-                className={styles.numberInput}
-                min='1'
-                onChange={event => setWeekNumber(event.target.value)}
-                required
-                type='number'
-                value={weekNumber}
-              />
-            </label>
+            {!isEditing ? (
+              <label className={styles.weekNumberField}>
+                <Text weight='medium'>진행 주차</Text>
+                <input
+                  aria-label='진행 주차'
+                  className={styles.numberInput}
+                  min='1'
+                  onChange={event => setWeekNumber(event.target.value)}
+                  required
+                  type='number'
+                  value={weekNumber}
+                />
+              </label>
+            ) : null}
             <TextArea
               label='설명'
               onChange={setDescription}
@@ -371,29 +524,39 @@ export default function AdminMilestoneSetupPage() {
                           </div>
                         </div>
                       </div>
-                      <Selector
-                        aria-label={`${section.code} 공개 상태`}
-                        label='공개 상태'
-                        onChange={nextStatus =>
-                          updateSectionSchedule(section.id, current => ({
-                            ...current,
-                            isPublished: nextStatus === 'published',
-                          }))
-                        }
-                        options={[
-                          { label: '미공개', value: 'unpublished' },
-                          { label: '공개', value: 'published' },
-                        ]}
-                        renderOption={option => (
-                          <SelectorOption
-                            label={option.label ?? option.value}
-                          />
-                        )}
-                        value={
-                          schedule.isPublished ? 'published' : 'unpublished'
-                        }
-                        width={180}
-                      />
+                      {isEditing && milestoneQuery.data?.status === 'CLOSED' ? (
+                        <div className={styles.scheduleField}>
+                          <Text weight='medium'>공개 상태</Text>
+                          <Text color='secondary' type='supporting'>
+                            마감됨 — 이 화면에서는 마감 상태를 변경하지
+                            않습니다.
+                          </Text>
+                        </div>
+                      ) : (
+                        <Selector
+                          aria-label={`${section.code} 공개 상태`}
+                          label='공개 상태'
+                          onChange={nextStatus =>
+                            updateSectionSchedule(section.id, current => ({
+                              ...current,
+                              isPublished: nextStatus === 'published',
+                            }))
+                          }
+                          options={[
+                            { label: '미공개', value: 'unpublished' },
+                            { label: '공개', value: 'published' },
+                          ]}
+                          renderOption={option => (
+                            <SelectorOption
+                              label={option.label ?? option.value}
+                            />
+                          )}
+                          value={
+                            schedule.isPublished ? 'published' : 'unpublished'
+                          }
+                          width={180}
+                        />
+                      )}
                       <CheckboxList
                         description='마감 일시와 지각 제출 정책은 선택한 분반별로 따로 설정됩니다.'
                         label='제출 정책'
@@ -484,57 +647,62 @@ export default function AdminMilestoneSetupPage() {
             )}
           </section>
 
-          <section className={styles.section}>
-            <Heading className={styles.sectionTitle} level={2}>
-              기본 양식 미리보기
-            </Heading>
-            <div className={styles.preview}>
-              <Text className={styles.previewEyebrow} type='supporting'>
-                학생 화면 기본 양식 미리보기
-              </Text>
-              <Heading className={styles.previewTitle} level={3}>
-                {title.trim() || '마일스톤 제목을 입력해주세요.'}
+          {!isEditing ? (
+            <section className={styles.section}>
+              <Heading className={styles.sectionTitle} level={2}>
+                기본 양식 미리보기
               </Heading>
-              <Text className={styles.previewTemplate} weight='medium'>
-                기본 양식: {template.label}
-              </Text>
-              <Text className={styles.previewDescription} color='secondary'>
-                {description.trim() || '마일스톤 설명을 입력해주세요.'}
-              </Text>
-              <Text className={styles.previewBlocksTitle} weight='medium'>
-                학생에게 표시되는 고정 블록
-              </Text>
-              <ul className={styles.previewList}>
-                {template.fields.map((field, index) => (
-                  <li className={styles.previewItem} key={field}>
-                    <span className={styles.previewItemNumber}>
-                      {index + 1}
-                    </span>
-                    <span>{field}</span>
-                  </li>
-                ))}
-              </ul>
-              <Text
-                className={styles.previewNote}
-                color='secondary'
-                type='supporting'
-              >
-                기본 양식의 블록 구성은 현재 학생 화면과 동일한 고정 구조입니다.
-                블록 추가·삭제·순서 변경은 별도 양식 API가 준비되면 지원합니다.
-              </Text>
-            </div>
-          </section>
+              <div className={styles.preview}>
+                <Text className={styles.previewEyebrow} type='supporting'>
+                  학생 화면 기본 양식 미리보기
+                </Text>
+                <Heading className={styles.previewTitle} level={3}>
+                  {title.trim() || '마일스톤 제목을 입력해주세요.'}
+                </Heading>
+                <Text className={styles.previewTemplate} weight='medium'>
+                  기본 양식: {template.label}
+                </Text>
+                <Text className={styles.previewDescription} color='secondary'>
+                  {description.trim() || '마일스톤 설명을 입력해주세요.'}
+                </Text>
+                <Text className={styles.previewBlocksTitle} weight='medium'>
+                  학생에게 표시되는 고정 블록
+                </Text>
+                <ul className={styles.previewList}>
+                  {template.fields.map((field, index) => (
+                    <li className={styles.previewItem} key={field}>
+                      <span className={styles.previewItemNumber}>
+                        {index + 1}
+                      </span>
+                      <span>{field}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Text
+                  className={styles.previewNote}
+                  color='secondary'
+                  type='supporting'
+                >
+                  기본 양식의 블록 구성은 현재 학생 화면과 동일한 고정
+                  구조입니다. 블록 추가·삭제·순서 변경은 별도 양식 API가
+                  준비되면 지원합니다.
+                </Text>
+              </div>
+            </section>
+          ) : null}
 
           <div className={styles.action}>
             <Text className={styles.actionNote} type='supporting'>
-              공개를 선택하면 생성 후 공개 상태 변경 요청을 한 번 더 전송합니다.
+              {isEditing
+                ? '내용과 일정을 저장한 뒤, 공개 상태가 변경된 경우에만 공개 상태 변경 요청을 전송합니다.'
+                : '공개를 선택하면 생성 후 공개 상태 변경 요청을 한 번 더 전송합니다.'}
             </Text>
             {formError ? (
               <Text className={styles.formError} role='alert'>
                 {formError}
               </Text>
             ) : null}
-            {submissionResults ? (
+            {!isEditing && submissionResults ? (
               <ul aria-live='polite' className={styles.resultList}>
                 {submissionResults.map(result => (
                   <li key={result.sectionId}>
@@ -550,10 +718,34 @@ export default function AdminMilestoneSetupPage() {
                 ))}
               </ul>
             ) : null}
-            <Link to={ROUTES.ADMIN_MILESTONES}>취소</Link>
+            <Link
+              params={
+                isEditing && editingMilestoneId
+                  ? { milestoneId: editingMilestoneId }
+                  : undefined
+              }
+              search={
+                isEditing && editingSectionId
+                  ? { sectionId: editingSectionId }
+                  : undefined
+              }
+              to={
+                isEditing
+                  ? ROUTES.ADMIN_MILESTONE_DETAIL
+                  : ROUTES.ADMIN_MILESTONES
+              }
+            >
+              취소
+            </Link>
             <Button
-              isDisabled={submitMilestonesMutation.isPending}
-              isLoading={submitMilestonesMutation.isPending}
+              isDisabled={
+                submitMilestonesMutation.isPending ||
+                updateMilestoneMutation.isPending
+              }
+              isLoading={
+                submitMilestonesMutation.isPending ||
+                updateMilestoneMutation.isPending
+              }
               label='저장'
               type='submit'
               variant='primary'

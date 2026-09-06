@@ -1,6 +1,7 @@
 import type {
   AdminMilestoneCreateInput,
   AdminMilestoneStatus,
+  AdminMilestoneUpdateInput,
   AdminSectionMilestoneDto,
   AdminSectionMilestonesResponse,
 } from '@aics/api-client';
@@ -108,5 +109,19 @@ export function updateAdminSectionMilestoneFixtureStatus(
   if (!milestone) return undefined;
 
   milestone.status = status;
+  return milestone;
+}
+
+export function updateAdminSectionMilestoneFixture(
+  sectionId: string,
+  milestoneId: string,
+  input: AdminMilestoneUpdateInput,
+) {
+  const milestone = milestonesBySectionId[sectionId]?.find(
+    candidate => candidate.id === Number(milestoneId),
+  );
+  if (!milestone) return undefined;
+
+  Object.assign(milestone, input);
   return milestone;
 }

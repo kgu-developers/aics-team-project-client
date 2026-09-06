@@ -4,6 +4,10 @@ export { useAdminAccessibleSectionMilestonesQuery } from './useAdminAccessibleSe
 export { useAdminSectionMilestonesQuery } from './useAdminSectionMilestonesQuery';
 export { useSubmitAdminSectionMilestonesMutation } from './useSubmitAdminSectionMilestonesMutation';
 export type { SubmitAdminSectionMilestonesResult } from './useSubmitAdminSectionMilestonesMutation';
+export {
+  useUpdateAdminSectionMilestoneMutation,
+  type UpdateAdminSectionMilestoneResult,
+} from './useUpdateAdminSectionMilestoneMutation';
 export { useAdminMilestoneSubmissionDetailQuery } from './useAdminMilestoneSubmissionDetailQuery';
 export { useAdminMilestoneSubmissionsQuery } from './useAdminMilestoneSubmissionsQuery';
 export { useAdminPresentationEvaluationsQuery } from './useAdminPresentationEvaluationsQuery';

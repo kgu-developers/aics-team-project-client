@@ -7,6 +7,7 @@ export {
 export { fetchAdminSectionMilestone } from './fetchAdminSectionMilestone';
 export { fetchAdminSectionMilestones } from './fetchAdminSectionMilestones';
 export { submitAdminSectionMilestone } from './submitAdminSectionMilestone';
+export { updateAdminSectionMilestone } from './updateAdminSectionMilestone';
 export { updateAdminSectionMilestoneStatus } from './updateAdminSectionMilestoneStatus';
 export type {
   AdminMilestoneCreateInput,
@@ -15,6 +16,7 @@ export type {
   AdminMilestoneScheduleDto,
   AdminMilestoneStatus,
   AdminMilestoneType,
+  AdminMilestoneUpdateInput,
   AdminSectionMilestoneDto,
   AdminSectionMilestonesResponse,
 } from './types';
