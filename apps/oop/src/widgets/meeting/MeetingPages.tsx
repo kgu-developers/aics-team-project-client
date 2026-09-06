@@ -48,7 +48,8 @@ import { useAuthStore } from '~/features/auth/authStore';
 import { useEditLock } from '~/features/editor/useEditLock';
 import {
   useMeetingRecordQuery,
-  useMeetingRecordsQuery,
+  type StudentMeetingListItem,
+  useStudentMeetingListQuery,
   useRemoveMeetingRecordMutation,
   useSubmitMeetingRecordMutation,
   useUpdateMeetingActionMutation,
@@ -97,8 +98,16 @@ function hasRichTextContent(value: unknown): boolean {
   return node.content?.some(hasRichTextContent) ?? false;
 }
 
-function createMeetingListColumns(): TableColumn<MeetingRecord>[] {
-  const columns: TableColumn<MeetingRecord>[] = [
+function createMeetingListColumns({
+  canOpenRecord,
+  headingLabel,
+  authorColumnLabel,
+}: {
+  canOpenRecord: boolean;
+  headingLabel: string;
+  authorColumnLabel: string;
+}): TableColumn<StudentMeetingListItem>[] {
+  const columns: TableColumn<StudentMeetingListItem>[] = [
     {
       key: 'heldAt',
       header: '날짜',
@@ -106,21 +115,27 @@ function createMeetingListColumns(): TableColumn<MeetingRecord>[] {
       renderCell: record => <>{record.heldAt.slice(0, 10)}</>,
     },
     {
-      key: 'title',
-      header: '제목',
+      key: 'heading',
+      header: headingLabel,
       width: proportional(2, { minWidth: 128 }),
       renderCell: record => (
         <div className={styles.listTitleCell}>
-          <Link
-            className={styles.listTitleLink}
-            params={{ meetingId: record.id }}
-            to='/student/meetings/$meetingId'
-          >
-            {record.title}
-          </Link>
+          {canOpenRecord ? (
+            <Link
+              className={styles.listTitleLink}
+              params={{ meetingId: record.id }}
+              to='/student/meetings/$meetingId'
+            >
+              {record.heading}
+            </Link>
+          ) : (
+            <Text>{record.heading}</Text>
+          )}
           <Text color='secondary' type='supporting'>
-            참석 {record.participants.length}명 · 액션 플랜{' '}
-            {record.actions.length}건
+            참석 {record.participantCount}명
+            {record.actionCount != null
+              ? ` · 액션 플랜 ${record.actionCount}건`
+              : ''}
             {record.location ? ` · ${record.location}` : ''}
           </Text>
         </div>
@@ -128,16 +143,16 @@ function createMeetingListColumns(): TableColumn<MeetingRecord>[] {
     },
   ];
   columns.push({
-    key: 'createdBy',
-    header: '작성자',
+    key: 'authorLabel',
+    header: authorColumnLabel,
     width: proportional(1),
-    renderCell: record => <>{record.createdBy.name}</>,
+    renderCell: record => <>{record.authorLabel}</>,
   });
   return columns;
 }
 
 type MeetingTablePlugin = NonNullable<
-  TableProps<MeetingRecord>['plugins']
+  TableProps<StudentMeetingListItem>['plugins']
 >[string];
 
 function toDraftAction(action: MeetingAction): DraftAction {
@@ -464,9 +479,20 @@ function MeetingForm({ record }: { record?: MeetingRecord }) {
     return (
       <div className={styles.page}>
         <EmptyState
-          description='회의록을 작성하려면 팀에 먼저 배정되어야 해요.'
-          title='소속 팀이 없어요.'
+          description={
+            currentUser?.teamId
+              ? '현재는 회의록 목록을 확인할 수 있어요.'
+              : '회의록을 작성하려면 팀에 먼저 배정되어야 해요.'
+          }
+          title={
+            currentUser?.teamId
+              ? '회의록 작성 기능을 준비 중이에요.'
+              : '소속 팀이 없어요.'
+          }
         />
+        {currentUser?.teamId ? (
+          <Link to={ROUTES.STUDENT.MEETINGS}>회의록 목록으로</Link>
+        ) : null}
       </div>
     );
   const submit = async () => {
@@ -657,9 +683,17 @@ function MeetingForm({ record }: { record?: MeetingRecord }) {
 
 export function MeetingListPage() {
   const navigate = useNavigate();
-  const teamId = useAuthStore(state => state.currentUser?.currentTeam?.id);
-  const query = useMeetingRecordsQuery(teamId);
-  const meetingColumns = useMemo(() => createMeetingListColumns(), []);
+  const query = useStudentMeetingListQuery();
+  const { teamId, canOpenRecord, headingLabel, authorColumnLabel } = query;
+  const meetingColumns = useMemo(
+    () =>
+      createMeetingListColumns({
+        canOpenRecord,
+        headingLabel,
+        authorColumnLabel,
+      }),
+    [canOpenRecord, headingLabel, authorColumnLabel],
+  );
   const rowInteractionPlugin = useMemo<MeetingTablePlugin>(
     () => ({
       transformBodyRow: (rowRenderProps, item) => {
@@ -690,12 +724,26 @@ export function MeetingListPage() {
     }),
     [navigate],
   );
-  if (!teamId)
+  if (teamId == null)
     return (
       <div className={styles.page}>
         <EmptyState
           description='팀 배정 후 팀 회의록을 기록할 수 있어요.'
           title='소속 팀이 없어요.'
+        />
+      </div>
+    );
+  if (query.isError)
+    return (
+      <div className={styles.page}>
+        <EmptyState
+          description={requestErrorMessage}
+          title='회의록을 불러올 수 없어요.'
+        />
+        <Button
+          label='다시 시도'
+          isDisabled={!query.canRetry}
+          onClick={() => void query.refetch()}
         />
       </div>
     );
@@ -708,30 +756,22 @@ export function MeetingListPage() {
         />
       </div>
     );
-  if (query.isError)
-    return (
-      <div className={styles.page}>
-        <EmptyState
-          description={requestErrorMessage}
-          title='회의록을 불러올 수 없어요.'
-        />
-      </div>
-    );
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
         <Heading level={1}>회의록</Heading>
         <Button
           label='새 회의록'
+          isDisabled={!query.canCreateRecord}
           onClick={() => void navigate({ to: ROUTES.STUDENT.MEETING_NEW })}
           variant='primary'
         />
       </div>
       <Card className={styles.listTableCard}>
         <div className={styles.responsiveListTable}>
-          <Table<MeetingRecord>
+          <Table<StudentMeetingListItem>
             columns={meetingColumns}
-            data={query.data ?? []}
+            data={query.items ?? []}
             density='balanced'
             dividers='rows'
             emptyState={
@@ -739,10 +779,12 @@ export function MeetingListPage() {
                 등록된 회의록이 없어요.
               </span>
             }
-            hasHover
+            hasHover={canOpenRecord}
             idKey='id'
             plugins={{
-              rowInteraction: rowInteractionPlugin,
+              ...(canOpenRecord
+                ? { rowInteraction: rowInteractionPlugin }
+                : {}),
               scrollWrapperLayout: tableScrollWrapperPlugin,
             }}
           />

@@ -130,8 +130,21 @@ vi.mock('~/features/meeting/queries', () => ({
     isError: false,
     isPending: false,
   }),
-  useMeetingRecordsQuery: () => ({
-    data: queries.meetingRecords,
+  useStudentMeetingListQuery: () => ({
+    teamId: useAuthStore.getState().currentUser?.currentTeam?.id,
+    items: queries.meetingRecords.map(record => ({
+      id: record.id,
+      heldAt: record.heldAt,
+      heading: record.title,
+      participantCount: record.participants.length,
+      actionCount: record.actions.length,
+      location: record.location,
+      authorLabel: record.createdBy.name,
+    })),
+    canOpenRecord: true,
+    canCreateRecord: true,
+    headingLabel: '제목',
+    authorColumnLabel: '작성자',
     isError: false,
     isPending: false,
   }),
