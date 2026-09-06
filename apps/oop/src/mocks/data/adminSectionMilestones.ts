@@ -1,4 +1,6 @@
 import type {
+  AdminMilestoneCreateInput,
+  AdminMilestoneStatus,
   AdminSectionMilestoneDto,
   AdminSectionMilestonesResponse,
 } from '@aics/api-client';
@@ -51,14 +53,14 @@ const sectionTwoMilestones: AdminSectionMilestoneDto[] = [
   },
 ];
 
-const milestonesBySectionId: Readonly<
-  Record<string, readonly AdminSectionMilestoneDto[]>
-> = {
+const milestonesBySectionId: Record<string, AdminSectionMilestoneDto[]> = {
   'oop-2026-2-01': sectionOneMilestones,
   'oop-2026-2-02': sectionTwoMilestones,
   '1': sectionOneMilestones,
   '2': sectionTwoMilestones,
 };
+
+let nextMilestoneId = 300;
 
 export function getAdminSectionMilestonesFixture(
   sectionId: string,
@@ -75,4 +77,36 @@ export function getAdminSectionMilestoneFixture(
   return milestonesBySectionId[sectionId]?.find(
     milestone => milestone.id === Number(milestoneId),
   );
+}
+
+export function createAdminSectionMilestoneFixture(
+  sectionId: string,
+  input: AdminMilestoneCreateInput,
+) {
+  const milestones = milestonesBySectionId[sectionId];
+  if (!milestones) return undefined;
+
+  const milestone: AdminSectionMilestoneDto = {
+    ...input,
+    id: nextMilestoneId++,
+    schedule: input.schedule,
+    sectionId: Number(sectionId) || 1,
+    status: 'DRAFT',
+  };
+  milestones.push(milestone);
+  return milestone;
+}
+
+export function updateAdminSectionMilestoneFixtureStatus(
+  sectionId: string,
+  milestoneId: string,
+  status: AdminMilestoneStatus,
+) {
+  const milestone = milestonesBySectionId[sectionId]?.find(
+    candidate => candidate.id === Number(milestoneId),
+  );
+  if (!milestone) return undefined;
+
+  milestone.status = status;
+  return milestone;
 }

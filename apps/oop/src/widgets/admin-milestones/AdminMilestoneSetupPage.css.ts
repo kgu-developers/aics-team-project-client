@@ -85,6 +85,14 @@ export const timeInput = style({
   width: '100%',
 });
 
+export const numberInput = style([timeInput, { maxWidth: 160 }]);
+
+export const weekNumberField = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+});
+
 export const preview = style({
   background: tokens.color.background.muted,
   border: `1px solid ${tokens.color.border.base}`,
@@ -161,4 +169,16 @@ export const actionNote = style({
   color: tokens.color.text.secondary,
   flex: '1 1 320px',
   margin: 0,
+});
+
+export const formError = style({
+  color: tokens.color.text.red,
+  flex: '1 1 100%',
+  margin: 0,
+});
+
+export const resultList = style({
+  flex: '1 1 100%',
+  margin: 0,
+  paddingLeft: 20,
 });

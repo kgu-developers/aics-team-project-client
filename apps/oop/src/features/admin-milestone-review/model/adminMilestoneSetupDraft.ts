@@ -6,6 +6,10 @@ export type AdminMilestoneSectionScheduleDraft = {
     time: string;
   };
   isPublished: boolean;
+  lateSubmissionUntil: {
+    date: string;
+    time: string;
+  };
   opensAt: {
     date: string;
     time: string;
@@ -22,8 +26,17 @@ export function createAdminMilestoneSectionScheduleDraft(): AdminMilestoneSectio
     allowSubmissionEditBeforeDueAt: false,
     dueAt: createDateTimeDraft(),
     isPublished: false,
+    lateSubmissionUntil: createDateTimeDraft(),
     opensAt: createDateTimeDraft(),
   };
+}
+
+export function toAdminMilestoneDateTime(
+  dateTime: Readonly<{ date: string; time: string }>,
+) {
+  if (!dateTime.date || !dateTime.time) return undefined;
+
+  return `${dateTime.date}T${dateTime.time}:00`;
 }
 
 export function syncAdminMilestoneSectionScheduleDrafts(

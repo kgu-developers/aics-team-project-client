@@ -13,19 +13,25 @@ import {
   TextInput,
 } from '@aics/design-system';
 import { Link, useSearch } from '@tanstack/react-router';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import {
   createAdminMilestoneSectionScheduleDraft,
+  createAdminMilestoneCreateInput,
   findMilestoneTemplate,
   isMilestoneTemplateId,
+  isSupportedMilestoneCreationTemplate,
   milestoneTemplates,
   syncAdminMilestoneSectionScheduleDrafts,
   type AdminMilestoneSectionScheduleDraft,
   type MilestoneTemplateId,
 } from '~/features/admin-milestone-review/model';
+import {
+  useSubmitAdminSectionMilestonesMutation,
+  type SubmitAdminSectionMilestonesResult,
+} from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMilestoneSetupPage.css';
@@ -47,9 +53,11 @@ export default function AdminMilestoneSetupPage() {
     sectionId?: string;
   };
   const sections = currentUser?.sections ?? [];
-  const initialTemplateId = isMilestoneTemplateId(search.milestoneId)
-    ? search.milestoneId
-    : 'proposal';
+  const initialTemplateId =
+    isMilestoneTemplateId(search.milestoneId) &&
+    isSupportedMilestoneCreationTemplate(search.milestoneId)
+      ? search.milestoneId
+      : 'proposal';
   const initialTemplate = getTemplate(initialTemplateId);
   const initialSectionId = sections.some(
     section => section.id === search.sectionId,
@@ -60,6 +68,10 @@ export default function AdminMilestoneSetupPage() {
     useState<MilestoneTemplateId>(initialTemplateId);
   const [title, setTitle] = useState(initialTemplate.title);
   const [description, setDescription] = useState(initialTemplate.description);
+  const [weekNumber, setWeekNumber] = useState('1');
+  const [formError, setFormError] = useState<string>();
+  const [submissionResults, setSubmissionResults] =
+    useState<readonly SubmitAdminSectionMilestonesResult[]>();
   const [sectionIds, setSectionIds] = useState<string[]>(
     initialSectionId ? [initialSectionId] : [],
   );
@@ -72,6 +84,7 @@ export default function AdminMilestoneSetupPage() {
   );
 
   const template = useMemo(() => getTemplate(templateId), [templateId]);
+  const submitMilestonesMutation = useSubmitAdminSectionMilestonesMutation();
   const sectionOptions = sections.map(section => ({
     label: `${section.code} · ${section.name}`,
     value: section.id,
@@ -117,6 +130,56 @@ export default function AdminMilestoneSetupPage() {
     setDescription(nextTemplate.description);
   };
 
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFormError(undefined);
+    setSubmissionResults(undefined);
+
+    const parsedWeekNumber = Number(weekNumber);
+    if (!title.trim()) {
+      setFormError('마일스톤 제목을 입력해주세요.');
+      return;
+    }
+    if (!Number.isInteger(parsedWeekNumber) || parsedWeekNumber < 1) {
+      setFormError('진행 주차는 1 이상의 정수로 입력해주세요.');
+      return;
+    }
+    if (selectedSections.length === 0) {
+      setFormError('대상 분반을 하나 이상 선택해주세요.');
+      return;
+    }
+
+    try {
+      const results = await submitMilestonesMutation.mutateAsync({
+        sections: selectedSections.map(section => ({
+          input: createAdminMilestoneCreateInput({
+            description,
+            schedule:
+              sectionSchedules[section.id] ??
+              createAdminMilestoneSectionScheduleDraft(),
+            templateId,
+            title,
+            weekNumber: parsedWeekNumber,
+          }),
+          publish: sectionSchedules[section.id]?.isPublished ?? false,
+          sectionId: section.id,
+        })),
+      });
+      setSubmissionResults(results);
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : '마일스톤을 저장하지 못했습니다.',
+      );
+    }
+  };
+
+  const getSectionLabel = (sectionId: string) => {
+    const section = sections.find(candidate => candidate.id === sectionId);
+    return section ? `${section.code} · ${section.name}` : sectionId;
+  };
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -132,10 +195,7 @@ export default function AdminMilestoneSetupPage() {
       </header>
 
       <Card padding={4}>
-        <form
-          className={styles.form}
-          onSubmit={event => event.preventDefault()}
-        >
+        <form className={styles.form} onSubmit={handleSubmit}>
           <section className={styles.section}>
             <Heading className={styles.sectionTitle} level={2}>
               기본 설정
@@ -153,17 +213,21 @@ export default function AdminMilestoneSetupPage() {
               width='100%'
             />
             <Text color='secondary' type='supporting'>
-              선택한 분반마다 공개 일정과 공개 상태를 따로 설정합니다. 여러 분반
-              저장의 API 요청 형식은 계약 확정 후 연결합니다.
+              선택한 분반마다 공개 일정과 공개 상태를 따로 설정합니다. 저장하면
+              선택한 분반별로 독립된 요청이 전송됩니다.
             </Text>
             <Selector
               aria-label='마일스톤 기본 양식'
               label='마일스톤 기본 양식'
               onChange={handleTemplateChange}
-              options={milestoneTemplates.map(templateOption => ({
-                label: templateOption.label,
-                value: templateOption.id,
-              }))}
+              options={milestoneTemplates
+                .filter(templateOption =>
+                  isSupportedMilestoneCreationTemplate(templateOption.id),
+                )
+                .map(templateOption => ({
+                  label: templateOption.label,
+                  value: templateOption.id,
+                }))}
               renderOption={option => (
                 <SelectorOption label={option.label ?? option.value} />
               )}
@@ -171,6 +235,18 @@ export default function AdminMilestoneSetupPage() {
               width='100%'
             />
             <TextInput label='제목' onChange={setTitle} value={title} />
+            <label className={styles.weekNumberField}>
+              <Text weight='medium'>진행 주차</Text>
+              <input
+                aria-label='진행 주차'
+                className={styles.numberInput}
+                min='1'
+                onChange={event => setWeekNumber(event.target.value)}
+                required
+                type='number'
+                value={weekNumber}
+              />
+            </label>
             <TextArea
               label='설명'
               onChange={setDescription}
@@ -352,6 +428,55 @@ export default function AdminMilestoneSetupPage() {
                           value='allow-late-submission'
                         />
                       </CheckboxList>
+                      {schedule.allowLateSubmission ? (
+                        <div className={styles.scheduleField}>
+                          <Text weight='medium'>지각 제출 마감 일시</Text>
+                          <div className={styles.scheduleInputs}>
+                            <DateInput
+                              hasClear
+                              label={`${section.code} 지각 제출 마감일`}
+                              onChange={date =>
+                                updateSectionSchedule(section.id, current => ({
+                                  ...current,
+                                  lateSubmissionUntil: {
+                                    ...current.lateSubmissionUntil,
+                                    date: date ?? '',
+                                  },
+                                }))
+                              }
+                              placeholder='날짜 선택'
+                              value={
+                                schedule.lateSubmissionUntil.date
+                                  ? (schedule.lateSubmissionUntil
+                                      .date as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
+                                  : undefined
+                              }
+                              width='100%'
+                            />
+                            <label>
+                              <Text type='supporting'>{`${section.code} 지각 제출 마감 시간`}</Text>
+                              <input
+                                aria-label={`${section.code} 지각 제출 마감 시간`}
+                                className={styles.timeInput}
+                                onChange={event =>
+                                  updateSectionSchedule(
+                                    section.id,
+                                    current => ({
+                                      ...current,
+                                      lateSubmissionUntil: {
+                                        ...current.lateSubmissionUntil,
+                                        time: event.target.value,
+                                      },
+                                    }),
+                                  )
+                                }
+                                type='time'
+                                value={schedule.lateSubmissionUntil.time}
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      ) : null}
                     </article>
                   );
                 })}
@@ -395,19 +520,44 @@ export default function AdminMilestoneSetupPage() {
                 type='supporting'
               >
                 기본 양식의 블록 구성은 현재 학생 화면과 동일한 고정 구조입니다.
-                블록 추가·삭제·순서 변경과 실제 저장은 양식 API 계약 확정 후
-                지원합니다.
+                블록 추가·삭제·순서 변경은 별도 양식 API가 준비되면 지원합니다.
               </Text>
             </div>
           </section>
 
           <div className={styles.action}>
             <Text className={styles.actionNote} type='supporting'>
-              실제 저장은 관리자 마일스톤 API가 병합되고 요청·응답 계약이 확정된
-              뒤 연결합니다.
+              공개를 선택하면 생성 후 공개 상태 변경 요청을 한 번 더 전송합니다.
             </Text>
+            {formError ? (
+              <Text className={styles.formError} role='alert'>
+                {formError}
+              </Text>
+            ) : null}
+            {submissionResults ? (
+              <ul aria-live='polite' className={styles.resultList}>
+                {submissionResults.map(result => (
+                  <li key={result.sectionId}>
+                    {getSectionLabel(result.sectionId)}:{' '}
+                    {result.status === 'published'
+                      ? '생성하고 공개했습니다.'
+                      : result.status === 'created'
+                        ? '미공개 마일스톤으로 생성했습니다.'
+                        : result.status === 'publish-failed'
+                          ? '생성했지만 공개 상태 변경에 실패했습니다. 목록에서 다시 공개할 수 있습니다.'
+                          : '생성에 실패했습니다.'}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             <Link to={ROUTES.ADMIN_MILESTONES}>취소</Link>
-            <Button isDisabled label='저장' type='submit' variant='primary' />
+            <Button
+              isDisabled={submitMilestonesMutation.isPending}
+              isLoading={submitMilestonesMutation.isPending}
+              label='저장'
+              type='submit'
+              variant='primary'
+            />
           </div>
         </form>
       </Card>

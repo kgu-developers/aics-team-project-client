@@ -27,6 +27,8 @@ export const ENDPOINTS = {
       `/api/v1/admin/oop/sections/${sectionId}/milestones`,
     SECTION_MILESTONE: (sectionId: string, milestoneId: string) =>
       `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}`,
+    SECTION_MILESTONE_STATUS: (sectionId: string, milestoneId: string) =>
+      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/status`,
     MILESTONE_SUBMISSION_DETAIL: (submissionId: string) =>
       `/admin/submissions/${submissionId}`,
     SECTION_MILESTONE_SUBMISSIONS: (sectionId: string, milestoneId: string) =>

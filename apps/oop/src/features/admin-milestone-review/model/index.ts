@@ -21,8 +21,13 @@ export {
 export {
   createAdminMilestoneSectionScheduleDraft,
   syncAdminMilestoneSectionScheduleDrafts,
+  toAdminMilestoneDateTime,
   type AdminMilestoneSectionScheduleDraft,
 } from './adminMilestoneSetupDraft';
+export {
+  createAdminMilestoneCreateInput,
+  isSupportedMilestoneCreationTemplate,
+} from './adminMilestoneCreation';
 export {
   findMilestoneTemplate,
   isMilestoneTemplateId,
