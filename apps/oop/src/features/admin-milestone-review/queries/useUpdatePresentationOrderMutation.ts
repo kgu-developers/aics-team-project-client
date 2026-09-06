@@ -12,8 +12,11 @@ export function useUpdatePresentationOrderMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ sectionId: _sectionId, ...input }: Input) =>
-      updatePresentationOrder(input),
+    mutationFn: ({ sectionId, ...input }: Input) => {
+      // sectionId is used for cache invalidation, not sent to the API.
+      void sectionId;
+      return updatePresentationOrder(input);
+    },
     onSuccess: async (_data, variables) => {
       await queryClient.invalidateQueries({
         queryKey: adminPresentationEvaluationKeys.list(variables.sectionId),

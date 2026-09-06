@@ -1,7 +1,7 @@
 import { apiClient } from '../client';
+import type { AdminMilestoneWeekNumbersUpdateInput } from './types';
 import { ENDPOINTS } from '../constants/endpoints';
 
-import type { AdminMilestoneWeekNumbersUpdateInput } from './types';
 
 export async function updateAdminSectionMilestoneWeekNumbers(
   sectionId: string,

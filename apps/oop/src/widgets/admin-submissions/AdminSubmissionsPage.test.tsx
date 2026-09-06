@@ -26,11 +26,11 @@ import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
-import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 import {
   adminPresentationEvaluationHandlers,
   resetPresentationEvaluationScenario,
 } from '~/mocks/handlers/adminPresentationEvaluations';
+import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 
 const server = setupServer(
   ...adminMeetingHandlers,

@@ -1,7 +1,7 @@
 import { apiClient } from '../client';
+import type { AdminMilestoneUpdateInput } from './types';
 import { ENDPOINTS } from '../constants/endpoints';
 
-import type { AdminMilestoneUpdateInput } from './types';
 
 export async function updateAdminSectionMilestone(
   sectionId: string,

@@ -1,9 +1,9 @@
 import { apiClient } from '../client';
-import { ENDPOINTS } from '../constants/endpoints';
 import type {
   AdminMilestoneStatus,
   AdminSectionMilestonesResponse,
 } from './types';
+import { ENDPOINTS } from '../constants/endpoints';
 
 export async function fetchAdminSectionMilestones(
   sectionId: string,
