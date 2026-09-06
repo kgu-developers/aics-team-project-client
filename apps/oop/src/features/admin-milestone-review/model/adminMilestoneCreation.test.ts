@@ -19,11 +19,11 @@ describe('createAdminMilestoneCreateInput', () => {
         weekNumber: 2,
       }),
     ).toEqual({
+      allowResubmissionBeforeDueAt: true,
       description: '제안서를 제출합니다.',
       schedule: {
         dueAt: '2026-09-10T23:59:00',
         opensAt: '2026-09-01T09:00:00',
-        revisionUntil: '2026-09-10T23:59:00',
       },
       title: '프로젝트 제안서',
       type: 'PROPOSAL',

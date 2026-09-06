@@ -13,6 +13,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { useSubmitAdminSectionMilestonesMutation } from './useSubmitAdminSectionMilestonesMutation';
 
 const input: AdminMilestoneCreateInput = {
+  allowResubmissionBeforeDueAt: false,
   schedule: { dueAt: '2026-09-10T23:59:00' },
   title: '제안서',
   type: 'PROPOSAL',

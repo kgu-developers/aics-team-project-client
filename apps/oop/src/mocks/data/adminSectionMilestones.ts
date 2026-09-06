@@ -8,6 +8,7 @@ import type {
 
 const sectionOneMilestones: AdminSectionMilestoneDto[] = [
   {
+    allowResubmissionBeforeDueAt: true,
     description: '프로젝트의 목표와 구성 방식을 정리합니다.',
     id: 101,
     schedule: {
@@ -22,6 +23,7 @@ const sectionOneMilestones: AdminSectionMilestoneDto[] = [
     weekNumber: 3,
   },
   {
+    allowResubmissionBeforeDueAt: false,
     description: '팀별 발표 순서와 동료 평가 기간을 관리합니다.',
     id: 103,
     schedule: {
@@ -37,6 +39,7 @@ const sectionOneMilestones: AdminSectionMilestoneDto[] = [
     weekNumber: 10,
   },
   {
+    allowResubmissionBeforeDueAt: true,
     description: '프로젝트 진행 상황과 설계 내용을 점검합니다.',
     id: 102,
     schedule: {
@@ -55,6 +58,7 @@ const sectionOneMilestones: AdminSectionMilestoneDto[] = [
 
 const sectionTwoMilestones: AdminSectionMilestoneDto[] = [
   {
+    allowResubmissionBeforeDueAt: false,
     description: '발표에 사용할 PDF, ZIP 파일과 시연 URL을 제출합니다.',
     id: 201,
     schedule: {

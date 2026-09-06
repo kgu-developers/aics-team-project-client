@@ -26,11 +26,12 @@ function toDateTimeDraft(value: string | null | undefined): {
 export function createAdminMilestoneSectionScheduleDraftFromDto(
   schedule: AdminMilestoneScheduleDto,
   status: AdminSectionMilestoneDto['status'],
+  allowResubmissionBeforeDueAt: boolean,
 ): AdminMilestoneSectionScheduleDraft {
   return {
     ...createAdminMilestoneSectionScheduleDraft(),
     allowLateSubmission: Boolean(schedule.lateSubmissionUntil),
-    allowSubmissionEditBeforeDueAt: Boolean(schedule.revisionUntil),
+    allowSubmissionEditBeforeDueAt: allowResubmissionBeforeDueAt,
     dueAt: toDateTimeDraft(schedule.dueAt),
     evaluationClosesAt: toDateTimeDraft(schedule.evaluationClosesAt),
     evaluationOpensAt: toDateTimeDraft(schedule.evaluationOpensAt),
@@ -90,6 +91,7 @@ export function createAdminMilestoneUpdateInput({
   });
 
   return {
+    allowResubmissionBeforeDueAt: schedule.allowSubmissionEditBeforeDueAt,
     description: description.trim() || undefined,
     schedule: {
       dueAt,
@@ -101,9 +103,6 @@ export function createAdminMilestoneUpdateInput({
           ? { opensAt }
           : {}),
       ...(lateSubmissionUntil ? { lateSubmissionUntil } : {}),
-      ...(schedule.allowSubmissionEditBeforeDueAt
-        ? { revisionUntil: dueAt }
-        : {}),
     },
     title: title.trim(),
     type,

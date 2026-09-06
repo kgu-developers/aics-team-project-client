@@ -22,6 +22,7 @@ import { useAdminSectionMilestoneQuery } from './useAdminSectionMilestoneQuery';
 
 const request = vi.fn();
 const response: AdminSectionMilestoneDto = {
+  allowResubmissionBeforeDueAt: false,
   description: '프로젝트의 목표와 구성 방식을 정리합니다.',
   id: 101,
   schedule: { dueAt: '2026-10-15T14:59:00Z' },

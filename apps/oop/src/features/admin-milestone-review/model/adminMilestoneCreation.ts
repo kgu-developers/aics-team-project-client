@@ -79,6 +79,7 @@ export function createAdminMilestoneCreateInput({
   });
 
   return {
+    allowResubmissionBeforeDueAt: schedule.allowSubmissionEditBeforeDueAt,
     description: description.trim() || undefined,
     schedule: {
       dueAt,
@@ -90,9 +91,6 @@ export function createAdminMilestoneCreateInput({
           ? { opensAt }
           : {}),
       ...(lateSubmissionUntil ? { lateSubmissionUntil } : {}),
-      ...(schedule.allowSubmissionEditBeforeDueAt
-        ? { revisionUntil: dueAt }
-        : {}),
     },
     title: title.trim(),
     type: milestoneTypeByTemplateId[templateId],
