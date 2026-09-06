@@ -117,9 +117,9 @@ export default function AdminMilestonesPage() {
             <thead>
               <tr>
                 <th>적용 분반</th>
+                <th>제목</th>
                 <th>마감일</th>
                 <th>공개 상태</th>
-                <th>제목</th>
               </tr>
             </thead>
             <tbody>
@@ -128,10 +128,6 @@ export default function AdminMilestonesPage() {
                   key={`${milestone.sectionId}-${milestone.id}-${milestone.sectionLabel}`}
                 >
                   <td>{milestone.sectionLabel}</td>
-                  <td>{formatAdminMilestoneDate(milestone.schedule.dueAt)}</td>
-                  <td>
-                    {milestone.status === 'PUBLISHED' ? '공개' : '미공개'}
-                  </td>
                   <td>
                     <Link
                       className={styles.titleLink}
@@ -143,6 +139,10 @@ export default function AdminMilestonesPage() {
                     >
                       {milestone.title}
                     </Link>
+                  </td>
+                  <td>{formatAdminMilestoneDate(milestone.schedule.dueAt)}</td>
+                  <td>
+                    {milestone.status === 'PUBLISHED' ? '공개' : '미공개'}
                   </td>
                 </tr>
               ))}
