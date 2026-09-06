@@ -123,6 +123,10 @@ export default function AdminMilestoneDetailPage() {
               label='마일스톤 유형'
               value={getAdminMilestoneTypeLabel(milestone.type)}
             />
+            <ReadOnlyField
+              label='진행 주차'
+              value={`${milestone.weekNumber}주차`}
+            />
           </div>
           <ReadOnlyField label='제목' value={milestone.title} />
           <ReadOnlyField label='설명' value={milestone.description ?? '-'} />

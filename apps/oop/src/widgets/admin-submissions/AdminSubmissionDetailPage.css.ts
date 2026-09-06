@@ -48,9 +48,11 @@ export const document = style({
 });
 
 export const documentHeader = style({
+  borderBottom: `1px solid ${tokens.color.border.base}`,
   display: 'flex',
   flexDirection: 'column',
   gap: 8,
+  paddingBottom: 20,
 });
 
 export const documentLabel = style({
@@ -63,6 +65,7 @@ export const section = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 12,
+  paddingTop: 4,
 });
 
 export const sectionDescription = style({
@@ -81,12 +84,9 @@ export const fieldGrid = style({
 });
 
 export const field = style({
-  background: tokens.color.background.muted,
-  borderRadius: 8,
   display: 'flex',
   flexDirection: 'column',
   gap: 6,
-  padding: 16,
 });
 
 export const fullWidthField = style({
@@ -215,4 +215,9 @@ export const evaluatorButton = style({
   padding: 0,
   textDecoration: 'underline',
   textUnderlineOffset: 3,
+});
+
+globalStyle(`${document} > section + section`, {
+  borderTop: `1px solid ${tokens.color.border.base}`,
+  paddingTop: 24,
 });

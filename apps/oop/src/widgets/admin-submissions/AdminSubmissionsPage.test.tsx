@@ -157,7 +157,7 @@ describe('AdminSubmissionsPage', () => {
     await user.click(screen.getAllByRole('link', { name: '상세보기' })[0]!);
 
     expect(
-      await screen.findByRole('heading', { name: '중간 점검 상세보기' }),
+      await screen.findByRole('heading', { name: '제출물 > 중간 점검' }),
     ).toBeInTheDocument();
   });
 
@@ -406,7 +406,7 @@ describe('AdminSubmissionsPage', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: '발표 자료 제출 상세보기',
+        name: '제출물 > 발표 자료 제출',
       }),
     ).toBeInTheDocument();
     expect(

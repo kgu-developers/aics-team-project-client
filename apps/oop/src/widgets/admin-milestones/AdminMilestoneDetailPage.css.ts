@@ -1,5 +1,5 @@
 import { tokens } from '@aics/design-system';
-import { style } from '@vanilla-extract/css';
+import { globalStyle, style } from '@vanilla-extract/css';
 
 export const page = style({
   display: 'flex',
@@ -29,6 +29,7 @@ export const detailCard = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 28,
+  padding: 'clamp(20px, 4vw, 32px)',
 });
 
 export const section = style({
@@ -47,14 +48,10 @@ export const readOnlyGrid = style({
 });
 
 export const readOnlyField = style({
-  background: tokens.color.background.muted,
-  border: `1px solid ${tokens.color.border.base}`,
-  borderRadius: tokens.radius.element,
   display: 'flex',
   flexDirection: 'column',
   gap: 6,
   minWidth: 0,
-  padding: 16,
 });
 
 export const readOnlyValue = style({
@@ -63,12 +60,9 @@ export const readOnlyValue = style({
 });
 
 export const sectionSchedule = style({
-  border: `1px solid ${tokens.color.border.base}`,
-  borderRadius: tokens.radius.container,
   display: 'flex',
   flexDirection: 'column',
   gap: 16,
-  padding: 20,
 });
 
 export const policyTitle = style({ margin: 0 });
@@ -83,4 +77,9 @@ export const policyList = style({
 export const actions = style({
   display: 'flex',
   justifyContent: 'flex-end',
+});
+
+globalStyle(`${detailCard} > section + section`, {
+  borderTop: `1px solid ${tokens.color.border.base}`,
+  paddingTop: 28,
 });

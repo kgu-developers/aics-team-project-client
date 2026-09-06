@@ -728,7 +728,7 @@ export default function AdminSubmissionDetailPage() {
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
-        <Heading level={1}>{milestoneLabel} 상세보기</Heading>
+        <Heading level={1}>제출물 &gt; {milestoneLabel}</Heading>
         <Link
           className={styles.backLink}
           search={search}
