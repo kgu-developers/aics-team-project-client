@@ -2,6 +2,7 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
+import { adminPreSurveyResponsesBySection } from '../data/adminPreSurveyResponses';
 import { getAdminProfile, updateAdminProfile } from '../data/adminProfile';
 
 function guardAdmin(request: Request) {
@@ -22,6 +23,19 @@ function guardAdmin(request: Request) {
 }
 
 export const adminProfileHandlers = [
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRE_SURVEY_RESPONSES(':sectionId')}`,
+    ({ params, request }) => {
+      const errorResponse = guardAdmin(request);
+      if (errorResponse) return errorResponse;
+
+      const sectionId = String(params.sectionId);
+
+      return HttpResponse.json({
+        contents: adminPreSurveyResponsesBySection[sectionId] ?? [],
+      });
+    },
+  ),
   http.get(`${API_BASE_URL}${ENDPOINTS.PROFILE.ME}`, ({ request }) => {
     const errorResponse = guardAdmin(request);
     if (errorResponse) return errorResponse;

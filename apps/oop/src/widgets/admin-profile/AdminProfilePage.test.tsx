@@ -329,14 +329,14 @@ describe('AdminProfilePage', () => {
     ).toBeInTheDocument();
   });
 
-  it('팀 구성 사전 정보에서 계약된 응답 항목만 표시한다', () => {
+  it('팀 구성 사전 정보에서 계약된 응답 항목만 표시한다', async () => {
     renderPage();
 
     expect(
       screen.getByRole('heading', { name: '팀 구성 사전 정보' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
+      await screen.findByText(
         '응답 수: 2명 · 미응답 학생은 현재 API 응답에 포함되지 않습니다.',
       ),
     ).toBeInTheDocument();
@@ -361,10 +361,36 @@ describe('AdminProfilePage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('사전 정보 조회가 실패하면 오류를 표시한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRE_SURVEY_RESPONSES(':sectionId')}`,
+        () =>
+          HttpResponse.json(
+            { code: 'PRE_SURVEY_LOOKUP_FAILED' },
+            { status: 500 },
+          ),
+      ),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        '사전 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      ),
+    ).toHaveAttribute('role', 'alert');
+  });
+
   it('분반 목록이 나중에 들어오면 첫 분반의 사전 정보를 표시한다', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, retryDelay: 0 } },
+    });
+    queryClients.push(queryClient);
     const { rerender } = render(
       <AstryxThemeProvider>
-        <AdminPreSurveyResponses sections={[]} />
+        <QueryClientProvider client={queryClient}>
+          <AdminPreSurveyResponses sections={[]} />
+        </QueryClientProvider>
       </AstryxThemeProvider>,
     );
 
@@ -374,9 +400,11 @@ describe('AdminProfilePage', () => {
 
     rerender(
       <AstryxThemeProvider>
-        <AdminPreSurveyResponses
-          sections={[{ code: 'OOP-01', id: 'oop-2026-2-01', name: '분반 1' }]}
-        />
+        <QueryClientProvider client={queryClient}>
+          <AdminPreSurveyResponses
+            sections={[{ code: 'OOP-01', id: 'oop-2026-2-01', name: '분반 1' }]}
+          />
+        </QueryClientProvider>
       </AstryxThemeProvider>,
     );
 

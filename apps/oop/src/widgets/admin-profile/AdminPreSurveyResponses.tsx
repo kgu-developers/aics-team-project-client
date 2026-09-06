@@ -12,9 +12,9 @@ import { useEffect, useState } from 'react';
 
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
-import * as styles from './AdminPreSurveyResponses.css';
+import { useAdminPreSurveyResponsesQuery } from '~/features/admin-profile/queries';
 
-import { adminPreSurveyResponsesBySection } from '~/mocks/data/adminPreSurveyResponses';
+import * as styles from './AdminPreSurveyResponses.css';
 
 type Section = { code: string; id: string; name: string };
 
@@ -28,8 +28,14 @@ const roleLabels: Record<string, string> = {
   TEAM_LEADER: '팀장(프로젝트 매니저)',
 };
 
-function formatPreferredRoles(roles: string[]) {
-  return roles.map(role => roleLabels[role] ?? role).join(', ');
+function formatPreferredRoles(roles: unknown) {
+  if (!Array.isArray(roles)) return '-';
+
+  const labels = roles
+    .filter((role): role is string => typeof role === 'string')
+    .map(role => roleLabels[role] ?? role);
+
+  return labels.length > 0 ? labels.join(', ') : '-';
 }
 
 export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
@@ -47,7 +53,9 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
     });
   }, [sections]);
 
-  const responses = adminPreSurveyResponsesBySection[sectionId] ?? [];
+  const responsesQuery = useAdminPreSurveyResponsesQuery(
+    sectionId || undefined,
+  );
 
   return (
     <Card className={styles.section} padding={4}>
@@ -80,59 +88,71 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
               width='100%'
             />
 
-            <Text color='secondary' role='status' type='supporting'>
-              응답 수: {responses.length}명 · 미응답 학생은 현재 API 응답에
-              포함되지 않습니다.
-            </Text>
+            {responsesQuery.isPending ? (
+              <Text color='secondary' role='status'>
+                사전 정보를 불러오는 중입니다.
+              </Text>
+            ) : responsesQuery.isError ? (
+              <Text role='alert'>
+                사전 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+              </Text>
+            ) : (
+              <>
+                <Text color='secondary' role='status' type='supporting'>
+                  응답 수: {responsesQuery.data.length}명 · 미응답 학생은 현재
+                  API 응답에 포함되지 않습니다.
+                </Text>
 
-            <div className={styles.table}>
-              <Table
-                columns={[
-                  {
-                    align: 'start',
-                    header: '학번',
-                    key: 'userId',
-                    width: proportional(0.7, { minWidth: 120 }),
-                  },
-                  {
-                    align: 'start',
-                    header: '희망 역할',
-                    key: 'preferredRoles',
-                    renderCell: response =>
-                      formatPreferredRoles(response.preferredRoles),
-                    width: proportional(1.1, { minWidth: 180 }),
-                  },
-                  {
-                    align: 'start',
-                    header: '주제 의견',
-                    key: 'topicOpinion',
-                    renderCell: response => response.topicOpinion ?? '-',
-                    width: proportional(1.4, { minWidth: 220 }),
-                  },
-                  {
-                    align: 'start',
-                    header: '기타 의견',
-                    key: 'etcOpinion',
-                    renderCell: response => response.etcOpinion ?? '-',
-                    width: proportional(1.4, { minWidth: 220 }),
-                  },
-                  {
-                    align: 'start',
-                    header: '제출일',
-                    key: 'submittedAt',
-                    width: proportional(0.9, { minWidth: 160 }),
-                  },
-                ]}
-                data={responses}
-                density='balanced'
-                dividers='rows'
-                emptyState={<span>제출된 사전 정보가 없습니다.</span>}
-                idKey='id'
-                plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
-                textOverflow='wrap'
-                verticalAlign='middle'
-              />
-            </div>
+                <div className={styles.table}>
+                  <Table
+                    columns={[
+                      {
+                        align: 'start',
+                        header: '학번',
+                        key: 'userId',
+                        width: proportional(0.7, { minWidth: 120 }),
+                      },
+                      {
+                        align: 'start',
+                        header: '희망 역할',
+                        key: 'preferredRoles',
+                        renderCell: response =>
+                          formatPreferredRoles(response.preferredRoles),
+                        width: proportional(1.1, { minWidth: 180 }),
+                      },
+                      {
+                        align: 'start',
+                        header: '주제 의견',
+                        key: 'topicOpinion',
+                        renderCell: response => response.topicOpinion ?? '-',
+                        width: proportional(1.4, { minWidth: 220 }),
+                      },
+                      {
+                        align: 'start',
+                        header: '기타 의견',
+                        key: 'etcOpinion',
+                        renderCell: response => response.etcOpinion ?? '-',
+                        width: proportional(1.4, { minWidth: 220 }),
+                      },
+                      {
+                        align: 'start',
+                        header: '제출일',
+                        key: 'submittedAt',
+                        width: proportional(0.9, { minWidth: 160 }),
+                      },
+                    ]}
+                    data={responsesQuery.data}
+                    density='balanced'
+                    dividers='rows'
+                    emptyState={<span>제출된 사전 정보가 없습니다.</span>}
+                    idKey='id'
+                    plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
+                    textOverflow='wrap'
+                    verticalAlign='middle'
+                  />
+                </div>
+              </>
+            )}
           </>
         )}
       </VStack>

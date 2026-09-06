@@ -34,6 +34,11 @@ export {
   type AdminOopUserDto,
 } from './adminSection';
 export {
+  fetchAdminPreSurveyResponses,
+  type AdminPreSurveyResponseDto,
+  type AdminPreSurveyResponsesResponse,
+} from './adminPreSurvey';
+export {
   fetchAdminMeetingRecord,
   fetchAdminMeetingRecords,
   type AdminMeetingRecordDetailDto,

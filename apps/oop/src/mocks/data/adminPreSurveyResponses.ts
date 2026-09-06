@@ -7,8 +7,7 @@ export type AdminPreSurveyResponsePreview = {
   userId: string;
 };
 
-// UI preview only. Replace this fixture with the KD3-148 admin query response
-// after the API is merged and the section-id mapping is confirmed.
+// MSW fixture for the KD3-148 administrator pre-survey response contract.
 export const adminPreSurveyResponsesBySection: Record<
   string,
   AdminPreSurveyResponsePreview[]
