@@ -1,6 +1,7 @@
 import {
   updateAdminSectionMilestone,
   updateAdminSectionMilestoneStatus,
+  updateAdminSectionMilestoneWeekNumbers,
   type AdminMilestoneStatus,
   type AdminMilestoneUpdateInput,
 } from '@aics/api-client';
@@ -12,12 +13,15 @@ export type UpdateAdminSectionMilestoneInput = {
   currentStatus: AdminMilestoneStatus;
   input: AdminMilestoneUpdateInput;
   milestoneId: string;
+  currentWeekNumber: number;
   sectionId: string;
   status: AdminMilestoneStatus;
+  weekNumber: number;
 };
 
 export type UpdateAdminSectionMilestoneResult = {
   statusUpdated: boolean;
+  weekNumberUpdated: boolean;
 };
 
 export function useUpdateAdminSectionMilestoneMutation() {
@@ -26,21 +30,36 @@ export function useUpdateAdminSectionMilestoneMutation() {
   return useMutation({
     mutationFn: async ({
       currentStatus,
+      currentWeekNumber,
       input,
       milestoneId,
       sectionId,
       status,
+      weekNumber,
     }: UpdateAdminSectionMilestoneInput): Promise<UpdateAdminSectionMilestoneResult> => {
       await updateAdminSectionMilestone(sectionId, milestoneId, input);
 
-      if (currentStatus === status) return { statusUpdated: true };
-
-      try {
-        await updateAdminSectionMilestoneStatus(sectionId, milestoneId, status);
-        return { statusUpdated: true };
-      } catch {
-        return { statusUpdated: false };
+      let weekNumberUpdated = true;
+      if (currentWeekNumber !== weekNumber) {
+        try {
+          await updateAdminSectionMilestoneWeekNumbers(sectionId, {
+            changes: [{ milestoneId: Number(milestoneId), weekNumber }],
+          });
+        } catch {
+          weekNumberUpdated = false;
+        }
       }
+
+      let statusUpdated = true;
+      if (currentStatus !== status) {
+        try {
+          await updateAdminSectionMilestoneStatus(sectionId, milestoneId, status);
+        } catch {
+          statusUpdated = false;
+        }
+      }
+
+      return { statusUpdated, weekNumberUpdated };
     },
     onSuccess: async (_, variables) => {
       await Promise.all([

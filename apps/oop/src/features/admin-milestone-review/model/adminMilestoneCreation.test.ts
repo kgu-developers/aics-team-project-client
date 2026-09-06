@@ -47,6 +47,22 @@ describe('createAdminMilestoneCreateInput', () => {
     ).toThrow('지각 제출 마감 일시를 입력해주세요.');
   });
 
+  it('공개 시작일이 제출 마감일보다 늦으면 생성하지 않는다', () => {
+    const schedule = createAdminMilestoneSectionScheduleDraft();
+    schedule.opensAt = { date: '2026-09-11', time: '09:00' };
+    schedule.dueAt = { date: '2026-09-10', time: '23:59' };
+
+    expect(() =>
+      createAdminMilestoneCreateInput({
+        description: '',
+        schedule,
+        templateId: 'proposal',
+        title: '제안서',
+        weekNumber: 2,
+      }),
+    ).toThrow('공개 시작 일시는 제출 마감 일시보다 앞서야 합니다.');
+  });
+
   it('단계 구분이 확정되지 않은 발표 양식은 생성하지 않는다', () => {
     const schedule = createAdminMilestoneSectionScheduleDraft();
     schedule.dueAt = { date: '2026-09-10', time: '23:59' };

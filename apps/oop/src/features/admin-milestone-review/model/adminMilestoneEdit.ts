@@ -5,16 +5,21 @@ import type {
 } from '@aics/api-client';
 
 import {
+  assertAdminMilestoneScheduleOrder,
   createAdminMilestoneSectionScheduleDraft,
   toAdminMilestoneDateTime,
   type AdminMilestoneSectionScheduleDraft,
 } from './adminMilestoneSetupDraft';
 
-function toDateTimeDraft(value: string | null | undefined) {
+function toDateTimeDraft(
+  value: string | null | undefined,
+): { date: string; time: string } {
   if (!value) return { date: '', time: '' };
 
   const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(value);
-  return match ? { date: match[1], time: match[2] } : { date: '', time: '' };
+  return match
+    ? { date: match[1] ?? '', time: match[2] ?? '' }
+    : { date: '', time: '' };
 }
 
 export function createAdminMilestoneSectionScheduleDraftFromDto(
@@ -54,6 +59,8 @@ export function createAdminMilestoneUpdateInput({
   }
 
   const opensAt = toAdminMilestoneDateTime(schedule.opensAt);
+
+  assertAdminMilestoneScheduleOrder({ dueAt, lateSubmissionUntil, opensAt });
 
   return {
     description: description.trim() || undefined,

@@ -32,6 +32,15 @@ const server = setupServer(
       return new HttpResponse(null, { status: 204 });
     },
   ),
+  http.put(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_WEEK_NUMBERS('1')}`,
+    async ({ request }) => {
+      expect(await request.json()).toEqual({
+        changes: [{ milestoneId: 101, weekNumber: 4 }],
+      });
+      return new HttpResponse(null, { status: 204 });
+    },
+  ),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -59,14 +68,19 @@ describe('useUpdateAdminSectionMilestoneMutation', () => {
 
     result.current.mutate({
       currentStatus: 'DRAFT',
+      currentWeekNumber: 3,
       input,
       milestoneId: '101',
       sectionId: '1',
       status: 'PUBLISHED',
+      weekNumber: 4,
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual({ statusUpdated: true });
+    expect(result.current.data).toEqual({
+      statusUpdated: true,
+      weekNumberUpdated: true,
+    });
   });
 
   it('공개 상태 변경이 실패해도 수정 완료 사실을 유지한다', async () => {
@@ -87,13 +101,51 @@ describe('useUpdateAdminSectionMilestoneMutation', () => {
 
     result.current.mutate({
       currentStatus: 'DRAFT',
+      currentWeekNumber: 4,
       input,
       milestoneId: '101',
       sectionId: '1',
       status: 'PUBLISHED',
+      weekNumber: 4,
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual({ statusUpdated: false });
+    expect(result.current.data).toEqual({
+      statusUpdated: false,
+      weekNumberUpdated: true,
+    });
+  });
+
+  it('주차 변경이 실패해도 내용과 공개 상태 변경 결과를 함께 반환한다', async () => {
+    server.use(
+      http.put(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_WEEK_NUMBERS('1')}`,
+        () =>
+          HttpResponse.json(
+            { message: '같은 분반의 주차가 이미 사용 중입니다.' },
+            { status: 409 },
+          ),
+      ),
+    );
+    const { result } = renderHook(
+      () => useUpdateAdminSectionMilestoneMutation(),
+      { wrapper: createWrapper() },
+    );
+
+    result.current.mutate({
+      currentStatus: 'PUBLISHED',
+      currentWeekNumber: 3,
+      input,
+      milestoneId: '101',
+      sectionId: '1',
+      status: 'PUBLISHED',
+      weekNumber: 4,
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual({
+      statusUpdated: true,
+      weekNumberUpdated: false,
+    });
   });
 });

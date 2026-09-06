@@ -57,6 +57,15 @@ export type AdminMilestoneUpdateInput = {
   type: AdminMilestoneType;
 };
 
+export type AdminMilestoneWeekNumberChange = {
+  milestoneId: number;
+  weekNumber: number;
+};
+
+export type AdminMilestoneWeekNumbersUpdateInput = {
+  changes: AdminMilestoneWeekNumberChange[];
+};
+
 export type AdminMilestonePersistResponse = {
   id: number;
 };

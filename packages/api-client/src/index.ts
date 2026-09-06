@@ -85,6 +85,7 @@ export {
   submitAdminSectionMilestone,
   updateAdminSectionMilestone,
   updateAdminSectionMilestoneStatus,
+  updateAdminSectionMilestoneWeekNumbers,
   type AdminMilestoneCreateInput,
   type AdminMilestonePersistResponse,
   type AdminMilestoneScheduleRequest,
@@ -95,6 +96,8 @@ export {
   type AdminMilestoneStatus,
   type AdminMilestoneType,
   type AdminMilestoneUpdateInput,
+  type AdminMilestoneWeekNumberChange,
+  type AdminMilestoneWeekNumbersUpdateInput,
   type AdminSectionMilestoneDto,
   type AdminSectionMilestonesResponse,
 } from './milestones';

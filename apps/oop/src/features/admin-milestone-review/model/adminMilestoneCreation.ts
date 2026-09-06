@@ -4,6 +4,7 @@ import type {
 } from '@aics/api-client';
 
 import {
+  assertAdminMilestoneScheduleOrder,
   type AdminMilestoneSectionScheduleDraft,
   toAdminMilestoneDateTime,
 } from './adminMilestoneSetupDraft';
@@ -49,6 +50,8 @@ export function createAdminMilestoneCreateInput({
   if (schedule.allowLateSubmission && !lateSubmissionUntil) {
     throw new Error('지각 제출 마감 일시를 입력해주세요.');
   }
+
+  assertAdminMilestoneScheduleOrder({ dueAt, lateSubmissionUntil, opensAt });
 
   return {
     description: description.trim() || undefined,

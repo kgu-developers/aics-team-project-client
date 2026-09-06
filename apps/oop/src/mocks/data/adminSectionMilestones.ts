@@ -125,3 +125,38 @@ export function updateAdminSectionMilestoneFixture(
   Object.assign(milestone, input);
   return milestone;
 }
+
+export function updateAdminSectionMilestoneFixtureWeekNumbers(
+  sectionId: string,
+  changes: readonly { milestoneId: number; weekNumber: number }[],
+) {
+  const milestones = milestonesBySectionId[sectionId];
+  if (!milestones) return undefined;
+
+  const milestoneIds = new Set(milestones.map(milestone => milestone.id));
+  if (
+    changes.length === 0 ||
+    changes.some(
+      change =>
+        !milestoneIds.has(change.milestoneId) ||
+        !Number.isInteger(change.weekNumber) ||
+        change.weekNumber < 1,
+    )
+  ) {
+    return null;
+  }
+
+  const nextWeekNumberById = new Map(
+    changes.map(change => [change.milestoneId, change.weekNumber]),
+  );
+  const nextWeekNumbers = milestones.map(
+    milestone => nextWeekNumberById.get(milestone.id) ?? milestone.weekNumber,
+  );
+  if (new Set(nextWeekNumbers).size !== nextWeekNumbers.length) return null;
+
+  for (const milestone of milestones) {
+    const weekNumber = nextWeekNumberById.get(milestone.id);
+    if (weekNumber !== undefined) milestone.weekNumber = weekNumber;
+  }
+  return milestones;
+}

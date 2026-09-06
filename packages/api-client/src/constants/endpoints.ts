@@ -29,6 +29,8 @@ export const ENDPOINTS = {
       `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}`,
     SECTION_MILESTONE_STATUS: (sectionId: string, milestoneId: string) =>
       `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/status`,
+    SECTION_MILESTONE_WEEK_NUMBERS: (sectionId: string) =>
+      `/api/v1/admin/oop/sections/${sectionId}/milestones/week-numbers`,
     MILESTONE_SUBMISSION_DETAIL: (submissionId: string) =>
       `/admin/submissions/${submissionId}`,
     SECTION_MILESTONE_SUBMISSIONS: (sectionId: string, milestoneId: string) =>

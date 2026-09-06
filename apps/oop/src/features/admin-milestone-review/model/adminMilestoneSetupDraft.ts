@@ -39,6 +39,23 @@ export function toAdminMilestoneDateTime(
   return `${dateTime.date}T${dateTime.time}:00`;
 }
 
+export function assertAdminMilestoneScheduleOrder({
+  dueAt,
+  lateSubmissionUntil,
+  opensAt,
+}: {
+  dueAt: string;
+  lateSubmissionUntil?: string;
+  opensAt?: string;
+}) {
+  if (opensAt && opensAt >= dueAt) {
+    throw new Error('공개 시작 일시는 제출 마감 일시보다 앞서야 합니다.');
+  }
+  if (lateSubmissionUntil && lateSubmissionUntil <= dueAt) {
+    throw new Error('지각 제출 마감 일시는 제출 마감 일시보다 뒤여야 합니다.');
+  }
+}
+
 export function syncAdminMilestoneSectionScheduleDrafts(
   sectionIds: readonly string[],
   currentDrafts: Readonly<Record<string, AdminMilestoneSectionScheduleDraft>>,

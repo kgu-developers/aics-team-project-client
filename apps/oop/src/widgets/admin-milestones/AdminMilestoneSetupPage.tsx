@@ -35,6 +35,7 @@ import {
 import {
   useSubmitAdminSectionMilestonesMutation,
   useAdminSectionMilestoneQuery,
+  useAdminSectionMilestonesQuery,
   useUpdateAdminSectionMilestoneMutation,
   type SubmitAdminSectionMilestonesResult,
 } from '~/features/admin-milestone-review/queries';
@@ -108,7 +109,10 @@ export default function AdminMilestoneSetupPage() {
     editingSectionId,
     editingMilestoneId,
   );
-  const hydratedMilestoneKey = useRef<string>();
+  const sectionMilestonesQuery = useAdminSectionMilestonesQuery(
+    editingSectionId,
+  );
+  const hydratedMilestoneKey = useRef<string | undefined>(undefined);
   const sectionOptions = sections.map(section => ({
     label: `${section.code} · ${section.name}`,
     value: section.id,
@@ -130,6 +134,7 @@ export default function AdminMilestoneSetupPage() {
     hydratedMilestoneKey.current = milestoneKey;
     setTitle(milestone.title);
     setDescription(milestone.description ?? '');
+    setWeekNumber(String(milestone.weekNumber));
     setSectionIds([editingSectionId]);
     setSectionSchedules({
       [editingSectionId]: createAdminMilestoneSectionScheduleDraftFromDto(
@@ -194,9 +199,28 @@ export default function AdminMilestoneSetupPage() {
         return;
       }
 
+      const parsedWeekNumber = Number(weekNumber);
+      if (!Number.isInteger(parsedWeekNumber) || parsedWeekNumber < 1) {
+        setFormError('진행 주차는 1 이상의 정수로 입력해주세요.');
+        return;
+      }
+
+      const duplicateMilestone = sectionMilestonesQuery.data?.content.find(
+        candidate =>
+          candidate.id !== milestone.id &&
+          candidate.weekNumber === parsedWeekNumber,
+      );
+      if (duplicateMilestone) {
+        setFormError(
+          `${parsedWeekNumber}주차는 '${duplicateMilestone.title}' 마일스톤이 이미 사용 중입니다. 주차 교환은 여러 마일스톤을 함께 변경하는 기능에서 지원할 예정입니다.`,
+        );
+        return;
+      }
+
       try {
         const result = await updateMilestoneMutation.mutateAsync({
           currentStatus: milestone.status,
+          currentWeekNumber: milestone.weekNumber,
           input: createAdminMilestoneUpdateInput({
             description,
             schedule,
@@ -211,18 +235,26 @@ export default function AdminMilestoneSetupPage() {
               : schedule.isPublished
                 ? 'PUBLISHED'
                 : 'DRAFT',
+          weekNumber: parsedWeekNumber,
         });
-        setFormError(
-          result.statusUpdated
-            ? undefined
-            : '내용과 일정은 저장했지만 공개 상태 변경에 실패했습니다. 상세 화면에서 다시 시도해주세요.',
-        );
-        if (result.statusUpdated) {
+        if (result.weekNumberUpdated && result.statusUpdated) {
           await navigate({
             params: { milestoneId: editingMilestoneId },
             search: { sectionId: editingSectionId },
             to: ROUTES.ADMIN_MILESTONE_DETAIL,
           });
+        } else if (!result.weekNumberUpdated && !result.statusUpdated) {
+          setFormError(
+            '내용과 일정은 저장했지만 주차와 공개 상태 변경에 실패했습니다. 다시 시도해주세요.',
+          );
+        } else if (!result.weekNumberUpdated) {
+          setFormError(
+            '내용과 일정은 저장했지만 주차 변경에 실패했습니다. 다른 마일스톤이 해당 주차를 사용 중인지 확인한 뒤 다시 시도해주세요.',
+          );
+        } else {
+          setFormError(
+            '내용·일정·주차는 저장했지만 공개 상태 변경에 실패했습니다. 상세 화면에서 다시 시도해주세요.',
+          );
         }
       } catch (error) {
         setFormError(
@@ -343,9 +375,6 @@ export default function AdminMilestoneSetupPage() {
                     ? getAdminMilestoneTypeLabel(milestoneQuery.data.type)
                     : '-'}
                 </Text>
-                <Text color='secondary' type='supporting'>
-                  진행 주차와 유형은 별도 주차 변경 기능에서 관리합니다.
-                </Text>
               </>
             ) : (
               <>
@@ -386,20 +415,24 @@ export default function AdminMilestoneSetupPage() {
               </>
             )}
             <TextInput label='제목' onChange={setTitle} value={title} />
-            {!isEditing ? (
-              <label className={styles.weekNumberField}>
-                <Text weight='medium'>진행 주차</Text>
-                <input
-                  aria-label='진행 주차'
-                  className={styles.numberInput}
-                  min='1'
-                  onChange={event => setWeekNumber(event.target.value)}
-                  required
-                  type='number'
-                  value={weekNumber}
-                />
-              </label>
-            ) : null}
+            <label className={styles.weekNumberField}>
+              <Text weight='medium'>진행 주차</Text>
+              <input
+                aria-label='진행 주차'
+                className={styles.numberInput}
+                min='1'
+                onChange={event => setWeekNumber(event.target.value)}
+                required
+                type='number'
+                value={weekNumber}
+              />
+              {isEditing ? (
+                <Text color='secondary' type='supporting'>
+                  주차를 변경해도 공개·제출 일정은 자동으로 변경되지 않습니다.
+                  이미 사용 중인 주차는 선택할 수 없습니다.
+                </Text>
+              ) : null}
+            </label>
             <TextArea
               label='설명'
               onChange={setDescription}
@@ -694,7 +727,7 @@ export default function AdminMilestoneSetupPage() {
           <div className={styles.action}>
             <Text className={styles.actionNote} type='supporting'>
               {isEditing
-                ? '내용과 일정을 저장한 뒤, 공개 상태가 변경된 경우에만 공개 상태 변경 요청을 전송합니다.'
+                ? '내용과 일정을 저장한 뒤, 변경된 경우에만 주차와 공개 상태 변경 요청을 각각 전송합니다.'
                 : '공개를 선택하면 생성 후 공개 상태 변경 요청을 한 번 더 전송합니다.'}
             </Text>
             {formError ? (

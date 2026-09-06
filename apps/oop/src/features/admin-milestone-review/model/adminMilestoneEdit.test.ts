@@ -47,4 +47,23 @@ describe('adminMilestoneEdit', () => {
       type: 'PROPOSAL',
     });
   });
+
+  it('지각 제출 마감일이 일반 제출 마감일보다 빠르면 수정하지 않는다', () => {
+    const schedule = createAdminMilestoneSectionScheduleDraftFromDto(
+      {
+        dueAt: '2026-09-10T23:59:00',
+        lateSubmissionUntil: '2026-09-10T23:59:00',
+      },
+      'DRAFT',
+    );
+
+    expect(() =>
+      createAdminMilestoneUpdateInput({
+        description: '',
+        schedule,
+        title: '제안서',
+        type: 'PROPOSAL',
+      }),
+    ).toThrow('지각 제출 마감 일시는 제출 마감 일시보다 뒤여야 합니다.');
+  });
 });

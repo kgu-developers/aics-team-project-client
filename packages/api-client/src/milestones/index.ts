@@ -9,6 +9,7 @@ export { fetchAdminSectionMilestones } from './fetchAdminSectionMilestones';
 export { submitAdminSectionMilestone } from './submitAdminSectionMilestone';
 export { updateAdminSectionMilestone } from './updateAdminSectionMilestone';
 export { updateAdminSectionMilestoneStatus } from './updateAdminSectionMilestoneStatus';
+export { updateAdminSectionMilestoneWeekNumbers } from './updateAdminSectionMilestoneWeekNumbers';
 export type {
   AdminMilestoneCreateInput,
   AdminMilestonePersistResponse,
@@ -17,6 +18,8 @@ export type {
   AdminMilestoneStatus,
   AdminMilestoneType,
   AdminMilestoneUpdateInput,
+  AdminMilestoneWeekNumberChange,
+  AdminMilestoneWeekNumbersUpdateInput,
   AdminSectionMilestoneDto,
   AdminSectionMilestonesResponse,
 } from './types';
