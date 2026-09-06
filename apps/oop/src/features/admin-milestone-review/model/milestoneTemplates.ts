@@ -27,13 +27,7 @@ export const milestoneTemplates: readonly MilestoneTemplate[] = [
     label: '중간 점검',
     title: '중간 점검',
     description: '프로젝트 진행 상황과 설계 내용을 점검하는 기본 양식입니다.',
-    fields: [
-      '주제',
-      '화면 GUI 설계',
-      '엔진부 설계',
-      '팀프로젝트 진행 계획',
-      '중간 점검 질문',
-    ],
+    fields: ['주제', '화면 GUI 설계', '엔진부 설계', '팀프로젝트 진행 계획'],
   },
   {
     id: 'presentation-submit',
