@@ -211,6 +211,10 @@ export default function AdminSubmissionsPage() {
     sectionMilestonesQuery.data?.content.find(
       milestone => milestone.type === 'PRESENTATION',
     );
+  const isPresentationMilestoneLoading = sectionMilestonesQuery.isPending;
+  const isPresentationMilestoneError = sectionMilestonesQuery.isError;
+  const isPresentationMilestoneMissing =
+    sectionMilestonesQuery.isSuccess && !presentationEvaluationMilestone;
   const sectionLabel =
     submissionsQuery.data?.sectionLabel ??
     accessibleSections.find(section => section.id === effectiveSectionId)
@@ -308,13 +312,21 @@ export default function AdminSubmissionsPage() {
                   <Heading level={2}>발표 평가 목록</Heading>
                   <div className={styles.evaluationActions}>
                     <Button
-                      isDisabled={!presentationEvaluationMilestone}
+                      isDisabled={
+                        isPresentationMilestoneLoading ||
+                        isPresentationMilestoneError ||
+                        isPresentationMilestoneMissing
+                      }
                       label='순서 배정 및 평가'
                       onClick={() => setIsEvaluationSettingsOpen(true)}
                       tooltip={
-                        presentationEvaluationMilestone
-                          ? undefined
-                          : '발표 평가 마일스톤을 먼저 설정해 주세요.'
+                        isPresentationMilestoneLoading
+                          ? '발표 평가 마일스톤을 불러오는 중입니다.'
+                          : isPresentationMilestoneError
+                            ? '발표 평가 마일스톤을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+                            : isPresentationMilestoneMissing
+                              ? '발표 평가 마일스톤을 먼저 설정해 주세요.'
+                              : undefined
                       }
                     />
                     <Button

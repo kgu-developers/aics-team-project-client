@@ -6,10 +6,50 @@ import {
   adminPresentationEvaluationsFixture,
   resetAdminPresentationEvaluationsFixture,
 } from '../data/adminPresentationEvaluations';
+import {
+  getAdminSectionMilestoneFixture,
+  resetAdminSectionMilestonesFixture,
+} from '../data/adminSectionMilestones';
 import { demoAdmin } from '../data/users';
 
 function resetPresentationEvaluationScenario() {
   resetAdminPresentationEvaluationsFixture();
+  resetAdminSectionMilestonesFixture();
+}
+
+function getPresentationEvaluationPeriod() {
+  const schedule = getAdminSectionMilestoneFixture(
+    adminPresentationEvaluationsFixture.section.id,
+    '103',
+  )?.schedule;
+  const startsAt = schedule?.evaluationOpensAt ?? schedule?.opensAt;
+  const endsAt = schedule?.evaluationClosesAt ?? schedule?.dueAt;
+
+  return startsAt && endsAt
+    ? { endsAt, startsAt }
+    : adminPresentationEvaluationsFixture.evaluationPeriod;
+}
+
+function isPresentationOrderRequest(
+  value: unknown,
+): value is { teamOrders: Array<{ teamId: number; order: number }> } {
+  if (!value || typeof value !== 'object' || !('teamOrders' in value)) {
+    return false;
+  }
+
+  const { teamOrders } = value;
+  return (
+    Array.isArray(teamOrders) &&
+    teamOrders.every(
+      team =>
+        Boolean(team) &&
+        typeof team === 'object' &&
+        'teamId' in team &&
+        'order' in team &&
+        Number.isInteger(team.teamId) &&
+        Number.isInteger(team.order),
+    )
+  );
 }
 
 export const adminPresentationEvaluationHandlers = [
@@ -28,9 +68,10 @@ export const adminPresentationEvaluationHandlers = [
           { status: 403 },
         );
       }
-      return HttpResponse.json(
-        structuredClone(adminPresentationEvaluationsFixture),
-      );
+      return HttpResponse.json({
+        ...structuredClone(adminPresentationEvaluationsFixture),
+        evaluationPeriod: getPresentationEvaluationPeriod(),
+      });
     },
   ),
   http.patch(
@@ -49,10 +90,13 @@ export const adminPresentationEvaluationHandlers = [
         );
       }
 
-      const body = (await request.json()) as {
-        teamOrders?: Array<{ teamId: number; order: number }>;
-      };
-      if (!body.teamOrders) {
+      let body: unknown;
+      try {
+        body = await request.json();
+      } catch {
+        body = undefined;
+      }
+      if (!isPresentationOrderRequest(body)) {
         return HttpResponse.json(
           { message: '필수 설정이 없습니다.' },
           { status: 400 },

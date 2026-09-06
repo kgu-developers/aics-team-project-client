@@ -69,6 +69,9 @@ const sectionTwoMilestones: AdminSectionMilestoneDto[] = [
   },
 ];
 
+const initialSectionOneMilestones = structuredClone(sectionOneMilestones);
+const initialSectionTwoMilestones = structuredClone(sectionTwoMilestones);
+
 const milestonesBySectionId: Record<string, AdminSectionMilestoneDto[]> = {
   'oop-2026-2-01': sectionOneMilestones,
   'oop-2026-2-02': sectionTwoMilestones,
@@ -77,6 +80,20 @@ const milestonesBySectionId: Record<string, AdminSectionMilestoneDto[]> = {
 };
 
 let nextMilestoneId = 300;
+
+export function resetAdminSectionMilestonesFixture() {
+  sectionOneMilestones.splice(
+    0,
+    sectionOneMilestones.length,
+    ...structuredClone(initialSectionOneMilestones),
+  );
+  sectionTwoMilestones.splice(
+    0,
+    sectionTwoMilestones.length,
+    ...structuredClone(initialSectionTwoMilestones),
+  );
+  nextMilestoneId = 300;
+}
 
 export function getAdminSectionMilestonesFixture(
   sectionId: string,

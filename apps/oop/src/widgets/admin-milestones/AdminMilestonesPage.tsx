@@ -26,18 +26,20 @@ export default function AdminMilestonesPage() {
     search.sectionId && accessibleSectionIds.includes(search.sectionId)
       ? search.sectionId
       : allSectionsValue;
-  const milestoneQueries =
-    useAdminAccessibleSectionMilestonesQuery(accessibleSectionIds);
-  const isPending = milestoneQueries.some(query => query.isPending);
-  const isError = milestoneQueries.some(query => query.isError);
-  const milestones = accessibleSections.flatMap((section, index) => {
-    if (
-      selectedSectionId !== allSectionsValue &&
-      section.id !== selectedSectionId
-    ) {
-      return [];
-    }
-
+  const displayedSections = accessibleSections.filter(
+    section =>
+      selectedSectionId === allSectionsValue ||
+      section.id === selectedSectionId,
+  );
+  const milestoneQueries = useAdminAccessibleSectionMilestonesQuery(
+    displayedSections.map(section => section.id),
+  );
+  const isLoading = milestoneQueries.some(query => query.isPending);
+  const hasSuccessfulQuery = milestoneQueries.some(query => query.isSuccess);
+  const failedSectionLabels = displayedSections.flatMap((section, index) =>
+    milestoneQueries[index]?.isError ? [section.code] : [],
+  );
+  const milestones = displayedSections.flatMap((section, index) => {
     return (milestoneQueries[index]?.data?.content ?? []).map(milestone => ({
       ...milestone,
       sectionKey: section.id,
@@ -100,56 +102,68 @@ export default function AdminMilestonesPage() {
           description='담당 분반이 없어 마일스톤을 조회할 수 없습니다.'
           title='표시할 마일스톤이 없습니다.'
         />
-      ) : isPending ? (
+      ) : isLoading && !hasSuccessfulQuery ? (
         <Text aria-live='polite' role='status'>
           마일스톤을 불러오는 중입니다.
         </Text>
-      ) : isError ? (
+      ) : !hasSuccessfulQuery && failedSectionLabels.length > 0 ? (
         <EmptyState
           description='잠시 후 다시 시도해 주세요.'
           title='마일스톤을 불러오지 못했습니다.'
         />
-      ) : milestones.length === 0 ? (
-        <EmptyState
-          description='마일스톤 추가 버튼으로 새 일정을 설정할 수 있습니다.'
-          title='등록된 마일스톤이 없습니다.'
-        />
       ) : (
-        <Card className={styles.tableCard}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th>적용 분반</th>
-                <th>제목</th>
-                <th>마감일</th>
-                <th>공개 상태</th>
-              </tr>
-            </thead>
-            <tbody>
-              {milestones.map(milestone => (
-                <tr
-                  key={`${milestone.sectionId}-${milestone.id}-${milestone.sectionLabel}`}
-                >
-                  <td>{milestone.sectionLabel}</td>
-                  <td>
-                    <Link
-                      className={styles.titleLink}
-                      params={{ milestoneId: String(milestone.id) }}
-                      search={{
-                        sectionId: milestone.sectionKey,
-                      }}
-                      to={ROUTES.ADMIN_MILESTONE_DETAIL}
+        <>
+          {failedSectionLabels.length > 0 ? (
+            <Text aria-live='polite' role='status' type='supporting'>
+              {failedSectionLabels.join(', ')} 분반의 마일스톤을 불러오지
+              못했습니다.
+            </Text>
+          ) : null}
+          {milestones.length === 0 ? (
+            <EmptyState
+              description='마일스톤 추가 버튼으로 새 일정을 설정할 수 있습니다.'
+              title='등록된 마일스톤이 없습니다.'
+            />
+          ) : (
+            <Card className={styles.tableCard}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>적용 분반</th>
+                    <th>제목</th>
+                    <th>마감일</th>
+                    <th>공개 상태</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {milestones.map(milestone => (
+                    <tr
+                      key={`${milestone.sectionId}-${milestone.id}-${milestone.sectionLabel}`}
                     >
-                      {milestone.title}
-                    </Link>
-                  </td>
-                  <td>{formatAdminMilestoneDate(milestone.schedule.dueAt)}</td>
-                  <td>{getAdminMilestoneStatusLabel(milestone.status)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
+                      <td>{milestone.sectionLabel}</td>
+                      <td>
+                        <Link
+                          className={styles.titleLink}
+                          params={{ milestoneId: String(milestone.id) }}
+                          search={{
+                            sectionId: milestone.sectionKey,
+                          }}
+                          to={ROUTES.ADMIN_MILESTONE_DETAIL}
+                        >
+                          {milestone.title}
+                        </Link>
+                      </td>
+                      <td>
+                        {formatAdminMilestoneDate(milestone.schedule.dueAt)}
+                      </td>
+                      <td>{getAdminMilestoneStatusLabel(milestone.status)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Card>
+          )}
+        </>
       )}
     </div>
   );

@@ -37,6 +37,7 @@ import {
   useAdminSectionMilestoneQuery,
   useAdminSectionMilestonesQuery,
   useUpdateAdminSectionMilestoneMutation,
+  type SubmitAdminSectionMilestonesInput,
   type SubmitAdminSectionMilestonesResult,
 } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -207,16 +208,31 @@ export default function AdminMilestoneSetupPage() {
         return;
       }
 
-      const duplicateMilestone = sectionMilestonesQuery.data?.content.find(
-        candidate =>
-          candidate.id !== milestone.id &&
-          candidate.weekNumber === parsedWeekNumber,
-      );
-      if (duplicateMilestone) {
-        setFormError(
-          `${parsedWeekNumber}주차는 '${duplicateMilestone.title}' 마일스톤이 이미 사용 중입니다. 주차 교환은 여러 마일스톤을 함께 변경하는 기능에서 지원할 예정입니다.`,
+      if (parsedWeekNumber !== milestone.weekNumber) {
+        if (sectionMilestonesQuery.isPending) {
+          setFormError(
+            '기존 마일스톤 주차를 확인하는 중입니다. 잠시 후 다시 저장해주세요.',
+          );
+          return;
+        }
+        if (sectionMilestonesQuery.isError || !sectionMilestonesQuery.data) {
+          setFormError(
+            '기존 마일스톤 주차를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.',
+          );
+          return;
+        }
+
+        const duplicateMilestone = sectionMilestonesQuery.data.content.find(
+          candidate =>
+            candidate.id !== milestone.id &&
+            candidate.weekNumber === parsedWeekNumber,
         );
-        return;
+        if (duplicateMilestone) {
+          setFormError(
+            `${parsedWeekNumber}주차는 '${duplicateMilestone.title}' 마일스톤이 이미 사용 중입니다. 주차 교환은 여러 마일스톤을 함께 변경하는 기능에서 지원할 예정입니다.`,
+          );
+          return;
+        }
       }
 
       try {
@@ -278,9 +294,11 @@ export default function AdminMilestoneSetupPage() {
       return;
     }
 
-    try {
-      const results = await submitMilestonesMutation.mutateAsync({
-        sections: selectedSections.map(section => ({
+    const sectionsToSubmit: SubmitAdminSectionMilestonesInput['sections'][number][] =
+      [];
+    for (const section of selectedSections) {
+      try {
+        sectionsToSubmit.push({
           input: createAdminMilestoneCreateInput({
             description,
             schedule:
@@ -292,7 +310,22 @@ export default function AdminMilestoneSetupPage() {
           }),
           publish: sectionSchedules[section.id]?.isPublished ?? false,
           sectionId: section.id,
-        })),
+        });
+      } catch (error) {
+        setFormError(
+          `${getSectionLabel(section.id)}: ${
+            error instanceof Error
+              ? error.message
+              : '마일스톤 입력값을 확인해주세요.'
+          }`,
+        );
+        return;
+      }
+    }
+
+    try {
+      const results = await submitMilestonesMutation.mutateAsync({
+        sections: sectionsToSubmit,
       });
       setSubmissionResults(results);
     } catch (error) {
