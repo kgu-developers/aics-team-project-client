@@ -142,6 +142,7 @@ export default function AdminMilestoneSetupPage() {
       [editingSectionId]: createAdminMilestoneSectionScheduleDraftFromDto(
         milestone.schedule,
         milestone.status,
+        milestone.allowResubmissionBeforeDueAt,
       ),
     });
   }, [editingMilestoneId, editingSectionId, isEditing, milestoneQuery.data]);

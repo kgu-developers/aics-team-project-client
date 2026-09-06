@@ -159,8 +159,8 @@ export default function AdminMilestoneDetailPage() {
               </Text>
               <div className={styles.policyList}>
                 <Text color='secondary' type='supporting'>
-                  수정 가능 기한:{' '}
-                  {formatAdminMilestoneDate(milestone.schedule.revisionUntil)}
+                  제출 마감 전 수정:{' '}
+                  {milestone.allowResubmissionBeforeDueAt ? '허용' : '불가'}
                 </Text>
                 <Text color='secondary' type='supporting'>
                   지각 제출 가능 기한:{' '}

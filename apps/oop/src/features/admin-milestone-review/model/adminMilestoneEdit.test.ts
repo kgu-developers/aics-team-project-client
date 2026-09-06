@@ -18,10 +18,11 @@ describe('adminMilestoneEdit', () => {
           revisionUntil: '2026-09-10T23:59:00',
         },
         'PUBLISHED',
+        false,
       ),
     ).toEqual({
       allowLateSubmission: true,
-      allowSubmissionEditBeforeDueAt: true,
+      allowSubmissionEditBeforeDueAt: false,
       dueAt: { date: '2026-09-10', time: '23:59' },
       evaluationClosesAt: { date: '2026-09-14', time: '23:59' },
       evaluationOpensAt: { date: '2026-09-12', time: '09:00' },
@@ -35,6 +36,7 @@ describe('adminMilestoneEdit', () => {
     const schedule = createAdminMilestoneSectionScheduleDraftFromDto(
       { dueAt: '2026-09-10T23:59:00' },
       'DRAFT',
+      false,
     );
 
     expect(
@@ -45,6 +47,7 @@ describe('adminMilestoneEdit', () => {
         type: 'PROPOSAL',
       }),
     ).toEqual({
+      allowResubmissionBeforeDueAt: false,
       description: '수정한 설명',
       schedule: { dueAt: '2026-09-10T23:59:00' },
       title: '수정한 제안서',
@@ -59,6 +62,7 @@ describe('adminMilestoneEdit', () => {
         lateSubmissionUntil: '2026-09-10T23:59:00',
       },
       'DRAFT',
+      false,
     );
 
     expect(() =>
@@ -80,6 +84,7 @@ describe('adminMilestoneEdit', () => {
         opensAt: '2026-11-21T09:00:00',
       },
       'DRAFT',
+      false,
     );
 
     expect(
