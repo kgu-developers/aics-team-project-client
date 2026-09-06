@@ -10,6 +10,7 @@ import { ROUTES } from '~/app/constants/routes';
 
 import {
   formatAdminMilestoneDate,
+  getAdminMilestoneStatusLabel,
   getAdminMilestoneTypeLabel,
 } from '~/features/admin-milestone-review/model';
 import { useAdminSectionMilestoneQuery } from '~/features/admin-milestone-review/queries';
@@ -149,7 +150,7 @@ export default function AdminMilestoneDetailPage() {
               />
               <ReadOnlyField
                 label='공개 상태'
-                value={milestone.status === 'PUBLISHED' ? '공개' : '미공개'}
+                value={getAdminMilestoneStatusLabel(milestone.status)}
               />
             </div>
             <div>

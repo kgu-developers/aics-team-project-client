@@ -3,7 +3,10 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { formatAdminMilestoneDate } from '~/features/admin-milestone-review/model';
+import {
+  formatAdminMilestoneDate,
+  getAdminMilestoneStatusLabel,
+} from '~/features/admin-milestone-review/model';
 import { useAdminAccessibleSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -142,7 +145,7 @@ export default function AdminMilestonesPage() {
                   </td>
                   <td>{formatAdminMilestoneDate(milestone.schedule.dueAt)}</td>
                   <td>
-                    {milestone.status === 'PUBLISHED' ? '공개' : '미공개'}
+                    {getAdminMilestoneStatusLabel(milestone.status)}
                   </td>
                 </tr>
               ))}

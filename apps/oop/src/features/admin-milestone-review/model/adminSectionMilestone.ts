@@ -1,4 +1,4 @@
-import type { AdminMilestoneType } from '@aics/api-client';
+import type { AdminMilestoneStatus, AdminMilestoneType } from '@aics/api-client';
 
 const milestoneTypeLabels: Record<AdminMilestoneType, string> = {
   FINAL_REPORT: '최종 보고서',
@@ -25,4 +25,14 @@ export function formatAdminMilestoneDate(value: string | null | undefined) {
 
 export function getAdminMilestoneTypeLabel(type: AdminMilestoneType) {
   return milestoneTypeLabels[type];
+}
+
+const milestoneStatusLabels: Record<AdminMilestoneStatus, string> = {
+  CLOSED: '마감',
+  DRAFT: '미공개',
+  PUBLISHED: '공개',
+};
+
+export function getAdminMilestoneStatusLabel(status: AdminMilestoneStatus) {
+  return milestoneStatusLabels[status];
 }

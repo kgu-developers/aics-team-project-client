@@ -1,5 +1,6 @@
 export {
   formatAdminMilestoneDate,
+  getAdminMilestoneStatusLabel,
   getAdminMilestoneTypeLabel,
 } from './adminSectionMilestone';
 export {
