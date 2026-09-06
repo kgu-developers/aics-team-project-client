@@ -164,6 +164,12 @@ export const emptyTeamPanel = style({
   padding: 24,
 });
 
+export const withdrawDialogContent = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 16,
+});
+
 globalStyle(`${statePanel} p, ${emptyTeamPanel} p`, {
   margin: 0,
 });

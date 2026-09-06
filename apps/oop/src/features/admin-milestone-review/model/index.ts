@@ -1,9 +1,11 @@
 export {
   toAdminMilestoneSubmissionDetailView,
+  toAdminPeerEvaluatorRows,
   toAdminPeerEvaluationRows,
   type AdminMilestoneSubmissionDetailView,
   type AdminProposalSubmissionDetailView,
   type AdminPeerEvaluationDetailView,
+  type AdminPeerEvaluatorRowView,
   type AdminPeerEvaluationRowView,
 } from './adminMilestoneSubmissionDetail';
 export {

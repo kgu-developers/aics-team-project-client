@@ -6,6 +6,7 @@ export type AdminFinalReportDownloadFile = {
   downloadUrl: string | null;
   fileName: string | null;
   label: string;
+  onClick?: () => void;
 };
 
 type AdminFinalReportDownloadSummaryProps = {
@@ -15,14 +16,21 @@ type AdminFinalReportDownloadSummaryProps = {
 type AdminSubmissionFileDownloadLinkProps = {
   downloadUrl: string;
   fileName: string;
+  onClick?: () => void;
 };
 
 export function AdminSubmissionFileDownloadLink({
   downloadUrl,
   fileName,
+  onClick,
 }: AdminSubmissionFileDownloadLinkProps) {
   return (
-    <a className={styles.link} download={fileName} href={downloadUrl}>
+    <a
+      className={styles.link}
+      download={fileName}
+      href={downloadUrl}
+      onClick={onClick}
+    >
       {fileName}
     </a>
   );
@@ -30,13 +38,21 @@ export function AdminSubmissionFileDownloadLink({
 
 type AdminSubmissionExternalLinkProps = {
   url: string;
+  onClick?: () => void;
 };
 
 export function AdminSubmissionExternalLink({
   url,
+  onClick,
 }: AdminSubmissionExternalLinkProps) {
   return (
-    <a className={styles.link} href={url} rel='noreferrer' target='_blank'>
+    <a
+      className={styles.link}
+      href={url}
+      onClick={onClick}
+      rel='noreferrer'
+      target='_blank'
+    >
       {url}
     </a>
   );
@@ -53,6 +69,7 @@ export function AdminFinalReportDownloadSummary({
           <AdminSubmissionFileDownloadLink
             downloadUrl={file.downloadUrl}
             fileName={file.fileName}
+            onClick={file.onClick}
           />
         ) : (
           '-'

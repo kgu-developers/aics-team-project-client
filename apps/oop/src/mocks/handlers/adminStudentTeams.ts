@@ -27,7 +27,11 @@ function getTeams(sectionId: string): Team[] {
           throw new Error(`팀원 fixture를 찾을 수 없습니다: ${memberId}`);
         }
 
-        return { id: student.id, name: student.name };
+        return {
+          id: student.id,
+          name: student.name,
+          isLeader: student.isLeader,
+        };
       }),
     }));
 }

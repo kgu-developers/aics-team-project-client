@@ -19,12 +19,6 @@ function formatDate(value: string) {
   );
 }
 
-const actionStatusLabels = {
-  DONE: '완료',
-  IN_PROGRESS: '진행 중',
-  TODO: '할 일',
-} as const;
-
 export default function AdminMeetingDetailPage() {
   const [selectedParticipantId, setSelectedParticipantId] = useState<
     string | null
@@ -145,35 +139,6 @@ export default function AdminMeetingDetailPage() {
             {getRichTextPlainText(record.content) ||
               '작성된 회의 내용이 없습니다.'}
           </Text>
-        </section>
-        <section>
-          <Heading level={2}>액션 플랜</Heading>
-          {record.actions.length === 0 ? (
-            <Text color='secondary'>등록된 액션 플랜이 없습니다.</Text>
-          ) : (
-            <div className={styles.actionTable}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>할 일</th>
-                    <th>담당자</th>
-                    <th>기한</th>
-                    <th>상태</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {record.actions.map(action => (
-                    <tr key={action.id}>
-                      <td>{action.content}</td>
-                      <td>{action.assignee?.name ?? '미정'}</td>
-                      <td>{action.dueDate ?? '미정'}</td>
-                      <td>{actionStatusLabels[action.status]}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </section>
         <Text color='secondary' type='supporting'>
           최초 작성 {record.createdBy.name} · 최종 수정{' '}

@@ -13,6 +13,10 @@ export const ENDPOINTS = {
       `/api/v1/oop/users/${studentNumber}/password`,
   },
   ADMIN: {
+    OOP_COURSES: '/api/v1/admin/oop/courses',
+    OOP_SECTIONS: '/api/v1/admin/oop/sections',
+    OOP_PEER_EVALUATION_FORM: (sectionId: number) =>
+      `/api/v1/admin/oop/sections/${sectionId}/peer-evaluation-forms`,
     MEETING_RECORDS: '/admin/meeting-records',
     MEETING_RECORD: (meetingId: string) =>
       `/admin/meeting-records/${meetingId}`,

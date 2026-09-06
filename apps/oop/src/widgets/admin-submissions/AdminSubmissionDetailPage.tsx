@@ -23,7 +23,7 @@ import {
   AdminSubmissionExternalLink,
   AdminSubmissionFileDownloadLink,
 } from '~/features/admin-milestone-review/components/AdminFinalReportDownloadSummary';
-import { toAdminPeerEvaluationRows } from '~/features/admin-milestone-review/model';
+import { toAdminPeerEvaluatorRows } from '~/features/admin-milestone-review/model';
 import { useAdminMilestoneSubmissionDetailQuery } from '~/features/admin-milestone-review/queries';
 import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import StudentDetailDialog from '~/features/admin-student-team/components/StudentDetailDialog';
@@ -31,6 +31,8 @@ import { useAdminStudentsQuery } from '~/features/admin-student-team/queries/use
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminSubmissionDetailPage.css';
+
+const HIDDEN_MIDTERM_BLOCK_TITLES = new Set(['5. 중간 점검 질문']);
 
 const milestoneLabels = {
   'final-report': '최종 보고서',
@@ -73,6 +75,9 @@ export default function AdminSubmissionDetailPage() {
       reflection: string;
     };
   } | null>(null);
+  const [peerAverageSort, setPeerAverageSort] = useState<'asc' | 'desc' | null>(
+    null,
+  );
   const [selectedEvaluator, setSelectedEvaluator] = useState<{
     name: string;
     studentNumber: string;
@@ -334,28 +339,39 @@ export default function AdminSubmissionDetailPage() {
             <SubmissionStatus resubmittedAt={detail.resubmittedAt} />
           </div>
 
-          {midterm.blocks.map(block => (
-            <section className={styles.section} key={block.title}>
-              <Heading level={3}>{block.title}</Heading>
-              <Text className={styles.sectionDescription}>
-                {block.description}
-              </Text>
-              <div className={styles.fieldGrid}>
-                {block.fields.map(field => (
-                  <div
-                    className={`${styles.field} ${styles.fullWidthField}`}
-                    key={field.label}
-                  >
-                    <Text className={styles.fieldLabel}>{field.label}</Text>
-                    <Text className={styles.fieldValue}>{field.value}</Text>
-                    {field.attachment ? (
-                      field.attachment.contentType.startsWith('image/') ? (
-                        <div className={styles.attachment}>
-                          <img
-                            alt={`${field.label} 미리보기`}
-                            className={styles.imagePreview}
-                            src={field.attachment.downloadUrl}
-                          />
+          {midterm.blocks
+            .filter(block => !HIDDEN_MIDTERM_BLOCK_TITLES.has(block.title))
+            .map(block => (
+              <section className={styles.section} key={block.title}>
+                <Heading level={3}>{block.title}</Heading>
+                <Text className={styles.sectionDescription}>
+                  {block.description}
+                </Text>
+                <div className={styles.fieldGrid}>
+                  {block.fields.map(field => (
+                    <div
+                      className={`${styles.field} ${styles.fullWidthField}`}
+                      key={field.label}
+                    >
+                      <Text className={styles.fieldLabel}>{field.label}</Text>
+                      <Text className={styles.fieldValue}>{field.value}</Text>
+                      {field.attachment ? (
+                        field.attachment.contentType.startsWith('image/') ? (
+                          <div className={styles.attachment}>
+                            <img
+                              alt={`${field.label} 미리보기`}
+                              className={styles.imagePreview}
+                              src={field.attachment.downloadUrl}
+                            />
+                            <a
+                              className={styles.downloadLink}
+                              download={field.attachment.fileName}
+                              href={field.attachment.downloadUrl}
+                            >
+                              {field.attachment.fileName} 다운로드
+                            </a>
+                          </div>
+                        ) : (
                           <a
                             className={styles.downloadLink}
                             download={field.attachment.fileName}
@@ -363,22 +379,13 @@ export default function AdminSubmissionDetailPage() {
                           >
                             {field.attachment.fileName} 다운로드
                           </a>
-                        </div>
-                      ) : (
-                        <a
-                          className={styles.downloadLink}
-                          download={field.attachment.fileName}
-                          href={field.attachment.downloadUrl}
-                        >
-                          {field.attachment.fileName} 다운로드
-                        </a>
-                      )
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </section>
-          ))}
+                        )
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
         </Card>
         <AdminMidtermFeedbackPanel
           feedback={detail.midtermFeedback}
@@ -410,35 +417,16 @@ export default function AdminSubmissionDetailPage() {
           </Text>
           <SubmissionStatus resubmittedAt={detail.resubmittedAt} />
         </div>
-        {presentation.blocks.map(block => (
-          <section className={styles.section} key={block.title}>
-            <Heading level={3}>{block.title}</Heading>
-            <Text className={styles.sectionDescription}>
-              {block.description}
-            </Text>
-            {block.title === '4. 시연 영상' && (
-              <div className={`${styles.field} ${styles.fullWidthField}`}>
-                <Text className={styles.fieldLabel}>시연 링크</Text>
-                {presentation.videoUrl ? (
-                  <AdminSubmissionExternalLink url={presentation.videoUrl} />
-                ) : (
-                  <Text className={styles.fieldValue}>-</Text>
-                )}
-              </div>
+        <section className={styles.section}>
+          <Heading level={3}>시연 URL</Heading>
+          <div className={`${styles.field} ${styles.fullWidthField}`}>
+            {presentation.videoUrl ? (
+              <AdminSubmissionExternalLink url={presentation.videoUrl} />
+            ) : (
+              <Text className={styles.fieldValue}>-</Text>
             )}
-            <div className={styles.fieldGrid}>
-              {block.fields.map(field => (
-                <div
-                  className={`${styles.field} ${styles.fullWidthField}`}
-                  key={field.label}
-                >
-                  <Text className={styles.fieldLabel}>{field.label}</Text>
-                  <Text className={styles.fieldValue}>{field.value}</Text>
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
+          </div>
+        </section>
         <section className={styles.section}>
           <Heading level={3}>제출 파일</Heading>
           <div className={styles.fieldGrid}>
@@ -481,7 +469,14 @@ export default function AdminSubmissionDetailPage() {
           title='표시할 평가가 없습니다.'
         />
       );
-    const peerRows = toAdminPeerEvaluationRows(peer);
+    const evaluatorRows = toAdminPeerEvaluatorRows(peer);
+    const sortedEvaluatorRows = peerAverageSort
+      ? [...evaluatorRows].sort((a, b) => {
+          const aValue = a.average ?? -1;
+          const bValue = b.average ?? -1;
+          return peerAverageSort === 'asc' ? aValue - bValue : bValue - aValue;
+        })
+      : evaluatorRows;
     return (
       <Card className={styles.document}>
         <div className={styles.documentHeader}>
@@ -490,70 +485,103 @@ export default function AdminSubmissionDetailPage() {
           </Text>
           <Heading level={2}>{detail.teamName} 상호 평가</Heading>
         </div>
-        <Table
-          columns={[
-            {
-              align: 'start',
-              header: '평가자',
-              key: 'evaluator',
-              renderCell: row => (
-                <button
-                  className={styles.peerMemberButton}
-                  type='button'
-                  onClick={() =>
-                    setSelectedPeerMember({
-                      ...row.evaluator,
-                      evaluation: peer.responses.find(
-                        response =>
-                          response.evaluatorStudentNumber ===
-                          row.evaluator.studentNumber,
-                      )?.projectEvaluation ?? {
-                        reflection: '-',
-                        roleSummary: '-',
-                        teamEvaluation: '-',
-                      },
-                    })
+        <div>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th className={styles.tableHeader} scope='col'>
+                  평가자
+                </th>
+                {peer.members.map(member => (
+                  <th
+                    className={styles.tableHeader}
+                    key={member.studentNumber}
+                    scope='col'
+                  >
+                    {member.name}
+                  </th>
+                ))}
+                <th
+                  aria-sort={
+                    peerAverageSort === 'asc'
+                      ? 'ascending'
+                      : peerAverageSort === 'desc'
+                        ? 'descending'
+                        : 'none'
                   }
+                  className={styles.tableHeader}
+                  scope='col'
                 >
-                  {row.evaluator.name}
-                </button>
-              ),
-              width: proportional(1, { minWidth: 120 }),
-            },
-            {
-              align: 'center',
-              header: '평가 제출 상태',
-              key: 'submissionStatus',
-              renderCell: row => (row.isSubmitted ? '제출 완료' : '미제출'),
-              width: proportional(0.9, { minWidth: 104 }),
-            },
-            {
-              align: 'center',
-              header: '평가 대상',
-              key: 'target',
-              renderCell: row => row.target.name,
-              width: proportional(1, { minWidth: 120 }),
-            },
-            {
-              align: 'center',
-              header: '점수',
-              key: 'score',
-              renderCell: row => row.score ?? '미평가',
-              width: proportional(0.8, { minWidth: 96 }),
-            },
-            {
-              align: 'center',
-              header: '평가 대상 평균',
-              key: 'average',
-              renderCell: row => row.average?.toFixed(1) ?? '미평가',
-              width: proportional(0.8, { minWidth: 96 }),
-            },
-          ]}
-          data={peerRows}
-          dividers='rows'
-          textOverflow='wrap'
-          verticalAlign='middle'
-        />
+                  <button
+                    aria-label='평균 점수 정렬'
+                    type='button'
+                    onClick={() =>
+                      setPeerAverageSort(current =>
+                        current === 'asc' ? 'desc' : 'asc',
+                      )
+                    }
+                  >
+                    평균{' '}
+                    {peerAverageSort === 'asc'
+                      ? '↑'
+                      : peerAverageSort === 'desc'
+                        ? '↓'
+                        : '↕'}
+                  </button>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedEvaluatorRows.map(({ average, evaluator, rows }) => {
+                return (
+                  <tr key={evaluator.studentNumber}>
+                    <td className={styles.tableCell}>
+                      <button
+                        className={styles.peerMemberButton}
+                        type='button'
+                        onClick={() =>
+                          setSelectedPeerMember({
+                            ...evaluator,
+                            evaluation: peer.responses.find(
+                              response =>
+                                response.evaluatorStudentNumber ===
+                                evaluator.studentNumber,
+                            )?.projectEvaluation ?? {
+                              reflection: '-',
+                              roleSummary: '-',
+                              teamEvaluation: '-',
+                            },
+                          })
+                        }
+                      >
+                        {evaluator.name}
+                      </button>
+                    </td>
+                    {peer.members.map(target => {
+                      const row = rows.find(
+                        item =>
+                          item.target.studentNumber === target.studentNumber,
+                      );
+                      const isSelf =
+                        evaluator.studentNumber === target.studentNumber;
+                      return (
+                        <td
+                          className={styles.tableCell}
+                          key={target.studentNumber}
+                        >
+                          {isSelf ? '-' : (row?.score ?? '미제출')}
+                        </td>
+                      );
+                    })}
+                    <td className={styles.tableCell}>
+                      {average?.toFixed(1) ?? '미제출'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
         <Dialog
           aria-label='프로젝트 평가'
           isOpen={selectedPeerMember !== null}

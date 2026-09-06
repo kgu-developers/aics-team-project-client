@@ -42,6 +42,11 @@ export type AdminPeerEvaluationRowView = {
   score: number | undefined;
   target: AdminPeerEvaluationDetailDto['members'][number];
 };
+export type AdminPeerEvaluatorRowView = {
+  average: number | undefined;
+  evaluator: AdminPeerEvaluationDetailDto['members'][number];
+  rows: AdminPeerEvaluationRowView[];
+};
 export type AdminPresentationEvaluationDetailView =
   AdminPresentationEvaluationDetailDto;
 
@@ -121,5 +126,26 @@ export function toAdminPeerEvaluationRows(
           target,
         };
       });
+  });
+}
+
+export function toAdminPeerEvaluatorRows(
+  peer: AdminPeerEvaluationDetailView,
+): AdminPeerEvaluatorRowView[] {
+  const peerRows = toAdminPeerEvaluationRows(peer);
+
+  return peer.members.map(evaluator => {
+    const rows = peerRows.filter(
+      row => row.evaluator.studentNumber === evaluator.studentNumber,
+    );
+    const submittedScores = rows
+      .map(row => row.score)
+      .filter((score): score is number => score !== undefined);
+    const average = submittedScores.length
+      ? submittedScores.reduce((sum, score) => sum + score, 0) /
+        submittedScores.length
+      : undefined;
+
+    return { average, evaluator, rows };
   });
 }

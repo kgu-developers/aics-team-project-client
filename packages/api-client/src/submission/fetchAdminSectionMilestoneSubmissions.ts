@@ -23,6 +23,8 @@ export type AdminSectionMilestoneSubmissionItemDto = {
   messageCount: number | null;
   submissionId: string | null;
   submittedAt: string | null;
+  submittedBy?: string | null;
+  resubmittedAt?: string | null;
   summary: AdminSectionMilestoneSubmissionSummaryDto;
   teamId: string;
   teamName: string;

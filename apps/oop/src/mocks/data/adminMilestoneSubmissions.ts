@@ -39,7 +39,12 @@ const milestones: Record<MilestoneId, { title: string }> = {
 const submissionDetailsByMilestone: Partial<
   Record<
     MilestoneId,
-    ReadonlyArray<{ submittedAt: string | null; submissionId: string | null }>
+    ReadonlyArray<{
+      resubmittedAt?: string | null;
+      submittedAt: string | null;
+      submittedBy?: string | null;
+      submissionId: string | null;
+    }>
   >
 > = {
   'peer-review': [
@@ -73,20 +78,28 @@ const submissionDetailsByMilestone: Partial<
     {
       submissionId: 'submission-oop-01-1-presentation-submit',
       submittedAt: '2026/11/12',
+      submittedBy: '김민준',
+      resubmittedAt: null,
     },
     {
       submissionId: 'submission-oop-01-2-presentation-submit',
       submittedAt: '2026/11/13',
+      submittedBy: '박지훈',
+      resubmittedAt: '2026/11/14',
     },
   ],
   'final-report': [
     {
       submissionId: 'submission-oop-01-1-final-report',
       submittedAt: '2026/12/07',
+      submittedBy: '김민준',
+      resubmittedAt: null,
     },
     {
       submissionId: 'submission-oop-01-2-final-report',
       submittedAt: '2026/12/08',
+      submittedBy: '박지훈',
+      resubmittedAt: '2026/12/09',
     },
   ],
 };
@@ -118,6 +131,8 @@ export function getAdminMilestoneSubmissionsFixture(
         messageCount: null,
         submissionId: submissionDetail?.submissionId ?? null,
         submittedAt: submissionDetail?.submittedAt ?? null,
+        submittedBy: submissionDetail?.submittedBy ?? null,
+        resubmittedAt: submissionDetail?.resubmittedAt ?? null,
         summary: {
           attachmentCount:
             typedMilestoneId === 'midterm'

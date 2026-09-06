@@ -161,6 +161,39 @@ describe('AdminStudentTeamManagement', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  it('수강생 제외 버튼은 확인 Dialog를 열고 API 연동 전 확인을 잠근다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    const studentCell = (await screen.findAllByText('김민준')).find(
+      element => element.tagName === 'TD',
+    );
+    expect(studentCell).toBeDefined();
+    const withdrawButton = within(
+      studentCell!.closest('tr') as HTMLElement,
+    ).getByRole('button', { name: '제외' });
+    await user.click(withdrawButton);
+
+    const dialog = await screen.findByRole('alertdialog', {
+      name: '수강생 제외 확인',
+    });
+    expect(
+      within(dialog).getByText(/김민준 학생은 현재 팀장입니다/),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/팀원들이 기존 팀장 선출 흐름에서/),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('button', { name: '제외 확인' }),
+    ).toHaveAttribute('aria-disabled', 'true');
+
+    await user.click(within(dialog).getByRole('button', { name: '취소' }));
+    expect(
+      screen.queryByRole('alertdialog', { name: '수강생 제외 확인' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('목록을 기다리는 동안 로딩 상태를 표시한다', async () => {
     server.use(
       http.get(
