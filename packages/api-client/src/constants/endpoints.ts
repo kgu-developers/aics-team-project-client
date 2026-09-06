@@ -23,6 +23,10 @@ export const ENDPOINTS = {
     MEETING_RECORD: (meetingId: string) =>
       `/admin/meeting-records/${meetingId}`,
     MILESTONE_SCHEDULE: '/admin/milestone-schedule',
+    SECTION_MILESTONES: (sectionId: string) =>
+      `/api/v1/admin/oop/sections/${sectionId}/milestones`,
+    SECTION_MILESTONE: (sectionId: string, milestoneId: string) =>
+      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}`,
     MILESTONE_SUBMISSION_DETAIL: (submissionId: string) =>
       `/admin/submissions/${submissionId}`,
     SECTION_MILESTONE_SUBMISSIONS: (sectionId: string, milestoneId: string) =>

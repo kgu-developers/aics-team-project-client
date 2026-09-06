@@ -80,9 +80,16 @@ export { ENDPOINTS } from './constants/endpoints';
 export { fetchStudentHomeDashboard } from './studentHome/fetchStudentHomeDashboard';
 export {
   fetchAdminMilestoneSchedule,
+  fetchAdminSectionMilestone,
+  fetchAdminSectionMilestones,
   type AdminMilestoneScheduleMilestoneDto,
   type AdminMilestoneScheduleResponse,
   type AdminMilestoneScheduleSectionDto,
+  type AdminMilestoneScheduleDto,
+  type AdminMilestoneStatus,
+  type AdminMilestoneType,
+  type AdminSectionMilestoneDto,
+  type AdminSectionMilestonesResponse,
 } from './milestones';
 export {
   fetchMeetingRecord,

@@ -3,18 +3,13 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { useAdminMilestoneScheduleQuery } from '~/features/admin-milestone-review/queries';
+import { formatAdminMilestoneDate } from '~/features/admin-milestone-review/model';
+import { useAdminAccessibleSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMilestonesPage.css';
 
 const allSectionsValue = 'all';
-
-function getDeadlineLabel(summary: string) {
-  const [deadline] = summary.split('\n');
-
-  return deadline?.replace(/^~/, '') ?? '-';
-}
 
 export default function AdminMilestonesPage() {
   const currentUser = useAuthStore(state => state.currentUser);
@@ -28,20 +23,24 @@ export default function AdminMilestonesPage() {
     search.sectionId && accessibleSectionIds.includes(search.sectionId)
       ? search.sectionId
       : allSectionsValue;
-  const scheduleQuery = useAdminMilestoneScheduleQuery(accessibleSectionIds);
-  const milestones = (scheduleQuery.data?.sections ?? [])
-    .filter(
-      section =>
-        selectedSectionId === allSectionsValue ||
-        section.sectionId === selectedSectionId,
-    )
-    .flatMap(section =>
-      section.milestones.map(milestone => ({
-        ...milestone,
-        sectionId: section.sectionId,
-        sectionLabel: section.sectionLabel,
-      })),
-    );
+  const milestoneQueries =
+    useAdminAccessibleSectionMilestonesQuery(accessibleSectionIds);
+  const isPending = milestoneQueries.some(query => query.isPending);
+  const isError = milestoneQueries.some(query => query.isError);
+  const milestones = accessibleSections.flatMap((section, index) => {
+    if (
+      selectedSectionId !== allSectionsValue &&
+      section.id !== selectedSectionId
+    ) {
+      return [];
+    }
+
+    return (milestoneQueries[index]?.data?.content ?? []).map(milestone => ({
+      ...milestone,
+      sectionKey: section.id,
+      sectionLabel: section.code,
+    }));
+  });
 
   function selectSection(sectionId: string) {
     void navigate({
@@ -98,11 +97,11 @@ export default function AdminMilestonesPage() {
           description='담당 분반이 없어 마일스톤을 조회할 수 없습니다.'
           title='표시할 마일스톤이 없습니다.'
         />
-      ) : scheduleQuery.isPending ? (
+      ) : isPending ? (
         <Text aria-live='polite' role='status'>
           마일스톤을 불러오는 중입니다.
         </Text>
-      ) : scheduleQuery.isError ? (
+      ) : isError ? (
         <EmptyState
           description='잠시 후 다시 시도해 주세요.'
           title='마일스톤을 불러오지 못했습니다.'
@@ -125,15 +124,21 @@ export default function AdminMilestonesPage() {
             </thead>
             <tbody>
               {milestones.map(milestone => (
-                <tr key={`${milestone.sectionId}-${milestone.id}`}>
+                <tr
+                  key={`${milestone.sectionId}-${milestone.id}-${milestone.sectionLabel}`}
+                >
                   <td>{milestone.sectionLabel}</td>
-                  <td>{getDeadlineLabel(milestone.summary)}</td>
-                  <td>{milestone.isPublished ? '공개' : '미공개'}</td>
+                  <td>{formatAdminMilestoneDate(milestone.schedule.dueAt)}</td>
+                  <td>
+                    {milestone.status === 'PUBLISHED' ? '공개' : '미공개'}
+                  </td>
                   <td>
                     <Link
                       className={styles.titleLink}
-                      params={{ milestoneId: milestone.id }}
-                      search={{ sectionId: milestone.sectionId }}
+                      params={{ milestoneId: String(milestone.id) }}
+                      search={{
+                        sectionId: milestone.sectionKey,
+                      }}
                       to={ROUTES.ADMIN_MILESTONE_DETAIL}
                     >
                       {milestone.title}

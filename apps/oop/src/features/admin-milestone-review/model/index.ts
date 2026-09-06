@@ -1,4 +1,8 @@
 export {
+  formatAdminMilestoneDate,
+  getAdminMilestoneTypeLabel,
+} from './adminSectionMilestone';
+export {
   toAdminMilestoneSubmissionDetailView,
   toAdminPeerEvaluatorRows,
   toAdminPeerEvaluationRows,
