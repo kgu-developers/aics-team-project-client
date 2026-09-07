@@ -24,6 +24,7 @@ import {
 
 const meetingRecordSummaryDto = {
   id: 7,
+  title: '진행 점검',
   phase: 'MID_CHECK' as const,
   meetingAt: '2026-08-03 14:00',
   authorId: '202600001',
@@ -32,6 +33,7 @@ const meetingRecordSummaryDto = {
 
 const meetingRecordDetailDto = {
   id: 7,
+  title: '진행 점검',
   teamId: 10,
   phase: 'MID_CHECK' as const,
   authorId: '202600001',
@@ -44,6 +46,7 @@ const meetingRecordDetailDto = {
 
 const meetingRecordPersistDto = {
   id: 7,
+  title: '진행 점검',
   phase: 'MID_CHECK' as const,
   meetingAt: '2026-08-03 14:00',
   authorId: '202600001',
@@ -53,7 +56,9 @@ const meetingActionDto = {
   id: 11,
   meetingRecordId: 7,
   content: 'API 명세서 작성',
-  status: 'IN_PROGRESS' as const,
+  status: 'TODO' as const,
+  createdAt: '2026-09-07 13:00',
+  updatedAt: '2026-09-07 13:00',
 };
 
 const requestBodies: unknown[] = [];
@@ -132,6 +137,7 @@ describe('meeting API client contract', () => {
 
   it('회의록 생성·수정·삭제를 POST·PATCH·DELETE 계약으로 호출한다', async () => {
     const created = await submitMeetingRecordApi('10', {
+      title: '진행 점검',
       meetingAt: '2026-08-03T14:00:00',
       phase: 'MID_CHECK',
       content: '진행 상황 공유',
@@ -145,6 +151,7 @@ describe('meeting API client contract', () => {
 
     expect(requestBodies).toEqual([
       {
+        title: '진행 점검',
         meetingAt: '2026-08-03T14:00:00',
         phase: 'MID_CHECK',
         content: '진행 상황 공유',
@@ -166,7 +173,6 @@ describe('meeting API client contract', () => {
     const teamActions = await fetchTeamMeetingActionEntries('10', 'DONE');
     const created = await submitMeetingActionApi('7', {
       content: 'API 명세서 작성',
-      status: 'IN_PROGRESS',
     });
     const updated = await updateMeetingActionApi('11', {
       status: 'DONE',
@@ -175,7 +181,7 @@ describe('meeting API client contract', () => {
 
     const expectedAction = {
       ...meetingActionDto,
-      assigneeId: null,
+      assignee: null,
       dueAt: null,
       id: '11',
       meetingRecordId: '7',
@@ -185,7 +191,7 @@ describe('meeting API client contract', () => {
     expect(created).toEqual(expectedAction);
     expect(updated).toEqual({ ...expectedAction, status: 'DONE' });
     expect(requestBodies).toEqual([
-      { content: 'API 명세서 작성', status: 'IN_PROGRESS' },
+      { content: 'API 명세서 작성' },
       { status: 'DONE', clearDueAt: true },
     ]);
   });
@@ -212,18 +218,16 @@ describe('meeting API contract boundaries', () => {
     await expect(fetchMeetingActionEntries('7')).resolves.toEqual([]);
   });
 
-  it('EXCLUDED 상태와 담당자 학번·서버 시각 문자열을 손실 없이 전달한다', async () => {
+  it('TODO 상태와 담당자 학번·서버 시각 문자열을 손실 없이 전달한다', async () => {
     server.use(
       http.get(`${API_BASE_URL}/teams/10/actions`, ({ request }) => {
-        expect(new URL(request.url).searchParams.get('status')).toBe(
-          'EXCLUDED',
-        );
+        expect(new URL(request.url).searchParams.get('status')).toBe('TODO');
         return HttpResponse.json({
           contents: [
             {
               ...meetingActionDto,
-              status: 'EXCLUDED',
-              assigneeId: '020260001',
+              status: 'TODO',
+              assignee: { userId: '020260001', name: '테스트 담당자' },
               dueAt: '2026-08-28 18:00',
             },
           ],
@@ -231,15 +235,13 @@ describe('meeting API contract boundaries', () => {
       }),
     );
 
-    await expect(
-      fetchTeamMeetingActionEntries('10', 'EXCLUDED'),
-    ).resolves.toEqual([
+    await expect(fetchTeamMeetingActionEntries('10', 'TODO')).resolves.toEqual([
       {
         ...meetingActionDto,
         id: '11',
         meetingRecordId: '7',
-        status: 'EXCLUDED',
-        assigneeId: '020260001',
+        status: 'TODO',
+        assignee: { userId: '020260001', name: '테스트 담당자' },
         dueAt: '2026-08-28 18:00',
       },
     ]);
@@ -268,6 +270,7 @@ describe('meeting API contract boundaries', () => {
       '회의록 생성',
       () =>
         submitMeetingRecordApi('10', {
+          title: '진행 점검',
           meetingAt: '2026-08-03T14:00:00',
           phase: 'MID_CHECK',
           content: '회의 내용',
@@ -275,12 +278,8 @@ describe('meeting API contract boundaries', () => {
     ],
     ['회의록 수정', () => updateMeetingRecordApi('7', { content: '수정' })],
     ['회의록 삭제', () => removeMeetingRecordApi('7')],
-    [
-      '액션 생성',
-      () =>
-        submitMeetingActionApi('7', { content: '작업', status: 'IN_PROGRESS' }),
-    ],
-    ['액션 수정', () => updateMeetingActionApi('11', { status: 'EXCLUDED' })],
+    ['액션 생성', () => submitMeetingActionApi('7', { content: '작업' })],
+    ['액션 수정', () => updateMeetingActionApi('11', { status: 'TODO' })],
   ])('%s 권한 오류를 성공 응답으로 바꾸지 않는다', async (_name, request) => {
     server.use(
       http.all('*', () =>

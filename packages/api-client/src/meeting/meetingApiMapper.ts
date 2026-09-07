@@ -14,6 +14,7 @@ export function mapMeetingRecordSummary(
 ): MeetingRecordSummary {
   return {
     id: String(dto.id),
+    title: dto.title ?? null,
     phase: dto.phase,
     meetingAt: dto.meetingAt,
     location: dto.location ?? null,
@@ -28,6 +29,7 @@ export function mapMeetingRecordDetail(
   return {
     id: String(dto.id),
     teamId: String(dto.teamId),
+    title: dto.title ?? null,
     phase: dto.phase,
     authorId: dto.authorId,
     meetingAt: dto.meetingAt,
@@ -44,6 +46,7 @@ export function mapMeetingRecordPersistResult(
 ): MeetingRecordPersistResult {
   return {
     id: String(dto.id),
+    title: dto.title ?? null,
     phase: dto.phase,
     meetingAt: dto.meetingAt,
     location: dto.location ?? null,
@@ -59,7 +62,9 @@ export function mapMeetingAction(
     meetingRecordId: String(dto.meetingRecordId),
     content: dto.content,
     status: dto.status,
-    assigneeId: dto.assigneeId ?? null,
+    assignee: dto.assignee ?? null,
+    createdAt: dto.createdAt,
+    updatedAt: dto.updatedAt,
     dueAt: dto.dueAt ?? null,
   };
 }

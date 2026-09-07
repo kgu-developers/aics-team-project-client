@@ -1,4 +1,4 @@
-/** Swagger contract: kept separate until KD3-156/157 can preserve the current UI semantics. */
+/** Deployed meeting API contract. Dates are server-local wall-clock strings. */
 export const meetingPhases = ['PROPOSAL', 'MID_CHECK', 'FINAL'] as const;
 
 export type MeetingPhase = (typeof meetingPhases)[number];
@@ -6,12 +6,13 @@ export type MeetingPhase = (typeof meetingPhases)[number];
 export const meetingApiActionStatuses = [
   'DONE',
   'IN_PROGRESS',
-  'EXCLUDED',
+  'TODO',
 ] as const;
 
 export type MeetingApiActionStatus = (typeof meetingApiActionStatuses)[number];
 
 export type MeetingRecordSummaryDto = {
+  title: string | null;
   id: number;
   phase: MeetingPhase;
   meetingAt: string;
@@ -25,6 +26,7 @@ export type MeetingRecordListResponseDto = {
 };
 
 export type MeetingRecordDetailResponseDto = {
+  title: string | null;
   id: number;
   teamId: number;
   phase: MeetingPhase;
@@ -38,6 +40,7 @@ export type MeetingRecordDetailResponseDto = {
 };
 
 export type MeetingRecordPersistResponseDto = {
+  title: string | null;
   id: number;
   phase: MeetingPhase;
   meetingAt: string;
@@ -50,7 +53,9 @@ export type MeetingActionResponseDto = {
   meetingRecordId: number;
   content: string;
   status: MeetingApiActionStatus;
-  assigneeId?: string | null;
+  assignee?: { userId: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
   dueAt?: string | null;
 };
 
@@ -59,6 +64,7 @@ export type MeetingActionListResponseDto = {
 };
 
 export type MeetingRecordSummary = {
+  title: string | null;
   id: string;
   phase: MeetingPhase;
   meetingAt: string;
@@ -68,6 +74,7 @@ export type MeetingRecordSummary = {
 };
 
 export type MeetingRecordDetail = {
+  title: string | null;
   id: string;
   teamId: string;
   phase: MeetingPhase;
@@ -81,6 +88,7 @@ export type MeetingRecordDetail = {
 };
 
 export type MeetingRecordPersistResult = {
+  title: string | null;
   id: string;
   phase: MeetingPhase;
   meetingAt: string;
@@ -89,6 +97,7 @@ export type MeetingRecordPersistResult = {
 };
 
 export type MeetingRecordCreateRequest = {
+  title: string;
   meetingAt: string;
   location?: string;
   phase: MeetingPhase;
@@ -97,6 +106,7 @@ export type MeetingRecordCreateRequest = {
 };
 
 export type MeetingRecordUpdateRequest = {
+  title?: string;
   meetingAt?: string;
   location?: string;
   phase?: MeetingPhase;
@@ -109,13 +119,14 @@ export type MeetingActionEntry = {
   meetingRecordId: string;
   content: string;
   status: MeetingApiActionStatus;
-  assigneeId: string | null;
+  assignee: { userId: string; name: string } | null;
+  createdAt: string;
+  updatedAt: string;
   dueAt: string | null;
 };
 
 export type MeetingActionCreateRequest = {
   content: string;
-  status: MeetingApiActionStatus;
   dueAt?: string;
   assigneeId?: string;
 };

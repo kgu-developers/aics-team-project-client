@@ -99,3 +99,6 @@ export type { TooltipProps } from '@astryxdesign/core/Tooltip';
 export { default as AstryxThemeProvider } from './provider/AstryxThemeProvider';
 export { oopTheme } from './theme/oopTheme';
 export { tokens } from './tokens';
+
+export { TimeInput } from '@astryxdesign/core/TimeInput';
+export type { TimeInputProps } from '@astryxdesign/core/TimeInput';

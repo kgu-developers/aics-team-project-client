@@ -120,12 +120,28 @@ afterAll(() => {
 });
 
 vi.mock('~/features/meeting/queries', () => ({
+  useMeetingTeamQuery: () => ({
+    requiresPhaseAndTime: false,
+    canEditRecord: true,
+    canManageActions: true,
+    canDeleteRecord: (authorId: string) => {
+      const user = useAuthStore.getState().currentUser;
+      return (
+        authorId === user?.id ||
+        user?.currentTeam?.members.find(member => member.id === user.id)
+          ?.isLeader
+      );
+    },
+    teamId: useAuthStore.getState().currentUser?.currentTeam?.id,
+    team: useAuthStore.getState().currentUser?.currentTeam,
+  }),
   useSubmitMeetingRecordMutation: () => ({
     isError: false,
     isPending: false,
     mutateAsync: mutations.createRecord,
   }),
   useMeetingRecordQuery: () => ({
+    teamId: useAuthStore.getState().currentUser?.currentTeam?.id,
     data: queries.meetingRecord,
     isError: false,
     isPending: false,
@@ -269,7 +285,7 @@ describe('MeetingNewPage', () => {
       screen.getAllByRole('button', { name: 'Open calendar' }),
     ).toHaveLength(2);
 
-    fireEvent.click(screen.getByRole('button', { name: '할 일 1 삭제' }));
+    fireEvent.click(screen.getByRole('button', { name: '삭제' }));
 
     expect(
       screen.queryByPlaceholderText('실행할 일을 입력해 주세요.'),
@@ -326,7 +342,7 @@ describe('MeetingNewPage', () => {
       screen.getByDisplayValue('도메인 모델 초안 작성'),
     ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: '할 일 1 삭제' }));
+    fireEvent.click(screen.getByRole('button', { name: '삭제' }));
     fireEvent.click(screen.getByRole('button', { name: '저장' }));
 
     await waitFor(() => {

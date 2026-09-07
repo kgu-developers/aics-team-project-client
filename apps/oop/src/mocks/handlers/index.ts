@@ -12,6 +12,7 @@ import { authHandlers } from './auth';
 import { editLockHandlers } from './editLock';
 import { evaluationHandlers } from './evaluation';
 import { meetingHandlers } from './meeting';
+import { createMeetingApiHandlers } from './meetingApi';
 import { midReportHandlers } from './midReport';
 import { presentationHandlers } from './presentation';
 import { proposalHandlers } from './proposal';
@@ -38,6 +39,7 @@ export const handlers = [
   ...adminPresentationEvaluationHandlers,
   ...editLockHandlers,
   ...evaluationHandlers,
+  ...createMeetingApiHandlers(),
   ...meetingHandlers,
   ...midReportHandlers,
   ...presentationHandlers,
