@@ -114,6 +114,12 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
                       },
                       {
                         align: 'start',
+                        header: '이름',
+                        key: 'userName',
+                        width: proportional(0.6, { minWidth: 100 }),
+                      },
+                      {
+                        align: 'start',
                         header: '희망 역할',
                         key: 'preferredRoles',
                         renderCell: response =>

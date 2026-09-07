@@ -329,7 +329,7 @@ describe('AdminProfilePage', () => {
     ).toBeInTheDocument();
   });
 
-  it('팀 구성 사전 정보에서 계약된 응답 항목만 표시한다', async () => {
+  it('팀 구성 사전 정보에서 계약된 응답 항목과 이름을 표시한다', async () => {
     renderPage();
 
     expect(
@@ -344,6 +344,9 @@ describe('AdminProfilePage', () => {
       screen.getByRole('columnheader', { name: '학번' }),
     ).toBeInTheDocument();
     expect(
+      screen.getByRole('columnheader', { name: '이름' }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole('columnheader', { name: '희망 역할' }),
     ).toBeInTheDocument();
     expect(
@@ -356,9 +359,34 @@ describe('AdminProfilePage', () => {
       screen.getByRole('columnheader', { name: '제출일' }),
     ).toBeInTheDocument();
     expect(screen.getByText('20260001')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('columnheader', { name: '이름' }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText('김객체')).toBeInTheDocument();
+    expect(screen.getByText('이프로')).toBeInTheDocument();
+  });
+
+  it('희망 역할 응답이 배열이 아니어도 목록을 표시한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRE_SURVEY_RESPONSES(':sectionId')}`,
+        () =>
+          HttpResponse.json({
+            contents: [
+              {
+                etcOpinion: '기타 의견',
+                id: 3,
+                preferredRoles: null,
+                submittedAt: '2026-09-07 12:00',
+                topicOpinion: '주제 의견',
+                userId: '20260004',
+                userName: '런타임 가드 테스트',
+              },
+            ],
+          }),
+      ),
+    );
+    renderPage();
+
+    expect(await screen.findByText('런타임 가드 테스트')).toBeInTheDocument();
+    expect(screen.getByText('-')).toBeInTheDocument();
   });
 
   it('사전 정보 조회가 실패하면 오류를 표시한다', async () => {

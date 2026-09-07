@@ -5,6 +5,7 @@ export type AdminPreSurveyResponsePreview = {
   submittedAt: string;
   topicOpinion: string | null;
   userId: string;
+  userName: string;
 };
 
 // MSW fixture for the KD3-148 administrator pre-survey response contract.
@@ -20,6 +21,7 @@ export const adminPreSurveyResponsesBySection: Record<
       submittedAt: '2026-09-04 14:00',
       topicOpinion: '학사 일정 알림 서비스를 만들고 싶습니다.',
       userId: '20260001',
+      userName: '김객체',
     },
     {
       etcOpinion: null,
@@ -28,6 +30,7 @@ export const adminPreSurveyResponsesBySection: Record<
       submittedAt: '2026-09-04 14:12',
       topicOpinion: null,
       userId: '20260003',
+      userName: '이프로',
     },
   ],
 };
