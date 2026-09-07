@@ -104,15 +104,23 @@ export default function AdminSubmissionDetailPage() {
       submissionQuery.isSuccess,
   );
   const versions = versionsQuery.data ?? [];
+  const detail = submissionQuery.data;
 
   useEffect(() => {
     const isSelectedVersionAvailable = versions.some(
       version => version.version === selectedVersion,
     );
     if (!isSelectedVersionAvailable) {
-      setSelectedVersion(versions[0]?.version);
+      const currentVersion = detail?.currentVersion;
+      const hasCurrentVersion = versions.some(
+        version => version.version === currentVersion,
+      );
+
+      setSelectedVersion(
+        hasCurrentVersion ? currentVersion : versions[0]?.version,
+      );
     }
-  }, [selectedVersion, versions]);
+  }, [detail?.currentVersion, selectedVersion, versions]);
 
   const versionQuery = useAdminSubmissionVersionQuery(
     submissionId,
@@ -121,7 +129,6 @@ export default function AdminSubmissionDetailPage() {
       isVersionDetailAvailable &&
       versionsQuery.isSuccess,
   );
-  const detail = submissionQuery.data;
   const { markAsRead } = useAdminReadState('submissions', {
     adminId: currentUser?.id,
   });

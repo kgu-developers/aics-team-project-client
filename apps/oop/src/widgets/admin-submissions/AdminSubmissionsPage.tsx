@@ -2,7 +2,6 @@ import {
   API_BASE_URL,
   AdminMilestoneType,
   AdminPresentationEvaluationTeamDto,
-  type AdminSubmissionVersionResponse,
   ENDPOINTS,
 } from '@aics/api-client';
 import {
@@ -26,7 +25,10 @@ import {
   AdminMilestoneSubmissionBulkDownloadAction,
   AdminMilestoneSubmissionDetailAction,
 } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionDetailAction';
-import type { AdminMilestoneSubmissionView } from '~/features/admin-milestone-review/model';
+import type {
+  AdminMilestoneSubmissionView,
+  AdminSubmissionVersionDetailView,
+} from '~/features/admin-milestone-review/model';
 import {
   useAdminMilestoneSubmissionsQuery,
   useAdminPresentationEvaluationsQuery,
@@ -95,7 +97,7 @@ function formatSubmittedAt(submittedAt: string) {
 
 function getSubmissionMetadata(
   submission: AdminMilestoneSubmissionView,
-  version: AdminSubmissionVersionResponse | undefined,
+  version: AdminSubmissionVersionDetailView | undefined,
 ) {
   if (!submission.submissionId || !version) return null;
 
@@ -117,7 +119,7 @@ function getReviewSummary(submission: AdminMilestoneSubmissionView) {
 
 function getDownloadSummary(
   submission: AdminMilestoneSubmissionView,
-  version: AdminSubmissionVersionResponse | undefined,
+  version: AdminSubmissionVersionDetailView | undefined,
   isVersionError: boolean,
   isVersionPending: boolean,
 ) {
@@ -143,7 +145,9 @@ function getDownloadSummary(
           {artifacts && artifacts.length > 0 ? (
             <ul className={styles.submissionArtifactList}>
               {artifacts.map((artifact, index) => (
-                <li key={artifact.fileId ?? `${artifact.url}-${index}`}>
+                <li
+                  key={`${artifact.type}-${artifact.fileName ?? artifact.url ?? index}`}
+                >
                   {artifact.type === 'FILE' &&
                   artifact.downloadUrl &&
                   artifact.fileName ? (

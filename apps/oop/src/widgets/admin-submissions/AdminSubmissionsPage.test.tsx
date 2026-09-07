@@ -19,7 +19,11 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminSubmissionDetailPage from './AdminSubmissionDetailPage';
 import AdminSubmissionsPage from './AdminSubmissionsPage';
 
-import { getAdminMilestoneSubmissionsFixture } from '~/mocks/data/adminMilestoneSubmissions';
+import {
+  getAdminMilestoneSubmissionsFixture,
+  resetAdminMilestoneSubmissionsFixture,
+  updatePresentationOrderFixture,
+} from '~/mocks/data/adminMilestoneSubmissions';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
@@ -35,6 +39,7 @@ const server = setupServer(
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  resetAdminMilestoneSubmissionsFixture();
   setApiAccessToken(null);
   useAuthStore.setState({ accessToken: null, currentUser: null });
   server.resetHandlers();
@@ -137,6 +142,43 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('link', { name: 'proposal-v1.pdf' }),
     ).toHaveAttribute('download', 'proposal-v1.pdf');
+  });
+
+  it('버전 목록 순서와 관계없이 현재 버전을 먼저 표시한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_VERSIONS('1001')}`,
+        () =>
+          HttpResponse.json({
+            contents: [
+              {
+                description: '초기 제안서',
+                late: false,
+                submittedAt: '2026-09-01T09:00:00Z',
+                submittedBy: '20230001',
+                version: 1,
+              },
+              {
+                changeNote: '피드백 반영',
+                description: '보완된 제안서',
+                late: false,
+                submittedAt: '2026-09-07T09:00:00Z',
+                submittedBy: '20230001',
+                version: 2,
+              },
+            ],
+          }),
+      ),
+    );
+
+    renderPage(
+      '/admin/submissions/1001?milestoneId=proposal&sectionId=oop-2026-2-01',
+    );
+
+    expect(await screen.findByText('보완된 제안서')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'proposal-v2.pdf' }),
+    ).toBeInTheDocument();
   });
 
   it('중간 점검의 현재 버전과 버전 이력을 일치하게 표시한다', async () => {
@@ -268,5 +310,24 @@ describe('AdminSubmissionsPage', () => {
 
   it('알 수 없는 마일스톤 키는 제출 목록 fixture에서 찾지 않는다', () => {
     expect(getAdminMilestoneSubmissionsFixture('constructor')).toBeUndefined();
+  });
+
+  it('발표 순서 fixture는 초기화 후 원래 순서로 돌아온다', () => {
+    updatePresentationOrderFixture([
+      { order: 2, teamId: 11 },
+      { order: 1, teamId: 12 },
+    ]);
+
+    expect(
+      getAdminMilestoneSubmissionsFixture('103')?.contents[0]
+        ?.presentationOrder,
+    ).toBe(2);
+
+    resetAdminMilestoneSubmissionsFixture();
+
+    expect(
+      getAdminMilestoneSubmissionsFixture('103')?.contents[0]
+        ?.presentationOrder,
+    ).toBe(1);
   });
 });

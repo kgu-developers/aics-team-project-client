@@ -2,7 +2,10 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
-import { updatePresentationOrderFixture } from '../data/adminMilestoneSubmissions';
+import {
+  resetAdminMilestoneSubmissionsFixture,
+  updatePresentationOrderFixture,
+} from '../data/adminMilestoneSubmissions';
 import {
   adminPresentationEvaluationsFixture,
   resetAdminPresentationEvaluationsFixture,
@@ -14,6 +17,7 @@ import {
 import { demoAdmin } from '../data/users';
 
 function resetPresentationEvaluationScenario() {
+  resetAdminMilestoneSubmissionsFixture();
   resetAdminPresentationEvaluationsFixture();
   resetAdminSectionMilestonesFixture();
 }

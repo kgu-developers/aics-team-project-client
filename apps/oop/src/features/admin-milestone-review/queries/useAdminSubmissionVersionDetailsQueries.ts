@@ -1,6 +1,7 @@
 import { fetchAdminSubmissionVersion } from '@aics/api-client';
 import { useQueries } from '@tanstack/react-query';
 
+import { toAdminSubmissionVersionDetailView } from '../model';
 import { adminMilestoneSubmissionsKeys } from './adminMilestoneSubmissionsKeys';
 
 type SubmissionVersionTarget = {
@@ -19,8 +20,13 @@ export function useAdminSubmissionVersionDetailsQueries(
         target.submissionId,
         target.version,
       ),
-      queryFn: () =>
-        fetchAdminSubmissionVersion(target.submissionId, target.version),
+      queryFn: async () =>
+        toAdminSubmissionVersionDetailView(
+          await fetchAdminSubmissionVersion(
+            target.submissionId,
+            target.version,
+          ),
+        ),
     })),
   });
 }

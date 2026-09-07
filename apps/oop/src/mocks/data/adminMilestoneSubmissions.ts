@@ -130,6 +130,10 @@ const submissionsByMilestoneId: Record<
   },
 };
 
+const initialSubmissionsByMilestoneId = structuredClone(
+  submissionsByMilestoneId,
+);
+
 export function getAdminMilestoneSubmissionsFixture(
   milestoneId: string,
 ): AdminMilestoneSubmissionsResponse | undefined {
@@ -152,4 +156,14 @@ export function updatePresentationOrderFixture(
     submission.presentationOrder =
       ordersByTeamId.get(submission.teamId) ?? submission.presentationOrder;
   });
+}
+
+export function resetAdminMilestoneSubmissionsFixture() {
+  Object.keys(submissionsByMilestoneId).forEach(milestoneId => {
+    delete submissionsByMilestoneId[milestoneId];
+  });
+  Object.assign(
+    submissionsByMilestoneId,
+    structuredClone(initialSubmissionsByMilestoneId),
+  );
 }
