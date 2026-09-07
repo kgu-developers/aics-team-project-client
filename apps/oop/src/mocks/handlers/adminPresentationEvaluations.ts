@@ -2,6 +2,7 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
+import { updatePresentationOrderFixture } from '../data/adminMilestoneSubmissions';
 import {
   adminPresentationEvaluationsFixture,
   resetAdminPresentationEvaluationsFixture,
@@ -132,6 +133,7 @@ export const adminPresentationEvaluationHandlers = [
           presentationOrder:
             teamOrders.get(team.teamId) ?? team.presentationOrder,
         }));
+      updatePresentationOrderFixture(body.teamOrders);
 
       return new HttpResponse(null, { status: 204 });
     },

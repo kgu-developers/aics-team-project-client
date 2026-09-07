@@ -46,12 +46,22 @@ export function AdminMilestoneSubmissionDetailAction({
 }
 
 export function AdminMilestoneSubmissionBulkDownloadAction({
+  href,
   label = '일괄 다운로드',
   onClick,
 }: {
+  href?: string;
   label?: string;
   onClick?: () => void;
 }) {
+  if (href) {
+    return (
+      <a className={styles.detailLink} href={href} onClick={onClick}>
+        {label}
+      </a>
+    );
+  }
+
   return (
     <button
       className={`${styles.detailLink} ${styles.detailButtonDisabled}`}

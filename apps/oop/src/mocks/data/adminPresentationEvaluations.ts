@@ -17,7 +17,7 @@ export const adminPresentationEvaluationsFixture: AdminPresentationEvaluationsRe
     teams: [
       {
         submissionId: 'submission-oop-01-1-presentation-evaluate',
-        teamId: 1,
+        teamId: 11,
         teamName: 'OOP-01 - 1팀',
         projectTopic: 'AI 기반 팀 프로젝트 관리 서비스',
         presentationOrder: 1,
@@ -27,7 +27,7 @@ export const adminPresentationEvaluationsFixture: AdminPresentationEvaluationsRe
       },
       {
         submissionId: 'submission-oop-01-2-presentation-evaluate',
-        teamId: 2,
+        teamId: 12,
         teamName: 'OOP-01 - 2팀',
         projectTopic: '캠퍼스 학습 일정 관리 서비스',
         presentationOrder: 2,
@@ -46,7 +46,7 @@ export function resetAdminPresentationEvaluationsFixture() {
   adminPresentationEvaluationsFixture.teams = [
     {
       submissionId: 'submission-oop-01-1-presentation-evaluate',
-      teamId: 1,
+      teamId: 11,
       teamName: 'OOP-01 - 1팀',
       projectTopic: 'AI 기반 팀 프로젝트 관리 서비스',
       presentationOrder: 1,
@@ -56,7 +56,7 @@ export function resetAdminPresentationEvaluationsFixture() {
     },
     {
       submissionId: 'submission-oop-01-2-presentation-evaluate',
-      teamId: 2,
+      teamId: 12,
       teamName: 'OOP-01 - 2팀',
       projectTopic: '캠퍼스 학습 일정 관리 서비스',
       presentationOrder: 2,

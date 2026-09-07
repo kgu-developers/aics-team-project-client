@@ -4,6 +4,7 @@ import {
 } from '@aics/api-client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { adminMilestoneSubmissionsKeys } from './adminMilestoneSubmissionsKeys';
 import { adminPresentationEvaluationKeys } from './adminPresentationEvaluationKeys';
 
 type Input = UpdatePresentationOrderInput & { sectionId: string };
@@ -20,6 +21,9 @@ export function useUpdatePresentationOrderMutation() {
     onSuccess: async (_data, variables) => {
       await queryClient.invalidateQueries({
         queryKey: adminPresentationEvaluationKeys.list(variables.sectionId),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: adminMilestoneSubmissionsKeys.all,
       });
     },
   });

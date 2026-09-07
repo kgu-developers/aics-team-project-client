@@ -88,6 +88,20 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
       teamName: 'OOP-01 - 1팀',
     },
     versionDetails: {
+      1: {
+        artifacts: [
+          {
+            downloadUrl: 'https://files.example.com/midterm-v1.pdf',
+            fileName: 'midterm-v1.pdf',
+            type: 'FILE',
+          },
+          { content: '초기 중간 점검 결과입니다.', type: 'TEXT' },
+        ],
+        late: false,
+        submittedAt: '2026-10-07T09:00:00Z',
+        submittedBy: '20230001',
+        version: 1,
+      },
       2: {
         artifacts: [
           { content: '중간 점검 결과입니다.', type: 'TEXT' },
@@ -110,6 +124,50 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
           submittedAt: '2026-10-14T09:00:00Z',
           submittedBy: '20230001',
           version: 2,
+        },
+        {
+          late: false,
+          submittedAt: '2026-10-07T09:00:00Z',
+          submittedBy: '20230001',
+          version: 1,
+        },
+      ],
+    },
+  },
+  '1004': {
+    detail: {
+      canSubmitNow: false,
+      currentVersion: 1,
+      hasPendingReview: false,
+      id: 1004,
+      milestoneId: 102,
+      status: 'APPROVED',
+      teamId: 12,
+      teamName: 'OOP-01 - 2팀',
+    },
+    versionDetails: {
+      1: {
+        artifacts: [
+          {
+            downloadUrl: 'https://files.example.com/midterm-team-2.pdf',
+            fileName: 'midterm-team-2.pdf',
+            type: 'FILE',
+          },
+          { content: '2팀 중간 점검 결과입니다.', type: 'TEXT' },
+        ],
+        late: false,
+        submittedAt: '2026-10-13T09:00:00Z',
+        submittedBy: '20230002',
+        version: 1,
+      },
+    },
+    versions: {
+      contents: [
+        {
+          late: false,
+          submittedAt: '2026-10-13T09:00:00Z',
+          submittedBy: '20230002',
+          version: 1,
         },
       ],
     },
@@ -135,7 +193,11 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
             fileName: 'final-report.pdf',
             type: 'FILE',
           },
-          { content: '최종 보고서 요약', type: 'TEXT' },
+          {
+            downloadUrl: 'https://files.example.com/final-deliverable.zip',
+            fileName: 'final-deliverable.zip',
+            type: 'FILE',
+          },
         ],
         late: false,
         submittedAt: '2026-12-01T09:00:00Z',
@@ -206,6 +268,11 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
           {
             downloadUrl: 'https://files.example.com/presentation.pdf',
             fileName: 'presentation.pdf',
+            type: 'FILE',
+          },
+          {
+            downloadUrl: 'https://files.example.com/presentation-demo.zip',
+            fileName: 'presentation-demo.zip',
             type: 'FILE',
           },
           { type: 'LINK', url: 'https://youtu.be/demo-oop-01-1' },

@@ -35,6 +35,8 @@ export const ENDPOINTS = {
       `/api/v1/admin/oop/milestones/${milestoneId}/submissions`,
     SUBMISSION: (submissionId: string | number) =>
       `/api/v1/admin/oop/submissions/${submissionId}`,
+    SUBMISSION_DOWNLOAD: (submissionId: string | number) =>
+      `/api/v1/admin/oop/submissions/${submissionId}/download`,
     SUBMISSION_VERSION: (
       submissionId: string | number,
       version: string | number,
