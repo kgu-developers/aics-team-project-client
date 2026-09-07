@@ -1,4 +1,5 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
+import type { CurrentUser } from '@aics/core';
 import { AstryxThemeProvider, ToastViewport } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -70,9 +71,12 @@ function createWrapper(initialPath = '/student') {
   return { wrapper: Wrapper, router, queryClient };
 }
 
-function renderHeader(initialPath?: string) {
+function renderHeader(
+  initialPath?: string,
+  currentUser: CurrentUser = demoStudent,
+) {
   useAuthStore.getState().markAuthenticated('STUDENT');
-  useAuthStore.getState().setCurrentUser(demoStudent);
+  useAuthStore.getState().setCurrentUser(currentUser);
   mockSessionResponseHeaders(issueMockSession(demoUserAccounts[0]));
   const context = createWrapper(initialPath);
   return {
@@ -84,6 +88,68 @@ function renderHeader(initialPath?: string) {
 }
 
 describe('StudentHeaderActions', () => {
+  it('실제 teamId가 있으면 프로필을 열 때 팀과 팀장을 조회하고 내 팀으로 연결한다', async () => {
+    let requests = 0;
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF('4')}`, () => {
+        requests += 1;
+        return HttpResponse.json({
+          id: 4,
+          name: '동시 선점 검수 팀',
+          members: [
+            {
+              id: 6,
+              studentNumber: '20260004',
+              name: '동시 A',
+              isLeader: true,
+            },
+            {
+              id: 7,
+              studentNumber: '20260005',
+              name: '동시 B',
+              isLeader: false,
+            },
+          ],
+        });
+      }),
+    );
+    renderHeader('/student', {
+      ...demoStudent,
+      teamId: '4',
+      currentTeam: null,
+    });
+    expect(requests).toBe(0);
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: '내 프로필 열기' }));
+    expect(await screen.findByText('동시 A (20260004)')).toBeVisible();
+    expect(
+      screen.getByRole('link', { name: '동시 선점 검수 팀' }),
+    ).toHaveAttribute('href', '/student/team');
+    expect(requests).toBe(1);
+  });
+
+  it('팀장 조회 실패를 미배정이나 미확정으로 잘못 표시하지 않는다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF('4')}`,
+        () => new HttpResponse(null, { status: 500 }),
+      ),
+    );
+    renderHeader('/student', {
+      ...demoStudent,
+      teamId: '4',
+      currentTeam: null,
+    });
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: '내 프로필 열기' }));
+    expect(await screen.findByText('팀 정보 확인 필요')).toBeVisible();
+    expect(screen.getByText('확인 필요')).toBeVisible();
+    expect(screen.queryByText('미확정')).toBeNull();
+    expect(screen.queryByText('미배정')).toBeNull();
+  });
+
   it('헤더는 홈·액션 플랜·공지사항·회의록 텍스트 내비게이션과 현재 경로를 표시한다', () => {
     renderHeader('/student/notices/notice-1');
 
@@ -180,7 +246,7 @@ describe('StudentHeaderActions', () => {
 
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }));
     expect(
-      await screen.findByText('현재 비밀번호를 입력해 주세요.'),
+      await within(dialog).findByText('현재 비밀번호를 입력해 주세요.'),
     ).toBeInTheDocument();
   });
 

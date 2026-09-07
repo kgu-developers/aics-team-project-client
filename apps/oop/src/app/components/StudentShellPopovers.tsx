@@ -28,6 +28,7 @@ import {
   validatePasswordChange,
   type PasswordValidationIssue,
 } from '~/features/auth/validatePasswordChange';
+import { useTeamKickoffQuery } from '~/features/team-assignment/queries';
 
 import { oopCourseConfig } from '~/course/config';
 
@@ -197,6 +198,25 @@ function StudentProfilePopover({
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const section = currentUser.sections[0];
   const team = currentUser.currentTeam;
+  const kickoff = useTeamKickoffQuery(
+    isOpen ? (currentUser.teamId ?? undefined) : undefined,
+  );
+  const liveLeader = kickoff.data?.members.find(member => member.isLeader);
+  const legacyLeader = team?.members.find(member => member.isLeader);
+  const teamName = currentUser.teamId
+    ? kickoff.isError
+      ? '팀 정보 확인 필요'
+      : (kickoff.data?.name ?? '확인 중…')
+    : team?.name;
+  const leaderName = currentUser.teamId
+    ? kickoff.isError
+      ? '확인 필요'
+      : kickoff.isPending
+        ? '확인 중…'
+        : liveLeader
+          ? `${liveLeader.name ?? liveLeader.studentNumber} (${liveLeader.studentNumber})`
+          : '미확정'
+    : (legacyLeader?.name ?? '미확정');
 
   const openPasswordDialog = () => {
     onOpenChange(false);
@@ -255,8 +275,26 @@ function StudentProfilePopover({
         </div>
         <div className={styles.profileDetailRow}>
           <dt>팀</dt>
-          <dd>{team?.name ?? '미배정'}</dd>
+          <dd>
+            {teamName ? (
+              <Link
+                className={styles.profileTeamLink}
+                to={ROUTES.STUDENT.TEAM}
+                onClick={() => onOpenChange(false)}
+              >
+                {teamName}
+              </Link>
+            ) : (
+              '미배정'
+            )}
+          </dd>
         </div>
+        {currentUser.teamId || team ? (
+          <div className={styles.profileDetailRow}>
+            <dt>팀장</dt>
+            <dd>{leaderName}</dd>
+          </div>
+        ) : null}
       </dl>
 
       <div className={styles.profileActions}>

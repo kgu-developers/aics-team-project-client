@@ -191,3 +191,6 @@ export {
 export { fetchMySections } from './section';
 
 export { fetchMyTeamAssignmentSurvey } from './team-assignment';
+
+export { fetchTeamKickoff, fetchTeamMemberContacts } from './teams';
+export { claimTeamLeader } from './team-assignment';

@@ -51,7 +51,8 @@ export type TeamAssignmentProjection = {
   confirmedPartner?: PartnerCandidate;
   assignedTeam?: {
     id: string;
-    groupNumber: number;
+    name?: string;
+    groupNumber?: number;
     projectTopic?: string;
     members: TeamAssignmentMember[];
     leaderId?: string;

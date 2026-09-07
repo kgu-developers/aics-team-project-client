@@ -40,6 +40,11 @@ vi.mock('./queries', () => ({
     isPending: false,
     mutateAsync: vi.fn(),
   }),
+  isValidPositiveTeamId: (id: string) => /^\d+$/.test(id),
+  useClaimTeamLeaderMutation: () => ({
+    isPending: false,
+    mutateAsync: vi.fn(),
+  }),
   useMyTeamAssignmentSurveyQuery: mockSurveyQuery,
   useSubmitTeamAssignmentSurveyMutation: () => ({
     isPending: false,
@@ -203,5 +208,43 @@ describe('TeamAssignmentFlow live API mode', () => {
     renderFlow();
     expect(screen.getByText(/배정된 팀이 어느 수강 분반/)).toBeVisible();
     expect(mockSurveyQuery).toHaveBeenCalledWith(undefined);
+  });
+  it('배정된 팀은 kickoff 응답의 이름과 ID로 표시한다', () => {
+    mockCurrentUserQuery.mockReturnValue(
+      queryResult({ ...student, teamId: '4' }),
+    );
+    mockSurveyQuery.mockReturnValue(queryResult());
+    mockKickoffQuery.mockReturnValue(
+      queryResult({
+        id: 4,
+        name: '7조',
+        members: [
+          { id: 10, studentNumber: student.studentNumber, isLeader: false },
+        ],
+      }),
+    );
+    renderFlow();
+    expect(
+      screen.getByRole('heading', { name: '7조에 배정되었어요!' }),
+    ).toBeVisible();
+    expect(mockKickoffQuery).toHaveBeenCalledWith('4');
+    expect(mockSurveyQuery).toHaveBeenCalledWith(undefined);
+  });
+  it('kickoff의 팀장 확정을 확인하면 학생 홈으로 이동한다', () => {
+    mockCurrentUserQuery.mockReturnValue(
+      queryResult({ ...student, teamId: '4' }),
+    );
+    mockSurveyQuery.mockReturnValue(queryResult());
+    mockKickoffQuery.mockReturnValue(
+      queryResult({
+        id: 4,
+        name: '7조',
+        members: [
+          { id: 10, studentNumber: student.studentNumber, isLeader: true },
+        ],
+      }),
+    );
+    renderFlow();
+    expect(screen.getByText('이동: /student')).toBeVisible();
   });
 });

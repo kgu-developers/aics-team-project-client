@@ -10,6 +10,7 @@ import { useMySectionsQuery } from '~/features/section/queries';
 import SectionSelection from '~/features/section/SectionSelection';
 import { useSelectedSection } from '~/features/section/useSelectedSection';
 
+import AssignedTeamFlow from './AssignedTeamFlow';
 import * as styles from './LiveTeamAssignmentFlow.css';
 import OnboardingRecovery from './OnboardingRecovery';
 import { useMyTeamAssignmentSurveyQuery } from './queries';
@@ -89,9 +90,12 @@ export default function LiveTeamAssignmentFlow({
       {!section ? (
         <p>설문에 응답할 수강 분반을 선택해 주세요.</p>
       ) : teamId ? (
-        <p>
-          팀 배정이 확인됐어요. 배정 결과와 첫 만남 절차는 연결 준비 중입니다.
-        </p>
+        <AssignedTeamFlow
+          key={teamId}
+          section={section}
+          teamId={teamId}
+          teamOnly={teamOnly}
+        />
       ) : surveyQuery.isPending ? (
         <p>사전 설문 제출 상태를 확인하는 중입니다.</p>
       ) : surveyQuery.isError ? (
