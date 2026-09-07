@@ -56,6 +56,11 @@ export const ENDPOINTS = {
       `/sections/${sectionId}/dashboard/student`,
   },
   TEAM: {
+    KICKOFF: (teamId: string) => `/api/v1/oop/teams/${teamId}/kickoff`,
+    MEMBER_CONTACTS: (teamId: string) =>
+      `/api/v1/oop/teams/${teamId}/members/contacts`,
+    LEADER_CLAIM: (teamId: string) =>
+      `/api/v1/oop/teams/${teamId}/leader-claim`,
     ROOT: '/teams',
   },
   MEETING: {

@@ -8,3 +8,5 @@ export { searchPartnerCandidates } from './searchPartnerCandidates';
 
 export { fetchMyTeamAssignmentSurvey } from './fetchMyTeamAssignmentSurvey';
 export { submitTeamAssignmentSurvey } from './submitTeamAssignmentSurvey';
+
+export { claimTeamLeader } from './claimTeamLeader';

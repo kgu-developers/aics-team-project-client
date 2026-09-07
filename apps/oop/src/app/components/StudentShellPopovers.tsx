@@ -28,6 +28,10 @@ import {
   validatePasswordChange,
   type PasswordValidationIssue,
 } from '~/features/auth/validatePasswordChange';
+import {
+  isValidPositiveTeamId,
+  useTeamKickoffQuery,
+} from '~/features/team-assignment/queries';
 
 import { oopCourseConfig } from '~/course/config';
 
@@ -197,6 +201,30 @@ function StudentProfilePopover({
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const section = currentUser.sections[0];
   const team = currentUser.currentTeam;
+  const teamId = currentUser.teamId ?? undefined;
+  const isInvalidTeamId =
+    teamId !== undefined && !isValidPositiveTeamId(teamId);
+  const kickoff = useTeamKickoffQuery(
+    isOpen && !isInvalidTeamId ? teamId : undefined,
+  );
+  const liveLeader = kickoff.data?.members.find(member => member.isLeader);
+  const legacyLeader = team?.members.find(member => member.isLeader);
+  const teamName =
+    teamId !== undefined
+      ? isInvalidTeamId || kickoff.isError
+        ? '팀 정보 확인 필요'
+        : (kickoff.data?.name ?? '확인 중…')
+      : team?.name;
+  const leaderName =
+    teamId !== undefined
+      ? isInvalidTeamId || kickoff.isError
+        ? '확인 필요'
+        : kickoff.isPending
+          ? '확인 중…'
+          : liveLeader
+            ? `${liveLeader.name ?? liveLeader.studentNumber} (${liveLeader.studentNumber})`
+            : '미확정'
+      : (legacyLeader?.name ?? '미확정');
 
   const openPasswordDialog = () => {
     onOpenChange(false);
@@ -255,8 +283,26 @@ function StudentProfilePopover({
         </div>
         <div className={styles.profileDetailRow}>
           <dt>팀</dt>
-          <dd>{team?.name ?? '미배정'}</dd>
+          <dd>
+            {teamName ? (
+              <Link
+                className={styles.profileTeamLink}
+                to={ROUTES.STUDENT.TEAM}
+                onClick={() => onOpenChange(false)}
+              >
+                {teamName}
+              </Link>
+            ) : (
+              '미배정'
+            )}
+          </dd>
         </div>
+        {teamId !== undefined || team ? (
+          <div className={styles.profileDetailRow}>
+            <dt>팀장</dt>
+            <dd>{leaderName}</dd>
+          </div>
+        ) : null}
       </dl>
 
       <div className={styles.profileActions}>

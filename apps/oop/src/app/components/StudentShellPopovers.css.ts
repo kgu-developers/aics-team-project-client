@@ -174,6 +174,11 @@ export const profileDetailRow = style({
   gridTemplateColumns: '52px minmax(0, 1fr)',
 });
 
+export const profileTeamLink = style({
+  color: tokens.color.text.accent,
+  textDecoration: 'underline',
+});
+
 globalStyle(`${profileDetailRow} dt`, {
   color: tokens.color.text.secondary,
 });

@@ -1,5 +1,6 @@
 import type { TeamAssignmentMember } from '@aics/core';
 import { Button, proportional, Table, useToast } from '@aics/design-system';
+import { Copy } from 'lucide-react';
 
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
@@ -108,11 +109,12 @@ export function TeamMemberTable({ members, variant }: TeamMemberTableProps) {
                     return (
                       <Button
                         clickAction={() => copyPhoneNumber(phoneNumber)}
+                        icon={<Copy aria-hidden='true' size={16} />}
                         label={`${phoneNumber} 복사`}
                         size='sm'
                         variant='ghost'
                       >
-                        {phoneNumber} 복사
+                        {phoneNumber}
                       </Button>
                     );
                   },

@@ -136,6 +136,11 @@ export type {
   SubmitTeamInput,
   Team,
   TeamMember,
+  TeamMemberContact,
+  TeamMemberContactResponse,
+  TeamMemberContactListResponse,
+  TeamKickoffMemberResponse,
+  TeamKickoffResponse,
 } from './team/types';
 export type {
   ConfirmTeamLeaderInput,
