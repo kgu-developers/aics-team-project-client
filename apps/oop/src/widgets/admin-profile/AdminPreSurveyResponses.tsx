@@ -28,8 +28,12 @@ const roleLabels: Record<string, string> = {
   TEAM_LEADER: '팀장(프로젝트 매니저)',
 };
 
-function formatPreferredRoles(roles: string[]) {
-  const labels = roles.map(role => roleLabels[role] ?? role);
+function formatPreferredRoles(roles: unknown) {
+  if (!Array.isArray(roles)) return '-';
+
+  const labels = roles
+    .filter((role): role is string => typeof role === 'string')
+    .map(role => roleLabels[role] ?? role);
 
   return labels.length > 0 ? labels.join(', ') : '-';
 }

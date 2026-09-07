@@ -363,6 +363,32 @@ describe('AdminProfilePage', () => {
     expect(screen.getByText('이프로')).toBeInTheDocument();
   });
 
+  it('희망 역할 응답이 배열이 아니어도 목록을 표시한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRE_SURVEY_RESPONSES(':sectionId')}`,
+        () =>
+          HttpResponse.json({
+            contents: [
+              {
+                etcOpinion: '기타 의견',
+                id: 3,
+                preferredRoles: null,
+                submittedAt: '2026-09-07 12:00',
+                topicOpinion: '주제 의견',
+                userId: '20260004',
+                userName: '런타임 가드 테스트',
+              },
+            ],
+          }),
+      ),
+    );
+    renderPage();
+
+    expect(await screen.findByText('런타임 가드 테스트')).toBeInTheDocument();
+    expect(screen.getByText('-')).toBeInTheDocument();
+  });
+
   it('사전 정보 조회가 실패하면 오류를 표시한다', async () => {
     server.use(
       http.get(
