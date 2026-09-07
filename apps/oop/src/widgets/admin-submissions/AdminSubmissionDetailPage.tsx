@@ -24,6 +24,12 @@ const milestoneLabels = {
   proposal: '제안서',
 } as const;
 
+const versionDetailMilestoneIds = new Set([
+  'midterm',
+  'presentation-submit',
+  'proposal',
+]);
+
 function getMilestoneLabel(milestoneId: string | undefined) {
   if (milestoneId && Object.hasOwn(milestoneLabels, milestoneId)) {
     return milestoneLabels[milestoneId as keyof typeof milestoneLabels];
@@ -84,13 +90,18 @@ export default function AdminSubmissionDetailPage() {
   const isRequestedSectionAccessible = Boolean(
     search.sectionId && accessibleSectionIds.includes(search.sectionId),
   );
+  const isVersionDetailAvailable = Boolean(
+    search.milestoneId && versionDetailMilestoneIds.has(search.milestoneId),
+  );
   const submissionQuery = useAdminMilestoneSubmissionDetailQuery(
     submissionId,
-    isRequestedSectionAccessible,
+    isRequestedSectionAccessible && isVersionDetailAvailable,
   );
   const versionsQuery = useAdminSubmissionVersionsQuery(
     submissionId,
-    isRequestedSectionAccessible && submissionQuery.isSuccess,
+    isRequestedSectionAccessible &&
+      isVersionDetailAvailable &&
+      submissionQuery.isSuccess,
   );
   const versions = versionsQuery.data ?? [];
 
@@ -106,7 +117,9 @@ export default function AdminSubmissionDetailPage() {
   const versionQuery = useAdminSubmissionVersionQuery(
     submissionId,
     selectedVersion,
-    isRequestedSectionAccessible && versionsQuery.isSuccess,
+    isRequestedSectionAccessible &&
+      isVersionDetailAvailable &&
+      versionsQuery.isSuccess,
   );
   const detail = submissionQuery.data;
   const { markAsRead } = useAdminReadState('submissions', {
@@ -147,6 +160,11 @@ export default function AdminSubmissionDetailPage() {
         <EmptyState
           description='담당 분반의 제출물만 조회할 수 있습니다.'
           title='접근할 수 없는 제출물입니다.'
+        />
+      ) : !isVersionDetailAvailable ? (
+        <EmptyState
+          description='이 마일스톤은 전용 화면의 조회 API가 확인된 뒤 연결합니다.'
+          title='버전 상세를 제공하지 않는 마일스톤입니다.'
         />
       ) : submissionQuery.isPending ? (
         <Text aria-live='polite' role='status'>

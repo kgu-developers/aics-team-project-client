@@ -80,6 +80,30 @@ export const list = style({
   gap: 8,
 });
 
+export const submissionArtifactList = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 4,
+  margin: 0,
+  paddingLeft: 0,
+  listStyle: 'none',
+});
+
+export const submissionArtifactLink = style({
+  color: tokens.color.text.accent,
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
+  ':focus-visible': {
+    outline: `2px solid ${tokens.color.accent}`,
+    outlineOffset: 2,
+  },
+});
+
+export const submissionMetadataText = style({
+  color: tokens.color.text.secondary,
+  fontSize: 12,
+});
+
 export const topic = style({
   fontWeight: 600,
 });

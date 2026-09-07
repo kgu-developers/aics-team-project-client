@@ -1,6 +1,9 @@
-import type {
+import {
+  API_BASE_URL,
   AdminMilestoneType,
   AdminPresentationEvaluationTeamDto,
+  type AdminSubmissionVersionResponse,
+  ENDPOINTS,
 } from '@aics/api-client';
 import {
   Button,
@@ -12,19 +15,23 @@ import {
   Text,
 } from '@aics/design-system';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { type KeyboardEvent, useRef, useState } from 'react';
+import { type KeyboardEvent, useMemo, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 
 import { AdminMilestoneSubmissionCard } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard';
-import { AdminMilestoneSubmissionDetailAction } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionDetailAction';
+import {
+  AdminMilestoneSubmissionBulkDownloadAction,
+  AdminMilestoneSubmissionDetailAction,
+} from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionDetailAction';
 import type { AdminMilestoneSubmissionView } from '~/features/admin-milestone-review/model';
 import {
   useAdminMilestoneSubmissionsQuery,
   useAdminPresentationEvaluationsQuery,
   useAdminSectionMilestonesQuery,
+  useAdminSubmissionVersionDetailsQueries,
 } from '~/features/admin-milestone-review/queries';
 import * as readStateStyles from '~/features/admin-read-state/adminReadState.css';
 import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
@@ -61,14 +68,65 @@ const milestoneTypeByTab: Partial<Record<MilestoneTabId, AdminMilestoneType>> =
     proposal: 'PROPOSAL',
   };
 
+const versionDetailMilestoneIds = new Set<MilestoneTabId>([
+  'midterm',
+  'proposal',
+]);
+
+const versionMetadataMilestoneIds = new Set<MilestoneTabId>([
+  'final-report',
+  'midterm',
+  'presentation-submit',
+  'proposal',
+]);
+
 function isMilestoneTabId(value: string | undefined): value is MilestoneTabId {
   return MILESTONE_TABS.some(tab => tab.id === value);
 }
 
-function getSubmissionSummary(submission: AdminMilestoneSubmissionView) {
+function formatSubmittedAt(submittedAt: string) {
+  const date = new Date(submittedAt);
+
+  if (Number.isNaN(date.getTime())) return submittedAt;
+
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function getSubmissionMetadata(
+  submission: AdminMilestoneSubmissionView,
+  version: AdminSubmissionVersionResponse | undefined,
+) {
+  if (!submission.submissionId || !version) return null;
+
   return (
     <>
-      <Text>상태: {submission.statusLabel}</Text>
+      <Text className={styles.submissionMetadataText}>
+        {formatSubmittedAt(version.submittedAt)}
+      </Text>
+      <Text className={styles.submissionMetadataText}>
+        제출자: {version.submittedBy}
+      </Text>
+    </>
+  );
+}
+
+function getReviewSummary(submission: AdminMilestoneSubmissionView) {
+  return <>{submission.hasPendingReview ? <Text>검토 대기 중</Text> : null}</>;
+}
+
+function getDownloadSummary(
+  submission: AdminMilestoneSubmissionView,
+  version: AdminSubmissionVersionResponse | undefined,
+  isVersionError: boolean,
+  isVersionPending: boolean,
+) {
+  const artifacts = version?.artifacts.filter(
+    artifact => artifact.type === 'FILE' || artifact.type === 'LINK',
+  );
+
+  return (
+    <>
       <Text>
         현재 버전:{' '}
         {submission.currentVersion > 0 ? `${submission.currentVersion}차` : '-'}
@@ -76,7 +134,46 @@ function getSubmissionSummary(submission: AdminMilestoneSubmissionView) {
       {submission.presentationOrder !== null ? (
         <Text>발표 순서: {submission.presentationOrder}번</Text>
       ) : null}
-      {submission.hasPendingReview ? <Text>검토 대기 중</Text> : null}
+      {!submission.submissionId ? null : isVersionPending ? (
+        <Text>제출 파일을 불러오는 중입니다.</Text>
+      ) : isVersionError ? (
+        <Text>제출 파일 정보를 불러오지 못했습니다.</Text>
+      ) : version ? (
+        <>
+          {artifacts && artifacts.length > 0 ? (
+            <ul className={styles.submissionArtifactList}>
+              {artifacts.map((artifact, index) => (
+                <li key={artifact.fileId ?? `${artifact.url}-${index}`}>
+                  {artifact.type === 'FILE' &&
+                  artifact.downloadUrl &&
+                  artifact.fileName ? (
+                    <a
+                      className={styles.submissionArtifactLink}
+                      download={artifact.fileName}
+                      href={artifact.downloadUrl}
+                    >
+                      {artifact.fileName}
+                    </a>
+                  ) : artifact.type === 'LINK' && artifact.url ? (
+                    <a
+                      className={styles.submissionArtifactLink}
+                      href={artifact.url}
+                      rel='noreferrer'
+                      target='_blank'
+                    >
+                      {artifact.url}
+                    </a>
+                  ) : (
+                    (artifact.fileName ?? artifact.url ?? '이름 없는 제출물')
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Text>제출된 파일이 없습니다.</Text>
+          )}
+        </>
+      ) : null}
     </>
   );
 }
@@ -118,6 +215,32 @@ export default function AdminSubmissionsPage() {
   const submissionsQuery = useAdminMilestoneSubmissionsQuery(
     selectedMilestone ? String(selectedMilestone.id) : undefined,
     isAccessibleSection && selectedMilestone !== undefined,
+  );
+  const versionMetadataTargets = useMemo(
+    () =>
+      versionMetadataMilestoneIds.has(activeMilestoneId)
+        ? (submissionsQuery.data?.submissions ?? []).flatMap(submission =>
+            submission.submissionId && submission.currentVersion > 0
+              ? [
+                  {
+                    submissionId: submission.submissionId,
+                    version: submission.currentVersion,
+                  },
+                ]
+              : [],
+          )
+        : [],
+    [activeMilestoneId, submissionsQuery.data?.submissions],
+  );
+  const versionMetadataQueries = useAdminSubmissionVersionDetailsQueries(
+    versionMetadataTargets,
+    versionMetadataMilestoneIds.has(activeMilestoneId),
+  );
+  const versionMetadataQueriesBySubmissionId = new Map(
+    versionMetadataTargets.map((target, index) => [
+      target.submissionId,
+      versionMetadataQueries[index],
+    ]),
   );
   const readState = useAdminReadState('submissions', {
     adminId: currentUser?.id,
@@ -409,6 +532,12 @@ export default function AdminSubmissionsPage() {
                 <div className={styles.list}>
                   {submissionsQuery.data?.submissions.map(submission => {
                     const submissionSectionId = effectiveSectionId;
+                    const isVersionDetailAvailable =
+                      versionDetailMilestoneIds.has(activeMilestoneId);
+                    const versionMetadataQuery =
+                      versionMetadataQueriesBySubmissionId.get(
+                        submission.submissionId ?? '',
+                      );
                     return (
                       <AdminMilestoneSubmissionCard
                         isUnread={Boolean(
@@ -420,16 +549,46 @@ export default function AdminSubmissionsPage() {
                           ),
                         )}
                         action={
-                          <AdminMilestoneSubmissionDetailAction
-                            milestoneId={activeTab.id}
-                            sectionId={effectiveSectionId}
-                            submissionId={submission.submissionId}
-                          />
+                          activeMilestoneId === 'final-report' ||
+                          activeMilestoneId === 'presentation-submit' ? (
+                            <AdminMilestoneSubmissionBulkDownloadAction
+                              href={
+                                submission.submissionId
+                                  ? `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_DOWNLOAD(submission.submissionId)}`
+                                  : undefined
+                              }
+                            />
+                          ) : (
+                            <AdminMilestoneSubmissionDetailAction
+                              milestoneId={activeTab.id}
+                              sectionId={effectiveSectionId}
+                              submissionId={submission.submissionId}
+                              unavailableReason={
+                                isVersionDetailAvailable
+                                  ? undefined
+                                  : '이 마일스톤의 전용 상세 조회 API 확인 후 제공 예정입니다.'
+                              }
+                            />
+                          )
                         }
                         key={submission.teamId}
                         label={submission.teamName}
                         secondaryLabel={submission.statusLabel}
-                        summary={getSubmissionSummary(submission)}
+                        submissionMetadata={getSubmissionMetadata(
+                          submission,
+                          versionMetadataQuery?.data,
+                        )}
+                        summary={
+                          activeMilestoneId === 'final-report' ||
+                          activeMilestoneId === 'presentation-submit'
+                            ? getDownloadSummary(
+                                submission,
+                                versionMetadataQuery?.data,
+                                Boolean(versionMetadataQuery?.isError),
+                                Boolean(versionMetadataQuery?.isPending),
+                              )
+                            : getReviewSummary(submission)
+                        }
                       />
                     );
                   })}
