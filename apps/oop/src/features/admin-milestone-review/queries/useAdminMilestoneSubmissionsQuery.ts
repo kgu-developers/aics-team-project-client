@@ -1,27 +1,23 @@
-import { fetchAdminSectionMilestoneSubmissions } from '@aics/api-client';
+import { fetchAdminMilestoneSubmissions } from '@aics/api-client';
 import { useQuery } from '@tanstack/react-query';
 
 import { toAdminMilestoneSubmissionsView } from '../model';
 import { adminMilestoneSubmissionsKeys } from './adminMilestoneSubmissionsKeys';
 
 export function useAdminMilestoneSubmissionsQuery(
-  sectionId: string | undefined,
-  milestoneId: string,
-  isAccessibleSection: boolean,
+  milestoneId: string | undefined,
+  isEnabled: boolean,
 ) {
   return useQuery({
-    enabled: Boolean(sectionId) && isAccessibleSection,
-    queryKey: adminMilestoneSubmissionsKeys.list(
-      sectionId ?? 'disabled',
-      milestoneId,
-    ),
+    enabled: Boolean(milestoneId) && isEnabled,
+    queryKey: adminMilestoneSubmissionsKeys.list(milestoneId ?? 'disabled'),
     queryFn: async () => {
-      if (!sectionId) {
-        throw new Error('분반 ID가 필요합니다.');
+      if (!milestoneId) {
+        throw new Error('마일스톤 ID가 필요합니다.');
       }
 
       return toAdminMilestoneSubmissionsView(
-        await fetchAdminSectionMilestoneSubmissions(sectionId, milestoneId),
+        await fetchAdminMilestoneSubmissions(milestoneId),
       );
     },
   });

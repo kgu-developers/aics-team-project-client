@@ -1,201 +1,139 @@
-import type { AdminSectionMilestoneSubmissionsResponse } from '@aics/api-client';
+import type { AdminMilestoneSubmissionsResponse } from '@aics/api-client';
 
-import { getAdminPeerEvaluationProgress } from './adminPeerEvaluationProgress';
-import { getAdminSubmissionFiles } from './adminSubmissionFiles';
-
-type MilestoneId =
-  | 'proposal'
-  | 'midterm'
-  | 'presentation-submit'
-  | 'final-report'
-  | 'peer-review';
-
-const section = {
-  id: 'oop-2026-2-01',
-  label: 'OOP-01',
-} as const;
-
-const teamSubmissions = [
-  {
-    id: 'submission-oop-01-1',
-    teamId: 'team-1151-1',
-    teamName: 'OOP-01 - 1팀',
-  },
-  {
-    id: 'submission-oop-01-2',
-    teamId: 'team-1151-2',
-    teamName: 'OOP-01 - 2팀',
-  },
-] as const;
-
-const milestones: Record<MilestoneId, { title: string }> = {
-  proposal: { title: '제안서' },
-  midterm: { title: '중간 점검' },
-  'presentation-submit': { title: '발표 자료 제출' },
-  'final-report': { title: '최종 보고서' },
-  'peer-review': { title: '상호 평가' },
-};
-
-const submissionDetailsByMilestone: Partial<
-  Record<
-    MilestoneId,
-    ReadonlyArray<{
-      resubmittedAt?: string | null;
-      submittedAt: string | null;
-      submittedBy?: string | null;
-      submissionId: string | null;
-    }>
-  >
+const submissionsByMilestoneId: Record<
+  string,
+  AdminMilestoneSubmissionsResponse
 > = {
-  'peer-review': [
-    {
-      submissionId: 'submission-oop-01-1-peer-review',
-      submittedAt: '2026/12/14',
-    },
-    { submissionId: null, submittedAt: null },
-  ],
-  proposal: [
-    {
-      submissionId: 'submission-oop-01-1-proposal',
-      submittedAt: '2026/09/05',
-    },
-    {
-      submissionId: 'submission-oop-01-2-proposal',
-      submittedAt: '2026/09/06',
-    },
-  ],
-  midterm: [
-    {
-      submissionId: 'submission-oop-01-1-midterm',
-      submittedAt: '2026/10/12',
-    },
-    {
-      submissionId: 'submission-oop-01-2-midterm',
-      submittedAt: '2026/10/13',
-    },
-  ],
-  'presentation-submit': [
-    {
-      submissionId: 'submission-oop-01-1-presentation-submit',
-      submittedAt: '2026/11/12',
-      submittedBy: '김민준',
-      resubmittedAt: null,
-    },
-    {
-      submissionId: 'submission-oop-01-2-presentation-submit',
-      submittedAt: '2026/11/13',
-      submittedBy: '박지훈',
-      resubmittedAt: '2026/11/14',
-    },
-  ],
-  'final-report': [
-    {
-      submissionId: 'submission-oop-01-1-final-report',
-      submittedAt: '2026/12/07',
-      submittedBy: '김민준',
-      resubmittedAt: null,
-    },
-    {
-      submissionId: 'submission-oop-01-2-final-report',
-      submittedAt: '2026/12/08',
-      submittedBy: '박지훈',
-      resubmittedAt: '2026/12/09',
-    },
-  ],
+  '101': {
+    contents: [
+      {
+        canSubmitNow: false,
+        currentVersion: 1,
+        hasPendingReview: true,
+        id: 1001,
+        milestoneId: 101,
+        status: 'SUBMITTED',
+        teamId: 11,
+        teamName: 'OOP-01 - 1팀',
+      },
+      {
+        canSubmitNow: true,
+        currentVersion: 0,
+        hasPendingReview: false,
+        id: 1002,
+        milestoneId: 101,
+        status: 'NOT_SUBMITTED',
+        teamId: 12,
+        teamName: 'OOP-01 - 2팀',
+      },
+    ],
+  },
+  '102': {
+    contents: [
+      {
+        canSubmitNow: false,
+        currentVersion: 2,
+        hasPendingReview: false,
+        id: 1003,
+        milestoneId: 102,
+        status: 'FEEDBACK_PROVIDED',
+        teamId: 11,
+        teamName: 'OOP-01 - 1팀',
+      },
+      {
+        canSubmitNow: false,
+        currentVersion: 1,
+        hasPendingReview: false,
+        id: 1004,
+        milestoneId: 102,
+        status: 'APPROVED',
+        teamId: 12,
+        teamName: 'OOP-01 - 2팀',
+      },
+    ],
+  },
+  '103': {
+    contents: [
+      {
+        canSubmitNow: false,
+        currentVersion: 1,
+        hasPendingReview: false,
+        id: 1008,
+        milestoneId: 103,
+        presentationOrder: 1,
+        status: 'SUBMITTED',
+        teamId: 11,
+        teamName: 'OOP-01 - 1팀',
+      },
+      {
+        canSubmitNow: true,
+        currentVersion: 0,
+        hasPendingReview: false,
+        id: 1009,
+        milestoneId: 103,
+        presentationOrder: 2,
+        status: 'NOT_SUBMITTED',
+        teamId: 12,
+        teamName: 'OOP-01 - 2팀',
+      },
+    ],
+  },
+  '104': {
+    contents: [
+      {
+        canSubmitNow: false,
+        completedAt: '2026-12-08T12:00:00Z',
+        completedBy: '담당 교수',
+        currentVersion: 1,
+        hasPendingReview: false,
+        id: 1005,
+        milestoneId: 104,
+        status: 'COMPLETED',
+        teamId: 11,
+        teamName: 'OOP-01 - 1팀',
+      },
+      {
+        canSubmitNow: true,
+        currentVersion: 0,
+        hasPendingReview: false,
+        id: 1010,
+        milestoneId: 104,
+        status: 'NOT_SUBMITTED',
+        teamId: 12,
+        teamName: 'OOP-01 - 2팀',
+      },
+    ],
+  },
+  '105': {
+    contents: [
+      {
+        canSubmitNow: false,
+        currentVersion: 1,
+        hasPendingReview: true,
+        id: 1006,
+        milestoneId: 105,
+        status: 'SUBMITTED',
+        teamId: 11,
+        teamName: 'OOP-01 - 1팀',
+      },
+      {
+        canSubmitNow: true,
+        currentVersion: 0,
+        hasPendingReview: false,
+        id: 1007,
+        milestoneId: 105,
+        status: 'NOT_SUBMITTED',
+        teamId: 12,
+        teamName: 'OOP-01 - 2팀',
+      },
+    ],
+  },
 };
 
 export function getAdminMilestoneSubmissionsFixture(
   milestoneId: string,
-): AdminSectionMilestoneSubmissionsResponse | undefined {
-  if (!Object.hasOwn(milestones, milestoneId)) return undefined;
-
-  const typedMilestoneId = milestoneId as MilestoneId;
-  const submissionDetails = submissionDetailsByMilestone[typedMilestoneId];
-
-  return {
-    milestone: {
-      id: typedMilestoneId,
-      title: milestones[typedMilestoneId].title,
-    },
-    section,
-    submissions: teamSubmissions.map((team, index) => {
-      const submissionDetail = submissionDetails?.[index] ?? null;
-      const peerEvaluationProgress = getAdminPeerEvaluationProgress(
-        team.teamId,
-      );
-      const submissionFiles = getAdminSubmissionFiles(team.teamId);
-
-      return {
-        id: `${team.id}-${typedMilestoneId}`,
-        meetingRecordCount: null,
-        messageCount: null,
-        submissionId: submissionDetail?.submissionId ?? null,
-        submittedAt: submissionDetail?.submittedAt ?? null,
-        submittedBy: submissionDetail?.submittedBy ?? null,
-        resubmittedAt: submissionDetail?.resubmittedAt ?? null,
-        summary: {
-          attachmentCount:
-            typedMilestoneId === 'midterm'
-              ? (submissionFiles?.midterm.length ?? 0)
-              : null,
-          feedbackCount:
-            typedMilestoneId === 'midterm' ? (index === 0 ? 1 : 0) : null,
-          leaderName:
-            typedMilestoneId === 'proposal'
-              ? index === 0
-                ? '김민준'
-                : '박지훈'
-              : null,
-          linkLabel:
-            typedMilestoneId === 'presentation-submit'
-              ? (submissionFiles?.presentation.videoUrl ?? null)
-              : null,
-          presentationFileDownloadUrl:
-            typedMilestoneId === 'presentation-submit'
-              ? (submissionFiles?.presentation.presentationFileDownloadUrl ??
-                null)
-              : null,
-          presentationFileName:
-            typedMilestoneId === 'presentation-submit'
-              ? (submissionFiles?.presentation.presentationFileName ?? null)
-              : null,
-          projectTopic:
-            typedMilestoneId === 'proposal'
-              ? (submissionFiles?.proposal.projectTopic ?? null)
-              : null,
-          reportFileName:
-            typedMilestoneId === 'final-report'
-              ? (submissionFiles?.finalReport.reportFileName ?? null)
-              : null,
-          reportDownloadUrl:
-            typedMilestoneId === 'final-report'
-              ? (submissionFiles?.finalReport.reportDownloadUrl ?? null)
-              : null,
-          sourceArchiveFileName:
-            typedMilestoneId === 'presentation-submit'
-              ? (submissionFiles?.presentation.sourceArchiveFileName ?? null)
-              : typedMilestoneId === 'final-report'
-                ? (submissionFiles?.finalReport.sourceArchiveFileName ?? null)
-                : null,
-          sourceArchiveDownloadUrl:
-            typedMilestoneId === 'presentation-submit'
-              ? (submissionFiles?.presentation.sourceArchiveDownloadUrl ?? null)
-              : typedMilestoneId === 'final-report'
-                ? (submissionFiles?.finalReport.sourceArchiveDownloadUrl ??
-                  null)
-                : null,
-          submittedMemberCount:
-            typedMilestoneId === 'peer-review'
-              ? peerEvaluationProgress.submittedMemberCount
-              : null,
-          memberCount:
-            typedMilestoneId === 'peer-review'
-              ? peerEvaluationProgress.memberCount
-              : null,
-        },
-        teamId: team.teamId,
-        teamName: team.teamName,
-      };
-    }),
-  };
+): AdminMilestoneSubmissionsResponse | undefined {
+  return Object.hasOwn(submissionsByMilestoneId, milestoneId)
+    ? submissionsByMilestoneId[milestoneId]
+    : undefined;
 }

@@ -42,7 +42,6 @@ export {
 } from './milestoneTemplates';
 export {
   toAdminMilestoneSubmissionsView,
-  type AdminMilestoneSubmissionSummaryView,
   type AdminMilestoneSubmissionView,
   type AdminMilestoneSubmissionsView,
 } from './adminMilestoneSubmissions';

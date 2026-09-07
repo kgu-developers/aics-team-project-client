@@ -8,8 +8,8 @@ import * as styles from './AdminMilestoneSubmissionCard.css';
 type AdminMilestoneSubmissionCardProps = {
   action: ReactNode;
   label: string;
-  meetingCountLabel: ReactNode;
-  messageCountLabel: string;
+  meetingCountLabel?: ReactNode;
+  messageCountLabel?: string;
   secondaryLabel: string;
   submissionMetadata?: ReactNode;
   summary: ReactNode;
@@ -46,10 +46,14 @@ export function AdminMilestoneSubmissionCard({
       <div className={styles.content}>
         <div className={styles.summary}>{summary}</div>
         <div className={styles.footer}>
-          <div className={styles.footerMetric}>{meetingCountLabel}</div>
-          <div className={styles.footerMetric}>
-            <Text>{messageCountLabel}</Text>
-          </div>
+          {meetingCountLabel ? (
+            <div className={styles.footerMetric}>{meetingCountLabel}</div>
+          ) : null}
+          {messageCountLabel ? (
+            <div className={styles.footerMetric}>
+              <Text>{messageCountLabel}</Text>
+            </div>
+          ) : null}
           {action}
         </div>
       </div>

@@ -140,7 +140,7 @@ export {
 } from './proposal';
 export {
   fetchAdminMilestoneSubmissionDetail,
-  fetchAdminSectionMilestoneSubmissions,
+  fetchAdminMilestoneSubmissions,
   fetchAdminPresentationEvaluations,
   updatePresentationOrder,
   fetchMyTeamSubmission,
@@ -148,9 +148,9 @@ export {
   submitSubmissionVersion,
   confirmSubmission,
   withdrawSubmissionConfirmation,
-  type AdminSectionMilestoneSubmissionItemDto,
-  type AdminSectionMilestoneSubmissionSummaryDto,
-  type AdminSectionMilestoneSubmissionsResponse,
+  type AdminMilestoneSubmissionItemDto,
+  type AdminMilestoneSubmissionStatusDto,
+  type AdminMilestoneSubmissionsResponse,
   type AdminPresentationEvaluationCriterionDto,
   type AdminPresentationEvaluationTeamDto,
   type AdminPresentationEvaluationsResponse,

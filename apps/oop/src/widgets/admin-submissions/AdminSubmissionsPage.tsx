@@ -1,4 +1,7 @@
-import type { AdminPresentationEvaluationTeamDto } from '@aics/api-client';
+import type {
+  AdminMilestoneType,
+  AdminPresentationEvaluationTeamDto,
+} from '@aics/api-client';
 import {
   Button,
   Card,
@@ -15,17 +18,8 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 
-import { useAdminMeetingRecordsQuery } from '~/features/admin-meeting/queries';
-import {
-  AdminFinalReportDownloadSummary,
-  AdminSubmissionExternalLink,
-  AdminSubmissionFileDownloadLink,
-} from '~/features/admin-milestone-review/components/AdminFinalReportDownloadSummary';
 import { AdminMilestoneSubmissionCard } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard';
-import {
-  AdminMilestoneSubmissionBulkDownloadAction,
-  AdminMilestoneSubmissionDetailAction,
-} from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionDetailAction';
+import { AdminMilestoneSubmissionDetailAction } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionDetailAction';
 import type { AdminMilestoneSubmissionView } from '~/features/admin-milestone-review/model';
 import {
   useAdminMilestoneSubmissionsQuery,
@@ -58,107 +52,33 @@ const MILESTONE_TABS = [
 
 type MilestoneTabId = (typeof MILESTONE_TABS)[number]['id'];
 
+const milestoneTypeByTab: Partial<Record<MilestoneTabId, AdminMilestoneType>> =
+  {
+    'final-report': 'FINAL_REPORT',
+    midterm: 'MID_REPORT',
+    'peer-review': 'PEER_EVALUATION',
+    'presentation-submit': 'PRESENTATION',
+    proposal: 'PROPOSAL',
+  };
+
 function isMilestoneTabId(value: string | undefined): value is MilestoneTabId {
   return MILESTONE_TABS.some(tab => tab.id === value);
 }
 
-function getSubmissionSummary(
-  milestoneId: MilestoneTabId,
-  submission: AdminMilestoneSubmissionView,
-  onRead: () => void,
-) {
-  switch (milestoneId) {
-    case 'midterm':
-      return (
-        <>
-          <Text>
-            {submission.summary.attachmentCountLabel ?? '첨부 파일 수: -'}
-          </Text>
-          <Text>{submission.summary.feedbackCountLabel ?? '피드백: -'}</Text>
-        </>
-      );
-    case 'presentation-submit':
-      return (
-        <>
-          <Text>
-            PPT 파일:{' '}
-            {submission.summary.presentationFileDownloadUrl &&
-            submission.summary.presentationFileName ? (
-              <AdminSubmissionFileDownloadLink
-                downloadUrl={submission.summary.presentationFileDownloadUrl}
-                fileName={submission.summary.presentationFileName}
-                onClick={onRead}
-              />
-            ) : (
-              '-'
-            )}
-          </Text>
-          <Text>
-            시연 파일(zip):{' '}
-            {submission.summary.sourceArchiveDownloadUrl &&
-            submission.summary.sourceArchiveFileName ? (
-              <AdminSubmissionFileDownloadLink
-                downloadUrl={submission.summary.sourceArchiveDownloadUrl}
-                fileName={submission.summary.sourceArchiveFileName}
-                onClick={onRead}
-              />
-            ) : (
-              '-'
-            )}
-          </Text>
-          <Text>
-            링크:{' '}
-            {submission.summary.linkLabel ? (
-              <AdminSubmissionExternalLink
-                onClick={onRead}
-                url={submission.summary.linkLabel}
-              />
-            ) : (
-              '-'
-            )}
-          </Text>
-        </>
-      );
-    case 'final-report':
-      return (
-        <AdminFinalReportDownloadSummary
-          files={[
-            {
-              downloadUrl: submission.summary.reportDownloadUrl,
-              fileName: submission.summary.reportFileName,
-              label: '보고서(pdf)',
-              onClick: onRead,
-            },
-            {
-              downloadUrl: submission.summary.sourceArchiveDownloadUrl,
-              fileName: submission.summary.sourceArchiveFileName,
-              label: '전체 파일(zip)',
-              onClick: onRead,
-            },
-          ]}
-        />
-      );
-    case 'peer-review':
-      return (
-        <Text>
-          제출자 수:{' '}
-          {submission.summary.submittedMemberCountLabel?.replace(
-            '제출자 수: ',
-            '',
-          ) ?? '-'}{' '}
-          / {submission.summary.memberCount ?? '-'}
-        </Text>
-      );
-    default:
-      return (
-        <>
-          <Text className={styles.topic}>
-            주제: {submission.summary.projectTopic ?? '-'}
-          </Text>
-          <Text>팀장: {submission.summary.leaderName ?? '-'}</Text>
-        </>
-      );
-  }
+function getSubmissionSummary(submission: AdminMilestoneSubmissionView) {
+  return (
+    <>
+      <Text>상태: {submission.statusLabel}</Text>
+      <Text>
+        현재 버전:{' '}
+        {submission.currentVersion > 0 ? `${submission.currentVersion}차` : '-'}
+      </Text>
+      {submission.presentationOrder !== null ? (
+        <Text>발표 순서: {submission.presentationOrder}번</Text>
+      ) : null}
+      {submission.hasPendingReview ? <Text>검토 대기 중</Text> : null}
+    </>
+  );
 }
 
 export default function AdminSubmissionsPage() {
@@ -182,27 +102,27 @@ export default function AdminSubmissionsPage() {
   const isAccessibleSection = Boolean(
     effectiveSectionId && accessibleSectionIds.includes(effectiveSectionId),
   );
-  const submissionsQuery = useAdminMilestoneSubmissionsQuery(
-    effectiveSectionId,
-    activeMilestoneId,
+  const selectedMilestoneType = milestoneTypeByTab[activeMilestoneId];
+  const shouldLoadSectionMilestones =
     isAccessibleSection &&
-      activeMilestoneId !== 'presentation-evaluate' &&
-      activeTab?.isListAvailable === true,
+    (activeMilestoneId === 'presentation-evaluate' ||
+      selectedMilestoneType !== undefined);
+  const sectionMilestonesQuery = useAdminSectionMilestonesQuery(
+    shouldLoadSectionMilestones ? effectiveSectionId : undefined,
   );
-  const meetingRecordsQuery = useAdminMeetingRecordsQuery(
-    accessibleSectionIds,
-    effectiveSectionId ? { sectionId: effectiveSectionId } : undefined,
-    isAccessibleSection,
+  const selectedMilestone = selectedMilestoneType
+    ? sectionMilestonesQuery.data?.content.find(
+        milestone => milestone.type === selectedMilestoneType,
+      )
+    : undefined;
+  const submissionsQuery = useAdminMilestoneSubmissionsQuery(
+    selectedMilestone ? String(selectedMilestone.id) : undefined,
+    isAccessibleSection && selectedMilestone !== undefined,
   );
   const readState = useAdminReadState('submissions', {
     adminId: currentUser?.id,
   });
   const presentationEvaluationsQuery = useAdminPresentationEvaluationsQuery(
-    activeMilestoneId === 'presentation-evaluate' && isAccessibleSection
-      ? effectiveSectionId
-      : undefined,
-  );
-  const sectionMilestonesQuery = useAdminSectionMilestonesQuery(
     activeMilestoneId === 'presentation-evaluate' && isAccessibleSection
       ? effectiveSectionId
       : undefined,
@@ -216,10 +136,8 @@ export default function AdminSubmissionsPage() {
   const isPresentationMilestoneMissing =
     sectionMilestonesQuery.isSuccess && !presentationEvaluationMilestone;
   const sectionLabel =
-    submissionsQuery.data?.sectionLabel ??
     accessibleSections.find(section => section.id === effectiveSectionId)
-      ?.code ??
-    '담당 분반';
+      ?.code ?? '담당 분반';
 
   if (!activeTab) return null;
 
@@ -472,6 +390,20 @@ export default function AdminSubmissionsPage() {
                   description='담당 분반만 제출물을 조회할 수 있습니다.'
                   title='접근할 수 없는 분반입니다.'
                 />
+              ) : sectionMilestonesQuery.isPending ? (
+                <Text aria-live='polite' role='status'>
+                  마일스톤 정보를 불러오는 중입니다.
+                </Text>
+              ) : sectionMilestonesQuery.isError ? (
+                <EmptyState
+                  description='잠시 후 다시 시도해 주세요.'
+                  title='마일스톤 정보를 불러오지 못했습니다.'
+                />
+              ) : !selectedMilestone ? (
+                <EmptyState
+                  description={`분반에 ${activeTab.label} 마일스톤을 먼저 설정해 주세요.`}
+                  title='표시할 제출물이 없습니다.'
+                />
               ) : submissionsQuery.isPending ? (
                 <Text aria-live='polite' role='status'>
                   제출물 목록을 불러오는 중입니다.
@@ -483,38 +415,13 @@ export default function AdminSubmissionsPage() {
                 />
               ) : submissionsQuery.data?.submissions.length === 0 ? (
                 <EmptyState
-                  description='이 마일스톤에 제출한 팀이 없습니다.'
+                  description='이 마일스톤의 팀별 제출 정보가 없습니다.'
                   title='표시할 제출물이 없습니다.'
                 />
               ) : (
                 <div className={styles.list}>
                   {submissionsQuery.data?.submissions.map(submission => {
-                    const canViewDetail =
-                      activeMilestoneId === 'peer-review'
-                        ? (submission.summary.submittedMemberCount ?? 0) > 0
-                        : submission.submittedAt !== null;
-                    const detailSubmissionId = canViewDetail
-                      ? submission.submissionId
-                      : null;
-                    const meetingCount = (
-                      meetingRecordsQuery.data?.records ?? []
-                    ).filter(
-                      record => record.teamId === submission.teamId,
-                    ).length;
-                    const meetingCountLabel = meetingRecordsQuery.isPending
-                      ? '회의록: 불러오는 중'
-                      : meetingRecordsQuery.isError
-                        ? '회의록: -'
-                        : `회의록: ${meetingCount}개`;
                     const submissionSectionId = effectiveSectionId;
-                    const markSubmissionAsRead = () => {
-                      if (submissionSectionId && submission.submissionId) {
-                        readState.markAsRead(
-                          submissionSectionId,
-                          submission.submissionId,
-                        );
-                      }
-                    };
                     return (
                       <AdminMilestoneSubmissionCard
                         isUnread={Boolean(
@@ -526,59 +433,17 @@ export default function AdminSubmissionsPage() {
                           ),
                         )}
                         action={
-                          activeMilestoneId === 'final-report' ||
-                          activeMilestoneId === 'presentation-submit' ? (
-                            <AdminMilestoneSubmissionBulkDownloadAction
-                              label={
-                                activeMilestoneId === 'presentation-submit'
-                                  ? '일괄 다운로드'
-                                  : undefined
-                              }
-                              onClick={markSubmissionAsRead}
-                            />
-                          ) : (
-                            <AdminMilestoneSubmissionDetailAction
-                              milestoneId={activeTab.id}
-                              sectionId={effectiveSectionId}
-                              submissionId={detailSubmissionId}
-                            />
-                          )
+                          <AdminMilestoneSubmissionDetailAction
+                            milestoneId={activeTab.id}
+                            sectionId={effectiveSectionId}
+                            submissionId={submission.submissionId}
+                            unavailableReason='제출물 상세·버전 조회 API 연동 후 제공 예정입니다.'
+                          />
                         }
-                        key={submission.id}
+                        key={submission.teamId}
                         label={submission.teamName}
-                        meetingCountLabel={
-                          <Link
-                            className={styles.meetingLink}
-                            search={{
-                              sectionId: effectiveSectionId,
-                              teamId: submission.teamId,
-                            }}
-                            to={ROUTES.ADMIN_MEETINGS}
-                          >
-                            {meetingCountLabel}
-                          </Link>
-                        }
-                        messageCountLabel={submission.messageCountLabel}
-                        secondaryLabel={submission.submittedAtLabel}
-                        submissionMetadata={
-                          activeMilestoneId === 'final-report' ||
-                          activeMilestoneId === 'presentation-submit' ? (
-                            <>
-                              제출자: {submission.submittedBy ?? '-'}
-                              {submission.resubmittedAt ? (
-                                <>
-                                  <br />
-                                  재제출일: {submission.resubmittedAt}
-                                </>
-                              ) : null}
-                            </>
-                          ) : null
-                        }
-                        summary={getSubmissionSummary(
-                          activeTab.id,
-                          submission,
-                          markSubmissionAsRead,
-                        )}
+                        secondaryLabel={submission.statusLabel}
+                        summary={getSubmissionSummary(submission)}
                       />
                     );
                   })}
