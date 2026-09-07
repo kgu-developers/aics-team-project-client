@@ -23,7 +23,6 @@ import { useSubmitMeetingRecordMutation } from './useSubmitMeetingRecordMutation
 import { demoAccessToken } from '~/mocks/data/users';
 import { createMeetingApiHandlers } from '~/mocks/handlers/meetingApi';
 
-
 const server = setupServer();
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
