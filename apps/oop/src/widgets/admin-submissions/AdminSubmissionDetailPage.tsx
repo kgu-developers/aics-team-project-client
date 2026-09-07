@@ -1,38 +1,19 @@
-import {
-  Button,
-  Card,
-  Dialog,
-  EmptyState,
-  Heading,
-  proportional,
-  Table,
-  Text,
-} from '@aics/design-system';
+import { Card, EmptyState, Heading, Text } from '@aics/design-system';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import type { AdminSubmissionArtifactView } from '~/features/admin-milestone-review/model';
 import {
-  AdminMidtermFeedbackPanel,
-  AdminProposalFeedbackPanel,
-} from '~/features/admin-feedback/components';
-import { AdminTeamMeetingRecordList } from '~/features/admin-meeting/components';
-import { useAdminMeetingRecordsQuery } from '~/features/admin-meeting/queries';
-import {
-  AdminSubmissionExternalLink,
-  AdminSubmissionFileDownloadLink,
-} from '~/features/admin-milestone-review/components/AdminFinalReportDownloadSummary';
-import { toAdminPeerEvaluatorRows } from '~/features/admin-milestone-review/model';
-import { useAdminMilestoneSubmissionDetailQuery } from '~/features/admin-milestone-review/queries';
+  useAdminMilestoneSubmissionDetailQuery,
+  useAdminSubmissionVersionQuery,
+  useAdminSubmissionVersionsQuery,
+} from '~/features/admin-milestone-review/queries';
 import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
-import StudentDetailDialog from '~/features/admin-student-team/components/StudentDetailDialog';
-import { useAdminStudentsQuery } from '~/features/admin-student-team/queries/useAdminStudentsQuery';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminSubmissionDetailPage.css';
-
-const HIDDEN_MIDTERM_BLOCK_TITLES = new Set(['5. 중간 점검 질문']);
 
 const milestoneLabels = {
   'final-report': '최종 보고서',
@@ -51,39 +32,45 @@ function getMilestoneLabel(milestoneId: string | undefined) {
   return '제출물';
 }
 
-function SubmissionStatus({
-  resubmittedAt,
+function ArtifactValue({
+  artifact,
 }: {
-  resubmittedAt?: string | null;
+  artifact: AdminSubmissionArtifactView;
 }) {
-  return (
-    <Text className={styles.metadata}>
-      제출 상태 ·{' '}
-      {resubmittedAt ? `재제출 완료 · ${resubmittedAt}` : '최초 제출'}
-    </Text>
+  if (artifact.type === 'FILE') {
+    return artifact.downloadUrl && artifact.fileName ? (
+      <a
+        className={styles.downloadLink}
+        download={artifact.fileName}
+        href={artifact.downloadUrl}
+      >
+        {artifact.fileName}
+      </a>
+    ) : (
+      <Text className={styles.fieldValue}>다운로드 정보가 없습니다.</Text>
+    );
+  }
+
+  if (artifact.type === 'TEXT') {
+    return <Text className={styles.fieldValue}>{artifact.content ?? '-'}</Text>;
+  }
+
+  return artifact.url ? (
+    <a
+      className={styles.downloadLink}
+      href={artifact.url}
+      rel='noreferrer'
+      target='_blank'
+    >
+      {artifact.url}
+    </a>
+  ) : (
+    <Text className={styles.fieldValue}>링크 정보가 없습니다.</Text>
   );
 }
 
 export default function AdminSubmissionDetailPage() {
-  const [selectedPeerMember, setSelectedPeerMember] = useState<{
-    name: string;
-    studentNumber: string;
-    major: string;
-    evaluation: {
-      roleSummary: string;
-      teamEvaluation: string;
-      reflection: string;
-    };
-  } | null>(null);
-  const [peerAverageSort, setPeerAverageSort] = useState<'asc' | 'desc' | null>(
-    null,
-  );
-  const [selectedEvaluator, setSelectedEvaluator] = useState<{
-    name: string;
-    studentNumber: string;
-    major: string;
-    team: { name: string } | null;
-  } | null>(null);
+  const [selectedVersion, setSelectedVersion] = useState<number>();
   const currentUser = useAuthStore(state => state.currentUser);
   const { submissionId } = useParams({
     from: '/admin/submissions/$submissionId',
@@ -101,10 +88,31 @@ export default function AdminSubmissionDetailPage() {
     submissionId,
     isRequestedSectionAccessible,
   );
+  const versionsQuery = useAdminSubmissionVersionsQuery(
+    submissionId,
+    isRequestedSectionAccessible && submissionQuery.isSuccess,
+  );
+  const versions = versionsQuery.data ?? [];
+
+  useEffect(() => {
+    const isSelectedVersionAvailable = versions.some(
+      version => version.version === selectedVersion,
+    );
+    if (!isSelectedVersionAvailable) {
+      setSelectedVersion(versions[0]?.version);
+    }
+  }, [selectedVersion, versions]);
+
+  const versionQuery = useAdminSubmissionVersionQuery(
+    submissionId,
+    selectedVersion,
+    isRequestedSectionAccessible && versionsQuery.isSuccess,
+  );
   const detail = submissionQuery.data;
   const { markAsRead } = useAdminReadState('submissions', {
     adminId: currentUser?.id,
   });
+
   useEffect(() => {
     if (
       detail?.submissionId &&
@@ -115,615 +123,12 @@ export default function AdminSubmissionDetailPage() {
     }
   }, [
     detail?.submissionId,
-    search.sectionId,
     isRequestedSectionAccessible,
     markAsRead,
+    search.sectionId,
   ]);
-  const milestoneLabel =
-    detail?.milestoneTitle ?? getMilestoneLabel(search.milestoneId);
-  const isAccessibleSection = Boolean(
-    detail &&
-    search.sectionId === detail.sectionId &&
-    accessibleSectionIds.includes(detail.sectionId),
-  );
-  const studentsQuery = useAdminStudentsQuery(
-    isAccessibleSection ? detail?.sectionId : undefined,
-  );
-  const meetingRecordsQuery = useAdminMeetingRecordsQuery(
-    accessibleSectionIds,
-    detail ? { sectionId: detail.sectionId, teamId: detail.teamId } : undefined,
-    isAccessibleSection,
-  );
 
-  function renderProposal() {
-    if (!detail?.proposal) {
-      return (
-        <EmptyState
-          description='이 제출물 형식의 상세보기는 후속 작업에서 연결합니다.'
-          title='표시할 상세 내용이 없습니다.'
-        />
-      );
-    }
-
-    const proposal = detail.proposal;
-
-    return (
-      <>
-        <Card className={styles.document}>
-          <div className={styles.documentHeader}>
-            <Text className={styles.documentLabel}>
-              DOC / PROPOSAL / FORM V1
-            </Text>
-            <Heading level={2}>{detail.teamName} 제안서</Heading>
-            <Text className={styles.metadata}>
-              {detail.sectionLabel} · 제출일 {detail.submittedAt} · 조회 전용
-            </Text>
-            <SubmissionStatus resubmittedAt={detail.resubmittedAt} />
-          </div>
-
-          <section className={styles.section}>
-            <Heading level={3}>1. 팀 정보</Heading>
-            <Text className={styles.sectionDescription}>
-              팀 구성과 역할을 한눈에 볼 수 있게 정리합니다.
-            </Text>
-            <div className={styles.fieldGrid}>
-              <div className={styles.field}>
-                <Text className={styles.fieldLabel}>팀명</Text>
-                <Text className={styles.fieldValue}>{proposal.teamName}</Text>
-              </div>
-              <div className={styles.field}>
-                <Text className={styles.fieldLabel}>팀장</Text>
-                <Text className={styles.fieldValue}>
-                  {proposal.teamLeaderName}
-                </Text>
-              </div>
-              <div className={`${styles.field} ${styles.fullWidthField}`}>
-                <Text className={styles.fieldLabel}>팀원</Text>
-                <Text className={styles.fieldValue}>
-                  {proposal.members.join('\n')}
-                </Text>
-              </div>
-              <div className={`${styles.field} ${styles.fullWidthField}`}>
-                <Text className={styles.fieldLabel}>팀 소개</Text>
-                <Text className={styles.fieldValue}>
-                  {proposal.introduction}
-                </Text>
-              </div>
-            </div>
-          </section>
-
-          <section className={styles.section}>
-            <Heading level={3}>2. 주제</Heading>
-            <Text className={styles.sectionDescription}>
-              제안 주제와 기대 효과를 구체적으로 작성합니다.
-            </Text>
-            <div className={styles.fieldGrid}>
-              <div className={`${styles.field} ${styles.fullWidthField}`}>
-                <Text className={styles.fieldLabel}>프로젝트 제목</Text>
-                <Text className={styles.fieldValue}>
-                  {proposal.projectTitle}
-                </Text>
-              </div>
-              <div className={`${styles.field} ${styles.fullWidthField}`}>
-                <Text className={styles.fieldLabel}>주제 설명</Text>
-                <Text className={styles.fieldValue}>
-                  {proposal.projectDescription}
-                </Text>
-              </div>
-            </div>
-          </section>
-
-          <section className={styles.section}>
-            <Heading level={3}>3. 데이터 구성</Heading>
-            <Text className={styles.sectionDescription}>
-              데이터 단위별 예상 건수와 설명을 표로 정리합니다.
-            </Text>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th className={`${styles.tableCell} ${styles.tableHeader}`}>
-                    데이터 이름
-                  </th>
-                  <th className={`${styles.tableCell} ${styles.tableHeader}`}>
-                    데이터 설명
-                  </th>
-                  <th className={`${styles.tableCell} ${styles.tableHeader}`}>
-                    예상 개수
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {proposal.dataRows.map((row, index) => (
-                  <tr
-                    className={
-                      index === proposal.dataRows.length - 1
-                        ? styles.lastTableRow
-                        : ''
-                    }
-                    key={row.name}
-                  >
-                    <td className={styles.tableCell}>{row.name}</td>
-                    <td className={styles.tableCell}>{row.description}</td>
-                    <td className={styles.tableCell}>{row.count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-
-          <section className={styles.section}>
-            <Heading level={3}>4. 화면 구성</Heading>
-            <Text className={styles.sectionDescription}>
-              핵심 화면과 사용자 행동을 화면별로 정리합니다.
-            </Text>
-            <div className={styles.fieldGrid}>
-              <div className={`${styles.field} ${styles.fullWidthField}`}>
-                <Text className={styles.fieldLabel}>와이어프레임 파일</Text>
-                <Text className={styles.fieldValue}>
-                  {proposal.wireframeFileNames.join(', ')}
-                </Text>
-              </div>
-              <div className={`${styles.field} ${styles.fullWidthField}`}>
-                <Text className={styles.fieldLabel}>화면 구성 설명</Text>
-                <Text className={styles.fieldValue}>
-                  {proposal.screenDescription}
-                </Text>
-              </div>
-            </div>
-            <div className={styles.screenList}>
-              {proposal.screens.map(screen => (
-                <div className={styles.field} key={screen.name}>
-                  <Text className={styles.fieldLabel}>{screen.name}</Text>
-                  <Text className={styles.fieldValue}>
-                    {screen.description}
-                  </Text>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className={styles.section}>
-            <Heading level={3}>5. 팀 운영 방식</Heading>
-            <Text className={styles.sectionDescription}>
-              역할 분담과 협업 규칙, 진행 일정을 정리합니다.
-            </Text>
-            <div className={styles.fieldGrid}>
-              <div className={`${styles.field} ${styles.fullWidthField}`}>
-                <Text className={styles.fieldLabel}>역할 분담</Text>
-                <Text className={styles.fieldValue}>{proposal.roles}</Text>
-              </div>
-              <div className={`${styles.field} ${styles.fullWidthField}`}>
-                <Text className={styles.fieldLabel}>협업 방식</Text>
-                <Text className={styles.fieldValue}>
-                  {proposal.collaboration}
-                </Text>
-              </div>
-              <div className={`${styles.field} ${styles.fullWidthField}`}>
-                <Text className={styles.fieldLabel}>진행 일정</Text>
-                <Text className={styles.fieldValue}>{proposal.schedule}</Text>
-              </div>
-            </div>
-          </section>
-        </Card>
-        <AdminProposalFeedbackPanel
-          feedback={detail.proposalFeedback}
-          key={detail.submissionId}
-        />
-      </>
-    );
-  }
-
-  function renderMidterm() {
-    if (!detail?.midterm) {
-      return (
-        <EmptyState
-          description='이 중간 점검 제출물의 상세 내용을 찾을 수 없습니다.'
-          title='표시할 상세 내용이 없습니다.'
-        />
-      );
-    }
-
-    const midterm = detail.midterm;
-
-    return (
-      <>
-        <Card className={styles.document}>
-          <div className={styles.documentHeader}>
-            <Text className={styles.documentLabel}>
-              DOC / MIDTERM / FORM V1
-            </Text>
-            <Heading level={2}>{detail.teamName} 중간 점검</Heading>
-            <Text className={styles.metadata}>
-              {detail.sectionLabel} · 제출일 {detail.submittedAt} · 조회 전용
-            </Text>
-            <SubmissionStatus resubmittedAt={detail.resubmittedAt} />
-          </div>
-
-          {midterm.blocks
-            .filter(block => !HIDDEN_MIDTERM_BLOCK_TITLES.has(block.title))
-            .map(block => (
-              <section className={styles.section} key={block.title}>
-                <Heading level={3}>{block.title}</Heading>
-                <Text className={styles.sectionDescription}>
-                  {block.description}
-                </Text>
-                <div className={styles.fieldGrid}>
-                  {block.fields.map(field => (
-                    <div
-                      className={`${styles.field} ${styles.fullWidthField}`}
-                      key={field.label}
-                    >
-                      <Text className={styles.fieldLabel}>{field.label}</Text>
-                      <Text className={styles.fieldValue}>{field.value}</Text>
-                      {field.attachment ? (
-                        field.attachment.contentType.startsWith('image/') ? (
-                          <div className={styles.attachment}>
-                            <img
-                              alt={`${field.label} 미리보기`}
-                              className={styles.imagePreview}
-                              src={field.attachment.downloadUrl}
-                            />
-                            <a
-                              className={styles.downloadLink}
-                              download={field.attachment.fileName}
-                              href={field.attachment.downloadUrl}
-                            >
-                              {field.attachment.fileName} 다운로드
-                            </a>
-                          </div>
-                        ) : (
-                          <a
-                            className={styles.downloadLink}
-                            download={field.attachment.fileName}
-                            href={field.attachment.downloadUrl}
-                          >
-                            {field.attachment.fileName} 다운로드
-                          </a>
-                        )
-                      ) : null}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ))}
-        </Card>
-        <AdminMidtermFeedbackPanel
-          feedback={detail.midtermFeedback}
-          key={detail.submissionId}
-        />
-      </>
-    );
-  }
-
-  function renderPresentation() {
-    if (!detail?.presentation) {
-      return (
-        <EmptyState
-          description='발표 자료 상세 내용이 없습니다.'
-          title='표시할 상세 내용이 없습니다.'
-        />
-      );
-    }
-    const presentation = detail.presentation;
-    return (
-      <Card className={styles.document}>
-        <div className={styles.documentHeader}>
-          <Text className={styles.documentLabel}>
-            DOC / PRESENTATION / FORM V1
-          </Text>
-          <Heading level={2}>{detail.teamName} 발표 자료 제출</Heading>
-          <Text className={styles.metadata}>
-            {detail.sectionLabel} · 제출일 {detail.submittedAt} · 조회 전용
-          </Text>
-          <SubmissionStatus resubmittedAt={detail.resubmittedAt} />
-        </div>
-        <section className={styles.section}>
-          <Heading level={3}>시연 URL</Heading>
-          <div className={`${styles.field} ${styles.fullWidthField}`}>
-            {presentation.videoUrl ? (
-              <AdminSubmissionExternalLink url={presentation.videoUrl} />
-            ) : (
-              <Text className={styles.fieldValue}>-</Text>
-            )}
-          </div>
-        </section>
-        <section className={styles.section}>
-          <Heading level={3}>제출 파일</Heading>
-          <div className={styles.fieldGrid}>
-            <div className={styles.field}>
-              <Text className={styles.fieldLabel}>발표 자료 PDF</Text>
-              {presentation.presentationFileDownloadUrl &&
-              presentation.presentationFileName ? (
-                <AdminSubmissionFileDownloadLink
-                  downloadUrl={presentation.presentationFileDownloadUrl}
-                  fileName={presentation.presentationFileName}
-                />
-              ) : (
-                <Text className={styles.fieldValue}>-</Text>
-              )}
-            </div>
-            <div className={styles.field}>
-              <Text className={styles.fieldLabel}>시연 파일 ZIP</Text>
-              {presentation.sourceArchiveDownloadUrl &&
-              presentation.sourceArchiveFileName ? (
-                <AdminSubmissionFileDownloadLink
-                  downloadUrl={presentation.sourceArchiveDownloadUrl}
-                  fileName={presentation.sourceArchiveFileName}
-                />
-              ) : (
-                <Text className={styles.fieldValue}>-</Text>
-              )}
-            </div>
-          </div>
-        </section>
-      </Card>
-    );
-  }
-
-  function renderPeerEvaluation() {
-    const peer = detail?.peerEvaluation;
-    if (!peer)
-      return (
-        <EmptyState
-          description='상호 평가 데이터가 없습니다.'
-          title='표시할 평가가 없습니다.'
-        />
-      );
-    const evaluatorRows = toAdminPeerEvaluatorRows(peer);
-    const sortedEvaluatorRows = peerAverageSort
-      ? [...evaluatorRows].sort((a, b) => {
-          const aValue = a.average ?? -1;
-          const bValue = b.average ?? -1;
-          return peerAverageSort === 'asc' ? aValue - bValue : bValue - aValue;
-        })
-      : evaluatorRows;
-    return (
-      <Card className={styles.document}>
-        <div className={styles.documentHeader}>
-          <Text className={styles.documentLabel}>
-            PEER EVALUATION / READ ONLY
-          </Text>
-          <Heading level={2}>{detail.teamName} 상호 평가</Heading>
-        </div>
-        <div>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th className={styles.tableHeader} scope='col'>
-                  평가자
-                </th>
-                {peer.members.map(member => (
-                  <th
-                    className={styles.tableHeader}
-                    key={member.studentNumber}
-                    scope='col'
-                  >
-                    {member.name}
-                  </th>
-                ))}
-                <th
-                  aria-sort={
-                    peerAverageSort === 'asc'
-                      ? 'ascending'
-                      : peerAverageSort === 'desc'
-                        ? 'descending'
-                        : 'none'
-                  }
-                  className={styles.tableHeader}
-                  scope='col'
-                >
-                  <button
-                    aria-label='평균 점수 정렬'
-                    type='button'
-                    onClick={() =>
-                      setPeerAverageSort(current =>
-                        current === 'asc' ? 'desc' : 'asc',
-                      )
-                    }
-                  >
-                    평균{' '}
-                    {peerAverageSort === 'asc'
-                      ? '↑'
-                      : peerAverageSort === 'desc'
-                        ? '↓'
-                        : '↕'}
-                  </button>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedEvaluatorRows.map(({ average, evaluator, rows }) => {
-                return (
-                  <tr key={evaluator.studentNumber}>
-                    <td className={styles.tableCell}>
-                      <button
-                        className={styles.peerMemberButton}
-                        type='button'
-                        onClick={() =>
-                          setSelectedPeerMember({
-                            ...evaluator,
-                            evaluation: peer.responses.find(
-                              response =>
-                                response.evaluatorStudentNumber ===
-                                evaluator.studentNumber,
-                            )?.projectEvaluation ?? {
-                              reflection: '-',
-                              roleSummary: '-',
-                              teamEvaluation: '-',
-                            },
-                          })
-                        }
-                      >
-                        {evaluator.name}
-                      </button>
-                    </td>
-                    {peer.members.map(target => {
-                      const row = rows.find(
-                        item =>
-                          item.target.studentNumber === target.studentNumber,
-                      );
-                      const isSelf =
-                        evaluator.studentNumber === target.studentNumber;
-                      return (
-                        <td
-                          className={styles.tableCell}
-                          key={target.studentNumber}
-                        >
-                          {isSelf ? '-' : (row?.score ?? '미제출')}
-                        </td>
-                      );
-                    })}
-                    <td className={styles.tableCell}>
-                      {average?.toFixed(1) ?? '미제출'}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <Dialog
-          aria-label='프로젝트 평가'
-          isOpen={selectedPeerMember !== null}
-          onOpenChange={open => {
-            if (!open) setSelectedPeerMember(null);
-          }}
-          purpose='info'
-          width={480}
-        >
-          {selectedPeerMember ? (
-            <>
-              <div className={styles.evaluationHeader}>
-                <Heading level={2}>{selectedPeerMember.name} 평가</Heading>
-                <Text>학번: {selectedPeerMember.studentNumber}</Text>
-                <Text>전공: {selectedPeerMember.major}</Text>
-              </div>
-              <div className={styles.evaluationList}>
-                <div className={styles.evaluationItem}>
-                  <Text className={styles.fieldLabel}>자신의 역할 요약</Text>
-                  <Text>{selectedPeerMember.evaluation.roleSummary}</Text>
-                </div>
-                <div className={styles.evaluationItem}>
-                  <Text className={styles.fieldLabel}>팀 프로젝트 평가</Text>
-                  <Text>{selectedPeerMember.evaluation.teamEvaluation}</Text>
-                </div>
-                <div className={styles.evaluationItem}>
-                  <Text className={styles.fieldLabel}>소감 또는 팀원 칭찬</Text>
-                  <Text>{selectedPeerMember.evaluation.reflection}</Text>
-                </div>
-              </div>
-              <Button
-                className={styles.evaluationClose}
-                data-autofocus=''
-                label='닫기'
-                onClick={() => setSelectedPeerMember(null)}
-                variant='secondary'
-              />
-            </>
-          ) : null}
-        </Dialog>
-      </Card>
-    );
-  }
-
-  function renderPresentationEvaluation() {
-    const evaluation = detail?.presentationEvaluation;
-    if (!evaluation) {
-      return (
-        <EmptyState
-          description='발표 평가 데이터가 없습니다.'
-          title='표시할 평가가 없습니다.'
-        />
-      );
-    }
-
-    return (
-      <>
-        <Card className={styles.document}>
-          <div className={styles.documentHeader}>
-            <Text className={styles.documentLabel}>
-              PRESENTATION EVALUATION / READ ONLY
-            </Text>
-            <Heading level={2}>{detail.teamName} 발표 평가</Heading>
-            <Text className={styles.metadata}>
-              {detail.sectionLabel} · 평가 마감일 {detail.submittedAt} · 조회
-              전용
-            </Text>
-          </div>
-          <Table
-            columns={[
-              {
-                align: 'start',
-                header: '평가자',
-                key: 'evaluatorName',
-                renderCell: evaluator => {
-                  const student = studentsQuery.data?.find(
-                    item =>
-                      item.studentNumber === evaluator.evaluatorStudentNumber,
-                  );
-                  return student ? (
-                    <button
-                      className={styles.evaluatorButton}
-                      onClick={() => setSelectedEvaluator(student)}
-                      type='button'
-                    >
-                      {evaluator.evaluatorName}
-                    </button>
-                  ) : (
-                    evaluator.evaluatorName
-                  );
-                },
-                width: proportional(1, { minWidth: 120 }),
-              },
-              {
-                align: 'center',
-                header: '제출 상태',
-                key: 'submissionStatus',
-                renderCell: evaluator =>
-                  evaluator.isTargetTeamMember
-                    ? '-'
-                    : evaluator.total === null
-                      ? '미제출'
-                      : '제출 완료',
-                width: proportional(0.9, { minWidth: 104 }),
-              },
-              ...evaluation.criteria.map(criterion => ({
-                align: 'center' as const,
-                header: criterion.label,
-                key: criterion.id,
-                renderCell: (
-                  evaluator: (typeof evaluation.evaluations)[number],
-                ) =>
-                  evaluator.isTargetTeamMember
-                    ? '-'
-                    : (evaluator.scores[criterion.id] ?? '미평가'),
-                width: proportional(1, { minWidth: 144 }),
-              })),
-              {
-                align: 'center',
-                header: '합계',
-                key: 'total',
-                renderCell: evaluator =>
-                  evaluator.isTargetTeamMember
-                    ? '-'
-                    : (evaluator.total ?? '미평가'),
-                width: proportional(0.7, { minWidth: 96 }),
-              },
-            ]}
-            data={evaluation.evaluations}
-            dividers='rows'
-            textOverflow='wrap'
-            verticalAlign='middle'
-          />
-        </Card>
-        <StudentDetailDialog
-          isOpen={selectedEvaluator !== null}
-          onClose={() => setSelectedEvaluator(null)}
-          student={selectedEvaluator}
-        />
-      </>
-    );
-  }
+  const milestoneLabel = getMilestoneLabel(search.milestoneId);
 
   return (
     <div className={styles.page}>
@@ -737,6 +142,7 @@ export default function AdminSubmissionDetailPage() {
           ← {milestoneLabel} 목록으로
         </Link>
       </div>
+
       {!isRequestedSectionAccessible ? (
         <EmptyState
           description='담당 분반의 제출물만 조회할 수 있습니다.'
@@ -746,41 +152,172 @@ export default function AdminSubmissionDetailPage() {
         <Text aria-live='polite' role='status'>
           제출물 상세를 불러오는 중입니다.
         </Text>
-      ) : submissionQuery.isError ? (
+      ) : submissionQuery.isError || !detail ? (
         <EmptyState
           description='제출물이 존재하는지 확인한 뒤 다시 시도해 주세요.'
           title='제출물 상세를 불러오지 못했습니다.'
         />
-      ) : !detail || !isAccessibleSection ? (
-        <EmptyState
-          description='담당 분반의 제출물만 조회할 수 있습니다.'
-          title='접근할 수 없는 제출물입니다.'
-        />
       ) : (
         <>
-          {detail.milestoneId === 'proposal' ? (
-            renderProposal()
-          ) : detail.milestoneId === 'midterm' ? (
-            renderMidterm()
-          ) : detail.milestoneId === 'presentation-submit' ? (
-            renderPresentation()
-          ) : detail.milestoneId === 'presentation-evaluate' ? (
-            renderPresentationEvaluation()
-          ) : detail.milestoneId === 'peer-review' ? (
-            renderPeerEvaluation()
-          ) : (
-            <EmptyState
-              description='이 마일스톤의 상세보기는 후속 작업에서 연결합니다.'
-              title='표시할 상세 내용이 없습니다.'
-            />
-          )}
-          <AdminTeamMeetingRecordList
-            isError={meetingRecordsQuery.isError}
-            isPending={meetingRecordsQuery.isPending}
-            records={meetingRecordsQuery.data?.records ?? []}
-            sectionId={detail.sectionId}
-            teamId={detail.teamId}
-          />
+          <Card className={styles.document}>
+            <div className={styles.documentHeader}>
+              <Text className={styles.documentLabel}>
+                SUBMISSION / READ ONLY
+              </Text>
+              <Heading level={2}>{detail.teamName} 제출물</Heading>
+              <Text className={styles.metadata}>
+                상태: {detail.statusLabel} · 현재 버전: {detail.currentVersion}
+                차
+              </Text>
+            </div>
+
+            <section className={styles.section}>
+              <Heading level={3}>제출 현황</Heading>
+              <div className={styles.fieldGrid}>
+                <div className={styles.field}>
+                  <Text className={styles.fieldLabel}>팀</Text>
+                  <Text className={styles.fieldValue}>{detail.teamName}</Text>
+                </div>
+                <div className={styles.field}>
+                  <Text className={styles.fieldLabel}>제출 상태</Text>
+                  <Text className={styles.fieldValue}>
+                    {detail.statusLabel}
+                  </Text>
+                </div>
+                {detail.presentationOrder !== null ? (
+                  <div className={styles.field}>
+                    <Text className={styles.fieldLabel}>발표 순서</Text>
+                    <Text className={styles.fieldValue}>
+                      {detail.presentationOrder}번
+                    </Text>
+                  </div>
+                ) : null}
+                <div className={styles.field}>
+                  <Text className={styles.fieldLabel}>검토 상태</Text>
+                  <Text className={styles.fieldValue}>
+                    {detail.hasPendingReview
+                      ? '검토 대기 중'
+                      : '검토 대기 없음'}
+                  </Text>
+                </div>
+                {detail.completedAt ? (
+                  <div className={styles.field}>
+                    <Text className={styles.fieldLabel}>완료 일시</Text>
+                    <Text className={styles.fieldValue}>
+                      {detail.completedAt}
+                    </Text>
+                  </div>
+                ) : null}
+                {detail.completedBy ? (
+                  <div className={styles.field}>
+                    <Text className={styles.fieldLabel}>완료 처리자</Text>
+                    <Text className={styles.fieldValue}>
+                      {detail.completedBy}
+                    </Text>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+
+            <section className={styles.section}>
+              <Heading level={3}>제출 버전</Heading>
+              {versionsQuery.isPending ? (
+                <Text aria-live='polite' role='status'>
+                  제출 버전 목록을 불러오는 중입니다.
+                </Text>
+              ) : versionsQuery.isError ? (
+                <EmptyState
+                  description='잠시 후 다시 시도해 주세요.'
+                  title='제출 버전 목록을 불러오지 못했습니다.'
+                />
+              ) : versions.length === 0 ? (
+                <EmptyState
+                  description='서버에서 반환한 제출 버전이 없습니다.'
+                  title='표시할 제출 버전이 없습니다.'
+                />
+              ) : (
+                <div className={styles.fieldGrid}>
+                  {versions.map(version => (
+                    <button
+                      aria-pressed={selectedVersion === version.version}
+                      className={styles.evaluatorButton}
+                      key={version.version}
+                      onClick={() => setSelectedVersion(version.version)}
+                      type='button'
+                    >
+                      {version.version}차 · {version.submittedBy} ·{' '}
+                      {version.submittedAt}
+                      {version.isLate ? ' · 지각 제출' : ''}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {selectedVersion === undefined ? null : versionQuery.isPending ? (
+              <Text aria-live='polite' role='status'>
+                선택한 버전을 불러오는 중입니다.
+              </Text>
+            ) : versionQuery.isError || !versionQuery.data ? (
+              <EmptyState
+                description='잠시 후 다시 시도해 주세요.'
+                title='선택한 제출 버전을 불러오지 못했습니다.'
+              />
+            ) : (
+              <section className={styles.section}>
+                <Heading level={3}>
+                  {versionQuery.data.version}차 제출 내용
+                </Heading>
+                <div className={styles.fieldGrid}>
+                  <div className={`${styles.field} ${styles.fullWidthField}`}>
+                    <Text className={styles.fieldLabel}>설명</Text>
+                    <Text className={styles.fieldValue}>
+                      {versionQuery.data.description ?? '-'}
+                    </Text>
+                  </div>
+                  <div className={`${styles.field} ${styles.fullWidthField}`}>
+                    <Text className={styles.fieldLabel}>변경 메모</Text>
+                    <Text className={styles.fieldValue}>
+                      {versionQuery.data.changeNote ?? '-'}
+                    </Text>
+                  </div>
+                  <div className={styles.field}>
+                    <Text className={styles.fieldLabel}>제출자</Text>
+                    <Text className={styles.fieldValue}>
+                      {versionQuery.data.submittedBy}
+                    </Text>
+                  </div>
+                  <div className={styles.field}>
+                    <Text className={styles.fieldLabel}>제출 일시</Text>
+                    <Text className={styles.fieldValue}>
+                      {versionQuery.data.submittedAt}
+                    </Text>
+                  </div>
+                </div>
+
+                <div className={styles.field}>
+                  <Text className={styles.fieldLabel}>아티팩트</Text>
+                  {versionQuery.data.artifacts.length === 0 ? (
+                    <Text className={styles.fieldValue}>
+                      등록된 아티팩트가 없습니다.
+                    </Text>
+                  ) : (
+                    versionQuery.data.artifacts.map((artifact, index) => (
+                      <div
+                        className={styles.attachment}
+                        key={`${artifact.type}-${index}`}
+                      >
+                        <Text className={styles.fieldLabel}>
+                          {artifact.label}
+                        </Text>
+                        <ArtifactValue artifact={artifact} />
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
+            )}
+          </Card>
         </>
       )}
     </div>

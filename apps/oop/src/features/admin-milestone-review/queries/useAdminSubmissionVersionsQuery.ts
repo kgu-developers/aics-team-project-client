@@ -1,23 +1,23 @@
-import { fetchAdminSubmission } from '@aics/api-client';
+import { fetchAdminSubmissionVersions } from '@aics/api-client';
 import { useQuery } from '@tanstack/react-query';
 
-import { toAdminSubmissionDetailView } from '../model';
+import { toAdminSubmissionVersionsView } from '../model';
 import { adminMilestoneSubmissionsKeys } from './adminMilestoneSubmissionsKeys';
 
-export function useAdminMilestoneSubmissionDetailQuery(
+export function useAdminSubmissionVersionsQuery(
   submissionId: string | undefined,
   enabled = true,
 ) {
   return useQuery({
     enabled: Boolean(submissionId) && enabled,
-    queryKey: adminMilestoneSubmissionsKeys.detail(submissionId ?? ''),
+    queryKey: adminMilestoneSubmissionsKeys.versions(submissionId ?? ''),
     queryFn: async () => {
       if (!submissionId) {
         throw new Error('제출물 ID가 필요합니다.');
       }
 
-      return toAdminSubmissionDetailView(
-        await fetchAdminSubmission(submissionId),
+      return toAdminSubmissionVersionsView(
+        await fetchAdminSubmissionVersions(submissionId),
       );
     },
   });

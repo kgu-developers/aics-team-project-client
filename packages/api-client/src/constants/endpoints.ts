@@ -31,10 +31,16 @@ export const ENDPOINTS = {
       `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/status`,
     SECTION_MILESTONE_WEEK_NUMBERS: (sectionId: string) =>
       `/api/v1/admin/oop/sections/${sectionId}/milestones/week-numbers`,
-    MILESTONE_SUBMISSION_DETAIL: (submissionId: string) =>
-      `/admin/submissions/${submissionId}`,
     MILESTONE_SUBMISSIONS: (milestoneId: string) =>
       `/api/v1/admin/oop/milestones/${milestoneId}/submissions`,
+    SUBMISSION: (submissionId: string | number) =>
+      `/api/v1/admin/oop/submissions/${submissionId}`,
+    SUBMISSION_VERSION: (
+      submissionId: string | number,
+      version: string | number,
+    ) => `/api/v1/admin/oop/submissions/${submissionId}/versions/${version}`,
+    SUBMISSION_VERSIONS: (submissionId: string | number) =>
+      `/api/v1/admin/oop/submissions/${submissionId}/versions`,
     SECTION_PRESENTATION_EVALUATIONS: (sectionId: string) =>
       `/admin/sections/${sectionId}/presentation-evaluations`,
     SECTION_PRESENTATION_EVALUATION_SETTINGS: (sectionId: string) =>

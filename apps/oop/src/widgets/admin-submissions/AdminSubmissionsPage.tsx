@@ -11,7 +11,7 @@ import {
   Table,
   Text,
 } from '@aics/design-system';
-import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { type KeyboardEvent, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -280,20 +280,7 @@ export default function AdminSubmissionsPage() {
                                   team.submissionId,
                                 ),
                               );
-                              const label = team.submissionId ? (
-                                <Link
-                                  params={{ submissionId: team.submissionId }}
-                                  search={{
-                                    milestoneId: 'presentation-evaluate',
-                                    sectionId: effectiveSectionId,
-                                  }}
-                                  to={ROUTES.ADMIN_SUBMISSION_DETAIL}
-                                >
-                                  {team.teamName}
-                                </Link>
-                              ) : (
-                                team.teamName
-                              );
+                              const label = team.teamName;
                               return (
                                 <span>
                                   {unread ? (
@@ -437,7 +424,6 @@ export default function AdminSubmissionsPage() {
                             milestoneId={activeTab.id}
                             sectionId={effectiveSectionId}
                             submissionId={submission.submissionId}
-                            unavailableReason='제출물 상세·버전 조회 API 연동 후 제공 예정입니다.'
                           />
                         }
                         key={submission.teamId}
