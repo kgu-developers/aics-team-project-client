@@ -60,13 +60,18 @@ export function useStudentMeetingListQuery() {
   return {
     teamId,
     items,
-    isPending: query.isPending,
+    isPending: query.isPending || (!usesDemoContract && kickoff.isPending),
     isError:
       query.isError ||
+      (!usesDemoContract && kickoff.isError) ||
       (!usesDemoContract && teamId != null && !hasMeetingApiId(teamId)),
-    refetch: query.refetch,
+    refetch: () =>
+      usesDemoContract
+        ? query.refetch()
+        : Promise.all([query.refetch(), kickoff.refetch()]),
     canRetry:
       !query.isFetching &&
+      (usesDemoContract || !kickoff.isFetching) &&
       (usesDemoContract ? Boolean(teamId) : hasMeetingApiId(teamId)),
     headingLabel: '제목',
     authorColumnLabel: '작성자',

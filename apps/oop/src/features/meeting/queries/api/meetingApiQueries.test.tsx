@@ -1,5 +1,9 @@
 import { API_BASE_URL } from '@aics/api-client';
-import type { MeetingApiActionStatus, MeetingPhase } from '@aics/core';
+import type {
+  MeetingActionResponseDto,
+  MeetingApiActionStatus,
+  MeetingPhase,
+} from '@aics/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -35,7 +39,9 @@ const action = {
   meetingRecordId: 7,
   content: 'API 계약 확인',
   status: 'IN_PROGRESS',
-};
+  createdAt: '2026-08-03 13:00',
+  updatedAt: '2026-08-03 14:00',
+} satisfies MeetingActionResponseDto;
 const server = setupServer();
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -149,7 +155,12 @@ it('단계와 상태 필터를 요청에 전달하고 각각 별도 캐시를 �
   );
   await waitFor(() => {
     expect(result.current.records.data?.[0]?.phase).toBe('PROPOSAL');
-    expect(result.current.actions.data?.[0]?.status).toBe('TODO');
+    expect(result.current.actions.data?.[0]).toMatchObject({
+      id: '11',
+      status: 'TODO',
+      createdAt: action.createdAt,
+      updatedAt: action.updatedAt,
+    });
   });
   rerender({ phase: 'FINAL', status: 'DONE' });
   await waitFor(() => {
