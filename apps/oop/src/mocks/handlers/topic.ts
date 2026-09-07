@@ -1,6 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { createLiveTopicHandlers } from './liveTopic';
 import { getMockAccessToken } from '../authSession';
 import {
   addTopicCandidate,
@@ -51,6 +52,7 @@ function selectionFinalized() {
 }
 
 export const topicHandlers = [
+  ...createLiveTopicHandlers(),
   http.get(
     `${API_BASE_URL}${ENDPOINTS.TOPIC.BOARD(':sectionId')}`,
     ({ params, request }) => {
