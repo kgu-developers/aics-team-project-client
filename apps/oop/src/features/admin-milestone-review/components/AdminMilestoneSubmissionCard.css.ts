@@ -22,7 +22,7 @@ export const meta = style({
   flexDirection: 'column',
   gap: 4,
   padding: '16px 12px',
-  width: 160,
+  width: 208,
   '@media': {
     'screen and (max-width: 767px)': {
       borderRadius: '12px 12px 0 0',
@@ -54,15 +54,16 @@ export const summary = style({
 });
 
 export const footer = style({
+  alignItems: 'stretch',
   borderTop: `1px solid ${tokens.color.border.base}`,
-  display: 'grid',
-  gridTemplateColumns: 'repeat(2, minmax(0, 1fr)) auto',
+  display: 'flex',
   minHeight: 43,
 });
 
 export const footerMetric = style({
   alignItems: 'center',
   display: 'flex',
+  flex: 1,
   justifyContent: 'center',
   minWidth: 0,
   padding: 10,
@@ -75,6 +76,12 @@ export const label = style({
 export const secondaryLabel = style({
   color: tokens.color.text.secondary,
   fontSize: 12,
+});
+
+export const submissionMetadata = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 2,
 });
 
 export const detailLink = style({
@@ -91,6 +98,7 @@ export const detailLink = style({
   fontWeight: 500,
   justifyContent: 'center',
   margin: 8,
+  marginLeft: 'auto',
   minWidth: 84,
   padding: '8px 12px',
   textDecoration: 'none',

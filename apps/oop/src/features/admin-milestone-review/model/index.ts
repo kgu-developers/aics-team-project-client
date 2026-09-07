@@ -4,14 +4,13 @@ export {
   getAdminMilestoneTypeLabel,
 } from './adminSectionMilestone';
 export {
-  toAdminMilestoneSubmissionDetailView,
-  toAdminPeerEvaluatorRows,
-  toAdminPeerEvaluationRows,
-  type AdminMilestoneSubmissionDetailView,
-  type AdminProposalSubmissionDetailView,
-  type AdminPeerEvaluationDetailView,
-  type AdminPeerEvaluatorRowView,
-  type AdminPeerEvaluationRowView,
+  toAdminSubmissionDetailView,
+  toAdminSubmissionVersionDetailView,
+  toAdminSubmissionVersionsView,
+  type AdminSubmissionArtifactView,
+  type AdminSubmissionDetailView,
+  type AdminSubmissionVersionDetailView,
+  type AdminSubmissionVersionSummaryView,
 } from './adminMilestoneSubmissionDetail';
 export {
   toAdminMilestoneScheduleView,

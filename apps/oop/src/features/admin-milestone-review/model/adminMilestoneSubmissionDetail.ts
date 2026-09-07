@@ -1,151 +1,123 @@
 import type {
-  AdminMilestoneSubmissionDetailResponse,
-  AdminMidtermSubmissionBlockDto,
-  AdminProposalDataRowDto,
-  AdminProposalScreenDto,
-  AdminPresentationSubmissionDetailDto,
-  AdminPeerEvaluationDetailDto,
-  AdminPresentationEvaluationDetailDto,
-  AdminMidtermFeedbackDto,
-  AdminProposalFeedbackDto,
+  AdminSubmissionArtifactDto,
+  AdminSubmissionArtifactTypeDto,
+  AdminSubmissionResponse,
+  AdminSubmissionStatusDto,
+  AdminSubmissionVersionResponse,
+  AdminSubmissionVersionSummaryDto,
+  AdminSubmissionVersionsResponse,
 } from '@aics/api-client';
 
-export type AdminProposalSubmissionDetailView = {
-  collaboration: string;
-  dataRows: AdminProposalDataRowDto[];
-  introduction: string;
-  members: string[];
-  projectDescription: string;
-  projectTitle: string;
-  roles: string;
-  schedule: string;
-  screenDescription: string;
-  screens: AdminProposalScreenDto[];
-  teamLeaderName: string;
-  teamName: string;
-  wireframeFileNames: string[];
+const submissionStatusLabels: Record<AdminSubmissionStatusDto, string> = {
+  APPROVED: '승인됨',
+  COMPLETED: '완료',
+  FEEDBACK_PROVIDED: '피드백 제공',
+  NOT_SUBMITTED: '미제출',
+  REVISION_REQUESTED: '수정 요청',
+  SUBMITTED: '제출 완료',
 };
 
-export type AdminMidtermSubmissionDetailView = {
-  blocks: AdminMidtermSubmissionBlockDto[];
-  teamLeaderName: string;
-  teamName: string;
+const artifactTypeLabels: Record<AdminSubmissionArtifactTypeDto, string> = {
+  CHEERPJ_RUN: 'CheerpJ 실행',
+  FILE: '파일',
+  LINK: '링크',
+  TEXT: '텍스트',
 };
 
-export type AdminPresentationSubmissionDetailView =
-  AdminPresentationSubmissionDetailDto;
-export type AdminPeerEvaluationDetailView = AdminPeerEvaluationDetailDto;
-export type AdminPeerEvaluationRowView = {
-  average: number | undefined;
-  evaluator: AdminPeerEvaluationDetailDto['members'][number];
-  isSubmitted: boolean;
-  score: number | undefined;
-  target: AdminPeerEvaluationDetailDto['members'][number];
-};
-export type AdminPeerEvaluatorRowView = {
-  average: number | undefined;
-  evaluator: AdminPeerEvaluationDetailDto['members'][number];
-  rows: AdminPeerEvaluationRowView[];
-};
-export type AdminPresentationEvaluationDetailView =
-  AdminPresentationEvaluationDetailDto;
-
-export type AdminMilestoneSubmissionDetailView = {
+export type AdminSubmissionDetailView = {
+  canSubmitNow: boolean;
+  completedAt: string | null;
+  completedBy: string | null;
+  currentVersion: number;
+  hasPendingReview: boolean;
   milestoneId: string;
-  milestoneTitle: string;
-  midterm: AdminMidtermSubmissionDetailView | null;
-  midtermFeedback: AdminMidtermFeedbackDto | null;
-  peerEvaluation: AdminPeerEvaluationDetailView | null;
-  presentationEvaluation: AdminPresentationEvaluationDetailView | null;
-  presentation: AdminPresentationSubmissionDetailView | null;
-  proposal: AdminProposalSubmissionDetailView | null;
-  proposalFeedback: AdminProposalFeedbackDto | null;
-  sectionId: string;
-  sectionLabel: string;
-  resubmittedAt: string | null;
-  submittedAt: string;
+  presentationOrder: number | null;
+  status: AdminSubmissionStatusDto;
+  statusLabel: string;
   submissionId: string;
   teamId: string;
   teamName: string;
 };
 
-export function toAdminMilestoneSubmissionDetailView(
-  response: AdminMilestoneSubmissionDetailResponse,
-): AdminMilestoneSubmissionDetailView {
+export type AdminSubmissionVersionSummaryView = {
+  changeNote: string | null;
+  description: string | null;
+  isLate: boolean;
+  submittedAt: string;
+  submittedBy: string;
+  version: number;
+};
+
+export type AdminSubmissionArtifactView = {
+  content: string | null;
+  downloadUrl: string | null;
+  fileName: string | null;
+  label: string;
+  type: AdminSubmissionArtifactTypeDto;
+  url: string | null;
+};
+
+export type AdminSubmissionVersionDetailView =
+  AdminSubmissionVersionSummaryView & {
+    artifacts: AdminSubmissionArtifactView[];
+  };
+
+function toSubmissionVersionSummaryView(
+  version: AdminSubmissionVersionSummaryDto,
+): AdminSubmissionVersionSummaryView {
   return {
-    milestoneId: response.milestone.id,
-    milestoneTitle: response.milestone.title,
-    midterm: response.midterm,
-    midtermFeedback: response.midtermFeedback ?? null,
-    presentation: response.presentation,
-    proposal: response.proposal,
-    proposalFeedback: response.proposalFeedback ?? null,
-    peerEvaluation: response.peerEvaluation ?? null,
-    presentationEvaluation: response.presentationEvaluation ?? null,
-    sectionId: response.section.id,
-    sectionLabel: response.section.label,
-    resubmittedAt: response.submission.revision.resubmittedAt,
-    submittedAt: response.submittedAt,
-    submissionId: response.submission.id,
-    teamId: response.submission.teamId,
-    teamName: response.submission.teamName,
+    changeNote: version.changeNote ?? null,
+    description: version.description ?? null,
+    isLate: version.late,
+    submittedAt: version.submittedAt,
+    submittedBy: version.submittedBy,
+    version: version.version,
   };
 }
 
-export function toAdminPeerEvaluationRows(
-  peer: AdminPeerEvaluationDetailView,
-): AdminPeerEvaluationRowView[] {
-  const responseByEvaluator = new Map(
-    peer.responses.map(response => [response.evaluatorStudentNumber, response]),
-  );
-
-  return peer.members.flatMap(target => {
-    const receivedScores = peer.members
-      .filter(member => member.studentNumber !== target.studentNumber)
-      .map(
-        member =>
-          responseByEvaluator.get(member.studentNumber)?.scores[
-            target.studentNumber
-          ],
-      )
-      .filter((score): score is number => score !== undefined);
-    const average = receivedScores.length
-      ? receivedScores.reduce((sum, score) => sum + score, 0) /
-        receivedScores.length
-      : undefined;
-
-    return peer.members
-      .filter(member => member.studentNumber !== target.studentNumber)
-      .map(evaluator => {
-        const response = responseByEvaluator.get(evaluator.studentNumber);
-        return {
-          average,
-          evaluator,
-          isSubmitted: response !== undefined,
-          score: response?.scores[target.studentNumber],
-          target,
-        };
-      });
-  });
+function toArtifactView(
+  artifact: AdminSubmissionArtifactDto,
+): AdminSubmissionArtifactView {
+  return {
+    content: artifact.content ?? null,
+    downloadUrl: artifact.downloadUrl ?? null,
+    fileName: artifact.fileName ?? null,
+    label: artifactTypeLabels[artifact.type],
+    type: artifact.type,
+    url: artifact.url ?? null,
+  };
 }
 
-export function toAdminPeerEvaluatorRows(
-  peer: AdminPeerEvaluationDetailView,
-): AdminPeerEvaluatorRowView[] {
-  const peerRows = toAdminPeerEvaluationRows(peer);
+export function toAdminSubmissionDetailView(
+  response: AdminSubmissionResponse,
+): AdminSubmissionDetailView {
+  return {
+    canSubmitNow: response.canSubmitNow,
+    completedAt: response.completedAt ?? null,
+    completedBy: response.completedBy ?? null,
+    currentVersion: response.currentVersion,
+    hasPendingReview: response.hasPendingReview,
+    milestoneId: String(response.milestoneId),
+    presentationOrder: response.presentationOrder ?? null,
+    status: response.status,
+    statusLabel: submissionStatusLabels[response.status],
+    submissionId: String(response.id),
+    teamId: String(response.teamId),
+    teamName: response.teamName,
+  };
+}
 
-  return peer.members.map(evaluator => {
-    const rows = peerRows.filter(
-      row => row.evaluator.studentNumber === evaluator.studentNumber,
-    );
-    const submittedScores = rows
-      .map(row => row.score)
-      .filter((score): score is number => score !== undefined);
-    const average = submittedScores.length
-      ? submittedScores.reduce((sum, score) => sum + score, 0) /
-        submittedScores.length
-      : undefined;
+export function toAdminSubmissionVersionsView(
+  response: AdminSubmissionVersionsResponse,
+): AdminSubmissionVersionSummaryView[] {
+  return response.contents.map(toSubmissionVersionSummaryView);
+}
 
-    return { average, evaluator, rows };
-  });
+export function toAdminSubmissionVersionDetailView(
+  response: AdminSubmissionVersionResponse,
+): AdminSubmissionVersionDetailView {
+  return {
+    ...toSubmissionVersionSummaryView(response),
+    artifacts: response.artifacts.map(toArtifactView),
+  };
 }

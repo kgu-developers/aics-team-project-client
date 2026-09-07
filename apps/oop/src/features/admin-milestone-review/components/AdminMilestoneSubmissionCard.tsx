@@ -40,7 +40,7 @@ export function AdminMilestoneSubmissionCard({
         </Text>
         <Text className={styles.secondaryLabel}>{secondaryLabel}</Text>
         {submissionMetadata ? (
-          <Text className={styles.secondaryLabel}>{submissionMetadata}</Text>
+          <div className={styles.submissionMetadata}>{submissionMetadata}</div>
         ) : null}
       </div>
       <div className={styles.content}>

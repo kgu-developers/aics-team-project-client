@@ -8,11 +8,11 @@ const submissionsByMilestoneId: Record<
     contents: [
       {
         canSubmitNow: false,
-        currentVersion: 1,
+        currentVersion: 2,
         hasPendingReview: true,
         id: 1001,
         milestoneId: 101,
-        status: 'SUBMITTED',
+        status: 'REVISION_REQUESTED',
         teamId: 11,
         teamName: 'OOP-01 - 1팀',
       },
@@ -130,10 +130,40 @@ const submissionsByMilestoneId: Record<
   },
 };
 
+const initialSubmissionsByMilestoneId = structuredClone(
+  submissionsByMilestoneId,
+);
+
 export function getAdminMilestoneSubmissionsFixture(
   milestoneId: string,
 ): AdminMilestoneSubmissionsResponse | undefined {
   return Object.hasOwn(submissionsByMilestoneId, milestoneId)
     ? submissionsByMilestoneId[milestoneId]
     : undefined;
+}
+
+export function updatePresentationOrderFixture(
+  teamOrders: Array<{ order: number; teamId: number }>,
+) {
+  const ordersByTeamId = new Map(
+    teamOrders.map(({ teamId, order }) => [teamId, order]),
+  );
+  const presentationSubmissions = submissionsByMilestoneId['103']?.contents;
+
+  if (!presentationSubmissions) return;
+
+  presentationSubmissions.forEach(submission => {
+    submission.presentationOrder =
+      ordersByTeamId.get(submission.teamId) ?? submission.presentationOrder;
+  });
+}
+
+export function resetAdminMilestoneSubmissionsFixture() {
+  Object.keys(submissionsByMilestoneId).forEach(milestoneId => {
+    delete submissionsByMilestoneId[milestoneId];
+  });
+  Object.assign(
+    submissionsByMilestoneId,
+    structuredClone(initialSubmissionsByMilestoneId),
+  );
 }

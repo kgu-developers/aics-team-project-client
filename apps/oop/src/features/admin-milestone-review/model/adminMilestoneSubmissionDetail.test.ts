@@ -1,56 +1,59 @@
 import { describe, expect, it } from 'vitest';
 
-import type { AdminPeerEvaluationDetailView } from './adminMilestoneSubmissionDetail';
-import { toAdminPeerEvaluatorRows } from './adminMilestoneSubmissionDetail';
+import {
+  toAdminSubmissionDetailView,
+  toAdminSubmissionVersionDetailView,
+} from './adminMilestoneSubmissionDetail';
 
-const peerEvaluation: AdminPeerEvaluationDetailView = {
-  members: [
-    { major: '컴퓨터공학과', name: '가', studentNumber: '1' },
-    { major: '소프트웨어학과', name: '나', studentNumber: '2' },
-    { major: '인공지능학과', name: '다', studentNumber: '3' },
-  ],
-  responses: [
-    {
-      evaluatorStudentNumber: '1',
-      projectEvaluation: {
-        reflection: '',
-        roleSummary: '',
-        teamEvaluation: '',
-      },
-      scores: { '2': 100, '3': 0 },
-    },
-    {
-      evaluatorStudentNumber: '2',
-      projectEvaluation: {
-        reflection: '',
-        roleSummary: '',
-        teamEvaluation: '',
-      },
-      scores: { '1': 20, '3': 30 },
-    },
-    {
-      evaluatorStudentNumber: '3',
-      projectEvaluation: {
-        reflection: '',
-        roleSummary: '',
-        teamEvaluation: '',
-      },
-      scores: { '1': 90, '2': 80 },
-    },
-  ],
-};
-
-describe('toAdminPeerEvaluatorRows', () => {
-  it('평가자별로 제출한 점수의 평균을 계산한다', () => {
+describe('toAdminSubmissionDetailView', () => {
+  it('서버의 선택 필드를 화면용 null 값으로 정규화한다', () => {
     expect(
-      toAdminPeerEvaluatorRows(peerEvaluation).map(row => ({
-        average: row.average,
-        studentNumber: row.evaluator.studentNumber,
-      })),
-    ).toEqual([
-      { average: 50, studentNumber: '1' },
-      { average: 25, studentNumber: '2' },
-      { average: 85, studentNumber: '3' },
-    ]);
+      toAdminSubmissionDetailView({
+        canSubmitNow: false,
+        currentVersion: 2,
+        hasPendingReview: true,
+        id: 1001,
+        milestoneId: 101,
+        status: 'REVISION_REQUESTED',
+        teamId: 11,
+        teamName: 'OOP-01 - 1팀',
+      }),
+    ).toMatchObject({
+      completedAt: null,
+      completedBy: null,
+      milestoneId: '101',
+      presentationOrder: null,
+      statusLabel: '수정 요청',
+      submissionId: '1001',
+      teamId: '11',
+    });
+  });
+});
+
+describe('toAdminSubmissionVersionDetailView', () => {
+  it('아티팩트 종류를 화면 표시용 이름으로 변환한다', () => {
+    expect(
+      toAdminSubmissionVersionDetailView({
+        artifacts: [
+          { downloadUrl: '/files/1', fileName: 'proposal.pdf', type: 'FILE' },
+          { type: 'LINK', url: 'https://example.com' },
+          { content: '제출 내용', type: 'TEXT' },
+          { type: 'CHEERPJ_RUN', url: 'https://example.com/run' },
+        ],
+        late: false,
+        submittedAt: '2026-09-07T09:00:00Z',
+        submittedBy: '20230001',
+        version: 2,
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        artifacts: [
+          expect.objectContaining({ label: '파일' }),
+          expect.objectContaining({ label: '링크' }),
+          expect.objectContaining({ label: '텍스트' }),
+          expect.objectContaining({ label: 'CheerpJ 실행' }),
+        ],
+      }),
+    );
   });
 });

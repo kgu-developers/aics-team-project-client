@@ -3,6 +3,10 @@ import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
 import {
+  resetAdminMilestoneSubmissionsFixture,
+  updatePresentationOrderFixture,
+} from '../data/adminMilestoneSubmissions';
+import {
   adminPresentationEvaluationsFixture,
   resetAdminPresentationEvaluationsFixture,
 } from '../data/adminPresentationEvaluations';
@@ -13,6 +17,7 @@ import {
 import { demoAdmin } from '../data/users';
 
 function resetPresentationEvaluationScenario() {
+  resetAdminMilestoneSubmissionsFixture();
   resetAdminPresentationEvaluationsFixture();
   resetAdminSectionMilestonesFixture();
 }
@@ -132,6 +137,7 @@ export const adminPresentationEvaluationHandlers = [
           presentationOrder:
             teamOrders.get(team.teamId) ?? team.presentationOrder,
         }));
+      updatePresentationOrderFixture(body.teamOrders);
 
       return new HttpResponse(null, { status: 204 });
     },

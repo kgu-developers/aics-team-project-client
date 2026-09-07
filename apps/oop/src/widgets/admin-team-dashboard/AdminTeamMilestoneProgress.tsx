@@ -164,6 +164,7 @@ export default function AdminTeamMilestoneProgress({
                       milestoneId={milestone.id}
                       sectionId={sectionId}
                       submissionId={detailSubmissionId}
+                      unavailableReason='팀 진행 현황의 제출물 상세 ID 연동 후 제공 예정입니다.'
                     />
                   )
                 }
