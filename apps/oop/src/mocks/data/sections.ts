@@ -2,7 +2,7 @@ import type { FetchMySectionsFilter, SectionResponse } from '@aics/core';
 
 const oopSectionOne: SectionResponse = {
   id: 1,
-  code: 'CS101',
+  code: '월8/1151',
   name: '01',
   classTime: '월123',
   capacity: 40,
@@ -18,7 +18,7 @@ const oopSectionOne: SectionResponse = {
 const oopSectionTwo: SectionResponse = {
   ...oopSectionOne,
   id: 2,
-  code: 'CS101-02',
+  code: '화8/1151',
   name: '02',
   classTime: '화123',
 };

@@ -1,12 +1,18 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import type {
+  PreSurveyResponseDetailResponse,
+  SubmitPreSurveyResponseRequest,
+} from '@aics/core';
+import type {
   PartnerCandidate,
   TeamAssignmentProjection,
   TeamAssignmentSurvey,
 } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
+import { getMockAuthenticatedAccount } from '../authSession';
 import { getMockAccessToken } from '../authSession';
+import { getMockMySections } from '../data/sections';
 import {
   assignedFixture,
   demoTeamAssignmentSectionId,
@@ -118,6 +124,68 @@ function applyDevelopmentPreview(request: Request) {
 }
 
 export const teamAssignmentHandlers = [
+  http.post(
+    `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.SUBMIT_SURVEY_RESPONSE(':sectionId')}`,
+    async ({ params, request }) => {
+      const rawSectionId = String(params.sectionId);
+      const denied = guardPreSurvey(request, rawSectionId);
+      if (denied) return denied;
+
+      let submitRequest: unknown;
+      try {
+        submitRequest = await request.json();
+      } catch {
+        return HttpResponse.json({ code: 'INVALID_INPUT' }, { status: 400 });
+      }
+      if (!isPreSurveyResponseSubmitRequest(submitRequest)) {
+        return HttpResponse.json({ code: 'INVALID_INPUT' }, { status: 400 });
+      }
+
+      const accessToken = getAccessToken(request)!;
+      const account = getStudentAccount(request)!;
+      const sectionId = parseSectionId(rawSectionId)!;
+      const responseKey = getPreSurveyResponseKey(
+        account.user.studentNumber,
+        sectionId,
+      );
+      const existingResponse =
+        preSurveyResponsesByStudentAndSection[responseKey];
+      const response: PreSurveyResponseDetailResponse = {
+        id: existingResponse?.id ?? nextPreSurveyResponseId++,
+        sectionId,
+        userId: account.user.studentNumber,
+        preferredRoles: structuredClone(submitRequest.preferredRoles),
+        submittedAt: '2026-09-02 14:00',
+        ...(submitRequest.topicOpinion === undefined
+          ? {}
+          : { topicOpinion: submitRequest.topicOpinion }),
+        ...(submitRequest.etcOpinion === undefined
+          ? {}
+          : { etcOpinion: submitRequest.etcOpinion }),
+      };
+      preSurveyResponsesByStudentAndSection[responseKey] = response;
+
+      const projection = projectionsByAccessToken[accessToken];
+      if (projection) {
+        projectionsByAccessToken[accessToken] = {
+          ...projection,
+          phase: 'resultWaiting',
+          survey: {
+            rolePreferences:
+              submitRequest.preferredRoles as TeamAssignmentSurvey['rolePreferences'],
+            topicIdea: submitRequest.topicOpinion ?? '',
+            ...(submitRequest.etcOpinion === undefined
+              ? {}
+              : { note: submitRequest.etcOpinion }),
+          },
+          window: { resultReleasesAt: '2026-09-08T10:00:00+09:00' },
+        };
+      }
+
+      return HttpResponse.json(response);
+    },
+  ),
+
   http.get(
     `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.ROOT(':sectionId')}`,
     ({ params, request }) => {
@@ -343,5 +411,97 @@ export const teamAssignmentHandlers = [
 ];
 
 export function resetTeamAssignmentMockData() {
+  preSurveyResponsesByStudentAndSection = {};
+  nextPreSurveyResponseId = 1;
   projectionsByAccessToken = createInitialProjections();
 }
+
+let preSurveyResponsesByStudentAndSection: Record<
+  string,
+  PreSurveyResponseDetailResponse
+> = {};
+let nextPreSurveyResponseId = 1;
+function getStudentAccount(request: Request) {
+  const account = getMockAuthenticatedAccount(request);
+  return account?.user.globalRole === 'STUDENT' ? account : undefined;
+}
+function parseSectionId(sectionId: string | null) {
+  if (!sectionId || !/^\d+$/.test(sectionId)) return undefined;
+  const parsedSectionId = Number(sectionId);
+  return Number.isSafeInteger(parsedSectionId) && parsedSectionId > 0
+    ? parsedSectionId
+    : undefined;
+}
+
+function guardPreSurvey(request: Request, rawSectionId: string | null) {
+  const account = getStudentAccount(request);
+  if (!account) {
+    return HttpResponse.json({ code: 'UNAUTHORIZED' }, { status: 401 });
+  }
+
+  const sectionId = parseSectionId(rawSectionId);
+  if (!sectionId) {
+    return HttpResponse.json({ code: 'INVALID_INPUT' }, { status: 400 });
+  }
+  if (
+    !getMockMySections(account.credentials.studentNumber, {}).some(
+      section => section.id === sectionId,
+    )
+  ) {
+    return HttpResponse.json(
+      { code: 'SECTION_ACCESS_DENIED' },
+      { status: 403 },
+    );
+  }
+
+  return undefined;
+}
+
+function isPreSurveyResponseSubmitRequest(
+  value: unknown,
+): value is SubmitPreSurveyResponseRequest {
+  if (!value || typeof value !== 'object') return false;
+
+  const { preferredRoles, topicOpinion, etcOpinion } = value as Record<
+    string,
+    unknown
+  >;
+
+  return (
+    Array.isArray(preferredRoles) &&
+    preferredRoles.length > 0 &&
+    preferredRoles.every(role => typeof role === 'string' && role.length > 0) &&
+    (topicOpinion === undefined || typeof topicOpinion === 'string') &&
+    (etcOpinion === undefined || typeof etcOpinion === 'string')
+  );
+}
+
+function getPreSurveyResponseKey(userId: string, sectionId: number) {
+  return `${userId}:${sectionId}`;
+}
+
+export const teamAssignmentUserHandlers = [
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.MY_SURVEY_RESPONSE}`,
+    ({ request }) => {
+      const rawSectionId = new URL(request.url).searchParams.get('sectionId');
+      const denied = guardPreSurvey(request, rawSectionId);
+      if (denied) return denied;
+
+      const account = getStudentAccount(request)!;
+      const sectionId = parseSectionId(rawSectionId)!;
+      const response =
+        preSurveyResponsesByStudentAndSection[
+          getPreSurveyResponseKey(account.user.studentNumber, sectionId)
+        ];
+      if (!response) {
+        return HttpResponse.json(
+          { code: 'PRE_SURVEY_RESPONSE_NOT_FOUND' },
+          { status: 404 },
+        );
+      }
+
+      return HttpResponse.json(response);
+    },
+  ),
+];

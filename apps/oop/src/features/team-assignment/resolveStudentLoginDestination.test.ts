@@ -30,7 +30,7 @@ beforeEach(() => {
 });
 
 describe('resolveStudentLoginDestination', () => {
-  it('학생의 서버 확정 팀 배정 단계로 이동한다', async () => {
+  it('학생은 팀 온보딩 단일 진입점으로 이동한다', async () => {
     fetchProjectionMock.mockResolvedValue({
       phase: 'firstMeeting',
       sectionId: 'oop-2026-2-01',
@@ -38,16 +38,18 @@ describe('resolveStudentLoginDestination', () => {
     } satisfies TeamAssignmentProjection);
 
     await expect(resolveStudentLoginDestination(student)).resolves.toBe(
-      '/onboarding/team/first-meeting',
+      '/onboarding/team',
     );
+    expect(fetchProjectionMock).not.toHaveBeenCalled();
   });
 
-  it('팀 배정 상태를 조회하지 못해도 인증된 학생 홈으로 이동한다', async () => {
+  it('로그인 중에는 팀 배정 API를 조회하지 않는다', async () => {
     fetchProjectionMock.mockRejectedValue(new Error('projection unavailable'));
 
     await expect(resolveStudentLoginDestination(student)).resolves.toBe(
-      '/student',
+      '/onboarding/team',
     );
+    expect(fetchProjectionMock).not.toHaveBeenCalled();
   });
 
   it('운영자 로그인에는 학생 팀 배정 API를 호출하지 않는다', async () => {

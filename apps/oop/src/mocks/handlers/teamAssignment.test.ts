@@ -38,7 +38,7 @@ describe('team assignment MSW contract', () => {
     setApiAccessToken(demoAccessToken);
 
     await submitTeamAssignmentSurvey({
-      sectionId: 'oop-2026-2-01',
+      sectionId: 1,
       survey: {
         note: '',
         rolePreferences: ['DEVELOPMENT'],

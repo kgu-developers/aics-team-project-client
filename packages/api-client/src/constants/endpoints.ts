@@ -128,6 +128,9 @@ export const ENDPOINTS = {
     SUBMIT: (proposalId: string) => `/proposals/${proposalId}/submit`,
   },
   TEAM_ASSIGNMENT: {
+    SUBMIT_SURVEY_RESPONSE: (sectionId: string) =>
+      `/api/v1/oop/sections/${sectionId}/pre-survey/responses`,
+    MY_SURVEY_RESPONSE: '/api/v1/oop/users/me/pre-survey-response',
     ROOT: (sectionId: string) => `/sections/${sectionId}/team-assignment`,
     SURVEY: (sectionId: string) =>
       `/sections/${sectionId}/team-assignment/survey`,

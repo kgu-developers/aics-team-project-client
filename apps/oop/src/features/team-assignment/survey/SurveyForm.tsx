@@ -32,18 +32,24 @@ const roleOptions: Array<{ label: string; value: TeamRolePreference }> = [
 ];
 const stepLabels = ['소개', '역할과 팀원', '주제와 의견'];
 
-type SurveyFormProps = { projection: TeamAssignmentProjection };
+type SurveyFormProps = {
+  preSurveySectionId: number;
+  projection?: TeamAssignmentProjection;
+};
 
-export function SurveyForm({ projection }: SurveyFormProps) {
+export function SurveyForm({
+  preSurveySectionId,
+  projection,
+}: SurveyFormProps) {
   const submitSurvey = useSubmitTeamAssignmentSurveyMutation();
   const [step, setStep] = useState(0);
   const [requestError, setRequestError] = useState<string>();
   const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
   const [survey, setSurvey] = useState<TeamAssignmentSurvey>(
-    projection.survey ?? { note: '', rolePreferences: [], topicIdea: '' },
+    projection?.survey ?? { note: '', rolePreferences: [], topicIdea: '' },
   );
   const hasRole = survey.rolePreferences.length > 0;
-  const hasIncomingPartnerRequest = Boolean(projection.incomingPartnerRequest);
+  const hasIncomingPartnerRequest = Boolean(projection?.incomingPartnerRequest);
 
   function updateSurvey<K extends keyof TeamAssignmentSurvey>(
     key: K,
@@ -78,13 +84,16 @@ export function SurveyForm({ projection }: SurveyFormProps) {
     setRequestError(undefined);
     try {
       await submitSurvey.mutateAsync({
-        sectionId: projection.sectionId,
+        sectionId: preSurveySectionId,
+        projectionSectionId: projection?.sectionId,
         survey,
       });
       setSubmitConfirmOpen(false);
     } catch {
       setSubmitConfirmOpen(false);
-      setRequestError('설문 기간 또는 제출 상태를 다시 확인해 주세요.');
+      setRequestError(
+        '설문을 제출하지 못했어요. 입력한 내용을 확인하고 다시 시도해 주세요.',
+      );
     }
   }
 
@@ -129,10 +138,16 @@ export function SurveyForm({ projection }: SurveyFormProps) {
         ) : null}
         {step === 1 ? (
           <SurveyQuestion
-            description='함께하고 싶은 팀원과 맡고 싶은 역할을 알려주세요.'
+            description={
+              projection
+                ? '함께하고 싶은 팀원과 맡고 싶은 역할을 알려주세요.'
+                : '팀에서 맡고 싶은 역할을 알려주세요.'
+            }
             title='역할과 팀원'
           >
-            <PartnerRequestPanel projection={projection} />
+            {projection ? (
+              <PartnerRequestPanel projection={projection} />
+            ) : null}
             <Field
               inputID='team-role-preferences'
               isGroupLabel
@@ -209,7 +224,7 @@ export function SurveyForm({ projection }: SurveyFormProps) {
           <VStack gap={2}>
             <Heading level={2}>설문을 제출할까요?</Heading>
             <Text color='secondary'>
-              제출 후에는 팀 선정 결과가 공개될 때까지 응답을 수정할 수 없어요.
+              제출한 응답을 바탕으로 팀 배정을 준비합니다.
             </Text>
           </VStack>
           <HStack gap={2} justify='end'>

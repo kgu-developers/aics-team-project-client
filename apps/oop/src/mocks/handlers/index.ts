@@ -20,7 +20,10 @@ import { studentFeedbackHandlers } from './studentFeedback';
 import { studentHomeHandlers } from './studentHome';
 import { studentNoticeHandlers } from './studentNotices';
 import { submissionHandlers } from './submission';
-import { teamAssignmentHandlers } from './teamAssignment';
+import {
+  teamAssignmentHandlers,
+  teamAssignmentUserHandlers,
+} from './teamAssignment';
 import { topicHandlers } from './topic';
 
 export const handlers = [
@@ -44,6 +47,7 @@ export const handlers = [
   ...studentNoticeHandlers,
   ...submissionHandlers,
   ...teamAssignmentHandlers,
+  ...teamAssignmentUserHandlers,
   ...topicHandlers,
   ...adminTeamDashboardHandlers,
   ...adminStudentTeamHandlers,

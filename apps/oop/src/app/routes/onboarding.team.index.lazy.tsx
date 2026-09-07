@@ -5,5 +5,5 @@ export const Route = createLazyFileRoute('/onboarding/team/')({
   component: Page,
 });
 function Page() {
-  return <TeamAssignmentFlow resolveOnly />;
+  return <TeamAssignmentFlow />;
 }

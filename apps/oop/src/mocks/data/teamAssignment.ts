@@ -44,3 +44,5 @@ export const assignedFixture = (
         }
       : { status: 'not-confirmed', isActionAvailable: true },
 });
+
+export const demoPreSurveySectionId = 1;
