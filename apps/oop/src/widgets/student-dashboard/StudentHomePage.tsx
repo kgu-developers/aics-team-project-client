@@ -6,12 +6,14 @@ import { useAuthStore } from '~/features/auth/authStore';
 import { useMeetingHomeSummaryQuery } from '~/features/meeting/queries';
 import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog';
 import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
+import { usesDemoStudentHome } from '~/features/student-home/model/usesDemoStudentHome';
 import { useStudentHomeDashboardQuery } from '~/features/student-home/queries';
 import SubmissionDialog from '~/features/submission/SubmissionDialog';
 import { SubmissionDialogProvider } from '~/features/submission/SubmissionDialogContext';
 
 import MilestoneList from '~/widgets/milestone-summary/MilestoneList';
 
+import LiveStudentHomePage from './LiveStudentHomePage';
 import StudentHomeHero from './StudentHomeHero';
 import { getStudentHomeHeroCopy } from './studentHomeHeroCopy';
 import * as styles from './StudentHomePage.css';
@@ -76,6 +78,10 @@ export function focusStudentMilestone(milestoneId: string) {
 }
 
 export default function StudentHomePage() {
+  return usesDemoStudentHome() ? <DemoStudentHomePage /> : <LiveStudentHomePage />;
+}
+
+function DemoStudentHomePage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const sectionId = currentUser?.sections[0]?.id ?? '';
   const teamId = currentUser?.currentTeam?.id;

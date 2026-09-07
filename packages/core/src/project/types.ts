@@ -4,3 +4,11 @@ export type Project = {
   title: string;
   description?: string;
 };
+
+/** Basic persisted project fields available to the student home. */
+export type TeamProjectResponse = {
+  id: number;
+  teamId: number;
+  title?: string | null;
+  description?: string | null;
+};

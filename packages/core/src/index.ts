@@ -105,7 +105,7 @@ export type {
   UpdateProposalBlockInput,
 } from './proposal/types';
 export { proposalBlockKeys } from './proposal/types';
-export type { Project } from './project/types';
+export type { Project, TeamProjectResponse } from './project/types';
 export type { Review } from './review/types';
 export type { Rubric } from './rubric/types';
 export * from './section';
