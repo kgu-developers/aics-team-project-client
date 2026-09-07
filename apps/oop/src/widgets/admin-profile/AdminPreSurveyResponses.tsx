@@ -28,12 +28,8 @@ const roleLabels: Record<string, string> = {
   TEAM_LEADER: '팀장(프로젝트 매니저)',
 };
 
-function formatPreferredRoles(roles: unknown) {
-  if (!Array.isArray(roles)) return '-';
-
-  const labels = roles
-    .filter((role): role is string => typeof role === 'string')
-    .map(role => roleLabels[role] ?? role);
+function formatPreferredRoles(roles: string[]) {
+  const labels = roles.map(role => roleLabels[role] ?? role);
 
   return labels.length > 0 ? labels.join(', ') : '-';
 }
@@ -111,6 +107,12 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
                         header: '학번',
                         key: 'userId',
                         width: proportional(0.7, { minWidth: 120 }),
+                      },
+                      {
+                        align: 'start',
+                        header: '이름',
+                        key: 'userName',
+                        width: proportional(0.6, { minWidth: 100 }),
                       },
                       {
                         align: 'start',

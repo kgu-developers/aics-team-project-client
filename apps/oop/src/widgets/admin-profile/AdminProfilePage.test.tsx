@@ -329,7 +329,7 @@ describe('AdminProfilePage', () => {
     ).toBeInTheDocument();
   });
 
-  it('팀 구성 사전 정보에서 계약된 응답 항목만 표시한다', async () => {
+  it('팀 구성 사전 정보에서 계약된 응답 항목과 이름을 표시한다', async () => {
     renderPage();
 
     expect(
@@ -344,6 +344,9 @@ describe('AdminProfilePage', () => {
       screen.getByRole('columnheader', { name: '학번' }),
     ).toBeInTheDocument();
     expect(
+      screen.getByRole('columnheader', { name: '이름' }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole('columnheader', { name: '희망 역할' }),
     ).toBeInTheDocument();
     expect(
@@ -356,9 +359,8 @@ describe('AdminProfilePage', () => {
       screen.getByRole('columnheader', { name: '제출일' }),
     ).toBeInTheDocument();
     expect(screen.getByText('20260001')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('columnheader', { name: '이름' }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByText('김객체')).toBeInTheDocument();
+    expect(screen.getByText('이프로')).toBeInTheDocument();
   });
 
   it('사전 정보 조회가 실패하면 오류를 표시한다', async () => {

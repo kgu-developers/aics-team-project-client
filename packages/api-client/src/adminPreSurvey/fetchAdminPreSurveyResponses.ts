@@ -4,10 +4,11 @@ import { ENDPOINTS } from '../constants/endpoints';
 export type AdminPreSurveyResponseDto = {
   etcOpinion?: string | null;
   id: number;
-  preferredRoles: unknown;
+  preferredRoles: string[];
   submittedAt: string;
   topicOpinion?: string | null;
   userId: string;
+  userName: string;
 };
 
 export type AdminPreSurveyResponsesResponse = {
