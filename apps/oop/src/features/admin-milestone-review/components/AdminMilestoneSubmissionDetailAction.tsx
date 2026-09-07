@@ -8,18 +8,24 @@ type AdminMilestoneSubmissionDetailActionProps = {
   milestoneId: string;
   sectionId: string | undefined;
   submissionId: string | null;
+  unavailableReason?: string;
 };
 
 export function AdminMilestoneSubmissionDetailAction({
   milestoneId,
   sectionId,
   submissionId,
+  unavailableReason,
 }: AdminMilestoneSubmissionDetailActionProps) {
-  if (!sectionId || !submissionId) {
+  if (!sectionId || !submissionId || unavailableReason) {
     return (
       <button
+        aria-label={
+          unavailableReason ? `상세보기: ${unavailableReason}` : undefined
+        }
         className={`${styles.detailLink} ${styles.detailButtonDisabled}`}
         disabled
+        title={unavailableReason}
         type='button'
       >
         상세보기

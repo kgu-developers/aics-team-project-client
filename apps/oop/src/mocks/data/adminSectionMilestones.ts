@@ -54,6 +54,36 @@ const sectionOneMilestones: AdminSectionMilestoneDto[] = [
     type: 'MID_REPORT',
     weekNumber: 7,
   },
+  {
+    allowResubmissionBeforeDueAt: false,
+    description: '최종 보고서와 최종 소스코드를 제출합니다.',
+    id: 104,
+    schedule: {
+      dueAt: '2026-12-07T14:59:00Z',
+      opensAt: '2026-11-30T00:00:00Z',
+    },
+    sectionId: 1,
+    status: 'PUBLISHED',
+    title: '최종 보고서',
+    type: 'FINAL_REPORT',
+    weekNumber: 12,
+  },
+  {
+    allowResubmissionBeforeDueAt: false,
+    description: '팀원 기여도와 프로젝트 평가를 제출합니다.',
+    id: 105,
+    schedule: {
+      dueAt: '2026-12-14T14:59:00Z',
+      evaluationClosesAt: '2026-12-14T14:59:00Z',
+      evaluationOpensAt: '2026-12-08T00:00:00Z',
+      opensAt: '2026-12-08T00:00:00Z',
+    },
+    sectionId: 1,
+    status: 'PUBLISHED',
+    title: '상호 평가',
+    type: 'PEER_EVALUATION',
+    weekNumber: 13,
+  },
 ];
 
 const sectionTwoMilestones: AdminSectionMilestoneDto[] = [

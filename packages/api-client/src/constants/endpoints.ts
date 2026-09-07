@@ -33,8 +33,8 @@ export const ENDPOINTS = {
       `/api/v1/admin/oop/sections/${sectionId}/milestones/week-numbers`,
     MILESTONE_SUBMISSION_DETAIL: (submissionId: string) =>
       `/admin/submissions/${submissionId}`,
-    SECTION_MILESTONE_SUBMISSIONS: (sectionId: string, milestoneId: string) =>
-      `/admin/sections/${sectionId}/milestones/${milestoneId}/submissions`,
+    MILESTONE_SUBMISSIONS: (milestoneId: string) =>
+      `/api/v1/admin/oop/milestones/${milestoneId}/submissions`,
     SECTION_PRESENTATION_EVALUATIONS: (sectionId: string) =>
       `/admin/sections/${sectionId}/presentation-evaluations`,
     SECTION_PRESENTATION_EVALUATION_SETTINGS: (sectionId: string) =>

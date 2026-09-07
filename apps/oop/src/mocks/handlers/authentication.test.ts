@@ -40,7 +40,7 @@ const adminEndpoints = [
   `${ENDPOINTS.ADMIN.MEETING_RECORD('admin-meeting-1')}?sectionId=${sectionId}`,
   ENDPOINTS.ADMIN.MILESTONE_SCHEDULE,
   ENDPOINTS.ADMIN.MILESTONE_SUBMISSION_DETAIL('submission-oop-01-1-proposal'),
-  ENDPOINTS.ADMIN.SECTION_MILESTONE_SUBMISSIONS(sectionId, 'proposal'),
+  ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('101'),
   ENDPOINTS.ADMIN.NOTICES,
   ENDPOINTS.ADMIN.NOTICE_DETAIL(adminNotices[0].id),
   ENDPOINTS.ADMIN.SECTION_PRESENTATION_EVALUATIONS(sectionId),
@@ -93,7 +93,6 @@ it.each(adminEndpoints)(
 
 it.each([
   `${ENDPOINTS.ADMIN.MEETING_RECORD('admin-meeting-1')}?sectionId=other-section`,
-  ENDPOINTS.ADMIN.SECTION_MILESTONE_SUBMISSIONS('other-section', 'proposal'),
   ENDPOINTS.ADMIN.SECTION_PRESENTATION_EVALUATIONS('other-section'),
 ])('%s: 유효한 어드민 세션이어도 담당 외 분반은 거부한다', async endpoint => {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {

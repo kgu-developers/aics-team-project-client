@@ -95,7 +95,7 @@ function renderPage(
 }
 
 describe('AdminSubmissionsPage', () => {
-  it('마일스톤 탭에 맞는 제출 목록 요약을 표시한다', async () => {
+  it('마일스톤 목록 응답의 상태와 현재 버전을 표시한다', async () => {
     const user = userEvent.setup();
 
     renderPage();
@@ -105,86 +105,75 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('heading', { name: '중간 점검 목록' }),
     ).toBeInTheDocument();
-    expect(await screen.findAllByText('첨부 파일 수: 1')).toHaveLength(2);
-    expect(screen.getByText('피드백: 1개')).toBeInTheDocument();
-    expect(screen.getByText('피드백: 0개')).toBeInTheDocument();
+    expect(await screen.findByText('상태: 피드백 제공')).toBeInTheDocument();
+    expect(screen.getByText('현재 버전: 2차')).toBeInTheDocument();
+    expect(screen.getByText('상태: 승인됨')).toBeInTheDocument();
   });
 
-  it('팀별 공통 제출 요약의 제안서 주제와 최종 보고서 파일을 표시한다', async () => {
+  it('제안서와 최종 보고서 목록에 서버 상태만 표시한다', async () => {
     const user = userEvent.setup();
 
     renderPage();
 
-    expect(
-      await screen.findByText(/AI 기반 팀 프로젝트 관리 서비스/),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/캠퍼스 학습 일정 관리 서비스/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('상태: 제출 완료')).toBeInTheDocument();
+    expect(screen.getByText('상태: 미제출')).toBeInTheDocument();
 
     await user.click(await screen.findByRole('tab', { name: '최종 보고서' }));
 
-    expect(
-      screen.getByRole('link', { name: 'oop-01-2-final-report.pdf' }),
-    ).toHaveAttribute('download', 'oop-01-2-final-report.pdf');
-    expect(
-      screen.getByRole('link', { name: 'oop-01-2-final-report.zip' }),
-    ).toHaveAttribute('download', 'oop-01-2-final-report.zip');
+    expect(await screen.findByText('상태: 완료')).toBeInTheDocument();
+    expect(screen.getByText('현재 버전: 1차')).toBeInTheDocument();
+    expect(screen.getByText('OOP-01 - 2팀')).toBeInTheDocument();
+    expect(screen.getByText('상태: 미제출')).toBeInTheDocument();
   });
 
-  it('제출물 카드의 회의록 수는 팀별 전체 회의록으로 표시하고 팀 필터 목록으로 이동한다', async () => {
-    renderPage();
-
-    const meetingLinks = await screen.findAllByRole('link', {
-      name: '회의록: 1개',
-    });
-
-    expect(meetingLinks).toHaveLength(2);
-    expect(meetingLinks[0]).toHaveAttribute(
-      'href',
-      '/admin/meetings?sectionId=oop-2026-2-01&teamId=team-1151-1',
+  it('선택한 템플릿의 실제 마일스톤 ID로 목록을 조회한다', async () => {
+    let requestCount = 0;
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('101')}`,
+        () => {
+          requestCount += 1;
+          return HttpResponse.json(getAdminMilestoneSubmissionsFixture('101'));
+        },
+      ),
     );
-    expect(meetingLinks[1]).toHaveAttribute(
-      'href',
-      '/admin/meetings?sectionId=oop-2026-2-01&teamId=team-1151-2',
-    );
-  });
-
-  it('제출 완료된 상세보기에서 선택한 마일스톤 이름을 유지한다', async () => {
-    const user = userEvent.setup();
-
     renderPage();
 
-    await user.click(await screen.findByRole('tab', { name: '중간 점검' }));
-    await user.click(screen.getAllByRole('link', { name: '상세보기' })[0]!);
-
-    expect(
-      await screen.findByRole('heading', { name: '제출물 > 중간 점검' }),
-    ).toBeInTheDocument();
+    await screen.findByText('OOP-01 - 1팀');
+    expect(requestCount).toBe(1);
   });
 
-  it('최종 보고서 파일명 다운로드 링크와 비활성화된 일괄 다운로드를 표시한다', async () => {
-    const user = userEvent.setup();
-
+  it('상세·버전 조회 연동 전에는 상세보기를 비활성화한다', async () => {
     renderPage();
 
-    await user.click(await screen.findByRole('tab', { name: '최종 보고서' }));
-
+    await screen.findByText('OOP-01 - 1팀');
+    expect(screen.getAllByRole('button', { name: /상세보기/ })).toHaveLength(2);
     expect(
-      screen.getAllByRole('link', { name: 'oop-01-1-final-report.pdf' }),
-    ).toHaveLength(1);
-    expect(
-      screen.getAllByRole('link', { name: 'oop-01-1-final-report.zip' }),
-    ).toHaveLength(1);
-    expect(
-      screen.getByRole('link', { name: 'oop-01-1-final-report.pdf' }),
-    ).toHaveAttribute('download', 'oop-01-1-final-report.pdf');
-    expect(
-      screen.getAllByRole('button', { name: '일괄 다운로드' }),
-    ).toHaveLength(2);
-    expect(
-      screen.getAllByRole('button', { name: '일괄 다운로드' })[0],
+      screen.getAllByRole('button', { name: /상세보기/ })[0],
     ).toBeDisabled();
+  });
+
+  it('발표 자료 제출도 발표 마일스톤 ID로 목록을 조회한다', async () => {
+    const user = userEvent.setup();
+    let requestCount = 0;
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('103')}`,
+        () => {
+          requestCount += 1;
+          return HttpResponse.json(getAdminMilestoneSubmissionsFixture('103'));
+        },
+      ),
+    );
+
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('tab', { name: '발표 자료 제출' }),
+    );
+
+    expect(await screen.findByText('발표 순서: 1번')).toBeInTheDocument();
+    expect(requestCount).toBe(1);
   });
 
   it('발표 평가 목록과 팀별 상세보기 링크를 표시한다', async () => {
@@ -360,15 +349,15 @@ describe('AdminSubmissionsPage', () => {
     await waitFor(() => expect(studentRequestCount).toBe(0));
   });
 
-  it('상호 평가 제출자 수에 따라 상세보기를 활성화한다', async () => {
+  it('상호 평가 목록에도 제출 상태와 버전을 표시한다', async () => {
     const user = userEvent.setup();
 
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '상호 평가' }));
 
-    expect(await screen.findByText('제출자 수: 1 / 2')).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: '상세보기' })).toHaveLength(1);
-    expect(screen.getAllByRole('button', { name: '상세보기' })).toHaveLength(1);
+    expect(await screen.findByText('상태: 제출 완료')).toBeInTheDocument();
+    expect(screen.getByText('상태: 미제출')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /상세보기/ })).toHaveLength(2);
   });
 
   it('미제출 팀의 발표 평가 상세에 다른 팀 학생을 미평가로 표시한다', async () => {

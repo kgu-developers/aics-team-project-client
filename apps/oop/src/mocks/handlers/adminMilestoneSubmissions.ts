@@ -7,10 +7,7 @@ import { demoAdmin } from '../data/users';
 
 export const adminMilestoneSubmissionsHandlers = [
   http.get(
-    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_SUBMISSIONS(
-      ':sectionId',
-      ':milestoneId',
-    )}`,
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS(':milestoneId')}`,
     ({ params, request }) => {
       const account = getMockAuthenticatedAccount(request);
 
@@ -21,15 +18,7 @@ export const adminMilestoneSubmissionsHandlers = [
         );
       }
 
-      const sectionId = String(params.sectionId);
       const milestoneId = String(params.milestoneId);
-
-      if (sectionId !== 'oop-2026-2-01') {
-        return HttpResponse.json(
-          { code: 'FORBIDDEN', message: '담당 분반만 조회할 수 있습니다.' },
-          { status: 403 },
-        );
-      }
 
       const fixture = getAdminMilestoneSubmissionsFixture(milestoneId);
 

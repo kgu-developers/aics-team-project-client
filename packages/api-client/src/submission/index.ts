@@ -17,11 +17,11 @@ export {
   type AdminProposalSubmissionDetailDto,
 } from './fetchAdminMilestoneSubmissionDetail';
 export {
-  fetchAdminSectionMilestoneSubmissions,
-  type AdminSectionMilestoneSubmissionItemDto,
-  type AdminSectionMilestoneSubmissionSummaryDto,
-  type AdminSectionMilestoneSubmissionsResponse,
-} from './fetchAdminSectionMilestoneSubmissions';
+  fetchAdminMilestoneSubmissions,
+  type AdminMilestoneSubmissionItemDto,
+  type AdminMilestoneSubmissionStatusDto,
+  type AdminMilestoneSubmissionsResponse,
+} from './fetchAdminMilestoneSubmissions';
 export {
   fetchAdminPresentationEvaluations,
   type AdminPresentationEvaluationCriterionDto,
