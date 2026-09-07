@@ -97,16 +97,19 @@ describe('team member contacts query', () => {
     queryClient.clear();
   });
 
-  it('팀 ID가 없으면 킥오프 API를 호출하지 않는다', () => {
-    const queryClient = createQueryClient();
-    const { result } = renderHook(() => useTeamKickoffQuery(undefined), {
-      wrapper: createWrapper(queryClient),
-    });
+  it.each([undefined, '9007199254740993'])(
+    '팀 ID가 없거나 안전 정수 범위를 벗어나면(%s) 킥오프 API를 호출하지 않는다',
+    teamId => {
+      const queryClient = createQueryClient();
+      const { result } = renderHook(() => useTeamKickoffQuery(teamId), {
+        wrapper: createWrapper(queryClient),
+      });
 
-    expect(result.current.fetchStatus).toBe('idle');
-    expect(fetchKickoffMock).not.toHaveBeenCalled();
-    queryClient.clear();
-  });
+      expect(result.current.fetchStatus).toBe('idle');
+      expect(fetchKickoffMock).not.toHaveBeenCalled();
+      queryClient.clear();
+    },
+  );
 
   it('양의 정수 팀 ID로 연락처 envelope를 조회한다', async () => {
     fetchContactsMock.mockResolvedValue(contacts);
@@ -133,25 +136,31 @@ describe('team member contacts query', () => {
     queryClient.clear();
   });
 
-  it.each([undefined, '', '0', '-1', '4.2', 'synthetic-team-4'])(
-    '유효하지 않은 팀 ID(%s)에서는 연락처 API를 호출하지 않는다',
-    teamId => {
-      const queryClient = createQueryClient();
-      const { result } = renderHook(() => useTeamMemberContactsQuery(teamId), {
-        wrapper: createWrapper(queryClient),
-      });
+  it.each([
+    undefined,
+    '',
+    '0',
+    '-1',
+    '4.2',
+    'synthetic-team-4',
+    '9007199254740993',
+  ])('유효하지 않은 팀 ID(%s)에서는 연락처 API를 호출하지 않는다', teamId => {
+    const queryClient = createQueryClient();
+    const { result } = renderHook(() => useTeamMemberContactsQuery(teamId), {
+      wrapper: createWrapper(queryClient),
+    });
 
-      expect(result.current.fetchStatus).toBe('idle');
-      expect(fetchContactsMock).not.toHaveBeenCalled();
-      queryClient.clear();
-    },
-  );
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(fetchContactsMock).not.toHaveBeenCalled();
+    queryClient.clear();
+  });
 
-  it('팀 ID 선행조건 판별은 양의 int64 문자열만 허용한다', () => {
+  it('팀 ID 선행조건 판별은 양의 안전 정수 문자열만 허용한다', () => {
     expect(isValidPositiveTeamId('1')).toBe(true);
     expect(isValidPositiveTeamId('9007199254740991')).toBe(true);
-    expect(isValidPositiveTeamId('9007199254740992')).toBe(true);
-    expect(isValidPositiveTeamId('9223372036854775807')).toBe(true);
+    expect(isValidPositiveTeamId('9007199254740992')).toBe(false);
+    expect(isValidPositiveTeamId('9007199254740993')).toBe(false);
+    expect(isValidPositiveTeamId('9223372036854775807')).toBe(false);
     expect(isValidPositiveTeamId('0')).toBe(false);
     expect(isValidPositiveTeamId('9223372036854775808')).toBe(false);
     expect(isValidPositiveTeamId('team-1')).toBe(false);

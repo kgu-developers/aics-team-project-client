@@ -129,6 +129,37 @@ describe('StudentHeaderActions', () => {
     expect(requests).toBe(1);
   });
 
+  it.each(['0', '', 'invalid-team', '9007199254740993'])(
+    '잘못된 팀 ID(%s)는 요청 없이 확인 필요로 표시한다',
+    async teamId => {
+      let requests = 0;
+      server.use(
+        http.get(`${API_BASE_URL}/api/v1/oop/teams/:teamId/kickoff`, () => {
+          requests += 1;
+          return new HttpResponse(null, { status: 500 });
+        }),
+      );
+      renderHeader('/student', {
+        ...demoStudent,
+        teamId,
+        currentTeam: null,
+      });
+      await userEvent
+        .setup()
+        .click(screen.getByRole('button', { name: '내 프로필 열기' }));
+
+      const profile = within(
+        await screen.findByRole('dialog', { name: '내 프로필' }),
+      );
+      expect(profile.getByText('팀 정보 확인 필요')).toBeVisible();
+      expect(profile.getByText('확인 필요')).toBeVisible();
+      expect(profile.queryByText('확인 중…')).toBeNull();
+      expect(profile.queryByText('미배정')).toBeNull();
+      expect(profile.queryByText('미확정')).toBeNull();
+      expect(requests).toBe(0);
+    },
+  );
+
   it('팀장 조회 실패를 미배정이나 미확정으로 잘못 표시하지 않는다', async () => {
     server.use(
       http.get(

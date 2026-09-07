@@ -3,12 +3,11 @@ import { skipToken, useQuery } from '@tanstack/react-query';
 
 import { teamMemberContactsQueryKey } from './teamAssignmentKeys';
 
-const maxSignedInt64 = 9_223_372_036_854_775_807n;
-
 export function isValidPositiveTeamId(teamId?: string): teamId is string {
   if (!teamId || !/^[1-9]\d*$/.test(teamId)) return false;
 
-  return BigInt(teamId) <= maxSignedInt64;
+  // The server sends numeric IDs; only accept values JavaScript can represent exactly.
+  return Number.isSafeInteger(Number(teamId));
 }
 
 export function useTeamMemberContactsQuery(teamId?: string, enabled = true) {
