@@ -35,6 +35,7 @@ const student: CurrentUser = {
 };
 const summary = {
   id: 19,
+  title: '진행 점검',
   phase: 'MID_CHECK',
   meetingAt: '2026-09-06 14:00',
   location: '301호',
@@ -48,6 +49,22 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   vi.stubEnv('VITE_ENABLE_MSW', 'false');
   useAuthStore.getState().setCurrentUser(student);
+  server.use(
+    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+      HttpResponse.json({
+        id: 7,
+        name: '테스트 팀',
+        members: [
+          {
+            id: 500,
+            studentNumber: student.studentNumber,
+            name: student.name,
+            isLeader: true,
+          },
+        ],
+      }),
+    ),
+  );
 });
 afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
@@ -77,20 +94,19 @@ it('currentTeam이 없어도 /me의 teamId로 실제 응답을 읽고 지원하�
   );
   renderPage();
 
-  expect(await screen.findByText('중간 점검')).toBeVisible();
+  expect(await screen.findByText('진행 점검')).toBeVisible();
   expect(requests).toHaveBeenCalledTimes(1);
   expect(screen.getByText('2026-09-06')).toBeVisible();
   expect(screen.getByText('참석 2명 · 301호')).toBeVisible();
-  expect(
-    screen.getByRole('columnheader', { name: '작성자 학번' }),
-  ).toBeVisible();
-  expect(screen.getByText(student.studentNumber)).toBeVisible();
+  expect(screen.getByRole('columnheader', { name: '작성자' })).toBeVisible();
+  expect(await screen.findByText(student.name)).toBeVisible();
   expect(screen.queryByText('소속 팀이 없어요.')).not.toBeInTheDocument();
   expect(screen.queryByText(/액션 플랜/)).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole('link', { name: '중간 점검' }),
-  ).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: '새 회의록' })).toBeDisabled();
+  expect(screen.getByRole('link', { name: '진행 점검' })).toHaveAttribute(
+    'href',
+    '/student/meetings/19',
+  );
+  expect(screen.getByRole('button', { name: '새 회의록' })).toBeEnabled();
 });
 
 it('팀에 속해 있지만 회의록이 없으면 빈 목록을 표시한다', async () => {
@@ -171,27 +187,33 @@ it('팀이 변경되면 새 팀을 조회하고 이전 팀의 회의록을 표�
     http.get(`${API_BASE_URL}/teams/7/meeting-records`, () =>
       HttpResponse.json({ contents: [summary] }),
     ),
+    http.get(`${API_BASE_URL}/api/v1/oop/teams/8/kickoff`, () =>
+      HttpResponse.json({ id: 8, name: '다른 팀', members: [] }),
+    ),
     http.get(`${API_BASE_URL}/teams/8/meeting-records`, () =>
-      HttpResponse.json({ contents: [{ ...summary, id: 20, phase: 'FINAL' }] }),
+      HttpResponse.json({
+        contents: [{ ...summary, id: 20, title: null, phase: 'FINAL' }],
+      }),
     ),
   );
   renderPage();
-  expect(await screen.findByText('중간 점검')).toBeVisible();
+  expect(await screen.findByText('진행 점검')).toBeVisible();
   act(() =>
     useAuthStore.getState().setCurrentUser({ ...student, teamId: '8' }),
   );
-  expect(await screen.findByText('최종')).toBeVisible();
+  expect(await screen.findByText('최종 회의록')).toBeVisible();
   await waitFor(() =>
-    expect(screen.queryByText('중간 점검')).not.toBeInTheDocument(),
+    expect(screen.queryByText('진행 점검')).not.toBeInTheDocument(),
   );
 });
 
-it('팀이 있는 학생이 작성 주소를 직접 열어도 팀 미배정으로 안내하지 않는다', () => {
+it('currentTeam이 없는 학생도 kickoff 학번으로 새 회의록을 작성할 수 있다', async () => {
   renderPage(<MeetingNewPage />);
-  expect(screen.getByText('회의록 작성 기능을 준비 중이에요.')).toBeVisible();
+  expect(
+    await screen.findByRole('heading', { name: '새 회의록' }),
+  ).toBeVisible();
+  expect(screen.getByRole('textbox', { name: /회의 제목/ })).toBeVisible();
+  expect(screen.getByText(/^회의 단계/)).toBeVisible();
+  expect(screen.getByText(/^회의 시간/)).toBeVisible();
   expect(screen.queryByText('소속 팀이 없어요.')).not.toBeInTheDocument();
-  expect(screen.getByRole('link', { name: '회의록 목록으로' })).toHaveAttribute(
-    'href',
-    '/student/meetings',
-  );
 });

@@ -17,3 +17,5 @@ export { useUpdateMeetingActionMutation } from './useUpdateMeetingActionMutation
 export { useUpdateMeetingRecordMutation } from './useUpdateMeetingRecordMutation';
 
 export * from './api';
+
+export { useMeetingTeamQuery } from './useMeetingTeamQuery';

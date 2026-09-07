@@ -24,6 +24,7 @@ import {
 
 const record = {
   id: 7,
+  title: '진행 점검',
   phase: 'MID_CHECK',
   meetingAt: '2026-08-03 14:00',
   authorId: '202600001',
@@ -144,11 +145,11 @@ it('단계와 상태 필터를 요청에 전달하고 각각 별도 캐시를 �
       records: useMeetingRecordSummariesQuery('10', phase),
       actions: useTeamMeetingActionEntriesQuery('10', status),
     }),
-    { wrapper, initialProps: { phase: 'PROPOSAL', status: 'EXCLUDED' } },
+    { wrapper, initialProps: { phase: 'PROPOSAL', status: 'TODO' } },
   );
   await waitFor(() => {
     expect(result.current.records.data?.[0]?.phase).toBe('PROPOSAL');
-    expect(result.current.actions.data?.[0]?.status).toBe('EXCLUDED');
+    expect(result.current.actions.data?.[0]?.status).toBe('TODO');
   });
   rerender({ phase: 'FINAL', status: 'DONE' });
   await waitFor(() => {
@@ -159,8 +160,8 @@ it('단계와 상태 필터를 요청에 전달하고 각각 별도 캐시를 �
     client.getQueryData(meetingApiKeys.filteredList('10', 'PROPOSAL')),
   ).toMatchObject([{ phase: 'PROPOSAL' }]);
   expect(
-    client.getQueryData(meetingApiKeys.filteredTeamActions('10', 'EXCLUDED')),
-  ).toMatchObject([{ status: 'EXCLUDED' }]);
+    client.getQueryData(meetingApiKeys.filteredTeamActions('10', 'TODO')),
+  ).toMatchObject([{ status: 'TODO' }]);
 });
 
 it.each([401, 403, 404, 500])(
@@ -195,7 +196,7 @@ function seedCache(client: QueryClient) {
     detail: meetingApiKeys.detail('7'),
     actions: meetingApiKeys.recordActions('7'),
     allTeamActions: meetingApiKeys.filteredTeamActions('10'),
-    excludedActions: meetingApiKeys.filteredTeamActions('10', 'EXCLUDED'),
+    todoActions: meetingApiKeys.filteredTeamActions('10', 'TODO'),
     otherRecords: meetingApiKeys.filteredList('20'),
     otherDetail: meetingApiKeys.detail('8'),
     otherActions: meetingApiKeys.recordActions('8'),
@@ -235,6 +236,7 @@ it('생성 후 해당 팀의 모든 단계 목록을 무효화하고 다른 캐�
     result.current.mutateAsync({
       teamId: '10',
       input: {
+        title: '진행 점검',
         meetingAt: '2026-08-03T14:00:00',
         phase: 'MID_CHECK',
         content: '회의 내용',
@@ -297,7 +299,7 @@ it('삭제 성공 후 상세와 회의별 액션을 제거하고 해당 팀의 �
         'proposalRecords',
         'finalRecords',
         'allTeamActions',
-        'excludedActions',
+        'todoActions',
       ].includes(name),
     );
   }
@@ -340,7 +342,7 @@ it.each([
     expectInvalidated(client, keys, [
       'actions',
       'allTeamActions',
-      'excludedActions',
+      'todoActions',
     ]);
   },
 );
@@ -364,6 +366,7 @@ it('저장과 삭제가 실패하면 기존 캐시를 지우거나 무효화하�
       result.current.create.mutateAsync({
         teamId: '10',
         input: {
+          title: '진행 점검',
           meetingAt: '2026-08-03T14:00:00',
           phase: 'FINAL',
           content: '내용',
@@ -378,7 +381,7 @@ it('저장과 삭제가 실패하면 기존 캐시를 지우거나 무효화하�
       result.current.createAction.mutateAsync({
         teamId: '10',
         meetingId: '7',
-        input: { content: '작업', status: 'IN_PROGRESS' },
+        input: { content: '작업' },
       }),
       result.current.updateAction.mutateAsync({
         teamId: '10',

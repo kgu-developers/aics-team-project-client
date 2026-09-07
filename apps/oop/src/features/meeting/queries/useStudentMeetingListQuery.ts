@@ -1,9 +1,9 @@
-import type { MeetingPhase } from '@aics/core';
-
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import { useTeamKickoffQuery } from '~/features/team-assignment/queries';
 
+import { meetingTitle } from '../model/studentMeeting';
 import { hasMeetingApiId } from './api/meetingApiKeys';
 import { useMeetingRecordSummariesQuery } from './api/useMeetingRecordSummariesQuery';
 import { useMeetingRecordsQuery } from './useMeetingRecordsQuery';
@@ -18,12 +18,6 @@ export type StudentMeetingListItem = {
   authorLabel: string;
 };
 
-const phaseLabels: Record<MeetingPhase, string> = {
-  PROPOSAL: '기획',
-  MID_CHECK: '중간 점검',
-  FINAL: '최종',
-};
-
 export function useStudentMeetingListQuery() {
   const currentUser = useAuthStore(state => state.currentUser);
   // Keep the existing demo contract at the feature boundary until CRUD migrates.
@@ -34,6 +28,7 @@ export function useStudentMeetingListQuery() {
   const teamId = usesDemoContract
     ? currentUser?.currentTeam?.id
     : (currentUser?.teamId ?? undefined);
+  const kickoff = useTeamKickoffQuery(usesDemoContract ? undefined : teamId);
   const summaries = useMeetingRecordSummariesQuery(
     usesDemoContract ? undefined : teamId,
   );
@@ -52,11 +47,14 @@ export function useStudentMeetingListQuery() {
     : summaries.data?.map(record => ({
         id: record.id,
         heldAt: record.meetingAt,
-        heading: phaseLabels[record.phase],
+        heading: meetingTitle(record.title, record.phase),
         participantCount: record.participantCount,
         actionCount: null,
         location: record.location,
-        authorLabel: record.authorId,
+        authorLabel:
+          kickoff.data?.members.find(
+            member => member.studentNumber === record.authorId,
+          )?.name || record.authorId,
       }));
 
   return {
@@ -70,10 +68,9 @@ export function useStudentMeetingListQuery() {
     canRetry:
       !query.isFetching &&
       (usesDemoContract ? Boolean(teamId) : hasMeetingApiId(teamId)),
-    headingLabel: usesDemoContract ? '제목' : '회의 단계',
-    authorColumnLabel: usesDemoContract ? '작성자' : '작성자 학번',
-    // Only list consumption is migrated here; editor/detail consumption is KD3-156.
-    canOpenRecord: usesDemoContract,
-    canCreateRecord: usesDemoContract,
+    headingLabel: '제목',
+    authorColumnLabel: '작성자',
+    canOpenRecord: true,
+    canCreateRecord: true,
   };
 }
