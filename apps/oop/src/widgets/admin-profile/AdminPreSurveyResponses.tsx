@@ -1,18 +1,23 @@
 import {
   Card,
+  Button,
   Heading,
   proportional,
   Selector,
   SelectorOption,
   Table,
   Text,
+  useToast,
   VStack,
 } from '@aics/design-system';
 import { useEffect, useState } from 'react';
 
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
-import { useAdminPreSurveyResponsesQuery } from '~/features/admin-profile/queries';
+import {
+  useAdminPreSurveyResponsesExcelDownloadMutation,
+  useAdminPreSurveyResponsesQuery,
+} from '~/features/admin-profile/queries';
 
 import * as styles from './AdminPreSurveyResponses.css';
 
@@ -28,6 +33,17 @@ const roleLabels: Record<string, string> = {
   TEAM_LEADER: '팀장(프로젝트 매니저)',
 };
 
+function downloadExcel(file: Blob, fileName: string) {
+  const url = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.download = fileName;
+  link.href = url;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 function formatPreferredRoles(roles: unknown) {
   if (!Array.isArray(roles)) return '-';
 
@@ -39,6 +55,7 @@ function formatPreferredRoles(roles: unknown) {
 }
 
 export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
+  const toast = useToast();
   const [sectionId, setSectionId] = useState(sections[0]?.id ?? '');
 
   useEffect(() => {
@@ -56,6 +73,23 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
   const responsesQuery = useAdminPreSurveyResponsesQuery(
     sectionId || undefined,
   );
+  const downloadMutation = useAdminPreSurveyResponsesExcelDownloadMutation();
+
+  function handleExcelDownload() {
+    if (!sectionId || downloadMutation.isPending) return;
+
+    downloadMutation.mutate(sectionId, {
+      onError: () => {
+        toast({
+          body: '사전조사 응답 Excel 파일을 다운로드하지 못했습니다. 다시 시도해 주세요.',
+        });
+      },
+      onSuccess: download => {
+        downloadExcel(download.file, download.fileName);
+        toast({ body: '사전조사 응답 Excel 파일을 다운로드했어요.' });
+      },
+    });
+  }
 
   return (
     <Card className={styles.section} padding={4}>
@@ -66,6 +100,13 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
             학생이 제출한 희망 역할, 주제 의견, 기타 의견을 확인하는 영역입니다.
             팀 구성 Excel 업로드와 실제 저장은 서버 연동 후 지원합니다.
           </Text>
+          <Button
+            isDisabled={!sectionId || downloadMutation.isPending}
+            isLoading={downloadMutation.isPending}
+            label='엑셀 다운로드'
+            onClick={handleExcelDownload}
+            variant='secondary'
+          />
         </header>
 
         {sections.length === 0 ? (

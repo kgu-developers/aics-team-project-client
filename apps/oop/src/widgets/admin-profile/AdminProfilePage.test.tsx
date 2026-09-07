@@ -14,6 +14,7 @@ import {
   describe,
   expect,
   it,
+  vi,
 } from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
@@ -46,6 +47,14 @@ const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
 const originalDialogShowModalDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
   'showModal',
+);
+const originalCreateObjectUrlDescriptor = Object.getOwnPropertyDescriptor(
+  URL,
+  'createObjectURL',
+);
+const originalRevokeObjectUrlDescriptor = Object.getOwnPropertyDescriptor(
+  URL,
+  'revokeObjectURL',
 );
 
 beforeAll(() => {
@@ -85,6 +94,21 @@ afterEach(() => {
   document.cookie = 'XSRF-TOKEN=; Max-Age=0; Path=/';
   setApiAccessToken(null);
   useAuthStore.getState().clearSession();
+
+  if (originalCreateObjectUrlDescriptor) {
+    Object.defineProperty(URL, 'createObjectURL', {
+      ...originalCreateObjectUrlDescriptor,
+    });
+  } else {
+    Reflect.deleteProperty(URL, 'createObjectURL');
+  }
+  if (originalRevokeObjectUrlDescriptor) {
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      ...originalRevokeObjectUrlDescriptor,
+    });
+  } else {
+    Reflect.deleteProperty(URL, 'revokeObjectURL');
+  }
 });
 afterAll(() => {
   server.close();
@@ -361,6 +385,62 @@ describe('AdminProfilePage', () => {
     expect(screen.getByText('20260001')).toBeInTheDocument();
     expect(screen.getByText('김객체')).toBeInTheDocument();
     expect(screen.getByText('이프로')).toBeInTheDocument();
+  });
+
+  it('선택한 분반의 사전조사 응답 Excel 파일을 다운로드한다', async () => {
+    const user = userEvent.setup();
+    const createObjectUrl = vi.fn(() => 'blob:pre-survey-responses');
+    const revokeObjectUrl = vi.fn();
+    const anchorClick = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        expect(this.download).toBe('객체지향프로그래밍 01-사전조사.xlsx');
+        expect(this.href).toBe('blob:pre-survey-responses');
+      });
+
+    Object.defineProperty(URL, 'createObjectURL', {
+      configurable: true,
+      value: createObjectUrl,
+    });
+    Object.defineProperty(URL, 'revokeObjectURL', {
+      configurable: true,
+      value: revokeObjectUrl,
+    });
+
+    renderPage();
+    await user.click(
+      await screen.findByRole('button', { name: '엑셀 다운로드' }),
+    );
+
+    await waitFor(() => expect(anchorClick).toHaveBeenCalledOnce());
+    expect(createObjectUrl).toHaveBeenCalledOnce();
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:pre-survey-responses');
+    expect(
+      screen.getByText('사전조사 응답 Excel 파일을 다운로드했어요.'),
+    ).toBeInTheDocument();
+
+    anchorClick.mockRestore();
+  });
+
+  it('사전조사 Excel 다운로드가 거부되면 오류를 안내한다', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRE_SURVEY_RESPONSES_DOWNLOAD(':sectionId')}`,
+        () => HttpResponse.json({ code: 'FORBIDDEN' }, { status: 403 }),
+      ),
+    );
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', { name: '엑셀 다운로드' }),
+    );
+
+    expect(
+      await screen.findByText(
+        '사전조사 응답 Excel 파일을 다운로드하지 못했습니다. 다시 시도해 주세요.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('희망 역할 응답이 배열이 아니어도 목록을 표시한다', async () => {
