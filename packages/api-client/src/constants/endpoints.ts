@@ -19,6 +19,8 @@ export const ENDPOINTS = {
       `/api/v1/admin/oop/sections/${sectionId}/peer-evaluation-forms`,
     OOP_PRE_SURVEY_RESPONSES: (sectionId: string) =>
       `/api/v1/admin/oop/sections/${sectionId}/pre-survey-responses`,
+    OOP_PRE_SURVEY_RESPONSES_DOWNLOAD: (sectionId: string) =>
+      `/api/v1/admin/oop/sections/${sectionId}/pre-survey-responses/download`,
     MEETING_RECORDS: '/admin/meeting-records',
     MEETING_RECORD: (meetingId: string) =>
       `/admin/meeting-records/${meetingId}`,

@@ -34,6 +34,8 @@ export {
   type AdminOopUserDto,
 } from './adminSection';
 export {
+  fetchAdminPreSurveyResponsesExcelDownload,
+  type AdminPreSurveyResponsesExcelDownload,
   fetchAdminPreSurveyResponses,
   type AdminPreSurveyResponseDto,
   type AdminPreSurveyResponsesResponse,
