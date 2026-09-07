@@ -1,7 +1,13 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -10,9 +16,13 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
+import { teamAssignmentSurveyQueryKey } from '../queries';
 import { SurveyForm } from './SurveyForm';
 
-import { teamAssignmentFixture } from '~/mocks/data/teamAssignment';
+import {
+  demoPreSurveySectionId,
+  teamAssignmentFixture,
+} from '~/mocks/data/teamAssignment';
 import {
   demoAccessToken,
   demoPartnerAccessToken,
@@ -61,7 +71,16 @@ function renderSurvey(
       </AstryxThemeProvider>
     );
   }
-  return render(<SurveyForm projection={projection} />, { wrapper: Wrapper });
+  return {
+    queryClient,
+    ...render(
+      <SurveyForm
+        preSurveySectionId={demoPreSurveySectionId}
+        projection={projection}
+      />,
+      { wrapper: Wrapper },
+    ),
+  };
 }
 
 describe('SurveyForm', () => {
@@ -184,5 +203,35 @@ describe('SurveyForm', () => {
         screen.getByLabelText('같이 팀을 할 파트너가 있으면 찾아보세요.'),
       ).toBeInTheDocument(),
     );
+  });
+
+  it('기본 projection에서도 숫자 분반 ID로 최종 설문을 제출한다', async () => {
+    const user = userEvent.setup();
+    const { queryClient } = renderSurvey();
+
+    await user.click(screen.getByRole('button', { name: '시작하기' }));
+    await user.click(screen.getByLabelText('개발'));
+    await user.click(screen.getByRole('button', { name: '다음 설문' }));
+    await user.click(screen.getByRole('button', { name: '설문 제출' }));
+
+    const dialog = screen.getByRole('dialog', { name: '설문 제출 확인' });
+    await user.click(within(dialog).getByRole('button', { name: '제출' }));
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: '설문 제출 확인' }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(
+      queryClient.getQueryData(
+        teamAssignmentSurveyQueryKey(demoPreSurveySectionId),
+      ),
+    ).toMatchObject({
+      sectionId: demoPreSurveySectionId,
+      preferredRoles: ['DEVELOPMENT'],
+    });
+    expect(
+      screen.queryByText('설문 기간 또는 제출 상태를 다시 확인해 주세요.'),
+    ).not.toBeInTheDocument();
   });
 });

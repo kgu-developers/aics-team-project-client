@@ -40,7 +40,7 @@ describe('sectionHandlers', () => {
       contents: [
         expect.objectContaining({
           id: 1,
-          code: 'CS101',
+          code: '월8/1151',
           courseId: 1,
           courseName: '객체지향프로그래밍',
           semester: 'SPRING',

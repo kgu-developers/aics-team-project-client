@@ -67,3 +67,24 @@ export type SaveTeamAssignmentSurveyInput = {
   survey: TeamAssignmentSurvey;
 };
 export type ConfirmTeamLeaderInput = { sectionId: string; teamId: string };
+
+export type SubmitPreSurveyResponseRequest = {
+  preferredRoles: string[];
+  topicOpinion?: string;
+  etcOpinion?: string;
+};
+
+export type PreSurveyResponseDetailResponse = {
+  id: number;
+  sectionId: number;
+  userId: string;
+  preferredRoles: unknown;
+  submittedAt: string;
+  topicOpinion?: string;
+  etcOpinion?: string;
+};
+
+export type SubmitTeamAssignmentSurveyInput = {
+  sectionId: number;
+  survey: TeamAssignmentSurvey;
+};

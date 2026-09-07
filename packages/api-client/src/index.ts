@@ -189,3 +189,5 @@ export {
 } from './team-assignment';
 
 export { fetchMySections } from './section';
+
+export { fetchMyTeamAssignmentSurvey } from './team-assignment';
