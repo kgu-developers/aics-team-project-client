@@ -18,6 +18,7 @@ import {
 } from '~/features/team-assignment/queries';
 
 import {
+  hasAllTopicVotes,
   isUncertainTopicWrite,
   type TopicParticipationEligibility,
 } from './liveTopicBoard';
@@ -35,6 +36,8 @@ export type TopicFinalizePanelProps = {
   studentNumber?: string;
   eligibility: TopicParticipationEligibility;
   participationBusy?: boolean;
+  className?: string;
+  onFinalized?: (result: TopicFinalizeResponse) => void;
 };
 
 export default function TopicFinalizePanel(props: TopicFinalizePanelProps) {
@@ -52,6 +55,8 @@ function TopicFinalization({
   studentNumber,
   eligibility,
   participationBusy = false,
+  className,
+  onFinalized,
 }: TopicFinalizePanelProps) {
   const ready =
     Boolean(sectionId && studentNumber) && isValidPositiveTeamId(teamId);
@@ -103,6 +108,10 @@ function TopicFinalization({
   const canFinalize =
     ready &&
     isLeader &&
+    hasAllTopicVotes(
+      candidates.data ?? [],
+      kickoff.data?.members.length ?? 0,
+    ) &&
     eligibility.status === 'open' &&
     !busy &&
     !uncertain &&
@@ -124,13 +133,6 @@ function TopicFinalization({
       ) : null}
       {project.isError ? (
         <Text role='alert'>프로젝트를 불러오지 못했어요.</Text>
-      ) : null}
-      {project.isSuccess && project.data ? (
-        <div className={styles.summary}>
-          <Heading level={3}>현재 프로젝트</Heading>
-          <Text>{project.data.title || '제목을 아직 입력하지 않았어요.'}</Text>
-          {project.data.goal ? <Text>{project.data.goal}</Text> : null}
-        </div>
       ) : null}
       {receipt ? (
         <Text role='status'>주제를 확정했어요: {receipt.title}</Text>
@@ -154,7 +156,8 @@ function TopicFinalization({
       <div className={styles.actions}>
         <Button
           label='주제 확정'
-          variant='secondary'
+          variant='primary'
+          className={className}
           isDisabled={!canFinalize || !candidates.data?.length}
           onClick={() => setIsOpen(true)}
         />
@@ -193,8 +196,9 @@ function TopicFinalization({
               mutation.mutate(
                 { candidateId: chosen.id, goal },
                 {
-                  onSuccess: () => {
+                  onSuccess: result => {
                     setIsOpen(false);
+                    onFinalized?.(result);
                   },
                   onSettled: () => {
                     inFlight.current = false;

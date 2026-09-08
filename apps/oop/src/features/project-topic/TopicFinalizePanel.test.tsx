@@ -28,9 +28,38 @@ import TopicFinalizePanel, {
 } from './TopicFinalizePanel';
 
 import { demoAccessToken, demoPartnerAccessToken } from '~/mocks/data/users';
-import { createLiveTopicHandlers } from '~/mocks/handlers/liveTopic';
+import { createLiveTopicHandlers as baseTopicHandlers } from '~/mocks/handlers/liveTopic';
 import { createMeetingApiHandlers } from '~/mocks/handlers/meetingApi';
 
+function createLiveTopicHandlers(
+  ...args: Parameters<typeof baseTopicHandlers>
+) {
+  return [
+    http.get(`${API_BASE_URL}${ENDPOINTS.TOPIC.CANDIDATES('7')}`, () =>
+      HttpResponse.json({
+        contents: [
+          {
+            id: 1,
+            title: '도서 대여 관리',
+            description: '도서와 대여 현황을 관리합니다.',
+            proposerUserId: '20260003',
+            voteCount: 3,
+            votedByMe: true,
+          },
+          {
+            id: 2,
+            title: '카페 주문 관리',
+            description: '주문과 결제 현황을 관리합니다.',
+            proposerUserId: '20260004',
+            voteCount: 0,
+            votedByMe: false,
+          },
+        ],
+      }),
+    ),
+    ...baseTopicHandlers(...args),
+  ];
+}
 const server = setupServer();
 const clients: QueryClient[] = [];
 const props: TopicFinalizePanelProps = {
@@ -81,23 +110,30 @@ async function fill() {
   return user;
 }
 it('팀장이 확정하면 프로젝트를 재조회하고 새 팀원 세션에서도 제목과 목표를 복원한다', async () => {
-  const first = setup();
+  const onFinalized = vi.fn();
+  const first = setup({ onFinalized });
   const user = await fill();
   await user.click(screen.getByRole('button', { name: '이 주제로 확정' }));
   expect(
     await screen.findByText('주제를 확정했어요: 도서 대여 관리'),
   ).toBeInTheDocument();
-  expect(
-    await screen.findByText('대여 시간을 줄입니다.', { selector: 'span' }),
-  ).toBeInTheDocument();
+  expect(await fetchTeamProject('7')).toMatchObject({
+    title: '도서 대여 관리',
+    goal: '대여 시간을 줄입니다.',
+  });
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   first.unmount();
   useAuthStore.getState().setAccessToken(demoPartnerAccessToken);
   setup({ studentNumber: '20260003' });
-  expect(
-    await screen.findByText('대여 시간을 줄입니다.', { selector: 'span' }),
-  ).toBeInTheDocument();
-  expect(screen.getByText('도서 대여 관리')).toBeInTheDocument();
+  expect(await fetchTeamProject('7')).toMatchObject({
+    title: '도서 대여 관리',
+    goal: '대여 시간을 줄입니다.',
+  });
+  expect(onFinalized).toHaveBeenCalledWith({
+    projectId: 17,
+    candidateId: 1,
+    title: '도서 대여 관리',
+  });
   expect(screen.queryByText(/주제를 확정했어요/)).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: '주제 확정' })).toBeDisabled();
 });
@@ -235,4 +271,11 @@ it('팀원 직접 PATCH는 거절하며 프로젝트를 변경하지 않는다',
     updateTopicFinalization('7', { candidateId: 1, goal: '목표' }),
   ).rejects.toMatchObject({ response: { status: 403 } });
   expect(await fetchTeamProject('7')).toBeNull();
+});
+
+it('전원 투표 전에 확정을 막는다', async () => {
+  server.use(...baseTopicHandlers());
+  const view = setup();
+  await waitFor(() => expect(view.client.isFetching()).toBe(0));
+  expect(screen.getByRole('button', { name: '주제 확정' })).toBeDisabled();
 });

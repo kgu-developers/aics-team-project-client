@@ -44,3 +44,14 @@ export function isUncertainTopicWrite(error: unknown) {
     error.response.status === 408
   );
 }
+
+export function hasAllTopicVotes(
+  candidates: Pick<TopicCandidateResponse, 'voteCount'>[],
+  totalMembers: number,
+) {
+  return (
+    totalMembers > 0 &&
+    candidates.reduce((sum, candidate) => sum + candidate.voteCount, 0) ===
+      totalMembers
+  );
+}

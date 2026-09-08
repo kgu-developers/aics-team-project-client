@@ -2,11 +2,14 @@ import type { StudentHomeMilestone } from '@aics/core';
 import { Button, Collapsible, StatusDot, useToast } from '@aics/design-system';
 import { useNavigate } from '@tanstack/react-router';
 
+import { editorSectionTo } from '~/app/constants/editorSections';
+
 import { cx } from '~/shared/lib/cx';
 
 import { useAuthStore } from '~/features/auth/authStore';
 import { useTopicApi } from '~/features/project-topic/TopicApiContext';
 import { useTopicCandidateDialog } from '~/features/project-topic/TopicCandidateDialogContext';
+import TopicFinalizePanel from '~/features/project-topic/TopicFinalizePanel';
 import { useUpdateSubmissionConfirmationMutation } from '~/features/submission/queries';
 import { useSubmissionDialog } from '~/features/submission/SubmissionDialogContext';
 
@@ -156,42 +159,56 @@ export default function MilestoneCard({
               <div className={styles.rowCell}>
                 {row.actionLabel ? (
                   <>
-                    <Button
-                      className={styles.rowAction}
-                      isDisabled={
-                        row.actionDisabled ||
-                        (row.id === 'proposal-topic-selection' && topicApi
-                          ? !topicApi.canParticipate ||
-                            topicApi.busy ||
-                            topicApi.boardQuery.data?.candidates.some(
-                              candidate => candidate.isMine,
-                            )
-                          : false) ||
-                        (row.id === 'final-report-submission' &&
-                          confirmationMutation.isPending)
-                      }
-                      isLoading={
-                        row.id === 'final-report-submission' &&
-                        confirmationMutation.isPending
-                      }
-                      label={row.actionLabel}
-                      onClick={
-                        row.id === 'proposal-topic-selection'
-                          ? () => setTopicCandidateDialogOpen(true)
-                          : row.id === 'final-report-submission'
-                            ? handleFinalReportAction
-                            : milestone.body?.kind ===
-                                  'presentation-material' &&
-                                row.id === 'presentation-material'
-                              ? () => openSubmissionDialog('presentation')
-                              : row.actionTo
-                                ? () => navigate({ to: row.actionTo })
-                                : undefined
-                      }
-                      size='md'
-                      tooltip={row.actionNotice}
-                      variant='primary'
-                    />
+                    {row.id === 'proposal-topic-selection' &&
+                    topicApi?.offerFinalization ? (
+                      <TopicFinalizePanel
+                        {...topicApi.scope}
+                        participationBusy={topicApi.busy}
+                        className={styles.rowAction}
+                        onFinalized={() => {
+                          void navigate({
+                            to: editorSectionTo('proposal', 'team-info'),
+                          });
+                        }}
+                      />
+                    ) : (
+                      <Button
+                        className={styles.rowAction}
+                        isDisabled={
+                          row.actionDisabled ||
+                          (row.id === 'proposal-topic-selection' && topicApi
+                            ? !topicApi.canParticipate ||
+                              topicApi.busy ||
+                              topicApi.boardQuery.data?.candidates.some(
+                                candidate => candidate.isMine,
+                              )
+                            : false) ||
+                          (row.id === 'final-report-submission' &&
+                            confirmationMutation.isPending)
+                        }
+                        isLoading={
+                          row.id === 'final-report-submission' &&
+                          confirmationMutation.isPending
+                        }
+                        label={row.actionLabel}
+                        onClick={
+                          row.id === 'proposal-topic-selection'
+                            ? () => setTopicCandidateDialogOpen(true)
+                            : row.id === 'final-report-submission'
+                              ? handleFinalReportAction
+                              : milestone.body?.kind ===
+                                    'presentation-material' &&
+                                  row.id === 'presentation-material'
+                                ? () => openSubmissionDialog('presentation')
+                                : row.actionTo
+                                  ? () => navigate({ to: row.actionTo })
+                                  : undefined
+                        }
+                        size='md'
+                        tooltip={row.actionNotice}
+                        variant='primary'
+                      />
+                    )}
                   </>
                 ) : null}
               </div>

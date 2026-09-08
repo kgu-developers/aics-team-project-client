@@ -6,12 +6,6 @@ export const root = style({
   flexDirection: 'column',
   gap: tokens.spacing['4'],
 });
-export const summary = style({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: tokens.spacing['2'],
-  overflowWrap: 'anywhere',
-});
 export const actions = style({
   display: 'flex',
   flexWrap: 'wrap',
