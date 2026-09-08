@@ -41,7 +41,11 @@ export function studentMilestoneSummary(
     ? new Date(milestone.schedule.opensAt).getTime()
     : undefined;
   const beforePeriod =
-    opensAt !== undefined && now < opensAt && !submission?.canSubmitNow;
+    milestone.status === 'PUBLISHED' &&
+    opensAt !== undefined &&
+    now < opensAt &&
+    submission?.status === 'NOT_SUBMITTED' &&
+    !submission.canSubmitNow;
   const status: StudentHomeMilestone['status'] =
     submission?.status === 'COMPLETED'
       ? 'completed'
@@ -58,9 +62,11 @@ export function studentMilestoneSummary(
       ? `~ ${milestoneDate(milestone.schedule.dueAt)}`
       : '마감 일정 미정',
     status,
-    statusLabel: submission
-      ? submissionLabels[submission.status]
-      : '상태 확인 필요',
+    statusLabel: beforePeriod
+      ? '기간 전'
+      : submission
+        ? submissionLabels[submission.status]
+        : '상태 확인 필요',
     currentStepLabel: milestone.title,
     interaction: 'static',
     isDetailAvailable: false,

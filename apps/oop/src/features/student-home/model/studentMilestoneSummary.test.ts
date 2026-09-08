@@ -30,6 +30,29 @@ const submission: MyTeamMilestoneSubmissionResponse = {
 };
 const now = Date.parse('2026-09-01T00:00:00+09:00');
 describe('학생 홈 마일스톤 표시', () => {
+  it('공개된 미제출 단계는 시작 전까지 기간 전으로 표시한다', () => {
+    const result = studentMilestoneSummary(milestone, submission, now);
+    expect(result.status).toBe('before-period');
+    expect(result.statusLabel).toBe('기간 전');
+  });
+  it('시작 시각부터 미제출 상태를 표시한다', () => {
+    const result = studentMilestoneSummary(
+      milestone,
+      submission,
+      Date.parse(milestone.schedule.opensAt!),
+    );
+    expect(result.status).toBe('in-progress');
+    expect(result.statusLabel).toBe('미제출');
+  });
+  it('시작 전에도 이미 제출한 결과는 기간 전으로 숨기지 않는다', () => {
+    const result = studentMilestoneSummary(
+      milestone,
+      { ...submission, status: 'SUBMITTED' },
+      now,
+    );
+    expect(result.status).toBe('in-progress');
+    expect(result.statusLabel).toBe('제출 완료');
+  });
   it('서버 ID와 제목을 유지하고 마감 시각을 자정으로 바꾸지 않는다', () => {
     const result = studentMilestoneSummary(milestone, submission, now);
     expect(result.id).toBe('47');
@@ -43,6 +66,7 @@ describe('학생 홈 마일스톤 표시', () => {
       now,
     );
     expect(result.status).toBe('in-progress');
+    expect(result.statusLabel).toBe('미제출');
     expect(result.isDetailAvailable).toBe(false);
     expect(result.rows).toEqual([]);
   });
