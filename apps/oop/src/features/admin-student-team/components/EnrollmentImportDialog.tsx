@@ -44,6 +44,13 @@ export default function EnrollmentImportDialog({
   }
 
   function close() {
+    if (applyMutation.isPending) return;
+
+    reset();
+    onClose();
+  }
+
+  function closeAfterApply() {
     reset();
     onClose();
   }
@@ -148,7 +155,12 @@ export default function EnrollmentImportDialog({
           </Text>
         ) : null}
         <HStack gap={2} justify='end'>
-          <Button label='취소' onClick={close} variant='secondary' />
+          <Button
+            isDisabled={applyMutation.isPending}
+            label='취소'
+            onClick={close}
+            variant='secondary'
+          />
           {!preview ? (
             <Button
               isDisabled={!file || previewMutation.isPending}
@@ -163,7 +175,9 @@ export default function EnrollmentImportDialog({
               isDisabled={cannotApply || applyMutation.isPending}
               label={applyMutation.isPending ? '반영 중' : '반영하기'}
               onClick={() => {
-                applyMutation.mutate(preview.importId, { onSuccess: close });
+                applyMutation.mutate(preview.importId, {
+                  onSuccess: closeAfterApply,
+                });
               }}
             />
           )}

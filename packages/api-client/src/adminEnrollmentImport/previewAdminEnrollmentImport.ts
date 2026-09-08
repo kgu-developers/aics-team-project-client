@@ -13,7 +13,7 @@ export async function previewAdminEnrollmentImport(
   const response = await apiClient.post<AdminEnrollmentImportPreviewResponse>(
     ENDPOINTS.ADMIN.SECTION_ENROLLMENT_IMPORT_PREVIEW(sectionId),
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
+    { headers: { 'Content-Type': undefined } },
   );
 
   return response.data;

@@ -203,7 +203,7 @@ export default function AdminStudentTeamManagement() {
               변경되고 팀 구성 및 팀 접근 권한에서도 제외됩니다.
             </Text>
             {withdrawMutation.isError ? (
-              <Text>
+              <Text role='alert'>
                 수강생을 제외하지 못했습니다. 잠시 후 다시 시도해 주세요.
               </Text>
             ) : null}

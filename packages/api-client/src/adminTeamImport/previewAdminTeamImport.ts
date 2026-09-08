@@ -13,7 +13,7 @@ export async function previewAdminTeamImport(
   const response = await apiClient.post<AdminTeamImportPreviewResponse>(
     ENDPOINTS.ADMIN.SECTION_TEAM_IMPORT_PREVIEW(sectionId),
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
+    { headers: { 'Content-Type': undefined } },
   );
 
   return response.data;
