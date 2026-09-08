@@ -62,27 +62,8 @@ export function studentMilestoneSummary(
       ? submissionLabels[submission.status]
       : '상태 확인 필요',
     currentStepLabel: milestone.title,
-    interaction: 'collapsible',
-    isDetailAvailable: true,
-    rows: [
-      {
-        id: 'submission-status',
-        label: '제출 상태',
-        value: submission
-          ? submissionLabels[submission.status]
-          : '상태 확인 필요',
-        tone: 'default',
-      },
-      {
-        id: 'submission-availability',
-        label: '제출 가능 여부',
-        value: !submission
-          ? '상태 확인 필요'
-          : submission.canSubmitNow
-            ? '제출 가능'
-            : '제출 불가',
-        tone: submission?.canSubmitNow ? 'primary' : 'muted',
-      },
-    ],
+    interaction: 'static',
+    isDetailAvailable: false,
+    rows: [],
   };
 }

@@ -54,9 +54,10 @@ function createWrapper() {
 }
 
 describe('StudentHomePage', () => {
-  it('히어로 CTA 대상 마일스톤을 열고 스크롤한 뒤 포커스한다', () => {
+  it('히어로 CTA는 상세를 열지 않고 목록 항목으로 이동한다', () => {
     const milestone = document.createElement('article');
     milestone.id = 'student-milestone-proposal';
+    milestone.tabIndex = -1;
     milestone.scrollIntoView = vi.fn();
     const trigger = document.createElement('button');
     trigger.setAttribute('aria-expanded', 'false');
@@ -66,12 +67,12 @@ describe('StudentHomePage', () => {
 
     focusStudentMilestone('proposal');
 
-    expect(clickSpy).toHaveBeenCalledOnce();
+    expect(clickSpy).not.toHaveBeenCalled();
     expect(milestone.scrollIntoView).toHaveBeenCalledWith({
       behavior: 'smooth',
       block: 'start',
     });
-    expect(trigger).toHaveFocus();
+    expect(milestone).toHaveFocus();
 
     milestone.remove();
   });

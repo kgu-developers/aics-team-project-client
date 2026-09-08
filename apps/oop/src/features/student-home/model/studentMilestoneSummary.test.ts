@@ -43,7 +43,8 @@ describe('학생 홈 마일스톤 표시', () => {
       now,
     );
     expect(result.status).toBe('in-progress');
-    expect(result.rows[1]?.value).toBe('제출 가능');
+    expect(result.isDetailAvailable).toBe(false);
+    expect(result.rows).toEqual([]);
   });
   it('마일스톤 CLOSED와 제출 SUBMITTED를 단계 완료로 바꾸지 않는다', () => {
     const result = studentMilestoneSummary(

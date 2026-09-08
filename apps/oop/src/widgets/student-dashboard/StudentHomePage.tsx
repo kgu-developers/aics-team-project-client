@@ -61,16 +61,8 @@ export function focusStudentMilestone(milestoneId: string) {
   const milestoneElement = document.getElementById(
     `student-milestone-${milestoneId}`,
   );
-  const collapsibleTrigger = milestoneElement?.querySelector<HTMLElement>(
-    'button[aria-expanded]',
-  );
-
-  if (collapsibleTrigger?.getAttribute('aria-expanded') === 'false') {
-    collapsibleTrigger.click();
-  }
-
   milestoneElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  (collapsibleTrigger ?? milestoneElement)?.focus({ preventScroll: true });
+  milestoneElement?.focus({ preventScroll: true });
 }
 
 export default function StudentHomePage() {
@@ -181,6 +173,7 @@ export default function StudentHomePage() {
           ) : (
             <MilestoneList
               milestones={milestones}
+              description='단계별 일정과 내 팀 제출 상태를 확인해 주세요.'
               persistenceKey={`${home.studentNumber ?? 'anonymous'}:${sectionId}:${home.teamId ?? 'unassigned'}`}
             />
           )}

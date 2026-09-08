@@ -108,6 +108,10 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     expect(
       document.getElementById(`student-milestone-${list[1]!.id}`),
     ).toHaveTextContent('수정 요청');
+    expect(
+      document.querySelector('[id^=student-milestone-] button[aria-expanded]'),
+    ).toBeNull();
+    expect(screen.queryByText('제출 가능 여부')).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: '회의록' }));
     expect(await screen.findByText('회의 4')).toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: '액션 플랜' }));
