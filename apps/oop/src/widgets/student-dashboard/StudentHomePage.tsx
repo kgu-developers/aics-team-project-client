@@ -1,7 +1,9 @@
-import { Button, Card, EmptyState } from '@aics/design-system';
+import { Button, EmptyState } from '@aics/design-system';
 import { isAxiosError } from 'axios';
 
-import LiveTopicBoardView from '~/features/project-topic/LiveTopicBoardView';
+import { TopicApiProvider } from '~/features/project-topic/TopicApiContext';
+import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog';
+import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
 import { useTopicMilestoneEligibility } from '~/features/project-topic/useTopicMilestoneEligibility';
 import { homeQueryState } from '~/features/student-home/model/homeQueryState';
 import { studentMilestoneSummary } from '~/features/student-home/model/studentMilestoneSummary';
@@ -126,6 +128,30 @@ export default function StudentHomePage() {
     if (!home.teamId) summary.statusLabel = '팀 배정 대기';
     else if (submission?.isError) summary.statusLabel = '조회 실패';
     else if (submission?.isPending) summary.statusLabel = '조회 중';
+    if (milestone.type === 'PROPOSAL') {
+      summary.interaction = 'collapsible';
+      summary.isDetailAvailable = true;
+      summary.currentStepLabel = '주제 선정';
+      summary.body = {
+        kind: 'topic',
+        guidance: '팀원이 등록한 주제 후보를 확인하고, 투표해 주세요.',
+        topicCandidates: [],
+        completion: { label: '', value: '' },
+      };
+      summary.rows = [
+        {
+          id: 'proposal-topic-selection',
+          label: '주제 선정',
+          value:
+            topicEligibility.status === 'open'
+              ? '후보를 등록하고 투표해 주세요.'
+              : '참여 기간 확인',
+          tone: 'default',
+          actionLabel: '후보 추가',
+          actionDisabled: topicEligibility.status !== 'open',
+        },
+      ];
+    }
     return summary;
   });
   const activeMilestone =
@@ -165,37 +191,39 @@ export default function StudentHomePage() {
         canCreateMeeting={Boolean(home.teamId)}
         onCtaClick={focusActiveMilestone}
       />
-      <Card>
-        <LiveTopicBoardView
-          sectionId={home.sectionId}
-          teamId={home.teamId}
-          studentNumber={home.studentNumber}
-          eligibility={topicEligibility}
-        />
-      </Card>
-      <SubmissionDialogProvider>
-        <SubmissionDialog />
-        {query.list.isPending || query.list.isError ? (
-          <StudentHomeShortcutState
-            state={homeQueryState(query.list)}
-            label='마일스톤 목록'
-          />
-        ) : (
-          <MilestoneList
-            milestones={milestones}
-            description='단계별 일정과 내 팀 제출 상태를 확인해 주세요.'
-            persistenceKey={`${home.studentNumber ?? 'anonymous'}:${sectionId}:${home.teamId ?? 'unassigned'}`}
-          />
-        )}
-        {query.submissions.some(submission => submission.isError) ? (
-          <Button
-            label='제출 상태 다시 시도'
-            isLoading={isFetching}
-            clickAction={refetch}
-            variant='secondary'
-          />
-        ) : null}
-      </SubmissionDialogProvider>
+      <TopicApiProvider
+        sectionId={home.sectionId}
+        teamId={home.teamId}
+        studentNumber={home.studentNumber}
+        eligibility={topicEligibility}
+      >
+        <TopicCandidateDialogProvider>
+          <TopicCandidateDialog />
+          <SubmissionDialogProvider>
+            <SubmissionDialog />
+            {query.list.isPending || query.list.isError ? (
+              <StudentHomeShortcutState
+                state={homeQueryState(query.list)}
+                label='마일스톤 목록'
+              />
+            ) : (
+              <MilestoneList
+                milestones={milestones}
+                description='단계별 일정과 내 팀 제출 상태를 확인해 주세요.'
+                persistenceKey={`${home.studentNumber ?? 'anonymous'}:${sectionId}:${home.teamId ?? 'unassigned'}`}
+              />
+            )}
+            {query.submissions.some(submission => submission.isError) ? (
+              <Button
+                label='제출 상태 다시 시도'
+                isLoading={isFetching}
+                clickAction={refetch}
+                variant='secondary'
+              />
+            ) : null}
+          </SubmissionDialogProvider>
+        </TopicCandidateDialogProvider>
+      </TopicApiProvider>
     </div>
   );
 }

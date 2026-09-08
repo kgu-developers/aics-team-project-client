@@ -12,8 +12,8 @@ it('화면을 열어 둔 채 시작·마감 시각을 지나면 참여 상태가
     {
       id: 1,
       sectionId: 2,
-      title: '주제 선정',
-      type: 'GENERAL',
+      title: '제안서',
+      type: 'PROPOSAL',
       weekNumber: 2,
       status: 'PUBLISHED',
       allowResubmissionBeforeDueAt: false,

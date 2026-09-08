@@ -6,8 +6,8 @@ import { topicMilestoneEligibility } from './topicMilestoneEligibility';
 const milestone: StudentMilestoneResponse = {
   id: 1,
   sectionId: 2,
-  title: '주제 선정',
-  type: 'GENERAL',
+  title: '제안서',
+  type: 'PROPOSAL',
   weekNumber: 2,
   status: 'PUBLISHED',
   allowResubmissionBeforeDueAt: false,
@@ -31,8 +31,7 @@ describe('주제 선정 마일스톤 기간', () => {
     [],
     [milestone, milestone],
     [{ ...milestone, sectionId: 3 }],
-    [{ ...milestone, type: 'PROPOSAL' as const }],
-    [{ ...milestone, title: '다른 단계' }],
+    [{ ...milestone, type: 'GENERAL' as const }],
   ])('미확인/중복/다른 분반·유형은 참여를 허용하지 않는다', list => {
     expect(topicMilestoneEligibility(list, '2', start).status).toBe('unknown');
   });

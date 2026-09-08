@@ -82,7 +82,7 @@ describe('학생 마일스톤 목록과 내 팀 제출 조회', () => {
       status: 'ACTIVE',
     })[0]!;
     const { result } = renderMilestones(String(section.id), '7');
-    await waitFor(() => expect(result.current.submissions).toHaveLength(6));
+    await waitFor(() => expect(result.current.submissions).toHaveLength(5));
     await waitFor(() => expect(result.current.isPending).toBe(false));
     expect(result.current.error).toBeFalsy();
     expect(

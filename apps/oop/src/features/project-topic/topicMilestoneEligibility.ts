@@ -2,23 +2,20 @@ import type { StudentMilestoneResponse } from '@aics/core';
 
 import type { TopicParticipationEligibility } from './liveTopicBoard';
 
-/** OOP currently identifies this GENERAL milestone by its exact display title. */
+/** Topic selection is the first step within the proposal milestone. */
 export function topicMilestoneEligibility(
   milestones: StudentMilestoneResponse[] | undefined,
   sectionId: string | undefined,
   now: number,
 ): TopicParticipationEligibility {
   const matches = milestones?.filter(
-    item =>
-      String(item.sectionId) === sectionId &&
-      item.type === 'GENERAL' &&
-      item.title.trim() === '주제 선정',
+    item => String(item.sectionId) === sectionId && item.type === 'PROPOSAL',
   );
   if (matches?.length !== 1) {
     return {
       status: 'unknown',
       reason:
-        '주제 선정 마일스톤을 확인한 뒤 후보 등록과 투표를 이용할 수 있어요.',
+        '제안서 마일스톤을 확인한 뒤 후보 등록과 투표를 이용할 수 있어요.',
     };
   }
   const milestone = matches[0]!;
@@ -39,7 +36,7 @@ export function topicMilestoneEligibility(
   ) {
     return {
       status: 'unknown',
-      reason: '주제 선정 시작·마감 일정을 확인해 주세요.',
+      reason: '제안서 시작·마감 일정을 확인해 주세요.',
     };
   }
   const window = { opensAt, dueAt };
