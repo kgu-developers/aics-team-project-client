@@ -244,3 +244,10 @@ export {
   fetchStudentMilestones,
   fetchMyTeamMilestoneSubmission,
 } from './milestones';
+
+export {
+  fetchTopicCandidates,
+  submitTeamTopicCandidate,
+  submitTopicCandidateVote,
+  removeTopicCandidateVote,
+} from './topic';

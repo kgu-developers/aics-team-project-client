@@ -183,3 +183,10 @@ export type {
   StudentMilestoneListResponse,
   MyTeamMilestoneSubmissionResponse,
 } from './milestone/studentMilestone';
+
+export type {
+  TopicCandidateResponse,
+  TopicCandidateListResponse,
+  TopicCandidatePersistResponse,
+  TopicVotePersistResponse,
+} from './topic/apiTypes';

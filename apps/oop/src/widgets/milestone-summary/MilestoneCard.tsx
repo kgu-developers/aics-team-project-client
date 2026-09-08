@@ -5,6 +5,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { cx } from '~/shared/lib/cx';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import { useTopicApi } from '~/features/project-topic/TopicApiContext';
 import { useTopicCandidateDialog } from '~/features/project-topic/TopicCandidateDialogContext';
 import { useUpdateSubmissionConfirmationMutation } from '~/features/submission/queries';
 import { useSubmissionDialog } from '~/features/submission/SubmissionDialogContext';
@@ -35,6 +36,7 @@ export default function MilestoneCard({
   isOpen,
 }: MilestoneCardProps) {
   const navigate = useNavigate();
+  const topicApi = useTopicApi();
   const toast = useToast();
   const currentUser = useAuthStore(state => state.currentUser);
   const { setIsOpen: setTopicCandidateDialogOpen } = useTopicCandidateDialog();
@@ -142,7 +144,13 @@ export default function MilestoneCard({
               </div>
               <div className={styles.rowCell}>
                 <p className={cx(styles.rowValue, ROW_TONE_CLASS[row.tone])}>
-                  {row.value}
+                  {row.id === 'proposal-topic-selection' && topicApi
+                    ? topicApi.boardQuery.data?.candidates.some(
+                        candidate => candidate.isMyVote,
+                      )
+                      ? '내 투표 완료'
+                      : row.value
+                    : row.value}
                 </p>
               </div>
               <div className={styles.rowCell}>
@@ -152,6 +160,13 @@ export default function MilestoneCard({
                       className={styles.rowAction}
                       isDisabled={
                         row.actionDisabled ||
+                        (row.id === 'proposal-topic-selection' && topicApi
+                          ? !topicApi.canParticipate ||
+                            topicApi.busy ||
+                            topicApi.boardQuery.data?.candidates.some(
+                              candidate => candidate.isMine,
+                            )
+                          : false) ||
                         (row.id === 'final-report-submission' &&
                           confirmationMutation.isPending)
                       }

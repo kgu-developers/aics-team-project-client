@@ -9,12 +9,14 @@ import {
 import { useAuthStore } from '~/features/auth/authStore';
 
 import { getTopicErrorMessage } from './getTopicErrorMessage';
+import { isUncertainTopicWrite } from './liveTopicBoard';
 import * as styles from './ProjectTopicBoard.css';
 import {
   useRemoveTopicVoteMutation,
   useSubmitTopicVoteMutation,
   useTopicBoardQuery,
 } from './queries';
+import { useTopicApi } from './TopicApiContext';
 
 type ProjectTopicBoardProps = {
   embedded?: boolean;
@@ -23,15 +25,18 @@ type ProjectTopicBoardProps = {
 export default function ProjectTopicBoard({
   embedded = false,
 }: ProjectTopicBoardProps) {
+  const live = useTopicApi();
   const currentUser = useAuthStore(state => state.currentUser);
   const sectionId =
     currentUser?.sections.find(section => section.role === 'STUDENT')?.id ?? '';
-  const boardQuery = useTopicBoardQuery(sectionId);
+  const legacyQuery = useTopicBoardQuery(live ? '' : sectionId);
+  const boardQuery = live?.boardQuery ?? legacyQuery;
   const voteMutation = useSubmitTopicVoteMutation(sectionId);
   const removeVoteMutation = useRemoveTopicVoteMutation(sectionId);
-  const mutationError = voteMutation.error ?? removeVoteMutation.error;
+  const mutationError =
+    live?.mutation.error ?? voteMutation.error ?? removeVoteMutation.error;
 
-  if (!sectionId) {
+  if (live ? !live.ready : !sectionId) {
     return (
       <EmptyState
         description='팀 배정 후 주제 후보를 등록하고 투표할 수 있어요.'
@@ -42,7 +47,11 @@ export default function ProjectTopicBoard({
   if (boardQuery.isPending) {
     return <p role='status'>주제 후보를 불러오는 중...</p>;
   }
-  if (boardQuery.isError || !boardQuery.data) {
+  if (
+    boardQuery.isError ||
+    !boardQuery.data ||
+    (live && isUncertainTopicWrite(mutationError))
+  ) {
     return (
       <EmptyState
         actions={
@@ -54,14 +63,20 @@ export default function ProjectTopicBoard({
             variant='primary'
           />
         }
-        description={getTopicErrorMessage(boardQuery.error)}
+        description={
+          live && isUncertainTopicWrite(mutationError)
+            ? '요청 결과를 확인하지 못했어요. 다시 시도하면 최신 목록을 확인합니다.'
+            : getTopicErrorMessage(boardQuery.error)
+        }
         title='주제 후보를 불러오지 못했어요.'
       />
     );
   }
 
   const board = boardQuery.data;
-  const isVotePending = voteMutation.isPending || removeVoteMutation.isPending;
+  const isVotePending = live
+    ? live.busy || !live.canParticipate
+    : voteMutation.isPending || removeVoteMutation.isPending;
 
   return (
     <section
@@ -81,16 +96,18 @@ export default function ProjectTopicBoard({
 
       <div className={styles.boardHeader}>
         <div>
-          <h2 className={styles.boardTitle}>우리 팀 투표</h2>
-          <p className={styles.description}>
-            내 후보를 제외한 한 후보를 선택할 수 있어요.
-          </p>
+          <h2 className={styles.boardTitle}>주제 후보 선택</h2>
         </div>
         <p className={styles.participation}>
           투표 참여 {board.participation.votedMemberCount}/
           {board.participation.totalMemberCount}명
         </p>
       </div>
+      {live?.reason ? (
+        <p className={styles.description} role='status'>
+          {live.reason}
+        </p>
+      ) : null}
       {mutationError ? (
         <p className={styles.error} role='alert'>
           {getTopicErrorMessage(mutationError)}
@@ -103,10 +120,14 @@ export default function ProjectTopicBoard({
         />
       ) : (
         <RadioList
-          description='후보를 선택하면 즉시 투표됩니다. 선택한 후보를 다시 누르면 투표를 취소할 수 있어요.'
+          isLabelHidden
           isDisabled={isVotePending}
           label='주제 후보 선택'
           onChange={candidateId => {
+            if (live) {
+              void live.vote(candidateId).catch(() => {});
+              return;
+            }
             removeVoteMutation.reset();
             voteMutation.mutate(candidateId);
           }}
@@ -116,6 +137,7 @@ export default function ProjectTopicBoard({
         >
           {board.candidates.map(candidate => (
             <RadioListItem
+              className={styles.candidate}
               description={`제안자 ${candidate.proposerName} · ${candidate.description}`}
               endContent={
                 <span className={styles.candidateEnd}>
@@ -131,6 +153,10 @@ export default function ProjectTopicBoard({
               label={candidate.title}
               onClick={() => {
                 if (candidate.isMyVote && !isVotePending) {
+                  if (live) {
+                    void live.cancel(candidate.id).catch(() => {});
+                    return;
+                  }
                   voteMutation.reset();
                   removeVoteMutation.mutate();
                 }
