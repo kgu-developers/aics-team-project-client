@@ -4,6 +4,7 @@ import {
   submissionConsentErrorMessage,
   type SubmissionConsentScope,
 } from './consentScope';
+import * as styles from './LiveSubmissionConsentPanel.css';
 import { useLiveSubmissionConsent } from './queries';
 
 export type LiveSubmissionConsentPanelProps = SubmissionConsentScope & {
@@ -33,7 +34,7 @@ export default function LiveSubmissionConsentPanel({
                 : undefined;
   return (
     <Card>
-      <section aria-label='최종보고서 팀원 확인'>
+      <section aria-label='최종보고서 팀원 확인' className={styles.root}>
         <Heading level={2}>최종보고서 팀원 확인</Heading>
         {message ? (
           <p role={consent.error ? 'alert' : 'status'}>{message}</p>
@@ -56,30 +57,32 @@ export default function LiveSubmissionConsentPanel({
         ) : (
           <Text>팀원 확인과 최종 완료는 별도 상태예요.</Text>
         )}
-        <Button
-          label='확인 현황 새로고침'
-          onClick={() => void consent.refresh()}
-          isDisabled={!consent.canRefresh}
-          variant='secondary'
-        />
-        {allowContractActions ? (
-          <>
-            <Button
-              label='현재 버전 확인'
-              onClick={() => void consent.confirm()}
-              isDisabled={
-                !consent.canChange || Boolean(summary?.isConfirmedByMe)
-              }
-            />
-            <Button
-              label='내 확인 취소'
-              onClick={() => void consent.cancel()}
-              isDisabled={!consent.canChange || !summary?.isConfirmedByMe}
-              variant='secondary'
-            />
-          </>
-        ) : null}
-        <Button label='최종 완료' isDisabled />
+        <div className={styles.actions}>
+          <Button
+            label='확인 현황 새로고침'
+            onClick={() => void consent.refresh()}
+            isDisabled={!consent.canRefresh}
+            variant='secondary'
+          />
+          {allowContractActions ? (
+            <>
+              <Button
+                label='현재 버전 확인'
+                onClick={() => void consent.confirm()}
+                isDisabled={
+                  !consent.canChange || Boolean(summary?.isConfirmedByMe)
+                }
+              />
+              <Button
+                label='내 확인 취소'
+                onClick={() => void consent.cancel()}
+                isDisabled={!consent.canChange || !summary?.isConfirmedByMe}
+                variant='secondary'
+              />
+            </>
+          ) : null}
+          <Button label='최종 완료' isDisabled />
+        </div>
         <Text color='secondary'>최종 완료 기능은 준비 중이에요.</Text>
       </section>
     </Card>
