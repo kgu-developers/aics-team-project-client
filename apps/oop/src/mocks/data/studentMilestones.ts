@@ -25,6 +25,7 @@ export function studentMilestoneFixtures(
       type: 'PEER_EVALUATION' as const,
       weekNumber: 15,
     },
+    { id: 306, title: '주제 선정', type: 'GENERAL' as const, weekNumber: 2 },
   ].map(item => ({
     ...item,
     id: sectionId * 1000 + item.id,

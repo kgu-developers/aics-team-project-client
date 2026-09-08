@@ -26,16 +26,16 @@ import { resetMockSessionState } from '~/mocks/authSession';
 import { demoAccessToken, demoPartnerAccessToken } from '~/mocks/data/users';
 import { createLiveTopicHandlers } from '~/mocks/handlers/liveTopic';
 
-const candidatesUrl = `${API_BASE_URL}/api/v1/teams/4/topic-candidates`;
-const kickoffUrl = `${API_BASE_URL}/api/v1/oop/teams/4/kickoff`;
+const candidatesUrl = `${API_BASE_URL}/api/v1/teams/7/topic-candidates`;
+const kickoffUrl = `${API_BASE_URL}/api/v1/oop/teams/7/kickoff`;
 const defaultProps: LiveTopicBoardViewProps = {
   sectionId: '1',
-  teamId: '4',
+  teamId: '7',
   studentNumber: '20260001',
   eligibility: { status: 'open' },
 };
 const kickoff = {
-  id: 4,
+  id: 7,
   name: '4팀',
   members: [
     {
@@ -131,7 +131,7 @@ describe('LiveTopicBoardView', () => {
     ).toBeInTheDocument();
     expect(
       requests.filter(
-        request => request === 'POST /api/v1/teams/4/topic-candidates',
+        request => request === 'POST /api/v1/teams/7/topic-candidates',
       ),
     ).toHaveLength(1);
     const first = screen.getByRole('radio', { name: '도서 대여 관리' });

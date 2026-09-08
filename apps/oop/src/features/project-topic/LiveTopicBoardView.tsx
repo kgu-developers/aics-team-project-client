@@ -133,6 +133,12 @@ function LiveTopicBoard({
     action: Parameters<typeof mutation.mutateAsync>[0],
   ) => {
     if (!canParticipate || requestInFlight.current) return;
+    if (
+      eligibility.window &&
+      (Date.now() < eligibility.window.opensAt ||
+        Date.now() >= eligibility.window.dueAt)
+    )
+      return;
     if (action.type === 'candidate' && ownCandidate) return;
     requestInFlight.current = true;
     setNotice('');

@@ -5,8 +5,11 @@ import type {
 } from '@aics/core';
 import { isAxiosError } from 'axios';
 
-export type TopicParticipationEligibility =
-  { status: 'open' } | { status: 'unknown' | 'closed'; reason?: string };
+export type TopicParticipationEligibility = (
+  { status: 'open' } | { status: 'unknown' | 'closed'; reason?: string }
+) & {
+  window?: { opensAt: number; dueAt: number };
+};
 
 export function mapLiveTopicCandidates(
   candidates: TopicCandidateResponse[],

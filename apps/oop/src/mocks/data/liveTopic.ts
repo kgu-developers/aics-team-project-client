@@ -1,6 +1,6 @@
 import type { TopicCandidatePersistResponse } from '@aics/core';
 
-export const liveTopicTeamId = '4';
+export const liveTopicTeamId = '7';
 export const liveTopicMemberNumbers = ['20260001', '20260003', '20260004'];
 
 export function createLiveTopicState() {

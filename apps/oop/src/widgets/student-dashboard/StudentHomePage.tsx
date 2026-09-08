@@ -1,8 +1,8 @@
-import { Button, EmptyState } from '@aics/design-system';
+import { Button, Card, EmptyState } from '@aics/design-system';
 import { isAxiosError } from 'axios';
 
-import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog';
-import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
+import LiveTopicBoardView from '~/features/project-topic/LiveTopicBoardView';
+import { useTopicMilestoneEligibility } from '~/features/project-topic/useTopicMilestoneEligibility';
 import { homeQueryState } from '~/features/student-home/model/homeQueryState';
 import { studentMilestoneSummary } from '~/features/student-home/model/studentMilestoneSummary';
 import {
@@ -69,6 +69,10 @@ export default function StudentHomePage() {
   const home = useLiveStudentHomeQuery();
   const sectionId = home.sectionId;
   const query = useStudentMilestonesQuery(sectionId, home.teamId);
+  const topicEligibility = useTopicMilestoneEligibility(
+    query.list.isSuccess ? query.list.data : undefined,
+    sectionId,
+  );
   const { isFetching, refetch } = query;
   const error = home.identity.error;
 
@@ -161,32 +165,37 @@ export default function StudentHomePage() {
         canCreateMeeting={Boolean(home.teamId)}
         onCtaClick={focusActiveMilestone}
       />
-      <TopicCandidateDialogProvider>
-        <SubmissionDialogProvider>
-          <TopicCandidateDialog />
-          <SubmissionDialog />
-          {query.list.isPending || query.list.isError ? (
-            <StudentHomeShortcutState
-              state={homeQueryState(query.list)}
-              label='마일스톤 목록'
-            />
-          ) : (
-            <MilestoneList
-              milestones={milestones}
-              description='단계별 일정과 내 팀 제출 상태를 확인해 주세요.'
-              persistenceKey={`${home.studentNumber ?? 'anonymous'}:${sectionId}:${home.teamId ?? 'unassigned'}`}
-            />
-          )}
-          {query.submissions.some(submission => submission.isError) ? (
-            <Button
-              label='제출 상태 다시 시도'
-              isLoading={isFetching}
-              clickAction={refetch}
-              variant='secondary'
-            />
-          ) : null}
-        </SubmissionDialogProvider>
-      </TopicCandidateDialogProvider>
+      <Card>
+        <LiveTopicBoardView
+          sectionId={home.sectionId}
+          teamId={home.teamId}
+          studentNumber={home.studentNumber}
+          eligibility={topicEligibility}
+        />
+      </Card>
+      <SubmissionDialogProvider>
+        <SubmissionDialog />
+        {query.list.isPending || query.list.isError ? (
+          <StudentHomeShortcutState
+            state={homeQueryState(query.list)}
+            label='마일스톤 목록'
+          />
+        ) : (
+          <MilestoneList
+            milestones={milestones}
+            description='단계별 일정과 내 팀 제출 상태를 확인해 주세요.'
+            persistenceKey={`${home.studentNumber ?? 'anonymous'}:${sectionId}:${home.teamId ?? 'unassigned'}`}
+          />
+        )}
+        {query.submissions.some(submission => submission.isError) ? (
+          <Button
+            label='제출 상태 다시 시도'
+            isLoading={isFetching}
+            clickAction={refetch}
+            variant='secondary'
+          />
+        ) : null}
+      </SubmissionDialogProvider>
     </div>
   );
 }

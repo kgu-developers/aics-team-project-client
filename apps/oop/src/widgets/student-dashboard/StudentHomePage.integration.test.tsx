@@ -34,6 +34,9 @@ const list = studentMilestoneFixtures(2).slice(0, 2);
 const requests: string[] = [];
 const server = setupServer(
   ...studentHomeLiveHandlers,
+  http.get(`${API_BASE_URL}/api/v1/teams/7/topic-candidates`, () =>
+    HttpResponse.json({ contents: [] }),
+  ),
   http.get(`${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`, () =>
     HttpResponse.json({ contents: list }),
   ),
@@ -93,6 +96,63 @@ function Wrapper({ children }: PropsWithChildren) {
 }
 
 describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
+  it('주제 선정 일정이 열리면 후보를 등록하고 실제 팀 목록을 다시 조회한다', async () => {
+    const candidate = {
+      id: 81,
+      title: '팀 일정',
+      description: '함께 관리',
+      proposerUserId: liveHomeUser.studentNumber,
+    };
+    let saved = false;
+    const now = Date.now();
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`, () =>
+        HttpResponse.json({
+          contents: [
+            {
+              ...list[0],
+              title: '주제 선정',
+              type: 'GENERAL',
+              schedule: {
+                opensAt: new Date(now - 60000).toISOString(),
+                dueAt: new Date(now + 60000).toISOString(),
+              },
+            },
+          ],
+        }),
+      ),
+      http.get(`${API_BASE_URL}/api/v1/teams/7/topic-candidates`, () =>
+        HttpResponse.json({
+          contents: saved
+            ? [{ ...candidate, voteCount: 0, votedByMe: false }]
+            : [],
+        }),
+      ),
+      http.post(
+        `${API_BASE_URL}/api/v1/teams/7/topic-candidates`,
+        async ({ request }) => {
+          expect(await request.json()).toEqual({
+            title: candidate.title,
+            description: candidate.description,
+          });
+          saved = true;
+          return HttpResponse.json(candidate, { status: 201 });
+        },
+      ),
+    );
+    const user = userEvent.setup();
+    render(<StudentHomePage />, { wrapper: Wrapper });
+    const add = await screen.findByRole('button', { name: '새 후보 추가' });
+    await waitFor(() => expect(add).toBeEnabled());
+    await user.click(add);
+    await user.type(screen.getByLabelText('후보 제목'), candidate.title);
+    await user.type(screen.getByLabelText('후보 설명'), candidate.description);
+    await user.click(screen.getByRole('button', { name: '후보 추가' }));
+    expect(
+      await screen.findByRole('radio', { name: candidate.title }),
+    ).toBeDisabled();
+    expect(screen.getByText('주제 후보를 추가했어요.')).toBeInTheDocument();
+  });
   it('구 dashboard 없이 히어로 탭과 서버 단계·제출 상태를 표시한다', async () => {
     const user = userEvent.setup();
     render(<StudentHomePage />, { wrapper: Wrapper });
