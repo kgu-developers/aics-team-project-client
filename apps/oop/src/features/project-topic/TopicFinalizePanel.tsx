@@ -71,6 +71,10 @@ function TopicFinalization({
     teamId,
     sectionId,
     studentNumber,
+    result => {
+      setIsOpen(false);
+      onFinalized?.(result);
+    },
   );
   const attempts = useMutationState({
     filters: {
@@ -196,10 +200,6 @@ function TopicFinalization({
               mutation.mutate(
                 { candidateId: chosen.id, goal },
                 {
-                  onSuccess: result => {
-                    setIsOpen(false);
-                    onFinalized?.(result);
-                  },
                   onSettled: () => {
                     inFlight.current = false;
                   },
