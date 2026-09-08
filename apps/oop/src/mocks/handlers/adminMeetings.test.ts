@@ -3,9 +3,8 @@ import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from 'vitest';
 
 import { resetMockSessionState } from '../authSession';
-import { demoAdminAccessToken } from '../data/users';
-
 import { adminMeetingHandlers } from './adminMeetings';
+import { demoAdminAccessToken } from '../data/users';
 
 const server = setupServer(...adminMeetingHandlers);
 
@@ -29,8 +28,14 @@ it('목록의 필터·페이지네이션 후에도 회의록 ID로 같은 상세
   expect(listResponse.status).toBe(200);
   expect(list.contents.map(record => record.id)).toEqual([1]);
 
+  const [firstRecord] = list.contents;
+
+  if (!firstRecord) {
+    throw new Error('팀 필터 결과에 회의록이 없습니다.');
+  }
+
   const detailResponse = await fetch(
-    `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORD_DETAIL(list.contents[0].id)}`,
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORD_DETAIL(firstRecord.id)}`,
     { headers: { Authorization: `Bearer ${demoAdminAccessToken}` } },
   );
   const detail = (await detailResponse.json()) as {
