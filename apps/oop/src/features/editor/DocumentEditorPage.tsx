@@ -77,7 +77,10 @@ export default function DocumentEditorPage<
   const document = EDITOR_DOCS[docId];
   const validSection = document.sections.find(item => item.slug === section);
 
-  const data = documentQuery.data ?? null;
+  // A stale or incompatible API payload must not enter autosave or lock flows.
+  const data = Array.isArray(documentQuery.data?.blocks)
+    ? documentQuery.data
+    : null;
   const block = useMemo(
     () => data?.blocks.find(item => item.key === section) ?? null,
     [data, section],

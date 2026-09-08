@@ -1,5 +1,7 @@
+import { InvalidProposalResponseError } from '@aics/api-client';
 import type { Proposal, ProposalBlock, ProposalField } from '@aics/core';
-import { useToast } from '@aics/design-system';
+import { Button, EmptyState, useToast } from '@aics/design-system';
+import { useNavigate } from '@tanstack/react-router';
 import { useCallback } from 'react';
 
 import { useAuthStore } from '~/features/auth/authStore';
@@ -66,6 +68,7 @@ export default function ProposalEditorPage({
   section,
 }: ProposalEditorPageProps) {
   const toast = useToast();
+  const navigate = useNavigate();
   const currentUser = useAuthStore(state => state.currentUser);
   const query = useCurrentProposalQuery(Boolean(currentUser));
 
@@ -88,6 +91,24 @@ export default function ProposalEditorPage({
       }),
     [mutation],
   );
+
+  if (query.isError && query.error instanceof InvalidProposalResponseError) {
+    return (
+      <EmptyState
+        title='제안서 작성 기능을 준비 중이에요.'
+        description='주제 확정은 완료할 수 있지만, 현재 서버에서는 제안서 편집 화면을 이용할 수 없어요.'
+        actions={
+          <Button
+            label='학생 홈으로 돌아가기'
+            variant='primary'
+            onClick={() => {
+              void navigate({ to: '/student' });
+            }}
+          />
+        }
+      />
+    );
+  }
 
   return (
     <DocumentEditorPage

@@ -147,6 +147,7 @@ export {
 export {
   completeProposalBlock,
   fetchCurrentProposal,
+  InvalidProposalResponseError,
   submitProposal,
   updateProposalBlock,
 } from './proposal';

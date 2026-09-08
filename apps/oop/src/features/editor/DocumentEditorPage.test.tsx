@@ -105,6 +105,16 @@ function editor(
 }
 
 describe('DocumentEditorPage 자동 저장', () => {
+  it('캐시에 blocks가 없는 응답이 남아 있어도 편집과 잠금을 시작하지 않는다', async () => {
+    const save = vi.fn();
+    renderWithRouter(
+      editor('team-info', { id: 'invalid', version: 1 } as TestDocument, save),
+    );
+    expect(await screen.findByText('문서를 열 수 없어요.')).toBeInTheDocument();
+    expect(save).not.toHaveBeenCalled();
+    expect(lockApi.acquireEditLock).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     useAuthStore.getState().setCurrentUser(demoStudent);
     lockApi.acquireEditLock.mockImplementation(
