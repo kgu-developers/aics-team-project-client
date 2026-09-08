@@ -14,3 +14,7 @@ export {
   type AdminMeetingRecordListItem,
   type AdminMeetingRecordListResponse,
 } from './fetchAdminMeetingRecordList';
+export {
+  fetchAdminMeetingRecordDetail,
+  type AdminMeetingRecordDetailResponse,
+} from './fetchAdminMeetingRecordDetail';

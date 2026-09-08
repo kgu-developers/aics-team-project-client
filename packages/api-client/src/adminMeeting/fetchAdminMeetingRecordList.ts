@@ -30,6 +30,7 @@ export type AdminMeetingRecordListFilter = {
   page?: number;
   sectionId?: number | string;
   size?: number;
+  teamId?: number | string;
 };
 
 export async function fetchAdminMeetingRecordList(
