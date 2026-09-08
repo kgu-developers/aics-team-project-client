@@ -21,7 +21,6 @@ import { getMockMySections } from '~/mocks/data/sections';
 import { demoAccessToken, demoStudent } from '~/mocks/data/users';
 import { studentMilestoneHandlers } from '~/mocks/handlers/studentMilestones';
 
-
 const milestone: StudentMilestoneResponse = {
   id: 301,
   sectionId: 2,
