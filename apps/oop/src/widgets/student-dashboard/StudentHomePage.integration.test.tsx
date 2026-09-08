@@ -249,7 +249,9 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     await user.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
     await user.click(trigger);
-    expect(screen.getByRole('heading', { name: '주제 후보 선택' })).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: '주제 후보 선택' }),
+    ).toBeVisible();
     expect(screen.queryByText('제출 가능 여부')).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: '회의록' }));
     expect(await screen.findByText('회의 4')).toBeInTheDocument();
