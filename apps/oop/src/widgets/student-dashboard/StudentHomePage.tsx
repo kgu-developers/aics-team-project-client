@@ -1,24 +1,22 @@
 import { Button, EmptyState } from '@aics/design-system';
 import { isAxiosError } from 'axios';
-import { lazy, Suspense } from 'react';
 
-import { useAuthStore } from '~/features/auth/authStore';
-import { useMeetingHomeSummaryQuery } from '~/features/meeting/queries';
 import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog';
 import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
-import { useStudentHomeDashboardQuery } from '~/features/student-home/queries';
+import { homeQueryState } from '~/features/student-home/model/homeQueryState';
+import { studentMilestoneSummary } from '~/features/student-home/model/studentMilestoneSummary';
+import {
+  useLiveStudentHomeQuery,
+  useStudentMilestonesQuery,
+} from '~/features/student-home/queries';
 import SubmissionDialog from '~/features/submission/SubmissionDialog';
 import { SubmissionDialogProvider } from '~/features/submission/SubmissionDialogContext';
 
 import MilestoneList from '~/widgets/milestone-summary/MilestoneList';
 
 import StudentHomeHero from './StudentHomeHero';
-import { getStudentHomeHeroCopy } from './studentHomeHeroCopy';
 import * as styles from './StudentHomePage.css';
-
-const DevelopmentMilestonePreview = import.meta.env.DEV
-  ? lazy(() => import('~/features/student-home/dev/MilestonePreview'))
-  : null;
+import StudentHomeShortcutState from './StudentHomeShortcutState';
 
 type DashboardErrorContent = {
   title: string;
@@ -63,29 +61,44 @@ export function focusStudentMilestone(milestoneId: string) {
   const milestoneElement = document.getElementById(
     `student-milestone-${milestoneId}`,
   );
-  const collapsibleTrigger = milestoneElement?.querySelector<HTMLElement>(
-    'button[aria-expanded]',
-  );
-
-  if (collapsibleTrigger?.getAttribute('aria-expanded') === 'false') {
-    collapsibleTrigger.click();
-  }
-
   milestoneElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  (collapsibleTrigger ?? milestoneElement)?.focus({ preventScroll: true });
+  milestoneElement?.focus({ preventScroll: true });
 }
 
 export default function StudentHomePage() {
-  const currentUser = useAuthStore(state => state.currentUser);
-  const sectionId = currentUser?.sections[0]?.id ?? '';
-  const teamId = currentUser?.currentTeam?.id;
-  const meetingSummaryQuery = useMeetingHomeSummaryQuery(
-    teamId,
-    currentUser?.id,
-  );
+  const home = useLiveStudentHomeQuery();
+  const sectionId = home.sectionId;
+  const query = useStudentMilestonesQuery(sectionId, home.teamId);
+  const { isFetching, refetch } = query;
+  const error = home.identity.error;
 
-  const { data, error, isFetching, isPending, refetch } =
-    useStudentHomeDashboardQuery(sectionId);
+  if (home.identity.isPending) {
+    return (
+      <p aria-live='polite' className={styles.status} role='status'>
+        대시보드를 불러오는 중...
+      </p>
+    );
+  }
+  if (error) {
+    const errorContent = getDashboardErrorContent(error);
+    return (
+      <div className={styles.root}>
+        <EmptyState
+          title={errorContent.title}
+          description={errorContent.description}
+          actions={
+            <Button
+              label='다시 시도'
+              variant='primary'
+              clickAction={async () => {
+                await home.identity.refetch();
+              }}
+            />
+          }
+        />
+      </div>
+    );
+  }
 
   if (!sectionId) {
     return (
@@ -99,42 +112,35 @@ export default function StudentHomePage() {
     );
   }
 
-  if (isPending) {
-    return (
-      <p aria-live='polite' className={styles.status} role='status'>
-        대시보드를 불러오는 중...
-      </p>
+  const milestones = query.milestones.map((milestone, index) => {
+    const submission = query.submissions[index];
+    const summary = studentMilestoneSummary(
+      milestone,
+      submission?.isSuccess ? submission.data : undefined,
+      Date.now(),
     );
-  }
-
-  if (error || !data) {
-    const errorContent = getDashboardErrorContent(error);
-
-    return (
-      <div className={styles.root}>
-        <EmptyState
-          actions={
-            <Button
-              clickAction={async () => {
-                await refetch();
-              }}
-              isLoading={isFetching}
-              label='다시 시도'
-              variant='primary'
-            />
-          }
-          description={errorContent.description}
-          headingLevel={2}
-          title={errorContent.title}
-        />
-      </div>
-    );
-  }
-
-  const hero = getStudentHomeHeroCopy(data.hero, data.milestones);
-  const activeMilestone = data.milestones.find(
-    milestone => milestone.isDetailAvailable,
-  );
+    if (!home.teamId) summary.statusLabel = '팀 배정 대기';
+    else if (submission?.isError) summary.statusLabel = '조회 실패';
+    else if (submission?.isPending) summary.statusLabel = '조회 중';
+    return summary;
+  });
+  const activeMilestone =
+    milestones.find(
+      (_, index) => query.submissions[index]?.data?.canSubmitNow,
+    ) ?? milestones.find(milestone => milestone.status !== 'completed');
+  const hero = {
+    date: new Intl.DateTimeFormat('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      dateStyle: 'long',
+    }).format(new Date()),
+    heading: activeMilestone
+      ? `${activeMilestone.title} 진행 상태를 확인해 주세요.`
+      : '팀 프로젝트 진행 상태를 확인해 주세요.',
+    description: activeMilestone
+      ? `${activeMilestone.title} · ${activeMilestone.statusLabel}`
+      : '아래에서 단계별 일정과 내 팀 제출 상태를 확인할 수 있어요.',
+    ctaLabel: '진행 단계 확인',
+  };
 
   const focusActiveMilestone = activeMilestone
     ? () => focusStudentMilestone(activeMilestone.id)
@@ -143,40 +149,42 @@ export default function StudentHomePage() {
   return (
     <div className={styles.root}>
       <StudentHomeHero
-        announcements={data.announcements}
-        assignedActions={meetingSummaryQuery.data?.assignedActions ?? []}
+        announcements={home.notices.items}
+        assignedActions={home.actions.items}
         hero={hero}
-        recentMeetingRecords={
-          meetingSummaryQuery.data?.recentMeetingRecords ?? []
-        }
-        meetingState={
-          !teamId
-            ? 'ready'
-            : meetingSummaryQuery.isPending
-              ? 'pending'
-              : meetingSummaryQuery.isError
-                ? 'error'
-                : 'ready'
-        }
+        recentMeetingRecords={home.meetings.items}
+        noticeState={home.notices.state}
+        actionState={home.actions.state}
+        recordState={home.meetings.state}
+        meetingMetadataState={home.meetings.metadataState}
+        sectionId={home.sectionId}
+        canCreateMeeting={Boolean(home.teamId)}
         onCtaClick={focusActiveMilestone}
       />
-      {DevelopmentMilestonePreview ? (
-        <Suspense fallback={null}>
-          <DevelopmentMilestonePreview
-            onPreviewChange={() => {
-              void refetch();
-            }}
-          />
-        </Suspense>
-      ) : null}
       <TopicCandidateDialogProvider>
         <SubmissionDialogProvider>
           <TopicCandidateDialog />
           <SubmissionDialog />
-          <MilestoneList
-            milestones={data.milestones}
-            persistenceKey={`${currentUser?.studentNumber ?? 'anonymous'}:${sectionId}`}
-          />
+          {query.list.isPending || query.list.isError ? (
+            <StudentHomeShortcutState
+              state={homeQueryState(query.list)}
+              label='마일스톤 목록'
+            />
+          ) : (
+            <MilestoneList
+              milestones={milestones}
+              description='단계별 일정과 내 팀 제출 상태를 확인해 주세요.'
+              persistenceKey={`${home.studentNumber ?? 'anonymous'}:${sectionId}:${home.teamId ?? 'unassigned'}`}
+            />
+          )}
+          {query.submissions.some(submission => submission.isError) ? (
+            <Button
+              label='제출 상태 다시 시도'
+              isLoading={isFetching}
+              clickAction={refetch}
+              variant='secondary'
+            />
+          ) : null}
         </SubmissionDialogProvider>
       </TopicCandidateDialogProvider>
     </div>

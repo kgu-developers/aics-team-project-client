@@ -54,9 +54,10 @@ function createWrapper() {
 }
 
 describe('StudentHomePage', () => {
-  it('히어로 CTA 대상 마일스톤을 열고 스크롤한 뒤 포커스한다', () => {
+  it('히어로 CTA는 상세를 열지 않고 목록 항목으로 이동한다', () => {
     const milestone = document.createElement('article');
     milestone.id = 'student-milestone-proposal';
+    milestone.tabIndex = -1;
     milestone.scrollIntoView = vi.fn();
     const trigger = document.createElement('button');
     trigger.setAttribute('aria-expanded', 'false');
@@ -66,12 +67,12 @@ describe('StudentHomePage', () => {
 
     focusStudentMilestone('proposal');
 
-    expect(clickSpy).toHaveBeenCalledOnce();
+    expect(clickSpy).not.toHaveBeenCalled();
     expect(milestone.scrollIntoView).toHaveBeenCalledWith({
       behavior: 'smooth',
       block: 'start',
     });
-    expect(trigger).toHaveFocus();
+    expect(milestone).toHaveFocus();
 
     milestone.remove();
   });
@@ -86,27 +87,39 @@ describe('StudentHomePage', () => {
     expect(getDashboardErrorContent(error).title).toBe(expectedTitle);
   });
 
-  it('학생에게 소속 분반이 없으면 안내 상태를 표시한다', () => {
+  it('학생에게 소속 분반이 없으면 안내 상태를 표시한다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+        HttpResponse.json({
+          studentNumber: demoStudent.studentNumber,
+          name: demoStudent.name,
+          email: demoStudent.email,
+          globalRole: 'USER',
+          sections: [],
+          teamId: null,
+        }),
+      ),
+    );
+    useAuthStore.getState().markAuthenticated('STUDENT');
     useAuthStore.getState().setCurrentUser({ ...demoStudent, sections: [] });
     const Wrapper = createWrapper();
 
     render(<StudentHomePage />, { wrapper: Wrapper });
 
-    expect(screen.getByText('소속 분반이 없어요.')).toBeInTheDocument();
+    expect(await screen.findByText('소속 분반이 없어요.')).toBeInTheDocument();
   });
 
   it('분반 접근이 거부되면 권한 오류를 구분해서 표시한다', async () => {
     server.use(
-      http.get(
-        'http://localhost:8080/sections/:sectionId/dashboard/student',
-        () =>
-          HttpResponse.json(
-            { code: 'SECTION_ACCESS_DENIED', message: '접근할 수 없습니다.' },
-            { status: 403 },
-          ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+        HttpResponse.json(
+          { code: 'SECTION_ACCESS_DENIED', message: '접근할 수 없습니다.' },
+          { status: 403 },
+        ),
       ),
     );
     useAuthStore.getState().setCurrentUser(demoStudent);
+    useAuthStore.getState().markAuthenticated('STUDENT');
     const Wrapper = createWrapper();
 
     render(<StudentHomePage />, { wrapper: Wrapper });

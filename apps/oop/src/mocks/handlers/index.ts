@@ -19,6 +19,7 @@ import { proposalHandlers } from './proposal';
 import { sectionHandlers } from './section';
 import { studentFeedbackHandlers } from './studentFeedback';
 import { studentHomeHandlers } from './studentHome';
+import { studentMilestoneHandlers } from './studentMilestones';
 import { studentNoticeHandlers } from './studentNotices';
 import { submissionHandlers } from './submission';
 import {
@@ -47,6 +48,7 @@ export const handlers = [
   ...studentFeedbackHandlers,
   ...studentHomeHandlers,
   ...studentNoticeHandlers,
+  ...studentMilestoneHandlers,
   ...submissionHandlers,
   ...teamAssignmentHandlers,
   ...teamAssignmentUserHandlers,

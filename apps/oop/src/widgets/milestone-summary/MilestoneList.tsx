@@ -8,6 +8,7 @@ import * as styles from './MilestoneList.css';
 type MilestoneListProps = {
   milestones: StudentHomeMilestone[];
   persistenceKey: string;
+  description?: string;
 };
 
 type MilestoneAccordionState = {
@@ -106,6 +107,7 @@ function hasSameIds(left: string[], right: string[]) {
 export default function MilestoneList({
   milestones,
   persistenceKey,
+  description = '해당 단계를 펼쳐, 더 자세한 내용을 확인 해보세요.',
 }: MilestoneListProps) {
   const detailAvailableIds = useMemo(
     () =>
@@ -166,9 +168,7 @@ export default function MilestoneList({
     <section className={styles.milestoneSection}>
       <div className={styles.sectionHeader}>
         <h2 className={styles.sectionTitle}>팀 프로젝트 진행 단계</h2>
-        <p className={styles.sectionDesc}>
-          해당 단계를 펼쳐, 더 자세한 내용을 확인 해보세요.
-        </p>
+        <p className={styles.sectionDesc}>{description}</p>
       </div>
       {milestones.length === 0 ? (
         <EmptyState

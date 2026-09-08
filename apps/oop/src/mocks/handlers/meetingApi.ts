@@ -1,14 +1,13 @@
-import { API_BASE_URL } from '@aics/api-client';
+import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { meetingPhases, type MeetingRecordCreateRequest } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
-import { getMockAccessToken } from '../authSession';
+import { getMockAuthenticatedAccount } from '../authSession';
 import {
   meetingApiAction,
   meetingApiRecord,
   meetingApiTeam,
 } from '../data/meetingApi';
-import { getDemoStudentAccount } from '../data/users';
 
 // Numeric server-contract fixtures coexist with the legacy demo's named IDs.
 export function createMeetingApiHandlers() {
@@ -21,7 +20,7 @@ export function createMeetingApiHandlers() {
       { status },
     );
   const guard = (request: Request, teamId = '7') => {
-    const account = getDemoStudentAccount(getMockAccessToken(request));
+    const account = getMockAuthenticatedAccount(request);
     if (!account) return fail(401);
     if (
       teamId !== '7' ||
@@ -37,6 +36,38 @@ export function createMeetingApiHandlers() {
   const recordPath = `${API_BASE_URL}/meeting-records/:id(\\d+)`;
   const now = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
   return [
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.MEETING.ACTIONS(':teamId')}`,
+      ({ request, params }) => {
+        const denied = guard(request, String(params.teamId));
+        if (denied) return denied;
+        const status = new URL(request.url).searchParams.get('status');
+        return HttpResponse.json({
+          contents: actions.filter(
+            action => !status || action.status === status,
+          ),
+        });
+      },
+    ),
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF(':teamId')}`,
+      ({ request, params }) => {
+        const denied = guard(request, String(params.teamId));
+        if (denied) return denied;
+        return HttpResponse.json(meetingApiTeam);
+      },
+    ),
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM(':teamId')}`,
+      ({ request, params }) => {
+        const denied = guard(request, String(params.teamId));
+        if (denied) return denied;
+        return HttpResponse.json(
+          { code: 'PROJECT_NOT_FOUND' },
+          { status: 404 },
+        );
+      },
+    ),
     http.get(
       `${API_BASE_URL}/teams/:teamId(\\d+)/meeting-records`,
       ({ request, params }) => {
@@ -72,8 +103,7 @@ export function createMeetingApiHandlers() {
           participantIds: input.participantIds ?? [],
           id: nextRecordId++,
           teamId: 7,
-          authorId: getDemoStudentAccount(getMockAccessToken(request))!.user
-            .studentNumber,
+          authorId: getMockAuthenticatedAccount(request)!.user.studentNumber,
           createdAt: now(),
           updatedAt: now(),
         };

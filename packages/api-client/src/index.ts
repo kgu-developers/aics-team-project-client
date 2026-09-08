@@ -204,3 +204,10 @@ export { fetchMyTeamAssignmentSurvey } from './team-assignment';
 
 export { fetchTeamKickoff, fetchTeamMemberContacts } from './teams';
 export { claimTeamLeader } from './team-assignment';
+
+export { fetchTeamProject } from './project';
+
+export {
+  fetchStudentMilestones,
+  fetchMyTeamMilestoneSubmission,
+} from './milestones';

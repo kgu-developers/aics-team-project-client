@@ -1,5 +1,4 @@
 import type {
-  MeetingAction,
   MeetingRecord,
   StudentHomeAnnouncement,
   StudentHomeHero as StudentHomeHeroData,
@@ -14,9 +13,15 @@ import { ROUTES } from '~/app/constants/routes';
 import { cx } from '~/shared/lib/cx';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import type { HomeQueryState } from '~/features/student-home/model/homeQueryState';
+import type {
+  HomeAssignedAction,
+  HomeMeetingRecord,
+} from '~/features/student-home/model/studentHomeSummary';
 import { useStudentNoticeReadState } from '~/features/student-notices/useStudentNoticeReadState';
 
 import * as styles from './StudentHomeHero.css';
+import StudentHomeShortcutState from './StudentHomeShortcutState';
 
 const SHORTCUT_TABS = [
   { id: 'notice', label: '공지사항', icon: Bell },
@@ -30,8 +35,14 @@ type ShortcutTabId = (typeof SHORTCUT_TABS)[number]['id'];
 type StudentHomeHeroProps = {
   hero: StudentHomeHeroData;
   announcements: StudentHomeAnnouncement[];
-  assignedActions?: MeetingAction[];
-  recentMeetingRecords?: MeetingRecord[];
+  assignedActions?: HomeAssignedAction[];
+  recentMeetingRecords?: Array<MeetingRecord | HomeMeetingRecord>;
+  noticeState?: HomeQueryState;
+  actionState?: HomeQueryState;
+  recordState?: HomeQueryState;
+  meetingMetadataState?: HomeQueryState;
+  sectionId?: string;
+  canCreateMeeting?: boolean;
   meetingState?: 'error' | 'pending' | 'ready';
   onCtaClick?: () => void;
 };
@@ -42,16 +53,34 @@ export default function StudentHomeHero({
   assignedActions = [],
   recentMeetingRecords = [],
   meetingState = 'ready',
+  noticeState,
+  actionState,
+  recordState,
+  meetingMetadataState,
+  sectionId: suppliedSectionId,
+  canCreateMeeting = true,
   onCtaClick,
 }: StudentHomeHeroProps) {
   const navigate = useNavigate();
   const currentUser = useAuthStore(state => state.currentUser);
-  const sectionId = currentUser?.sections[0]?.id ?? '';
+  const sectionId = suppliedSectionId ?? currentUser?.sections[0]?.id ?? '';
   const { isRead } = useStudentNoticeReadState(
     currentUser?.id ?? '',
     sectionId,
   );
   const [activeTab, setActiveTab] = useState<ShortcutTabId>('notice');
+  const activeState =
+    activeTab === 'notice'
+      ? noticeState
+      : activeTab === 'minutes'
+        ? recordState
+        : actionState;
+  const activeLabel =
+    activeTab === 'notice'
+      ? '공지사항'
+      : activeTab === 'minutes'
+        ? '회의록'
+        : '액션 플랜';
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const visibleAnnouncements = announcements.slice(0, HOME_SHORTCUT_ITEM_LIMIT);
   const visibleMeetingRecords = recentMeetingRecords.slice(
@@ -159,7 +188,21 @@ export default function StudentHomeHero({
             role='tabpanel'
             tabIndex={0}
           >
-            {activeTab === 'notice' ? (
+            {activeTab === 'minutes' &&
+            meetingMetadataState?.status === 'error' ? (
+              <StudentHomeShortcutState
+                state={meetingMetadataState}
+                label='작성자 정보'
+                className={styles.emptyTab}
+              />
+            ) : null}
+            {activeState && activeState.status !== 'ready' ? (
+              <StudentHomeShortcutState
+                state={activeState}
+                label={activeLabel}
+                className={styles.emptyTab}
+              />
+            ) : activeTab === 'notice' ? (
               visibleAnnouncements.length > 0 ? (
                 <div className={styles.noticeList}>
                   {visibleAnnouncements.map((announcement, index) => (
@@ -238,8 +281,15 @@ export default function StudentHomeHero({
                             <p className={styles.noticeTitle}>{record.title}</p>
                             <div className={styles.noticeMeta}>
                               <p className={styles.noticeContent}>
-                                {record.createdBy.name} · 액션 플랜{' '}
-                                {record.actions.length}건
+                                {'authorName' in record
+                                  ? record.authorName
+                                  : record.createdBy.name}{' '}
+                                ·{' '}
+                                {'actionCount' in record
+                                  ? record.actionCount === null
+                                    ? '액션 수 확인 필요'
+                                    : `액션 플랜 ${record.actionCount}건`
+                                  : `액션 플랜 ${record.actions.length}건`}
                               </p>
                               <p className={styles.noticeDate}>
                                 {record.heldAt.slice(0, 10)}
@@ -328,6 +378,7 @@ export default function StudentHomeHero({
         <Button
           className={styles.meetingCta}
           label='회의록 작성'
+          isDisabled={!canCreateMeeting}
           onClick={() => navigate({ to: ROUTES.STUDENT.MEETING_NEW })}
           size='lg'
           variant='primary'

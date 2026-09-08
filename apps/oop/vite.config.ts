@@ -11,6 +11,7 @@ const apiProxyPrefixes = [
   '/announcements',
   '/meeting-actions',
   '/meeting-records',
+  '/milestones',
   '/sections',
   '/teams',
 ];
