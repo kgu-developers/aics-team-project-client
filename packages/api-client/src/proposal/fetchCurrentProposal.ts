@@ -20,11 +20,15 @@ export async function fetchCurrentProposal(): Promise<Proposal> {
   if (
     !isRecord(data) ||
     typeof data.id !== 'string' ||
+    (data.status !== 'DRAFT' &&
+      data.status !== 'SUBMITTED' &&
+      data.status !== 'REVISION_REQUESTED') ||
     !Number.isSafeInteger(data.version) ||
     !Array.isArray(data.blocks) ||
     !data.blocks.every(
       block =>
         isRecord(block) &&
+        (block.status === 'IN_PROGRESS' || block.status === 'COMPLETED') &&
         typeof block.key === 'string' &&
         typeof block.title === 'string' &&
         typeof block.description === 'string' &&

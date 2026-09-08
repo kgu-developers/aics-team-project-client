@@ -76,3 +76,34 @@ it('HTML 200 응답에도 오류 경계로 추락하지 않고 안내와 홈 복
   expect(screen.queryByText(/Cannot read/)).not.toBeInTheDocument();
   expect(read).toHaveBeenCalledTimes(1);
 });
+
+it.each([undefined, 'UNKNOWN'])(
+  '누락되거나 잘못된 문서 상태를 거절한다: %s',
+  async status => {
+    server.use(
+      http.get(url, () =>
+        HttpResponse.json({ ...getCurrentProposal(), status }),
+      ),
+    );
+    await expect(fetchCurrentProposal()).rejects.toBeInstanceOf(
+      InvalidProposalResponseError,
+    );
+  },
+);
+it.each([undefined, 'UNKNOWN'])(
+  '누락되거나 잘못된 블록 상태를 거절한다: %s',
+  async status => {
+    const document = getCurrentProposal();
+    server.use(
+      http.get(url, () =>
+        HttpResponse.json({
+          ...document,
+          blocks: document.blocks.map(block => ({ ...block, status })),
+        }),
+      ),
+    );
+    await expect(fetchCurrentProposal()).rejects.toBeInstanceOf(
+      InvalidProposalResponseError,
+    );
+  },
+);
