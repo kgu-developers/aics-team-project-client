@@ -61,3 +61,12 @@ globalStyle(table + ' td', {
 globalStyle(table + ' tbody tr:hover td', {
   background: tokens.color.background.muted,
 });
+
+export const recordLink = style({
+  color: 'inherit',
+  textDecoration: 'none',
+});
+
+globalStyle(`${recordLink}:hover`, {
+  textDecoration: 'underline',
+});

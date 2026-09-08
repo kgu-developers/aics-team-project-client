@@ -6,7 +6,7 @@ import {
   HStack,
   Text,
 } from '@aics/design-system';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -40,6 +40,7 @@ export default function AdminMeetingsPage() {
   const search = useSearch({ from: '/admin/meetings/' }) as {
     page?: number;
     sectionId?: string;
+    teamId?: string;
   };
   const accessibleSections = currentUser?.sections ?? [];
   const accessibleSectionIds = accessibleSections.map(section => section.id);
@@ -54,6 +55,7 @@ export default function AdminMeetingsPage() {
     page: selectedPage,
     sectionId:
       selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
+    teamId: search.teamId,
     size: 20,
   });
   const records = query.data?.contents ?? [];
@@ -144,7 +146,15 @@ export default function AdminMeetingsPage() {
                   <td>{record.sectionName}</td>
                   <td>{record.teamName}</td>
                   <td>{phaseLabel[record.phase]}</td>
-                  <td>{getContentPreview(record.content)}</td>
+                  <td>
+                    <Link
+                      className={styles.recordLink}
+                      params={{ meetingId: String(record.id) }}
+                      to={ROUTES.ADMIN_MEETING_DETAIL}
+                    >
+                      {getContentPreview(record.content)}
+                    </Link>
+                  </td>
                   <td>{record.authorId}</td>
                   <td>{record.participantCount}명</td>
                 </tr>
