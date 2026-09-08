@@ -109,6 +109,10 @@ export const ENDPOINTS = {
       `/peer-evaluation-forms/${formId}/responses`,
   },
   TOPIC: {
+    CANDIDATES: (teamId: string) => `/api/v1/teams/${teamId}/topic-candidates`,
+    CANDIDATE_VOTE: (candidateId: string) =>
+      `/api/v1/topic-candidates/${candidateId}/vote`,
+    // Legacy demo projection; production uses team/candidate endpoints above.
     BOARD: (sectionId: string) => `/sections/${sectionId}/project-topic`,
     VOTE: (sectionId: string) => `/sections/${sectionId}/project-topic/vote`,
   },

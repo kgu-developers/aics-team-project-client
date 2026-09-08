@@ -3,3 +3,5 @@ export { useRemoveTopicVoteMutation } from './useRemoveTopicVoteMutation';
 export { useSubmitTopicCandidateMutation } from './useSubmitTopicCandidateMutation';
 export { useSubmitTopicVoteMutation } from './useSubmitTopicVoteMutation';
 export { useTopicBoardQuery } from './useTopicBoardQuery';
+export { useLiveTopicCandidatesQuery } from './useLiveTopicCandidatesQuery';
+export { useLiveTopicParticipationMutation } from './useLiveTopicParticipationMutation';

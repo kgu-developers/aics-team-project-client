@@ -7,7 +7,7 @@ import {
   createRootRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -34,6 +34,9 @@ const list = studentMilestoneFixtures(2).slice(0, 2);
 const requests: string[] = [];
 const server = setupServer(
   ...studentHomeLiveHandlers,
+  http.get(`${API_BASE_URL}/api/v1/teams/7/topic-candidates`, () =>
+    HttpResponse.json({ contents: [] }),
+  ),
   http.get(`${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`, () =>
     HttpResponse.json({ contents: list }),
   ),
@@ -93,6 +96,128 @@ function Wrapper({ children }: PropsWithChildren) {
 }
 
 describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
+  it('주제 선정 일정이 열리면 후보를 등록하고 실제 팀 목록을 다시 조회한다', async () => {
+    const candidate = {
+      id: 81,
+      title: '팀 일정',
+      description: '함께 관리',
+      proposerUserId: liveHomeUser.studentNumber,
+    };
+    let saved = false;
+    let rejectFirst = true;
+    let voted: number | undefined;
+    const others = [82, 83].map(id => ({
+      id,
+      title: `다른 후보 ${id}`,
+      description: '팀원 후보',
+      proposerUserId: '202600002',
+    }));
+    const now = Date.now();
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`, () =>
+        HttpResponse.json({
+          contents: [
+            {
+              ...list[0],
+              title: '제안서',
+              type: 'PROPOSAL',
+              schedule: {
+                opensAt: new Date(now - 60000).toISOString(),
+                dueAt: new Date(now + 60000).toISOString(),
+              },
+            },
+          ],
+        }),
+      ),
+      http.get(`${API_BASE_URL}/api/v1/teams/7/topic-candidates`, () =>
+        HttpResponse.json({
+          contents: [...others, ...(saved ? [candidate] : [])].map(item => ({
+            ...item,
+            voteCount: voted === item.id ? 1 : 0,
+            votedByMe: voted === item.id,
+          })),
+        }),
+      ),
+      http.post(
+        `${API_BASE_URL}/api/v1/topic-candidates/:id/vote`,
+        ({ params }) => {
+          voted = Number(params.id);
+          return HttpResponse.json(
+            {
+              id: 1,
+              candidateId: voted,
+              voterUserId: liveHomeUser.studentNumber,
+            },
+            { status: 201 },
+          );
+        },
+      ),
+      http.delete(`${API_BASE_URL}/api/v1/topic-candidates/:id/vote`, () => {
+        voted = undefined;
+        return new HttpResponse(null, { status: 204 });
+      }),
+      http.post(
+        `${API_BASE_URL}/api/v1/teams/7/topic-candidates`,
+        async ({ request }) => {
+          expect(await request.json()).toEqual({
+            title: candidate.title,
+            description: candidate.description,
+          });
+          if (rejectFirst) {
+            rejectFirst = false;
+            return HttpResponse.json({}, { status: 403 });
+          }
+          saved = true;
+          return HttpResponse.json(candidate, { status: 201 });
+        },
+      ),
+    );
+    const user = userEvent.setup();
+    render(<StudentHomePage />, { wrapper: Wrapper });
+    const add = await screen.findByRole('button', { name: '후보 추가' });
+    await waitFor(() => expect(add).toBeEnabled());
+    await user.click(add);
+    await user.type(screen.getByLabelText('후보 제목'), candidate.title);
+    await user.type(screen.getByLabelText('후보 설명'), candidate.description);
+    await user.click(
+      within(screen.getByRole('dialog', { name: '주제 후보 추가' })).getByRole(
+        'button',
+        { name: '후보 추가' },
+      ),
+    );
+    expect(
+      await within(
+        screen.getByRole('dialog', { name: '주제 후보 추가' }),
+      ).findByText('이 팀의 주제 보드에 접근할 수 없어요.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: '후보 제목' })).toHaveValue(
+      candidate.title,
+    );
+    await user.click(
+      within(screen.getByRole('dialog', { name: '주제 후보 추가' })).getByRole(
+        'button',
+        { name: '후보 추가' },
+      ),
+    );
+    expect(
+      await screen.findByRole('radio', { name: candidate.title }),
+    ).toBeDisabled();
+    expect(
+      screen.queryByRole('dialog', { name: '주제 후보 추가' }),
+    ).not.toBeInTheDocument();
+    const first = screen.getByRole('radio', { name: '다른 후보 82' });
+    const second = screen.getByRole('radio', { name: '다른 후보 83' });
+    await waitFor(() => expect(first).toBeEnabled());
+    await user.click(first);
+    await waitFor(() => expect(first).toBeChecked());
+    await waitFor(() => expect(second).toBeEnabled());
+    await user.click(second);
+    await waitFor(() => expect(second).toBeChecked());
+    expect(first).not.toBeChecked();
+    await waitFor(() => expect(second).toBeEnabled());
+    await user.click(second);
+    await waitFor(() => expect(second).not.toBeChecked());
+  });
   it('구 dashboard 없이 히어로 탭과 서버 단계·제출 상태를 표시한다', async () => {
     const user = userEvent.setup();
     render(<StudentHomePage />, { wrapper: Wrapper });
@@ -109,8 +234,24 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
       document.getElementById(`student-milestone-${list[1]!.id}`),
     ).toHaveTextContent('수정 요청');
     expect(
-      document.querySelector('[id^=student-milestone-] button[aria-expanded]'),
-    ).toBeNull();
+      document.querySelectorAll(
+        '[id^=student-milestone-] button[aria-expanded]',
+      ),
+    ).toHaveLength(1);
+    const proposal = document.getElementById(
+      `student-milestone-${list[0]!.id}`,
+    )!;
+    expect(proposal).toHaveTextContent('주제 후보 선택');
+    expect(
+      screen.queryByRole('heading', { name: '우리 팀 주제 후보' }),
+    ).not.toBeInTheDocument();
+    const trigger = proposal.querySelector('button[aria-expanded]')!;
+    await user.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await user.click(trigger);
+    expect(
+      screen.getByRole('heading', { name: '주제 후보 선택' }),
+    ).toBeVisible();
     expect(screen.queryByText('제출 가능 여부')).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: '회의록' }));
     expect(await screen.findByText('회의 4')).toBeInTheDocument();

@@ -4,8 +4,13 @@ import { style } from '@vanilla-extract/css';
 export const root = style({
   display: 'flex',
   flexDirection: 'column',
-  gap: 12,
-  padding: 16,
+  gap: tokens.spacing['6'],
+  padding: tokens.spacing['6'],
+  '@media': {
+    'screen and (max-width: 767px)': {
+      paddingInline: tokens.spacing['4'],
+    },
+  },
 });
 
 export const guidance = style({
