@@ -142,16 +142,15 @@ describe('AdminTeamDashboard', () => {
       screen.getByRole('link', { name: 'oop-01-1-source.zip' }),
     ).toHaveAttribute('download', 'oop-01-1-source.zip');
     expect(screen.queryByText('발표 평가')).not.toBeInTheDocument();
+    const detailButtons = screen.getAllByRole('button', {
+      name: /상세보기: 팀 진행 현황의 제출물 상세 ID 연동 후 제공 예정입니다./,
+    });
+
+    expect(detailButtons).toHaveLength(4);
+    detailButtons.forEach(button => expect(button).toBeDisabled());
     expect(
-      screen.queryByRole('button', { name: '상세보기' }),
+      screen.queryByRole('link', { name: '상세보기' }),
     ).not.toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: '상세보기' })).toHaveLength(4);
-    expect(
-      screen.getAllByRole('link', { name: '상세보기' })[0],
-    ).toHaveAttribute(
-      'href',
-      '/admin/submissions/submission-oop-01-1-proposal?milestoneId=proposal&sectionId=oop-2026-2-01',
-    );
   });
 
   it('수강생/팀 관리에 등록된 2팀 정보를 표시한다', async () => {

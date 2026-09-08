@@ -16,10 +16,6 @@ export const filters = style({
   gap: 8,
 });
 
-export const filterDescription = style({
-  color: tokens.color.text.secondary,
-  marginTop: -16,
-});
 const filterBase = {
   background: tokens.color.background.muted,
   border: 0,
@@ -47,16 +43,6 @@ export const table = style({
   width: '100%',
 });
 
-export const titleLink = style({
-  color: tokens.color.text.primary,
-  textDecoration: 'none',
-  ':hover': {
-    color: tokens.color.text.accent,
-    textDecoration: 'underline',
-    textUnderlineOffset: 3,
-  },
-});
-
 globalStyle(table + ' th', {
   background: tokens.color.background.card,
   color: tokens.color.text.secondary,
@@ -74,4 +60,13 @@ globalStyle(table + ' td', {
 
 globalStyle(table + ' tbody tr:hover td', {
   background: tokens.color.background.muted,
+});
+
+export const recordLink = style({
+  color: 'inherit',
+  textDecoration: 'none',
+});
+
+globalStyle(`${recordLink}:hover`, {
+  textDecoration: 'underline',
 });

@@ -1,7 +1,7 @@
 import {
   API_BASE_URL,
   ENDPOINTS,
-  type AdminMeetingRecordsResponse,
+  type AdminMeetingRecordListResponse,
 } from '@aics/api-client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
@@ -18,24 +18,35 @@ import {
   vi,
 } from 'vitest';
 
-import { useAdminMeetingRecordsQuery } from './useAdminMeetingRecordsQuery';
+import { useAdminMeetingRecordListQuery } from './useAdminMeetingRecordListQuery';
 
 const meetingRecordsRequest = vi.fn();
-const response: AdminMeetingRecordsResponse = {
-  records: [
+const response: AdminMeetingRecordListResponse = {
+  contents: [
     {
-      createdAt: '2026-10-08T19:00:00+09:00',
-      id: 'meeting-2',
-      sectionId: 'oop-01',
-      sectionLabel: 'OOP-01',
-      teamId: 'team-2',
-      teamLabel: '2팀',
-      title: '발표 자료 구성 논의',
+      authorId: '20260001',
+      content: '발표 자료 구성 논의',
+      id: 2,
+      location: '온라인',
+      meetingAt: '2026-10-08 19:00',
+      participantCount: 4,
+      phase: 'MID_CHECK',
+      sectionId: 1,
+      sectionName: 'OOP-01',
+      teamId: 2,
+      teamName: '2팀',
     },
   ],
+  pageable: {
+    isEnd: true,
+    page: 0,
+    size: 20,
+    totalElements: 1,
+    totalPages: 1,
+  },
 };
 const server = setupServer(
-  http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`, () => {
+  http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS_LIST}`, () => {
     meetingRecordsRequest();
     return HttpResponse.json(response);
   }),
@@ -60,9 +71,9 @@ function createWrapper() {
   };
 }
 
-describe('useAdminMeetingRecordsQuery', () => {
+describe('useAdminMeetingRecordListQuery', () => {
   it('담당 분반 ID가 없으면 회의록 목록을 요청하지 않는다', () => {
-    const { result } = renderHook(() => useAdminMeetingRecordsQuery([]), {
+    const { result } = renderHook(() => useAdminMeetingRecordListQuery([]), {
       wrapper: createWrapper(),
     });
 
@@ -72,7 +83,7 @@ describe('useAdminMeetingRecordsQuery', () => {
 
   it('담당 분반이 있으면 회의록 목록을 조회한다', async () => {
     const { result } = renderHook(
-      () => useAdminMeetingRecordsQuery(['oop-01']),
+      () => useAdminMeetingRecordListQuery(['oop-01']),
       { wrapper: createWrapper() },
     );
 
@@ -82,55 +93,69 @@ describe('useAdminMeetingRecordsQuery', () => {
     expect(result.current.data).toEqual(response);
   });
 
-  it('여러 담당 분반의 회의록을 최신 작성일 순서로 전달한다', async () => {
-    const multipleSectionsResponse: AdminMeetingRecordsResponse = {
-      records: [
+  it('서버가 최신순으로 반환한 회의록 순서를 유지한다', async () => {
+    const multipleSectionsResponse: AdminMeetingRecordListResponse = {
+      contents: [
         {
-          createdAt: '2026-10-01T10:30:00+09:00',
-          id: 'meeting-oop-01',
-          sectionId: 'oop-01',
-          sectionLabel: 'OOP-01',
-          teamId: 'team-oop-01',
-          teamLabel: '1팀',
-          title: 'OOP-01 회의록',
+          authorId: '20260001',
+          content: '가장 최근 회의록',
+          id: 2,
+          location: null,
+          meetingAt: '2026-10-08 19:00',
+          participantCount: 4,
+          phase: 'MID_CHECK',
+          sectionId: 2,
+          sectionName: 'OOP-02',
+          teamId: 2,
+          teamName: '1팀',
         },
         {
-          createdAt: '2026-10-08T19:00:00+09:00',
-          id: 'meeting-oop-02',
-          sectionId: 'oop-02',
-          sectionLabel: 'OOP-02',
-          teamId: 'team-oop-02',
-          teamLabel: '1팀',
-          title: 'OOP-02 회의록',
+          authorId: '20260002',
+          content: '이전 회의록',
+          id: 1,
+          location: null,
+          meetingAt: '2026-10-01 10:30',
+          participantCount: 3,
+          phase: 'PROPOSAL',
+          sectionId: 1,
+          sectionName: 'OOP-01',
+          teamId: 1,
+          teamName: '1팀',
         },
       ],
+      pageable: {
+        isEnd: true,
+        page: 0,
+        size: 20,
+        totalElements: 2,
+        totalPages: 1,
+      },
     };
 
     server.use(
-      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`, () =>
+      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS_LIST}`, () =>
         HttpResponse.json(multipleSectionsResponse),
       ),
     );
 
     const { result } = renderHook(
-      () => useAdminMeetingRecordsQuery(['oop-01', 'oop-02']),
+      () => useAdminMeetingRecordListQuery(['oop-01', 'oop-02']),
       { wrapper: createWrapper() },
     );
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data?.records.map(record => record.id)).toEqual([
-      'meeting-oop-02',
-      'meeting-oop-01',
+    expect(result.current.data?.contents.map(record => record.id)).toEqual([
+      2, 1,
     ]);
   });
 
-  it('분반과 팀 필터를 API Client 요청으로 전달한다', async () => {
+  it('분반·팀 필터와 페이지네이션을 API Client 요청으로 전달한다', async () => {
     const receivedUrl = vi.fn();
 
     server.use(
       http.get(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`,
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS_LIST}`,
         ({ request }) => {
           receivedUrl(request.url);
           return HttpResponse.json(response);
@@ -140,9 +165,11 @@ describe('useAdminMeetingRecordsQuery', () => {
 
     const { result } = renderHook(
       () =>
-        useAdminMeetingRecordsQuery(['oop-01'], {
+        useAdminMeetingRecordListQuery(['oop-01'], {
           sectionId: 'oop-01',
-          teamId: 'team-1',
+          teamId: 2,
+          page: 2,
+          size: 50,
         }),
       { wrapper: createWrapper() },
     );
@@ -153,7 +180,11 @@ describe('useAdminMeetingRecordsQuery', () => {
       expect.stringContaining('sectionId=oop-01'),
     );
     expect(receivedUrl).toHaveBeenCalledWith(
-      expect.stringContaining('teamId=team-1'),
+      expect.stringContaining('teamId=2'),
+    );
+    expect(receivedUrl).toHaveBeenCalledWith(expect.stringContaining('page=2'));
+    expect(receivedUrl).toHaveBeenCalledWith(
+      expect.stringContaining('size=50'),
     );
   });
 });

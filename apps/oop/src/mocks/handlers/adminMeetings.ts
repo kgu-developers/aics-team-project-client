@@ -1,8 +1,10 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { getRichTextPlainText } from '../../features/admin-meeting/model';
 import { getMockAuthenticatedAccount } from '../authSession';
 import { adminMeetingRecordsFixture } from '../data/adminMeetings';
+import { adminStudentsFixture } from '../data/adminStudentTeams';
 
 function getAccessibleSectionIds(request: Request) {
   const account = getMockAuthenticatedAccount(request);
@@ -10,6 +12,20 @@ function getAccessibleSectionIds(request: Request) {
   if (!account || account.user.globalRole === 'STUDENT') return null;
 
   return account.user.sections.map(section => section.id);
+}
+
+function getAdminMeetingRecordId(
+  record: (typeof adminMeetingRecordsFixture)[number],
+) {
+  const match = /^admin-meeting-(\d+)$/.exec(record.id);
+
+  if (!match) {
+    throw new Error(
+      `관리자 회의록 fixture ID 형식이 올바르지 않습니다: ${record.id}`,
+    );
+  }
+
+  return Number(match[1]);
 }
 
 export const adminMeetingHandlers = [
@@ -45,6 +61,109 @@ export const adminMeetingHandlers = [
             teamLabel: record.teamLabel,
             title: record.title,
           })),
+      });
+    },
+  ),
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS_LIST}`,
+    ({ request }) => {
+      const accessibleSectionIds = getAccessibleSectionIds(request);
+
+      if (!accessibleSectionIds) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+
+      const searchParams = new URL(request.url).searchParams;
+      const sectionId = searchParams.get('sectionId');
+      const teamId = searchParams.get('teamId');
+      const page = Math.max(Number(searchParams.get('page') ?? 0), 0);
+      const size = Math.min(
+        Math.max(Number(searchParams.get('size') ?? 20), 1),
+        100,
+      );
+      const records = adminMeetingRecordsFixture
+        .filter(record => accessibleSectionIds.includes(record.sectionId))
+        .filter(record => !sectionId || record.sectionId === sectionId)
+        .filter(
+          record =>
+            !teamId ||
+            String(record.teamId === 'team-1151-1' ? 11 : 12) === teamId,
+        )
+        .sort((left, right) => right.heldAt.localeCompare(left.heldAt));
+      const start = page * size;
+
+      return HttpResponse.json({
+        contents: records.slice(start, start + size).map(record => ({
+          authorId: record.createdBy.userId,
+          content: getRichTextPlainText(record.content),
+          id: getAdminMeetingRecordId(record),
+          location: record.location,
+          meetingAt: record.heldAt.slice(0, 16).replace('T', ' '),
+          participantCount: record.participants.length,
+          phase: 'MID_CHECK',
+          sectionId: 1,
+          sectionName: record.sectionLabel,
+          teamId: record.teamId === 'team-1151-1' ? 11 : 12,
+          teamName: record.teamLabel,
+        })),
+        pageable: {
+          isEnd: start + size >= records.length,
+          page,
+          size,
+          totalElements: records.length,
+          totalPages: Math.ceil(records.length / size),
+        },
+      });
+    },
+  ),
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORD_DETAIL(':meetingId')}`,
+    ({ params, request }) => {
+      const accessibleSectionIds = getAccessibleSectionIds(request);
+      const meetingId = Number(params.meetingId);
+      const record = Number.isSafeInteger(meetingId)
+        ? adminMeetingRecordsFixture.find(
+            item => getAdminMeetingRecordId(item) === meetingId,
+          )
+        : undefined;
+
+      if (!accessibleSectionIds) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+
+      if (!record || !accessibleSectionIds.includes(record.sectionId)) {
+        return HttpResponse.json(
+          { code: 'MEETING_NOT_FOUND', message: '회의록을 찾을 수 없습니다.' },
+          { status: 404 },
+        );
+      }
+
+      return HttpResponse.json({
+        authorId: record.createdBy.userId,
+        content: getRichTextPlainText(record.content),
+        createdAt: record.createdAt.slice(0, 16).replace('T', ' '),
+        id: getAdminMeetingRecordId(record),
+        location: record.location,
+        meetingAt: record.heldAt.slice(0, 16).replace('T', ' '),
+        participantIds: record.participants.map(
+          participant =>
+            adminStudentsFixture.find(
+              student => student.id === participant.userId,
+            )?.studentNumber ?? participant.userId,
+        ),
+        phase: 'MID_CHECK',
+        sectionId: 1,
+        sectionName: record.sectionLabel,
+        teamId: record.teamId === 'team-1151-1' ? 11 : 12,
+        teamName: record.teamLabel,
+        title: record.title,
+        updatedAt: record.updatedAt.slice(0, 16).replace('T', ' '),
       });
     },
   ),

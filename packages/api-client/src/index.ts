@@ -49,6 +49,16 @@ export {
   type AdminMeetingRecordsResponse,
 } from './adminMeeting';
 export {
+  fetchAdminMeetingRecordList,
+  type AdminMeetingRecordListFilter,
+  type AdminMeetingRecordListItem,
+  type AdminMeetingRecordListResponse,
+} from './adminMeeting';
+export {
+  fetchAdminMeetingRecordDetail,
+  type AdminMeetingRecordDetailResponse,
+} from './adminMeeting';
+export {
   fetchAdminTeamDashboard,
   type AdminTeamDashboardMilestoneDto,
   type AdminTeamDashboardMilestoneStatusDto,
