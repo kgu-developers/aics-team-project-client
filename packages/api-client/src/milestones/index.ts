@@ -23,3 +23,6 @@ export type {
   AdminSectionMilestoneDto,
   AdminSectionMilestonesResponse,
 } from './types';
+
+export { fetchStudentMilestones } from './fetchStudentMilestones';
+export { fetchMyTeamMilestoneSubmission } from './fetchMyTeamMilestoneSubmission';

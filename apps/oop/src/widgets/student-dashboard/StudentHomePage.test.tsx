@@ -86,27 +86,39 @@ describe('StudentHomePage', () => {
     expect(getDashboardErrorContent(error).title).toBe(expectedTitle);
   });
 
-  it('학생에게 소속 분반이 없으면 안내 상태를 표시한다', () => {
+  it('학생에게 소속 분반이 없으면 안내 상태를 표시한다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+        HttpResponse.json({
+          studentNumber: demoStudent.studentNumber,
+          name: demoStudent.name,
+          email: demoStudent.email,
+          globalRole: 'USER',
+          sections: [],
+          teamId: null,
+        }),
+      ),
+    );
+    useAuthStore.getState().markAuthenticated('STUDENT');
     useAuthStore.getState().setCurrentUser({ ...demoStudent, sections: [] });
     const Wrapper = createWrapper();
 
     render(<StudentHomePage />, { wrapper: Wrapper });
 
-    expect(screen.getByText('소속 분반이 없어요.')).toBeInTheDocument();
+    expect(await screen.findByText('소속 분반이 없어요.')).toBeInTheDocument();
   });
 
   it('분반 접근이 거부되면 권한 오류를 구분해서 표시한다', async () => {
     server.use(
-      http.get(
-        'http://localhost:8080/sections/:sectionId/dashboard/student',
-        () =>
-          HttpResponse.json(
-            { code: 'SECTION_ACCESS_DENIED', message: '접근할 수 없습니다.' },
-            { status: 403 },
-          ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+        HttpResponse.json(
+          { code: 'SECTION_ACCESS_DENIED', message: '접근할 수 없습니다.' },
+          { status: 403 },
+        ),
       ),
     );
     useAuthStore.getState().setCurrentUser(demoStudent);
+    useAuthStore.getState().markAuthenticated('STUDENT');
     const Wrapper = createWrapper();
 
     render(<StudentHomePage />, { wrapper: Wrapper });

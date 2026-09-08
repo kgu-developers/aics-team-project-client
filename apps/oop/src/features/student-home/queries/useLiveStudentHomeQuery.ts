@@ -1,4 +1,3 @@
-import { useAuthStore } from '~/features/auth/authStore';
 import {
   useMeetingRecordSummariesQuery,
   useTeamMeetingActionEntriesQuery,
@@ -7,6 +6,7 @@ import { useSectionAnnouncementsQuery } from '~/features/student-notices/queries
 import { useTeamKickoffQuery } from '~/features/team-assignment/queries';
 import { isValidPositiveTeamId } from '~/features/team-assignment/queries/useTeamMemberContactsQuery';
 
+import { useStudentHomeUserQuery } from './useStudentHomeUserQuery';
 import { useTeamProjectQuery } from './useTeamProjectQuery';
 import { homeQueryState } from '../model/homeQueryState';
 import {
@@ -16,7 +16,8 @@ import {
 } from '../model/studentHomeSummary';
 
 export function useLiveStudentHomeQuery() {
-  const user = useAuthStore(state => state.currentUser);
+  const identity = useStudentHomeUserQuery();
+  const user = identity.isSuccess ? identity.data : undefined;
   const sectionId =
     user?.sections.length === 1 &&
     isValidPositiveTeamId(user.sections[0]?.id) &&
@@ -45,7 +46,12 @@ export function useLiveStudentHomeQuery() {
       ? '팀 배정이 완료되면 이곳에서 팀 자료를 확인할 수 있어요.'
       : undefined);
 
+  const identityState = homeQueryState(identity);
+  const stateFor = (state: ReturnType<typeof homeQueryState>) =>
+    identityState.status === 'ready' ? state : identityState;
+
   return {
+    identity,
     sectionId,
     teamId,
     studentNumber: user?.studentNumber,
@@ -53,7 +59,7 @@ export function useLiveStudentHomeQuery() {
     missingTeam,
     notices: {
       items: homeAnnouncements(notices.data ?? []),
-      state: homeQueryState(notices, missingSection),
+      state: stateFor(homeQueryState(notices, missingSection)),
     },
     meetings: {
       items: homeMeetingRecords(
@@ -61,22 +67,24 @@ export function useLiveStudentHomeQuery() {
         actions.isError ? undefined : actions.data,
         kickoff.data,
       ),
-      state: homeQueryState(meetings, missingTeam),
-      metadataState: homeQueryState(kickoff, missingTeam),
+      state: stateFor(homeQueryState(meetings, missingTeam)),
+      metadataState: stateFor(homeQueryState(kickoff, missingTeam)),
     },
     actions: {
       items: homeAssignedActions(actions.data ?? [], user?.studentNumber),
-      state: homeQueryState(
-        actions,
-        missingTeam ??
-          (!user?.studentNumber
-            ? '학생 정보를 확인해야 내 액션 플랜을 조회할 수 있어요.'
-            : undefined),
+      state: stateFor(
+        homeQueryState(
+          actions,
+          missingTeam ??
+            (!user?.studentNumber
+              ? '학생 정보를 확인해야 내 액션 플랜을 조회할 수 있어요.'
+              : undefined),
+        ),
       ),
     },
     project: {
       data: project.data,
-      state: homeQueryState(project, missingTeam),
+      state: stateFor(homeQueryState(project, missingTeam)),
     },
     teamName: kickoff.data?.name,
   };

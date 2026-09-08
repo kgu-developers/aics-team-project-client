@@ -76,6 +76,7 @@ describe('학생 홈 개별 API 계약 조회 (UI 연결과 별도 검증)', () 
       '공지 3',
       '공지 2',
     ]);
+    expect(requests).toContain(ENDPOINTS.USER.ME);
     expect(requests).not.toContain(ENDPOINTS.SECTION.STUDENT_DASHBOARD('2'));
   });
 
@@ -107,14 +108,38 @@ describe('학생 홈 개별 API 계약 조회 (UI 연결과 별도 검증)', () 
   });
 
   it('팀 미배정이면 팀 API를 요청하지 않는다', async () => {
-    const user = { ...liveHomeUser, teamId: null };
-    useAuthStore.getState().setCurrentUser(user);
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+        HttpResponse.json({
+          studentNumber: liveHomeUser.studentNumber,
+          name: liveHomeUser.name,
+          email: liveHomeUser.email,
+          globalRole: 'USER',
+          sections: [{ id: 2, code: 'OOP-2', name: '테스트 분반' }],
+          teamId: null,
+        }),
+      ),
+    );
     const { result } = renderHomeQuery();
     await waitFor(() =>
       expect(result.current.notices.state.status).toBe('ready'),
     );
     expect(result.current.actions.state.status).toBe('missing');
     expect(requests.some(path => path.includes('/teams/'))).toBe(false);
+  });
+
+  it('/me 실패 시 이전 로그인 정보로 팀 요청을 보내지 않는다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+        HttpResponse.json({ code: 'FORBIDDEN' }, { status: 403 }),
+      ),
+    );
+    const { result } = renderHomeQuery();
+    await waitFor(() => expect(result.current.identity.isError).toBe(true));
+    expect(result.current.actions.state.status).toBe('error');
+    expect(result.current.notices.state.status).toBe('error');
+    expect(requests.some(path => path.includes('/teams/'))).toBe(false);
+    expect(requests.some(path => path.endsWith('/announcements'))).toBe(false);
   });
 
   it('다른 팀의 프로젝트 응답을 현재 팀 자료로 표시하지 않는다', async () => {

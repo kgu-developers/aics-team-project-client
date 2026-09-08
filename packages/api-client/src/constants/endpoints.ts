@@ -1,4 +1,9 @@
 export const ENDPOINTS = {
+  STUDENT_MILESTONE: {
+    LIST: (sectionId: string) => `/api/v1/sections/${sectionId}/milestones`,
+    MY_TEAM_SUBMISSION: (milestoneId: string) =>
+      `/milestones/${milestoneId}/my-team-submission`,
+  },
   AUTH: {
     LOGIN: '/api/v1/oop/auth/login',
     REFRESH: '/api/v1/oop/auth/refresh',

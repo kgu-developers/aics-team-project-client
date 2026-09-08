@@ -177,3 +177,9 @@ export type {
 } from './studentHome/types';
 
 export * from './meeting/apiTypes';
+
+export type {
+  StudentMilestoneResponse,
+  StudentMilestoneListResponse,
+  MyTeamMilestoneSubmissionResponse,
+} from './milestone/studentMilestone';

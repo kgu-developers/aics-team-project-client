@@ -15,6 +15,12 @@ export const meetingApiTeam: TeamKickoffResponse = {
       isLeader: true,
     },
     {
+      id: 503,
+      studentNumber: '20260004',
+      name: 'OOP 데모 학생 C',
+      isLeader: false,
+    },
+    {
       id: 502,
       studentNumber: '20260003',
       name: 'OOP 데모 학생 B',
