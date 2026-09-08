@@ -280,3 +280,5 @@ export {
   submitStudentSubmissionVersion,
   fetchRequiredSubmissionArtifacts,
 } from './submission';
+
+export { fetchStudentSubmissionMemberConsent, updateStudentSubmissionMemberConsent, removeStudentSubmissionMemberConsent } from './submission';

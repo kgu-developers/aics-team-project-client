@@ -218,3 +218,5 @@ export type {
   RequiredSubmissionArtifact,
   StudentSubmissionVersionInput,
 } from './submission/apiTypes';
+
+export type { StudentSubmissionMemberConsent } from './submission/memberConsentApiTypes';
