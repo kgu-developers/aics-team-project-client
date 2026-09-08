@@ -123,17 +123,15 @@ describe('AdminTeamMilestoneProgress', () => {
     expect(
       screen.getAllByRole('link', { name: '회의록: 2개' })[0],
     ).toHaveAttribute('href', '/admin/meetings?sectionId=oop-01&teamId=team-1');
-    expect(screen.getAllByRole('button', { name: '상세보기' })).toHaveLength(2);
-    const detailLinks = screen.getAllByRole('link', { name: '상세보기' });
+    const detailButtons = screen.getAllByRole('button', {
+      name: /상세보기: 팀 진행 현황의 제출물 상세 ID 연동 후 제공 예정입니다./,
+    });
 
-    expect(detailLinks[0]).toHaveAttribute(
-      'href',
-      '/admin/submissions/submission-midterm-team-1?milestoneId=midterm&sectionId=oop-01',
-    );
-    expect(detailLinks[1]).toHaveAttribute(
-      'href',
-      '/admin/submissions/submission-presentation-team-1?milestoneId=presentation-submit&sectionId=oop-01',
-    );
+    expect(detailButtons).toHaveLength(4);
+    detailButtons.forEach(button => expect(button).toBeDisabled());
+    expect(
+      screen.queryByRole('link', { name: '상세보기' }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'oop-01-1-final-report.pdf' }),
     ).toHaveAttribute('download', 'oop-01-1-final-report.pdf');
