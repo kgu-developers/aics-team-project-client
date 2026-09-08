@@ -241,7 +241,7 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     const proposal = document.getElementById(
       `student-milestone-${list[0]!.id}`,
     )!;
-    expect(proposal).toHaveTextContent('우리 팀 투표');
+    expect(proposal).toHaveTextContent('주제 후보 선택');
     expect(
       screen.queryByRole('heading', { name: '우리 팀 주제 후보' }),
     ).not.toBeInTheDocument();
@@ -249,7 +249,7 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     await user.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
     await user.click(trigger);
-    expect(screen.getByRole('heading', { name: '우리 팀 투표' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: '주제 후보 선택' })).toBeVisible();
     expect(screen.queryByText('제출 가능 여부')).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: '회의록' }));
     expect(await screen.findByText('회의 4')).toBeInTheDocument();

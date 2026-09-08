@@ -96,10 +96,7 @@ export default function ProjectTopicBoard({
 
       <div className={styles.boardHeader}>
         <div>
-          <h2 className={styles.boardTitle}>우리 팀 투표</h2>
-          <p className={styles.description}>
-            내 후보를 제외한 한 후보를 선택할 수 있어요.
-          </p>
+          <h2 className={styles.boardTitle}>주제 후보 선택</h2>
         </div>
         <p className={styles.participation}>
           투표 참여 {board.participation.votedMemberCount}/
@@ -123,7 +120,7 @@ export default function ProjectTopicBoard({
         />
       ) : (
         <RadioList
-          description='후보를 선택하면 즉시 투표됩니다. 선택한 후보를 다시 누르면 투표를 취소할 수 있어요.'
+          isLabelHidden
           isDisabled={isVotePending}
           label='주제 후보 선택'
           onChange={candidateId => {
@@ -140,6 +137,7 @@ export default function ProjectTopicBoard({
         >
           {board.candidates.map(candidate => (
             <RadioListItem
+              className={styles.candidate}
               description={`제안자 ${candidate.proposerName} · ${candidate.description}`}
               endContent={
                 <span className={styles.candidateEnd}>

@@ -4,7 +4,7 @@ import { style } from '@vanilla-extract/css';
 export const root = style({
   display: 'flex',
   flexDirection: 'column',
-  gap: 24,
+  gap: tokens.spacing['6'],
 });
 export const header = style({
   display: 'flex',
@@ -49,3 +49,7 @@ export const candidateEnd = style({
   gap: 8,
 });
 export const error = style({ color: tokens.color.text.red, margin: 0 });
+
+export const candidate = style({
+  paddingBlock: tokens.spacing['2'],
+});
