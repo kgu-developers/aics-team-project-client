@@ -80,6 +80,7 @@ function useTopicApiState({
     }
   }
   return {
+    scope: { sectionId, teamId, studentNumber, eligibility },
     ready,
     canParticipate,
     busy,

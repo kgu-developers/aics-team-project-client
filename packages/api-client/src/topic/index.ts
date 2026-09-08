@@ -6,3 +6,5 @@ export { fetchTopicCandidates } from './fetchTopicCandidates';
 export { submitTeamTopicCandidate } from './submitTeamTopicCandidate';
 export { submitTopicCandidateVote } from './submitTopicCandidateVote';
 export { removeTopicCandidateVote } from './removeTopicCandidateVote';
+
+export { updateTopicFinalization } from './updateTopicFinalization';

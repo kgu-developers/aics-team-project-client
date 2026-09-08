@@ -1,4 +1,5 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
+import type { TeamProjectResponse } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
@@ -7,9 +8,13 @@ import {
   liveTopicMemberNumbers,
   liveTopicTeamId,
 } from '../data/liveTopic';
+import { meetingApiTeam } from '../data/meetingApi';
 
 /** Independent fixture state for the deployed team/candidate contract. */
-export function createLiveTopicHandlers() {
+export function createLiveTopicHandlers(
+  initialProject: TeamProjectResponse | null = null,
+) {
+  let project = initialProject ? structuredClone(initialProject) : null;
   const state = createLiveTopicState();
   function guard(request: Request, teamId = liveTopicTeamId) {
     const account = getMockAuthenticatedAccount(request);
@@ -32,6 +37,70 @@ export function createLiveTopicHandlers() {
     return { studentNumber };
   }
   return [
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM(':teamId')}`,
+      ({ request, params }) => {
+        const result = guard(request, String(params.teamId));
+        if ('response' in result) return result.response;
+        return project
+          ? HttpResponse.json(project)
+          : HttpResponse.json({ code: 'PROJECT_NOT_FOUND' }, { status: 404 });
+      },
+    ),
+    http.patch(
+      `${API_BASE_URL}${ENDPOINTS.TOPIC.FINALIZE(':teamId')}`,
+      async ({ request, params }) => {
+        const result = guard(request, String(params.teamId));
+        if ('response' in result) return result.response;
+        if (
+          !meetingApiTeam.members.some(
+            member =>
+              member.studentNumber === result.studentNumber && member.isLeader,
+          )
+        )
+          return HttpResponse.json({ code: 'ACCESS_DENIED' }, { status: 403 });
+        const input = (await request.json()) as {
+          candidateId?: number;
+          goal?: string;
+        };
+        if (
+          !Number.isSafeInteger(input.candidateId) ||
+          typeof input.goal !== 'string' ||
+          !input.goal.trim()
+        )
+          return HttpResponse.json(
+            { code: 'INVALID_REQUEST' },
+            { status: 400 },
+          );
+        const candidate = state.candidates.find(
+          item => item.id === input.candidateId,
+        );
+        if (!candidate)
+          return HttpResponse.json(
+            { code: 'TOPIC_CANDIDATE_NOT_FOUND' },
+            { status: 404 },
+          );
+        if (project?.proposalCompletedAt)
+          return HttpResponse.json(
+            { code: 'PROJECT_PROPOSAL_COMPLETED' },
+            { status: 409 },
+          );
+        project = {
+          ...project,
+          id: project?.id ?? 17,
+          teamId: Number(liveTopicTeamId),
+          title: candidate.title,
+          description: candidate.description,
+          goal: input.goal.trim(),
+          proposalCompletedAt: null,
+        };
+        return HttpResponse.json({
+          projectId: project.id,
+          candidateId: candidate.id,
+          title: candidate.title,
+        });
+      },
+    ),
     http.get(
       `${API_BASE_URL}${ENDPOINTS.TOPIC.CANDIDATES(':teamId')}`,
       ({ request, params }) => {

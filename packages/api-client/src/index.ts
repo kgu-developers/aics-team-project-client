@@ -218,3 +218,5 @@ export {
   submitTopicCandidateVote,
   removeTopicCandidateVote,
 } from './topic';
+
+export { updateTopicFinalization } from './topic';

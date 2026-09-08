@@ -22,3 +22,10 @@ export type TopicVotePersistResponse = {
   candidateId: number;
   voterUserId: string;
 };
+
+export type TopicFinalizeInput = { candidateId: number; goal: string };
+export type TopicFinalizeResponse = {
+  projectId: number;
+  candidateId: number;
+  title: string;
+};

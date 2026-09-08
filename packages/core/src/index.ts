@@ -190,3 +190,8 @@ export type {
   TopicCandidatePersistResponse,
   TopicVotePersistResponse,
 } from './topic/apiTypes';
+
+export type {
+  TopicFinalizeInput,
+  TopicFinalizeResponse,
+} from './topic/apiTypes';

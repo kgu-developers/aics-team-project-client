@@ -28,5 +28,11 @@ export async function fetchTeamProject(
     throw new Error('우리 팀의 프로젝트인지 확인할 수 없습니다.');
   }
 
+  for (const field of ['goal', 'proposalCompletedAt'] as const) {
+    const value = response.data[field];
+    if (value != null && typeof value !== 'string') {
+      throw new Error('프로젝트 목표와 완료 상태를 확인할 수 없습니다.');
+    }
+  }
   return response.data;
 }

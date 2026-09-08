@@ -10,5 +10,7 @@ export type TeamProjectResponse = {
   id: number;
   teamId: number;
   title?: string | null;
+  goal?: string | null;
+  proposalCompletedAt?: string | null;
   description?: string | null;
 };

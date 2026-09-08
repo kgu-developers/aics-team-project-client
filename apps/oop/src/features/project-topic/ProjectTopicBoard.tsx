@@ -17,6 +17,7 @@ import {
   useTopicBoardQuery,
 } from './queries';
 import { useTopicApi } from './TopicApiContext';
+import TopicFinalizePanel from './TopicFinalizePanel';
 
 type ProjectTopicBoardProps = {
   embedded?: boolean;
@@ -166,6 +167,13 @@ export default function ProjectTopicBoard({
           ))}
         </RadioList>
       )}
+      {live ? (
+        <TopicFinalizePanel
+          key={`${live.scope.sectionId}/${live.scope.teamId}/${live.scope.studentNumber}`}
+          {...live.scope}
+          participationBusy={live.busy}
+        />
+      ) : null}
     </section>
   );
 }

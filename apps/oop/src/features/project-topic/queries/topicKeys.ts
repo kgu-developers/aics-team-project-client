@@ -1,4 +1,12 @@
 export const topicKeys = {
+  finalization: (teamId?: string, studentNumber?: string, sectionId?: string) =>
+    [
+      'project-topic',
+      'finalization',
+      teamId,
+      studentNumber,
+      sectionId,
+    ] as const,
   all: ['project-topic'] as const,
   teamCandidates: (teamId?: string) =>
     [...topicKeys.all, 'candidates', teamId] as const,
