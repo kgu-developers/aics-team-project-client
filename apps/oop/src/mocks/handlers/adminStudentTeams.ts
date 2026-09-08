@@ -9,6 +9,8 @@ import {
 } from '../data/adminStudentTeams';
 import { demoAdmin } from '../data/users';
 
+const demoSectionId = 'oop-2026-2-01';
+
 const studentsById = new Map(
   adminStudentsFixture.map(student => [student.id, student]),
 );
@@ -37,8 +39,10 @@ function getTeams(sectionId: string): Team[] {
 }
 
 function getStudents(sectionId: string) {
+  const normalizedSectionId = sectionId === '1' ? demoSectionId : sectionId;
+
   return adminStudentsFixture
-    .filter(student => student.sectionId === sectionId)
+    .filter(student => student.sectionId === normalizedSectionId)
     .map(student => {
       const team = student.teamId
         ? adminTeamsFixture.find(candidate => candidate.id === student.teamId)
