@@ -13,7 +13,10 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminStudentTeamManagement from './AdminStudentTeamManagement';
 
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
-import { adminStudentTeamHandlers } from '~/mocks/handlers/adminStudentTeams';
+import {
+  adminStudentTeamHandlers,
+  resetAdminStudentTeamMockState,
+} from '~/mocks/handlers/adminStudentTeams';
 import { renderWithRouter } from '~/test/renderWithRouter';
 
 const server = setupServer(...adminStudentTeamHandlers);
@@ -44,6 +47,7 @@ beforeAll(() => {
 });
 afterEach(() => {
   server.resetHandlers();
+  resetAdminStudentTeamMockState();
   useAuthStore.getState().clearSession();
 });
 afterAll(() => {
@@ -137,31 +141,19 @@ describe('AdminStudentTeamManagement', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('팀원 이름을 누르면 수강생 상세 정보를 표시하고 닫은 뒤 원래 버튼으로 포커스를 돌려준다', async () => {
-    const user = userEvent.setup();
-
+  it('수강생과 팀 구성을 Swagger 응답의 학번 기준으로 표시한다', async () => {
     renderPage();
 
-    const memberButton = await screen.findByRole('button', {
-      name: '김민준',
-    });
-    await user.click(memberButton);
-
-    const dialog = await screen.findByRole('dialog', {
-      name: '김민준 수강생 정보',
-    });
-
-    expect(dialog).toBeInTheDocument();
-    expect(within(dialog).getByText('컴퓨터공학과')).toBeInTheDocument();
-
-    expect(screen.getByRole('button', { name: '닫기' })).toHaveFocus();
-    await user.keyboard('{Escape}');
-
-    await waitFor(() => expect(memberButton).toHaveFocus());
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect((await screen.findAllByText('김민준')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('20231234')).toHaveLength(2);
+    expect(
+      screen.queryByRole('columnheader', { name: '전공' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '1팀' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '2팀' })).toBeInTheDocument();
   });
 
-  it('수강생 제외 버튼은 확인 Dialog를 열고 API 연동 전 확인을 잠근다', async () => {
+  it('수강생 제외를 확인하면 WITHDRAWN 처리 후 목록과 팀 구성에서 제거한다', async () => {
     const user = userEvent.setup();
 
     renderPage();
@@ -179,28 +171,23 @@ describe('AdminStudentTeamManagement', () => {
       name: '수강생 제외 확인',
     });
     expect(
-      within(dialog).getByText(/김민준 학생은 현재 팀장입니다/),
+      within(dialog).getByText(/김민준 학생을 제외하면 수강 상태가 WITHDRAWN/),
     ).toBeInTheDocument();
-    expect(
-      within(dialog).getByText(/팀원들이 기존 팀장 선출 흐름에서/),
-    ).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole('button', { name: '제외 확인' }),
-    ).toHaveAttribute('aria-disabled', 'true');
+    await user.click(within(dialog).getByRole('button', { name: '제외 확인' }));
 
-    await user.click(within(dialog).getByRole('button', { name: '취소' }));
-    expect(
-      screen.queryByRole('alertdialog', { name: '수강생 제외 확인' }),
-    ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByText('김민준')).not.toBeInTheDocument(),
+    );
+    expect(screen.getAllByText('이서연')).toHaveLength(2);
   });
 
   it('목록을 기다리는 동안 로딩 상태를 표시한다', async () => {
     server.use(
       http.get(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_STUDENTS(':sectionId')}`,
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ENROLLMENTS(':sectionId')}`,
         async () => {
           await delay(1_000);
-          return HttpResponse.json([]);
+          return HttpResponse.json({ contents: [] });
         },
       ),
     );
@@ -215,8 +202,8 @@ describe('AdminStudentTeamManagement', () => {
   it('수강생 목록이 비어 있으면 빈 상태를 표시한다', async () => {
     server.use(
       http.get(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_STUDENTS(':sectionId')}`,
-        () => HttpResponse.json([]),
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ENROLLMENTS(':sectionId')}`,
+        () => HttpResponse.json({ contents: [] }),
       ),
     );
 
@@ -234,7 +221,7 @@ describe('AdminStudentTeamManagement', () => {
   it('목록 요청이 실패하면 오류 상태를 표시한다', async () => {
     server.use(
       http.get(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_STUDENTS(':sectionId')}`,
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ENROLLMENTS(':sectionId')}`,
         () =>
           HttpResponse.json(
             {

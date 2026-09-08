@@ -36,9 +36,17 @@ import {
   demoUserAccounts,
 } from '~/mocks/data/users';
 import { adminProfileHandlers } from '~/mocks/handlers/adminProfile';
+import {
+  adminStudentTeamHandlers,
+  resetAdminStudentTeamMockState,
+} from '~/mocks/handlers/adminStudentTeams';
 import { authHandlers, resetDemoPasswordState } from '~/mocks/handlers/auth';
 
-const server = setupServer(...adminProfileHandlers, ...authHandlers);
+const server = setupServer(
+  ...adminProfileHandlers,
+  ...authHandlers,
+  ...adminStudentTeamHandlers,
+);
 const queryClients: QueryClient[] = [];
 const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
@@ -75,7 +83,9 @@ beforeAll(() => {
 });
 beforeEach(() => {
   resetAdminProfileMockData();
+  resetAdminStudentTeamMockState();
   resetDemoPasswordState();
+  resetAdminStudentTeamMockState();
   mockSessionResponseHeaders(
     issueMockSession(
       demoUserAccounts.find(
@@ -270,69 +280,51 @@ describe('AdminProfilePage', () => {
     ).toBeInTheDocument();
   });
 
-  it('Excel 파일만 임시로 선택할 수 있고 선택을 제거할 수 있다', async () => {
+  it('수강생 명단 Excel 파일을 미리보기로 검증하고 반영할 수 있다', async () => {
     const user = userEvent.setup({ applyAccept: false });
     renderPage();
 
     await user.click(
       screen.getByRole('button', { name: '학생 명단 파일 선택' }),
     );
-    const dialog = screen.getByRole('dialog', { name: '학생 명단 업로드' });
     const fileInput =
-      dialog.querySelector<HTMLInputElement>('input[type="file"]');
+      document.querySelector<HTMLInputElement>('input[type="file"]');
 
     if (!fileInput) throw new Error('파일 선택 input을 찾을 수 없습니다.');
 
     await user.upload(fileInput, new File(['not excel'], 'students.txt'));
-    const fileInputTrigger = screen
-      .getAllByRole('button', { name: '학생 명단 파일 선택' })
-      .find(button => button.getAttribute('aria-invalid') === 'true');
-
-    expect(fileInputTrigger).toBeDefined();
-
     const excelFile = new File(['excel data'], '1151.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
     await user.upload(fileInput, excelFile);
-    expect(
-      await screen.findByText('1151.xlsx 선택됨 · 서버 업로드 전'),
-    ).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: '선택한 파일 제거' }));
-    expect(
-      screen.queryByText('1151.xlsx 선택됨 · 서버 업로드 전'),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: '선택한 파일 제거' }),
-    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '미리보기' }));
+    expect(await screen.findByText('전체 4건')).toBeInTheDocument();
+    expect(screen.getByText('중복 4건')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '반영하기' })).toBeEnabled();
   });
 
-  it('업로드 모달을 닫으면 임시 선택 파일을 초기화한다', async () => {
+  it('업로드 모달을 닫으면 미리보기 상태를 초기화한다', async () => {
     const user = userEvent.setup();
     renderPage();
 
     await user.click(
       screen.getByRole('button', { name: '학생 명단 파일 선택' }),
     );
-    const dialog = screen.getByRole('dialog', { name: '학생 명단 업로드' });
     const fileInput =
-      dialog.querySelector<HTMLInputElement>('input[type="file"]');
+      document.querySelector<HTMLInputElement>('input[type="file"]');
 
     if (!fileInput) throw new Error('파일 선택 input을 찾을 수 없습니다.');
 
     await user.upload(fileInput, new File(['excel data'], '1151.xlsx'));
-    expect(
-      await screen.findByText('1151.xlsx 선택됨 · 서버 업로드 전'),
-    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '미리보기' }));
+    expect(await screen.findByText('전체 4건')).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole('button', { name: '닫기' }));
+    await user.click(screen.getByRole('button', { name: '취소' }));
     await user.click(
       screen.getByRole('button', { name: '학생 명단 파일 선택' }),
     );
 
-    expect(
-      screen.queryByText('1151.xlsx 선택됨 · 서버 업로드 전'),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText('전체 4건')).not.toBeInTheDocument();
   });
 
   it('담당 분반이 없으면 파일 선택 버튼을 비활성화하고 이유를 표시한다', () => {

@@ -1,25 +1,26 @@
 import { Button, Dialog, Heading, HStack, Text } from '@aics/design-system';
-import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 
-import { ROUTES } from '~/app/constants/routes';
+import {
+  useAdminSectionEnrollmentsQuery,
+  useAdminSectionTeamsQuery,
+  useAdminTeamDetailsQueries,
+  useFinalizeAdminSectionTeamsMutation,
+  useWithdrawAdminSectionEnrollmentMutation,
+} from '~/features/admin-student-team/queries';
+import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminStudentTeamManagement.css';
-import StudentDetailDialog from '../../features/admin-student-team/components/StudentDetailDialog';
-import { useAdminStudentsQuery } from '../../features/admin-student-team/queries/useAdminStudentsQuery';
-import { useAuthStore } from '../../features/auth/authStore';
-import { useTeamsQuery } from '../../features/teams/queries/useTeamsQuery';
+import AdminStudentDetailDialog from '../../features/admin-student-team/components/AdminStudentDetailDialog';
 
 export default function AdminStudentTeamManagement() {
   const currentUser = useAuthStore(state => state.currentUser);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
     null,
   );
-  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(
-    null,
-  );
-  const [studentToWithdraw, setStudentToWithdraw] = useState<
-    (typeof students)[number] | null
+  const [isFinalizeDialogOpen, setIsFinalizeDialogOpen] = useState(false);
+  const [selectedStudentNumber, setSelectedStudentNumber] = useState<
+    string | null
   >(null);
   const sections = currentUser?.sections ?? [];
   const selectedSection =
@@ -27,33 +28,40 @@ export default function AdminStudentTeamManagement() {
     sections[0] ??
     null;
   const sectionId = selectedSection?.id ?? '';
-  const studentsQuery = useAdminStudentsQuery(sectionId);
-  const teamsQuery = useTeamsQuery(sectionId);
-
-  const students = studentsQuery.data ?? [];
-  const teams = teamsQuery.data ?? [];
-  const studentsById = useMemo(
-    () => new Map(students.map(student => [student.id, student])),
-    [students],
+  const enrollmentsQuery = useAdminSectionEnrollmentsQuery(sectionId);
+  const teamsQuery = useAdminSectionTeamsQuery(sectionId);
+  const teamDetailsQueries = useAdminTeamDetailsQueries(
+    teamsQuery.data?.contents.map(team => team.id) ?? [],
   );
-  const selectedStudent = selectedStudentId
-    ? (studentsById.get(selectedStudentId) ?? null)
-    : null;
-  const withdrawingStudentIsLeader = studentToWithdraw
-    ? teams.some(team =>
-        team.members.some(
-          member =>
-            member.id === studentToWithdraw.id && member.isLeader === true,
+  const withdrawMutation = useWithdrawAdminSectionEnrollmentMutation();
+  const finalizeMutation = useFinalizeAdminSectionTeamsMutation();
+
+  const students = (enrollmentsQuery.data?.contents ?? []).filter(
+    student => student.status === 'ACTIVE',
+  );
+  const teams = teamDetailsQueries.flatMap(query =>
+    query.data ? [query.data] : [],
+  );
+  const teamNameByStudentNumber = useMemo(
+    () =>
+      new Map(
+        teams.flatMap(team =>
+          team.members.map(member => [member.studentNumber, team.name]),
         ),
-      )
-    : false;
-
-  const isPending = studentsQuery.isPending || teamsQuery.isPending;
-  const error = studentsQuery.error ?? teamsQuery.error;
-
-  function openStudentDetail(studentId: string) {
-    setSelectedStudentId(studentId);
-  }
+      ),
+    [teams],
+  );
+  const [studentToWithdraw, setStudentToWithdraw] = useState<
+    (typeof students)[number] | null
+  >(null);
+  const isPending =
+    enrollmentsQuery.isPending ||
+    teamsQuery.isPending ||
+    teamDetailsQueries.some(query => query.isPending);
+  const error =
+    enrollmentsQuery.error ??
+    teamsQuery.error ??
+    teamDetailsQueries.find(query => query.error)?.error;
 
   return (
     <div className={styles.page}>
@@ -106,7 +114,6 @@ export default function AdminStudentTeamManagement() {
                     <tr>
                       <th scope='col'>이름</th>
                       <th scope='col'>학번</th>
-                      <th scope='col'>전공</th>
                       <th scope='col'>팀</th>
                       <th scope='col'>관리</th>
                     </tr>
@@ -116,8 +123,10 @@ export default function AdminStudentTeamManagement() {
                       <tr key={student.id}>
                         <td>{student.name}</td>
                         <td>{student.studentNumber}</td>
-                        <td>{student.major}</td>
-                        <td>{student.team?.name ?? '미배정'}</td>
+                        <td>
+                          {teamNameByStudentNumber.get(student.studentNumber) ??
+                            '미배정'}
+                        </td>
                         <td>
                           <Button
                             label='제외'
@@ -135,9 +144,16 @@ export default function AdminStudentTeamManagement() {
           </section>
 
           <section className={styles.section}>
-            <Heading level={2}>
-              {selectedSection?.code ?? '분반'} 팀 구성
-            </Heading>
+            <HStack justify='between'>
+              <Heading level={2}>
+                {selectedSection?.code ?? '분반'} 팀 구성
+              </Heading>
+              <Button
+                isDisabled={!sectionId}
+                label='팀 배정 확정'
+                onClick={() => setIsFinalizeDialogOpen(true)}
+              />
+            </HStack>
             {teams.length === 0 ? (
               <div className={styles.emptyTeamPanel}>
                 <p>등록된 팀이 없습니다.</p>
@@ -146,31 +162,22 @@ export default function AdminStudentTeamManagement() {
               <div className={styles.teamGrid}>
                 {teams.map(team => (
                   <article className={styles.teamCard} key={team.id}>
-                    <h3 className={styles.teamName}>
-                      <Link
-                        params={{ teamId: team.id }}
-                        to={ROUTES.ADMIN_TEAM_DETAIL}
-                      >
-                        {team.name}
-                      </Link>
-                    </h3>
+                    <h3 className={styles.teamName}>{team.name}</h3>
                     <ul className={styles.memberList}>
-                      {team.members.map(member => {
-                        const student = studentsById.get(member.id);
-
-                        return (
-                          <li className={styles.member} key={member.id}>
-                            <button
-                              className={styles.memberButton}
-                              onClick={() => openStudentDetail(member.id)}
-                              type='button'
-                            >
-                              {member.name}
-                            </button>
-                            <span>{student?.studentNumber ?? '-'}</span>
-                          </li>
-                        );
-                      })}
+                      {team.members.map(member => (
+                        <li className={styles.member} key={member.id}>
+                          <button
+                            className={styles.memberButton}
+                            onClick={() =>
+                              setSelectedStudentNumber(member.studentNumber)
+                            }
+                            type='button'
+                          >
+                            {member.name}
+                          </button>
+                          <span>{member.studentNumber}</span>
+                        </li>
+                      ))}
                     </ul>
                   </article>
                 ))}
@@ -179,11 +186,6 @@ export default function AdminStudentTeamManagement() {
           </section>
         </>
       )}
-      <StudentDetailDialog
-        isOpen={selectedStudent !== null}
-        onClose={() => setSelectedStudentId(null)}
-        student={selectedStudent}
-      />
       <Dialog
         aria-label='수강생 제외 확인'
         isOpen={studentToWithdraw !== null}
@@ -197,17 +199,14 @@ export default function AdminStudentTeamManagement() {
           <div className={styles.withdrawDialogContent}>
             <Heading level={2}>수강생을 분반에서 제외할까요?</Heading>
             <Text>
-              {withdrawingStudentIsLeader
-                ? `${studentToWithdraw.name} 학생은 현재 팀장입니다. 제외하면 팀장 권한이 해제되고 팀 상태가 모집 중으로 변경됩니다.`
-                : `${studentToWithdraw.name} 학생을 제외하면 수강 상태가 변경되고 팀 구성에서도 제외됩니다.`}
+              {studentToWithdraw.name} 학생을 제외하면 수강 상태가 WITHDRAWN으로
+              변경되고 팀 구성 및 팀 접근 권한에서도 제외됩니다.
             </Text>
-            {withdrawingStudentIsLeader ? (
-              <Text>
-                이후 팀원들이 기존 팀장 선출 흐름에서 새 팀장을 자진해서 정하게
-                됩니다.
+            {withdrawMutation.isError ? (
+              <Text role='alert'>
+                수강생을 제외하지 못했습니다. 잠시 후 다시 시도해 주세요.
               </Text>
             ) : null}
-            <Text>제외 처리는 백엔드 API 연동 후 사용할 수 있습니다.</Text>
             <HStack gap={2} justify='end'>
               <Button
                 label='취소'
@@ -215,13 +214,64 @@ export default function AdminStudentTeamManagement() {
                 variant='secondary'
               />
               <Button
-                isDisabled
-                label='제외 확인'
-                tooltip='백엔드 수강 상태 변경 API 연동 후 제공 예정입니다.'
+                isDisabled={withdrawMutation.isPending}
+                label={withdrawMutation.isPending ? '제외 중' : '제외 확인'}
+                onClick={() => {
+                  if (!studentToWithdraw) return;
+
+                  withdrawMutation.mutate(
+                    {
+                      sectionId,
+                      studentNumber: studentToWithdraw.studentNumber,
+                    },
+                    { onSuccess: () => setStudentToWithdraw(null) },
+                  );
+                }}
               />
             </HStack>
           </div>
         ) : null}
+      </Dialog>
+      <AdminStudentDetailDialog
+        onClose={() => setSelectedStudentNumber(null)}
+        studentNumber={selectedStudentNumber}
+      />
+      <Dialog
+        aria-label='팀 배정 확정 확인'
+        isOpen={isFinalizeDialogOpen}
+        onOpenChange={open => {
+          if (!open) setIsFinalizeDialogOpen(false);
+        }}
+        purpose='required'
+        width={440}
+      >
+        <div className={styles.withdrawDialogContent}>
+          <Heading level={2}>팀 배정을 확정할까요?</Heading>
+          <Text>
+            확정된 팀의 팀원은 이후 이동하거나 역할을 변경할 수 없습니다.
+          </Text>
+          {finalizeMutation.isError ? (
+            <Text role='alert'>
+              팀 배정을 확정하지 못했습니다. 다시 시도해 주세요.
+            </Text>
+          ) : null}
+          <HStack gap={2} justify='end'>
+            <Button
+              label='취소'
+              onClick={() => setIsFinalizeDialogOpen(false)}
+              variant='secondary'
+            />
+            <Button
+              isDisabled={finalizeMutation.isPending}
+              label={finalizeMutation.isPending ? '확정 중' : '확정하기'}
+              onClick={() => {
+                finalizeMutation.mutate(sectionId, {
+                  onSuccess: () => setIsFinalizeDialogOpen(false),
+                });
+              }}
+            />
+          </HStack>
+        </div>
       </Dialog>
     </div>
   );

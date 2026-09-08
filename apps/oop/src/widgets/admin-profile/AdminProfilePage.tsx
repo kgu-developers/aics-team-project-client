@@ -2,11 +2,8 @@ import {
   Button,
   Card,
   Dialog,
-  FileInput,
   Heading,
   HStack,
-  Selector,
-  SelectorOption,
   Text,
   TextArea,
   TextInput,
@@ -19,6 +16,8 @@ import {
   useAdminProfileQuery,
   useUpdateAdminProfileMutation,
 } from '~/features/admin-profile/queries';
+import EnrollmentImportDialog from '~/features/admin-student-team/components/EnrollmentImportDialog';
+import TeamImportDialog from '~/features/admin-student-team/components/TeamImportDialog';
 import { useAuthStore } from '~/features/auth/authStore';
 import { getPasswordChangeErrorMessage } from '~/features/auth/getPasswordChangeErrorMessage';
 import {
@@ -34,20 +33,17 @@ import { AdminPreSurveyResponses } from './AdminPreSurveyResponses';
 import * as styles from './AdminProfilePage.css';
 
 type UploadFileKind = 'studentRoster' | 'teamRoster';
-type Section = { id: string; code: string; name: string };
-
 const uploadCopy: Record<
   UploadFileKind,
   { description: string; label: string; title: string }
 > = {
   studentRoster: {
-    description:
-      '학번, 이름, 소속(전공), 학년, 학적 구분, 이메일 컬럼 포함 Excel (.xls/.xlsx)',
+    description: '학번 필수, 이름·이메일·전화번호·역할 선택 Excel (.xls/.xlsx)',
     label: '학생 명단 파일 선택',
     title: '학생 명단',
   },
   teamRoster: {
-    description: '팀명, 학번 컬럼 포함 Excel (.xls/.xlsx)',
+    description: '팀명·학번 필수, 이름·팀장·역할 등 선택 Excel (.xls/.xlsx)',
     label: '팀 구성 명단 파일 선택',
     title: '팀 구성 명단',
   },
@@ -79,89 +75,6 @@ function FileSelectionCard({
         />
       </VStack>
     </Card>
-  );
-}
-
-function UploadDialog({
-  file,
-  isOpen,
-  kind,
-  onClose,
-  onFileChange,
-  onSectionChange,
-  sections,
-  sectionId,
-}: {
-  file: File | null;
-  isOpen: boolean;
-  kind: UploadFileKind | null;
-  onClose: () => void;
-  onFileChange: (file: File | null) => void;
-  onSectionChange: (sectionId: string) => void;
-  sections: Section[];
-  sectionId: string;
-}) {
-  if (!kind) return null;
-  const copy = uploadCopy[kind];
-
-  return (
-    <Dialog
-      aria-label={`${copy.title} 업로드`}
-      isOpen={isOpen}
-      onOpenChange={nextIsOpen => {
-        if (!nextIsOpen) onClose();
-      }}
-      purpose='info'
-      width={520}
-    >
-      <VStack gap={3}>
-        <Heading level={2}>{copy.title} 업로드</Heading>
-        <Text color='secondary' type='supporting'>
-          업로드할 분반을 선택한 뒤 Excel 파일을 선택해 주세요. 파일은 서버
-          업로드 API가 준비되기 전까지 임시로만 선택됩니다.
-        </Text>
-        <Selector
-          label='분반'
-          onChange={onSectionChange}
-          options={sections.map(section => ({
-            label: `${section.code} (${section.name})`,
-            value: section.id,
-          }))}
-          renderOption={option => (
-            <SelectorOption label={option.label ?? option.value} />
-          )}
-          value={sectionId}
-          width='100%'
-        />
-        <FileInput
-          accept='.xls,.xlsx'
-          label={copy.label}
-          mode='input'
-          onChange={selected => {
-            const nextFile = Array.isArray(selected) ? selected[0] : selected;
-            onFileChange(nextFile ?? null);
-          }}
-          placeholder='Excel 파일 선택'
-          value={file}
-          width='100%'
-        />
-        {file ? (
-          <Text color='secondary' role='status' type='supporting'>
-            {file.name} 선택됨 · 서버 업로드 전
-          </Text>
-        ) : null}
-        <div className={styles.actions}>
-          {file ? (
-            <Button
-              label='선택한 파일 제거'
-              onClick={() => onFileChange(null)}
-              variant='secondary'
-            />
-          ) : null}
-          <Button label='닫기' onClick={onClose} variant='secondary' />
-        </div>
-      </VStack>
-    </Dialog>
   );
 }
 
@@ -309,7 +222,6 @@ export default function AdminProfilePage() {
   const [isEditingIntroduction, setIsEditingIntroduction] = useState(false);
   const [uploadKind, setUploadKind] = useState<UploadFileKind | null>(null);
   const [uploadSectionId, setUploadSectionId] = useState('');
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const sections = currentUser?.sections ?? [];
   const hasUploadSections = sections.length > 0;
   const profileQuery = useAdminProfileQuery();
@@ -322,21 +234,14 @@ export default function AdminProfilePage() {
   }, [profileQuery.data?.introduction, updateProfileMutation.isSuccess]);
   const hasSavedIntroduction = savedIntroduction.trim().length > 0;
   const showIntroductionEditor = isEditingIntroduction || !hasSavedIntroduction;
-  const uploadSections = sections.map(section => ({
-    code: section.code,
-    id: section.id,
-    name: section.name,
-  }));
   function openUploadDialog(kind: UploadFileKind) {
     if (!hasUploadSections) return;
 
     setUploadKind(kind);
-    setUploadSectionId(uploadSections[0]?.id ?? '');
-    setUploadFile(null);
+    setUploadSectionId(sections[0]?.id ?? '');
   }
 
   function closeUploadDialog() {
-    setUploadFile(null);
     setUploadKind(null);
     setUploadSectionId('');
   }
@@ -524,20 +429,21 @@ export default function AdminProfilePage() {
         </VStack>
       </Card>
 
-      <AdminPreSurveyResponses sections={uploadSections} />
+      <AdminPreSurveyResponses sections={sections} />
 
-      <UploadDialog
-        file={uploadFile}
-        isOpen={uploadKind !== null && uploadSectionId !== ''}
-        kind={uploadKind}
+      <EnrollmentImportDialog
+        isOpen={uploadKind === 'studentRoster' && uploadSectionId !== ''}
         onClose={closeUploadDialog}
-        onFileChange={setUploadFile}
-        onSectionChange={sectionId => {
-          setUploadSectionId(sectionId);
-          setUploadFile(null);
-        }}
-        sections={uploadSections}
+        onSectionChange={setUploadSectionId}
         sectionId={uploadSectionId}
+        sections={sections}
+      />
+      <TeamImportDialog
+        isOpen={uploadKind === 'teamRoster' && uploadSectionId !== ''}
+        onClose={closeUploadDialog}
+        onSectionChange={setUploadSectionId}
+        sectionId={uploadSectionId}
+        sections={sections}
       />
     </div>
   );
