@@ -180,6 +180,7 @@ export {
 export {
   completeProposalBlock,
   fetchCurrentProposal,
+  InvalidProposalResponseError,
   submitProposal,
   updateProposalBlock,
 } from './proposal';
@@ -251,3 +252,5 @@ export {
   submitTopicCandidateVote,
   removeTopicCandidateVote,
 } from './topic';
+
+export { updateTopicFinalization } from './topic';

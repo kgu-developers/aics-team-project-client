@@ -18,6 +18,7 @@ import { cx } from '~/shared/lib/cx';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import {
+  isDocumentEditorDocument,
   isDocumentVersionConflict,
   type DocumentEditorField,
   type DocumentEditorPageProps,
@@ -77,7 +78,10 @@ export default function DocumentEditorPage<
   const document = EDITOR_DOCS[docId];
   const validSection = document.sections.find(item => item.slug === section);
 
-  const data = documentQuery.data ?? null;
+  // A stale or incompatible API payload must not enter autosave or lock flows.
+  const data = isDocumentEditorDocument(documentQuery.data)
+    ? documentQuery.data
+    : null;
   const block = useMemo(
     () => data?.blocks.find(item => item.key === section) ?? null,
     [data, section],
@@ -111,7 +115,7 @@ export default function DocumentEditorPage<
   const refetchDocument = documentQuery.refetch;
   const refreshCurrentDocument = useCallback(async () => {
     const refreshed = await refetchDocument();
-    return refreshed.data ?? null;
+    return isDocumentEditorDocument(refreshed.data) ? refreshed.data : null;
   }, [refetchDocument]);
   const editor = useDocumentEditorAutosave({
     block,

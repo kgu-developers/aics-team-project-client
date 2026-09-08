@@ -127,6 +127,7 @@ export const ENDPOINTS = {
       `/peer-evaluation-forms/${formId}/responses`,
   },
   TOPIC: {
+    FINALIZE: (teamId: string) => `/api/v1/teams/${teamId}/topic-finalize`,
     CANDIDATES: (teamId: string) => `/api/v1/teams/${teamId}/topic-candidates`,
     CANDIDATE_VOTE: (candidateId: string) =>
       `/api/v1/topic-candidates/${candidateId}/vote`,

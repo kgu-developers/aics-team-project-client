@@ -33,6 +33,9 @@ import { studentHomeLiveHandlers } from '~/mocks/handlers/studentHomeLive';
 const list = studentMilestoneFixtures(2).slice(0, 2);
 const requests: string[] = [];
 const server = setupServer(
+  http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+    HttpResponse.json({ code: 'PROJECT_NOT_FOUND' }, { status: 404 }),
+  ),
   ...studentHomeLiveHandlers,
   http.get(`${API_BASE_URL}/api/v1/teams/7/topic-candidates`, () =>
     HttpResponse.json({ contents: [] }),
@@ -58,6 +61,7 @@ const server = setupServer(
   ),
 );
 let queryClient: QueryClient;
+let navigationHistory = createMemoryHistory({ initialEntries: ['/student'] });
 beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' });
   server.events.on('request:start', ({ request }) =>
@@ -66,6 +70,7 @@ beforeAll(() => {
 });
 beforeEach(() => {
   sessionStorage.clear();
+  navigationHistory = createMemoryHistory({ initialEntries: ['/student'] });
   useAuthStore.getState().setCurrentUser(liveHomeUser);
   useAuthStore.getState().markAuthenticated('STUDENT');
   queryClient = new QueryClient({
@@ -82,7 +87,7 @@ afterAll(() => server.close());
 function Wrapper({ children }: PropsWithChildren) {
   const router = createRouter({
     routeTree: createRootRoute(),
-    history: createMemoryHistory({ initialEntries: ['/student'] }),
+    history: navigationHistory,
   });
   return (
     <AstryxThemeProvider>
@@ -96,6 +101,96 @@ function Wrapper({ children }: PropsWithChildren) {
 }
 
 describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
+  it('프로젝트가 존재하면 새 세션의 홈에서도 제안서 작성 단계로 복원한다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+        HttpResponse.json({
+          id: 21,
+          teamId: 7,
+          title: '서버 프로젝트',
+          goal: '팀 목표',
+        }),
+      ),
+    );
+    const first = render(<StudentHomePage />, { wrapper: Wrapper });
+    expect(
+      await screen.findByRole('button', { name: '작성하기' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('제안서 작성')).toBeInTheDocument();
+    expect(screen.getByText('서버 프로젝트')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '후보 추가' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('주제 선정')).not.toBeInTheDocument();
+    first.unmount();
+    queryClient.clear();
+    queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(<StudentHomePage />, { wrapper: Wrapper });
+    expect(
+      await screen.findByRole('button', { name: '작성하기' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('주제 선정')).not.toBeInTheDocument();
+  });
+  it('확정 성공으로 홈의 후보 영역이 사라져도 작성 화면으로 이동한다', async () => {
+    let finalized = false;
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+        finalized
+          ? HttpResponse.json({ id: 21, teamId: 7, title: '팀 프로젝트' })
+          : HttpResponse.json({ code: 'PROJECT_NOT_FOUND' }, { status: 404 }),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.TOPIC.CANDIDATES('7')}`, () =>
+        HttpResponse.json({
+          contents: [
+            {
+              id: 1,
+              title: '팀 프로젝트',
+              description: '설명',
+              proposerUserId: '202600002',
+              voteCount: 2,
+              votedByMe: true,
+            },
+          ],
+        }),
+      ),
+      http.patch(`${API_BASE_URL}${ENDPOINTS.TOPIC.FINALIZE('7')}`, () => {
+        finalized = true;
+        return HttpResponse.json({
+          projectId: 21,
+          candidateId: 1,
+          title: '팀 프로젝트',
+        });
+      }),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+    const user = userEvent.setup();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '주제 확정' })).toBeEnabled(),
+    );
+    await user.click(screen.getByRole('button', { name: '주제 확정' }));
+    await user.click(
+      within(screen.getByRole('dialog', { name: '팀 주제 확정' })).getByRole(
+        'radio',
+        { name: '팀 프로젝트' },
+      ),
+    );
+    await user.type(screen.getByLabelText('프로젝트 목표'), '공동 목표');
+    await user.click(screen.getByRole('button', { name: '이 주제로 확정' }));
+    await waitFor(() =>
+      expect(navigationHistory.location.pathname).toBe(
+        '/student/editor/proposal/team-info',
+      ),
+    );
+    expect(
+      await screen.findByRole('button', { name: '작성하기' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '후보 추가' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('주제 선정 일정이 열리면 후보를 등록하고 실제 팀 목록을 다시 조회한다', async () => {
     const candidate = {
       id: 81,

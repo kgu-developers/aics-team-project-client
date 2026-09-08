@@ -100,3 +100,37 @@ export type DocumentEditorPageProps<D extends DocumentEditorDocument> = {
     isLocked: boolean,
   ) => React.ReactNode;
 };
+
+/** 캐시 응답도 렌더링·잠금·저장에 필요한 공통 문서 계약을 만족해야 한다. */
+export function isDocumentEditorDocument(
+  value: unknown,
+): value is DocumentEditorDocument {
+  const isRecord = (item: unknown): item is Record<string, unknown> =>
+    typeof item === 'object' && item !== null;
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    Number.isSafeInteger(value.version) &&
+    Array.isArray(value.blocks) &&
+    value.blocks.every(
+      block =>
+        isRecord(block) &&
+        typeof block.key === 'string' &&
+        typeof block.title === 'string' &&
+        typeof block.description === 'string' &&
+        typeof block.lastSavedAt === 'string' &&
+        (block.lock === null ||
+          (isRecord(block.lock) && typeof block.lock.ownerName === 'string')) &&
+        Array.isArray(block.fields) &&
+        block.fields.every(
+          field =>
+            isRecord(field) &&
+            typeof field.key === 'string' &&
+            typeof field.label === 'string' &&
+            typeof field.value === 'string' &&
+            (field.multiline === undefined ||
+              typeof field.multiline === 'boolean'),
+        ),
+    )
+  );
+}

@@ -56,6 +56,7 @@ describe('OOP development server config', () => {
       '/announcements',
       '/meeting-actions',
       '/meeting-records',
+      '/milestones',
       '/sections',
       '/teams',
     ]);
@@ -66,6 +67,7 @@ describe('OOP development server config', () => {
           '/announcements',
           '/meeting-actions',
           '/meeting-records',
+          '/milestones',
           '/sections',
           '/teams',
         ].map(prefix => [

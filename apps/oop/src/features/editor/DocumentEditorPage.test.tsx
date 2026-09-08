@@ -105,6 +105,46 @@ function editor(
 }
 
 describe('DocumentEditorPage 자동 저장', () => {
+  it.each([
+    { id: 'invalid', version: 1 },
+    { ...createDocument(), id: undefined },
+    { ...createDocument(), version: 1.5 },
+    { ...createDocument(), blocks: [null] },
+    { ...createDocument(), blocks: [{ key: 'team-info' }] },
+    ...['key', 'title', 'description', 'fields', 'lock', 'lastSavedAt'].map(
+      key => ({
+        ...createDocument(),
+        blocks: [{ ...createDocument().blocks[0], [key]: undefined }],
+      }),
+    ),
+    {
+      ...createDocument(),
+      blocks: [{ ...createDocument().blocks[0], fields: [null] }],
+    },
+    {
+      ...createDocument(),
+      blocks: [{ ...createDocument().blocks[0], lock: {} }],
+    },
+  ])('잘못된 캐시는 편집과 잠금을 시작하지 않는다: %o', async payload => {
+    const save = vi.fn();
+    renderWithRouter(
+      <DocumentEditorPage
+        copy={copy}
+        docId='proposal'
+        documentQuery={query(payload as TestDocument)}
+        editLockTargetType='PROJECT_BLOCK'
+        metadataTag='TEST'
+        saveBlock={save}
+        saveState={{ error: null, saving: false }}
+        section='team-info'
+      />,
+    );
+    expect(await screen.findByText('문서를 열 수 없어요.')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(save).not.toHaveBeenCalled();
+    expect(lockApi.acquireEditLock).not.toHaveBeenCalled();
+  });
+
   beforeEach(() => {
     useAuthStore.getState().setCurrentUser(demoStudent);
     lockApi.acquireEditLock.mockImplementation(

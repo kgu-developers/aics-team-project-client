@@ -9,6 +9,7 @@ import {
 import { useTeamKickoffQuery } from '~/features/team-assignment/queries';
 
 import {
+  hasAllTopicVotes,
   isUncertainTopicWrite,
   mapLiveTopicCandidates,
   type TopicParticipationEligibility,
@@ -80,7 +81,18 @@ function useTopicApiState({
     }
   }
   return {
+    scope: { sectionId, teamId, studentNumber, eligibility },
     ready,
+    offerFinalization:
+      candidates.isSuccess &&
+      !candidates.isError &&
+      kickoff.isSuccess &&
+      !kickoff.isError &&
+      String(kickoff.data.id) === teamId &&
+      kickoff.data.members.some(
+        member => member.studentNumber === studentNumber && member.isLeader,
+      ) &&
+      hasAllTopicVotes(items, kickoff.data.members.length),
     canParticipate,
     busy,
     reason,

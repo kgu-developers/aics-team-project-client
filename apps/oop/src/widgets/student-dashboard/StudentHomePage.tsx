@@ -1,6 +1,8 @@
 import { Button, EmptyState } from '@aics/design-system';
 import { isAxiosError } from 'axios';
 
+import { editorSectionTo } from '~/app/constants/editorSections';
+
 import { TopicApiProvider } from '~/features/project-topic/TopicApiContext';
 import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog';
 import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
@@ -129,6 +131,28 @@ export default function StudentHomePage() {
     else if (submission?.isError) summary.statusLabel = '조회 실패';
     else if (submission?.isPending) summary.statusLabel = '조회 중';
     if (milestone.type === 'PROPOSAL') {
+      const project =
+        home.project.state.status === 'ready' ? home.project.data : undefined;
+      if (project) {
+        // An existing project can be continued regardless of how it was created.
+        // This does not assert a selected candidate ID or invent block progress.
+        summary.currentStepLabel = '제안서 작성';
+        summary.interaction = 'static';
+        summary.isDetailAvailable = false;
+        summary.body = undefined;
+        summary.rows = [
+          {
+            id: 'proposal-writing',
+            label: '제안서 작성',
+            value: project.title?.trim() || '프로젝트 내용 확인',
+            tone: 'primary',
+            actionLabel: '작성하기',
+            actionTo: editorSectionTo('proposal', 'team-info'),
+          },
+        ];
+        return summary;
+      }
+
       summary.interaction = 'collapsible';
       summary.isDetailAvailable = true;
       summary.currentStepLabel = '주제 선정';

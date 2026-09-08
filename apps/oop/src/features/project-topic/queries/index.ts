@@ -5,3 +5,5 @@ export { useSubmitTopicVoteMutation } from './useSubmitTopicVoteMutation';
 export { useTopicBoardQuery } from './useTopicBoardQuery';
 export { useLiveTopicCandidatesQuery } from './useLiveTopicCandidatesQuery';
 export { useLiveTopicParticipationMutation } from './useLiveTopicParticipationMutation';
+
+export { useUpdateTopicFinalizationMutation } from './useUpdateTopicFinalizationMutation';
