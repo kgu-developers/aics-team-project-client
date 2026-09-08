@@ -73,6 +73,7 @@ export default function AdminMeetingsPage() {
         ...(selectedSectionId === allSectionsValue
           ? {}
           : { sectionId: selectedSectionId }),
+        ...(search.teamId ? { teamId: search.teamId } : {}),
         page,
       },
       to: ROUTES.ADMIN_MEETINGS,

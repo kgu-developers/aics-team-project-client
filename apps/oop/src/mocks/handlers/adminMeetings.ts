@@ -14,6 +14,20 @@ function getAccessibleSectionIds(request: Request) {
   return account.user.sections.map(section => section.id);
 }
 
+function getAdminMeetingRecordId(
+  record: (typeof adminMeetingRecordsFixture)[number],
+) {
+  const match = /^admin-meeting-(\d+)$/.exec(record.id);
+
+  if (!match) {
+    throw new Error(
+      `관리자 회의록 fixture ID 형식이 올바르지 않습니다: ${record.id}`,
+    );
+  }
+
+  return Number(match[1]);
+}
+
 export const adminMeetingHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`,
@@ -82,10 +96,10 @@ export const adminMeetingHandlers = [
       const start = page * size;
 
       return HttpResponse.json({
-        contents: records.slice(start, start + size).map((record, index) => ({
+        contents: records.slice(start, start + size).map(record => ({
           authorId: record.createdBy.userId,
           content: getRichTextPlainText(record.content),
-          id: start + index + 1,
+          id: getAdminMeetingRecordId(record),
           location: record.location,
           meetingAt: record.heldAt.slice(0, 16).replace('T', ' '),
           participantCount: record.participants.length,
@@ -109,8 +123,12 @@ export const adminMeetingHandlers = [
     `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORD_DETAIL(':meetingId')}`,
     ({ params, request }) => {
       const accessibleSectionIds = getAccessibleSectionIds(request);
-      const recordIndex = Number(params.meetingId) - 1;
-      const record = adminMeetingRecordsFixture[recordIndex];
+      const meetingId = Number(params.meetingId);
+      const record = Number.isSafeInteger(meetingId)
+        ? adminMeetingRecordsFixture.find(
+            item => getAdminMeetingRecordId(item) === meetingId,
+          )
+        : undefined;
 
       if (!accessibleSectionIds) {
         return HttpResponse.json(
@@ -130,7 +148,7 @@ export const adminMeetingHandlers = [
         authorId: record.createdBy.userId,
         content: getRichTextPlainText(record.content),
         createdAt: record.createdAt.slice(0, 16).replace('T', ' '),
-        id: recordIndex + 1,
+        id: getAdminMeetingRecordId(record),
         location: record.location,
         meetingAt: record.heldAt.slice(0, 16).replace('T', ' '),
         participantIds: record.participants.map(

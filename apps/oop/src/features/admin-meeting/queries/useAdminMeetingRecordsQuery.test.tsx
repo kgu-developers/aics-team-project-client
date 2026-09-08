@@ -150,7 +150,7 @@ describe('useAdminMeetingRecordListQuery', () => {
     ]);
   });
 
-  it('분반 필터와 페이지네이션을 API Client 요청으로 전달한다', async () => {
+  it('분반·팀 필터와 페이지네이션을 API Client 요청으로 전달한다', async () => {
     const receivedUrl = vi.fn();
 
     server.use(
@@ -167,6 +167,7 @@ describe('useAdminMeetingRecordListQuery', () => {
       () =>
         useAdminMeetingRecordListQuery(['oop-01'], {
           sectionId: 'oop-01',
+          teamId: 2,
           page: 2,
           size: 50,
         }),
@@ -177,6 +178,9 @@ describe('useAdminMeetingRecordListQuery', () => {
 
     expect(receivedUrl).toHaveBeenCalledWith(
       expect.stringContaining('sectionId=oop-01'),
+    );
+    expect(receivedUrl).toHaveBeenCalledWith(
+      expect.stringContaining('teamId=2'),
     );
     expect(receivedUrl).toHaveBeenCalledWith(expect.stringContaining('page=2'));
     expect(receivedUrl).toHaveBeenCalledWith(
