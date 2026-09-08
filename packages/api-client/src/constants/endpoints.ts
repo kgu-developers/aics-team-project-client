@@ -20,6 +20,24 @@ export const ENDPOINTS = {
   ADMIN: {
     OOP_COURSES: '/api/v1/admin/oop/courses',
     OOP_SECTIONS: '/api/v1/admin/oop/sections',
+    SECTION_ENROLLMENTS: (sectionId: string | number) =>
+      `/api/v1/admin/oop/sections/${sectionId}/enrollments`,
+    SECTION_ENROLLMENT: (sectionId: string | number, studentNumber: string) =>
+      `/api/v1/admin/oop/sections/${sectionId}/enrollments/${studentNumber}`,
+    SECTION_TEAMS: (sectionId: string | number) =>
+      `/api/v1/admin/oop/sections/${sectionId}/teams`,
+    SECTION_TEAM_IMPORT_PREVIEW: (sectionId: string | number) =>
+      `/api/v1/admin/oop/sections/${sectionId}/team-imports/preview`,
+    SECTION_TEAMS_FINALIZE: (sectionId: string | number) =>
+      `/api/v1/admin/oop/sections/${sectionId}/teams/finalize`,
+    TEAM: (teamId: string | number) => `/api/v1/admin/oop/teams/${teamId}`,
+    TEAM_IMPORT_APPLY: (importId: string | number) =>
+      `/api/v1/admin/oop/team-imports/${importId}/apply`,
+    USER: (studentNumber: string) => `/api/v1/admin/oop/users/${studentNumber}`,
+    SECTION_ENROLLMENT_IMPORT_PREVIEW: (sectionId: string | number) =>
+      `/api/v1/admin/oop/sections/${sectionId}/enrollment-imports/preview`,
+    ENROLLMENT_IMPORT_APPLY: (importId: string | number) =>
+      `/api/v1/admin/oop/enrollment-imports/${importId}/apply`,
     OOP_PEER_EVALUATION_FORM: (sectionId: number) =>
       `/api/v1/admin/oop/sections/${sectionId}/peer-evaluation-forms`,
     OOP_PRE_SURVEY_RESPONSES: (sectionId: string) =>

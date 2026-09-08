@@ -5,8 +5,8 @@ import { useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { useAdminMeetingRecordDetailQuery } from '~/features/admin-meeting/queries';
-import StudentDetailDialog from '~/features/admin-student-team/components/StudentDetailDialog';
-import { useAdminStudentsQuery } from '~/features/admin-student-team/queries/useAdminStudentsQuery';
+import AdminStudentDetailDialog from '~/features/admin-student-team/components/AdminStudentDetailDialog';
+import { useAdminSectionEnrollmentsQuery } from '~/features/admin-student-team/queries';
 
 import * as styles from './AdminMeetingDetailPage.css';
 
@@ -16,7 +16,7 @@ export default function AdminMeetingDetailPage() {
   >(null);
   const { meetingId } = useParams({ from: '/admin/meetings/$meetingId' });
   const query = useAdminMeetingRecordDetailQuery(meetingId);
-  const studentsQuery = useAdminStudentsQuery(
+  const enrollmentsQuery = useAdminSectionEnrollmentsQuery(
     query.data ? String(query.data.sectionId) : undefined,
   );
 
@@ -43,18 +43,12 @@ export default function AdminMeetingDetailPage() {
 
   const record = query.data;
   const participants = record.participantIds.map(participantId => {
-    const student = studentsQuery.data?.find(
+    const student = enrollmentsQuery.data?.contents.find(
       candidate => candidate.studentNumber === participantId,
     );
 
     return { id: participantId, name: student?.name ?? participantId };
   });
-  const selectedStudent = selectedParticipantId
-    ? (studentsQuery.data?.find(
-        student => student.studentNumber === selectedParticipantId,
-      ) ?? null)
-    : null;
-
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
@@ -104,10 +98,9 @@ export default function AdminMeetingDetailPage() {
           최초 작성 {record.authorId} · 최종 수정 {record.updatedAt}
         </Text>
       </Card>
-      <StudentDetailDialog
-        isOpen={selectedStudent !== null}
+      <AdminStudentDetailDialog
+        studentNumber={selectedParticipantId}
         onClose={() => setSelectedParticipantId(null)}
-        student={selectedStudent}
       />
     </div>
   );
