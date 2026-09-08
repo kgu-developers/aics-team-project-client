@@ -16,10 +16,6 @@ export const filters = style({
   gap: 8,
 });
 
-export const filterDescription = style({
-  color: tokens.color.text.secondary,
-  marginTop: -16,
-});
 const filterBase = {
   background: tokens.color.background.muted,
   border: 0,
@@ -45,16 +41,6 @@ export const table = style({
   borderCollapse: 'collapse',
   minWidth: 660,
   width: '100%',
-});
-
-export const titleLink = style({
-  color: tokens.color.text.primary,
-  textDecoration: 'none',
-  ':hover': {
-    color: tokens.color.text.accent,
-    textDecoration: 'underline',
-    textUnderlineOffset: 3,
-  },
 });
 
 globalStyle(table + ' th', {

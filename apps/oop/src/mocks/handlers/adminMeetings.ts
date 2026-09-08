@@ -1,6 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { getRichTextPlainText } from '../../features/admin-meeting/model';
 import { getMockAuthenticatedAccount } from '../authSession';
 import { adminMeetingRecordsFixture } from '../data/adminMeetings';
 
@@ -45,6 +46,55 @@ export const adminMeetingHandlers = [
             teamLabel: record.teamLabel,
             title: record.title,
           })),
+      });
+    },
+  ),
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS_LIST}`,
+    ({ request }) => {
+      const accessibleSectionIds = getAccessibleSectionIds(request);
+
+      if (!accessibleSectionIds) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+
+      const searchParams = new URL(request.url).searchParams;
+      const sectionId = searchParams.get('sectionId');
+      const page = Math.max(Number(searchParams.get('page') ?? 0), 0);
+      const size = Math.min(
+        Math.max(Number(searchParams.get('size') ?? 20), 1),
+        100,
+      );
+      const records = adminMeetingRecordsFixture
+        .filter(record => accessibleSectionIds.includes(record.sectionId))
+        .filter(record => !sectionId || record.sectionId === sectionId)
+        .sort((left, right) => right.heldAt.localeCompare(left.heldAt));
+      const start = page * size;
+
+      return HttpResponse.json({
+        contents: records.slice(start, start + size).map((record, index) => ({
+          authorId: record.createdBy.userId,
+          content: getRichTextPlainText(record.content),
+          id: start + index + 1,
+          location: record.location,
+          meetingAt: record.heldAt.slice(0, 16).replace('T', ' '),
+          participantCount: record.participants.length,
+          phase: 'MID_CHECK',
+          sectionId: 1,
+          sectionName: record.sectionLabel,
+          teamId: record.teamId === 'team-1151-1' ? 11 : 12,
+          teamName: record.teamLabel,
+        })),
+        pageable: {
+          isEnd: start + size >= records.length,
+          page,
+          size,
+          totalElements: records.length,
+          totalPages: Math.ceil(records.length / size),
+        },
       });
     },
   ),

@@ -3,15 +3,13 @@ import { Link, useNavigate } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { useAdminMeetingRecordsQuery } from '~/features/admin-meeting/queries';
+import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import type {
   AdminMilestoneScheduleMilestoneView,
   AdminMilestoneScheduleSectionView,
 } from '~/features/admin-milestone-review/model';
 import { useAdminMilestoneScheduleQuery } from '~/features/admin-milestone-review/queries';
 import { useAdminNoticesQuery } from '~/features/admin-notices/queries';
-import * as readStateStyles from '~/features/admin-read-state/adminReadState.css';
-import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminHomeDashboard.css';
@@ -27,11 +25,15 @@ type DashboardListItem = {
 };
 
 function formatMeetingCreatedAt(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', {
-    month: '2-digit',
-    day: '2-digit',
-    year: 'numeric',
-  }).format(new Date(value));
+  return value.replace('T', ' ').slice(0, 10);
+}
+
+function getMeetingContentPreview(content: string) {
+  const normalized = content.replace(/\s+/g, ' ').trim();
+
+  return normalized.length > 45
+    ? `${normalized.slice(0, 45)}…`
+    : normalized || '작성된 회의 내용이 없습니다.';
 }
 
 function getMilestoneColumns(
@@ -54,12 +56,10 @@ function List({
   isMeetingList = false,
   isNoticeList = false,
   items,
-  meetingReadState,
 }: {
   isMeetingList?: boolean;
   isNoticeList?: boolean;
   items: readonly DashboardListItem[];
-  meetingReadState?: ReturnType<typeof useAdminReadState>;
 }) {
   return (
     <ul className={styles.list}>
@@ -74,17 +74,6 @@ function List({
         >
           <span className={styles.itemMeta}>
             <span className={styles.label}>{item.section}</span>
-            {isMeetingList &&
-            item.meetingId &&
-            item.sectionId &&
-            meetingReadState &&
-            !meetingReadState.isRead(item.sectionId, item.meetingId) ? (
-              <span
-                aria-label='읽지 않음'
-                className={readStateStyles.unreadDot}
-                role='img'
-              />
-            ) : null}
           </span>
           {isNoticeList && item.id ? (
             <Link
@@ -95,12 +84,7 @@ function List({
               {item.title}
             </Link>
           ) : isMeetingList && item.meetingId && item.sectionId ? (
-            <Link
-              className={styles.itemTitle}
-              params={{ meetingId: item.meetingId }}
-              search={{ sectionId: item.sectionId }}
-              to={ROUTES.ADMIN_MEETING_DETAIL}
-            >
+            <Link className={styles.itemTitle} to={ROUTES.ADMIN_MEETINGS}>
               {item.title}
             </Link>
           ) : (
@@ -120,7 +104,6 @@ function Panel({
   items,
   action,
   isNoticePanel = false,
-  meetingReadState,
 }: {
   emptyMessage?: string;
   isMeetingPanel?: boolean;
@@ -128,7 +111,6 @@ function Panel({
   items: readonly DashboardListItem[];
   action?: boolean;
   isNoticePanel?: boolean;
-  meetingReadState?: ReturnType<typeof useAdminReadState>;
 }) {
   const navigate = useNavigate();
 
@@ -156,7 +138,6 @@ function Panel({
             isMeetingList={isMeetingPanel}
             isNoticeList={isNoticePanel}
             items={items}
-            meetingReadState={meetingReadState}
           />
         ) : emptyMessage ? (
           <p className={styles.panelState}>{emptyMessage}</p>
@@ -182,27 +163,25 @@ function Panel({
 export default function AdminHomeDashboard() {
   const navigate = useNavigate();
   const currentUser = useAuthStore(state => state.currentUser);
-  const meetingReadState = useAdminReadState('meetings', {
-    adminId: currentUser?.id,
-  });
   const accessibleSectionIds =
     currentUser?.sections.map(section => section.id) ?? [];
   const milestoneScheduleQuery =
     useAdminMilestoneScheduleQuery(accessibleSectionIds);
-  const meetingRecordsQuery = useAdminMeetingRecordsQuery(accessibleSectionIds);
+  const meetingRecordsQuery =
+    useAdminMeetingRecordListQuery(accessibleSectionIds);
   const noticesQuery = useAdminNoticesQuery();
   const scheduleSections = milestoneScheduleQuery.data?.sections ?? [];
   const milestoneColumns = getMilestoneColumns(scheduleSections);
   const meetingItems: DashboardListItem[] = (
-    meetingRecordsQuery.data?.records ?? []
+    meetingRecordsQuery.data?.contents ?? []
   )
     .slice(0, 4)
     .map(record => ({
-      date: formatMeetingCreatedAt(record.createdAt),
-      meetingId: record.id,
-      section: `${record.sectionLabel} · ${record.teamLabel}`,
-      sectionId: record.sectionId,
-      title: record.title,
+      date: formatMeetingCreatedAt(record.meetingAt),
+      meetingId: String(record.id),
+      section: `${record.sectionName} · ${record.teamName}`,
+      sectionId: String(record.sectionId),
+      title: getMeetingContentPreview(record.content),
     }));
   const meetingEmptyMessage =
     accessibleSectionIds.length === 0
@@ -323,7 +302,6 @@ export default function AdminHomeDashboard() {
         <Panel
           emptyMessage={meetingEmptyMessage}
           isMeetingPanel
-          meetingReadState={meetingReadState}
           items={meetingItems}
           title='회의록'
         />

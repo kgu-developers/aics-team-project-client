@@ -22,6 +22,7 @@ export const ENDPOINTS = {
     OOP_PRE_SURVEY_RESPONSES_DOWNLOAD: (sectionId: string) =>
       `/api/v1/admin/oop/sections/${sectionId}/pre-survey-responses/download`,
     MEETING_RECORDS: '/admin/meeting-records',
+    MEETING_RECORDS_LIST: '/api/v1/admin/oop/meeting-records',
     MEETING_RECORD: (meetingId: string) =>
       `/admin/meeting-records/${meetingId}`,
     MILESTONE_SCHEDULE: '/admin/milestone-schedule',
