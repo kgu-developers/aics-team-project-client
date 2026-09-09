@@ -13,7 +13,7 @@ function getDownloadFileName(
   const encodedMatch = contentDisposition?.match(/filename\*=UTF-8''([^;]+)/i);
   if (encodedMatch?.[1]) return decodeURIComponent(encodedMatch[1]);
 
-  const plainMatch = contentDisposition?.match(/filename=\"?([^\";]+)\"?/i);
+  const plainMatch = contentDisposition?.match(/filename="?([^";]+)"?/i);
   return plainMatch?.[1] ?? `submission-${submissionId}.zip`;
 }
 

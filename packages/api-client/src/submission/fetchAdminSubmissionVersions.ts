@@ -1,6 +1,6 @@
 import { apiClient } from '../client';
-import { ENDPOINTS } from '../constants/endpoints';
 import type { AdminSubmissionSubmitterDto } from './fetchAdminSubmissionVersion';
+import { ENDPOINTS } from '../constants/endpoints';
 
 export type AdminSubmissionVersionSummaryDto = {
   changeNote?: string;
