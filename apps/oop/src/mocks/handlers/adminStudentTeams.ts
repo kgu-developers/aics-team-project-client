@@ -12,8 +12,21 @@ import { demoAdmin } from '../data/users';
 const demoSectionId = 'oop-2026-2-01';
 const adminSectionId = 1;
 const withdrawnStudentNumbers = new Set<string>();
-const teamImportPreviews = new Map<number, { sectionId: string }>();
-const enrollmentImportPreviews = new Map<number, { sectionId: string }>();
+const teamImportPreviews = new Map<
+  number,
+  { fileName: string; sectionId: string }
+>();
+const enrollmentImportPreviews = new Map<
+  number,
+  { fileName: string; sectionId: string }
+>();
+const rosterImportStatusBySection = new Map<
+  string,
+  {
+    studentRoster: { appliedAt: string; fileName: string } | null;
+    teamRoster: { appliedAt: string; fileName: string } | null;
+  }
+>();
 let nextTeamImportId = 1;
 let nextEnrollmentImportId = 1;
 
@@ -171,11 +184,43 @@ export function resetAdminStudentTeamMockState() {
   withdrawnStudentNumbers.clear();
   teamImportPreviews.clear();
   enrollmentImportPreviews.clear();
+  rosterImportStatusBySection.clear();
   nextTeamImportId = 1;
   nextEnrollmentImportId = 1;
 }
 
 export const adminStudentTeamHandlers = [
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ROSTER_IMPORT_STATUS(
+      ':sectionId',
+    )}`,
+    ({ params, request }) => {
+      const account = getMockAuthenticatedAccount(request);
+      const sectionId = params.sectionId;
+
+      if (account?.user.id !== demoAdmin.id) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+
+      if (typeof sectionId !== 'string') {
+        return HttpResponse.json(
+          { code: 'SECTION_ID_REQUIRED', message: '분반 정보가 필요합니다.' },
+          { status: 400 },
+        );
+      }
+
+      return HttpResponse.json(
+        rosterImportStatusBySection.get(sectionId) ?? {
+          studentRoster: null,
+          teamRoster: null,
+        },
+      );
+    },
+  ),
+
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ENROLLMENTS(':sectionId')}`,
     ({ params, request }) => {
@@ -391,7 +436,7 @@ export const adminStudentTeamHandlers = [
 
       const importId = nextTeamImportId++;
 
-      teamImportPreviews.set(importId, { sectionId });
+      teamImportPreviews.set(importId, { fileName: file.name, sectionId });
 
       return HttpResponse.json({
         importId,
@@ -456,6 +501,16 @@ export const adminStudentTeamHandlers = [
       }
 
       teamImportPreviews.delete(importId);
+      rosterImportStatusBySection.set(preview.sectionId, {
+        ...(rosterImportStatusBySection.get(preview.sectionId) ?? {
+          studentRoster: null,
+          teamRoster: null,
+        }),
+        teamRoster: {
+          appliedAt: '2026-09-09T11:30:00Z',
+          fileName: preview.fileName,
+        },
+      });
 
       return HttpResponse.json({
         appliedMembers: 0,
@@ -515,7 +570,10 @@ export const adminStudentTeamHandlers = [
         student => student.sectionId === resolveFixtureSectionId(sectionId),
       );
 
-      enrollmentImportPreviews.set(importId, { sectionId });
+      enrollmentImportPreviews.set(importId, {
+        fileName: file.name,
+        sectionId,
+      });
 
       return HttpResponse.json({
         importId,
@@ -565,6 +623,16 @@ export const adminStudentTeamHandlers = [
       }
 
       enrollmentImportPreviews.delete(importId);
+      rosterImportStatusBySection.set(preview.sectionId, {
+        ...(rosterImportStatusBySection.get(preview.sectionId) ?? {
+          studentRoster: null,
+          teamRoster: null,
+        }),
+        studentRoster: {
+          appliedAt: '2026-09-09T11:30:00Z',
+          fileName: preview.fileName,
+        },
+      });
 
       return HttpResponse.json({
         applied: 0,

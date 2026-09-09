@@ -303,6 +303,84 @@ describe('AdminProfilePage', () => {
     expect(screen.getByRole('button', { name: '반영하기' })).toBeEnabled();
   });
 
+  it('수강생 명단을 반영하면 분반별 업로드 현황을 최신 파일로 갱신한다', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      screen.getByRole('button', { name: '학생 명단 파일 선택' }),
+    );
+    const fileInput =
+      document.querySelector<HTMLInputElement>('input[type="file"]');
+
+    if (!fileInput) throw new Error('파일 선택 input을 찾을 수 없습니다.');
+
+    await user.upload(fileInput, new File(['excel data'], 'students-01.xlsx'));
+    await user.click(screen.getByRole('button', { name: '미리보기' }));
+    await user.click(await screen.findByRole('button', { name: '반영하기' }));
+
+    expect(await screen.findByText(/students-01\.xlsx/)).toBeInTheDocument();
+    expect(screen.getAllByText('파일 없음')).toHaveLength(1);
+  });
+
+  it('팀 구성 명단을 반영하면 팀 명단 현황만 최신 파일로 갱신한다', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      screen.getByRole('button', { name: '팀 구성 명단 파일 선택' }),
+    );
+    const fileInput = document.querySelector<HTMLInputElement>(
+      'dialog[open] input[type="file"]',
+    );
+
+    if (!fileInput) throw new Error('파일 선택 input을 찾을 수 없습니다.');
+
+    await user.upload(fileInput, new File(['excel data'], 'teams-01.xlsx'));
+    await user.click(screen.getByRole('button', { name: '미리보기' }));
+    await user.click(await screen.findByRole('button', { name: '반영하기' }));
+
+    expect(await screen.findByText(/teams-01\.xlsx/)).toBeInTheDocument();
+    expect(screen.getAllByText('파일 없음')).toHaveLength(1);
+  });
+
+  it('명단 반영 현황을 조회하지 못하면 오류 상태를 표시한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ROSTER_IMPORT_STATUS(':sectionId')}`,
+        () =>
+          HttpResponse.json(
+            { code: 'ROSTER_IMPORT_STATUS_LOOKUP_FAILED' },
+            { status: 500 },
+          ),
+      ),
+    );
+    renderPage();
+
+    expect(
+      await screen.findAllByText('업로드 현황을 불러오지 못했습니다.'),
+    ).toHaveLength(2);
+  });
+
+  it('파일명이 없는 기존 반영 이력은 파일 없음으로 표시한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ROSTER_IMPORT_STATUS(':sectionId')}`,
+        () =>
+          HttpResponse.json({
+            studentRoster: null,
+            teamRoster: {
+              appliedAt: '2026-09-09T07:00:00',
+              fileName: null,
+            },
+          }),
+      ),
+    );
+    renderPage();
+
+    expect(await screen.findAllByText('파일 없음')).toHaveLength(2);
+  });
+
   it('업로드 모달을 닫으면 미리보기 상태를 초기화한다', async () => {
     const user = userEvent.setup();
     renderPage();

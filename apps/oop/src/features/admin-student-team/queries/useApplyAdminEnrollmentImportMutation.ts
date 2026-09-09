@@ -1,6 +1,7 @@
 import { applyAdminEnrollmentImport } from '@aics/api-client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { adminRosterImportStatusKeys } from './adminRosterImportStatusKeys';
 import { adminStudentTeamKeys } from './adminStudentTeamKeys';
 
 export function useApplyAdminEnrollmentImportMutation() {
@@ -8,7 +9,13 @@ export function useApplyAdminEnrollmentImportMutation() {
 
   return useMutation({
     mutationFn: applyAdminEnrollmentImport,
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: adminStudentTeamKeys.all }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: adminStudentTeamKeys.all }),
+        queryClient.invalidateQueries({
+          queryKey: adminRosterImportStatusKeys.all,
+        }),
+      ]);
+    },
   });
 }
