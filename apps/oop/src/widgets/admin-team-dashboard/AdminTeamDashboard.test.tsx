@@ -11,7 +11,15 @@ import {
 import { render, screen, waitFor } from '@testing-library/react';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -159,7 +167,9 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('발표 자료 제출')).toBeInTheDocument();
     expect(screen.getByText('presentation.pdf')).toBeInTheDocument();
     expect(screen.queryByText('발표 평가')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'proposal-v2.pdf' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'proposal-v2.pdf' }),
+    ).not.toBeInTheDocument();
 
     await waitFor(() => expect(requests).toHaveBeenCalled());
     expect(requests.mock.calls).toEqual(
@@ -169,12 +179,20 @@ describe('AdminTeamDashboard', () => {
     );
     expect(requests.mock.calls).not.toEqual(
       expect.arrayContaining([
-        [expect.objectContaining({ pathname: expect.stringContaining('/103/') })],
+        [
+          expect.objectContaining({
+            pathname: expect.stringContaining('/103/'),
+          }),
+        ],
       ]),
     );
     expect(requests.mock.calls).toEqual(
       expect.arrayContaining([
-        [expect.objectContaining({ pathname: expect.stringContaining('/106/') })],
+        [
+          expect.objectContaining({
+            pathname: expect.stringContaining('/106/'),
+          }),
+        ],
       ]),
     );
   });

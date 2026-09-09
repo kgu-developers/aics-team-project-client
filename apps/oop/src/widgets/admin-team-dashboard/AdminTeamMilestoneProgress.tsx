@@ -80,7 +80,8 @@ function getDownloadSummary(milestone: TeamMilestoneProgress) {
       {submission.presentationOrder !== null ? (
         <Text>발표 순서: {submission.presentationOrder}번</Text>
       ) : null}
-      {!submission.submissionId ? null : milestone.versionState === 'pending' ? (
+      {!submission.submissionId ? null : milestone.versionState ===
+        'pending' ? (
         <Text>제출 파일을 불러오는 중입니다.</Text>
       ) : milestone.versionState === 'error' ? (
         <Text>제출 파일 정보를 불러오지 못했습니다.</Text>
@@ -188,10 +189,10 @@ export default function AdminTeamMilestoneProgress({
             const unavailableReason = !isVersionDetailAvailable
               ? '이 마일스톤의 전용 상세 조회 API 확인 후 제공 예정입니다.'
               : !submission
-              ? '이 팀의 제출 정보를 찾을 수 없습니다.'
-              : submission.currentVersion === 0
-                ? '아직 제출하지 않은 마일스톤입니다.'
-                : undefined;
+                ? '이 팀의 제출 정보를 찾을 수 없습니다.'
+                : submission.currentVersion === 0
+                  ? '아직 제출하지 않은 마일스톤입니다.'
+                  : undefined;
 
             return (
               <AdminMilestoneSubmissionCard
@@ -224,7 +225,7 @@ export default function AdminTeamMilestoneProgress({
                 }
                 isUnread={Boolean(
                   submissionId &&
-                    !submissionReadState.isRead(sectionId, submissionId),
+                  !submissionReadState.isRead(sectionId, submissionId),
                 )}
                 key={milestone.milestone.id}
                 label={milestone.milestone.title}

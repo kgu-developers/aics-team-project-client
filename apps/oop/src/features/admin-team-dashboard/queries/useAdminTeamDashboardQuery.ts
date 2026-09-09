@@ -21,8 +21,7 @@ export function useAdminTeamDashboardQuery(teamId: string) {
   return useQuery({
     enabled: Boolean(teamId),
     queryKey: adminTeamDashboardKeys.detail(teamId),
-    queryFn: async () =>
-      toAdminTeamDashboardView(await fetchAdminTeam(teamId)),
+    queryFn: async () => toAdminTeamDashboardView(await fetchAdminTeam(teamId)),
     retry: shouldRetryTeamDashboardRequest,
   });
 }

@@ -95,11 +95,15 @@ export default function AdminTeamDashboard() {
   const teamDashboardQuery = useAdminTeamDashboardQuery(teamId);
   const team = teamDashboardQuery.data;
   const dashboardSection = team
-    ? currentUser?.sections.find(section => section.id === search.sectionId) ??
+    ? (currentUser?.sections.find(section => section.id === search.sectionId) ??
       currentUser?.sections.find(section => section.id === team.sectionId) ??
-      (currentUser?.sections.length === 1 ? currentUser.sections[0] : undefined)
+      (currentUser?.sections.length === 1
+        ? currentUser.sections[0]
+        : undefined))
     : undefined;
-  const sectionMilestonesQuery = useAdminSectionMilestonesQuery(team?.sectionId);
+  const sectionMilestonesQuery = useAdminSectionMilestonesQuery(
+    team?.sectionId,
+  );
   const sectionMilestones = [...(sectionMilestonesQuery.data?.content ?? [])]
     .filter(milestone => !isPresentationEvaluationMilestone(milestone))
     .sort((left, right) => left.weekNumber - right.weekNumber);
@@ -135,8 +139,8 @@ export default function AdminTeamDashboard() {
       versionQueries[index],
     ]),
   );
-  const teamMilestoneProgresses: TeamMilestoneProgress[] = sectionMilestones.map(
-    (milestone, index) => {
+  const teamMilestoneProgresses: TeamMilestoneProgress[] =
+    sectionMilestones.map((milestone, index) => {
       const submissionQuery = milestoneSubmissionQueries[index];
       const submission = milestoneSubmissions[index] ?? null;
       const versionQuery = submission?.submissionId
@@ -152,16 +156,16 @@ export default function AdminTeamDashboard() {
             ? 'ready'
             : 'pending',
         version: versionQuery?.data ?? null,
-        versionState: !submission || submission.currentVersion === 0
-          ? 'idle'
-          : versionQuery?.isError
-            ? 'error'
-            : versionQuery?.isSuccess
-              ? 'ready'
-              : 'pending',
+        versionState:
+          !submission || submission.currentVersion === 0
+            ? 'idle'
+            : versionQuery?.isError
+              ? 'error'
+              : versionQuery?.isSuccess
+                ? 'ready'
+                : 'pending',
       };
-    },
-  );
+    });
   const proposalMilestoneIndex = sectionMilestones.findIndex(
     milestone => milestone.type === 'PROPOSAL',
   );
@@ -279,7 +283,7 @@ export default function AdminTeamDashboard() {
                 ? '제안서 마일스톤 없음'
                 : milestoneSubmissionQueries[proposalMilestoneIndex]?.isPending
                   ? '조회 중'
-                  : projectTopic ?? '미정'}
+                  : (projectTopic ?? '미정')}
             </strong>
           </Text>
 

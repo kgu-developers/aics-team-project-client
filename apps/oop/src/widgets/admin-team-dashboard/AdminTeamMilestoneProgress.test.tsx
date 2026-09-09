@@ -107,12 +107,16 @@ describe('AdminTeamMilestoneProgress', () => {
     expect(await screen.findByText('제안서')).toBeInTheDocument();
     expect(screen.getByText('제출 완료')).toBeInTheDocument();
     expect(screen.getByText('2026.10.10 18:00')).toBeInTheDocument();
-    expect(screen.getByText('제출자: 홍길동', { exact: false })).toBeInTheDocument();
+    expect(
+      screen.getByText('제출자: 홍길동', { exact: false }),
+    ).toBeInTheDocument();
     expect(
       screen.getByText('프로젝트 주제: AI 기반 팀 프로젝트 운영 플랫폼'),
     ).toBeInTheDocument();
     expect(screen.getByText('검토 대기 중')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'proposal.pdf' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: 'proposal.pdf' }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: '상세보기' })).toHaveAttribute(
       'href',
       expect.stringContaining('/admin/submissions/1001'),
@@ -136,7 +140,9 @@ describe('AdminTeamMilestoneProgress', () => {
     ]);
 
     expect(await screen.findByText('미제출')).toBeInTheDocument();
-    expect(screen.getByText('프로젝트 주제: AI 기반 팀 프로젝트 운영 플랫폼')).toBeInTheDocument();
+    expect(
+      screen.getByText('프로젝트 주제: AI 기반 팀 프로젝트 운영 플랫폼'),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('button', {
         name: '상세보기: 아직 제출하지 않은 마일스톤입니다.',

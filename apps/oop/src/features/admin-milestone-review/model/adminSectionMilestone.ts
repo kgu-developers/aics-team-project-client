@@ -42,7 +42,7 @@ export function isPresentationEvaluationMilestone(
     milestone.type === 'PRESENTATION' &&
     Boolean(
       milestone.schedule.evaluationOpensAt &&
-        milestone.schedule.evaluationClosesAt,
+      milestone.schedule.evaluationClosesAt,
     )
   );
 }

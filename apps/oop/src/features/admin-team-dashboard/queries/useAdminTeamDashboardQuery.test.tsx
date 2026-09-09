@@ -36,10 +36,13 @@ const teamResponse = {
   status: 'FORMING',
 };
 const server = setupServer(
-  http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM(':teamId')}`, ({ params }) => {
-    teamRequest(params.teamId);
-    return HttpResponse.json(teamResponse);
-  }),
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM(':teamId')}`,
+    ({ params }) => {
+      teamRequest(params.teamId);
+      return HttpResponse.json(teamResponse);
+    },
+  ),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
