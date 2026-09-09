@@ -8,9 +8,11 @@ import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog'
 import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
 import { useTopicMilestoneEligibility } from '~/features/project-topic/useTopicMilestoneEligibility';
 import { homeQueryState } from '~/features/student-home/model/homeQueryState';
+import { selectActiveMilestone } from '~/features/student-home/model/selectActiveMilestone';
 import { studentMilestoneSummary } from '~/features/student-home/model/studentMilestoneSummary';
 import {
   useLiveStudentHomeQuery,
+  useMilestoneScheduleClock,
   useStudentMilestonesQuery,
 } from '~/features/student-home/queries';
 import SubmissionDialog from '~/features/submission/SubmissionDialog';
@@ -73,6 +75,11 @@ export default function StudentHomePage() {
   const home = useLiveStudentHomeQuery();
   const sectionId = home.sectionId;
   const query = useStudentMilestonesQuery(sectionId, home.teamId);
+  const now = useMilestoneScheduleClock(
+    query.milestones,
+    sectionId,
+    home.teamId,
+  );
   const topicEligibility = useTopicMilestoneEligibility(
     query.list.isSuccess ? query.list.data : undefined,
     sectionId,
@@ -125,7 +132,7 @@ export default function StudentHomePage() {
     const summary = studentMilestoneSummary(
       milestone,
       submission?.isSuccess ? submission.data : undefined,
-      Date.now(),
+      now,
     );
     if (!home.teamId) summary.statusLabel = '팀 배정 대기';
     else if (submission?.isError) summary.statusLabel = '조회 실패';
@@ -178,10 +185,16 @@ export default function StudentHomePage() {
     }
     return summary;
   });
-  const activeMilestone =
-    milestones.find(
-      (_, index) => query.submissions[index]?.data?.canSubmitNow,
-    ) ?? milestones.find(milestone => milestone.status !== 'completed');
+  const activeMilestone = selectActiveMilestone(
+    milestones,
+    new Set(
+      query.submissions.flatMap(item =>
+        item.isSuccess && item.data.canSubmitNow
+          ? [String(item.data.milestoneId)]
+          : [],
+      ),
+    ),
+  );
   const hero = {
     date: new Intl.DateTimeFormat('ko-KR', {
       timeZone: 'Asia/Seoul',

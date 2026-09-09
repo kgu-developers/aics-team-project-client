@@ -4,7 +4,12 @@ import type {
 } from '../feedback/types';
 
 export type StudentHomeMilestoneStatus =
-  'before-period' | 'in-progress' | 'revision-available' | 'completed';
+  | 'before-period'
+  | 'in-progress'
+  | 'revision-available'
+  | 'completed'
+  | 'closed'
+  | 'unavailable';
 
 export type StudentHomeMilestoneRowTone = 'default' | 'primary' | 'muted';
 
