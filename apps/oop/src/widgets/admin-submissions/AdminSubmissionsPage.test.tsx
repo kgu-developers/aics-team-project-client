@@ -90,6 +90,15 @@ function renderPage(
 }
 
 describe('AdminSubmissionsPage', () => {
+  it('제안서 목록에 팀별 프로젝트 주제를 표시한다', async () => {
+    renderPage();
+
+    expect(
+      await screen.findByText('프로젝트 주제: AI 기반 팀 프로젝트 관리 서비스'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('프로젝트 주제: -')).toBeInTheDocument();
+  });
+
   it('제안서와 중간 점검 목록은 왼쪽에 상태와 제출 정보를 표시한다', async () => {
     const user = userEvent.setup();
 

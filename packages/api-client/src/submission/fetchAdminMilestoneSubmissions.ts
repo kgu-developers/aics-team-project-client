@@ -18,6 +18,7 @@ export type AdminMilestoneSubmissionItemDto = {
   id: number;
   milestoneId: number;
   presentationOrder?: number | null;
+  projectTitle?: string | null;
   status: AdminMilestoneSubmissionStatusDto;
   teamId: number;
   teamName: string;
