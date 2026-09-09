@@ -35,6 +35,7 @@ const response: AdminMeetingRecordListResponse = {
       sectionName: 'OOP-01',
       teamId: 2,
       teamName: '2팀',
+      title: '발표 자료 구성 논의 회의',
     },
   ],
   pageable: {
@@ -108,6 +109,7 @@ describe('useAdminMeetingRecordListQuery', () => {
           sectionName: 'OOP-02',
           teamId: 2,
           teamName: '1팀',
+          title: '가장 최근 회의록 제목',
         },
         {
           authorId: '20260002',
@@ -121,6 +123,7 @@ describe('useAdminMeetingRecordListQuery', () => {
           sectionName: 'OOP-01',
           teamId: 1,
           teamName: '1팀',
+          title: '이전 회의록 제목',
         },
       ],
       pageable: {

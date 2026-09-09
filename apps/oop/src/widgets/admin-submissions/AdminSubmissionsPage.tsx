@@ -117,6 +117,15 @@ function getReviewSummary(submission: AdminMilestoneSubmissionView) {
   return <>{submission.hasPendingReview ? <Text>검토 대기 중</Text> : null}</>;
 }
 
+function getProposalSummary(submission: AdminMilestoneSubmissionView) {
+  return (
+    <>
+      <Text>프로젝트 주제: {submission.projectTitle ?? '-'}</Text>
+      {getReviewSummary(submission)}
+    </>
+  );
+}
+
 function getDownloadSummary(
   submission: AdminMilestoneSubmissionView,
   version: AdminSubmissionVersionDetailView | undefined,
@@ -583,15 +592,17 @@ export default function AdminSubmissionsPage() {
                           versionMetadataQuery?.data,
                         )}
                         summary={
-                          activeMilestoneId === 'final-report' ||
-                          activeMilestoneId === 'presentation-submit'
-                            ? getDownloadSummary(
-                                submission,
-                                versionMetadataQuery?.data,
-                                Boolean(versionMetadataQuery?.isError),
-                                Boolean(versionMetadataQuery?.isPending),
-                              )
-                            : getReviewSummary(submission)
+                          activeMilestoneId === 'proposal'
+                            ? getProposalSummary(submission)
+                            : activeMilestoneId === 'final-report' ||
+                                activeMilestoneId === 'presentation-submit'
+                              ? getDownloadSummary(
+                                  submission,
+                                  versionMetadataQuery?.data,
+                                  Boolean(versionMetadataQuery?.isError),
+                                  Boolean(versionMetadataQuery?.isPending),
+                                )
+                              : getReviewSummary(submission)
                         }
                       />
                     );

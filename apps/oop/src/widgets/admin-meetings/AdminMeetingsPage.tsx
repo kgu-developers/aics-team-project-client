@@ -26,14 +26,6 @@ function formatDate(value: string) {
   return value.replace('T', ' ');
 }
 
-function getContentPreview(content: string) {
-  const normalized = content.replace(/\s+/g, ' ').trim();
-
-  return normalized.length > 60
-    ? `${normalized.slice(0, 60)}…`
-    : normalized || '작성된 회의 내용이 없습니다.';
-}
-
 export default function AdminMeetingsPage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const navigate = useNavigate();
@@ -135,7 +127,7 @@ export default function AdminMeetingsPage() {
                 <th scope='col'>분반</th>
                 <th scope='col'>팀</th>
                 <th scope='col'>단계</th>
-                <th scope='col'>회의 내용</th>
+                <th scope='col'>회의 제목</th>
                 <th scope='col'>작성자</th>
                 <th scope='col'>참석</th>
               </tr>
@@ -153,7 +145,7 @@ export default function AdminMeetingsPage() {
                       params={{ meetingId: String(record.id) }}
                       to={ROUTES.ADMIN_MEETING_DETAIL}
                     >
-                      {getContentPreview(record.content)}
+                      {record.title}
                     </Link>
                   </td>
                   <td>{record.authorId}</td>
