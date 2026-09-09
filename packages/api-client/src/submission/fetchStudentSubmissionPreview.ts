@@ -4,13 +4,13 @@ export async function fetchStudentSubmissionPreview(
   signal?: AbortSignal,
 ): Promise<Blob> {
   const parsed = new URL(url);
-  if (
-    !['http:', 'https:'].includes(parsed.protocol) ||
-    parsed.username ||
-    parsed.password
-  )
+  if (parsed.protocol !== 'https:' || parsed.username || parsed.password)
     throw new Error('파일 주소를 확인할 수 없습니다.');
-  const response = await fetch(url, { credentials: 'omit', signal });
+  const response = await fetch(url, {
+    credentials: 'omit',
+    redirect: 'error',
+    signal,
+  });
   if (!response.ok) throw new Error('파일 미리보기를 불러올 수 없습니다.');
   const blob = await response.blob();
   if (blob.type.split(';')[0] !== 'application/pdf')

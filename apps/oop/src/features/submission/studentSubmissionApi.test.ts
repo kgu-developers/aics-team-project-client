@@ -53,6 +53,54 @@ describe('학생 제출 HTTP 경계', () => {
       '제출 파일 응답',
     );
   });
+  it('HTTP 파일 주소는 요청 전에 거절한다', async () => {
+    let requested = false;
+    server.use(
+      http.get('http://files.example.test/file.pdf', () => {
+        requested = true;
+        return new HttpResponse('%PDF-1.4', {
+          headers: { 'Content-Type': 'application/pdf' },
+        });
+      }),
+    );
+    await expect(
+      fetchStudentSubmissionPreview('http://files.example.test/file.pdf'),
+    ).rejects.toThrow('파일 주소');
+    expect(requested).toBe(false);
+  });
+  it('HTTPS에서 HTTP로 리다이렉트되는 파일을 따라가지 않는다', async () => {
+    let redirected = false;
+    server.use(
+      http.get('https://files.example.test/file.pdf', () =>
+        HttpResponse.redirect('http://files.example.test/redirected.pdf'),
+      ),
+      http.get('http://files.example.test/redirected.pdf', () => {
+        redirected = true;
+        return new HttpResponse('%PDF-1.4', {
+          headers: { 'Content-Type': 'application/pdf' },
+        });
+      }),
+    );
+    await expect(
+      fetchStudentSubmissionPreview('https://files.example.test/file.pdf'),
+    ).rejects.toThrow();
+    expect(redirected).toBe(false);
+  });
+  it('HTTPS PDF는 인증 정보를 생략하고 조회한다', async () => {
+    server.use(
+      http.get('https://files.example.test/file.pdf', ({ request }) => {
+        expect(request.credentials).toBe('omit');
+        expect(request.headers.has('authorization')).toBe(false);
+        return new HttpResponse('%PDF-1.4', {
+          headers: { 'Content-Type': 'application/pdf' },
+        });
+      }),
+    );
+    const result = await fetchStudentSubmissionPreview(
+      'https://files.example.test/file.pdf',
+    );
+    expect(result.type).toBe('application/pdf');
+  });
   it('PDF가 아닌 signed URL 응답은 미리보기에 넣지 않는다', async () => {
     server.use(
       http.get(

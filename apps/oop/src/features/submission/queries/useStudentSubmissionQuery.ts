@@ -33,13 +33,11 @@ export function useStudentSubmissionQuery(
   const { sectionId, teamId, milestoneId } = scope;
   useEffect(() => {
     if (!query.isSuccess || !query.data) return;
-    const key = [
-      ...studentHomeKeys.all,
-      'submission',
+    const key = studentHomeKeys.submission(
       sectionId,
       teamId,
       Number(milestoneId),
-    ];
+    );
     // Reuse the existing home summary without repeating its get-or-create GET.
     if (
       (client.getQueryState(key)?.dataUpdatedAt ?? Infinity) >
