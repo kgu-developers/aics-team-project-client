@@ -29,6 +29,8 @@ const ROW_TONE_CLASS = {
 
 const STATUS_VARIANT = {
   completed: 'success',
+  closed: 'neutral',
+  unavailable: 'neutral',
   'in-progress': 'accent',
   'revision-available': 'accent',
   'before-period': 'neutral',

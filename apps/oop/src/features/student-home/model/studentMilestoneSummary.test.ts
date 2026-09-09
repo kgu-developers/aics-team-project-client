@@ -4,7 +4,11 @@ import type {
 } from '@aics/core';
 import { describe, expect, it } from 'vitest';
 
-import { studentMilestoneSummary } from './studentMilestoneSummary';
+import {
+  milestoneDate,
+  milestoneTime,
+  studentMilestoneSummary,
+} from './studentMilestoneSummary';
 
 const milestone: StudentMilestoneResponse = {
   id: 47,
@@ -77,7 +81,8 @@ describe('학생 홈 마일스톤 표시', () => {
       now,
     );
     expect(result.status).not.toBe('completed');
-    expect(result.statusLabel).toBe('제출 완료');
+    expect(result.status).toBe('closed');
+    expect(result.statusLabel).toBe('제출 완료 · 마감');
   });
   it('제출 상태 미조회는 미제출과 구분한다', () => {
     expect(studentMilestoneSummary(milestone, undefined, now).statusLabel).toBe(
@@ -85,3 +90,109 @@ describe('학생 홈 마일스톤 표시', () => {
     );
   });
 });
+
+describe('마감과 팀별 제출 가능 상태', () => {
+  const due = Date.parse(milestone.schedule.dueAt!);
+  it('마감 직전과 정확한 마감 시각을 구분한다', () => {
+    expect(studentMilestoneSummary(milestone, submission, due - 1).status).toBe(
+      'in-progress',
+    );
+    expect(studentMilestoneSummary(milestone, submission, due).status).toBe(
+      'closed',
+    );
+  });
+  it('수정 요청이 남아 있어도 서버가 재제출을 허용하지 않으면 마감이다', () => {
+    const result = studentMilestoneSummary(
+      milestone,
+      { ...submission, status: 'REVISION_REQUESTED' },
+      due,
+    );
+    expect(result.status).toBe('closed');
+    expect(result.statusLabel).toBe('수정 요청 · 마감');
+  });
+  it('서버가 재제출을 허용하면 공식 수정 기한을 표시한다', () => {
+    const result = studentMilestoneSummary(
+      {
+        ...milestone,
+        schedule: {
+          ...milestone.schedule,
+          revisionUntil: '2026-10-15T18:30:00+09:00',
+        },
+      },
+      { ...submission, status: 'REVISION_REQUESTED', canSubmitNow: true },
+      due,
+    );
+    expect(result.status).toBe('revision-available');
+    expect(result.dueDate).toContain('재제출 마감');
+    expect(result.dueDate).toContain('15.');
+  });
+  it('지각 제출 가능 기간에는 원래 마감 대신 지각 기한을 안내한다', () => {
+    const result = studentMilestoneSummary(
+      {
+        ...milestone,
+        schedule: {
+          ...milestone.schedule,
+          lateSubmissionUntil: '2026-10-12T18:30:00+09:00',
+        },
+      },
+      { ...submission, canSubmitNow: true },
+      due,
+    );
+    expect(result.status).toBe('in-progress');
+    expect(result.dueDate).toContain('지각 제출 마감');
+  });
+  it('공식 기한 이후 교수 재오픈은 서버 값을 따르고 임의 기한을 만들지 않는다', () => {
+    const result = studentMilestoneSummary(
+      { ...milestone, status: 'CLOSED' },
+      { ...submission, status: 'REVISION_REQUESTED', canSubmitNow: true },
+      due + 1,
+    );
+    expect(result.status).toBe('revision-available');
+    expect(result.dueDate).toBe('제출 가능 · 기한 확인 필요');
+  });
+  it('마감과 관계없이 COMPLETED만 단계 완료로 표시한다', () => {
+    expect(
+      studentMilestoneSummary(
+        milestone,
+        { ...submission, status: 'COMPLETED' },
+        due,
+      ).status,
+    ).toBe('completed');
+  });
+  it('조회되지 않은 상태를 기간 전 또는 진행 중으로 판단하지 않는다', () => {
+    expect(studentMilestoneSummary(milestone, undefined, due).status).toBe(
+      'unavailable',
+    );
+  });
+  it('오프셋 없는 서버 일정은 한국 시각으로 해석한다', () => {
+    expect(milestoneTime('2026-10-10T18:30:00')).toBe(due);
+    expect(milestoneDate('2026-10-10T18:30:00')).toContain('18:30');
+    expect(milestoneDate(null)).toBe('일정 미정');
+    expect(milestoneDate('invalid')).toBe('일정 확인 필요');
+  });
+});
+
+it.each(['revisionUntil', 'lateSubmissionUntil'] as const)(
+  '%s 경계에서 서버가 제출을 닫으면 마감으로 전환한다',
+  field => {
+    const end = '2026-10-15T18:30:00+09:00';
+    const item = {
+      ...milestone,
+      schedule: { ...milestone.schedule, [field]: end },
+    };
+    const status =
+      field === 'revisionUntil' ? 'REVISION_REQUESTED' : 'NOT_SUBMITTED';
+    const before = studentMilestoneSummary(
+      item,
+      { ...submission, status, canSubmitNow: true },
+      Date.parse(end) - 1,
+    );
+    const after = studentMilestoneSummary(
+      item,
+      { ...submission, status, canSubmitNow: false },
+      Date.parse(end),
+    );
+    expect(before.status).not.toBe('closed');
+    expect(after.status).toBe('closed');
+  },
+);
