@@ -13,6 +13,7 @@ export type AdminMeetingRecordListItem = {
   sectionName: string;
   teamId: number;
   teamName: string;
+  title: string;
 };
 
 export type AdminMeetingRecordListResponse = {

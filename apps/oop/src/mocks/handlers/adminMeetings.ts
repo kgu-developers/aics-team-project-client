@@ -108,6 +108,7 @@ export const adminMeetingHandlers = [
           sectionName: record.sectionLabel,
           teamId: record.teamId === 'team-1151-1' ? 11 : 12,
           teamName: record.teamLabel,
+          title: record.title,
         })),
         pageable: {
           isEnd: start + size >= records.length,
