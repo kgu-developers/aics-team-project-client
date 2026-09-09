@@ -38,6 +38,8 @@ export const ENDPOINTS = {
       `/api/v1/admin/oop/sections/${sectionId}/enrollment-imports/preview`,
     ENROLLMENT_IMPORT_APPLY: (importId: string | number) =>
       `/api/v1/admin/oop/enrollment-imports/${importId}/apply`,
+    SECTION_ROSTER_IMPORT_STATUS: (sectionId: string | number) =>
+      `/api/v1/admin/oop/sections/${sectionId}/roster-import-status`,
     OOP_PEER_EVALUATION_FORM: (sectionId: number) =>
       `/api/v1/admin/oop/sections/${sectionId}/peer-evaluation-forms`,
     OOP_PRE_SURVEY_RESPONSES: (sectionId: string) =>

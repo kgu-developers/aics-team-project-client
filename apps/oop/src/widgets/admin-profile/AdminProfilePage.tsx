@@ -1,3 +1,4 @@
+import type { AdminRosterImportAppliedDto } from '@aics/api-client';
 import {
   Button,
   Card,
@@ -18,6 +19,7 @@ import {
 } from '~/features/admin-profile/queries';
 import EnrollmentImportDialog from '~/features/admin-student-team/components/EnrollmentImportDialog';
 import TeamImportDialog from '~/features/admin-student-team/components/TeamImportDialog';
+import { useAdminRosterImportStatusQueries } from '~/features/admin-student-team/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 import { getPasswordChangeErrorMessage } from '~/features/auth/getPasswordChangeErrorMessage';
 import {
@@ -31,6 +33,7 @@ import {
 
 import { AdminPreSurveyResponses } from './AdminPreSurveyResponses';
 import * as styles from './AdminProfilePage.css';
+import { formatRosterImportAppliedAt } from './formatRosterImportAppliedAt';
 
 type UploadFileKind = 'studentRoster' | 'teamRoster';
 const uploadCopy: Record<
@@ -48,6 +51,18 @@ const uploadCopy: Record<
     title: '팀 구성 명단',
   },
 };
+
+function getRosterImportStatusLabel(
+  record: AdminRosterImportAppliedDto | null | undefined,
+  isError: boolean,
+  isPending: boolean,
+) {
+  if (isPending) return '불러오는 중입니다.';
+  if (isError) return '업로드 현황을 불러오지 못했습니다.';
+  if (!record || !record.fileName) return '파일 없음';
+
+  return `${record.fileName} · ${formatRosterImportAppliedAt(record.appliedAt)}`;
+}
 
 function FileSelectionCard({
   isDisabled,
@@ -223,6 +238,12 @@ export default function AdminProfilePage() {
   const [uploadKind, setUploadKind] = useState<UploadFileKind | null>(null);
   const [uploadSectionId, setUploadSectionId] = useState('');
   const sections = currentUser?.sections ?? [];
+  const rosterImportStatusQueries = useAdminRosterImportStatusQueries(
+    sections.map(section => section.id),
+  );
+  const rosterImportStatusBySectionId = new Map(
+    rosterImportStatusQueries.map(({ query, sectionId }) => [sectionId, query]),
+  );
   const hasUploadSections = sections.length > 0;
   const profileQuery = useAdminProfileQuery();
   const updateProfileMutation = useUpdateAdminProfileMutation();
@@ -412,14 +433,27 @@ export default function AdminProfilePage() {
                   <section key={kind}>
                     <Heading level={4}>{uploadCopy[kind].title}</Heading>
                     <ul className={styles.sectionStatusList}>
-                      {sections.map(section => (
-                        <li key={section.id}>
-                          <strong className={styles.sectionCode}>
-                            {section.code}
-                          </strong>
-                          <span className={styles.sectionFile}>파일 없음</span>
-                        </li>
-                      ))}
+                      {sections.map(section => {
+                        const statusQuery = rosterImportStatusBySectionId.get(
+                          section.id,
+                        );
+                        const record = statusQuery?.data?.[kind];
+
+                        return (
+                          <li key={section.id}>
+                            <strong className={styles.sectionCode}>
+                              {section.code}
+                            </strong>
+                            <span className={styles.sectionFile}>
+                              {getRosterImportStatusLabel(
+                                record,
+                                statusQuery?.isError ?? false,
+                                statusQuery?.isPending ?? false,
+                              )}
+                            </span>
+                          </li>
+                        );
+                      })}
                     </ul>
                   </section>
                 ))}
