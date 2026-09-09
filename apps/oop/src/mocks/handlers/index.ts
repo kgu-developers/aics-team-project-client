@@ -21,6 +21,7 @@ import { studentFeedbackHandlers } from './studentFeedback';
 import { studentHomeHandlers } from './studentHome';
 import { studentMilestoneHandlers } from './studentMilestones';
 import { studentNoticeHandlers } from './studentNotices';
+import { studentSubmissionHandlers } from './studentSubmission';
 import { submissionHandlers } from './submission';
 import {
   teamAssignmentHandlers,
@@ -50,6 +51,7 @@ export const handlers = [
   ...studentHomeHandlers,
   ...studentNoticeHandlers,
   ...studentMilestoneHandlers,
+  ...studentSubmissionHandlers,
   ...submissionHandlers,
   ...teamAssignmentHandlers,
   ...teamAssignmentUserHandlers,

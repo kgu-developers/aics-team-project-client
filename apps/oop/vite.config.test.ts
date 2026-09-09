@@ -58,6 +58,7 @@ describe('OOP development server config', () => {
       '/meeting-records',
       '/milestones',
       '/sections',
+      '/submissions',
       '/teams',
     ]);
     expect(proxiedDevelopmentConfig.server.proxy).toMatchObject(
@@ -69,6 +70,7 @@ describe('OOP development server config', () => {
           '/meeting-records',
           '/milestones',
           '/sections',
+          '/submissions',
           '/teams',
         ].map(prefix => [
           prefix,

@@ -1,10 +1,10 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
-import type { MyTeamMilestoneSubmissionResponse } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
 import { getMockMySections } from '../data/sections';
 import { studentMilestoneFixtures } from '../data/studentMilestones';
+import { studentSubmissionFixture } from '../data/studentSubmission';
 
 export const studentMilestoneHandlers = [
   http.get(
@@ -45,15 +45,10 @@ export const studentMilestoneHandlers = [
       const teamId = Number(account.user.currentTeam?.id.replace(/^team-/, ''));
       if (!Number.isSafeInteger(teamId) || teamId <= 0)
         return new HttpResponse(null, { status: 403 });
-      return HttpResponse.json<MyTeamMilestoneSubmissionResponse>({
-        id: milestoneId + 1000,
-        milestoneId,
-        teamId,
-        status: 'NOT_SUBMITTED',
-        currentVersion: 0,
-        canSubmitNow: true,
-        hasPendingReview: false,
-      });
+      const milestone = sections
+        .flatMap(section => studentMilestoneFixtures(section.id))
+        .find(item => item.id === milestoneId)!;
+      return HttpResponse.json(studentSubmissionFixture(milestone, teamId));
     },
   ),
 ];
