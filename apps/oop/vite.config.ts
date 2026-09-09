@@ -7,6 +7,7 @@ import { loadEnv, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 
 const apiProxyPrefixes = [
+  '/auth',
   '/api',
   '/announcements',
   '/meeting-actions',

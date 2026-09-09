@@ -5,6 +5,22 @@ export const content = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 16,
+  maxHeight: 'calc(100vh - 96px)',
+});
+
+export const body = style({
+  display: 'flex',
+  flex: '1 1 auto',
+  flexDirection: 'column',
+  gap: 16,
+  minHeight: 0,
+  overflowY: 'auto',
+});
+
+export const actions = style({
+  background: tokens.color.background.card,
+  flexShrink: 0,
+  paddingTop: 4,
 });
 
 export const summary = style({
