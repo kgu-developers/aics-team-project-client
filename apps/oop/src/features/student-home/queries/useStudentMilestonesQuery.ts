@@ -19,13 +19,7 @@ export function useStudentMilestonesQuery(sectionId?: string, teamId?: string) {
     : [];
   const submissions = useQueries({
     queries: milestones.map(milestone => ({
-      queryKey: [
-        ...studentHomeKeys.all,
-        'submission',
-        sectionId,
-        teamId,
-        milestone.id,
-      ],
+      queryKey: studentHomeKeys.submission(sectionId, teamId, milestone.id),
       queryFn: teamId
         ? () => fetchMyTeamMilestoneSubmission(String(milestone.id), teamId)
         : skipToken,

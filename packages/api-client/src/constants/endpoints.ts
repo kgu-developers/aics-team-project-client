@@ -142,6 +142,8 @@ export const ENDPOINTS = {
       `/milestones/${milestoneId}/my-team-submission`,
     DETAIL: (submissionId: string) => `/submissions/${submissionId}`,
     VERSIONS: (submissionId: string) => `/submissions/${submissionId}/versions`,
+    VERSION: (submissionId: string, version: number) =>
+      `/submissions/${submissionId}/versions/${version}`,
     CONFIRMATION: (submissionId: string) =>
       `/submissions/${submissionId}/confirmation`,
     MID_REPORT_FEEDBACK: (submissionId: string) =>

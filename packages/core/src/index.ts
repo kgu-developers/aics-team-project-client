@@ -195,3 +195,11 @@ export type {
   TopicFinalizeInput,
   TopicFinalizeResponse,
 } from './topic/apiTypes';
+
+export type {
+  StudentSubmissionResponse,
+  StudentSubmissionStatus,
+  StudentSubmissionArtifact,
+  StudentSubmissionVersionResponse,
+  StudentSubmissionVersionsResponse,
+} from './submission/apiTypes';

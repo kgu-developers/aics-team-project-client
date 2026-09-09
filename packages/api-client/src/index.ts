@@ -254,3 +254,10 @@ export {
 } from './topic';
 
 export { updateTopicFinalization } from './topic';
+
+export {
+  fetchStudentSubmission,
+  fetchStudentSubmissionVersion,
+  fetchStudentSubmissionVersions,
+  fetchStudentSubmissionPreview,
+} from './submission';
