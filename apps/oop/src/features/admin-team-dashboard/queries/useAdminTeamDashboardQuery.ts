@@ -1,4 +1,4 @@
-import { fetchAdminTeamDashboard } from '@aics/api-client';
+import { fetchAdminTeam } from '@aics/api-client';
 import { useQuery } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 
@@ -22,7 +22,7 @@ export function useAdminTeamDashboardQuery(teamId: string) {
     enabled: Boolean(teamId),
     queryKey: adminTeamDashboardKeys.detail(teamId),
     queryFn: async () =>
-      toAdminTeamDashboardView(await fetchAdminTeamDashboard(teamId)),
+      toAdminTeamDashboardView(await fetchAdminTeam(teamId)),
     retry: shouldRetryTeamDashboardRequest,
   });
 }

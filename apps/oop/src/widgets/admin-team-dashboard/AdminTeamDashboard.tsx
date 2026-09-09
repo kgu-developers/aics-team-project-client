@@ -6,7 +6,7 @@ import {
   Heading,
   Text,
 } from '@aics/design-system';
-import { Link, useParams } from '@tanstack/react-router';
+import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
 import { useEffect, useState } from 'react';
 
@@ -14,8 +14,17 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { AdminTeamMeetingRecordList } from '~/features/admin-meeting/components';
 import { useAdminMeetingRecordsQuery } from '~/features/admin-meeting/queries';
+import { isPresentationEvaluationMilestone } from '~/features/admin-milestone-review/model';
+import {
+  useAdminSectionMilestonesQuery,
+  useAdminSubmissionVersionDetailsQueries,
+} from '~/features/admin-milestone-review/queries';
 import StudentDetailDialog from '~/features/admin-student-team/components/StudentDetailDialog';
-import { useAdminTeamDashboardQuery } from '~/features/admin-team-dashboard/queries';
+import type { TeamMilestoneProgress } from '~/features/admin-team-dashboard/model';
+import {
+  useAdminTeamDashboardQuery,
+  useAdminTeamMilestoneSubmissionsQueries,
+} from '~/features/admin-team-dashboard/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminTeamDashboard.css';
@@ -76,20 +85,100 @@ function getTeamDashboardErrorContent(
 
 export default function AdminTeamDashboard() {
   const { teamId } = useParams({ from: '/admin/teams/$teamId' });
+  const search = useSearch({ from: '/admin/teams/$teamId' }) as {
+    sectionId?: string;
+  };
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const currentUser = useAuthStore(state => state.currentUser);
   const accessibleSectionIds =
     currentUser?.sections.map(section => section.id) ?? [];
   const teamDashboardQuery = useAdminTeamDashboardQuery(teamId);
+  const team = teamDashboardQuery.data;
+  const dashboardSection = team
+    ? currentUser?.sections.find(section => section.id === search.sectionId) ??
+      currentUser?.sections.find(section => section.id === team.sectionId) ??
+      (currentUser?.sections.length === 1 ? currentUser.sections[0] : undefined)
+    : undefined;
+  const sectionMilestonesQuery = useAdminSectionMilestonesQuery(team?.sectionId);
+  const sectionMilestones = [...(sectionMilestonesQuery.data?.content ?? [])]
+    .filter(milestone => !isPresentationEvaluationMilestone(milestone))
+    .sort((left, right) => left.weekNumber - right.weekNumber);
+  const milestoneSubmissionQueries = useAdminTeamMilestoneSubmissionsQueries(
+    sectionMilestones.map(milestone => String(milestone.id)),
+    team?.id,
+  );
+  const milestoneSubmissions = sectionMilestones.map((milestone, index) => {
+    const query = milestoneSubmissionQueries[index];
+    return query?.data?.submissions.find(
+      submission => submission.teamId === team?.id,
+    );
+  });
+  const versionTargets = milestoneSubmissions.flatMap((submission, index) =>
+    submission?.submissionId &&
+    submission.currentVersion > 0 &&
+    sectionMilestones[index]?.type !== 'PEER_EVALUATION'
+      ? [
+          {
+            submissionId: submission.submissionId,
+            version: submission.currentVersion,
+          },
+        ]
+      : [],
+  );
+  const versionQueries = useAdminSubmissionVersionDetailsQueries(
+    versionTargets,
+    Boolean(team),
+  );
+  const versionQueryBySubmissionId = new Map(
+    versionTargets.map((target, index) => [
+      target.submissionId,
+      versionQueries[index],
+    ]),
+  );
+  const teamMilestoneProgresses: TeamMilestoneProgress[] = sectionMilestones.map(
+    (milestone, index) => {
+      const submissionQuery = milestoneSubmissionQueries[index];
+      const submission = milestoneSubmissions[index] ?? null;
+      const versionQuery = submission?.submissionId
+        ? versionQueryBySubmissionId.get(submission.submissionId)
+        : undefined;
+
+      return {
+        milestone,
+        submission,
+        submissionState: submissionQuery?.isError
+          ? 'error'
+          : submissionQuery?.isSuccess
+            ? 'ready'
+            : 'pending',
+        version: versionQuery?.data ?? null,
+        versionState: !submission || submission.currentVersion === 0
+          ? 'idle'
+          : versionQuery?.isError
+            ? 'error'
+            : versionQuery?.isSuccess
+              ? 'ready'
+              : 'pending',
+      };
+    },
+  );
+  const proposalMilestoneIndex = sectionMilestones.findIndex(
+    milestone => milestone.type === 'PROPOSAL',
+  );
+  const proposalSubmission =
+    proposalMilestoneIndex >= 0
+      ? milestoneSubmissions[proposalMilestoneIndex]
+      : undefined;
+  const projectTopic = proposalSubmission?.projectTitle ?? null;
   const meetingRecordsQuery = useAdminMeetingRecordsQuery(
     accessibleSectionIds,
-    teamDashboardQuery.data
+    team
       ? {
-          sectionId: teamDashboardQuery.data.section.id,
-          teamId,
+          sectionId: team.sectionId,
+          teamId: team.id,
         }
       : undefined,
-    Boolean(teamDashboardQuery.data),
+    Boolean(team),
   );
 
   useEffect(() => {
@@ -137,7 +226,18 @@ export default function AdminTeamDashboard() {
     );
   }
 
-  const team = teamDashboardQuery.data;
+  if (!team) {
+    return (
+      <div className={styles.page}>
+        <EmptyState
+          description='팀 식별자를 확인한 뒤 다시 시도해 주세요.'
+          headingLevel={2}
+          title='팀 정보를 찾을 수 없습니다.'
+        />
+      </div>
+    );
+  }
+
   const selectedMember = selectedMemberId
     ? (team.members.find(member => member.id === selectedMemberId) ?? null)
     : null;
@@ -154,11 +254,13 @@ export default function AdminTeamDashboard() {
     setSelectedMemberId(memberId);
   }
 
+  const sectionCode = dashboardSection?.code ?? '분반 정보 없음';
+
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
         <Heading level={1}>
-          {team.section.code}반 - {team.name} 대시보드
+          {sectionCode} - {team.name} 대시보드
         </Heading>
         <Link className={styles.backLink} to={ROUTES.ADMIN_STUDENT_TEAM}>
           ← 수강생/팀 관리로
@@ -171,7 +273,14 @@ export default function AdminTeamDashboard() {
             {team.name} 상세
           </Heading>
           <Text>
-            프로젝트 주제: <strong>{team.projectTopic ?? '미정'}</strong>
+            프로젝트 주제:{' '}
+            <strong>
+              {proposalMilestoneIndex < 0
+                ? '제안서 마일스톤 없음'
+                : milestoneSubmissionQueries[proposalMilestoneIndex]?.isPending
+                  ? '조회 중'
+                  : projectTopic ?? '미정'}
+            </strong>
           </Text>
 
           <ul className={styles.memberList}>
@@ -205,31 +314,24 @@ export default function AdminTeamDashboard() {
       </section>
 
       <AdminTeamMilestoneProgress
-        milestones={team.milestones}
-        meetingCountState={
-          meetingRecordsQuery.isSuccess
-            ? {
-                count: meetingRecordsQuery.data.records.length,
-                status: 'ready',
-              }
-            : meetingRecordsQuery.isError
-              ? { status: 'error' }
-              : { status: 'pending' }
+        milestones={
+          sectionMilestonesQuery.isSuccess ? teamMilestoneProgresses : []
         }
-        projectTopic={team.projectTopic}
-        sectionId={team.section.id}
-        teamId={team.id}
-        teamMemberCount={team.members.length}
-        teamLeaderName={
-          team.members.find(member => member.isLeader)?.name ?? null
+        milestoneListState={
+          sectionMilestonesQuery.isError
+            ? 'error'
+            : sectionMilestonesQuery.isSuccess
+              ? 'ready'
+              : 'pending'
         }
+        sectionId={dashboardSection?.id}
       />
 
       <AdminTeamMeetingRecordList
         isError={meetingRecordsQuery.isError}
         isPending={meetingRecordsQuery.isPending}
         records={meetingRecordsQuery.data?.records ?? []}
-        sectionId={team.section.id}
+        sectionId={team.sectionId}
         teamId={team.id}
       />
 

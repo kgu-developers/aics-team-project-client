@@ -1,4 +1,5 @@
 import { AstryxThemeProvider } from '@aics/design-system';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   RouterProvider,
   createMemoryHistory,
@@ -13,89 +14,79 @@ import type { TeamMilestoneProgress } from '~/features/admin-team-dashboard/mode
 
 import AdminTeamMilestoneProgress from './AdminTeamMilestoneProgress';
 
-type MeetingCountState =
-  | { status: 'pending' }
-  | { status: 'error' }
-  | { count: number; status: 'ready' };
-
-const milestones: TeamMilestoneProgress[] = [
-  {
-    id: 'proposal',
+const submittedMilestone: TeamMilestoneProgress = {
+  milestone: {
+    allowResubmissionBeforeDueAt: false,
+    id: 101,
+    schedule: { dueAt: '2026-10-15T14:59:00Z' },
+    sectionId: 1,
+    status: 'PUBLISHED',
     title: '제안서',
-    deadlineLabel: '2026-08-10',
-    submissionId: null,
-    status: { kind: 'before-deadline' },
+    type: 'PROPOSAL',
+    weekNumber: 3,
   },
-  {
-    id: 'midterm',
-    title: '중간 점검',
-    deadlineLabel: '2026-08-15',
-    submissionId: 'submission-midterm-team-1',
-    status: { kind: 'evaluated' },
+  submission: {
+    canSubmitNow: false,
+    completedAt: null,
+    completedBy: null,
+    currentVersion: 2,
+    hasPendingReview: true,
+    presentationOrder: null,
+    projectTitle: 'AI 기반 팀 프로젝트 운영 플랫폼',
+    status: 'SUBMITTED',
+    statusLabel: '제출 완료',
+    submissionId: '1001',
+    teamId: '1',
+    teamName: '1팀',
   },
-  {
-    id: 'presentation-submit',
-    title: '발표 자료 제출',
-    deadlineLabel: '2026-08-17',
-    status: {
-      kind: 'submitted',
-      submittedDateLabel: '2026-08-17',
-    },
-    submissionId: 'submission-presentation-team-1',
-  },
-  {
-    id: 'presentation-evaluate',
-    title: '발표 평가',
-    deadlineLabel: '2026-08-20',
-    submissionId: null,
-    status: { kind: 'evaluated' },
-  },
-  {
-    id: 'final-report',
-    title: '최종 보고서',
-    deadlineLabel: '2026-12-07',
-    submissionId: 'submission-final-report-team-1',
-    downloadFiles: [
+  submissionState: 'ready',
+  version: {
+    artifacts: [
       {
-        downloadUrl: 'data:application/pdf;base64,JVBERi0xLjQKJQ==',
-        fileName: 'oop-01-1-final-report.pdf',
-        label: '보고서(pdf)',
+        content: null,
+        downloadUrl: 'https://files.example.com/proposal.pdf',
+        fileName: 'proposal.pdf',
+        label: '파일',
+        type: 'FILE',
+        url: null,
       },
       {
-        downloadUrl:
-          'data:application/zip;base64,UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA==',
-        fileName: 'oop-01-1-final-report.zip',
-        label: '전체 파일(zip)',
+        content: null,
+        downloadUrl: null,
+        fileName: null,
+        label: '링크',
+        type: 'LINK',
+        url: 'https://github.com/kgu-developers/example',
       },
     ],
-    status: { kind: 'submitted', submittedDateLabel: '2026-12-07' },
+    changeNote: null,
+    description: null,
+    isLate: false,
+    submittedAt: '2026-10-10T09:00:00Z',
+    submittedBy: '홍길동',
+    version: 2,
   },
-  {
-    id: 'peer-review',
-    title: '상호 평가',
-    deadlineLabel: '2026-08-30',
-    submissionId: null,
-    status: { kind: 'before-deadline' },
-  },
-];
+  versionState: 'ready',
+};
 
 function renderProgress(
-  items: TeamMilestoneProgress[],
-  meetingCountState: MeetingCountState = { count: 2, status: 'ready' },
+  milestones: TeamMilestoneProgress[],
+  milestoneListState: 'error' | 'pending' | 'ready' = 'ready',
 ) {
+  const queryClient = new QueryClient({
+    defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
+  });
   const rootRoute = createRootRoute();
   const progressRoute = createRoute({
     component: () => (
       <AstryxThemeProvider>
-        <AdminTeamMilestoneProgress
-          milestones={items}
-          projectTopic='구독 관리 가계부 프로젝트'
-          sectionId='oop-01'
-          teamId='team-1'
-          teamMemberCount={2}
-          teamLeaderName='김ㅇㅇ'
-          meetingCountState={meetingCountState}
-        />
+        <QueryClientProvider client={queryClient}>
+          <AdminTeamMilestoneProgress
+            milestoneListState={milestoneListState}
+            milestones={milestones}
+            sectionId='1'
+          />
+        </QueryClientProvider>
       </AstryxThemeProvider>
     ),
     getParentRoute: () => rootRoute,
@@ -110,57 +101,60 @@ function renderProgress(
 }
 
 describe('AdminTeamMilestoneProgress', () => {
-  it('발표 평가를 제외한 제출물 카드를 표시하고 미제출 카드는 비활성화한다', async () => {
-    renderProgress(milestones);
+  it('제안서를 제출물 목록과 같은 상태·제출자·주제 요약으로 표시한다', async () => {
+    renderProgress([submittedMilestone]);
 
     expect(await screen.findByText('제안서')).toBeInTheDocument();
-    expect(screen.getByText('중간 점검')).toBeInTheDocument();
-    expect(screen.getByText('발표 자료 제출')).toBeInTheDocument();
-    expect(screen.getByText('최종 보고서')).toBeInTheDocument();
-    expect(screen.getByText('상호 평가')).toBeInTheDocument();
-    expect(screen.getByText('제출자 수: 0 / 2')).toBeInTheDocument();
-    expect(screen.queryByText('발표 평가')).not.toBeInTheDocument();
+    expect(screen.getByText('제출 완료')).toBeInTheDocument();
+    expect(screen.getByText('2026.10.10 18:00')).toBeInTheDocument();
+    expect(screen.getByText('제출자: 홍길동', { exact: false })).toBeInTheDocument();
     expect(
-      screen.getAllByRole('link', { name: '회의록: 2개' })[0],
-    ).toHaveAttribute('href', '/admin/meetings?sectionId=oop-01&teamId=team-1');
-    const detailButtons = screen.getAllByRole('button', {
-      name: /상세보기: 팀 진행 현황의 제출물 상세 ID 연동 후 제공 예정입니다./,
-    });
+      screen.getByText('프로젝트 주제: AI 기반 팀 프로젝트 운영 플랫폼'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('검토 대기 중')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'proposal.pdf' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '상세보기' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/admin/submissions/1001'),
+    );
+  });
 
-    expect(detailButtons).toHaveLength(4);
-    detailButtons.forEach(button => expect(button).toBeDisabled());
+  it('미제출 제안서를 제출물 목록과 같은 상태와 비활성 상세보기로 표시한다', async () => {
+    renderProgress([
+      {
+        ...submittedMilestone,
+        submission: {
+          ...submittedMilestone.submission!,
+          currentVersion: 0,
+          status: 'NOT_SUBMITTED',
+          statusLabel: '미제출',
+          submissionId: null,
+        },
+        version: null,
+        versionState: 'idle',
+      },
+    ]);
+
+    expect(await screen.findByText('미제출')).toBeInTheDocument();
+    expect(screen.getByText('프로젝트 주제: AI 기반 팀 프로젝트 운영 플랫폼')).toBeInTheDocument();
     expect(
-      screen.queryByRole('link', { name: '상세보기' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('link', { name: 'oop-01-1-final-report.pdf' }),
-    ).toHaveAttribute('download', 'oop-01-1-final-report.pdf');
-    expect(
-      screen.getByRole('button', { name: '일괄 다운로드' }),
+      screen.getByRole('button', {
+        name: '상세보기: 아직 제출하지 않은 마일스톤입니다.',
+      }),
     ).toBeDisabled();
   });
 
-  it('마일스톤이 없으면 빈 상태를 표시한다', async () => {
-    renderProgress([]);
+  it('마일스톤 목록 로딩과 오류를 빈 목록과 구분해 표시한다', async () => {
+    renderProgress([], 'pending');
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      '마일스톤을 불러오는 중입니다.',
+    );
+
+    renderProgress([], 'error');
 
     expect(
-      await screen.findByText('등록된 마일스톤이 없습니다.'),
+      await screen.findByText('마일스톤을 불러오지 못했습니다.'),
     ).toBeInTheDocument();
-  });
-
-  it('회의록 수를 아직 알 수 없으면 0개로 표시하지 않는다', async () => {
-    renderProgress(milestones, { status: 'pending' });
-
-    expect(await screen.findAllByText('회의록 조회 중...')).toHaveLength(5);
-    expect(screen.queryByText('회의록: 0개')).not.toBeInTheDocument();
-  });
-
-  it('회의록 조회가 실패하면 실패 상태를 표시한다', async () => {
-    renderProgress(milestones, { status: 'error' });
-
-    expect(
-      await screen.findAllByText('회의록을 불러오지 못했습니다.'),
-    ).toHaveLength(5);
-    expect(screen.queryByText('회의록: 0개')).not.toBeInTheDocument();
   });
 });

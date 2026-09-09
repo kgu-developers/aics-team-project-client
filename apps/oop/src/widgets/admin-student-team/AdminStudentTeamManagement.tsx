@@ -1,5 +1,8 @@
 import { Button, Dialog, Heading, HStack, Text } from '@aics/design-system';
+import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
+
+import { ROUTES } from '~/app/constants/routes';
 
 import {
   useAdminSectionEnrollmentsQuery,
@@ -162,7 +165,16 @@ export default function AdminStudentTeamManagement() {
               <div className={styles.teamGrid}>
                 {teams.map(team => (
                   <article className={styles.teamCard} key={team.id}>
-                    <h3 className={styles.teamName}>{team.name}</h3>
+                    <h3 className={styles.teamName}>
+                      <Link
+                        className={styles.teamDashboardLink}
+                        params={{ teamId: String(team.id) }}
+                        search={{ sectionId }}
+                        to={ROUTES.ADMIN_TEAM_DETAIL}
+                      >
+                        {team.name}
+                      </Link>
+                    </h3>
                     <ul className={styles.memberList}>
                       {team.members.map(member => (
                         <li className={styles.member} key={member.id}>

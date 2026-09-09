@@ -151,6 +151,10 @@ describe('AdminStudentTeamManagement', () => {
     ).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '1팀' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '2팀' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '1팀' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/admin/teams/1'),
+    );
   });
 
   it('수강생 제외를 확인하면 WITHDRAWN 처리 후 목록과 팀 구성에서 제거한다', async () => {

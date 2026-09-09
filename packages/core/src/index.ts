@@ -131,8 +131,6 @@ export type {
   TopicCandidate,
 } from './topic/types';
 export type {
-  AdminTeamDashboard,
-  AdminTeamDashboardMember,
   SubmitTeamInput,
   Team,
   TeamMember,

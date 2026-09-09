@@ -17,26 +17,6 @@ export type SubmitTeamInput = {
   name: string;
 };
 
-export type AdminTeamDashboardMember = {
-  id: string;
-  name: string;
-  studentNumber: string;
-  major: string;
-  isLeader: boolean;
-  projectRole: 'ENGINE' | 'GUI' | null;
-};
-
-export type AdminTeamDashboard = {
-  id: string;
-  section: {
-    id: string;
-    code: string;
-  };
-  name: string;
-  projectTopic: string | null;
-  members: AdminTeamDashboardMember[];
-};
-
 /**
  * Contact details returned by the student-team contacts endpoint.
  *

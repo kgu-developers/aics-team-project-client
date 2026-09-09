@@ -16,22 +16,35 @@ import {
 
 import { useAdminTeamDashboardQuery } from './useAdminTeamDashboardQuery';
 
-import { adminTeamDashboardFixture } from '~/mocks/data/adminTeamDashboard';
-
-const dashboardRequest = vi.fn();
-const server = setupServer(
-  http.get(
-    `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_DASHBOARD(':teamId')}`,
-    ({ params }) => {
-      dashboardRequest(params.teamId);
-      return HttpResponse.json(adminTeamDashboardFixture);
+const teamRequest = vi.fn();
+const teamResponse = {
+  createdAt: '2026-09-08T15:15:06.663Z',
+  id: 1,
+  kickoffRule: null,
+  meetingSchedule: null,
+  members: [
+    {
+      id: 1,
+      isLeader: true,
+      name: '김민준',
+      projectRole: 'BACKEND',
+      studentNumber: '20231234',
     },
-  ),
+  ],
+  name: '1팀',
+  sectionId: 1,
+  status: 'FORMING',
+};
+const server = setupServer(
+  http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM(':teamId')}`, ({ params }) => {
+    teamRequest(params.teamId);
+    return HttpResponse.json(teamResponse);
+  }),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
-  dashboardRequest.mockClear();
+  teamRequest.mockClear();
   server.resetHandlers();
 });
 afterAll(() => server.close());
@@ -49,80 +62,58 @@ function createWrapper() {
 }
 
 describe('useAdminTeamDashboardQuery', () => {
-  it('팀 ID가 없으면 팀 대시보드 API를 호출하지 않는다', () => {
+  it('팀 ID가 없으면 팀 상세 API를 호출하지 않는다', () => {
     const { result } = renderHook(() => useAdminTeamDashboardQuery(''), {
       wrapper: createWrapper(),
     });
 
     expect(result.current.fetchStatus).toBe('idle');
-    expect(dashboardRequest).not.toHaveBeenCalled();
+    expect(teamRequest).not.toHaveBeenCalled();
   });
 
-  it('팀 ID가 있으면 해당 팀 대시보드를 요청한다', async () => {
-    const { result } = renderHook(
-      () => useAdminTeamDashboardQuery('team-1151-1'),
-      { wrapper: createWrapper() },
-    );
+  it('팀 상세 API 응답을 대시보드용 팀 정보로 변환한다', async () => {
+    const { result } = renderHook(() => useAdminTeamDashboardQuery('1'), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(dashboardRequest).toHaveBeenCalledOnce();
-    expect(dashboardRequest).toHaveBeenCalledWith('team-1151-1');
-    expect(result.current.data).toEqual(adminTeamDashboardFixture);
+    expect(teamRequest).toHaveBeenCalledOnce();
+    expect(teamRequest).toHaveBeenCalledWith('1');
+    expect(result.current.data).toMatchObject({
+      id: '1',
+      name: '1팀',
+      sectionId: '1',
+      members: [
+        {
+          major: null,
+          name: '김민준',
+          projectRole: 'BACKEND',
+          studentNumber: '20231234',
+        },
+      ],
+    });
   });
 
   it('404 응답은 자동으로 다시 요청하지 않는다', async () => {
     const request = vi.fn();
 
     server.use(
-      http.get(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_DASHBOARD(':teamId')}`,
-        () => {
-          request();
-          return HttpResponse.json(
-            { code: 'TEAM_NOT_FOUND', message: '팀을 찾을 수 없습니다.' },
-            { status: 404 },
-          );
-        },
-      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM(':teamId')}`, () => {
+        request();
+        return HttpResponse.json(
+          { code: 'TEAM_NOT_FOUND', message: '팀을 찾을 수 없습니다.' },
+          { status: 404 },
+        );
+      }),
     );
 
-    const { result } = renderHook(
-      () => useAdminTeamDashboardQuery('not-found'),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useAdminTeamDashboardQuery('999'), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.isError).toBe(true));
 
     expect(request).toHaveBeenCalledOnce();
-  });
-
-  it('서버 오류는 한 번 자동으로 다시 요청한다', async () => {
-    const request = vi.fn();
-
-    server.use(
-      http.get(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_DASHBOARD(':teamId')}`,
-        () => {
-          request();
-
-          return request.mock.calls.length === 1
-            ? HttpResponse.json(
-                { code: 'INTERNAL_SERVER_ERROR', message: '서버 오류' },
-                { status: 500 },
-              )
-            : HttpResponse.json(adminTeamDashboardFixture);
-        },
-      ),
-    );
-
-    const { result } = renderHook(
-      () => useAdminTeamDashboardQuery('team-1151-1'),
-      { wrapper: createWrapper() },
-    );
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(request).toHaveBeenCalledTimes(2);
   });
 });

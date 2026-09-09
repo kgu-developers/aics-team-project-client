@@ -7,7 +7,6 @@ import { adminPresentationEvaluationHandlers } from './adminPresentationEvaluati
 import { adminProfileHandlers } from './adminProfile';
 import { adminSectionMilestoneHandlers } from './adminSectionMilestones';
 import { adminStudentTeamHandlers } from './adminStudentTeams';
-import { adminTeamDashboardHandlers } from './adminTeamDashboard';
 import { authHandlers } from './auth';
 import { editLockHandlers } from './editLock';
 import { evaluationHandlers } from './evaluation';
@@ -55,7 +54,6 @@ export const handlers = [
   ...submissionHandlers,
   ...teamAssignmentHandlers,
   ...teamAssignmentUserHandlers,
-  ...adminTeamDashboardHandlers,
   ...adminStudentTeamHandlers,
   ...adminProfileHandlers,
 ];
