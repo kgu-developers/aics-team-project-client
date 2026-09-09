@@ -14,13 +14,19 @@ export type AdminSubmissionArtifactDto = {
   url?: string;
 };
 
+export type AdminSubmissionSubmitterDto = {
+  name: string;
+  userId: string;
+};
+
 export type AdminSubmissionVersionResponse = {
   artifacts: AdminSubmissionArtifactDto[];
   changeNote?: string;
   description?: string;
   late: boolean;
   submittedAt: string;
-  submittedBy: string;
+  /** Swagger returns an object; string keeps legacy mock responses readable. */
+  submittedBy: AdminSubmissionSubmitterDto | string;
   version: number;
 };
 

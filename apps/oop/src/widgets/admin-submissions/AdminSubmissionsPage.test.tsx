@@ -256,13 +256,11 @@ describe('AdminSubmissionsPage', () => {
 
     expect(await screen.findByText('OOP-01 - 2팀')).toBeInTheDocument();
     expect(screen.getByText('미제출')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '일괄 다운로드' })).toHaveAttribute(
-      'href',
-      `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_DOWNLOAD('1005')}`,
-    );
-    expect(
-      screen.getByRole('button', { name: '일괄 다운로드' }),
-    ).toBeDisabled();
+    const finalDownloadButtons = screen.getAllByRole('button', {
+      name: '일괄 다운로드',
+    });
+    expect(finalDownloadButtons[0]).toBeEnabled();
+    expect(finalDownloadButtons[1]).toBeDisabled();
     expect(
       await screen.findByRole('link', { name: 'final-report.pdf' }),
     ).toHaveAttribute('download', 'final-report.pdf');
@@ -295,10 +293,11 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('link', { name: 'https://youtu.be/demo-oop-01-1' }),
     ).toHaveAttribute('target', '_blank');
-    expect(screen.getByRole('link', { name: '일괄 다운로드' })).toHaveAttribute(
-      'href',
-      `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_DOWNLOAD('1008')}`,
-    );
+    const presentationDownloadButtons = screen.getAllByRole('button', {
+      name: '일괄 다운로드',
+    });
+    expect(presentationDownloadButtons[0]).toBeEnabled();
+    expect(presentationDownloadButtons[1]).toBeDisabled();
     expect(
       screen.queryByRole('link', { name: '상세보기' }),
     ).not.toBeInTheDocument();
@@ -323,8 +322,8 @@ describe('AdminSubmissionsPage', () => {
 
   it('발표 순서 fixture는 초기화 후 원래 순서로 돌아온다', () => {
     updatePresentationOrderFixture([
-      { order: 2, teamId: 11 },
-      { order: 1, teamId: 12 },
+      { order: 2, teamId: 1 },
+      { order: 1, teamId: 2 },
     ]);
 
     expect(

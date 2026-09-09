@@ -2,6 +2,8 @@ export {
   formatAdminMilestoneDate,
   getAdminMilestoneStatusLabel,
   getAdminMilestoneTypeLabel,
+  isPresentationEvaluationMilestone,
+  isPresentationSubmissionMilestone,
 } from './adminSectionMilestone';
 export {
   toAdminSubmissionDetailView,

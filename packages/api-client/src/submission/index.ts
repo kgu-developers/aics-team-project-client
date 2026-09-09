@@ -11,6 +11,7 @@ export {
   fetchAdminSubmissionVersion,
   type AdminSubmissionArtifactDto,
   type AdminSubmissionArtifactTypeDto,
+  type AdminSubmissionSubmitterDto,
   type AdminSubmissionVersionResponse,
 } from './fetchAdminSubmissionVersion';
 export {
@@ -24,6 +25,10 @@ export {
   type AdminMilestoneSubmissionStatusDto,
   type AdminMilestoneSubmissionsResponse,
 } from './fetchAdminMilestoneSubmissions';
+export {
+  downloadAdminSubmissionArtifacts,
+  type AdminSubmissionArtifactsDownload,
+} from './downloadAdminSubmissionArtifacts';
 export {
   fetchAdminPresentationEvaluations,
   type AdminPresentationEvaluationCriterionDto,

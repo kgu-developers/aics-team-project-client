@@ -96,12 +96,6 @@ export {
   fetchAdminMeetingRecordDetail,
   type AdminMeetingRecordDetailResponse,
 } from './adminMeeting';
-export {
-  fetchAdminTeamDashboard,
-  type AdminTeamDashboardMilestoneDto,
-  type AdminTeamDashboardMilestoneStatusDto,
-  type AdminTeamDashboardResponse,
-} from './teams/fetchAdminTeamDashboard';
 export { acquireEditLock, fetchEditLock, removeEditLock } from './editLock';
 export {
   fetchEvaluationContext,
@@ -194,6 +188,7 @@ export {
   fetchAdminSubmissionVersion,
   fetchAdminSubmissionVersions,
   fetchAdminMilestoneSubmissions,
+  downloadAdminSubmissionArtifacts,
   fetchAdminPresentationEvaluations,
   updatePresentationOrder,
   fetchMyTeamSubmission,
@@ -204,12 +199,14 @@ export {
   type AdminMilestoneSubmissionItemDto,
   type AdminMilestoneSubmissionStatusDto,
   type AdminMilestoneSubmissionsResponse,
+  type AdminSubmissionArtifactsDownload,
   type AdminPresentationEvaluationCriterionDto,
   type AdminPresentationEvaluationTeamDto,
   type AdminPresentationEvaluationsResponse,
   type UpdatePresentationOrderInput,
   type AdminSubmissionArtifactDto,
   type AdminSubmissionArtifactTypeDto,
+  type AdminSubmissionSubmitterDto,
   type AdminFeedbackEntryDto,
   type AdminMidtermFeedbackDto,
   type AdminProposalFeedbackDto,

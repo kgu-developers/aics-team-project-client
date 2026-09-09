@@ -19,7 +19,7 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
       id: 1001,
       milestoneId: 101,
       status: 'REVISION_REQUESTED',
-      teamId: 11,
+      teamId: 1,
       teamName: 'OOP-01 - 1팀',
     },
     versionDetails: {
@@ -84,7 +84,7 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
       id: 1003,
       milestoneId: 102,
       status: 'FEEDBACK_PROVIDED',
-      teamId: 11,
+      teamId: 1,
       teamName: 'OOP-01 - 1팀',
     },
     versionDetails: {
@@ -142,7 +142,7 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
       id: 1004,
       milestoneId: 102,
       status: 'APPROVED',
-      teamId: 12,
+      teamId: 2,
       teamName: 'OOP-01 - 2팀',
     },
     versionDetails: {
@@ -182,7 +182,7 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
       id: 1005,
       milestoneId: 104,
       status: 'COMPLETED',
-      teamId: 11,
+      teamId: 1,
       teamName: 'OOP-01 - 1팀',
     },
     versionDetails: {
@@ -224,7 +224,7 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
       id: 1006,
       milestoneId: 105,
       status: 'SUBMITTED',
-      teamId: 11,
+      teamId: 1,
       teamName: 'OOP-01 - 1팀',
     },
     versionDetails: {
@@ -256,10 +256,10 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
       currentVersion: 1,
       hasPendingReview: false,
       id: 1008,
-      milestoneId: 103,
+      milestoneId: 106,
       presentationOrder: 1,
       status: 'SUBMITTED',
-      teamId: 11,
+      teamId: 1,
       teamName: 'OOP-01 - 1팀',
     },
     versionDetails: {

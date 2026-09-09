@@ -70,7 +70,10 @@ function toSubmissionVersionSummaryView(
     description: version.description ?? null,
     isLate: version.late,
     submittedAt: version.submittedAt,
-    submittedBy: version.submittedBy,
+    submittedBy:
+      typeof version.submittedBy === 'string'
+        ? version.submittedBy
+        : version.submittedBy.name,
     version: version.version,
   };
 }

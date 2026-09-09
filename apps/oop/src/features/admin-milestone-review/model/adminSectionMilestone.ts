@@ -1,6 +1,7 @@
 import type {
   AdminMilestoneStatus,
   AdminMilestoneType,
+  AdminSectionMilestoneDto,
 } from '@aics/api-client';
 
 const milestoneTypeLabels: Record<AdminMilestoneType, string> = {
@@ -28,6 +29,32 @@ export function formatAdminMilestoneDate(value: string | null | undefined) {
 
 export function getAdminMilestoneTypeLabel(type: AdminMilestoneType) {
   return milestoneTypeLabels[type];
+}
+
+/**
+ * `PRESENTATION` is shared by material submission and presentation evaluation.
+ * The API contract distinguishes evaluation by its configured evaluation window.
+ */
+export function isPresentationEvaluationMilestone(
+  milestone: AdminSectionMilestoneDto,
+) {
+  return (
+    milestone.type === 'PRESENTATION' &&
+    Boolean(
+      milestone.schedule.evaluationOpensAt &&
+        milestone.schedule.evaluationClosesAt,
+    )
+  );
+}
+
+export function isPresentationSubmissionMilestone(
+  milestone: AdminSectionMilestoneDto,
+) {
+  return (
+    milestone.type === 'PRESENTATION' &&
+    Boolean(milestone.schedule.dueAt) &&
+    !isPresentationEvaluationMilestone(milestone)
+  );
 }
 
 const milestoneStatusLabels: Record<AdminMilestoneStatus, string> = {

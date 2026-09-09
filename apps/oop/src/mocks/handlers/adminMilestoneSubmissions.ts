@@ -29,7 +29,18 @@ export const adminMilestoneSubmissionsHandlers = [
         );
       }
 
-      return HttpResponse.json(fixture);
+      const teamId = new URL(request.url).searchParams.get('teamId');
+
+      return HttpResponse.json(
+        teamId
+          ? {
+              ...fixture,
+              contents: fixture.contents.filter(
+                submission => submission.teamId === Number(teamId),
+              ),
+            }
+          : fixture,
+      );
     },
   ),
 ];
