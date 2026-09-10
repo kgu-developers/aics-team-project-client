@@ -42,11 +42,11 @@ async function finishEditing() {
 
 ## 문서별 대상
 
-| 화면 | targetType | targetId | sectionKey |
-| --- | --- | --- | --- |
-| 제안서 | `PROJECT` | 서버가 반환한 `project.id` | 해당 제안서 영역의 합의된 키 |
-| 중간보고서 영역 | `MID_REPORT_BLOCK` | 서버가 반환한 `midReport.id` | 해당 블록의 합의된 키 |
-| 회의록 | `MEETING_RECORD` | 서버가 반환한 `meetingRecord.id` | 해당 회의록 영역의 합의된 키 |
+| 화면            | targetType         | targetId                         | sectionKey                   |
+| --------------- | ------------------ | -------------------------------- | ---------------------------- |
+| 제안서          | `PROJECT`          | 서버가 반환한 `project.id`       | 해당 제안서 영역의 합의된 키 |
+| 중간보고서 영역 | `MID_REPORT_BLOCK` | 서버가 반환한 `midReport.id`     | 해당 블록의 합의된 키        |
+| 회의록          | `MEETING_RECORD`   | 서버가 반환한 `meetingRecord.id` | 해당 회의록 영역의 합의된 키 |
 
 `sectionKey`는 문서 내부 영역이다. 수업 분반의 `sectionId`가 아니며 훅이 기본값을 만들지 않는다.
 필수 데이터가 없으면 조회에 `null`을 전달하고 별도의 미준비 상태를 표시한다. 잘못된 ID나 빈 영역 키는 mutation에서도 요청 전에 거절된다.
