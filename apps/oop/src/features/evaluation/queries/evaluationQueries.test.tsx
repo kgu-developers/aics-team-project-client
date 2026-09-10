@@ -1,6 +1,6 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 import type { PropsWithChildren } from 'react';
@@ -78,6 +78,52 @@ function createWrapper() {
 }
 
 describe('evaluation queries', () => {
+  it.each([null, ''])(
+    '팀원 대상 ID가 %s인 응답은 조회 오류로 처리한다',
+    async targetUserId => {
+      server.use(
+        http.get(
+          `${API_BASE_URL}${ENDPOINTS.EVALUATION.PEER_TARGETS(':formId')}`,
+          () =>
+            HttpResponse.json({
+              formId: 1,
+              title: '상호평가',
+              windowState: 'OPEN',
+              windowMessage: '',
+              targets: [{ userId: '20260003', name: '팀원', role: '개발' }],
+              myResponse: {
+                id: 1,
+                status: 'DRAFT',
+                selfContribution: null,
+                projectReviewComment: null,
+                updatedAt: '2026-09-10T00:00:00',
+                submittedAt: null,
+                answers: [
+                  {
+                    kind: 'TEAMMATE_CONTRIBUTION',
+                    targetUserId,
+                    contributionPercent: null,
+                    contributionDetail: null,
+                    teammateAssessment: null,
+                    comment: null,
+                  },
+                ],
+              },
+            }),
+        ),
+      );
+      const { result } = renderHook(
+        () => usePeerEvaluationTargetsQuery('section', '20260001', '1'),
+        { wrapper: createWrapper() },
+      );
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.data).toBeUndefined();
+      expect(result.current.error?.message).toBe(
+        '상호평가 응답의 팀원 정보가 올바르지 않아요.',
+      );
+    },
+  );
+
   it.each([
     ['', '20260001'],
     ['oop-2026-2-01', ''],

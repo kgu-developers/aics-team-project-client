@@ -1097,6 +1097,7 @@ function getPeerEvaluationSectionProgress(
           teammateAnswers.length === targetCount &&
           teammateAnswers.every(
             answer =>
+              answer.contributionPercent !== null &&
               answer.contributionDetail.trim() &&
               answer.teammateAssessment.trim(),
           )),

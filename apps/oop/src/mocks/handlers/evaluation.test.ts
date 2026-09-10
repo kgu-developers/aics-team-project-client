@@ -525,6 +525,41 @@ describe('evaluationHandlers', () => {
     expect(anotherBody.myResponse).toBeNull();
   });
 
+  it.each([
+    [null, 'in-progress'],
+    [0, 'completed'],
+  ] as const)(
+    '서술을 채운 초안의 기여도 %s를 상태 %s로 표시한다',
+    async (contributionPercent, status) => {
+      const saved = await request(
+        ENDPOINTS.EVALUATION.PEER_RESPONSES(peerEvaluationFormId),
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            selfContribution: '',
+            projectReviewComment: '',
+            submit: false,
+            answers: contributionAnswers().map(answer => ({
+              ...answer,
+              contributionPercent,
+            })),
+          }),
+        },
+      );
+      expect(saved.status).toBe(200);
+      const dashboard = await getDashboardPreview('peer-evaluation');
+      const milestone = dashboard.milestones.find(
+        item => item.id === 'peer-evaluation',
+      );
+      expect(milestone?.body).toMatchObject({
+        kind: 'peer-evaluation',
+        sections: expect.arrayContaining([
+          expect.objectContaining({ id: 'teammate-contribution', status }),
+        ]),
+      });
+    },
+  );
+
   it('상호평가 임시 저장과 제출 뒤 대시보드 재조회에 섹션과 CTA 상태를 반영한다', async () => {
     const draftInput: SubmitPeerEvaluationResponseInput = {
       selfContribution: '문서 구조를 맡았습니다.',
