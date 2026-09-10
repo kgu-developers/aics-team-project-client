@@ -4,6 +4,7 @@ export type AdminSectionEnrollmentDto = {
   name: string;
   email: string;
   phone: string;
+  major: string | null;
   role: 'STUDENT' | 'ASSISTANT';
   status: 'ACTIVE' | 'WITHDRAWN';
   createdAt: string;
