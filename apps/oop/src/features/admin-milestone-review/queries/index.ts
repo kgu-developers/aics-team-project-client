@@ -20,3 +20,12 @@ export { useDownloadAdminSubmissionArtifactsMutation } from './useDownloadAdminS
 export { adminMilestoneSubmissionsKeys } from './adminMilestoneSubmissionsKeys';
 export { useAdminPresentationEvaluationsQuery } from './useAdminPresentationEvaluationsQuery';
 export { useUpdatePresentationOrderMutation } from './useUpdatePresentationOrderMutation';
+export { adminRequiredArtifactKeys } from './adminRequiredArtifactKeys';
+export { useAdminRequiredArtifactsQuery } from './useAdminRequiredArtifactsQuery';
+export { useRemoveRequiredArtifactMutation } from './useRemoveRequiredArtifactMutation';
+export { useSubmitRequiredArtifactMutation } from './useSubmitRequiredArtifactMutation';
+export {
+  useSubmitAdminRequiredArtifactsMutation,
+  type SubmitAdminRequiredArtifactsResult,
+} from './useSubmitAdminRequiredArtifactsMutation';
+export { useUpdateRequiredArtifactMutation } from './useUpdateRequiredArtifactMutation';

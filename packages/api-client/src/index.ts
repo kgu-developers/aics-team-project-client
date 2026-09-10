@@ -121,6 +121,16 @@ export {
   type AdminNoticesResponse,
 } from './notices';
 export { ENDPOINTS } from './constants/endpoints';
+export {
+  fetchRequiredArtifacts,
+  removeRequiredArtifact,
+  submitRequiredArtifact,
+  updateRequiredArtifact,
+  type RequiredArtifactDto,
+  type RequiredArtifactInput,
+  type RequiredArtifactsResponse,
+  type RequiredArtifactType,
+} from './requiredArtifacts';
 export { fetchStudentHomeDashboard } from './studentHome/fetchStudentHomeDashboard';
 export {
   fetchAdminMilestoneSchedule,
