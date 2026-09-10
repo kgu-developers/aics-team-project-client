@@ -421,7 +421,7 @@ function ProposalFeedbackBody({
   const body = useProposalFeedbackQuery(sourceBody);
   return (
     <div className={styles.root}>
-      <SectionBanner title='교수 피드백' />
+      <SectionBanner title='피드백 대화' />
       <FeedbackList feedback={body.feedback} />
       <SectionBanner title='피드백 반영 답변' />
       {body.studentResponse ? (
@@ -463,7 +463,7 @@ function MidReportFeedbackBody({
       )}
       {body.feedback.length > 0 ? (
         <>
-          <SectionBanner title='교수 추가 답변' />
+          <SectionBanner title='피드백 대화' />
           <FeedbackList feedback={body.feedback} />
         </>
       ) : null}

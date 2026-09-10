@@ -1,25 +1,19 @@
 import type { SubmitMidReportFeedbackInput } from '@aics/core';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { useSubmitTeamMessageMutation } from '~/features/team-message/queries';
+import { teamMessageMutationOptions } from '~/features/team-message/queries';
 
 export type SubmitMidReportFeedbackVariables = SubmitMidReportFeedbackInput;
 
 export function useSubmitMidReportFeedbackMutation(teamId?: string) {
-  const mutation = useSubmitTeamMessageMutation(teamId);
-  const toMessage = (input: SubmitMidReportFeedbackVariables) => ({
-    message: input.content.trim(),
-    relatedType: 'MID_REPORT' as const,
+  const queryClient = useQueryClient();
+  const options = teamMessageMutationOptions(queryClient, teamId);
+  return useMutation({
+    ...options,
+    mutationFn: (input: SubmitMidReportFeedbackVariables) =>
+      options.mutationFn({
+        message: input.content.trim(),
+        relatedType: 'MID_REPORT',
+      }),
   });
-
-  return {
-    ...mutation,
-    mutate: (
-      input: SubmitMidReportFeedbackVariables,
-      options?: Parameters<typeof mutation.mutate>[1],
-    ) => mutation.mutate(toMessage(input), options),
-    mutateAsync: (
-      input: SubmitMidReportFeedbackVariables,
-      options?: Parameters<typeof mutation.mutateAsync>[1],
-    ) => mutation.mutateAsync(toMessage(input), options),
-  };
 }

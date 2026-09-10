@@ -92,6 +92,8 @@ describe('existing proposal feedback form with team messages', () => {
     expect(
       screen.queryByText(`${demoStudent.studentNumber} (2026-09-01 10:10)`),
     ).not.toBeInTheDocument();
+    expect(screen.getByText('피드백 대화')).toBeInTheDocument();
+    expect(screen.queryByText('교수 피드백')).not.toBeInTheDocument();
     expect(paths.some(path => path.endsWith('/kickoff'))).toBe(false);
   });
 
@@ -164,10 +166,12 @@ describe('existing proposal feedback form with team messages', () => {
     expect(
       await screen.findByText('역할 분담도 정리했습니다.'),
     ).toBeInTheDocument();
-    expect(requests).toEqual([
-      { message: '핵심 기능을 구체화했습니다.', relatedType: 'PROPOSAL' },
-      { message: '역할 분담도 정리했습니다.', relatedType: 'PROPOSAL' },
-    ]);
+    await waitFor(() =>
+      expect(requests).toEqual([
+        { message: '핵심 기능을 구체화했습니다.', relatedType: 'PROPOSAL' },
+        { message: '역할 분담도 정리했습니다.', relatedType: 'PROPOSAL' },
+      ]),
+    );
     view.unmount();
     renderFeedback();
     expect(
@@ -368,6 +372,8 @@ describe('중간보고서 피드백 메시지', () => {
       await screen.findByText('반영 내용을 확인했습니다.'),
     ).toBeInTheDocument();
     expect(screen.getByText('대면 피드백을 기록했습니다.')).toBeInTheDocument();
+    expect(screen.getByText('피드백 대화')).toBeInTheDocument();
+    expect(screen.queryByText('교수 추가 답변')).not.toBeInTheDocument();
     expect(
       screen.getByText('검수 교수 (2026-09-10 10:10)'),
     ).toBeInTheDocument();

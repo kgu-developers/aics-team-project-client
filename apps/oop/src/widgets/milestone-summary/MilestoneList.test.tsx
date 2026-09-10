@@ -130,7 +130,7 @@ describe('MilestoneList', () => {
       'true',
     );
     expect(screen.queryByText('최종 선정 주제')).not.toBeInTheDocument();
-    expect(screen.queryByText('교수 피드백')).not.toBeInTheDocument();
+    expect(screen.queryByText('피드백 대화')).not.toBeInTheDocument();
   });
 
   it('제안서 피드백 반영과 조기 활성화된 중간 단계를 함께 상세로 표시한다', () => {
@@ -152,7 +152,7 @@ describe('MilestoneList', () => {
     writingButtons.forEach(button => expect(button).toBeEnabled());
     expect(screen.getByText('중간보고서 작성')).toBeInTheDocument();
     expect(screen.getByText('최종 선정 주제')).toBeInTheDocument();
-    expect(screen.getByText('교수 피드백')).toBeInTheDocument();
+    expect(screen.getByText('피드백 대화')).toBeInTheDocument();
   });
 
   it('새로 활성화된 마일스톤은 데이터 갱신 뒤에도 기본으로 상세를 연다', () => {
@@ -173,7 +173,7 @@ describe('MilestoneList', () => {
       />,
     );
 
-    expect(screen.getByText('교수 피드백')).toBeInTheDocument();
+    expect(screen.getByText('피드백 대화')).toBeInTheDocument();
     expect(screen.getByText('최종 선정 주제')).toBeInTheDocument();
   });
 

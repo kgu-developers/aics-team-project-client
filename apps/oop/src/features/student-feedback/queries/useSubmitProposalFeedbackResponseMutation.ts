@@ -1,26 +1,20 @@
 import type { SubmitProposalFeedbackResponseInput } from '@aics/core';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { useSubmitTeamMessageMutation } from '~/features/team-message/queries';
+import { teamMessageMutationOptions } from '~/features/team-message/queries';
 
 export type SubmitProposalFeedbackResponseVariables =
   SubmitProposalFeedbackResponseInput;
 
 export function useSubmitProposalFeedbackResponseMutation(teamId?: string) {
-  const mutation = useSubmitTeamMessageMutation(teamId);
-  const toMessage = (input: SubmitProposalFeedbackResponseVariables) => ({
-    message: input.content.trim(),
-    relatedType: 'PROPOSAL' as const,
+  const queryClient = useQueryClient();
+  const options = teamMessageMutationOptions(queryClient, teamId);
+  return useMutation({
+    ...options,
+    mutationFn: (input: SubmitProposalFeedbackResponseVariables) =>
+      options.mutationFn({
+        message: input.content.trim(),
+        relatedType: 'PROPOSAL',
+      }),
   });
-
-  return {
-    ...mutation,
-    mutate: (
-      input: SubmitProposalFeedbackResponseVariables,
-      options?: Parameters<typeof mutation.mutate>[1],
-    ) => mutation.mutate(toMessage(input), options),
-    mutateAsync: (
-      input: SubmitProposalFeedbackResponseVariables,
-      options?: Parameters<typeof mutation.mutateAsync>[1],
-    ) => mutation.mutateAsync(toMessage(input), options),
-  };
 }
