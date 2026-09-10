@@ -214,3 +214,7 @@ export type {
   TeamMessagesParams,
   TeamThread,
 } from './teamMessage/types';
+export type {
+  RequiredSubmissionArtifact,
+  StudentSubmissionVersionInput,
+} from './submission/apiTypes';

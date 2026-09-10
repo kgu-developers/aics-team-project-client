@@ -17,6 +17,7 @@ import {
   useStudentMilestonesQuery,
   usePeerEvaluationHomeQuery,
 } from '~/features/student-home/queries';
+import type { FinalReportSubmissionTarget } from '~/features/submission/FinalReportSubmissionPanel';
 import SubmissionDialog from '~/features/submission/SubmissionDialog';
 import { SubmissionDialogProvider } from '~/features/submission/SubmissionDialogContext';
 
@@ -136,6 +137,7 @@ export default function StudentHomePage() {
     );
   }
 
+  const finalReportTargets: Record<string, FinalReportSubmissionTarget> = {};
   const milestones = query.milestones.map((milestone, index) => {
     const submission = query.submissions[index];
     const summary = studentMilestoneSummary(
@@ -167,6 +169,52 @@ export default function StudentHomePage() {
         guide: '대면 피드백과 반영 내용을 기록해 주세요.',
       };
       return summary;
+    }
+    if (
+      milestone.type === 'FINAL_REPORT' &&
+      submission?.isSuccess &&
+      home.teamId &&
+      home.studentNumber &&
+      String(submission.data.milestoneId) === String(milestone.id) &&
+      String(submission.data.teamId) === home.teamId
+    ) {
+      finalReportTargets[String(milestone.id)] = {
+        sectionId,
+        teamId: home.teamId,
+        studentNumber: home.studentNumber,
+        milestoneId: String(milestone.id),
+        submissionId: String(submission.data.id),
+        type: 'FINAL_REPORT',
+        title: '최종 파일 제출',
+      };
+      summary.interaction = 'collapsible';
+      summary.isDetailAvailable = true;
+      summary.body = {
+        kind: 'final-report',
+        submissionId: String(submission.data.id),
+        notice: {
+          description:
+            milestone.description ||
+            '담당 교수자가 안내한 제출 항목과 일정을 확인해 주세요.',
+        },
+        materials: [],
+      };
+      summary.rows = [
+        {
+          id: 'final-report-submission',
+          label: '최종보고서 제출',
+          value: submission.data.currentVersion
+            ? `v${submission.data.currentVersion} 제출됨`
+            : '미제출',
+          tone: 'primary',
+          actionLabel: submission.data.canSubmitNow
+            ? submission.data.currentVersion
+              ? '파일 교체'
+              : '파일 제출'
+            : '제출 내역',
+          actionNotice: '파일 제출과 교체는 팀장만 할 수 있어요.',
+        },
+      ];
     }
     if (milestone.type === 'PROPOSAL') {
       const project =
@@ -276,7 +324,10 @@ export default function StudentHomePage() {
       >
         <TopicCandidateDialogProvider>
           <TopicCandidateDialog />
-          <SubmissionDialogProvider>
+          <SubmissionDialogProvider
+            key={`${home.studentNumber}:${sectionId}:${home.teamId}`}
+            finalReportTargets={finalReportTargets}
+          >
             <SubmissionDialog />
             {query.list.isPending || query.list.isError ? (
               <StudentHomeShortcutState

@@ -45,7 +45,8 @@ export default function MilestoneCard({
   const toast = useToast();
   const currentUser = useAuthStore(state => state.currentUser);
   const { setIsOpen: setTopicCandidateDialogOpen } = useTopicCandidateDialog();
-  const { openDialog: openSubmissionDialog } = useSubmissionDialog();
+  const { openDialog: openSubmissionDialog, finalReportTargets } =
+    useSubmissionDialog();
   const sectionId =
     currentUser?.sections.find(section => section.role === 'STUDENT')?.id ?? '';
   const userId = currentUser?.studentNumber ?? '';
@@ -73,12 +74,12 @@ export default function MilestoneCard({
 
   const body =
     milestone.isDetailAvailable && milestone.body ? (
-      <MilestoneDetails body={milestone.body} />
+      <MilestoneDetails body={milestone.body} milestoneId={milestone.id} />
     ) : null;
 
   function handleFinalReportAction() {
-    if (isTeamLeader) {
-      openSubmissionDialog('final-report');
+    if (finalReportTargets[milestone.id] || isTeamLeader) {
+      openSubmissionDialog('final-report', milestone.id);
       return;
     }
     if (!finalReportBody?.submissionId || !finalReportBody.memberConsent) {

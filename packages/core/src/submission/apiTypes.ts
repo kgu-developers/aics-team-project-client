@@ -28,3 +28,23 @@ export type StudentSubmissionVersionResponse = {
 export type StudentSubmissionVersionsResponse = {
   contents: StudentSubmissionVersionResponse[];
 };
+
+export type RequiredSubmissionArtifact = {
+  id: number;
+  type: 'FILE' | 'LINK' | 'TEXT' | 'CHEERPJ_RUN';
+  label: string;
+  required: boolean;
+  allowedExtensions: string[];
+  maxFileSizeMb: number | null;
+};
+export type StudentSubmissionVersionInput = {
+  description: string;
+  changeNote?: string;
+  files: { requiredArtifactId: number; file: File }[];
+  artifacts: {
+    requiredArtifactId: number;
+    type: 'LINK' | 'TEXT' | 'CHEERPJ_RUN';
+    url?: string;
+    content?: string;
+  }[];
+};

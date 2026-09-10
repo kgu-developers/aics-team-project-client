@@ -1,5 +1,7 @@
-import { Dialog } from '@aics/design-system';
+import { Dialog, EmptyState } from '@aics/design-system';
 
+import FinalReportSubmissionPanel from './FinalReportSubmissionPanel';
+import * as styles from './SubmissionDialog.css';
 import {
   type SubmissionDialogMilestoneId,
   useSubmissionDialog,
@@ -21,7 +23,7 @@ const dialogCopy: Record<
 };
 
 export default function SubmissionDialog() {
-  const { closeDialog, milestoneId } = useSubmissionDialog();
+  const { closeDialog, milestoneId, target } = useSubmissionDialog();
 
   if (!milestoneId) return null;
 
@@ -31,16 +33,32 @@ export default function SubmissionDialog() {
     <Dialog
       aria-label={copy.ariaLabel}
       isOpen
+      width='min(640px, calc(100vw - 32px))'
+      maxHeight='calc(100dvh - 48px)'
+      padding={0}
       onOpenChange={isOpen => {
         if (!isOpen) closeDialog();
       }}
       purpose='form'
     >
-      <SubmissionFilePanel
-        milestoneId={milestoneId}
-        showCurrentFiles={false}
-        title={copy.title}
-      />
+      <div className={styles.content}>
+        {milestoneId === 'final-report' ? (
+          target ? (
+            <FinalReportSubmissionPanel
+              key={`${target.studentNumber}:${target.sectionId}:${target.teamId}:${target.milestoneId}`}
+              target={target}
+            />
+          ) : (
+            <EmptyState title='최종보고서 제출 대상을 확인할 수 없어요.' />
+          )
+        ) : (
+          <SubmissionFilePanel
+            milestoneId={milestoneId}
+            showCurrentFiles={false}
+            title={copy.title}
+          />
+        )}
+      </div>
     </Dialog>
   );
 }

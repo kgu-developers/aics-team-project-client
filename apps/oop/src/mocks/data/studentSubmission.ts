@@ -4,11 +4,27 @@ import type {
   StudentSubmissionVersionResponse,
 } from '@aics/core';
 
+const uploadedSubmissions = new Map<number, StudentSubmissionResponse>();
+const uploadedVersions = new Map<number, StudentSubmissionVersionResponse[]>();
+export function storeStudentSubmission(
+  submission: StudentSubmissionResponse,
+  versions: StudentSubmissionVersionResponse[],
+) {
+  uploadedSubmissions.set(submission.id, submission);
+  uploadedVersions.set(submission.id, versions);
+}
+export function resetStudentSubmissionUploads() {
+  uploadedSubmissions.clear();
+  uploadedVersions.clear();
+}
+
 /** Synthetic read fixtures shared by the home summary and submission details. */
 export function studentSubmissionFixture(
   milestone: StudentMilestoneResponse,
   teamId: number,
 ): StudentSubmissionResponse {
+  const stored = uploadedSubmissions.get(teamId * 100000 + milestone.id);
+  if (stored) return stored;
   const currentVersion =
     milestone.type === 'PRESENTATION'
       ? 2
@@ -29,6 +45,8 @@ export function studentSubmissionFixture(
 export function studentSubmissionVersionFixtures(
   submission: StudentSubmissionResponse,
 ): StudentSubmissionVersionResponse[] {
+  const stored = uploadedVersions.get(submission.id);
+  if (stored) return stored;
   return Array.from({ length: submission.currentVersion }, (_, index) => {
     const version = index + 1;
     return {
