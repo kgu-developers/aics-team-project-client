@@ -24,6 +24,7 @@ import {
 
 import { studentHomeKeys } from '~/features/student-home/queries/studentHomeKeys';
 
+import { MeetingUpdateValidationError } from '../model/meetingUpdateError';
 import { mapStudentMeeting } from '../model/studentMeeting';
 import { meetingApiKeys } from './api/meetingApiKeys';
 import { meetingKeys } from './meetingKeys';
@@ -163,6 +164,7 @@ it.each([
   { meetingId: 'meeting-19' },
   { original: undefined },
   { phase: undefined },
+  { original: { ...variables.original, phase: undefined } },
   { teamId: '8' },
   { meetingId: '20' },
 ])('원본 또는 필수 ID가 일치하지 않으면 요청하지 않는다: %j', async patch => {
@@ -172,7 +174,7 @@ it.each([
   await act(async () => {
     await expect(
       result.current.mutateAsync({ ...variables, ...patch }),
-    ).rejects.toThrow('유효한');
+    ).rejects.toBeInstanceOf(MeetingUpdateValidationError);
   });
   expect(request).not.toHaveBeenCalled();
 });

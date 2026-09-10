@@ -51,7 +51,10 @@ import { liveEditLockKeys } from '~/features/editor/queries';
 import { MeetingCreateError } from '~/features/meeting/model/meetingCreateError';
 import { MeetingEditLockError } from '~/features/meeting/model/meetingEditLock';
 import { meetingUpdateRequest } from '~/features/meeting/model/meetingUpdate';
-import { MeetingUpdateError } from '~/features/meeting/model/meetingUpdateError';
+import {
+  MeetingUpdateError,
+  MeetingUpdateValidationError,
+} from '~/features/meeting/model/meetingUpdateError';
 import {
   meetingPhaseLabels,
   type StudentMeetingRecord,
@@ -499,7 +502,11 @@ export function MeetingForm({
   );
   const [phase, setPhase] = useState<MeetingPhase>(record?.phase ?? 'PROPOSAL');
   const [saveError, setSaveError] = useState<
-    MeetingCreateError | MeetingUpdateError | MeetingEditLockError | null
+    | MeetingCreateError
+    | MeetingUpdateError
+    | MeetingUpdateValidationError
+    | MeetingEditLockError
+    | null
   >(null);
   const [location, setLocation] = useState(record?.location ?? '');
   const [content, setContent] = useState<RichTextJson>(
@@ -517,18 +524,34 @@ export function MeetingForm({
   const submitBusy = useRef(false);
   const allowNavigation = useRef(false);
   const liveEdit = Boolean(record && !context.isDemo);
-  const draftInput: CreateMeetingRecordInput = {
-    title,
-    heldAt: `${heldAt}T${meetingTime || '00:00'}:00`,
-    location: location || null,
-    content,
-    participantUserIds: participants,
-    actions: [],
-  };
-  const dirty = Boolean(
-    record &&
-    Object.keys(meetingUpdateRequest(record, draftInput, phase)).length,
+  const [originalContentJson] = useState(() =>
+    JSON.stringify(record?.content ?? emptyDoc),
   );
+  const [contentDirty, setContentDirty] = useState(false);
+  const changeContent = (next: RichTextJson) => {
+    setContent(next);
+    setContentDirty(JSON.stringify(next) !== originalContentJson);
+  };
+  const metadataDirty = useMemo(() => {
+    if (!record) return false;
+    return (
+      Object.keys(
+        meetingUpdateRequest(
+          record,
+          {
+            title,
+            heldAt: `${heldAt}T${meetingTime || '00:00'}:00`,
+            location: location || null,
+            content: record.content,
+            participantUserIds: participants,
+            actions: [],
+          },
+          phase,
+        ),
+      ).length > 0
+    );
+  }, [record, title, heldAt, meetingTime, location, participants, phase]);
+  const dirty = Boolean(record && (metadataDirty || contentDirty));
   const blocker = useBlocker({
     disabled: !liveEdit,
     withResolver: true,
@@ -546,6 +569,7 @@ export function MeetingForm({
     (liveEdit && (!editLock?.canEdit || recordError || context.isError)) ||
     (saveError instanceof MeetingCreateError && saveError.uncertain) ||
     (saveError instanceof MeetingUpdateError && saveError.blocksRetry) ||
+    saveError instanceof MeetingUpdateValidationError ||
     saveError instanceof MeetingEditLockError ||
     creation.isUncertain;
   const fieldsDisabled = isDisabled || Boolean(creation.meetingId);
@@ -640,6 +664,7 @@ export function MeetingForm({
       if (
         error instanceof MeetingCreateError ||
         error instanceof MeetingUpdateError ||
+        error instanceof MeetingUpdateValidationError ||
         error instanceof MeetingEditLockError
       ) {
         setSaveError(error);
@@ -648,6 +673,7 @@ export function MeetingForm({
         body:
           error instanceof MeetingCreateError ||
           error instanceof MeetingUpdateError ||
+          error instanceof MeetingUpdateValidationError ||
           error instanceof MeetingEditLockError
             ? error.message
             : requestErrorMessage,
@@ -801,7 +827,7 @@ export function MeetingForm({
           <MeetingEditor
             content={content}
             isDisabled={fieldsDisabled}
-            onChange={setContent}
+            onChange={changeContent}
           />
           {record && !context.isDemo ? (
             <Text color='secondary' type='supporting'>
@@ -889,7 +915,8 @@ export function MeetingForm({
           <div className={styles.error} role='alert'>
             <p>{saveError?.message ?? requestErrorMessage}</p>
             {record &&
-            (saveError instanceof MeetingEditLockError ||
+            (saveError instanceof MeetingUpdateValidationError ||
+              saveError instanceof MeetingEditLockError ||
               (saveError instanceof MeetingUpdateError &&
                 saveError.blocksRetry)) ? (
               <Link

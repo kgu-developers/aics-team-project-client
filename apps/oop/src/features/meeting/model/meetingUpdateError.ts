@@ -1,5 +1,7 @@
 import { isAxiosError } from 'axios';
 
+export class MeetingUpdateValidationError extends Error {}
+
 export class MeetingUpdateError extends Error {
   readonly uncertain: boolean;
   readonly blocksRetry: boolean;

@@ -13,7 +13,8 @@ export function meetingUpdateRequest(
   phase: MeetingPhase,
 ): MeetingRecordUpdateRequest {
   const patch: MeetingRecordUpdateRequest = {};
-  if (input.title !== original.title) patch.title = input.title.trim();
+  const title = input.title.trim();
+  if (title !== original.title) patch.title = title;
   if (phase !== original.phase) patch.phase = phase;
   // The form edits minutes; omit unchanged dates to retain seconds/precision.
   if (

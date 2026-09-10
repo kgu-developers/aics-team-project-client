@@ -18,7 +18,7 @@ import {
 import { useAuthStore } from '~/features/auth/authStore';
 import { mapStudentMeeting } from '~/features/meeting/model/studentMeeting';
 
-import { MeetingEditPage } from './MeetingPages';
+import { MeetingEditPage, MeetingForm } from './MeetingPages';
 
 import { meetingApiRecord, meetingApiTeam } from '~/mocks/data/meetingApi';
 import { demoAccessToken, demoStudent } from '~/mocks/data/users';
@@ -58,7 +58,7 @@ const original = mapStudentMeeting(
 );
 
 // Exercise the route through real lock queries/mutations and numeric MSW contracts.
-function renderForm() {
+function renderForm(record?: typeof original) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -66,7 +66,23 @@ function renderForm() {
   return renderWithRouter(
     <QueryClientProvider client={client}>
       <AstryxThemeProvider>
-        <MeetingEditPage meetingId='19' />
+        {record ? (
+          <MeetingForm
+            record={record}
+            editLock={{
+              record,
+              canEdit: true,
+              pending: false,
+              lost: false,
+              message: undefined,
+              retry: async () => true,
+              confirmOwnership: async () => true,
+              finish: async () => true,
+            }}
+          />
+        ) : (
+          <MeetingEditPage meetingId='19' />
+        )}
         <ToastViewport />
       </AstryxThemeProvider>
     </QueryClientProvider>,
@@ -219,4 +235,30 @@ it('저장 중 화면을 떠나면 늦은 응답이 상세로 이동시키지 �
     await waitFor(() => expect(clients[0]?.isMutating()).toBe(0));
   });
   expect(navigate).not.toHaveBeenCalled();
+});
+
+it('원본 단계가 없으면 구체적인 검증 오류를 표시하고 초안을 유지한다', async () => {
+  const writes = vi.fn();
+  server.use(
+    http.patch(`${API_BASE_URL}/meeting-records/19`, () => {
+      writes();
+      return HttpResponse.error();
+    }),
+  );
+  renderForm({ ...original, phase: undefined });
+  const title = await screen.findByRole('textbox', { name: /회의 제목/ });
+  fireEvent.change(title, { target: { value: '보존할 제목' } });
+  await userEvent.click(screen.getByRole('button', { name: '저장' }));
+  expect(
+    await screen.findByText(
+      '유효한 팀과 회의록 원본, 회의 단계가 필요해요. 상세에서 다시 확인해 주세요.',
+      { selector: 'p' },
+    ),
+  ).toBeVisible();
+  expect(title).toHaveValue('보존할 제목');
+  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+  expect(
+    screen.getByRole('link', { name: '저장된 회의록 확인' }),
+  ).toBeVisible();
+  expect(writes).not.toHaveBeenCalled();
 });

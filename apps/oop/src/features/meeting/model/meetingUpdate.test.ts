@@ -20,6 +20,15 @@ const input = {
 };
 
 describe('회의록 PATCH 변경 필드', () => {
+  it('제목 앞뒤 공백만 바뀌면 변경으로 취급하지 않는다', () => {
+    expect(
+      meetingUpdateRequest(
+        original,
+        { ...input, title: ' ' + input.title + ' ' },
+        'MID_CHECK',
+      ),
+    ).toEqual({});
+  });
   it('변경 없는 폼은 원본 평문·날짜·null 장소를 다시 직렬화하지 않는다', () => {
     expect(meetingUpdateRequest(original, input, 'MID_CHECK')).toEqual({});
   });

@@ -9,7 +9,10 @@ import { studentHomeKeys } from '~/features/student-home/queries/studentHomeKeys
 
 import { MeetingEditLockError } from '../model/meetingEditLock';
 import { meetingUpdateRequest } from '../model/meetingUpdate';
-import { MeetingUpdateError } from '../model/meetingUpdateError';
+import {
+  MeetingUpdateError,
+  MeetingUpdateValidationError,
+} from '../model/meetingUpdateError';
 import type { StudentMeetingRecord } from '../model/studentMeeting';
 import { hasMeetingApiId, meetingApiKeys } from './api/meetingApiKeys';
 import { meetingKeys } from './meetingKeys';
@@ -40,7 +43,9 @@ export function useUpdateMeetingRecordMutation() {
       confirmOwnership?: () => Promise<boolean>;
     }) => {
       if (!teamId || !meetingId)
-        throw new Error('유효한 팀과 회의록이 필요해요.');
+        throw new MeetingUpdateValidationError(
+          '유효한 팀과 회의록이 필요해요.',
+        );
       if (isDemo) {
         try {
           return await updateMeetingRecord(meetingId, input);
@@ -57,7 +62,9 @@ export function useUpdateMeetingRecordMutation() {
         !original.phase ||
         !phase
       )
-        throw new Error('유효한 팀과 회의록 원본, 회의 단계가 필요해요.');
+        throw new MeetingUpdateValidationError(
+          '유효한 팀과 회의록 원본, 회의 단계가 필요해요. 상세에서 다시 확인해 주세요.',
+        );
       const patch = meetingUpdateRequest(original, input, phase);
       if (Object.keys(patch).length === 0) return { id: meetingId };
       if (
