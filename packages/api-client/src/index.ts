@@ -275,3 +275,8 @@ export {
   fetchTeamThread,
   submitTeamMessage,
 } from './teamMessage';
+
+export {
+  submitStudentSubmissionVersion,
+  fetchRequiredSubmissionArtifacts,
+} from './submission';

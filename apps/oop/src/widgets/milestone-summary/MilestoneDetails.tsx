@@ -27,10 +27,12 @@ import {
   useSubmitProposalFeedbackResponseMutation,
 } from '~/features/student-feedback/queries';
 
+import FinalReportMaterials from './FinalReportMaterials';
 import * as styles from './MilestoneDetails.css';
 import SubmissionMaterials from './SubmissionMaterials';
 
 type MilestoneDetailsProps = {
+  milestoneId?: string;
   body: StudentHomeMilestoneBody;
 };
 
@@ -518,18 +520,24 @@ function PresentationEvaluationBody({
 
 function FinalReportBody({
   body,
+  milestoneId,
 }: {
   body: Extract<StudentHomeMilestoneBody, { kind: 'final-report' }>;
+  milestoneId?: string;
 }) {
   return (
     <div className={styles.root}>
       <SectionBanner title='최종보고서 작성 공지사항' />
       <ProjectSummary description={body.notice.description} />
       {body.notice.file ? <FileRow file={body.notice.file} /> : null}
-      <SubmissionMaterials
-        materials={body.materials}
-        metadata={body.submission}
-      />
+      {milestoneId && /^\d+$/.test(milestoneId) ? (
+        <FinalReportMaterials milestoneId={milestoneId} />
+      ) : (
+        <SubmissionMaterials
+          materials={body.materials}
+          metadata={body.submission}
+        />
+      )}
     </div>
   );
 }
@@ -550,7 +558,10 @@ function PeerEvaluationBody({
   );
 }
 
-export default function MilestoneDetails({ body }: MilestoneDetailsProps) {
+export default function MilestoneDetails({
+  body,
+  milestoneId,
+}: MilestoneDetailsProps) {
   switch (body.kind) {
     case 'topic':
       return <TopicBody body={body} />;
@@ -566,7 +577,7 @@ export default function MilestoneDetails({ body }: MilestoneDetailsProps) {
     case 'presentation-evaluation':
       return <PresentationEvaluationBody body={body} />;
     case 'final-report':
-      return <FinalReportBody body={body} />;
+      return <FinalReportBody body={body} milestoneId={milestoneId} />;
     case 'peer-evaluation':
       return <PeerEvaluationBody body={body} />;
   }

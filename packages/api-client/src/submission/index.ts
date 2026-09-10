@@ -51,3 +51,6 @@ export { fetchStudentSubmission } from './fetchStudentSubmission';
 export { fetchStudentSubmissionVersion } from './fetchStudentSubmissionVersion';
 export { fetchStudentSubmissionVersions } from './fetchStudentSubmissionVersions';
 export { fetchStudentSubmissionPreview } from './fetchStudentSubmissionPreview';
+
+export { submitStudentSubmissionVersion } from './submitStudentSubmissionVersion';
+export { fetchRequiredSubmissionArtifacts } from './fetchRequiredSubmissionArtifacts';
