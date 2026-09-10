@@ -26,6 +26,7 @@ const teamResponse = {
     {
       id: 1,
       isLeader: true,
+      major: null,
       name: '김민준',
       projectRole: 'BACKEND',
       studentNumber: '20231234',

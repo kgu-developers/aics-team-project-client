@@ -248,7 +248,11 @@ export default function AdminStudentTeamManagement() {
       </Dialog>
       <AdminStudentDetailDialog
         onClose={() => setSelectedStudentNumber(null)}
-        major={students.find(student => student.studentNumber === selectedStudentNumber)?.major}
+        major={
+          students.find(
+            student => student.studentNumber === selectedStudentNumber,
+          )?.major
+        }
         studentNumber={selectedStudentNumber}
       />
       <Dialog
