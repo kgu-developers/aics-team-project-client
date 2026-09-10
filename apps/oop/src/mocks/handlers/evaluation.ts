@@ -118,6 +118,30 @@ function isPresentationInput(
   );
 }
 
+function normalizePeerInput(value: unknown): unknown {
+  if (!isRecord(value)) return value;
+  return {
+    ...value,
+    selfContribution: value.selfContribution ?? '',
+    projectReviewComment: value.projectReviewComment ?? '',
+    submit: value.submit ?? false,
+    answers: Array.isArray(value.answers)
+      ? value.answers.map(answer =>
+          !isRecord(answer)
+            ? answer
+            : answer.kind === 'REFLECTION'
+              ? { ...answer, comment: answer.comment ?? '' }
+              : {
+                  ...answer,
+                  contributionPercent: answer.contributionPercent ?? null,
+                  contributionDetail: answer.contributionDetail ?? '',
+                  teammateAssessment: answer.teammateAssessment ?? '',
+                },
+        )
+      : value.answers,
+  };
+}
+
 function isPeerInput(
   value: unknown,
 ): value is SubmitPeerEvaluationResponseInput {
@@ -134,12 +158,31 @@ function isPeerInput(
       return (
         answer.kind === 'TEAMMATE_CONTRIBUTION' &&
         typeof answer.targetUserId === 'string' &&
-        typeof answer.contributionPercent === 'number' &&
+        (answer.contributionPercent === null ||
+          typeof answer.contributionPercent === 'number') &&
         typeof answer.contributionDetail === 'string' &&
         typeof answer.teammateAssessment === 'string'
       );
     })
   );
+}
+
+function peerResponseDto(response: MyPeerEvaluationResponse) {
+  return {
+    ...response,
+    id: Number(response.id),
+    submittedAt: response.submittedAt ?? null,
+    answers: response.answers
+      .filter(answer => answer.kind !== 'REFLECTION' || answer.comment.trim())
+      .map(answer => ({
+        targetUserId: null,
+        contributionPercent: null,
+        contributionDetail: null,
+        teammateAssessment: null,
+        comment: null,
+        ...answer,
+      })),
+  };
 }
 
 export const evaluationHandlers = [
@@ -287,9 +330,13 @@ export const evaluationHandlers = [
       const scopeError = requireEvaluationResourceScope(student);
       if (scopeError) return scopeError;
       if (params.formId !== peerEvaluationFormId)
-        return error('FORM_NOT_FOUND', '상호평가 폼을 찾을 수 없어요.', 404);
+        return error(
+          'PEER_EVALUATION_FORM_NOT_FOUND',
+          '상호평가 폼을 찾을 수 없어요.',
+          404,
+        );
       return HttpResponse.json({
-        formId: peerEvaluationFormId,
+        formId: Number(peerEvaluationFormId),
         title: '팀 기여도 평가 및 개인보고서',
         windowState: getPeerWindowState(),
         windowMessage:
@@ -297,7 +344,9 @@ export const evaluationHandlers = [
             ? '본인을 제외한 팀원에게 기여도 합계 100%를 배분해 주세요.'
             : '상호평가 기간이 종료됐어요. 내 제출 내역만 확인할 수 있어요.',
         targets: getPeerTargets(student.userId),
-        myResponse: getPeerResponse(student.userId),
+        myResponse: getPeerResponse(student.userId)
+          ? peerResponseDto(getPeerResponse(student.userId)!)
+          : null,
       });
     },
   ),
@@ -309,20 +358,43 @@ export const evaluationHandlers = [
       const scopeError = requireEvaluationResourceScope(student);
       if (scopeError) return scopeError;
       if (params.formId !== peerEvaluationFormId)
-        return error('FORM_NOT_FOUND', '상호평가 폼을 찾을 수 없어요.', 404);
+        return error(
+          'PEER_EVALUATION_FORM_NOT_FOUND',
+          '상호평가 폼을 찾을 수 없어요.',
+          404,
+        );
       if (getPeerWindowState() !== 'OPEN')
-        return error('EVALUATION_CLOSED', '상호평가 기간이 종료됐어요.', 403);
-      const input = await parseBody<unknown>(request);
+        return error(
+          'PEER_EVALUATION_CLOSED',
+          '상호평가 기간이 종료됐어요.',
+          403,
+        );
+      const input = normalizePeerInput(await parseBody<unknown>(request));
       if (!isPeerInput(input))
         return error(
           'INVALID_REQUEST',
           '상호평가 요청 형식이 올바르지 않아요.',
           400,
         );
+      const narratives = [
+        input.selfContribution,
+        input.projectReviewComment,
+        ...input.answers.flatMap(answer =>
+          answer.kind === 'REFLECTION'
+            ? [answer.comment]
+            : [answer.contributionDetail, answer.teammateAssessment],
+        ),
+      ];
+      if (narratives.some(value => value.trim().length > 2000))
+        return error(
+          'INVALID_PEER_EVALUATION_RESPONSE',
+          '서술은 2000자 이내로 작성해 주세요.',
+          422,
+        );
       const existing = getPeerResponse(student.userId);
       if (existing?.status === 'SUBMITTED')
         return error(
-          'ALREADY_SUBMITTED',
+          'PEER_EVALUATION_ALREADY_SUBMITTED',
           '이미 제출한 상호평가는 수정할 수 없어요.',
           409,
         );
@@ -340,33 +412,34 @@ export const evaluationHandlers = [
           answer =>
             !targetIds.has(answer.targetUserId) ||
             answer.targetUserId === student.userId ||
-            !Number.isInteger(answer.contributionPercent) ||
-            answer.contributionPercent < 0 ||
-            answer.contributionPercent > 100,
+            (answer.contributionPercent !== null &&
+              (!Number.isInteger(answer.contributionPercent) ||
+                answer.contributionPercent < 0 ||
+                answer.contributionPercent > 100)),
         ) ||
         uniqueTargetIds.size !== teammateAnswers.length
       )
         return error(
-          'INVALID_TARGET',
+          'INVALID_PEER_EVALUATION_RESPONSE',
           '본인을 제외한 현재 팀원만 평가할 수 있어요.',
           422,
         );
       const total = teammateAnswers.reduce(
-        (sum, answer) => sum + answer.contributionPercent,
+        (sum, answer) => sum + (answer.contributionPercent ?? 0),
         0,
       );
       if (input.submit && total !== 100)
         return error(
-          'CONTRIBUTION_SUM_INVALID',
+          'INVALID_PEER_EVALUATION_RESPONSE',
           '팀원 기여도 합계는 100%여야 해요.',
           422,
         );
       const reflections = input.answers.filter(
         answer => answer.kind === 'REFLECTION',
       );
-      if (reflections.length !== 1)
+      if (reflections.length > 1)
         return error(
-          'INVALID_REFLECTION',
+          'INVALID_PEER_EVALUATION_RESPONSE',
           '소감 응답은 하나만 작성해 주세요.',
           422,
         );
@@ -380,26 +453,27 @@ export const evaluationHandlers = [
           !reflection.comment.trim() ||
           teammateAnswers.some(
             answer =>
+              answer.contributionPercent === null ||
               !answer.contributionDetail.trim() ||
               !answer.teammateAssessment.trim(),
           ))
       )
         return error(
-          'INCOMPLETE_RESPONSE',
+          'INVALID_PEER_EVALUATION_RESPONSE',
           '모든 개인보고서와 팀원 평가 항목을 작성해 주세요.',
           422,
         );
       const now = new Date().toISOString();
       const { submit, ...responseInput } = input;
       const response: MyPeerEvaluationResponse = {
-        id: existing?.id ?? `peer-response-${student.userId}`,
+        id: existing?.id ?? student.userId,
         ...responseInput,
         status: submit ? 'SUBMITTED' : 'DRAFT',
         updatedAt: now,
         submittedAt: submit ? now : undefined,
       };
       setPeerResponse(student.userId, response);
-      return HttpResponse.json(response);
+      return HttpResponse.json(peerResponseDto(response));
     },
   ),
 ];

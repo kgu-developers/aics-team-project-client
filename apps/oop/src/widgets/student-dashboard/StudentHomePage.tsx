@@ -8,12 +8,14 @@ import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog'
 import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
 import { useTopicMilestoneEligibility } from '~/features/project-topic/useTopicMilestoneEligibility';
 import { homeQueryState } from '~/features/student-home/model/homeQueryState';
+import { peerEvaluationHomeSummary } from '~/features/student-home/model/peerEvaluationHomeSummary';
 import { selectActiveMilestone } from '~/features/student-home/model/selectActiveMilestone';
 import { studentMilestoneSummary } from '~/features/student-home/model/studentMilestoneSummary';
 import {
   useLiveStudentHomeQuery,
   useMilestoneScheduleClock,
   useStudentMilestonesQuery,
+  usePeerEvaluationHomeQuery,
 } from '~/features/student-home/queries';
 import SubmissionDialog from '~/features/submission/SubmissionDialog';
 import { SubmissionDialogProvider } from '~/features/submission/SubmissionDialogContext';
@@ -75,6 +77,13 @@ export default function StudentHomePage() {
   const home = useLiveStudentHomeQuery();
   const sectionId = home.sectionId;
   const query = useStudentMilestonesQuery(sectionId, home.teamId);
+  const peerMilestones = query.milestones.filter(
+    milestone => milestone.type === 'PEER_EVALUATION',
+  );
+  const peer = usePeerEvaluationHomeQuery(
+    peerMilestones.length && home.teamId ? sectionId : undefined,
+    home.studentNumber,
+  );
   const now = useMilestoneScheduleClock(
     query.milestones,
     sectionId,
@@ -134,6 +143,14 @@ export default function StudentHomePage() {
       submission?.isSuccess ? submission.data : undefined,
       now,
     );
+    if (milestone.type === 'PEER_EVALUATION') {
+      return peerEvaluationHomeSummary(
+        summary,
+        peer,
+        Boolean(home.teamId),
+        peerMilestones.length === 1,
+      );
+    }
     if (!home.teamId) summary.statusLabel = '팀 배정 대기';
     else if (submission?.isError) summary.statusLabel = '조회 실패';
     else if (submission?.isPending) summary.statusLabel = '조회 중';
@@ -250,6 +267,13 @@ export default function StudentHomePage() {
                 persistenceKey={`${home.studentNumber ?? 'anonymous'}:${sectionId}:${home.teamId ?? 'unassigned'}`}
               />
             )}
+            {peerMilestones.length > 0 && peer.error ? (
+              <Button
+                label='상호평가 상태 다시 시도'
+                clickAction={peer.refetch}
+                variant='secondary'
+              />
+            ) : null}
             {query.submissions.some(submission => submission.isError) ? (
               <Button
                 label='제출 상태 다시 시도'

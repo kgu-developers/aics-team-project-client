@@ -76,6 +76,94 @@ function renderPage(element: ReactElement) {
 }
 
 describe('KD3-92 학생 평가 화면', () => {
+  it('시작 전에는 입력을 잠그고 초안 저장 요청을 보내지 않는다', async () => {
+    const user = userEvent.setup();
+    setEvaluationWindowStates('OPEN', 'UPCOMING');
+    const save = vi.fn();
+    server.use(
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.PEER_RESPONSES(':formId')}`,
+        () => {
+          save();
+          return HttpResponse.json({});
+        },
+      ),
+    );
+    renderPage(<PeerEvaluationPage />);
+    const input = await screen.findByRole('textbox', {
+      name: /자신의 역할 요약/,
+    });
+    expect(input).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: '다음 설문' }));
+    expect(save).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: '제출하기' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  });
+
+  it('서버의 nullable 초안을 복원해 빈 기여도를 null로 다시 저장한다', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.PEER_TARGETS(':formId')}`,
+        () =>
+          HttpResponse.json({
+            formId: 2026,
+            title: '상호평가',
+            windowState: 'OPEN',
+            windowMessage: '',
+            targets: [{ userId: '20260003', name: '팀원', role: '개발' }],
+            myResponse: {
+              id: 12,
+              selfContribution: null,
+              projectReviewComment: null,
+              answers: [
+                {
+                  kind: 'TEAMMATE_CONTRIBUTION',
+                  targetUserId: '20260003',
+                  contributionPercent: null,
+                  contributionDetail: null,
+                  teammateAssessment: null,
+                  comment: null,
+                },
+              ],
+              status: 'DRAFT',
+              updatedAt: '2026-09-09T10:00:00',
+              submittedAt: null,
+            },
+          }),
+      ),
+    );
+    let body: unknown;
+    server.use(
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.PEER_RESPONSES(':formId')}`,
+        async ({ request }) => {
+          body = await request.json();
+          return HttpResponse.json(
+            { code: 'FAILED', message: '저장 실패' },
+            { status: 500 },
+          );
+        },
+      ),
+    );
+    renderPage(<PeerEvaluationPage />);
+    expect(
+      await screen.findByRole('textbox', { name: /자신의 역할 요약/ }),
+    ).toHaveValue('');
+    await user.click(screen.getByRole('button', { name: '다음 설문' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('저장 실패');
+    expect(body).toMatchObject({
+      answers: [
+        expect.objectContaining({ contributionPercent: null }),
+        expect.anything(),
+      ],
+      submit: false,
+    });
+    expect(screen.getByText('미입력')).toBeInTheDocument();
+  });
+
   it('평가 기간이 종료되면 내역은 보여 주되 상호평가 입력은 잠근다', async () => {
     const user = userEvent.setup();
     setEvaluationWindowStates('CLOSED', 'CLOSED');
@@ -86,11 +174,83 @@ describe('KD3-92 학생 평가 화면', () => {
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '2. 팀원 기여도' }));
     expect(
-      screen.getByText('평가 기간이 종료되어 내 제출 내역만 확인할 수 있어요.'),
+      screen.getByText('평가 기간이 아니어서 응답을 수정할 수 없어요.'),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '제출하기' })).toHaveAttribute(
       'aria-disabled',
       'true',
+    );
+  });
+
+  it('최종 제출 충돌 시 성공 처리하지 않고 작성 내용을 유지한다', async () => {
+    const user = userEvent.setup();
+    const answer = {
+      kind: 'TEAMMATE_CONTRIBUTION',
+      targetUserId: '20260003',
+      contributionPercent: 100,
+      contributionDetail: '테스트 기여 내용',
+      teammateAssessment: '테스트 한줄평',
+      comment: null,
+    };
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.PEER_TARGETS(':formId')}`,
+        () =>
+          HttpResponse.json({
+            formId: 2026,
+            title: '상호평가',
+            windowState: 'OPEN',
+            windowMessage: '',
+            targets: [{ userId: '20260003', name: '팀원', role: '개발' }],
+            myResponse: {
+              id: 12,
+              selfContribution: '테스트 역할',
+              projectReviewComment: '테스트 프로젝트 평가',
+              answers: [answer, { kind: 'REFLECTION', comment: '테스트 소감' }],
+              status: 'DRAFT',
+              updatedAt: '2026-09-09T10:00:00',
+              submittedAt: null,
+            },
+          }),
+      ),
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.PEER_RESPONSES(':formId')}`,
+        async ({ request }) => {
+          expect(await request.json()).toMatchObject({
+            submit: true,
+            selfContribution: '테스트 역할',
+            projectReviewComment: '테스트 프로젝트 평가',
+            answers: [
+              { kind: 'TEAMMATE_CONTRIBUTION', contributionPercent: 100 },
+              { kind: 'REFLECTION', comment: '테스트 소감' },
+            ],
+          });
+          return HttpResponse.json(
+            {
+              code: 'DATA_CONFLICT',
+              message: '요청이 기존 데이터와 충돌합니다.',
+            },
+            { status: 409 },
+          );
+        },
+      ),
+    );
+    renderPage(<PeerEvaluationPage />);
+    await user.click(await screen.findByRole('button', { name: '제출하기' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '상호평가를 제출하지 못했어요. 요청이 기존 데이터와 충돌합니다.',
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText('상호평가를 제출했어요.'),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '수정' }));
+    expect(screen.getByRole('textbox', { name: /기여도/ })).toHaveValue('100');
+    expect(screen.getByRole('textbox', { name: /기여 내용/ })).toHaveValue(
+      '테스트 기여 내용',
+    );
+    expect(screen.getByRole('textbox', { name: /한줄평가/ })).toHaveValue(
+      '테스트 한줄평',
     );
   });
 

@@ -86,7 +86,11 @@ describe('학생 마일스톤 목록과 내 팀 제출 조회', () => {
     await waitFor(() => expect(result.current.isPending).toBe(false));
     expect(result.current.error).toBeFalsy();
     expect(
-      result.current.submissions.every(query => query.data?.teamId === 7),
+      result.current.submissions.every((query, index) =>
+        result.current.milestones[index]?.type === 'PEER_EVALUATION'
+          ? query.data === undefined && !query.isFetching
+          : query.data?.teamId === 7,
+      ),
     ).toBe(true);
   });
   it('브라우저 MSW는 타 분반의 목록을 거부한다', async () => {
@@ -113,6 +117,19 @@ describe('학생 마일스톤 목록과 내 팀 제출 조회', () => {
       ENDPOINTS.STUDENT_MILESTONE.LIST('2'),
       ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION('301'),
     ]);
+  });
+  it('상호평가만 있으면 팀 문서 제출을 조회하지 않고 목록 로딩을 마친다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`, () =>
+        HttpResponse.json({
+          contents: [{ ...milestone, type: 'PEER_EVALUATION' }],
+        }),
+      ),
+    );
+    const { result } = renderMilestones('2', '7');
+    await waitFor(() => expect(result.current.list.isSuccess).toBe(true));
+    expect(result.current.isPending).toBe(false);
+    expect(requests).toEqual([ENDPOINTS.STUDENT_MILESTONE.LIST('2')]);
   });
   it('분반이 없으면 조회하지 않는다', () => {
     renderMilestones(undefined, '7');

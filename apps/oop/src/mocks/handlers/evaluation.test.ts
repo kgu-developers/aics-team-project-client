@@ -86,6 +86,105 @@ async function getDashboardPreview(
 }
 
 describe('evaluationHandlers', () => {
+  it('빈 초안과 null 기여도를 저장하고 숫자 ID 및 null 미응답을 반환한다', async () => {
+    const path = ENDPOINTS.EVALUATION.PEER_RESPONSES(peerEvaluationFormId);
+    const empty = await request(path, {
+      method: 'POST',
+      body: JSON.stringify({
+        selfContribution: '',
+        projectReviewComment: '',
+        answers: [],
+        submit: false,
+      }),
+    });
+    expect(empty.status).toBe(200);
+    const draft = await request(path, {
+      method: 'POST',
+      body: JSON.stringify({
+        selfContribution: '',
+        projectReviewComment: '',
+        answers: [{ ...contributionAnswers()[0], contributionPercent: null }],
+        submit: false,
+      }),
+    });
+    expect(draft.status).toBe(200);
+    const saved = await draft.json();
+    expect(saved.id).toEqual(expect.any(Number));
+    expect(saved.submittedAt).toBeNull();
+    const restored = await request(
+      ENDPOINTS.EVALUATION.PEER_TARGETS(peerEvaluationFormId),
+    );
+    expect(await restored.json()).toMatchObject({
+      formId: 2026,
+      myResponse: { answers: [{ contributionPercent: null }] },
+    });
+  });
+
+  it.each(['target', 'duplicate', 'missing', 'null', 'length', 'reflection'])(
+    '최종 제출의 %s 위반을 422로 거절한다',
+    async scenario => {
+      const answers = contributionAnswers();
+      if (scenario === 'target')
+        answers[0]!.targetUserId = demoStudent.studentNumber;
+      if (scenario === 'duplicate')
+        answers[1]!.targetUserId = answers[0]!.targetUserId;
+      if (scenario === 'missing') {
+        answers.splice(1);
+        answers[0]!.contributionPercent = 100;
+      }
+      const input = {
+        selfContribution: scenario === 'length' ? 'a'.repeat(2001) : '역할',
+        projectReviewComment: '평가',
+        answers: [
+          ...answers.map(answer => ({
+            ...answer,
+            contributionPercent:
+              scenario === 'null' ? null : answer.contributionPercent,
+          })),
+          ...(scenario === 'reflection'
+            ? []
+            : [{ kind: 'REFLECTION', comment: '소감' }]),
+        ],
+        submit: true,
+      };
+      const response = await request(
+        ENDPOINTS.EVALUATION.PEER_RESPONSES(peerEvaluationFormId),
+        { method: 'POST', body: JSON.stringify(input) },
+      );
+      expect(response.status).toBe(422);
+      expect(await response.json()).toMatchObject({
+        code: 'INVALID_PEER_EVALUATION_RESPONSE',
+      });
+    },
+  );
+
+  it('제출 완료 후 재제출과 초안 수정을 409로 거절한다', async () => {
+    const path = ENDPOINTS.EVALUATION.PEER_RESPONSES(peerEvaluationFormId);
+    const input = {
+      selfContribution: '역할',
+      projectReviewComment: '평가',
+      answers: [
+        ...contributionAnswers(),
+        { kind: 'REFLECTION', comment: '소감' },
+      ],
+      submit: true,
+    };
+    expect(
+      (await request(path, { method: 'POST', body: JSON.stringify(input) }))
+        .status,
+    ).toBe(200);
+    for (const submit of [true, false]) {
+      const response = await request(path, {
+        method: 'POST',
+        body: JSON.stringify({ ...input, submit }),
+      });
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({
+        code: 'PEER_EVALUATION_ALREADY_SUBMITTED',
+      });
+    }
+  });
+
   it('분반의 활성 평가 리소스 ID를 서버 projection으로 제공한다', async () => {
     const response = await request(
       ENDPOINTS.EVALUATION.CONTEXT('oop-2026-2-01'),
@@ -298,7 +397,7 @@ describe('evaluationHandlers', () => {
 
     expect(response.status).toBe(422);
     await expect(response.json()).resolves.toMatchObject({
-      code: 'CONTRIBUTION_SUM_INVALID',
+      code: 'INVALID_PEER_EVALUATION_RESPONSE',
     });
   });
 
@@ -307,7 +406,7 @@ describe('evaluationHandlers', () => {
       ENDPOINTS.EVALUATION.PEER_RESPONSES(peerEvaluationFormId),
       {
         method: 'POST',
-        body: JSON.stringify({ answers: [], submit: true }),
+        body: JSON.stringify({ answers: 'invalid', submit: true }),
       },
     );
 
@@ -423,7 +522,7 @@ describe('evaluationHandlers', () => {
       demoPartnerAccessToken,
     );
     const anotherBody = await anotherStudent.json();
-    expect(anotherBody.myResponse).toBeUndefined();
+    expect(anotherBody.myResponse).toBeNull();
   });
 
   it('상호평가 임시 저장과 제출 뒤 대시보드 재조회에 섹션과 CTA 상태를 반영한다', async () => {
