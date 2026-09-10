@@ -26,6 +26,7 @@ import {
   teamAssignmentHandlers,
   teamAssignmentUserHandlers,
 } from './teamAssignment';
+import { createTeamMessageHandlers } from './teamMessages';
 import { topicHandlers } from './topic';
 
 export const handlers = [
@@ -41,6 +42,7 @@ export const handlers = [
   ...editLockHandlers,
   ...evaluationHandlers,
   ...topicHandlers,
+  ...createTeamMessageHandlers(),
   ...createMeetingApiHandlers(),
   ...meetingHandlers,
   ...midReportHandlers,

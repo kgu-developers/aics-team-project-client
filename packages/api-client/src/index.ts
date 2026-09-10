@@ -269,3 +269,9 @@ export {
   submitLiveEditLock,
   removeLiveEditLock,
 } from './editLock';
+
+export {
+  fetchTeamMessages,
+  fetchTeamThread,
+  submitTeamMessage,
+} from './teamMessage';

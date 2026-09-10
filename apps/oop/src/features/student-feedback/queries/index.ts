@@ -1,3 +1,4 @@
+export { useProposalFeedbackQuery } from './useProposalFeedbackQuery';
 export {
   useSubmitMidReportFeedbackMutation,
   type SubmitMidReportFeedbackVariables,
@@ -6,3 +7,4 @@ export {
   useSubmitProposalFeedbackResponseMutation,
   type SubmitProposalFeedbackResponseVariables,
 } from './useSubmitProposalFeedbackResponseMutation';
+export { useMidReportFeedbackQuery } from './useMidReportFeedbackQuery';
