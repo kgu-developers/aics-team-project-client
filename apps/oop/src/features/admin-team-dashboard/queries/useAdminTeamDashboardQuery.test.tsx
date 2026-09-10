@@ -26,7 +26,7 @@ const teamResponse = {
     {
       id: 1,
       isLeader: true,
-      major: null,
+      major: '컴퓨터공학과',
       name: '김민준',
       projectRole: 'BACKEND',
       studentNumber: '20231234',
@@ -90,7 +90,7 @@ describe('useAdminTeamDashboardQuery', () => {
       sectionId: '1',
       members: [
         {
-          major: null,
+          major: '컴퓨터공학과',
           name: '김민준',
           projectRole: 'BACKEND',
           studentNumber: '20231234',
