@@ -328,7 +328,7 @@ export default function AdminTeamDashboard() {
               ? 'ready'
               : 'pending'
         }
-        sectionId={dashboardSection?.id}
+        sectionId={team.sectionId}
       />
 
       <AdminTeamMeetingRecordList

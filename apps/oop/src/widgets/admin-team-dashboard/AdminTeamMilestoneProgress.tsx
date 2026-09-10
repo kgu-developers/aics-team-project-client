@@ -17,23 +17,15 @@ import { useDownloadAdminSubmissionArtifactsMutation } from '~/features/admin-mi
 import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import type { TeamMilestoneProgress } from '~/features/admin-team-dashboard/model';
 import { useAuthStore } from '~/features/auth/authStore';
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import * as styles from './AdminTeamMilestoneProgress.css';
 
 type AdminTeamMilestoneProgressProps = {
   milestones: TeamMilestoneProgress[];
   milestoneListState: 'error' | 'pending' | 'ready';
-  sectionId: string | undefined;
+  sectionId: string;
 };
-
-function formatSubmittedAt(submittedAt: string) {
-  const date = new Date(submittedAt);
-
-  if (Number.isNaN(date.getTime())) return submittedAt;
-
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
 function getSubmissionMetadata(
   submission: AdminMilestoneSubmissionView,
@@ -43,7 +35,7 @@ function getSubmissionMetadata(
 
   return (
     <>
-      <Text>{formatSubmittedAt(version.submittedAt)}</Text>
+      <Text>{formatSeoulDateTime(version.submittedAt)}</Text>
       <Text>제출자: {version.submittedBy}</Text>
     </>
   );
@@ -88,7 +80,7 @@ function getDownloadSummary(milestone: TeamMilestoneProgress) {
       ) : milestone.version ? (
         artifacts && artifacts.length > 0 ? (
           artifacts.map((artifact, index) => {
-            const label = `${artifact.label} ${index + 1}`;
+            const label = artifact.label;
 
             if (artifact.downloadUrl && artifact.fileName) {
               return (
@@ -199,7 +191,10 @@ export default function AdminTeamMilestoneProgress({
                 action={
                   isDownloadMilestone ? (
                     <AdminMilestoneSubmissionBulkDownloadAction
-                      isLoading={downloadArtifactsMutation.isPending}
+                      isLoading={
+                        downloadArtifactsMutation.isPending &&
+                        downloadArtifactsMutation.variables === submissionId
+                      }
                       onClick={
                         submissionId
                           ? () => {

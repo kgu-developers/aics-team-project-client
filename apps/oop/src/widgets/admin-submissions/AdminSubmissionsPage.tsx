@@ -18,6 +18,7 @@ import { type KeyboardEvent, useMemo, useRef, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { AdminMilestoneSubmissionCard } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard';
 import {
@@ -92,9 +93,6 @@ function findMilestoneForTab(
   milestones: readonly AdminSectionMilestoneDto[] | undefined,
   tabId: MilestoneTabId,
 ) {
-  const type = milestoneTypeByTab[tabId];
-  if (!type) return undefined;
-
   if (tabId === 'presentation-evaluate') {
     return milestones?.find(isPresentationEvaluationMilestone);
   }
@@ -103,16 +101,10 @@ function findMilestoneForTab(
     return milestones?.find(isPresentationSubmissionMilestone);
   }
 
+  const type = milestoneTypeByTab[tabId];
+  if (!type) return undefined;
+
   return milestones?.find(milestone => milestone.type === type);
-}
-
-function formatSubmittedAt(submittedAt: string) {
-  const date = new Date(submittedAt);
-
-  if (Number.isNaN(date.getTime())) return submittedAt;
-
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function getSubmissionMetadata(
@@ -124,7 +116,7 @@ function getSubmissionMetadata(
   return (
     <>
       <Text className={styles.submissionMetadataText}>
-        {formatSubmittedAt(version.submittedAt)}
+        {formatSeoulDateTime(version.submittedAt)}
       </Text>
       <Text className={styles.submissionMetadataText}>
         제출자: {version.submittedBy}

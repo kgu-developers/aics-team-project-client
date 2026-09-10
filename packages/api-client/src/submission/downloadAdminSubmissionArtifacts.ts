@@ -11,7 +11,13 @@ function getDownloadFileName(
   submissionId: string,
 ) {
   const encodedMatch = contentDisposition?.match(/filename\*=UTF-8''([^;]+)/i);
-  if (encodedMatch?.[1]) return decodeURIComponent(encodedMatch[1]);
+  if (encodedMatch?.[1]) {
+    try {
+      return decodeURIComponent(encodedMatch[1]);
+    } catch {
+      // Fall back to the plain filename header for malformed RFC 5987 values.
+    }
+  }
 
   const plainMatch = contentDisposition?.match(/filename="?([^";]+)"?/i);
   return plainMatch?.[1] ?? `submission-${submissionId}.zip`;

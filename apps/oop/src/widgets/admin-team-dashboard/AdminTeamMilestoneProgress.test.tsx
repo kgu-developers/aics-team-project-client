@@ -150,6 +150,31 @@ describe('AdminTeamMilestoneProgress', () => {
     ).toBeDisabled();
   });
 
+  it('제출 파일과 링크에는 순번 없이 유형만 표시한다', async () => {
+    renderProgress([
+      {
+        ...submittedMilestone,
+        milestone: {
+          ...submittedMilestone.milestone,
+          type: 'FINAL_REPORT',
+        },
+      },
+    ]);
+
+    expect(
+      await screen.findByText(
+        (_, element) => element?.textContent === '파일: proposal.pdf',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.textContent ===
+          '링크: https://github.com/kgu-developers/example',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('마일스톤 목록 로딩과 오류를 빈 목록과 구분해 표시한다', async () => {
     renderProgress([], 'pending');
 

@@ -250,12 +250,12 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
       ],
     },
   },
-  '1008': {
+  '1011': {
     detail: {
       canSubmitNow: false,
       currentVersion: 1,
       hasPendingReview: false,
-      id: 1008,
+      id: 1011,
       milestoneId: 106,
       presentationOrder: 1,
       status: 'SUBMITTED',
