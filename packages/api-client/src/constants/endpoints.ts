@@ -40,7 +40,7 @@ export const ENDPOINTS = {
       `/api/v1/admin/oop/enrollment-imports/${importId}/apply`,
     SECTION_ROSTER_IMPORT_STATUS: (sectionId: string | number) =>
       `/api/v1/admin/oop/sections/${sectionId}/roster-import-status`,
-    OOP_PEER_EVALUATION_FORM: (sectionId: number) =>
+    OOP_PEER_EVALUATION_FORM: (sectionId: string | number) =>
       `/api/v1/admin/oop/sections/${sectionId}/peer-evaluation-forms`,
     OOP_PRE_SURVEY_RESPONSES: (sectionId: string) =>
       `/api/v1/admin/oop/sections/${sectionId}/pre-survey-responses`,
@@ -59,6 +59,14 @@ export const ENDPOINTS = {
       `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}`,
     SECTION_MILESTONE_STATUS: (sectionId: string, milestoneId: string) =>
       `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/status`,
+    REQUIRED_ARTIFACTS: (sectionId: string, milestoneId: string) =>
+      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/required-artifacts`,
+    REQUIRED_ARTIFACT: (
+      sectionId: string,
+      milestoneId: string,
+      requiredArtifactId: string,
+    ) =>
+      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/required-artifacts/${requiredArtifactId}`,
     SECTION_MILESTONE_WEEK_NUMBERS: (sectionId: string) =>
       `/api/v1/admin/oop/sections/${sectionId}/milestones/week-numbers`,
     MILESTONE_SUBMISSIONS: (milestoneId: string) =>
