@@ -47,7 +47,11 @@ export default function AdminMeetingDetailPage() {
       candidate => candidate.studentNumber === participantId,
     );
 
-    return { id: participantId, name: student?.name ?? participantId };
+    return {
+      id: participantId,
+      major: student?.major ?? null,
+      name: student?.name ?? participantId,
+    };
   });
   return (
     <div className={styles.page}>
@@ -100,6 +104,9 @@ export default function AdminMeetingDetailPage() {
         </Text>
       </Card>
       <AdminStudentDetailDialog
+        major={
+          participants.find(item => item.id === selectedParticipantId)?.major
+        }
         studentNumber={selectedParticipantId}
         onClose={() => setSelectedParticipantId(null)}
       />

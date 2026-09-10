@@ -7,6 +7,7 @@ export type AdminEnrollmentImportPreviewRowDto = {
   name: string | null;
   email: string | null;
   phone: string | null;
+  major: string | null;
   role: 'STUDENT' | 'ASSISTANT' | null;
   status: AdminEnrollmentImportRowStatus;
   message: string | null;
