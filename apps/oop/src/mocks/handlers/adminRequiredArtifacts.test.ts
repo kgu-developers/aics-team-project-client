@@ -88,7 +88,9 @@ it('필수 산출물을 등록·수정·삭제하고 목록에 반영한다', as
     contents: Array<{ id: number }>;
   };
   expect(afterDeleteResponse.status).toBe(200);
-  expect(afterDelete.contents).not.toContainEqual({ id: created.id });
+  expect(
+    afterDelete.contents.some(artifact => artifact.id === created.id),
+  ).toBe(false);
 });
 
 it('관리자 인증이 없으면 산출물 목록을 조회할 수 없다', async () => {

@@ -14,6 +14,16 @@ function isAdminRequest(request: Request) {
   return getMockAuthenticatedAccount(request)?.user.id === demoAdmin.id;
 }
 
+function invalidRequest() {
+  return HttpResponse.json(
+    {
+      code: 'INVALID_REQUEST',
+      message: '상호평가 양식 입력값이 올바르지 않습니다.',
+    },
+    { status: 400 },
+  );
+}
+
 export function resetAdminPeerEvaluationFormsFixture() {
   nextPeerEvaluationFormId = 1;
 }
@@ -29,16 +39,26 @@ export const adminPeerEvaluationFormHandlers = [
         );
       }
 
-      const input =
-        (await request.json()) as AdminPeerEvaluationFormCreateInput;
-      if (!input.milestoneId || !input.opensAt || !input.closesAt) {
-        return HttpResponse.json(
-          {
-            code: 'INVALID_REQUEST',
-            message: '상호평가 양식 입력값이 올바르지 않습니다.',
-          },
-          { status: 400 },
-        );
+      let body: unknown;
+      try {
+        body = await request.json();
+      } catch {
+        return invalidRequest();
+      }
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        return invalidRequest();
+      }
+
+      const input = body as Partial<AdminPeerEvaluationFormCreateInput>;
+      if (
+        typeof input.milestoneId !== 'number' ||
+        input.milestoneId < 1 ||
+        typeof input.opensAt !== 'string' ||
+        !input.opensAt ||
+        typeof input.closesAt !== 'string' ||
+        !input.closesAt
+      ) {
+        return invalidRequest();
       }
 
       return HttpResponse.json(

@@ -111,7 +111,8 @@ export default function AdminRequiredArtifactsManager({
   const [deletingArtifact, setDeletingArtifact] =
     useState<RequiredArtifactDto | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [error, setError] = useState<string>();
+  const [deleteError, setDeleteError] = useState<string>();
+  const [formError, setFormError] = useState<string>();
 
   const isPending =
     submitMutation.isPending ||
@@ -121,29 +122,41 @@ export default function AdminRequiredArtifactsManager({
 
   const closeForm = () => {
     if (isPending) return;
-    setError(undefined);
+    setFormError(undefined);
     setEditingArtifact(null);
     setForm(emptyForm);
     setIsFormOpen(false);
   };
 
+  const closeDeleteDialog = () => {
+    if (isPending) return;
+    setDeleteError(undefined);
+    setDeletingArtifact(null);
+  };
+
   const openCreateForm = () => {
-    setError(undefined);
+    setFormError(undefined);
     setEditingArtifact(null);
     setForm(emptyForm);
     setIsFormOpen(true);
   };
 
   const openEditForm = (artifact: RequiredArtifactDto) => {
-    setError(undefined);
+    setFormError(undefined);
     setEditingArtifact(artifact);
     setForm(toArtifactForm(artifact));
     setIsFormOpen(true);
   };
 
+  const openDeleteDialog = (artifact: RequiredArtifactDto) => {
+    setDeleteError(undefined);
+    setDeletingArtifact(artifact);
+  };
+
   const submitForm = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (isPending) return;
+    setFormError(undefined);
 
     try {
       const input = createArtifactInput(form);
@@ -159,7 +172,7 @@ export default function AdminRequiredArtifactsManager({
       }
       closeForm();
     } catch (reason) {
-      setError(
+      setFormError(
         reason instanceof Error
           ? reason.message
           : '산출물을 저장하지 못했습니다. 잠시 후 다시 시도해주세요.',
@@ -169,7 +182,7 @@ export default function AdminRequiredArtifactsManager({
 
   const confirmRemove = async () => {
     if (!deletingArtifact || isPending) return;
-    setError(undefined);
+    setDeleteError(undefined);
 
     try {
       await removeMutation.mutateAsync({
@@ -177,9 +190,9 @@ export default function AdminRequiredArtifactsManager({
         requiredArtifactId: String(deletingArtifact.id),
         sectionId,
       });
-      setDeletingArtifact(null);
+      closeDeleteDialog();
     } catch (reason) {
-      setError(
+      setDeleteError(
         reason instanceof Error
           ? reason.message
           : '산출물을 삭제하지 못했습니다. 잠시 후 다시 시도해주세요.',
@@ -249,7 +262,7 @@ export default function AdminRequiredArtifactsManager({
                   <Button
                     isDisabled={isPending}
                     label='삭제'
-                    onClick={() => setDeletingArtifact(artifact)}
+                    onClick={() => openDeleteDialog(artifact)}
                     variant='secondary'
                   />
                 </div>
@@ -267,12 +280,6 @@ export default function AdminRequiredArtifactsManager({
         </div>
       )}
 
-      {error ? (
-        <Text className={styles.error} role='alert'>
-          {error}
-        </Text>
-      ) : null}
-
       <Dialog
         aria-label={editingArtifact ? '필수 산출물 수정' : '필수 산출물 추가'}
         isOpen={isFormOpen}
@@ -286,6 +293,11 @@ export default function AdminRequiredArtifactsManager({
           <Heading level={2}>
             {editingArtifact ? '필수 산출물 수정' : '필수 산출물 추가'}
           </Heading>
+          {formError ? (
+            <Text className={styles.error} role='alert'>
+              {formError}
+            </Text>
+          ) : null}
           <TextInput
             isDisabled={isPending}
             isRequired
@@ -384,7 +396,7 @@ export default function AdminRequiredArtifactsManager({
         aria-label='필수 산출물 삭제'
         isOpen={Boolean(deletingArtifact)}
         onOpenChange={isOpen => {
-          if (!isOpen && !isPending) setDeletingArtifact(null);
+          if (!isOpen) closeDeleteDialog();
         }}
         purpose='required'
         width={440}
@@ -395,11 +407,16 @@ export default function AdminRequiredArtifactsManager({
             삭제한 규칙은 이후 제출 검증과 목록에서 제외됩니다. 기존 제출 이력은
             유지됩니다.
           </Text>
+          {deleteError ? (
+            <Text className={styles.error} role='alert'>
+              {deleteError}
+            </Text>
+          ) : null}
           <div className={styles.dialogActions}>
             <Button
               isDisabled={isPending}
               label='취소'
-              onClick={() => setDeletingArtifact(null)}
+              onClick={closeDeleteDialog}
               variant='secondary'
             />
             <Button
