@@ -19,7 +19,6 @@ import {
 } from '~/features/student-home/queries';
 import SubmissionDialog from '~/features/submission/SubmissionDialog';
 import { SubmissionDialogProvider } from '~/features/submission/SubmissionDialogContext';
-import { useTeamMessagesQuery } from '~/features/team-message/queries';
 
 import MilestoneList from '~/widgets/milestone-summary/MilestoneList';
 
@@ -84,18 +83,6 @@ export default function StudentHomePage() {
   const peer = usePeerEvaluationHomeQuery(
     peerMilestones.length && home.teamId ? sectionId : undefined,
     home.studentNumber,
-  );
-  const proposalMessages = useTeamMessagesQuery(
-    query.milestones.some(milestone => milestone.type === 'PROPOSAL')
-      ? home.teamId
-      : undefined,
-    'PROPOSAL',
-  );
-  const midReportMessages = useTeamMessagesQuery(
-    query.milestones.some(milestone => milestone.type === 'MID_REPORT')
-      ? home.teamId
-      : undefined,
-    'MID_REPORT',
   );
   const now = useMilestoneScheduleClock(
     query.milestones,
@@ -168,35 +155,17 @@ export default function StudentHomePage() {
     else if (submission?.isError) summary.statusLabel = '조회 실패';
     else if (submission?.isPending) summary.statusLabel = '조회 중';
     if (milestone.type === 'MID_REPORT' && home.teamId) {
-      const hasFeedback =
-        midReportMessages.isSuccess && midReportMessages.data.length > 0;
-      const feedbackRequested =
-        submission?.isSuccess &&
-        ['FEEDBACK_PROVIDED', 'REVISION_REQUESTED'].includes(
-          submission.data.status,
-        );
-      if (hasFeedback || feedbackRequested) {
-        summary.currentStepLabel = '피드백 반영';
-        summary.interaction = 'collapsible';
-        summary.isDetailAvailable = true;
-        summary.body = {
-          kind: 'mid-review-feedback',
-          teamId: home.teamId,
-          feedback: [],
-          canSubmitResponse: false,
-          sections: [],
-          guide: '대면 피드백과 반영 내용을 기록해 주세요.',
-        };
-      }
-      if (midReportMessages.isError) {
-        summary.rows.push({
-          id: 'mid-report-feedback-status',
-          label: '중간보고서 피드백',
-          value:
-            '피드백을 불러오지 못했어요. 최신 화면에서 다시 확인해 주세요.',
-          tone: 'default',
-        });
-      }
+      summary.currentStepLabel = '중간보고서 작성';
+      summary.interaction = 'collapsible';
+      summary.isDetailAvailable = true;
+      summary.body = {
+        kind: 'mid-review-feedback',
+        teamId: home.teamId,
+        feedback: [],
+        canSubmitResponse: false,
+        sections: [],
+        guide: '대면 피드백과 반영 내용을 기록해 주세요.',
+      };
       return summary;
     }
     if (milestone.type === 'PROPOSAL') {
@@ -206,38 +175,6 @@ export default function StudentHomePage() {
         // An existing project can be continued regardless of how it was created.
         // This does not assert a selected candidate ID or invent block progress.
         summary.currentStepLabel = '제안서 작성';
-        summary.interaction = 'static';
-        summary.isDetailAvailable = false;
-        summary.body = undefined;
-        summary.rows = [
-          {
-            id: 'proposal-writing',
-            label: '제안서 작성',
-            value: project.title?.trim() || '프로젝트 내용 확인',
-            tone: 'primary',
-            actionLabel: '작성하기',
-            actionTo: editorSectionTo('proposal', 'team-info'),
-          },
-        ];
-      }
-
-      if (home.teamId && !proposalMessages.isSuccess) {
-        // An unavailable conversation is not evidence of a topic-selection stage.
-        summary.rows.push({
-          id: 'proposal-feedback-status',
-          label: '제안서 피드백',
-          value: proposalMessages.isError
-            ? '피드백을 불러오지 못했어요. 최신 화면에서 다시 확인해 주세요.'
-            : '피드백을 불러오는 중...',
-          tone: 'default',
-        });
-        return summary;
-      }
-
-      if (proposalMessages.isSuccess && proposalMessages.data.length > 0) {
-        // PROPOSAL messages form one team conversation. Neither milestone titles
-        // nor submission/review IDs identify a separate feedback thread.
-        summary.currentStepLabel = '피드백 반영';
         summary.interaction = 'collapsible';
         summary.isDetailAvailable = true;
         summary.body = {
@@ -249,7 +186,16 @@ export default function StudentHomePage() {
           sections: [],
           guide: '피드백을 반영한 내용을 답변으로 남겨 주세요.',
         };
-        return summary;
+        summary.rows = [
+          {
+            id: 'proposal-writing',
+            label: '제안서 작성',
+            value: project.title?.trim() || '프로젝트 내용 확인',
+            tone: 'primary',
+            actionLabel: '작성하기',
+            actionTo: editorSectionTo('proposal', 'team-info'),
+          },
+        ];
       }
 
       if (project) return summary;

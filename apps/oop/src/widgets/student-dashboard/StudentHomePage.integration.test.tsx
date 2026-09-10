@@ -123,7 +123,7 @@ function Wrapper({ children }: PropsWithChildren) {
 }
 
 describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
-  it('프로젝트가 없어도 실제 제안서 피드백이 있으면 기존 패널에서 답변하고 이력을 복원한다', async () => {
+  it('제안서 작성 단계에서 답변하고 이력을 복원해도 단계와 제출 상태는 유지된다', async () => {
     const milestone = { ...list[0]!, title: '제안서' };
     const messages: TeamMessage[] = [
       {
@@ -137,6 +137,16 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
         read: false,
       },
     ];
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+        HttpResponse.json({
+          id: 21,
+          teamId: 7,
+          title: '서버 프로젝트',
+          goal: '팀 목표',
+        }),
+      ),
+    );
     const posts: unknown[] = [];
     // The page's fresh /me result must win over stale session team metadata.
     useAuthStore.getState().setCurrentUser({ ...liveHomeUser, teamId: '8' });
@@ -195,7 +205,8 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     );
     const view = render(<StudentHomePage />, { wrapper: Wrapper });
     expect(await screen.findByText(messages[0]!.message)).toBeInTheDocument();
-    expect(screen.getByText('피드백 반영')).toBeInTheDocument();
+    expect(screen.getAllByText('제안서 작성').length).toBeGreaterThan(0);
+    expect(screen.queryByText('피드백 반영')).not.toBeInTheDocument();
     expect(screen.queryByText('주제 선정')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: '후보 추가' }),
@@ -239,8 +250,16 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     ).toHaveValue('');
   });
 
-  it('피드백 조회 실패를 빈 대화로 간주해 주제 선정으로 되돌리지 않는다', async () => {
+  it('피드백 조회가 실패해도 작성 단계와 패널을 유지하고 전송만 막는다', async () => {
     server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+        HttpResponse.json({
+          id: 21,
+          teamId: 7,
+          title: '서버 프로젝트',
+          goal: '팀 목표',
+        }),
+      ),
       http.get(`${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`, () =>
         HttpResponse.json({ contents: [list[0]] }),
       ),
@@ -250,18 +269,83 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     );
     render(<StudentHomePage />, { wrapper: Wrapper });
     expect(
-      await screen.findByText(
-        '피드백을 불러오지 못했어요. 최신 화면에서 다시 확인해 주세요.',
-      ),
-    ).toBeInTheDocument();
+      (
+        await screen.findAllByText(
+          '피드백을 불러오지 못했어요. 최신 화면에서 다시 확인해 주세요.',
+        )
+      ).length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByText('주제 선정')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: '후보 추가' }),
     ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: '답변 보내기' }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '답변 보내기' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   });
+
+  it.each(['PROPOSAL', 'MID_REPORT'] as const)(
+    '%s 작성 단계는 미제출·빈 대화에서도 패널을 표시한다',
+    async type => {
+      const milestone = {
+        ...list[0]!,
+        type,
+        title: type === 'PROPOSAL' ? '제안서' : '중간보고서',
+      };
+      server.use(
+        http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+          HttpResponse.json({
+            id: 21,
+            teamId: 7,
+            title: '서버 프로젝트',
+            goal: '팀 목표',
+          }),
+        ),
+        http.get(
+          `${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`,
+          () => HttpResponse.json({ contents: [milestone] }),
+        ),
+        http.get(
+          `${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION(String(milestone.id))}`,
+          () =>
+            HttpResponse.json({
+              id: 9000,
+              milestoneId: milestone.id,
+              teamId: 7,
+              status: 'NOT_SUBMITTED',
+              currentVersion: 0,
+              canSubmitNow: true,
+              hasPendingReview: false,
+            }),
+        ),
+      );
+      render(<StudentHomePage />, { wrapper: Wrapper });
+      const label =
+        type === 'PROPOSAL' ? /피드백 반영 답변/ : /대면 피드백 반영 내용/;
+      const input = await screen.findByRole('textbox', { name: label });
+      expect(input).toBeVisible();
+      if (type === 'PROPOSAL') {
+        await screen.findAllByText(
+          '교수 피드백이 도착하면 답변을 남길 수 있어요.',
+        );
+        expect(
+          screen.getByRole('button', { name: '답변 보내기' }),
+        ).toHaveAttribute('aria-disabled', 'true');
+      } else {
+        await userEvent.setup().type(input, '대면 피드백을 먼저 기록합니다.');
+        await waitFor(() =>
+          expect(
+            screen.getByRole('button', { name: '반영 기록 남기기' }),
+          ).not.toHaveAttribute('aria-disabled', 'true'),
+        );
+      }
+      expect(
+        screen.getAllByText(`${milestone.title} 작성`).length,
+      ).toBeGreaterThan(0);
+      expect(screen.queryByText('피드백 반영')).not.toBeInTheDocument();
+    },
+  );
 
   it('프로젝트가 존재하면 새 세션의 홈에서도 제안서 작성 단계로 복원한다', async () => {
     server.use(
@@ -278,7 +362,7 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     expect(
       await screen.findByRole('button', { name: '작성하기' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('제안서 작성')).toBeInTheDocument();
+    expect(screen.getAllByText('제안서 작성').length).toBeGreaterThan(0);
     expect(screen.getByText('서버 프로젝트')).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: '후보 추가' }),
