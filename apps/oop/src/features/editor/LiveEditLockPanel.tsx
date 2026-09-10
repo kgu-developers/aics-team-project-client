@@ -5,7 +5,7 @@ import { useLiveEditLock } from './queries';
 
 const labels: Record<string, string> = {
   unauthenticated: '학생 로그인 정보를 확인해 주세요.',
-  'missing-target': '발표 제출 대상을 선택해 주세요.',
+  'missing-target': '편집할 문서와 영역을 선택해 주세요.',
   'unsupported-target': '이 문서의 편집 잠금은 아직 지원하지 않아요.',
   loading: '편집 잠금 상태를 확인하고 있어요.',
   error: '편집 잠금을 확인하지 못했어요. 다시 확인해 주세요.',
@@ -31,7 +31,9 @@ export default function LiveEditLockPanel({
           {labels[lock.state]}
         </p>
         {lock.status?.lockedBy ? (
-          <Text>잠금 계정: {lock.status.lockedBy}</Text>
+          <Text>
+            편집자: {lock.status.lockedByName ?? lock.status.lockedBy}
+          </Text>
         ) : null}
         <p>동시 편집 보호를 준비 중이라 문서 편집은 아직 사용할 수 없어요.</p>
         <Button label='편집 시작' isDisabled />

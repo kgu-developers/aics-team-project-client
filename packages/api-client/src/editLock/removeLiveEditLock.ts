@@ -10,6 +10,10 @@ export async function removeLiveEditLock(
 ): Promise<void> {
   assertLiveEditLockTarget(target);
   await apiClient.delete(ENDPOINTS.EDIT_LOCKS.ROOT, {
-    params: { targetType: target.targetType, targetId: target.targetId },
+    params: {
+      targetType: target.targetType,
+      targetId: target.targetId,
+      sectionKey: target.sectionKey,
+    },
   });
 }

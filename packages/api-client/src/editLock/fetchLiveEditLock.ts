@@ -12,7 +12,11 @@ export async function fetchLiveEditLock(
 ): Promise<LiveEditLockStatus> {
   assertLiveEditLockTarget(target);
   const response = await apiClient.get<unknown>(ENDPOINTS.EDIT_LOCKS.ROOT, {
-    params: { targetType: target.targetType, targetId: target.targetId },
+    params: {
+      targetType: target.targetType,
+      targetId: target.targetId,
+      sectionKey: target.sectionKey,
+    },
   });
   return mapLiveEditLockStatus(response.data);
 }

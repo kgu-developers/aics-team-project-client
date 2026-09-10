@@ -10,6 +10,7 @@ const apiProxyPrefixes = [
   '/auth',
   '/api',
   '/announcements',
+  '/edit-locks',
   '/meeting-actions',
   '/meeting-records',
   '/milestones',

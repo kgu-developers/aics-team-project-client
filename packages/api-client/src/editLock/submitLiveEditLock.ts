@@ -15,6 +15,7 @@ export async function submitLiveEditLock(
   const response = await apiClient.post<unknown>(ENDPOINTS.EDIT_LOCKS.ROOT, {
     targetType: target.targetType,
     targetId: target.targetId,
+    sectionKey: target.sectionKey,
   });
   return mapLiveEditLockStatus(response.data);
 }

@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '@aics/api-client';
+import type { LiveEditLockTarget } from '@aics/core';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
@@ -38,7 +39,7 @@ afterEach(() => {
 afterAll(() => server.close());
 function renderPanel(
   contractActions = false,
-  targetType: 'PRESENTATION_CONTENT' | 'PROJECT' = 'PRESENTATION_CONTENT',
+  targetType: LiveEditLockTarget['targetType'] = 'PROJECT',
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -48,7 +49,7 @@ function renderPanel(
     <AstryxThemeProvider>
       <QueryClientProvider client={client}>
         <LiveEditLockPanel
-          target={{ targetType, targetId: 19 }}
+          target={{ targetType, targetId: 19, sectionKey: 'TEAM_INFO' }}
           allowContractActions={contractActions}
         />
       </QueryClientProvider>
@@ -76,13 +77,14 @@ it('검수용 획득·해제 후에도 편집은 비활성 상태로 유지된�
     await screen.findByText('현재 계정이 편집 잠금을 보유하고 있어요.'),
   ).toBeVisible();
   expect(screen.getByRole('button', { name: '편집 시작' })).toBeDisabled();
+  expect(screen.getByText(`편집자: ${demoStudent.name}`)).toBeVisible();
   await actor.click(screen.getByRole('button', { name: '검수용 잠금 해제' }));
   expect(
     await screen.findByText('현재 확인된 편집 잠금이 없어요.'),
   ).toBeVisible();
 });
 
-it('PROJECT는 지원 대기로 안내하며 live 요청을 보내지 않는다', () => {
+it('중간보고서는 지원 대기로 안내하며 live 요청을 보내지 않는다', () => {
   const requests = vi.fn();
   server.use(
     http.all(`${API_BASE_URL}/edit-locks`, () => {
@@ -90,7 +92,7 @@ it('PROJECT는 지원 대기로 안내하며 live 요청을 보내지 않는다'
       return HttpResponse.json({ locked: false });
     }),
   );
-  renderPanel(true, 'PROJECT');
+  renderPanel(true, 'PRESENTATION_CONTENT' as LiveEditLockTarget['targetType']);
   expect(
     screen.getByText('이 문서의 편집 잠금은 아직 지원하지 않아요.'),
   ).toBeVisible();
@@ -98,6 +100,14 @@ it('PROJECT는 지원 대기로 안내하며 live 요청을 보내지 않는다'
     screen.getByRole('button', { name: '검수용 잠금 요청' }),
   ).toBeDisabled();
   expect(requests).not.toHaveBeenCalled();
+});
+
+it('회의록도 잠금 상태를 조회하고 편집은 비활성 상태로 유지한다', async () => {
+  renderPanel(false, 'MEETING_RECORD');
+  expect(
+    await screen.findByText('현재 확인된 편집 잠금이 없어요.'),
+  ).toBeVisible();
+  expect(screen.getByRole('button', { name: '편집 시작' })).toBeDisabled();
 });
 
 it('잠금 조회 실패는 오류와 재확인 동작을 제공하고 편집은 계속 차단한다', async () => {
