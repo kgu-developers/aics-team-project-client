@@ -105,6 +105,12 @@ export const teamName = style({
   paddingTop: 8,
 });
 
+export const teamDashboardLink = style({
+  color: 'inherit',
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
+});
+
 export const memberList = style({
   display: 'flex',
   flexWrap: 'wrap',

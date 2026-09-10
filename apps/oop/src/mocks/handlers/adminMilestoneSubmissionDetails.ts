@@ -22,6 +22,27 @@ function notFoundResponse() {
 
 export const adminMilestoneSubmissionDetailHandlers = [
   http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_DOWNLOAD(':submissionId')}`,
+    ({ params, request }) => {
+      if (!requireAdmin(request)) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+
+      const fixture = getAdminSubmissionFixture(String(params.submissionId));
+      if (!fixture) return notFoundResponse();
+
+      return new HttpResponse(new Blob(['mock submission archive']), {
+        headers: {
+          'Content-Disposition': `attachment; filename="submission-${params.submissionId}.zip"`,
+          'Content-Type': 'application/zip',
+        },
+      });
+    },
+  ),
+  http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION(':submissionId')}`,
     ({ params, request }) => {
       if (!requireAdmin(request)) {

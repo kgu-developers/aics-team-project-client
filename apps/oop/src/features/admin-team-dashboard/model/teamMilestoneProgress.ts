@@ -1,32 +1,14 @@
-export type TeamMilestoneProgressStatus =
-  | { kind: 'before-deadline' }
-  | { kind: 'not-submitted' }
-  | { kind: 'submitted'; submittedDateLabel: string }
-  | { kind: 'evaluated' };
+import type { AdminSectionMilestoneDto } from '@aics/api-client';
 
-export type TeamMilestoneDownloadFile = {
-  downloadUrl: string;
-  fileName: string;
-  label: string;
-};
-
-export type TeamMilestoneSummary = {
-  attachmentCount?: number | null;
-  presentationFileDownloadUrl?: string | null;
-  presentationFileName?: string | null;
-  sourceArchiveDownloadUrl?: string | null;
-  sourceArchiveFileName?: string | null;
-  videoUrl?: string | null;
-};
+import type {
+  AdminMilestoneSubmissionView,
+  AdminSubmissionVersionDetailView,
+} from '~/features/admin-milestone-review/model';
 
 export type TeamMilestoneProgress = {
-  id: string;
-  title: string;
-  deadlineLabel: string;
-  downloadFiles?: TeamMilestoneDownloadFile[];
-  summary?: TeamMilestoneSummary;
-  submissionId: string | null;
-  status: TeamMilestoneProgressStatus;
-  submittedMemberCount?: number | null;
-  memberCount?: number | null;
+  milestone: AdminSectionMilestoneDto;
+  submission: AdminMilestoneSubmissionView | null;
+  submissionState: 'error' | 'pending' | 'ready';
+  version: AdminSubmissionVersionDetailView | null;
+  versionState: 'error' | 'idle' | 'pending' | 'ready';
 };

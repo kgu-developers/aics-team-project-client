@@ -79,7 +79,6 @@ export const ENDPOINTS = {
       `/admin/sections/${sectionId}/presentation-evaluation-settings`,
     SECTION_STUDENTS: (sectionId: string) =>
       `/admin/sections/${sectionId}/students`,
-    TEAM_DASHBOARD: (teamId: string) => `/admin/teams/${teamId}/dashboard`,
     NOTICE_ATTACHMENT: (noticeId: string) =>
       `/admin/notices/${noticeId}/attachment`,
     NOTICES: '/admin/notices',

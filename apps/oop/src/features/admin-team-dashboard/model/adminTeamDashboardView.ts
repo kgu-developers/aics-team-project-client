@@ -1,36 +1,35 @@
-import type {
-  AdminTeamDashboardMilestoneDto,
-  AdminTeamDashboardResponse,
-} from '@aics/api-client';
-import type { AdminTeamDashboard } from '@aics/core';
+import type { AdminTeamDetailDto } from '@aics/api-client';
 
-import type { TeamMilestoneProgress } from './teamMilestoneProgress';
-
-export type AdminTeamDashboardView = AdminTeamDashboard & {
-  milestones: TeamMilestoneProgress[];
+export type AdminTeamDashboardMemberView = {
+  id: string;
+  isLeader: boolean;
+  major: string | null;
+  name: string;
+  projectRole: string | null;
+  studentNumber: string;
 };
 
-function toTeamMilestoneProgress(
-  milestone: AdminTeamDashboardMilestoneDto,
-): TeamMilestoneProgress {
-  return {
-    deadlineLabel: milestone.deadlineLabel,
-    downloadFiles: milestone.downloadFiles?.map(file => ({ ...file })),
-    id: milestone.id,
-    summary: milestone.summary ? { ...milestone.summary } : undefined,
-    status: milestone.status,
-    submittedMemberCount: milestone.submittedMemberCount,
-    memberCount: milestone.memberCount,
-    submissionId: milestone.submissionId,
-    title: milestone.title,
-  };
-}
+export type AdminTeamDashboardView = {
+  id: string;
+  members: AdminTeamDashboardMemberView[];
+  name: string;
+  sectionId: string;
+};
 
 export function toAdminTeamDashboardView(
-  response: AdminTeamDashboardResponse,
+  response: AdminTeamDetailDto,
 ): AdminTeamDashboardView {
   return {
-    ...response,
-    milestones: response.milestones?.map(toTeamMilestoneProgress) ?? [],
+    id: String(response.id),
+    members: response.members.map(member => ({
+      id: String(member.id),
+      isLeader: member.isLeader,
+      major: null,
+      name: member.name ?? member.studentNumber,
+      projectRole: member.projectRole,
+      studentNumber: member.studentNumber,
+    })),
+    name: response.name,
+    sectionId: String(response.sectionId),
   };
 }

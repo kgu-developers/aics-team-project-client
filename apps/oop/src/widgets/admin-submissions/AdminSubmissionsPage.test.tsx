@@ -256,13 +256,11 @@ describe('AdminSubmissionsPage', () => {
 
     expect(await screen.findByText('OOP-01 - 2팀')).toBeInTheDocument();
     expect(screen.getByText('미제출')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '일괄 다운로드' })).toHaveAttribute(
-      'href',
-      `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_DOWNLOAD('1005')}`,
-    );
-    expect(
-      screen.getByRole('button', { name: '일괄 다운로드' }),
-    ).toBeDisabled();
+    const finalDownloadButtons = screen.getAllByRole('button', {
+      name: '일괄 다운로드',
+    });
+    expect(finalDownloadButtons[0]).toBeEnabled();
+    expect(finalDownloadButtons[1]).toBeDisabled();
     expect(
       await screen.findByRole('link', { name: 'final-report.pdf' }),
     ).toHaveAttribute('download', 'final-report.pdf');
@@ -295,13 +293,44 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('link', { name: 'https://youtu.be/demo-oop-01-1' }),
     ).toHaveAttribute('target', '_blank');
-    expect(screen.getByRole('link', { name: '일괄 다운로드' })).toHaveAttribute(
-      'href',
-      `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_DOWNLOAD('1008')}`,
-    );
+    const presentationDownloadButtons = screen.getAllByRole('button', {
+      name: '일괄 다운로드',
+    });
+    expect(presentationDownloadButtons[0]).toBeEnabled();
+    expect(presentationDownloadButtons[1]).toBeDisabled();
     expect(
       screen.queryByRole('link', { name: '상세보기' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('발표 평가 마일스톤을 찾아 순서 설정을 제공한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    const settingsButton = await screen.findByRole('button', {
+      name: '순서 배정 및 평가',
+    });
+    expect(settingsButton).toBeEnabled();
+
+    await user.click(settingsButton);
+    expect(
+      await screen.findByRole('heading', { name: '발표 순서 설정' }),
+    ).toBeInTheDocument();
+  });
+
+  it('발표 자료 제출 fixture의 최신 버전을 조회한다', async () => {
+    renderPage(
+      '/admin/submissions/1011?milestoneId=presentation-submit&sectionId=oop-2026-2-01',
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'OOP-01 - 1팀 제출물' }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('link', { name: 'presentation.pdf' }),
+    ).toHaveAttribute('download', 'presentation.pdf');
   });
 
   it('상호 평가는 전용 표 조회 계약 전까지 범용 버전 상세로 이동하지 않는다', async () => {
@@ -323,8 +352,8 @@ describe('AdminSubmissionsPage', () => {
 
   it('발표 순서 fixture는 초기화 후 원래 순서로 돌아온다', () => {
     updatePresentationOrderFixture([
-      { order: 2, teamId: 11 },
-      { order: 1, teamId: 12 },
+      { order: 2, teamId: 1 },
+      { order: 1, teamId: 2 },
     ]);
 
     expect(

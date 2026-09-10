@@ -30,9 +30,11 @@ export type AdminMilestoneSubmissionsResponse = {
 
 export async function fetchAdminMilestoneSubmissions(
   milestoneId: string,
+  teamId?: string,
 ): Promise<AdminMilestoneSubmissionsResponse> {
   const response = await apiClient.get<AdminMilestoneSubmissionsResponse>(
     ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS(milestoneId),
+    { params: teamId ? { teamId } : undefined },
   );
 
   return response.data;

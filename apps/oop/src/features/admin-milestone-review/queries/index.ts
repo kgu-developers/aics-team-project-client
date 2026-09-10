@@ -16,5 +16,7 @@ export { useAdminSubmissionVersionQuery } from './useAdminSubmissionVersionQuery
 export { useAdminSubmissionVersionDetailsQueries } from './useAdminSubmissionVersionDetailsQueries';
 export { useAdminSubmissionVersionsQuery } from './useAdminSubmissionVersionsQuery';
 export { useAdminMilestoneSubmissionsQuery } from './useAdminMilestoneSubmissionsQuery';
+export { useDownloadAdminSubmissionArtifactsMutation } from './useDownloadAdminSubmissionArtifactsMutation';
+export { adminMilestoneSubmissionsKeys } from './adminMilestoneSubmissionsKeys';
 export { useAdminPresentationEvaluationsQuery } from './useAdminPresentationEvaluationsQuery';
 export { useUpdatePresentationOrderMutation } from './useUpdatePresentationOrderMutation';

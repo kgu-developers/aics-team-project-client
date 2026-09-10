@@ -24,6 +24,20 @@ const sectionOneMilestones: AdminSectionMilestoneDto[] = [
   },
   {
     allowResubmissionBeforeDueAt: false,
+    description: '발표에 사용할 PDF, ZIP 파일과 시연 URL을 제출합니다.',
+    id: 106,
+    schedule: {
+      dueAt: '2026-11-13T14:59:00Z',
+      opensAt: '2026-11-01T00:00:00Z',
+    },
+    sectionId: 1,
+    status: 'PUBLISHED',
+    title: '발표 자료 제출',
+    type: 'PRESENTATION',
+    weekNumber: 9,
+  },
+  {
+    allowResubmissionBeforeDueAt: false,
     description: '팀별 발표 순서와 동료 평가 기간을 관리합니다.',
     id: 103,
     schedule: {

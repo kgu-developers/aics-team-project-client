@@ -1,8 +1,7 @@
 import {
-  API_BASE_URL,
   AdminMilestoneType,
   AdminPresentationEvaluationTeamDto,
-  ENDPOINTS,
+  type AdminSectionMilestoneDto,
 } from '@aics/api-client';
 import {
   Button,
@@ -19,21 +18,25 @@ import { type KeyboardEvent, useMemo, useRef, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { AdminMilestoneSubmissionCard } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard';
 import {
   AdminMilestoneSubmissionBulkDownloadAction,
   AdminMilestoneSubmissionDetailAction,
 } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionDetailAction';
-import type {
-  AdminMilestoneSubmissionView,
-  AdminSubmissionVersionDetailView,
+import {
+  isPresentationEvaluationMilestone,
+  isPresentationSubmissionMilestone,
+  type AdminMilestoneSubmissionView,
+  type AdminSubmissionVersionDetailView,
 } from '~/features/admin-milestone-review/model';
 import {
   useAdminMilestoneSubmissionsQuery,
   useAdminPresentationEvaluationsQuery,
   useAdminSectionMilestonesQuery,
   useAdminSubmissionVersionDetailsQueries,
+  useDownloadAdminSubmissionArtifactsMutation,
 } from '~/features/admin-milestone-review/queries';
 import * as readStateStyles from '~/features/admin-read-state/adminReadState.css';
 import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
@@ -86,13 +89,22 @@ function isMilestoneTabId(value: string | undefined): value is MilestoneTabId {
   return MILESTONE_TABS.some(tab => tab.id === value);
 }
 
-function formatSubmittedAt(submittedAt: string) {
-  const date = new Date(submittedAt);
+function findMilestoneForTab(
+  milestones: readonly AdminSectionMilestoneDto[] | undefined,
+  tabId: MilestoneTabId,
+) {
+  if (tabId === 'presentation-evaluate') {
+    return milestones?.find(isPresentationEvaluationMilestone);
+  }
 
-  if (Number.isNaN(date.getTime())) return submittedAt;
+  if (tabId === 'presentation-submit') {
+    return milestones?.find(isPresentationSubmissionMilestone);
+  }
 
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  const type = milestoneTypeByTab[tabId];
+  if (!type) return undefined;
+
+  return milestones?.find(milestone => milestone.type === type);
 }
 
 function getSubmissionMetadata(
@@ -104,7 +116,7 @@ function getSubmissionMetadata(
   return (
     <>
       <Text className={styles.submissionMetadataText}>
-        {formatSubmittedAt(version.submittedAt)}
+        {formatSeoulDateTime(version.submittedAt)}
       </Text>
       <Text className={styles.submissionMetadataText}>
         제출자: {version.submittedBy}
@@ -197,6 +209,8 @@ export default function AdminSubmissionsPage() {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [isEvaluationSettingsOpen, setIsEvaluationSettingsOpen] =
     useState(false);
+  const downloadArtifactsMutation =
+    useDownloadAdminSubmissionArtifactsMutation();
   const search = useSearch({ from: '/admin/submissions' }) as {
     milestoneId?: string;
     sectionId?: string;
@@ -220,11 +234,10 @@ export default function AdminSubmissionsPage() {
   const sectionMilestonesQuery = useAdminSectionMilestonesQuery(
     shouldLoadSectionMilestones ? effectiveSectionId : undefined,
   );
-  const selectedMilestone = selectedMilestoneType
-    ? sectionMilestonesQuery.data?.content.find(
-        milestone => milestone.type === selectedMilestoneType,
-      )
-    : undefined;
+  const selectedMilestone = findMilestoneForTab(
+    sectionMilestonesQuery.data?.content,
+    activeMilestoneId,
+  );
   const submissionsQuery = useAdminMilestoneSubmissionsQuery(
     selectedMilestone ? String(selectedMilestone.id) : undefined,
     isAccessibleSection && selectedMilestone !== undefined,
@@ -263,10 +276,10 @@ export default function AdminSubmissionsPage() {
       ? effectiveSectionId
       : undefined,
   );
-  const presentationEvaluationMilestone =
-    sectionMilestonesQuery.data?.content.find(
-      milestone => milestone.type === 'PRESENTATION',
-    );
+  const presentationEvaluationMilestone = findMilestoneForTab(
+    sectionMilestonesQuery.data?.content,
+    'presentation-evaluate',
+  );
   const isPresentationMilestoneLoading = sectionMilestonesQuery.isPending;
   const isPresentationMilestoneError = sectionMilestonesQuery.isError;
   const isPresentationMilestoneMissing =
@@ -545,6 +558,7 @@ export default function AdminSubmissionsPage() {
                 <div className={styles.list}>
                   {submissionsQuery.data?.submissions.map(submission => {
                     const submissionSectionId = effectiveSectionId;
+                    const submissionId = submission.submissionId;
                     const isVersionDetailAvailable =
                       versionDetailMilestoneIds.has(activeMilestoneId);
                     const versionMetadataQuery =
@@ -565,9 +579,14 @@ export default function AdminSubmissionsPage() {
                           activeMilestoneId === 'final-report' ||
                           activeMilestoneId === 'presentation-submit' ? (
                             <AdminMilestoneSubmissionBulkDownloadAction
-                              href={
-                                submission.submissionId
-                                  ? `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_DOWNLOAD(submission.submissionId)}`
+                              isLoading={downloadArtifactsMutation.isPending}
+                              onClick={
+                                submissionId
+                                  ? () => {
+                                      downloadArtifactsMutation.mutate(
+                                        submissionId,
+                                      );
+                                    }
                                   : undefined
                               }
                             />
@@ -575,7 +594,7 @@ export default function AdminSubmissionsPage() {
                             <AdminMilestoneSubmissionDetailAction
                               milestoneId={activeTab.id}
                               sectionId={effectiveSectionId}
-                              submissionId={submission.submissionId}
+                              submissionId={submissionId}
                               unavailableReason={
                                 isVersionDetailAvailable
                                   ? undefined

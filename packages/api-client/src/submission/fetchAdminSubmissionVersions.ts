@@ -1,4 +1,5 @@
 import { apiClient } from '../client';
+import type { AdminSubmissionSubmitterDto } from './fetchAdminSubmissionVersion';
 import { ENDPOINTS } from '../constants/endpoints';
 
 export type AdminSubmissionVersionSummaryDto = {
@@ -6,7 +7,7 @@ export type AdminSubmissionVersionSummaryDto = {
   description?: string;
   late: boolean;
   submittedAt: string;
-  submittedBy: string;
+  submittedBy: AdminSubmissionSubmitterDto | string;
   version: number;
 };
 

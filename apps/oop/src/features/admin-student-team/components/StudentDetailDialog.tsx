@@ -5,7 +5,7 @@ import * as styles from './StudentDetailDialog.css';
 export type StudentDetailDialogStudent = {
   name: string;
   studentNumber: string;
-  major: string;
+  major: string | null;
   team: {
     name: string;
   } | null;
@@ -46,7 +46,7 @@ export default function StudentDetailDialog({
             </div>
             <div className={styles.detailRow}>
               <dt>전공</dt>
-              <dd>{student.major}</dd>
+              <dd>{student.major ?? '-'}</dd>
             </div>
             <div className={styles.detailRow}>
               <dt>팀</dt>

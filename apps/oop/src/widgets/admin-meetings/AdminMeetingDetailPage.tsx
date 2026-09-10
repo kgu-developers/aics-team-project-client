@@ -65,6 +65,7 @@ export default function AdminMeetingDetailPage() {
             <Link
               className={styles.teamLink}
               params={{ teamId: String(record.teamId) }}
+              search={{ sectionId: String(record.sectionId) }}
               to={ROUTES.ADMIN_TEAM_DETAIL}
             >
               {record.teamName}
