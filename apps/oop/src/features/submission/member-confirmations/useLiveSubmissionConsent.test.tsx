@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '@aics/api-client';
-import { AstryxThemeProvider } from '@aics/design-system';
+import { AstryxThemeProvider, Button, Text } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   act,
@@ -16,10 +16,10 @@ import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
-import type { SubmissionConsentScope } from './consentScope';
-import LiveSubmissionConsentPanel, {
-  type LiveSubmissionConsentPanelProps,
-} from './LiveSubmissionConsentPanel';
+import {
+  submissionConsentErrorMessage,
+  type SubmissionConsentScope,
+} from './consentScope';
 import { useLiveSubmissionConsent } from './queries';
 
 import {
@@ -68,8 +68,8 @@ function wrapper() {
     );
   };
 }
-function renderPanel(props: LiveSubmissionConsentPanelProps = scope) {
-  return render(<LiveSubmissionConsentPanel {...props} />, {
+function renderPanel(props: ConsentTestControlsProps = scope) {
+  return render(<ConsentTestControls {...props} />, {
     wrapper: wrapper(),
   });
 }
@@ -177,9 +177,7 @@ it('완료된 제출의 서버 상태를 표시하되 확인 취소를 활성화
     }),
   );
   renderPanel({ ...scope, allowContractActions: true });
-  expect(
-    await screen.findByText('서버에서 최종 완료된 제출이에요.'),
-  ).toBeVisible();
+  expect(await screen.findByText('최종 완료된 제출이에요.')).toBeVisible();
   expect(screen.getByRole('button', { name: '현재 버전 확인' })).toBeDisabled();
   expect(screen.getByRole('button', { name: '내 확인 취소' })).toBeDisabled();
 });
@@ -222,11 +220,7 @@ it('새 버전 제출 후 이전 확인 수를 숨기고 새 버전으로 재조
   await screen.findByText('v2 확인 현황: 2/2명');
   currentVersion = 3;
   view.rerender(
-    <LiveSubmissionConsentPanel
-      {...scope}
-      currentVersion={3}
-      allowContractActions
-    />,
+    <ConsentTestControls {...scope} currentVersion={3} allowContractActions />,
   );
   expect(screen.queryByText('v2 확인 현황: 2/2명')).not.toBeInTheDocument();
   expect(await screen.findByText('v3 확인 현황: 1/2명')).toBeVisible();
@@ -424,3 +418,169 @@ it('계정 전환과 동일 계정 재로그인 시 이전 현황을 즉시 숨�
   await waitFor(() => expect(result.current.state).toBe('ready'));
   expect(requests.length).toBeGreaterThan(before);
 });
+
+it('팀장은 전원 확인 후 완료하고 홈과 제출 상세도 완료 상태로 갱신한다', async () => {
+  useAuthStore.getState().setAccessToken(demoAccessToken);
+  useAuthStore.getState().setCurrentUser(demoStudent);
+  server.use(
+    ...createStudentSubmissionConsentHandlers({
+      initialConfirmations: { '20260003': 2 },
+    }),
+  );
+  const actor = userEvent.setup();
+  renderPanel({
+    ...scope,
+    studentNumber: demoStudent.studentNumber,
+    allowContractActions: true,
+    isLeader: true,
+  });
+  await screen.findByText('v2 확인 현황: 2/2명');
+  await actor.dblClick(screen.getByRole('button', { name: '최종 완료' }));
+  expect(await screen.findByText('최종 완료된 제출이에요.')).toBeVisible();
+  expect(screen.getByRole('button', { name: '내 확인 취소' })).toBeDisabled();
+  expect(requests.filter(item => item.startsWith('PATCH '))).toHaveLength(1);
+  expect(
+    clients[0]!.getQueryData([
+      'student-submission-api',
+      '1',
+      '7',
+      '20260001',
+      '21',
+      'detail',
+      '41',
+    ]),
+  ).toMatchObject({ status: 'COMPLETED' });
+  expect(
+    clients[0]!.getQueryData(['student-home', 'submission', '1', '7', 21]),
+  ).toMatchObject({ status: 'COMPLETED' });
+});
+it.each([403, 428])(
+  '완료 요청 %s는 오류를 표시하고 재조회 전 중복 완료를 막는다',
+  async status => {
+    useAuthStore.getState().setAccessToken(demoAccessToken);
+    useAuthStore.getState().setCurrentUser(demoStudent);
+    server.use(
+      ...createStudentSubmissionConsentHandlers({
+        initialConfirmations: { '20260003': 2 },
+      }),
+    );
+    server.use(
+      http.patch(
+        `${API_BASE_URL}/submissions/41/complete`,
+        () => new HttpResponse(null, { status }),
+      ),
+    );
+    const actor = userEvent.setup();
+    renderPanel({
+      ...scope,
+      studentNumber: demoStudent.studentNumber,
+      allowContractActions: true,
+      isLeader: true,
+    });
+    await screen.findByText('v2 확인 현황: 2/2명');
+    await actor.click(screen.getByRole('button', { name: '최종 완료' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      status === 428 ? '아직 현재 버전을 확인하지 않은 팀원' : '권한이 없어요',
+    );
+    expect(screen.getByRole('button', { name: '최종 완료' })).toBeDisabled();
+    await actor.click(
+      screen.getByRole('button', { name: '확인 현황 새로고침' }),
+    );
+    await screen.findByText('v2 확인 현황: 2/2명');
+    expect(screen.getByRole('button', { name: '최종 완료' })).toBeEnabled();
+  },
+);
+
+// Test-only controls exercise the hook independently of the product CTA.
+type ConsentTestControlsProps = SubmissionConsentScope & {
+  allowContractActions?: boolean;
+  isLeader?: boolean;
+};
+
+/** Confirmation applies to the displayed current submission version. */
+function ConsentTestControls({
+  allowContractActions = false,
+  isLeader = false,
+  ...scope
+}: ConsentTestControlsProps) {
+  const consent = useLiveSubmissionConsent(
+    scope,
+    allowContractActions,
+    isLeader,
+  );
+  const summary = consent.snapshot?.consent;
+  const message =
+    consent.state === 'unauthenticated'
+      ? '현재 학생 로그인 정보와 제출 대상을 확인해 주세요.'
+      : consent.state === 'missing-context'
+        ? '분반, 팀, 마일스톤과 제출 버전이 확인되면 팀원 확인 현황을 볼 수 있어요.'
+        : consent.state === 'unsupported'
+          ? '최종보고서의 팀원 확인만 지원해요.'
+          : consent.state === 'loading'
+            ? '최신 제출 버전과 팀원 확인 현황을 확인하고 있어요.'
+            : consent.state === 'not-submitted'
+              ? '아직 최종보고서가 제출되지 않았어요.'
+              : consent.error
+                ? submissionConsentErrorMessage(consent.error)
+                : undefined;
+  return (
+    <div>
+      <section aria-label='최종보고서 팀원 확인'>
+        {message ? (
+          <p role={consent.error ? 'alert' : 'status'}>{message}</p>
+        ) : null}
+        {summary ? (
+          <>
+            <Text>
+              v{consent.snapshot!.submission.currentVersion} 확인 현황:{' '}
+              {summary.confirmedCount}/{summary.totalCount}명
+            </Text>
+            <Text>
+              {summary.isConfirmedByMe
+                ? '현재 버전을 확인했어요.'
+                : '현재 버전의 확인이 필요해요.'}
+            </Text>
+          </>
+        ) : null}
+        {consent.state === 'completed' ? (
+          <Text>최종 완료된 제출이에요.</Text>
+        ) : (
+          <Text>팀원 확인과 최종 완료는 별도 상태예요.</Text>
+        )}
+        <div>
+          <Button
+            label='확인 현황 새로고침'
+            onClick={() => void consent.refresh()}
+            isDisabled={!consent.canRefresh}
+            variant='secondary'
+          />
+          {allowContractActions ? (
+            <>
+              <Button
+                label='현재 버전 확인'
+                onClick={() => void consent.confirm()}
+                isDisabled={
+                  !consent.canChange || Boolean(summary?.isConfirmedByMe)
+                }
+              />
+              <Button
+                label='내 확인 취소'
+                onClick={() => void consent.cancel()}
+                isDisabled={!consent.canChange || !summary?.isConfirmedByMe}
+                variant='secondary'
+              />
+            </>
+          ) : null}
+          <Button
+            label='최종 완료'
+            isDisabled={!consent.canComplete}
+            onClick={() => void consent.complete()}
+          />
+        </div>
+        <Text color='secondary'>
+          모든 팀원이 현재 버전을 확인하면 팀장이 최종 완료할 수 있어요.
+        </Text>
+      </section>
+    </div>
+  );
+}

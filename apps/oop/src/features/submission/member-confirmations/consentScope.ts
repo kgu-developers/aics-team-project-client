@@ -57,6 +57,10 @@ export function submissionConsentErrorMessage(error: unknown) {
       return '로그인 정보가 만료되었어요. 다시 로그인해 주세요.';
     if (error.response?.status === 403)
       return '이 제출을 확인할 권한이 없어요. 현재 팀과 수강 상태를 확인해 주세요.';
+    if (error.response?.status === 428)
+      return '아직 현재 버전을 확인하지 않은 팀원이 있어요. 현황을 새로고침해 주세요.';
+    if (error.response?.status === 409)
+      return '제출 상태가 변경됐어요. 현황을 새로고침해 주세요.';
     if (error.response?.status === 404)
       return '제출 자료를 찾을 수 없어요. 제출 대상을 다시 확인해 주세요.';
     if (

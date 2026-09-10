@@ -58,3 +58,5 @@ export { fetchRequiredSubmissionArtifacts } from './fetchRequiredSubmissionArtif
 export { fetchStudentSubmissionMemberConsent } from './fetchStudentSubmissionMemberConsent';
 export { updateStudentSubmissionMemberConsent } from './updateStudentSubmissionMemberConsent';
 export { removeStudentSubmissionMemberConsent } from './removeStudentSubmissionMemberConsent';
+
+export { updateStudentSubmissionCompletion } from './updateStudentSubmissionCompletion';

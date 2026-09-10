@@ -1,7 +1,10 @@
 import { Button, Text } from '@aics/design-system';
 
 import type { FinalReportSubmissionTarget } from '~/features/submission/FinalReportSubmissionPanel';
-import { useStudentSubmissionVersionsQuery } from '~/features/submission/queries';
+import {
+  useStudentSubmissionQuery,
+  useStudentSubmissionVersionsQuery,
+} from '~/features/submission/queries';
 import { useSubmissionDialog } from '~/features/submission/SubmissionDialogContext';
 import { safeSubmissionUrl } from '~/features/submission/submissionUploadInput';
 
@@ -10,16 +13,17 @@ import SubmissionMaterials from './SubmissionMaterials';
 
 function Materials({ target }: { target: FinalReportSubmissionTarget }) {
   const query = useStudentSubmissionVersionsQuery(target, target.submissionId);
-  if (query.isPending)
+  const detail = useStudentSubmissionQuery(target, target.submissionId);
+  if (query.isPending || detail.isPending)
     return <Text role='status'>제출 자료를 불러오는 중...</Text>;
-  if (query.isError)
+  if (query.isError || detail.isError)
     return (
       <>
         <Text role='alert'>제출 자료를 불러오지 못했어요.</Text>
         <Button
           label='자료 다시 조회'
           clickAction={async () => {
-            await query.refetch();
+            await Promise.all([query.refetch(), detail.refetch()]);
           }}
         />
       </>

@@ -1,5 +1,6 @@
 import {
   fetchStudentSubmission,
+  updateStudentSubmissionCompletion,
   fetchStudentSubmissionMemberConsent,
   updateStudentSubmissionMemberConsent,
   removeStudentSubmissionMemberConsent,
@@ -11,8 +12,9 @@ import {
   selectHasAuthenticatedSession,
   useAuthStore,
 } from '~/features/auth/authStore';
+import { studentHomeKeys } from '~/features/student-home/queries/studentHomeKeys';
 
-import { liveSubmissionKeys } from '../../queries/liveSubmissionKeys';
+import { studentSubmissionKeys } from '../../queries/studentSubmissionKeys';
 import {
   hasConsentScope,
   requireMatchingConsentSubmission,
@@ -24,11 +26,28 @@ import {
 export function useLiveSubmissionConsent(
   scope: SubmissionConsentScope,
   allowContractActions = false,
+  isLeader = false,
 ) {
   const client = useQueryClient();
   const authenticated = useAuthStore(selectHasAuthenticatedSession);
   const user = useAuthStore(state => state.currentUser);
-  const revision = useAuthStore(state => state.sessionRevision);
+  const sessionEpoch = useRef(0);
+  const [revision, setRevision] = useState(0);
+  useEffect(
+    () =>
+      useAuthStore.subscribe((next, previous) => {
+        if (
+          next.currentUser !== previous.currentUser ||
+          selectHasAuthenticatedSession(next) !==
+            selectHasAuthenticatedSession(previous)
+        ) {
+          sessionEpoch.current += 1;
+          setRevision(sessionEpoch.current);
+        }
+      }),
+    [],
+  );
+
   const accountMatches =
     authenticated &&
     user?.globalRole === 'STUDENT' &&
@@ -39,8 +58,9 @@ export function useLiveSubmissionConsent(
     scope.milestoneType === 'FINAL_REPORT';
   const queryKey = [
     'student-submission-member-consent',
+    user?.id,
     revision,
-    ...liveSubmissionKeys.scope(scope),
+    ...studentSubmissionKeys.scope(scope),
     scope.submissionId,
     scope.currentVersion,
     scope.milestoneType,
@@ -68,7 +88,8 @@ export function useLiveSubmissionConsent(
       generation.current.mounted &&
       generation.current.identity === identity &&
       generation.current.number === token &&
-      auth.sessionRevision === revision &&
+      auth.currentUser === user &&
+      sessionEpoch.current === revision &&
       auth.currentUser?.studentNumber === scope.studentNumber &&
       auth.currentUser?.globalRole === 'STUDENT' &&
       selectHasAuthenticatedSession(auth)
@@ -127,11 +148,20 @@ export function useLiveSubmissionConsent(
     Boolean(snapshot?.consent) &&
     snapshot?.submission.status !== 'COMPLETED' &&
     scope.currentVersion !== 0;
+  const canComplete =
+    canChange &&
+    isLeader &&
+    snapshot?.submission.status === 'SUBMITTED' &&
+    Boolean(
+      snapshot?.consent &&
+      snapshot.consent.totalCount > 0 &&
+      snapshot.consent.confirmedCount === snapshot.consent.totalCount,
+    );
 
-  async function change(confirmed: boolean) {
+  async function change(confirmed: boolean | 'complete') {
     const previousToken = renderGeneration;
     if (
-      !canChange ||
+      !(confirmed === 'complete' ? canComplete : canChange) ||
       !current(previousToken) ||
       (busy.current?.identity === identity &&
         busy.current.token === previousToken)
@@ -146,7 +176,16 @@ export function useLiveSubmissionConsent(
       if (before.currentVersion === 0 || before.status === 'COMPLETED')
         throw new Error('이 제출의 확인 상태를 변경할 수 없습니다.');
       // Never send userId or an invented expectedVersion: neither is in the API.
-      if (before.memberConsent?.isConfirmedByMe !== confirmed) {
+      if (confirmed === 'complete') {
+        if (
+          !isLeader ||
+          before.memberConsent?.confirmedCount !==
+            before.memberConsent?.totalCount
+        )
+          throw new Error('모든 팀원이 현재 버전을 확인해야 완료할 수 있어요.');
+        await updateStudentSubmissionCompletion(scope.submissionId!);
+        assertCurrent(token);
+      } else if (before.memberConsent?.isConfirmedByMe !== confirmed) {
         await (confirmed
           ? updateStudentSubmissionMemberConsent(scope.submissionId!)
           : removeStudentSubmissionMemberConsent(scope.submissionId!));
@@ -158,10 +197,31 @@ export function useLiveSubmissionConsent(
       await client.cancelQueries({ queryKey, exact: true });
       assertCurrent(token);
       client.setQueryData(queryKey, updated);
-      await client.invalidateQueries({
-        queryKey: liveSubmissionKeys.scope(scope),
-        refetchType: 'none',
-      });
+      await Promise.all([
+        client.cancelQueries({
+          queryKey: studentSubmissionKeys.detail(scope, scope.submissionId),
+        }),
+        client.cancelQueries({
+          queryKey: studentHomeKeys.submission(
+            scope.sectionId,
+            scope.teamId,
+            Number(scope.milestoneId),
+          ),
+        }),
+      ]);
+      assertCurrent(token);
+      client.setQueryData(
+        studentSubmissionKeys.detail(scope, scope.submissionId),
+        updated.submission,
+      );
+      client.setQueryData(
+        studentHomeKeys.submission(
+          scope.sectionId,
+          scope.teamId,
+          Number(scope.milestoneId),
+        ),
+        updated.submission,
+      );
     } catch (error) {
       if (current(token))
         setOperation({ identity, token, pending: false, error });
@@ -180,7 +240,12 @@ export function useLiveSubmissionConsent(
   async function refresh() {
     if (!allowed || pending || !current(renderGeneration)) return;
     setOperation(undefined);
-    await query.refetch();
+    await Promise.all([
+      query.refetch(),
+      client.invalidateQueries({
+        queryKey: studentSubmissionKeys.scope(scope),
+      }),
+    ]);
   }
   return {
     state: !accountMatches
@@ -208,6 +273,7 @@ export function useLiveSubmissionConsent(
     refresh,
     confirm: () => change(true),
     cancel: () => change(false),
-    canComplete: false as const,
+    canComplete,
+    complete: () => change('complete'),
   };
 }

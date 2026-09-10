@@ -9,7 +9,7 @@ import { getMockAccessToken } from '../authSession';
 import { studentSubmissionConsent } from '../data/studentSubmissionConsent';
 import { getDemoUserAccount } from '../data/users';
 
-/** Isolated fixtures for the real contract; opt in only on the review surface. */
+/** Isolated confirmation scenarios for API and component regression tests. */
 export function createStudentSubmissionConsentHandlers({
   getSubmission = () => studentSubmissionConsent,
   getActiveStudentNumbers = () => ['20260001', '20260003'],
@@ -23,6 +23,7 @@ export function createStudentSubmissionConsentHandlers({
   leaderStudentNumber?: string;
   initialConfirmations?: Readonly<Record<string, number>>;
 } = {}) {
+  let completed = false;
   const confirmations = new Map(Object.entries(initialConfirmations));
   let observedVersion: number | undefined;
   const error = (code: string, status: number) =>
@@ -36,7 +37,9 @@ export function createStudentSubmissionConsentHandlers({
       if (milestoneType === 'FINAL_REPORT' && observedVersion > 0)
         confirmations.set(leaderStudentNumber, observedVersion);
     }
-    return submission;
+    return completed
+      ? { ...submission, status: 'COMPLETED' as const, canSubmitNow: false }
+      : submission;
   }
   function summary(
     submission: StudentSubmissionResponse,
@@ -82,6 +85,28 @@ export function createStudentSubmissionConsentHandlers({
     return HttpResponse.json(summary(submission, studentNumber));
   }
   return [
+    http.patch(
+      `${API_BASE_URL}/submissions/:submissionId/complete`,
+      ({ request, params }) => {
+        const authorized = authorize(request, params.submissionId);
+        if (authorized instanceof Response) return authorized;
+        if (authorized.studentNumber !== leaderStudentNumber)
+          return error('SUBMISSION_LEADER_ONLY', 403);
+        if (authorized.submission.status !== 'SUBMITTED')
+          return error('SUBMISSION_NOT_YET_SUBMITTED', 400);
+        const consent = summary(
+          authorized.submission,
+          authorized.studentNumber,
+        );
+        if (consent.confirmedCount !== consent.totalCount)
+          return error('SUBMISSION_MEMBER_CONFIRMATION_INCOMPLETE', 428);
+        completed = true;
+        return HttpResponse.json({
+          ...readSubmission(),
+          memberConsent: consent,
+        });
+      },
+    ),
     http.get(
       `${API_BASE_URL}${ENDPOINTS.SUBMISSION.DETAIL(':submissionId')}`,
       ({ request, params }) => {
