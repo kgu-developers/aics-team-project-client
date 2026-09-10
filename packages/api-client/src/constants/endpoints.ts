@@ -103,6 +103,12 @@ export const ENDPOINTS = {
       `/api/v1/oop/teams/${teamId}/leader-claim`,
     ROOT: '/teams',
   },
+  TEAM_MESSAGE: {
+    BY_TEAM: (teamId: string) => `/api/v1/teams/${teamId}/messages`,
+  },
+  TEAM_THREAD: {
+    BY_TEAM: (teamId: string) => `/api/v1/teams/${teamId}/thread`,
+  },
   MEETING: {
     RECORDS: (teamId: string) => `/teams/${teamId}/meeting-records`,
     ACTIONS: (teamId: string) => `/teams/${teamId}/actions`,

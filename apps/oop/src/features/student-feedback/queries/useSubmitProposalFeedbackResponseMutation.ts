@@ -1,26 +1,20 @@
-import { submitProposalFeedbackResponse } from '@aics/api-client';
 import type { SubmitProposalFeedbackResponseInput } from '@aics/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { studentHomeKeys } from '~/features/student-home/queries';
+import { teamMessageMutationOptions } from '~/features/team-message/queries';
 
 export type SubmitProposalFeedbackResponseVariables =
-  SubmitProposalFeedbackResponseInput & {
-    reviewId: string;
-  };
+  SubmitProposalFeedbackResponseInput;
 
-export function useSubmitProposalFeedbackResponseMutation(sectionId: string) {
+export function useSubmitProposalFeedbackResponseMutation(teamId?: string) {
   const queryClient = useQueryClient();
-
+  const options = teamMessageMutationOptions(queryClient, teamId);
   return useMutation({
-    mutationFn: ({
-      reviewId,
-      ...input
-    }: SubmitProposalFeedbackResponseVariables) =>
-      submitProposalFeedbackResponse(reviewId, input),
-    onSettled: () =>
-      queryClient.invalidateQueries({
-        queryKey: studentHomeKeys.dashboard(sectionId),
+    ...options,
+    mutationFn: (input: SubmitProposalFeedbackResponseVariables) =>
+      options.mutationFn({
+        message: input.content.trim(),
+        relatedType: 'PROPOSAL',
       }),
   });
 }

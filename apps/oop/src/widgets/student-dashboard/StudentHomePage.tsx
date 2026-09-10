@@ -154,6 +154,20 @@ export default function StudentHomePage() {
     if (!home.teamId) summary.statusLabel = '팀 배정 대기';
     else if (submission?.isError) summary.statusLabel = '조회 실패';
     else if (submission?.isPending) summary.statusLabel = '조회 중';
+    if (milestone.type === 'MID_REPORT' && home.teamId) {
+      summary.currentStepLabel = '중간보고서 작성';
+      summary.interaction = 'collapsible';
+      summary.isDetailAvailable = true;
+      summary.body = {
+        kind: 'mid-review-feedback',
+        teamId: home.teamId,
+        feedback: [],
+        canSubmitResponse: false,
+        sections: [],
+        guide: '대면 피드백과 반영 내용을 기록해 주세요.',
+      };
+      return summary;
+    }
     if (milestone.type === 'PROPOSAL') {
       const project =
         home.project.state.status === 'ready' ? home.project.data : undefined;
@@ -161,9 +175,17 @@ export default function StudentHomePage() {
         // An existing project can be continued regardless of how it was created.
         // This does not assert a selected candidate ID or invent block progress.
         summary.currentStepLabel = '제안서 작성';
-        summary.interaction = 'static';
-        summary.isDetailAvailable = false;
-        summary.body = undefined;
+        summary.interaction = 'collapsible';
+        summary.isDetailAvailable = true;
+        summary.body = {
+          kind: 'proposal-feedback',
+          teamId: home.teamId,
+          feedback: [],
+          canSubmitResponse: false,
+          replyPlaceholder: '피드백을 반영한 내용을 작성해 주세요.',
+          sections: [],
+          guide: '피드백을 반영한 내용을 답변으로 남겨 주세요.',
+        };
         summary.rows = [
           {
             id: 'proposal-writing',
@@ -174,8 +196,9 @@ export default function StudentHomePage() {
             actionTo: editorSectionTo('proposal', 'team-info'),
           },
         ];
-        return summary;
       }
+
+      if (project) return summary;
 
       summary.interaction = 'collapsible';
       summary.isDetailAvailable = true;
