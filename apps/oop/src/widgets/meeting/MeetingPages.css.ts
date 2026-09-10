@@ -399,7 +399,11 @@ export const meetingContent = style({
   paddingTop: 'var(--spacing-4)',
 });
 export const error = style({ color: 'var(--color-text-error)', margin: 0 });
-export const deleteDialogContent = style({
+export const editNotice = style([
+  error,
+  { display: 'grid', gap: 'var(--spacing-2)' },
+]);
+export const dialogContent = style({
   display: 'grid',
   gap: 'var(--spacing-4)',
 });
