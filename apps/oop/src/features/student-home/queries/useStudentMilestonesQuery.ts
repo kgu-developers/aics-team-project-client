@@ -20,9 +20,10 @@ export function useStudentMilestonesQuery(sectionId?: string, teamId?: string) {
   const submissions = useQueries({
     queries: milestones.map(milestone => ({
       queryKey: studentHomeKeys.submission(sectionId, teamId, milestone.id),
-      queryFn: teamId
-        ? () => fetchMyTeamMilestoneSubmission(String(milestone.id), teamId)
-        : skipToken,
+      queryFn:
+        teamId && milestone.type !== 'PEER_EVALUATION'
+          ? () => fetchMyTeamMilestoneSubmission(String(milestone.id), teamId)
+          : skipToken,
       retry: false,
     })),
   });
@@ -32,7 +33,13 @@ export function useStudentMilestonesQuery(sectionId?: string, teamId?: string) {
     submissions,
     isPending:
       list.isPending ||
-      Boolean(teamId && submissions.some(query => query.isPending)),
+      Boolean(
+        teamId &&
+        submissions.some(
+          (query, index) =>
+            milestones[index]?.type !== 'PEER_EVALUATION' && query.isPending,
+        ),
+      ),
     isFetching: list.isFetching || submissions.some(query => query.isFetching),
     error: list.error ?? submissions.find(query => query.isError)?.error,
     refetch: async () => {

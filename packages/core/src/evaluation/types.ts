@@ -101,7 +101,7 @@ export type PeerEvaluationTarget = {
 export type PeerEvaluationTeammateAnswer = {
   kind: 'TEAMMATE_CONTRIBUTION';
   targetUserId: string;
-  contributionPercent: number;
+  contributionPercent: number | null;
   contributionDetail: string;
   teammateAssessment: string;
 };

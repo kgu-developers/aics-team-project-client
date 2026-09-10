@@ -201,3 +201,5 @@ export type {
   StudentSubmissionVersionResponse,
   StudentSubmissionVersionsResponse,
 } from './submission/apiTypes';
+
+export type * from './evaluation/apiTypes';

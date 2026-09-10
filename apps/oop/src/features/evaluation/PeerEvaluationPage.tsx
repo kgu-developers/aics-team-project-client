@@ -69,9 +69,10 @@ function initialTargetDrafts(
       return [
         target.userId,
         {
-          contributionPercent: answer
-            ? String(answer.contributionPercent)
-            : '0',
+          contributionPercent:
+            answer?.contributionPercent != null
+              ? String(answer.contributionPercent)
+              : '',
           contributionDetail: answer?.contributionDetail ?? '',
           teammateAssessment: answer?.teammateAssessment ?? '',
         },
@@ -89,7 +90,7 @@ function initialStep(response?: MyPeerEvaluationResponse): 0 | 1 {
   const hasTeammateDraft = response.answers.some(
     answer =>
       answer.kind === 'TEAMMATE_CONTRIBUTION' &&
-      (answer.contributionPercent > 0 ||
+      (answer.contributionPercent !== null ||
         Boolean(answer.contributionDetail.trim()) ||
         Boolean(answer.teammateAssessment.trim())),
   );
@@ -153,8 +154,9 @@ function PeerEvaluationForm({
       ...targets.map(target => ({
         kind: 'TEAMMATE_CONTRIBUTION' as const,
         targetUserId: target.userId,
-        contributionPercent:
-          Number(drafts[target.userId]?.contributionPercent) || 0,
+        contributionPercent: drafts[target.userId]?.contributionPercent?.trim()
+          ? Number(drafts[target.userId]?.contributionPercent)
+          : null,
         contributionDetail: drafts[target.userId]?.contributionDetail ?? '',
         teammateAssessment: drafts[target.userId]?.teammateAssessment ?? '',
       })),
@@ -163,12 +165,33 @@ function PeerEvaluationForm({
     submit,
   });
 
+  const validateLength = (input: ReturnType<typeof buildInput>) => {
+    const narratives = [
+      input.selfContribution,
+      input.projectReviewComment,
+      ...input.answers.flatMap(answer =>
+        answer.kind === 'REFLECTION'
+          ? [answer.comment]
+          : [answer.contributionDetail, answer.teammateAssessment],
+      ),
+    ];
+    if (narratives.some(value => value.trim().length > 2000)) {
+      setClientError('각 서술 항목은 2000자 이내로 작성해 주세요.');
+      return false;
+    }
+    setClientError('');
+    return true;
+  };
+
   const saveDraft = async (
     drafts: Record<string, PeerEvaluationTargetDraft> = targetDrafts,
   ) => {
-    if (isReadOnly) return;
+    if (isReadOnly || draftMutation.isPending || submitMutation.isPending)
+      return;
     draftMutation.reset();
-    await draftMutation.mutateAsync(buildInput(false, drafts));
+    const input = buildInput(false, drafts);
+    if (!validateLength(input)) throw new Error('서술 길이 초과');
+    await draftMutation.mutateAsync(input);
   };
 
   const changeStep = async (nextStep: 0 | 1) => {
@@ -185,7 +208,7 @@ function PeerEvaluationForm({
     setEditingTargetId(target.userId);
     setEditingDraft({
       contributionPercent:
-        targetDrafts[target.userId]?.contributionPercent ?? '0',
+        targetDrafts[target.userId]?.contributionPercent ?? '',
       contributionDetail: targetDrafts[target.userId]?.contributionDetail ?? '',
       teammateAssessment: targetDrafts[target.userId]?.teammateAssessment ?? '',
     });
@@ -213,13 +236,21 @@ function PeerEvaluationForm({
   };
 
   const submit = () => {
+    if (isReadOnly || draftMutation.isPending || submitMutation.isPending)
+      return;
     setClientError('');
+    draftMutation.reset();
     submitMutation.reset();
     const input = buildInput(true);
+    if (!validateLength(input)) return;
     const teammateAnswers = input.answers.filter(
       (answer): answer is PeerEvaluationTeammateAnswer =>
         answer.kind === 'TEAMMATE_CONTRIBUTION',
     );
+    if (teammateAnswers.some(answer => answer.contributionPercent === null)) {
+      setClientError('모든 팀원의 기여도를 입력해 주세요.');
+      return;
+    }
     if (total !== 100) {
       setClientError('제출하려면 팀원 기여도 합계를 100%로 맞춰 주세요.');
       return;
@@ -256,9 +287,13 @@ function PeerEvaluationForm({
       id: target.userId,
       name: target.name,
       role: target.role,
-      score: `${Number(draft?.contributionPercent) || 0}%`,
+      score: draft?.contributionPercent
+        ? `${draft.contributionPercent}%`
+        : '미입력',
       isCompleted: Boolean(
-        draft?.contributionDetail.trim() && draft.teammateAssessment.trim(),
+        draft?.contributionPercent !== '' &&
+        draft?.contributionDetail.trim() &&
+        draft.teammateAssessment.trim(),
       ),
       target,
     };
@@ -274,6 +309,7 @@ function PeerEvaluationForm({
     <>
       {step === 1 ? (
         <Button
+          isDisabled={draftMutation.isPending || submitMutation.isPending}
           label='이전 설문'
           onClick={() => {
             void changeStep(0);
@@ -283,6 +319,7 @@ function PeerEvaluationForm({
       ) : null}
       {step === 0 ? (
         <Button
+          isDisabled={draftMutation.isPending || submitMutation.isPending}
           label='다음 설문'
           onClick={() => {
             void changeStep(1);
@@ -293,6 +330,7 @@ function PeerEvaluationForm({
         <Button
           isDisabled={
             isReadOnly ||
+            draftMutation.isPending ||
             total !== 100 ||
             !allTeammatesCompleted ||
             !projectEvaluationCompleted
@@ -372,7 +410,7 @@ function PeerEvaluationForm({
             >
               {isWindowClosed ? (
                 <p className={styles.helper}>
-                  평가 기간이 종료되어 내 제출 내역만 확인할 수 있어요.
+                  평가 기간이 아니어서 응답을 수정할 수 없어요.
                 </p>
               ) : null}
               <div className={styles.teammateTable}>
@@ -453,6 +491,7 @@ function PeerEvaluationForm({
           ) : null}
           {submitMutation.isError ? (
             <p className={styles.error} role='alert'>
+              상호평가를 제출하지 못했어요.{' '}
               {getEvaluationErrorMessage(submitMutation.error)}
             </p>
           ) : null}
@@ -622,7 +661,8 @@ export default function PeerEvaluationPage() {
     <div className={styles.root}>
       <PeerEvaluationForm
         formId={formId}
-        isWindowClosed={query.data.windowState === 'CLOSED'}
+        isWindowClosed={query.data.windowState !== 'OPEN'}
+        key={`${sectionId}:${userId}:${formId}`}
         response={query.data.myResponse}
         sectionId={sectionId}
         targets={query.data.targets}

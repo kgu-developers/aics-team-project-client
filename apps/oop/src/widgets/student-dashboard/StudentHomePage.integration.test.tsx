@@ -477,3 +477,134 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     );
   });
 });
+
+const peerMilestone = {
+  ...list[1]!,
+  id: 2313,
+  title: '개인 상호평가',
+  type: 'PEER_EVALUATION',
+  weekNumber: 10,
+};
+function servePeerEvaluation(
+  myResponse: Record<string, unknown> | null = null,
+) {
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`, () =>
+      HttpResponse.json({ contents: [list[0], peerMilestone] }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.EVALUATION.CONTEXT('2')}`, () =>
+      HttpResponse.json({
+        presentationMilestoneId: null,
+        peerEvaluationFormId: '1',
+      }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.EVALUATION.PEER_TARGETS('1')}`, () =>
+      HttpResponse.json({
+        formId: 1,
+        title: '개인 상호평가',
+        windowState: 'OPEN',
+        windowMessage: '',
+        targets: [{ userId: '202600003', name: '팀원', role: '개발' }],
+        myResponse,
+      }),
+    ),
+  );
+}
+
+describe('학생 홈의 개인 상호평가 연결', () => {
+  it('팀 문서 제출 상태를 조회하지 않고 내 상호평가 작성 화면으로 이동한다', async () => {
+    servePeerEvaluation();
+    render(<StudentHomePage />, { wrapper: Wrapper });
+    const user = userEvent.setup();
+    const button = await screen.findByRole('button', { name: '상호평가 작성' });
+    expect(screen.getByText('미작성')).toBeInTheDocument();
+    expect(requests).not.toContain(
+      ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION('2313'),
+    );
+    await user.click(button);
+    await waitFor(() =>
+      expect(navigationHistory.location.pathname).toBe('/student/peer-review'),
+    );
+  });
+
+  it.each([
+    ['DRAFT', '작성 중', '이어 작성'],
+    ['SUBMITTED', '제출 완료', '제출 내역 보기'],
+  ])(
+    '내 응답 %s를 새 조회에서도 홈에 복원한다',
+    async (status, label, action) => {
+      servePeerEvaluation({
+        id: 11,
+        status,
+        selfContribution: null,
+        projectReviewComment: null,
+        answers: [],
+        updatedAt: '2026-09-09T10:00:00',
+        submittedAt: status === 'SUBMITTED' ? '2026-09-09T10:00:00' : null,
+      });
+      render(<StudentHomePage />, { wrapper: Wrapper });
+      const button = await screen.findByRole('button', { name: action });
+      const card = button.closest('#student-milestone-2313')! as HTMLElement;
+      expect(within(card).getByText(label)).toBeInTheDocument();
+      expect(requests).not.toContain(
+        ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION('2313'),
+      );
+    },
+  );
+
+  it('상호평가 조회가 실패해도 다른 마일스톤은 표시하고 실패한 상태를 재조회한다', async () => {
+    servePeerEvaluation();
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.EVALUATION.PEER_TARGETS('1')}`, () =>
+        HttpResponse.json({ code: 'FORBIDDEN' }, { status: 403 }),
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+    const retry = await screen.findByRole('button', {
+      name: '상호평가 상태 다시 시도',
+    });
+    expect(screen.getByText('조회 실패')).toBeInTheDocument();
+    expect(screen.getByText(list[0]!.title)).toBeInTheDocument();
+    servePeerEvaluation();
+    await userEvent.setup().click(retry);
+    expect(
+      await screen.findByRole('button', { name: '상호평가 작성' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('조회 실패')).not.toBeInTheDocument();
+  });
+
+  it('현재 평가 폼의 제출 완료를 여러 마일스톤 전체에 표시하지 않는다', async () => {
+    servePeerEvaluation({
+      id: 11,
+      status: 'SUBMITTED',
+      selfContribution: null,
+      projectReviewComment: null,
+      answers: [],
+      updatedAt: '2026-09-09T10:00:00',
+      submittedAt: '2026-09-09T10:00:00',
+    });
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`, () =>
+        HttpResponse.json({
+          contents: [
+            peerMilestone,
+            {
+              ...peerMilestone,
+              id: 2314,
+              weekNumber: 11,
+              title: '추가 상호평가',
+            },
+          ],
+        }),
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+    await waitFor(() =>
+      expect(screen.getAllByText('상태 확인 필요')).toHaveLength(2),
+    );
+    expect(screen.queryByText('제출 완료')).not.toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button', { name: '상호평가 확인' }),
+    ).toHaveLength(2);
+  });
+});

@@ -12,7 +12,7 @@ export const evaluationSectionId = 'oop-2026-2-01';
 export const presentationEvaluationMilestoneId = 'presentation';
 export const presentationEvaluationOpensAt = '2026-11-10T14:00:00+09:00';
 export const presentationEvaluationClosesAt = '2026-11-10T16:00:00+09:00';
-export const peerEvaluationFormId = 'peer-evaluation-2026';
+export const peerEvaluationFormId = '2026';
 export const evaluationTeamId = 'team-07';
 
 type EvaluationMembership = {

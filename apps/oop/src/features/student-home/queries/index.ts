@@ -4,3 +4,4 @@ export { useTeamProjectQuery } from './useTeamProjectQuery';
 export { useLiveStudentHomeQuery } from './useLiveStudentHomeQuery';
 export { useStudentMilestonesQuery } from './useStudentMilestonesQuery';
 export { useMilestoneScheduleClock } from './useMilestoneScheduleClock';
+export { usePeerEvaluationHomeQuery } from './usePeerEvaluationHomeQuery';

@@ -52,11 +52,13 @@ describe('OOP development server config', () => {
 
   it('can proxy every Swagger API root only in development serve mode', () => {
     expect(Object.keys(proxiedDevelopmentConfig.server.proxy ?? {})).toEqual([
+      '/auth',
       '/api',
       '/announcements',
       '/meeting-actions',
       '/meeting-records',
       '/milestones',
+      '/peer-evaluation-forms',
       '/sections',
       '/submissions',
       '/teams',
@@ -64,11 +66,13 @@ describe('OOP development server config', () => {
     expect(proxiedDevelopmentConfig.server.proxy).toMatchObject(
       Object.fromEntries(
         [
+          '/auth',
           '/api',
           '/announcements',
           '/meeting-actions',
           '/meeting-records',
           '/milestones',
+          '/peer-evaluation-forms',
           '/sections',
           '/submissions',
           '/teams',

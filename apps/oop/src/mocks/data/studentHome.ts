@@ -1079,7 +1079,7 @@ function getPeerEvaluationSectionProgress(
   );
   const hasStartedTeammateEvaluation = teammateAnswers.some(
     answer =>
-      answer.contributionPercent > 0 ||
+      (answer.contributionPercent ?? 0) > 0 ||
       Boolean(answer.contributionDetail.trim()) ||
       Boolean(answer.teammateAssessment.trim()),
   );
@@ -1097,6 +1097,7 @@ function getPeerEvaluationSectionProgress(
           teammateAnswers.length === targetCount &&
           teammateAnswers.every(
             answer =>
+              answer.contributionPercent !== null &&
               answer.contributionDetail.trim() &&
               answer.teammateAssessment.trim(),
           )),
