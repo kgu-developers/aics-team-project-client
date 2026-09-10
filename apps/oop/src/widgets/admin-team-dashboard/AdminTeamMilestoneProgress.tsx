@@ -1,5 +1,7 @@
 import { EmptyState, Heading, Text } from '@aics/design-system';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+
 import {
   AdminSubmissionExternalLink,
   AdminSubmissionFileDownloadLink,
@@ -17,7 +19,6 @@ import { useDownloadAdminSubmissionArtifactsMutation } from '~/features/admin-mi
 import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import type { TeamMilestoneProgress } from '~/features/admin-team-dashboard/model';
 import { useAuthStore } from '~/features/auth/authStore';
-import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import * as styles from './AdminTeamMilestoneProgress.css';
 
