@@ -34,15 +34,17 @@ const queries = vi.hoisted(() => ({
 }));
 
 vi.mock('~/features/meeting/queries', () => ({
-  useMeetingRecordsQuery: () => ({
-    data: queries.meetingRecords,
+  useTeamActionPlanQuery: () => ({
+    teamId: 'team-07',
+    team: useAuthStore.getState().currentUser?.currentTeam,
+    records: queries.meetingRecords,
+    actions: queries.actions,
     isError: false,
     isPending: false,
-  }),
-  useTeamMeetingActionsQuery: () => ({
-    data: queries.actions,
-    isError: false,
-    isPending: false,
+    recordsPending: false,
+    recordsError: false,
+    canRetry: true,
+    refetch: vi.fn(),
   }),
   useSubmitMeetingActionMutation: () => ({
     isPending: false,
@@ -184,9 +186,7 @@ describe('TeamActionPlanPage', () => {
       {
         actionId: 'meeting-action-home-3',
         input: {
-          assigneeUserId: 'student-c',
           content: '모바일 화면 수정 사항 반영 완료',
-          dueDate: '2026-10-06',
         },
         meetingId: 'meeting-home-3',
         teamId: 'team-07',

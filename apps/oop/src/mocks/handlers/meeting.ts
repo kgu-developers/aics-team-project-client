@@ -14,6 +14,7 @@ import {
   createMeetingAction,
   createMeetingRecord,
   deleteMeetingRecord,
+  deleteMeetingAction,
   getMeetingRecord,
   getMeetingRecordByActionId,
   getMeetingRecords,
@@ -165,6 +166,18 @@ export const meetingHandlers = [
       return HttpResponse.json(createMeetingAction(record.id, input), {
         status: 201,
       });
+    },
+  ),
+  http.delete(
+    `${API_BASE_URL}${ENDPOINTS.MEETING.ACTION(':actionId')}`,
+    ({ params, request }) => {
+      const actionId = String(params.actionId);
+      const meeting = getMeetingRecordByActionId(actionId);
+      if (!meeting) return error('MEETING_ACTION_NOT_FOUND', 404);
+      const result = owned(request, meeting.id);
+      if ('response' in result) return result.response;
+      deleteMeetingAction(meeting.id, actionId);
+      return new HttpResponse(null, { status: 204 });
     },
   ),
   http.patch(

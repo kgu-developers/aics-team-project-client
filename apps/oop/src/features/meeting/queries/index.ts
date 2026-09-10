@@ -6,6 +6,7 @@ export {
   useStudentMeetingListQuery,
 } from './useStudentMeetingListQuery';
 export { useTeamMeetingActionsQuery } from './useTeamMeetingActionsQuery';
+export { useTeamActionPlanQuery } from './useTeamActionPlanQuery';
 export { useSubmitMeetingActionMutation } from './useSubmitMeetingActionMutation';
 export {
   type MeetingHomeSummary,
@@ -19,3 +20,6 @@ export { useUpdateMeetingRecordMutation } from './useUpdateMeetingRecordMutation
 export * from './api';
 
 export { useMeetingTeamQuery } from './useMeetingTeamQuery';
+
+export { useRemoveMeetingActionMutation } from './useRemoveMeetingActionMutation';
+export { useCreateMeetingWithActions } from './useCreateMeetingWithActions';

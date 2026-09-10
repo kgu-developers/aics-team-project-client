@@ -163,6 +163,7 @@ export {
   submitMeetingActionApi,
   updateMeetingActionApi,
   removeMeetingRecordApi,
+  removeMeetingActionApi,
 } from './meeting';
 export {
   completeMidReportBlock,

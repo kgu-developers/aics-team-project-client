@@ -1,7 +1,6 @@
 import type {
   CreateMeetingRecordInput,
   MeetingAction,
-  MeetingActionStatus,
   MeetingRecord,
   MeetingPhase,
   RichTextJson,
@@ -58,13 +57,13 @@ import {
   type StudentMeetingListItem,
   useStudentMeetingListQuery,
   useRemoveMeetingRecordMutation,
-  useSubmitMeetingRecordMutation,
+  useCreateMeetingWithActions,
   useUpdateMeetingRecordMutation,
   useMeetingTeamQuery,
-  useUpdateMeetingActionMutation,
 } from '~/features/meeting/queries';
 
 import * as styles from './MeetingPages.css';
+import MeetingRecordActions from './MeetingRecordActions';
 
 type DraftAction = {
   id?: string;
@@ -76,15 +75,6 @@ const emptyDoc: RichTextJson = {
   type: 'doc',
   content: [{ type: 'paragraph' }],
 };
-const statusLabels: Record<MeetingActionStatus, string> = {
-  TODO: '할 일',
-  IN_PROGRESS: '진행 중',
-  DONE: '완료',
-};
-const statusOptions = Object.entries(statusLabels).map(([value, label]) => ({
-  label,
-  value,
-}));
 const requestErrorMessage =
   '요청을 완료하지 못했어요. 잠시 후 다시 시도해 주세요.';
 
@@ -292,12 +282,16 @@ function MeetingEditor({
 
 function ActionFields({
   actions,
+  savedIndexes = [],
+  lockRows = false,
   emptyMessage = '아직 등록된 액션 플랜이 없어요.',
   isDisabled,
   members,
   onChange,
 }: {
   actions: DraftAction[];
+  savedIndexes?: number[];
+  lockRows?: boolean;
   emptyMessage?: string;
   isDisabled: boolean;
   members: { id: string; name: string }[];
@@ -314,7 +308,7 @@ function ActionFields({
       <div className={styles.titleRow}>
         <Heading level={3}>액션 플랜</Heading>
         <Button
-          isDisabled={isDisabled}
+          isDisabled={isDisabled || lockRows}
           label='액션 추가'
           onClick={() =>
             onChange([
@@ -340,7 +334,10 @@ function ActionFields({
                 <div className={styles.responsiveActionCell}>
                   <span className={styles.mobileActionLabel}>할 일</span>
                   <TextInput
-                    isDisabled={isDisabled}
+                    isDisabled={
+                      isDisabled ||
+                      savedIndexes.includes(actions.indexOf(action))
+                    }
                     isLabelHidden
                     isRequired
                     label={`할 일 ${actions.indexOf(action) + 1}`}
@@ -362,7 +359,10 @@ function ActionFields({
                 <div className={styles.responsiveActionCell}>
                   <span className={styles.mobileActionLabel}>담당자</span>
                   <Selector
-                    isDisabled={isDisabled}
+                    isDisabled={
+                      isDisabled ||
+                      savedIndexes.includes(actions.indexOf(action))
+                    }
                     isLabelHidden
                     label={`할 일 ${actions.indexOf(action) + 1} 담당자`}
                     onChange={assigneeUserId =>
@@ -390,7 +390,10 @@ function ActionFields({
                   <span className={styles.mobileActionLabel}>기한</span>
                   <DateInput
                     hasClear
-                    isDisabled={isDisabled}
+                    isDisabled={
+                      isDisabled ||
+                      savedIndexes.includes(actions.indexOf(action))
+                    }
                     isLabelHidden
                     isOptional
                     label={`할 일 ${actions.indexOf(action) + 1} 기한`}
@@ -417,20 +420,24 @@ function ActionFields({
               renderCell: (action: DraftAction) => (
                 <div className={styles.responsiveActionCell}>
                   <span className={styles.mobileActionLabel}>관리</span>
-                  <Button
-                    isDisabled={isDisabled}
-                    label='삭제'
-                    onClick={() =>
-                      onChange(
-                        actions.filter(
-                          (_, current) => current !== actions.indexOf(action),
-                        ),
-                      )
-                    }
-                    size='md'
-                    variant='secondary'
-                    width='fit-content'
-                  />
+                  {savedIndexes.includes(actions.indexOf(action)) ? (
+                    <Text>저장됨</Text>
+                  ) : (
+                    <Button
+                      isDisabled={isDisabled || lockRows}
+                      label='삭제'
+                      onClick={() =>
+                        onChange(
+                          actions.filter(
+                            (_, current) => current !== actions.indexOf(action),
+                          ),
+                        )
+                      }
+                      size='md'
+                      variant='secondary'
+                      width='fit-content'
+                    />
+                  )}
                 </div>
               ),
               width: proportional(1, { minWidth: 80 }),
@@ -477,11 +484,12 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
   const [actions, setActions] = useState<DraftAction[]>(
     record?.actions.map(toDraftAction) ?? [],
   );
-  const submitMutation = useSubmitMeetingRecordMutation();
+  const creation = useCreateMeetingWithActions();
   const updateMutation = useUpdateMeetingRecordMutation();
-  const saveMutation = record ? updateMutation : submitMutation;
-  const pending = saveMutation.isPending;
-  const isDisabled = pending || Boolean(saveError?.uncertain);
+  const pending = record ? updateMutation.isPending : creation.isPending;
+  const isDisabled =
+    pending || Boolean(saveError?.uncertain) || creation.isUncertain;
+  const fieldsDisabled = isDisabled || Boolean(creation.meetingId);
   if (context.isError || context.isPending)
     return (
       <div className={styles.page}>
@@ -549,7 +557,8 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
             teamId: team.id,
             meetingId: record.id,
           })
-        : await submitMutation.mutateAsync({ input, teamId: team.id, phase });
+        : await creation.save({ input, teamId: team.id, phase });
+      if (!savedRecord) return;
       toast({ body: record ? '회의록을 수정했어요.' : '회의록을 등록했어요.' });
       void navigate({
         to: '/student/meetings/$meetingId',
@@ -606,7 +615,7 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
         <div className={styles.fields}>
           <div className={styles.documentTitle}>
             <TextInput
-              isDisabled={isDisabled}
+              isDisabled={fieldsDisabled}
               isRequired
               label='회의 제목'
               onChange={setTitle}
@@ -620,7 +629,7 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
               <Selector
                 label='회의 단계'
                 isRequired
-                isDisabled={isDisabled}
+                isDisabled={fieldsDisabled}
                 options={Object.entries(meetingPhaseLabels).map(
                   ([value, label]) => ({ value, label }),
                 )}
@@ -631,7 +640,7 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
             ) : null}
             <DateInput
               hasClear
-              isDisabled={isDisabled}
+              isDisabled={fieldsDisabled}
               isRequired
               label='회의 일자'
               onChange={value => setHeldAt(value ?? '')}
@@ -647,7 +656,7 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
               <TimeInput
                 label='회의 시간'
                 isRequired
-                isDisabled={isDisabled}
+                isDisabled={fieldsDisabled}
                 hourFormat='24h'
                 value={
                   meetingTime
@@ -659,7 +668,7 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
               />
             ) : null}
             <TextInput
-              isDisabled={isDisabled}
+              isDisabled={fieldsDisabled}
               label='장소 (선택)'
               onChange={setLocation}
               value={location}
@@ -671,7 +680,7 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
               description='실제 참석한 팀원을 1명 이상 선택해 주세요.'
               hasClear
               hasSearch
-              isDisabled={isDisabled}
+              isDisabled={fieldsDisabled}
               isRequired
               label='참석자'
               onChange={setParticipants}
@@ -697,7 +706,7 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
           </section>
           <MeetingEditor
             content={content}
-            isDisabled={isDisabled}
+            isDisabled={fieldsDisabled}
             onChange={setContent}
           />
           <ActionFields
@@ -708,20 +717,26 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
                 : '액션 플랜 등록은 준비 중이에요.'
             }
             isDisabled={isDisabled || !context.canManageActions}
+            savedIndexes={creation.savedActionIndexes}
+            lockRows={Boolean(creation.meetingId)}
             members={team.members}
             onChange={setActions}
           />
         </div>
         <div className={styles.actions}>
           <Button
-            label='취소'
+            label={creation.meetingId ? '회의록 상세로' : '취소'}
             isDisabled={pending}
             onClick={() =>
               void navigate({
-                to: record
-                  ? '/student/meetings/$meetingId'
-                  : ROUTES.STUDENT.MEETINGS,
-                params: record ? { meetingId: record.id } : undefined,
+                to:
+                  record || creation.meetingId
+                    ? '/student/meetings/$meetingId'
+                    : ROUTES.STUDENT.MEETINGS,
+                params:
+                  record || creation.meetingId
+                    ? { meetingId: record?.id ?? creation.meetingId! }
+                    : undefined,
               })
             }
             variant='secondary'
@@ -737,12 +752,41 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
                 actions.some(action => !action.content.trim()))
             }
             isLoading={pending}
-            label={record ? '저장' : '등록'}
+            label={
+              record ? '저장' : creation.meetingId ? '남은 액션 저장' : '등록'
+            }
             onClick={() => void submit()}
             variant='primary'
           />
         </div>
-        {saveMutation.isError ? (
+        {creation.meetingId ? (
+          <div role='status'>
+            <Text>
+              회의록은 저장했어요. 액션 {actions.length}개 중{' '}
+              {creation.savedActionIndexes.length}개를 저장했어요.
+            </Text>
+            <Text color='secondary'>
+              저장된 행은 다시 등록하지 않아요. 이 화면을 나가면 아직 저장하지
+              못한 입력은 사라져요.
+            </Text>
+          </div>
+        ) : null}
+        {creation.error ? (
+          <div className={styles.error} role='alert'>
+            <p>{creation.error}</p>
+            {creation.meetingId ? (
+              <Link
+                to='/student/meetings/$meetingId'
+                params={{ meetingId: creation.meetingId }}
+              >
+                저장된 회의록 확인
+              </Link>
+            ) : creation.isUncertain ? (
+              <Link to={ROUTES.STUDENT.MEETINGS}>회의록 목록 확인</Link>
+            ) : null}
+          </div>
+        ) : null}
+        {updateMutation.isError ? (
           <div className={styles.error} role='alert'>
             <p>{saveError?.message ?? requestErrorMessage}</p>
             {saveError?.uncertain ? (
@@ -867,43 +911,6 @@ export function MeetingListPage() {
         </div>
       </Card>
     </div>
-  );
-}
-
-function ActionStatusControl({
-  action,
-  meetingId,
-  teamId,
-}: {
-  action: MeetingAction;
-  meetingId: string;
-  teamId: string;
-}) {
-  const mutation = useUpdateMeetingActionMutation();
-  const toast = useToast();
-  return (
-    <Selector
-      isLabelHidden
-      isDisabled={mutation.isPending}
-      label={`${action.content} 상태`}
-      onChange={status =>
-        mutation.mutate(
-          {
-            actionId: action.id,
-            input: { status: status as MeetingActionStatus },
-            meetingId,
-            teamId,
-          },
-          {
-            onError: () => toast({ body: requestErrorMessage, type: 'error' }),
-            onSuccess: () => toast({ body: '액션 플랜 상태를 변경했어요.' }),
-          },
-        )
-      }
-      options={statusOptions}
-      value={action.status}
-      width='100%'
-    />
   );
 }
 
@@ -1056,79 +1063,15 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
             <Text color='secondary'>작성된 회의 내용이 없어요.</Text>
           )}
         </section>
-        <section className={styles.fields}>
-          <Heading level={2}>액션 플랜</Heading>
-          {record.actions.length ? (
-            <div
-              className={`${styles.tableFrame} ${styles.responsiveActionTable}`}
-            >
-              <Table
-                columns={[
-                  {
-                    header: '할 일',
-                    key: 'content',
-                    renderCell: (action: MeetingAction) => (
-                      <div className={styles.responsiveActionCell}>
-                        <span className={styles.mobileActionLabel}>할 일</span>
-                        <span>{action.content}</span>
-                      </div>
-                    ),
-                    width: proportional(3, { minWidth: 220 }),
-                  },
-                  {
-                    header: '담당자',
-                    key: 'assignee',
-                    renderCell: (action: MeetingAction) => (
-                      <div className={styles.responsiveActionCell}>
-                        <span className={styles.mobileActionLabel}>담당자</span>
-                        <span>{action.assignee?.name ?? '미정'}</span>
-                      </div>
-                    ),
-                    width: proportional(1, { minWidth: 100 }),
-                  },
-                  {
-                    header: '기한',
-                    key: 'dueDate',
-                    renderCell: (action: MeetingAction) => (
-                      <div className={styles.responsiveActionCell}>
-                        <span className={styles.mobileActionLabel}>기한</span>
-                        <span>{action.dueDate?.slice(0, 10) ?? '미정'}</span>
-                      </div>
-                    ),
-                    width: proportional(1, { minWidth: 110 }),
-                  },
-                  {
-                    header: '상태',
-                    key: 'status',
-                    renderCell: (action: MeetingAction) => (
-                      <div className={styles.responsiveActionCell}>
-                        <span className={styles.mobileActionLabel}>상태</span>
-                        {context.canManageActions ? (
-                          <ActionStatusControl
-                            action={action}
-                            meetingId={meetingId}
-                            teamId={record.teamId}
-                          />
-                        ) : (
-                          <Text>{statusLabels[action.status]}</Text>
-                        )}
-                      </div>
-                    ),
-                    width: proportional(2, { minWidth: 140 }),
-                  },
-                ]}
-                data={record.actions}
-                density='compact'
-                dividers='grid'
-                idKey='id'
-                plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
-                textOverflow='wrap'
-              />
-            </div>
-          ) : (
-            <Text color='secondary'>등록된 액션 플랜이 없어요.</Text>
-          )}
-        </section>
+        <MeetingRecordActions
+          key={record.teamId + ':' + record.id}
+          actions={record.actions}
+          meetingId={record.id}
+          title={record.title}
+          teamId={record.teamId}
+          members={context.team?.members ?? []}
+          onRefresh={query.refetch}
+        />
         <footer className={styles.detailFooter}>
           <Text color='secondary' type='supporting'>
             최초 작성 {record.createdBy.name} · 최종 수정{' '}
@@ -1137,6 +1080,7 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
           <div className={`${styles.actions} ${styles.detailActions}`}>
             {canDelete ? (
               <Button
+                aria-label='회의록 삭제'
                 label='삭제'
                 onClick={() => setIsDeleteDialogOpen(true)}
                 variant='secondary'
@@ -1144,6 +1088,7 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
             ) : null}
             {context.canEditRecord ? (
               <Button
+                aria-label='회의록 수정'
                 label='수정'
                 onClick={() =>
                   void navigate({

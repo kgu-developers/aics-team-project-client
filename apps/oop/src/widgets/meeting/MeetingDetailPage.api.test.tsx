@@ -1,4 +1,9 @@
-import { API_BASE_URL, fetchMeetingRecordDetail } from '@aics/api-client';
+import {
+  API_BASE_URL,
+  fetchMeetingRecordDetail,
+  fetchMeetingActionEntries,
+  fetchTeamMeetingActionEntries,
+} from '@aics/api-client';
 import { AstryxThemeProvider, ToastViewport } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -84,7 +89,7 @@ function renderPage(page = <MeetingDetailPage meetingId='19' />) {
   );
 }
 
-it('상세와 기존 액션을 읽기 전용으로 표시하고 수정·상태 변경을 제공하지 않는다', async () => {
+it('회의록 본문 수정은 막고 액션 관리와 상태 변경은 제공한다', async () => {
   renderPage();
   expect(
     await screen.findByRole('heading', { name: '진행 점검 회의' }),
@@ -94,13 +99,11 @@ it('상세와 기존 액션을 읽기 전용으로 표시하고 수정·상태 �
   ).toBeVisible();
   expect(screen.getAllByText('OOP 데모 학생 B').length).toBeGreaterThan(0);
   expect(screen.getByText('회의록 상세 화면 검증')).toBeVisible();
+  expect(screen.getByRole('button', { name: '수정' })).toBeEnabled();
   expect(
-    screen.queryByRole('button', { name: '수정' }),
-  ).not.toBeInTheDocument();
-  expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole('button', { name: '액션 추가' }),
-  ).not.toBeInTheDocument();
+    screen.getByRole('combobox', { name: '회의록 상세 화면 검증 상태' }),
+  ).toBeEnabled();
+  expect(screen.getByRole('button', { name: '액션 추가' })).toBeEnabled();
 });
 
 it('실 API에서 수정 URL에 직접 진입해도 편집 폼과 저장 요청을 제공하지 않는다', async () => {
@@ -141,7 +144,7 @@ async function fillNewMeeting() {
   return user;
 }
 
-it('실 API 생성 폼은 액션 테이블을 비활성 상태로 유지하고 회의록만 한 번 등록한다', async () => {
+it('실 API 생성 폼은 액션 입력을 제공하고 액션이 없으면 회의록만 한 번 등록한다', async () => {
   const writes: { method: string; url: string }[] = [];
   server.events.on('request:start', ({ request }) => {
     if (request.method !== 'GET')
@@ -152,12 +155,7 @@ it('실 API 생성 폼은 액션 테이블을 비활성 상태로 유지하고 �
   expect(within(actions).getByRole('table')).toBeVisible();
   expect(
     within(actions).getByRole('button', { name: '액션 추가' }),
-  ).toBeDisabled();
-  expect(
-    within(actions).getByText('액션 플랜 등록은 준비 중이에요.'),
-  ).toBeVisible();
-  await user.click(within(actions).getByRole('button', { name: '액션 추가' }));
-  expect(within(actions).queryByRole('textbox')).not.toBeInTheDocument();
+  ).toBeEnabled();
   await user.click(screen.getByRole('button', { name: '등록' }));
   await waitFor(() =>
     expect(navigate).toHaveBeenCalledWith({
@@ -220,7 +218,7 @@ it('팀원은 작성자와 달라도 회의록 전체 삭제를 확인 후 실�
     .setCurrentUser({ ...demoPartnerStudent, teamId: '7', currentTeam: null });
   const user = userEvent.setup();
   renderPage();
-  await user.click(await screen.findByRole('button', { name: '삭제' }));
+  await user.click(await screen.findByRole('button', { name: '회의록 삭제' }));
   const dialog = await screen.findByRole('dialog', {
     name: '회의록 삭제 확인',
   });
@@ -287,4 +285,154 @@ it('팀이 없으면 상세·작성에서 네트워크 요청 없이 별도 상�
   expect(screen.getAllByText('소속 팀이 없어요.')).toHaveLength(2);
   await act(async () => {});
   expect(request).not.toHaveBeenCalled();
+});
+
+it('상세에서 액션 등록→수정→완료→삭제하면 회의별·팀별 목록에 같은 결과가 남는다', async () => {
+  const user = userEvent.setup();
+  renderPage();
+  await user.click(await screen.findByRole('button', { name: '액션 추가' }));
+  let dialog = screen.getByRole('dialog', { name: '액션 플랜 추가' });
+  await user.type(
+    within(dialog).getByRole('textbox', { name: /액션 항목/ }),
+    '상세에서 추가',
+  );
+  await user.click(within(dialog).getByRole('button', { name: '추가' }));
+  let row = await screen.findByRole('row', { name: /상세에서 추가/ });
+  await user.click(within(row).getByRole('button', { name: '수정' }));
+  dialog = screen.getByRole('dialog', { name: '액션 플랜 수정' });
+  const input = within(dialog).getByRole('textbox', { name: /액션 항목/ });
+  await user.clear(input);
+  await user.type(input, '수정된 상세 액션');
+  await user.click(within(dialog).getByRole('button', { name: '저장' }));
+  row = await screen.findByRole('row', { name: /수정된 상세 액션/ });
+  await user.click(
+    within(row).getByRole('combobox', { name: '수정된 상세 액션 상태' }),
+  );
+  await user.click(screen.getByRole('option', { name: '완료' }));
+  await waitFor(async () =>
+    expect(
+      (await fetchMeetingActionEntries('19')).find(
+        action => action.content === '수정된 상세 액션',
+      )?.status,
+    ).toBe('DONE'),
+  );
+  await user.click(within(row).getByRole('button', { name: '삭제' }));
+  dialog = screen.getByRole('dialog', { name: '액션 플랜 삭제' });
+  expect(within(dialog).getByText('수정된 상세 액션')).toBeVisible();
+  await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole('row', { name: /수정된 상세 액션/ }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(
+    (await fetchMeetingActionEntries('19')).map(action => action.content),
+  ).toEqual(['회의록 상세 화면 검증']);
+  expect(
+    (await fetchTeamMeetingActionEntries('7')).map(action => action.content),
+  ).toEqual(['회의록 상세 화면 검증']);
+  expect(await fetchMeetingRecordDetail('19')).toMatchObject({
+    title: '진행 점검 회의',
+  });
+});
+
+it('두 번째 액션 등록 실패 시 저장된 회의록과 첫 행을 보존하고 남은 행만 재시도한다', async () => {
+  const writes: string[] = [];
+  let failSecond = true;
+  let recordPosts = 0;
+  server.use(
+    http.post(`${API_BASE_URL}/teams/7/meeting-records`, () => {
+      recordPosts++;
+      return undefined;
+    }),
+    http.post(
+      `${API_BASE_URL}/meeting-records/:id/actions`,
+      async ({ request }) => {
+        const input = (await request.clone().json()) as { content: string };
+        writes.push(input.content);
+        if (failSecond && input.content === '두 번째 작업')
+          return HttpResponse.json({ code: 'DATA_CONFLICT' }, { status: 409 });
+        return undefined;
+      },
+    ),
+  );
+  const user = await fillNewMeeting();
+  const actions = screen.getByRole('region', { name: '액션 플랜' });
+  await user.click(within(actions).getByRole('button', { name: '액션 추가' }));
+  await user.type(
+    within(actions).getByRole('textbox', { name: /할 일 1/ }),
+    '첫 번째 작업',
+  );
+  await user.click(within(actions).getByRole('button', { name: '액션 추가' }));
+  await user.type(
+    within(actions).getByRole('textbox', { name: /할 일 2/ }),
+    '두 번째 작업',
+  );
+  await user.click(screen.getByRole('button', { name: '등록' }));
+  expect(
+    await screen.findByText(
+      '회의록은 저장했어요. 액션 2개 중 1개를 저장했어요.',
+    ),
+  ).toBeVisible();
+  expect(navigate).not.toHaveBeenCalled();
+  expect(
+    within(actions).getByRole('textbox', { name: /할 일 1/ }),
+  ).toBeDisabled();
+  expect(
+    within(actions).getByRole('textbox', { name: /할 일 2/ }),
+  ).toBeEnabled();
+  expect(screen.getByRole('textbox', { name: /회의 제목/ })).toBeDisabled();
+  expect(
+    within(actions).getByRole('button', { name: '액션 추가' }),
+  ).toBeDisabled();
+  failSecond = false;
+  await user.click(screen.getByRole('button', { name: '남은 액션 저장' }));
+  await waitFor(() =>
+    expect(navigate).toHaveBeenCalledWith({
+      to: '/student/meetings/$meetingId',
+      params: { meetingId: '20' },
+    }),
+  );
+  expect(recordPosts).toBe(1);
+  expect(writes).toEqual(['첫 번째 작업', '두 번째 작업', '두 번째 작업']);
+  expect(await fetchMeetingActionEntries('20')).toHaveLength(2);
+});
+
+it('액션 등록 409와 삭제 403을 입력·기존 행을 보존하는 오류로 보여준다', async () => {
+  server.use(
+    http.post(`${API_BASE_URL}/meeting-records/:id/actions`, () =>
+      HttpResponse.json({ code: 'DATA_CONFLICT' }, { status: 409 }),
+    ),
+    http.delete(`${API_BASE_URL}/meeting-actions/:id`, () =>
+      HttpResponse.json({ code: 'ACCESS_DENIED' }, { status: 403 }),
+    ),
+  );
+  const user = userEvent.setup();
+  renderPage();
+  await user.click(await screen.findByRole('button', { name: '액션 추가' }));
+  let dialog = screen.getByRole('dialog', { name: '액션 플랜 추가' });
+  await user.type(
+    within(dialog).getByRole('textbox', { name: /액션 항목/ }),
+    '실패한 입력',
+  );
+  await user.click(within(dialog).getByRole('button', { name: '추가' }));
+  expect(
+    (await within(dialog).findByText(/서버 데이터 충돌/)).closest(
+      '[role=alert]',
+    ),
+  ).not.toBeNull();
+  expect(
+    within(dialog).getByRole('textbox', { name: /액션 항목/ }),
+  ).toHaveValue('실패한 입력');
+  await user.click(within(dialog).getByRole('button', { name: '취소' }));
+  const row = screen.getByRole('row', { name: /회의록 상세 화면 검증/ });
+  await user.click(within(row).getByRole('button', { name: '삭제' }));
+  dialog = screen.getByRole('dialog', { name: '액션 플랜 삭제' });
+  await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+  expect(
+    (await within(dialog).findByText(/삭제할 권한이 없어요/)).closest(
+      '[role=alert]',
+    ),
+  ).not.toBeNull();
+  expect(await fetchMeetingActionEntries('19')).toHaveLength(1);
 });

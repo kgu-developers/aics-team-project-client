@@ -1,13 +1,7 @@
-import type {
-  MeetingActionStatus,
-  MeetingRecord,
-  TeamMeetingAction,
-} from '@aics/core';
+import type { MeetingActionStatus, TeamMeetingAction } from '@aics/core';
 import {
   Button,
   Card,
-  DateInput,
-  Dialog,
   EmptyState,
   Heading,
   IconButton,
@@ -16,24 +10,30 @@ import {
   StatusDot,
   Table,
   Text,
-  TextInput,
   Tooltip,
   type StatusDotVariant,
   type TableColumn,
   useToast,
 } from '@aics/design-system';
-import { Pencil } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
-import { useAuthStore } from '~/features/auth/authStore';
+import MeetingActionDeleteDialog from '~/features/meeting/MeetingActionDeleteDialog';
+import MeetingActionFormDialog, {
+  type ActionFormState,
+} from '~/features/meeting/MeetingActionFormDialog';
 import {
-  useMeetingRecordsQuery,
+  actionDueDate,
+  actionSaveError,
+  isActionCreateUncertain,
+} from '~/features/meeting/model/actionPlan';
+import {
+  useTeamActionPlanQuery,
   useSubmitMeetingActionMutation,
-  useTeamMeetingActionsQuery,
   useUpdateMeetingActionMutation,
 } from '~/features/meeting/queries';
 
@@ -42,13 +42,6 @@ import * as styles from './TeamActionPlanPage.css';
 type ActionStatusFilter = 'ALL' | MeetingActionStatus;
 
 type ActionRow = TeamMeetingAction;
-
-type ActionFormState = {
-  assigneeUserId: string;
-  content: string;
-  dueDate: string;
-  meetingId: string;
-};
 
 const statusLabels: Record<MeetingActionStatus, string> = {
   TODO: '시작 전',
@@ -75,134 +68,21 @@ const statusFilterOptions = [
   { label: statusLabels.DONE, value: 'DONE' },
 ];
 
-const requestErrorMessage =
-  '액션 플랜을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.';
-
-function ActionPlanDialog({
-  form,
-  isOpen,
-  isPending,
-  meetings,
-  mode,
-  onClose,
-  onSubmit,
-  setForm,
-  teamMembers,
-}: {
-  form: ActionFormState;
-  isOpen: boolean;
-  isPending: boolean;
-  meetings: MeetingRecord[];
-  mode: 'add' | 'edit';
-  onClose: () => void;
-  onSubmit: () => void;
-  setForm: (next: ActionFormState) => void;
-  teamMembers: { id: string; name: string }[];
-}) {
-  const isInvalid = !form.content.trim() || !form.meetingId;
-
-  return (
-    <Dialog
-      aria-label={mode === 'add' ? '액션 플랜 추가' : '액션 플랜 수정'}
-      isOpen={isOpen}
-      onOpenChange={nextIsOpen => {
-        if (!nextIsOpen && !isPending) onClose();
-      }}
-      purpose='form'
-      width={520}
-    >
-      <form
-        className={styles.dialogForm}
-        onSubmit={event => {
-          event.preventDefault();
-          if (!isInvalid) onSubmit();
-        }}
-      >
-        <Heading level={2}>
-          {mode === 'add' ? '액션 플랜 추가' : '액션 플랜 수정'}
-        </Heading>
-        <Selector
-          isDisabled={mode === 'edit' || isPending}
-          isRequired
-          label='회의록'
-          onChange={meetingId => setForm({ ...form, meetingId })}
-          options={meetings.map(record => ({
-            label: record.title,
-            value: record.id,
-          }))}
-          value={form.meetingId}
-          width='100%'
-        />
-        <TextInput
-          isDisabled={isPending}
-          isRequired
-          label='액션 항목'
-          onChange={content => setForm({ ...form, content })}
-          placeholder='실행할 액션을 입력해 주세요.'
-          value={form.content}
-          width='100%'
-        />
-        <Selector
-          isDisabled={isPending}
-          label='담당자'
-          onChange={assigneeUserId => setForm({ ...form, assigneeUserId })}
-          options={[
-            { label: '미정', value: '' },
-            ...teamMembers.map(member => ({
-              label: member.name,
-              value: member.id,
-            })),
-          ]}
-          value={form.assigneeUserId}
-          width='100%'
-        />
-        <DateInput
-          hasClear
-          isDisabled={isPending}
-          isOptional
-          label='기한'
-          onChange={dueDate => setForm({ ...form, dueDate: dueDate ?? '' })}
-          placeholder='기한 선택'
-          value={
-            form.dueDate
-              ? (form.dueDate as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
-              : undefined
-          }
-          width='100%'
-        />
-        {mode === 'add' ? (
-          <Text color='secondary' type='supporting'>
-            새 액션 플랜은 ‘시작 전’ 상태로 추가되며, 추가 후 상태를 변경할 수
-            있어요.
-          </Text>
-        ) : null}
-        <div className={styles.dialogActions}>
-          <Button
-            isDisabled={isPending}
-            label='취소'
-            onClick={onClose}
-            variant='secondary'
-          />
-          <Button
-            isDisabled={isInvalid || isPending}
-            isLoading={isPending}
-            label={mode === 'add' ? '추가' : '저장'}
-            type='submit'
-            variant='primary'
-          />
-        </div>
-      </form>
-    </Dialog>
-  );
+export default function TeamActionPlanPage() {
+  const data = useTeamActionPlanQuery();
+  return <TeamActionPlanContent key={data.teamId ?? 'no-team'} data={data} />;
 }
 
-export default function TeamActionPlanPage() {
-  const team = useAuthStore(state => state.currentUser?.currentTeam);
-  const recordsQuery = useMeetingRecordsQuery(team?.id);
-  const actionsQuery = useTeamMeetingActionsQuery(team?.id);
+function TeamActionPlanContent({
+  data,
+}: {
+  data: ReturnType<typeof useTeamActionPlanQuery>;
+}) {
+  const { team, records, actions: rows } = data;
   const submitActionMutation = useSubmitMeetingActionMutation();
   const updateActionMutation = useUpdateMeetingActionMutation();
   const toast = useToast();
+  const [deletingAction, setDeletingAction] = useState<ActionRow | null>(null);
   const [statusFilter, setStatusFilter] = useState<ActionStatusFilter>('ALL');
   const [assigneeFilter, setAssigneeFilter] = useState('ALL');
   const [dialogMode, setDialogMode] = useState<'add' | 'edit' | null>(null);
@@ -214,8 +94,7 @@ export default function TeamActionPlanPage() {
     meetingId: '',
   });
 
-  const records = recordsQuery.data ?? [];
-  const rows = actionsQuery.data ?? [];
+  const [uncertainCreate, setUncertainCreate] = useState(false);
   const filteredRows = useMemo(
     () =>
       rows
@@ -265,27 +144,32 @@ export default function TeamActionPlanPage() {
     setForm({
       assigneeUserId: row.assignee?.userId ?? '',
       content: row.content,
-      dueDate: row.dueDate ?? '',
+      dueDate: actionDueDate(row.dueDate),
       meetingId: row.meetingRecord.id,
     });
   };
 
   const submitDialog = () => {
-    if (!team) return;
+    if (!team || isPending || (dialogMode === 'add' && uncertainCreate)) return;
     if (dialogMode === 'edit' && editingAction) {
       updateActionMutation.mutate(
         {
           actionId: editingAction.id,
           input: {
-            assigneeUserId: form.assigneeUserId || null,
-            content: form.content,
-            dueDate: form.dueDate || null,
+            content: form.content.trim(),
+            ...(form.assigneeUserId !== (editingAction.assignee?.userId ?? '')
+              ? { assigneeUserId: form.assigneeUserId || null }
+              : {}),
+            ...(form.dueDate !== actionDueDate(editingAction.dueDate)
+              ? { dueDate: form.dueDate || null }
+              : {}),
           },
           meetingId: editingAction.meetingRecord.id,
           teamId: team.id,
         },
         {
-          onError: () => toast({ body: requestErrorMessage, type: 'error' }),
+          onError: error =>
+            toast({ body: actionSaveError(error), type: 'error' }),
           onSuccess: () => {
             toast({ body: '액션 플랜을 수정했어요.' });
             closeDialog();
@@ -306,7 +190,10 @@ export default function TeamActionPlanPage() {
         teamId: team.id,
       },
       {
-        onError: () => toast({ body: requestErrorMessage, type: 'error' }),
+        onError: error => {
+          toast({ body: actionSaveError(error), type: 'error' });
+          setUncertainCreate(isActionCreateUncertain(error));
+        },
         onSuccess: () => {
           toast({ body: '액션 플랜을 추가했어요.' });
           closeDialog();
@@ -316,7 +203,7 @@ export default function TeamActionPlanPage() {
   };
 
   const changeStatus = (row: ActionRow, status: MeetingActionStatus) => {
-    if (!team || status === row.status) return;
+    if (!team || isPending || status === row.status) return;
     updateActionMutation.mutate(
       {
         actionId: row.id,
@@ -325,7 +212,8 @@ export default function TeamActionPlanPage() {
         teamId: team.id,
       },
       {
-        onError: () => toast({ body: requestErrorMessage, type: 'error' }),
+        onError: error =>
+          toast({ body: actionSaveError(error), type: 'error' }),
         onSuccess: () => toast({ body: '액션 플랜 상태를 변경했어요.' }),
       },
     );
@@ -338,7 +226,7 @@ export default function TeamActionPlanPage() {
         key: 'dueDate',
         renderCell: row => (
           <div className={styles.cell}>
-            <span>{row.dueDate ?? '미정'}</span>
+            <span>{actionDueDate(row.dueDate) || '미정'}</span>
           </div>
         ),
         width: proportional(1.1, { minWidth: 0 }),
@@ -360,10 +248,11 @@ export default function TeamActionPlanPage() {
               </a>
             </Tooltip>
             <span
-              aria-label={`기한 ${row.dueDate ?? '미정'}, 담당자 ${row.assignee?.name ?? '미정'}`}
+              aria-label={`기한 ${actionDueDate(row.dueDate) || '미정'}, 담당자 ${row.assignee?.name ?? '미정'}`}
               className={styles.mobileActionMeta}
             >
-              {row.dueDate ?? '미정'} · {row.assignee?.name ?? '미정'}
+              {actionDueDate(row.dueDate) || '미정'} ·{' '}
+              {row.assignee?.name ?? '미정'}
             </span>
           </div>
         ),
@@ -385,7 +274,7 @@ export default function TeamActionPlanPage() {
         renderCell: row => (
           <div className={styles.cell}>
             <Selector
-              isDisabled={updateActionMutation.isPending}
+              isDisabled={isPending}
               isLabelHidden
               label={`${row.content} 상태`}
               onChange={status =>
@@ -421,17 +310,34 @@ export default function TeamActionPlanPage() {
           <div className={styles.cell}>
             <span className={styles.desktopEditButton}>
               <Button
+                isDisabled={isPending}
                 label='수정'
                 onClick={() => openEditDialog(row)}
                 size='sm'
                 variant='secondary'
               />
+              <Button
+                isDisabled={isPending}
+                label='삭제'
+                size='sm'
+                variant='secondary'
+                onClick={() => setDeletingAction(row)}
+              />
             </span>
             <span className={styles.mobileEditButton}>
               <IconButton
+                isDisabled={isPending}
                 icon={<Pencil aria-hidden='true' size={16} />}
                 label={`${row.content} 수정`}
                 onClick={() => openEditDialog(row)}
+                size='sm'
+                variant='ghost'
+              />
+              <IconButton
+                isDisabled={isPending}
+                icon={<Trash2 aria-hidden='true' size={16} />}
+                label={row.content + ' 삭제'}
+                onClick={() => setDeletingAction(row)}
                 size='sm'
                 variant='ghost'
               />
@@ -441,10 +347,10 @@ export default function TeamActionPlanPage() {
         width: proportional(1.4, { minWidth: 0 }),
       },
     ],
-    [team, toast, updateActionMutation],
+    [team, toast, updateActionMutation, isPending],
   );
 
-  if (!team) {
+  if (!data.teamId) {
     return (
       <div className={styles.page}>
         <EmptyState
@@ -455,7 +361,7 @@ export default function TeamActionPlanPage() {
     );
   }
 
-  if (actionsQuery.isPending) {
+  if (data.isPending && !data.isError) {
     return (
       <div className={styles.page}>
         <EmptyState
@@ -466,12 +372,18 @@ export default function TeamActionPlanPage() {
     );
   }
 
-  if (actionsQuery.isError) {
+  if (data.isError || !team) {
     return (
       <div className={styles.page}>
         <EmptyState
-          description='팀 액션 플랜을 불러오지 못했어요.'
+          description='팀 액션 플랜 또는 팀원 정보를 불러오지 못했어요.'
           title='다시 시도해 주세요.'
+        />
+        <Button
+          label='다시 시도'
+          isDisabled={!data.canRetry}
+          onClick={() => void data.refetch()}
+          variant='secondary'
         />
       </div>
     );
@@ -487,12 +399,53 @@ export default function TeamActionPlanPage() {
           </Text>
         </div>
         <Button
-          isDisabled={recordsQuery.isPending || records.length === 0}
+          isDisabled={
+            data.recordsPending ||
+            data.recordsError ||
+            records.length === 0 ||
+            isPending ||
+            uncertainCreate
+          }
           label='액션 플랜 추가'
           onClick={openAddDialog}
           variant='primary'
         />
       </div>
+      {data.recordsError ? (
+        <div role='alert'>
+          <Text>회의록 목록을 불러오지 못해 액션 플랜을 추가할 수 없어요.</Text>
+          <Button
+            label='회의록 다시 불러오기'
+            isDisabled={!data.canRetry}
+            onClick={() => void data.refetch()}
+            variant='secondary'
+          />
+        </div>
+      ) : !data.recordsPending && records.length === 0 ? (
+        <Text color='secondary'>
+          액션 플랜을 추가하려면 먼저 회의록을 작성해 주세요.
+        </Text>
+      ) : null}
+      {uncertainCreate ? (
+        <div role='alert'>
+          <Text>
+            저장 결과가 불확실해 추가 등록을 멈췄어요. 목록을 새로고침한 후 같은
+            액션이 있는지 확인해 주세요.
+          </Text>
+          <Button
+            label='등록 내역 확인'
+            isDisabled={!data.canRetry}
+            onClick={async () => {
+              const results = await data.refetch();
+              if (results.every(result => !result.isError)) {
+                closeDialog();
+                setUncertainCreate(false);
+              }
+            }}
+            variant='secondary'
+          />
+        </div>
+      ) : null}
       <div className={styles.filterBar}>
         <Selector
           label='상태'
@@ -535,11 +488,24 @@ export default function TeamActionPlanPage() {
           />
         </div>
       </Card>
-      <ActionPlanDialog
+      {deletingAction ? (
+        <MeetingActionDeleteDialog
+          action={deletingAction}
+          teamId={team.id}
+          onClose={() => setDeletingAction(null)}
+        />
+      ) : null}
+      <MeetingActionFormDialog
+        isUncertain={dialogMode === 'add' && uncertainCreate}
         form={form}
         isOpen={dialogMode !== null}
         isPending={isPending}
-        meetings={records}
+        meetings={
+          editingAction &&
+          !records.some(record => record.id === editingAction.meetingRecord.id)
+            ? [editingAction.meetingRecord, ...records]
+            : records
+        }
         mode={dialogMode ?? 'add'}
         onClose={closeDialog}
         onSubmit={submitDialog}

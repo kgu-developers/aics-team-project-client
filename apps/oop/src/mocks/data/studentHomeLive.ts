@@ -1,6 +1,6 @@
 import type {
   CurrentUser,
-  MeetingActionResponseDto,
+  TeamMeetingActionResponseDto,
   MeetingRecordSummaryDto,
   SectionAnnouncementResponse,
   TeamKickoffResponse,
@@ -60,11 +60,15 @@ export const liveHomeRecords: MeetingRecordSummaryDto[] = [1, 4, 2, 3].map(
   }),
 );
 
-export const liveHomeActions: MeetingActionResponseDto[] = [
+export const liveHomeActions: TeamMeetingActionResponseDto[] = [
   1, 2, 3, 4, 5, 6,
 ].map(id => ({
   id,
   meetingRecordId: 4,
+  meetingRecord: {
+    id: 4,
+    title: liveHomeRecords.find(record => record.id === 4)!.title,
+  },
   content: `액션 ${id}`,
   status: 'TODO',
   assignee:

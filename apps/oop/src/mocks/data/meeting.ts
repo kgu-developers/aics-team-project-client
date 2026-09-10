@@ -315,3 +315,11 @@ export function getMeetingRecordByActionId(actionId: string) {
 }
 export const isMeetingMemberId = (id: string) =>
   members.some(member => member.userId === id);
+
+export function deleteMeetingAction(meetingId: string, actionId: string) {
+  const meeting = records.find(record => record.id === meetingId);
+  if (!meeting || !meeting.actions.some(action => action.id === actionId))
+    return false;
+  meeting.actions = meeting.actions.filter(action => action.id !== actionId);
+  return true;
+}
