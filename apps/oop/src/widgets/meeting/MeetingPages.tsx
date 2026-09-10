@@ -27,7 +27,7 @@ import {
   useToast,
 } from '@aics/design-system';
 import type { TableColumn } from '@aics/design-system';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { Link, useBlocker, useNavigate } from '@tanstack/react-router';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import {
@@ -40,14 +40,21 @@ import {
   Quote,
   Strikethrough,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import { liveEditLockKeys } from '~/features/editor/queries';
 import { MeetingCreateError } from '~/features/meeting/model/meetingCreateError';
+import { MeetingEditLockError } from '~/features/meeting/model/meetingEditLock';
+import { meetingUpdateRequest } from '~/features/meeting/model/meetingUpdate';
+import {
+  MeetingUpdateError,
+  MeetingUpdateValidationError,
+} from '~/features/meeting/model/meetingUpdateError';
 import {
   meetingPhaseLabels,
   type StudentMeetingRecord,
@@ -60,6 +67,8 @@ import {
   useCreateMeetingWithActions,
   useUpdateMeetingRecordMutation,
   useMeetingTeamQuery,
+  useMeetingEditLock,
+  type MeetingEditLock,
 } from '~/features/meeting/queries';
 
 import * as styles from './MeetingPages.css';
@@ -460,10 +469,29 @@ function ActionFields({
   );
 }
 
-function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
+export function MeetingForm({
+  record: loadedRecord,
+  editLock,
+  recordError = false,
+}: {
+  record?: StudentMeetingRecord;
+  editLock?: MeetingEditLock;
+  recordError?: boolean;
+}) {
+  // Keep the opened version as the PATCH baseline while queries refetch.
+  const [record] = useState(loadedRecord);
   const navigate = useNavigate();
   const toast = useToast();
   const context = useMeetingTeamQuery();
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const canEditActions =
+    context.canManageActions && (!record || context.isDemo);
   const team = context.team;
   const [title, setTitle] = useState(record?.title ?? '');
   const [heldAt, setHeldAt] = useState(
@@ -473,7 +501,13 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
     record?.heldAt.slice(11, 16) ?? '',
   );
   const [phase, setPhase] = useState<MeetingPhase>(record?.phase ?? 'PROPOSAL');
-  const [saveError, setSaveError] = useState<MeetingCreateError | null>(null);
+  const [saveError, setSaveError] = useState<
+    | MeetingCreateError
+    | MeetingUpdateError
+    | MeetingUpdateValidationError
+    | MeetingEditLockError
+    | null
+  >(null);
   const [location, setLocation] = useState(record?.location ?? '');
   const [content, setContent] = useState<RichTextJson>(
     record?.content ?? emptyDoc,
@@ -487,10 +521,59 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
   const creation = useCreateMeetingWithActions();
   const updateMutation = useUpdateMeetingRecordMutation();
   const pending = record ? updateMutation.isPending : creation.isPending;
+  const submitBusy = useRef(false);
+  const allowNavigation = useRef(false);
+  const liveEdit = Boolean(record && !context.isDemo);
+  const [originalContentJson] = useState(() =>
+    JSON.stringify(record?.content ?? emptyDoc),
+  );
+  const [contentDirty, setContentDirty] = useState(false);
+  const changeContent = (next: RichTextJson) => {
+    setContent(next);
+    setContentDirty(JSON.stringify(next) !== originalContentJson);
+  };
+  const metadataDirty = useMemo(() => {
+    if (!record) return false;
+    return (
+      Object.keys(
+        meetingUpdateRequest(
+          record,
+          {
+            title,
+            heldAt: `${heldAt}T${meetingTime || '00:00'}:00`,
+            location: location || null,
+            content: record.content,
+            participantUserIds: participants,
+            actions: [],
+          },
+          phase,
+        ),
+      ).length > 0
+    );
+  }, [record, title, heldAt, meetingTime, location, participants, phase]);
+  const dirty = Boolean(record && (metadataDirty || contentDirty));
+  const blocker = useBlocker({
+    disabled: !liveEdit,
+    withResolver: true,
+    enableBeforeUnload: () =>
+      !allowNavigation.current && (dirty || submitBusy.current),
+    shouldBlockFn: async () => {
+      if (allowNavigation.current) return false;
+      if (dirty || submitBusy.current) return true;
+      await editLock?.finish();
+      return false;
+    },
+  });
   const isDisabled =
-    pending || Boolean(saveError?.uncertain) || creation.isUncertain;
+    pending ||
+    (liveEdit && (!editLock?.canEdit || recordError || context.isError)) ||
+    (saveError instanceof MeetingCreateError && saveError.uncertain) ||
+    (saveError instanceof MeetingUpdateError && saveError.blocksRetry) ||
+    saveError instanceof MeetingUpdateValidationError ||
+    saveError instanceof MeetingEditLockError ||
+    creation.isUncertain;
   const fieldsDisabled = isDisabled || Boolean(creation.meetingId);
-  if (context.isError || context.isPending)
+  if ((context.isError || context.isPending) && (!record || !team))
     return (
       <div className={styles.page}>
         <EmptyState
@@ -530,10 +613,10 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
       !title.trim() ||
       !heldAt ||
       participants.length === 0 ||
-      (context.canManageActions &&
-        actions.some(action => !action.content.trim())) ||
+      (canEditActions && actions.some(action => !action.content.trim())) ||
       (context.requiresPhaseAndTime && !meetingTime) ||
-      isDisabled
+      isDisabled ||
+      submitBusy.current
     )
       return;
     const input: CreateMeetingRecordInput = {
@@ -542,7 +625,7 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
       location: location || null,
       content,
       participantUserIds: participants,
-      actions: (context.canManageActions ? actions : []).map(action => ({
+      actions: (canEditActions ? actions : []).map(action => ({
         id: action.id,
         content: action.content,
         assigneeUserId: action.assigneeUserId || null,
@@ -550,31 +633,54 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
       })),
     };
     try {
+      submitBusy.current = true;
       setSaveError(null);
       const savedRecord = record
         ? await updateMutation.mutateAsync({
             input,
             teamId: team.id,
             meetingId: record.id,
+            original: record,
+            phase,
+            confirmOwnership: editLock?.confirmOwnership,
           })
         : await creation.save({ input, teamId: team.id, phase });
-      if (!savedRecord) return;
+      if (!savedRecord || !mounted.current) return;
+      const released = await editLock?.finish();
+      if (!mounted.current) return;
+      allowNavigation.current = true;
       toast({ body: record ? '회의록을 수정했어요.' : '회의록을 등록했어요.' });
+      if (released === false)
+        toast({
+          body: '회의록은 저장했어요. 편집 종료를 확인하지 못해 잠금이 잠시 유지될 수 있어요.',
+          type: 'error',
+        });
       void navigate({
         to: '/student/meetings/$meetingId',
         params: { meetingId: savedRecord.id },
       });
     } catch (error) {
-      if (error instanceof MeetingCreateError) {
+      if (!mounted.current) return;
+      if (
+        error instanceof MeetingCreateError ||
+        error instanceof MeetingUpdateError ||
+        error instanceof MeetingUpdateValidationError ||
+        error instanceof MeetingEditLockError
+      ) {
         setSaveError(error);
       }
       toast({
         body:
-          error instanceof MeetingCreateError
+          error instanceof MeetingCreateError ||
+          error instanceof MeetingUpdateError ||
+          error instanceof MeetingUpdateValidationError ||
+          error instanceof MeetingEditLockError
             ? error.message
             : requestErrorMessage,
         type: 'error',
       });
+    } finally {
+      submitBusy.current = false;
     }
   };
   const detailPath = record
@@ -612,6 +718,20 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
       </div>
       <Card className={styles.editorCard}>
         <Heading level={1}>{record ? '회의록 수정' : '새 회의록'}</Heading>
+        {liveEdit && (editLock?.message || recordError || context.isError) ? (
+          <div role='alert' className={styles.editNotice}>
+            <Text>
+              {editLock?.message ??
+                '회의록 정보를 다시 확인하지 못했어요. 입력 내용을 보관하고 상세에서 다시 확인해 주세요.'}
+            </Text>
+            <Link
+              to='/student/meetings/$meetingId'
+              params={{ meetingId: record!.id }}
+            >
+              회의록 상세에서 확인
+            </Link>
+          </div>
+        ) : null}
         <div className={styles.fields}>
           <div className={styles.documentTitle}>
             <TextInput
@@ -707,21 +827,27 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
           <MeetingEditor
             content={content}
             isDisabled={fieldsDisabled}
-            onChange={setContent}
+            onChange={changeContent}
           />
-          <ActionFields
-            actions={actions}
-            emptyMessage={
-              context.canManageActions
-                ? undefined
-                : '액션 플랜 등록은 준비 중이에요.'
-            }
-            isDisabled={isDisabled || !context.canManageActions}
-            savedIndexes={creation.savedActionIndexes}
-            lockRows={Boolean(creation.meetingId)}
-            members={team.members}
-            onChange={setActions}
-          />
+          {record && !context.isDemo ? (
+            <Text color='secondary' type='supporting'>
+              액션 플랜은 회의록 상세에서 수정할 수 있어요.
+            </Text>
+          ) : (
+            <ActionFields
+              actions={actions}
+              emptyMessage={
+                context.canManageActions
+                  ? undefined
+                  : '액션 플랜 등록은 준비 중이에요.'
+              }
+              isDisabled={isDisabled || !context.canManageActions}
+              savedIndexes={creation.savedActionIndexes}
+              lockRows={Boolean(creation.meetingId)}
+              members={team.members}
+              onChange={setActions}
+            />
+          )}
         </div>
         <div className={styles.actions}>
           <Button
@@ -748,8 +874,7 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
               !title.trim() ||
               !heldAt ||
               participants.length === 0 ||
-              (context.canManageActions &&
-                actions.some(action => !action.content.trim()))
+              (canEditActions && actions.some(action => !action.content.trim()))
             }
             isLoading={pending}
             label={
@@ -789,12 +914,58 @@ function MeetingForm({ record }: { record?: StudentMeetingRecord }) {
         {updateMutation.isError ? (
           <div className={styles.error} role='alert'>
             <p>{saveError?.message ?? requestErrorMessage}</p>
-            {saveError?.uncertain ? (
-              <Link to={ROUTES.STUDENT.MEETINGS}>회의록 목록 확인</Link>
+            {record &&
+            (saveError instanceof MeetingUpdateValidationError ||
+              saveError instanceof MeetingEditLockError ||
+              (saveError instanceof MeetingUpdateError &&
+                saveError.blocksRetry)) ? (
+              <Link
+                to='/student/meetings/$meetingId'
+                params={{ meetingId: record.id }}
+              >
+                저장된 회의록 확인
+              </Link>
             ) : null}
           </div>
         ) : null}
       </Card>
+      <Dialog
+        aria-label='회의록 편집 나가기'
+        isOpen={blocker.status === 'blocked'}
+        onOpenChange={open => {
+          if (!open) blocker.reset?.();
+        }}
+        purpose='form'
+        width={440}
+      >
+        <div className={styles.dialogContent}>
+          <Heading level={2}>회의록 편집을 나갈까요?</Heading>
+          <Text color='secondary'>
+            {pending
+              ? '저장이 끝날 때까지 기다려 주세요.'
+              : '저장하지 않은 수정 내용은 사라져요.'}
+          </Text>
+          <div className={styles.dialogActions}>
+            <Button
+              label='계속 수정'
+              variant='secondary'
+              onClick={() => blocker.reset?.()}
+            />
+            <Button
+              label='저장하지 않고 나가기'
+              isDisabled={pending || editLock?.pending}
+              onClick={() => {
+                void (async () => {
+                  await editLock?.finish();
+                  if (!mounted.current) return;
+                  allowNavigation.current = true;
+                  blocker.proceed?.();
+                })();
+              }}
+            />
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 }
@@ -939,7 +1110,7 @@ export function MeetingDeleteDialog({
       purpose='form'
       width={440}
     >
-      <div className={styles.deleteDialogContent}>
+      <div className={styles.dialogContent}>
         <Heading level={2}>이 회의록을 삭제할까요?</Heading>
         <Text color='secondary'>
           삭제한 회의록과 액션 플랜은 복구할 수 없습니다.
@@ -1133,6 +1304,7 @@ export function MeetingNewPage() {
   );
 }
 export function MeetingEditPage({ meetingId }: { meetingId: string }) {
+  const session = useAuthStore();
   const context = useMeetingTeamQuery();
   const query = useMeetingRecordQuery(
     context.canEditRecord ? meetingId : undefined,
@@ -1141,8 +1313,14 @@ export function MeetingEditPage({ meetingId }: { meetingId: string }) {
     return (
       <div className={styles.page}>
         <EmptyState
-          title='회의록 수정은 준비 중이에요.'
-          description='회의록 상세에서 내용을 확인할 수 있어요.'
+          title={
+            !query.teamId ? '소속 팀이 없어요.' : '회의록을 수정할 수 없어요.'
+          }
+          description={
+            !query.teamId
+              ? '팀 배정 후 회의록을 확인할 수 있어요.'
+              : '학생 로그인과 소속 팀 정보를 확인해 주세요.'
+          }
         />
         <Link to='/student/meetings/$meetingId' params={{ meetingId }}>
           회의록 상세로 돌아가기
@@ -1167,7 +1345,7 @@ export function MeetingEditPage({ meetingId }: { meetingId: string }) {
         />
       </div>
     );
-  if (query.isError || !query.data)
+  if (!query.data)
     return (
       <div className={styles.page}>
         <EmptyState
@@ -1176,10 +1354,52 @@ export function MeetingEditPage({ meetingId }: { meetingId: string }) {
         />
       </div>
     );
+  return context.isDemo ? (
+    <MeetingForm
+      key={`${session.currentUser?.studentNumber}:${query.data.teamId}:${query.data.id}`}
+      record={query.data}
+    />
+  ) : (
+    <MeetingLiveEditForm
+      key={JSON.stringify([
+        liveEditLockKeys.detail(session, null),
+        query.data.teamId,
+        meetingId,
+      ])}
+      meetingId={meetingId}
+    />
+  );
+}
+
+function MeetingLiveEditForm({ meetingId }: { meetingId: string }) {
+  const query = useMeetingRecordQuery(meetingId);
+  const lock = useMeetingEditLock(meetingId, query.reloadForEdit);
+  if (!lock.record)
+    return (
+      <div className={styles.page}>
+        <EmptyState
+          title={
+            lock.pending
+              ? '편집을 준비하고 있어요.'
+              : '지금은 회의록을 수정할 수 없어요.'
+          }
+          description={
+            lock.message ?? '편집 잠금과 최신 회의록을 확인하고 있어요.'
+          }
+        />
+        {!lock.pending ? (
+          <Button label='편집 다시 시도' onClick={() => void lock.retry()} />
+        ) : null}
+        <Link to='/student/meetings/$meetingId' params={{ meetingId }}>
+          회의록 상세로 돌아가기
+        </Link>
+      </div>
+    );
   return (
     <MeetingForm
-      key={`${query.data.teamId}:${query.data.id}`}
-      record={query.data}
+      record={lock.record}
+      editLock={lock}
+      recordError={query.isError}
     />
   );
 }

@@ -121,6 +121,7 @@ afterAll(() => {
 
 vi.mock('~/features/meeting/queries', () => ({
   useMeetingTeamQuery: () => ({
+    isDemo: true,
     requiresPhaseAndTime: false,
     canEditRecord: true,
     canManageActions: true,
