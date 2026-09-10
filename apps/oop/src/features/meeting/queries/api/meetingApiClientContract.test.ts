@@ -103,7 +103,11 @@ const server = setupServer(
   }),
   http.get(`${API_BASE_URL}/teams/:teamId/actions`, ({ request }) => {
     expect(new URL(request.url).searchParams.get('status')).toBe('DONE');
-    return HttpResponse.json({ contents: [meetingActionDto] });
+    return HttpResponse.json({
+      contents: [
+        { ...meetingActionDto, meetingRecord: { id: 7, title: '진행 점검' } },
+      ],
+    });
   }),
 );
 
@@ -187,7 +191,9 @@ describe('meeting API client contract', () => {
       meetingRecordId: '7',
     };
     expect(meetingActions).toEqual([expectedAction]);
-    expect(teamActions).toEqual([expectedAction]);
+    expect(teamActions).toEqual([
+      { ...expectedAction, meetingRecord: { id: '7', title: '진행 점검' } },
+    ]);
     expect(created).toEqual(expectedAction);
     expect(updated).toEqual({ ...expectedAction, status: 'DONE' });
     expect(requestBodies).toEqual([
@@ -226,6 +232,7 @@ describe('meeting API contract boundaries', () => {
           contents: [
             {
               ...meetingActionDto,
+              meetingRecord: { id: 7, title: null },
               status: 'TODO',
               assignee: { userId: '020260001', name: '테스트 담당자' },
               dueAt: '2026-08-28 18:00',
@@ -240,6 +247,7 @@ describe('meeting API contract boundaries', () => {
         ...meetingActionDto,
         id: '11',
         meetingRecordId: '7',
+        meetingRecord: { id: '7', title: null },
         status: 'TODO',
         assignee: { userId: '020260001', name: '테스트 담당자' },
         dueAt: '2026-08-28 18:00',

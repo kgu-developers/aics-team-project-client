@@ -16,3 +16,5 @@ export { fetchTeamMeetingActionEntries } from './fetchTeamMeetingActionEntries';
 export { submitMeetingActionApi } from './submitMeetingActionApi';
 export { updateMeetingActionApi } from './updateMeetingActionApi';
 export { removeMeetingRecordApi } from './removeMeetingRecordApi';
+
+export { removeMeetingActionApi } from './removeMeetingActionApi';

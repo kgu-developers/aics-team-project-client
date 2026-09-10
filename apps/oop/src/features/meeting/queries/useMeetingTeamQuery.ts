@@ -18,7 +18,7 @@ export function useMeetingTeamQuery() {
     isDemo,
     requiresPhaseAndTime: !isDemo,
     canEditRecord: isDemo,
-    canManageActions: isDemo,
+    canManageActions: valid,
     canDeleteRecord: (authorId: string) =>
       !isDemo ||
       authorId === user?.id ||

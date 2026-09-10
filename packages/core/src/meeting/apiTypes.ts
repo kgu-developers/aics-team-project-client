@@ -63,6 +63,18 @@ export type MeetingActionListResponseDto = {
   contents: MeetingActionResponseDto[];
 };
 
+export type TeamMeetingActionResponseDto = MeetingActionResponseDto & {
+  meetingRecord: { id: number; title: string | null };
+};
+
+export type TeamMeetingActionListResponseDto = {
+  contents: TeamMeetingActionResponseDto[];
+};
+
+export type TeamMeetingActionEntry = MeetingActionEntry & {
+  meetingRecord: { id: string; title: string | null };
+};
+
 export type MeetingRecordSummary = {
   title: string | null;
   id: string;

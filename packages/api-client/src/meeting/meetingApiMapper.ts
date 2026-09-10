@@ -7,6 +7,8 @@ import type {
   MeetingRecordPersistResult,
   MeetingRecordSummary,
   MeetingRecordSummaryDto,
+  TeamMeetingActionEntry,
+  TeamMeetingActionResponseDto,
 } from '@aics/core';
 
 export function mapMeetingRecordSummary(
@@ -66,5 +68,17 @@ export function mapMeetingAction(
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
     dueAt: dto.dueAt ?? null,
+  };
+}
+
+export function mapTeamMeetingAction(
+  dto: TeamMeetingActionResponseDto,
+): TeamMeetingActionEntry {
+  return {
+    ...mapMeetingAction(dto),
+    meetingRecord: {
+      id: String(dto.meetingRecord.id),
+      title: dto.meetingRecord.title ?? null,
+    },
   };
 }

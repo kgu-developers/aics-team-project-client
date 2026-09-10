@@ -1,21 +1,21 @@
 import type {
-  MeetingActionEntry,
-  MeetingActionListResponseDto,
+  TeamMeetingActionEntry,
+  TeamMeetingActionListResponseDto,
   MeetingApiActionStatus,
 } from '@aics/core';
 
 import { apiClient } from '../client';
-import { mapMeetingAction } from './meetingApiMapper';
+import { mapTeamMeetingAction } from './meetingApiMapper';
 import { ENDPOINTS } from '../constants/endpoints';
 
 export async function fetchTeamMeetingActionEntries(
   teamId: string,
   status?: MeetingApiActionStatus,
-): Promise<MeetingActionEntry[]> {
-  const response = await apiClient.get<MeetingActionListResponseDto>(
+): Promise<TeamMeetingActionEntry[]> {
+  const response = await apiClient.get<TeamMeetingActionListResponseDto>(
     ENDPOINTS.MEETING.ACTIONS(teamId),
     { params: status ? { status } : undefined },
   );
 
-  return response.data.contents.map(mapMeetingAction);
+  return response.data.contents.map(mapTeamMeetingAction);
 }

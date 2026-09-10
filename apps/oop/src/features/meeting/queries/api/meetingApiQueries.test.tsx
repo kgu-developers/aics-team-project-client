@@ -133,6 +133,7 @@ it('단계와 상태 필터를 요청에 전달하고 각각 별도 캐시를 �
         contents: [
           {
             ...action,
+            meetingRecord: { id: 7, title: '진행 점검' },
             status: new URL(request.url).searchParams.get('status'),
           },
         ],

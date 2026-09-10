@@ -89,7 +89,9 @@ export const actionText = style({
 });
 
 export const desktopEditButton = style({
-  display: 'block',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: tokens.spacing[2],
   '@media': {
     'screen and (max-width: 1023px)': {
       display: 'none',
@@ -102,21 +104,12 @@ export const mobileEditButton = style({
   '@media': {
     'screen and (max-width: 1023px)': {
       display: 'flex',
+      flexDirection: 'column',
+      gap: tokens.spacing[1],
+      alignItems: 'center',
       justifyContent: 'center',
     },
   },
-});
-
-export const dialogForm = style({
-  display: 'grid',
-  gap: tokens.spacing[4],
-});
-
-export const dialogActions = style({
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: tokens.spacing[2],
-  justifyContent: 'end',
 });
 
 export const error = style({

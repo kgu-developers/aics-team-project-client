@@ -135,6 +135,12 @@ vi.mock('~/features/meeting/queries', () => ({
     teamId: useAuthStore.getState().currentUser?.currentTeam?.id,
     team: useAuthStore.getState().currentUser?.currentTeam,
   }),
+  useCreateMeetingWithActions: () => ({
+    save: mutations.createRecord,
+    isPending: false,
+    savedActionIndexes: [],
+  }),
+  useSubmitMeetingActionMutation: () => ({ isPending: false, mutate: vi.fn() }),
   useSubmitMeetingRecordMutation: () => ({
     isError: false,
     isPending: false,
@@ -490,7 +496,7 @@ describe('MeetingDetailPage', () => {
     renderWithRouter(<MeetingDetailPage meetingId={meetingRecord.id} />);
 
     expect(
-      screen.queryByRole('button', { name: '삭제' }),
+      screen.queryByRole('button', { name: '회의록 삭제' }),
     ).not.toBeInTheDocument();
   });
 
@@ -514,7 +520,7 @@ describe('MeetingDetailPage', () => {
     ).toHaveAttribute('href', '/student/meetings');
 
     const metadata = screen.getByText(/최초 작성/);
-    const editButton = screen.getByRole('button', { name: '수정' });
+    const editButton = screen.getByRole('button', { name: '회의록 수정' });
     expect(metadata.closest('footer')).toContainElement(editButton);
     expect(screen.getByText('작성된 회의 내용이 없어요.')).toBeInTheDocument();
     expect(screen.getAllByRole('table')).toHaveLength(1);
@@ -546,7 +552,7 @@ describe('MeetingDetailPage', () => {
       </AstryxThemeProvider>,
     );
 
-    await user.click(screen.getByRole('button', { name: '삭제' }));
+    await user.click(screen.getByRole('button', { name: '회의록 삭제' }));
     const dialog = await screen.findByRole('dialog', {
       name: '회의록 삭제 확인',
     });

@@ -1,5 +1,12 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
-import { meetingPhases, type MeetingRecordCreateRequest } from '@aics/core';
+import {
+  meetingPhases,
+  meetingApiActionStatuses,
+  type MeetingRecordCreateRequest,
+  type MeetingActionCreateRequest,
+  type MeetingActionUpdateRequest,
+  type TeamMeetingActionResponseDto,
+} from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
@@ -14,6 +21,7 @@ export function createMeetingApiHandlers() {
   let records = [structuredClone(meetingApiRecord)];
   let actions = [structuredClone(meetingApiAction)];
   let nextRecordId = 20;
+  let nextActionId = 42;
   const fail = (status: number) =>
     HttpResponse.json(
       { code: status === 403 ? 'FORBIDDEN' : 'INVALID_REQUEST' },
@@ -35,18 +43,36 @@ export function createMeetingApiHandlers() {
     meetingApiTeam.members.find(item => item.studentNumber === id);
   const recordPath = `${API_BASE_URL}/meeting-records/:id(\\d+)`;
   const now = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
+  const validDueAt = (value: string | undefined) =>
+    value === undefined || /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(value);
+  const assignee = (id?: string) => {
+    const found = id ? member(id) : undefined;
+    return found
+      ? { userId: found.studentNumber, name: found.name || found.studentNumber }
+      : null;
+  };
+  const dueAt = (value: string) => value.replace('T', ' ').slice(0, 16);
   return [
     http.get(
-      `${API_BASE_URL}${ENDPOINTS.MEETING.ACTIONS(':teamId')}`,
+      `${API_BASE_URL}/teams/:teamId(\\d+)/actions`,
       ({ request, params }) => {
         const denied = guard(request, String(params.teamId));
         if (denied) return denied;
         const status = new URL(request.url).searchParams.get('status');
-        return HttpResponse.json({
-          contents: actions.filter(
-            action => !status || action.status === status,
-          ),
-        });
+        if (status && !meetingApiActionStatuses.some(value => value === status))
+          return fail(400);
+        const contents: TeamMeetingActionResponseDto[] = actions
+          .filter(action => !status || action.status === status)
+          .map(action => {
+            const record = records.find(
+              item => item.id === action.meetingRecordId,
+            )!;
+            return {
+              ...action,
+              meetingRecord: { id: record.id, title: record.title },
+            };
+          });
+        return HttpResponse.json({ contents });
       },
     ),
     http.get(
@@ -137,5 +163,74 @@ export function createMeetingApiHandlers() {
         ),
       });
     }),
+    http.post(`${recordPath}/actions`, async ({ request, params }) => {
+      const denied = guard(request);
+      if (denied) return denied;
+      const recordId = Number(params.id);
+      if (!records.some(record => record.id === recordId)) return fail(404);
+      const input = (await request.json()) as MeetingActionCreateRequest;
+      if (
+        !input.content?.trim() ||
+        !validDueAt(input.dueAt) ||
+        (input.assigneeId !== undefined && !member(input.assigneeId))
+      )
+        return fail(400);
+      const action = {
+        id: nextActionId++,
+        meetingRecordId: recordId,
+        content: input.content,
+        status: 'TODO' as const,
+        assignee: assignee(input.assigneeId),
+        dueAt: input.dueAt ? dueAt(input.dueAt) : null,
+        createdAt: now(),
+        updatedAt: now(),
+      };
+      actions.push(action);
+      return HttpResponse.json(action, { status: 201 });
+    }),
+    http.delete(
+      `${API_BASE_URL}/meeting-actions/:id(\\d+)`,
+      ({ request, params }) => {
+        const denied = guard(request);
+        if (denied) return denied;
+        const id = Number(params.id);
+        if (!actions.some(action => action.id === id))
+          return HttpResponse.json(
+            { code: 'MEETING_ACTION_NOT_FOUND' },
+            { status: 404 },
+          );
+        actions = actions.filter(action => action.id !== id);
+        return new HttpResponse(null, { status: 204 });
+      },
+    ),
+    http.patch(
+      `${API_BASE_URL}/meeting-actions/:id(\\d+)`,
+      async ({ request, params }) => {
+        const denied = guard(request);
+        if (denied) return denied;
+        const action = actions.find(item => item.id === Number(params.id));
+        if (!action) return fail(404);
+        const input = (await request.json()) as MeetingActionUpdateRequest;
+        if (
+          (input.content !== undefined && !input.content.trim()) ||
+          (input.status !== undefined &&
+            !meetingApiActionStatuses.includes(input.status)) ||
+          !validDueAt(input.dueAt) ||
+          (!input.clearAssignee &&
+            input.assigneeId !== undefined &&
+            !member(input.assigneeId))
+        )
+          return fail(400);
+        if (input.content !== undefined) action.content = input.content;
+        if (input.status !== undefined) action.status = input.status;
+        if (input.clearAssignee) action.assignee = null;
+        else if (input.assigneeId !== undefined)
+          action.assignee = assignee(input.assigneeId);
+        if (input.clearDueAt) action.dueAt = null;
+        else if (input.dueAt !== undefined) action.dueAt = dueAt(input.dueAt);
+        action.updatedAt = now();
+        return HttpResponse.json(action);
+      },
+    ),
   ];
 }
