@@ -64,6 +64,7 @@ function setup({
   allConfirmed = false,
   version = 2,
   showFiles = false,
+  detailError = false,
 } = {}) {
   const user = leader ? demoStudent : demoPartnerStudent;
   useAuthStore
@@ -103,13 +104,26 @@ function setup({
                 submittedAt: '2026-09-10T09:00:00',
                 updatedAt: '2026-09-10T09:00:00',
                 late: false,
-                artifacts: [],
+                artifacts: [
+                  {
+                    type: 'FILE',
+                    fileName: 'report.pdf',
+                    downloadUrl: 'https://files.example.test/report.pdf',
+                  },
+                ],
               },
             ]
           : [],
       }),
     ),
   );
+  if (detailError)
+    server.use(
+      http.get(
+        `${API_BASE_URL}/submissions/41`,
+        () => new HttpResponse(null, { status: 500 }),
+      ),
+    );
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <AstryxThemeProvider>
@@ -205,4 +219,20 @@ it('본문에는 교체 버튼 없이 파일과 이력만 표시한다', async (
     within(body).queryByRole('button', { name: '파일 교체' }),
   ).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: '파일 교체' })).toBeEnabled();
+});
+
+it('상세 조회가 실패해도 조회된 파일과 제출 이력은 표시하고 승인 CTA는 재조회로 제한한다', async () => {
+  setup({ showFiles: true, detailError: true });
+  const body = screen.getByRole('region', { name: '제출 자료 본문' });
+  expect(
+    await within(body).findByRole('link', { name: '다운로드' }),
+  ).toHaveAttribute('href', 'https://files.example.test/report.pdf');
+  expect(within(body).getByTitle('report.pdf')).toBeVisible();
+  expect(within(body).getByText('제출 이력 (1)')).toBeVisible();
+  expect(
+    within(body).queryByText('제출 자료를 불러오지 못했어요.'),
+  ).not.toBeInTheDocument();
+  expect(
+    await screen.findByRole('button', { name: '다시 조회' }),
+  ).toBeEnabled();
 });

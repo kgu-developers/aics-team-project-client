@@ -14,9 +14,9 @@ import SubmissionMaterials from './SubmissionMaterials';
 function Materials({ target }: { target: FinalReportSubmissionTarget }) {
   const query = useStudentSubmissionVersionsQuery(target, target.submissionId);
   const detail = useStudentSubmissionQuery(target, target.submissionId);
-  if (query.isPending || detail.isPending)
+  if (query.isPending)
     return <Text role='status'>제출 자료를 불러오는 중...</Text>;
-  if (query.isError || detail.isError)
+  if (query.isError)
     return (
       <>
         <Text role='alert'>제출 자료를 불러오지 못했어요.</Text>

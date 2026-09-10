@@ -136,17 +136,17 @@ function consentResponse(
 }
 export const studentSubmissionHandlers = [
   http.get(
-    `${API_BASE_URL}/submissions/:submissionId/member-confirmations`,
+    `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MEMBER_CONFIRMATIONS(':submissionId')}`,
     ({ request, params }) =>
       consentResponse(request, String(params.submissionId)),
   ),
   http.put(
-    `${API_BASE_URL}/submissions/:submissionId/member-confirmations/me`,
+    `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MY_MEMBER_CONFIRMATION(':submissionId')}`,
     ({ request, params }) =>
       consentResponse(request, String(params.submissionId), 'confirm'),
   ),
   http.delete(
-    `${API_BASE_URL}/submissions/:submissionId/member-confirmations/me`,
+    `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MY_MEMBER_CONFIRMATION(':submissionId')}`,
     ({ request, params }) =>
       consentResponse(request, String(params.submissionId), 'cancel'),
   ),

@@ -101,7 +101,10 @@ export function useLiveSubmissionConsent(
   }
   async function verifySubmission(token: number, signal?: AbortSignal) {
     assertCurrent(token, signal);
-    const submission = await fetchStudentSubmission(scope.submissionId!);
+    const submission = await fetchStudentSubmission(
+      scope.submissionId!,
+      signal,
+    );
     assertCurrent(token, signal);
     return requireMatchingConsentSubmission(submission, scope);
   }
