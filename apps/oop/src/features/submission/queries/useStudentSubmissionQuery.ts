@@ -22,9 +22,9 @@ export function useStudentSubmissionQuery(
     queryKey: studentSubmissionKeys.detail(scope, submissionId),
     queryFn:
       hasSubmissionScope(scope) && hasSubmissionApiId(submissionId)
-        ? async () =>
+        ? async ({ signal }) =>
             requireMatchingSubmission(
-              await fetchStudentSubmission(submissionId),
+              await fetchStudentSubmission(submissionId, signal),
               scope,
             )
         : skipToken,

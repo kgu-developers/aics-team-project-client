@@ -161,6 +161,10 @@ export const ENDPOINTS = {
       `/submissions/${submissionId}/versions/${version}`,
     CONFIRMATION: (submissionId: string) =>
       `/submissions/${submissionId}/confirmation`,
+    MEMBER_CONFIRMATIONS: (submissionId: string) =>
+      `/submissions/${submissionId}/member-confirmations`,
+    MY_MEMBER_CONFIRMATION: (submissionId: string) =>
+      `/submissions/${submissionId}/member-confirmations/me`,
     MID_REPORT_FEEDBACK: (submissionId: string) =>
       `/submissions/${submissionId}/mid-report-feedback`,
   },

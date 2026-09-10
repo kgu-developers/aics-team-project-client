@@ -4,7 +4,10 @@ import { http, HttpResponse } from 'msw';
 import { getMockAuthenticatedAccount } from '../authSession';
 import { getMockMySections } from '../data/sections';
 import { studentMilestoneFixtures } from '../data/studentMilestones';
-import { studentSubmissionFixture } from '../data/studentSubmission';
+import {
+  studentSubmissionFixture,
+  submissionConsentFor,
+} from '../data/studentSubmission';
 
 export const studentMilestoneHandlers = [
   http.get(
@@ -48,7 +51,18 @@ export const studentMilestoneHandlers = [
       const milestone = sections
         .flatMap(section => studentMilestoneFixtures(section.id))
         .find(item => item.id === milestoneId)!;
-      return HttpResponse.json(studentSubmissionFixture(milestone, teamId));
+      const submission = studentSubmissionFixture(milestone, teamId);
+      return HttpResponse.json({
+        ...submission,
+        memberConsent:
+          milestone.type === 'FINAL_REPORT'
+            ? submissionConsentFor(
+                submission,
+                milestone.sectionId,
+                account.user.studentNumber,
+              )
+            : null,
+      });
     },
   ),
 ];
