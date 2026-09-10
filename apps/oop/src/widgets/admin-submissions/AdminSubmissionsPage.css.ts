@@ -14,12 +14,14 @@ export const page = style({
 export const header = style({
   alignItems: 'flex-start',
   display: 'flex',
+  gap: 16,
   justifyContent: 'space-between',
-});
-
-export const description = style({
-  color: tokens.color.text.secondary,
-  marginTop: 8,
+  '@media': {
+    'screen and (max-width: 640px)': {
+      alignItems: 'stretch',
+      flexDirection: 'column',
+    },
+  },
 });
 
 export const listSection = style({

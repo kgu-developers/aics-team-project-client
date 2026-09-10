@@ -9,6 +9,8 @@ import {
   EmptyState,
   Heading,
   proportional,
+  Selector,
+  SelectorOption,
   Table,
   Text,
 } from '@aics/design-system';
@@ -284,9 +286,10 @@ export default function AdminSubmissionsPage() {
   const isPresentationMilestoneError = sectionMilestonesQuery.isError;
   const isPresentationMilestoneMissing =
     sectionMilestonesQuery.isSuccess && !presentationEvaluationMilestone;
-  const sectionLabel =
-    accessibleSections.find(section => section.id === effectiveSectionId)
-      ?.code ?? '담당 분반';
+  const sectionOptions = accessibleSections.map(section => ({
+    label: `${section.code} · ${section.name}`,
+    value: section.id,
+  }));
 
   if (!activeTab) return null;
 
@@ -299,6 +302,13 @@ export default function AdminSubmissionsPage() {
       to: ROUTES.ADMIN_SUBMISSIONS,
     });
     tabRefs.current[index]?.focus();
+  }
+
+  function selectSection(nextSectionId: string) {
+    navigate({
+      search: { milestoneId: activeMilestoneId, sectionId: nextSectionId },
+      to: ROUTES.ADMIN_SUBMISSIONS,
+    });
   }
 
   function handleTabKeyDown(
@@ -328,9 +338,19 @@ export default function AdminSubmissionsPage() {
       <div className={styles.header}>
         <div>
           <Heading level={1}>분반별 제출물</Heading>
-          <Text className={styles.description}>
-            {sectionLabel} · {activeTab.label}
-          </Text>
+          {accessibleSections.length > 0 ? (
+            <Selector
+              aria-label='조회할 분반'
+              label='분반 선택'
+              onChange={selectSection}
+              options={sectionOptions}
+              renderOption={option => (
+                <SelectorOption label={option.label ?? option.value} />
+              )}
+              value={effectiveSectionId}
+              width={280}
+            />
+          ) : null}
         </div>
       </div>
 
