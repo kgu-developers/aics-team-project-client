@@ -203,3 +203,4 @@ export type {
 } from './submission/apiTypes';
 
 export type * from './evaluation/apiTypes';
+export * from './editLock/apiTypes';

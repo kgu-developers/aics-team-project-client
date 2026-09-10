@@ -264,3 +264,8 @@ export {
   fetchStudentSubmissionVersions,
   fetchStudentSubmissionPreview,
 } from './submission';
+export {
+  fetchLiveEditLock,
+  submitLiveEditLock,
+  removeLiveEditLock,
+} from './editLock';
