@@ -119,6 +119,7 @@ function getAdminEnrollmentResponse(sectionId: string) {
         createdAt: '2026-09-08T15:15:06.644Z',
         email: `${student.studentNumber}@example.com`,
         id: getEnrollmentId(student.id),
+        major: student.major,
         name: student.name,
         phone: '010-1234-5678',
         role: 'STUDENT',

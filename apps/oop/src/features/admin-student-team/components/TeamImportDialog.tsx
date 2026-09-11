@@ -63,7 +63,7 @@ export default function TeamImportDialog({
         if (!open) close();
       }}
       purpose='info'
-      width={920}
+      width={1040}
     >
       <div className={styles.content}>
         <div className={styles.body}>
