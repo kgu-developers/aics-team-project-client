@@ -1,4 +1,13 @@
 export const ENDPOINTS = {
+  PROJECT_PROPOSAL: {
+    BY_TEAM: (teamId: string) => `/api/v1/teams/${teamId}/project`,
+    SECTIONS: (projectId: number) =>
+      `/api/v1/projects/${projectId}/proposal/sections`,
+    SECTION: (projectId: number, section: string) =>
+      `/api/v1/projects/${projectId}/proposal/sections/${section}`,
+    COMPLETE: (projectId: number) =>
+      `/api/v1/projects/${projectId}/proposal-complete`,
+  },
   STUDENT_MILESTONE: {
     LIST: (sectionId: string) => `/api/v1/sections/${sectionId}/milestones`,
     MY_TEAM_SUBMISSION: (milestoneId: string) =>

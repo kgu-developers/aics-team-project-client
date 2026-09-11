@@ -269,3 +269,11 @@ export {
   submitLiveEditLock,
   removeLiveEditLock,
 } from './editLock';
+
+export {
+  fetchProjectProposal,
+  updateProjectProposal,
+  fetchProposalSections,
+  updateProposalSection,
+  submitProjectProposal,
+} from './proposal';
