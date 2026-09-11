@@ -7,3 +7,9 @@ export const row = style({
   gap: 'var(--spacing-4)',
   padding: 'var(--spacing-4)',
 });
+
+export const imagePreview = style({
+  width: '100%',
+  maxHeight: 400,
+  objectFit: 'contain',
+});

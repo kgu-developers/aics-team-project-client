@@ -10,6 +10,7 @@ import { adminStudentTeamHandlers } from './adminStudentTeams';
 import { authHandlers } from './auth';
 import { editLockHandlers } from './editLock';
 import { evaluationHandlers } from './evaluation';
+import { createLiveEditLockHandlers } from './liveEditLock';
 import { meetingHandlers } from './meeting';
 import { createMeetingApiHandlers } from './meetingApi';
 import { midReportHandlers } from './midReport';
@@ -27,6 +28,7 @@ import {
   teamAssignmentUserHandlers,
 } from './teamAssignment';
 import { topicHandlers } from './topic';
+import { liveEditLockMockResources } from '../data/liveEditLock';
 
 export const handlers = [
   ...sectionHandlers,
@@ -38,6 +40,13 @@ export const handlers = [
   ...adminMeetingHandlers,
   ...adminNoticeHandlers,
   ...adminPresentationEvaluationHandlers,
+  ...createLiveEditLockHandlers({
+    onlyMidReport: true,
+    resources: liveEditLockMockResources.map(resource => ({
+      ...resource,
+      id: 701,
+    })),
+  }),
   ...editLockHandlers,
   ...evaluationHandlers,
   ...topicHandlers,

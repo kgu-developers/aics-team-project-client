@@ -1,11 +1,4 @@
-import {
-  Button,
-  FileInput,
-  Text,
-  TextArea,
-  TextInput,
-  VStack,
-} from '@aics/design-system';
+import { Button, Text, TextArea, TextInput, VStack } from '@aics/design-system';
 import { useState } from 'react';
 
 import type { DocumentEditorField } from '~/features/editor/documentEditor';
@@ -17,6 +10,8 @@ type GuiScreenRow = {
   name: string;
   description: string;
   imageName?: string;
+  imageFileId?: number;
+  imageUrl?: string;
 };
 
 const createId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -41,9 +36,8 @@ export default function MidReportStructuredFields({
   isLocked,
   onFieldsChange,
 }: MidReportStructuredFieldsProps) {
-  const [selectedImages, setSelectedImages] = useState<Record<string, File>>(
-    {},
-  );
+  const [imageIds, setImageIds] = useState<Record<string, string>>({});
+  const [imageError, setImageError] = useState<string | null>(null);
   const field = fields.find(item => item.key === 'guiScreens');
   if (!field) return null;
   const rows = readRows(field.value);
@@ -58,6 +52,10 @@ export default function MidReportStructuredFields({
 
   return (
     <VStack gap={4}>
+      {imageError ? <p role='alert'>{imageError}</p> : null}
+      <Text color='secondary'>
+        팀원이 업로드한 이미지 파일 ID를 연결할 수 있어요.
+      </Text>
       <Text color='secondary'>
         화면 하나마다 이름과 그 화면에서 제공하는 기능·사용자 행동을 한 세트로
         작성해요.
@@ -88,31 +86,78 @@ export default function MidReportStructuredFields({
             }
             value={row.description}
           />
-          <FileInput
-            accept='image/*'
+          <TextInput
             isDisabled={isLocked}
-            label={`화면 ${index + 1} 이미지`}
-            onChange={value => {
-              const file = Array.isArray(value) ? value[0] : value;
-              setSelectedImages(current =>
-                file
-                  ? { ...current, [row.id]: file }
-                  : Object.fromEntries(
-                      Object.entries(current).filter(([id]) => id !== row.id),
-                    ),
-              );
+            label={`화면 ${index + 1} 이미지 파일 ID`}
+            value={imageIds[row.id] ?? String(row.imageFileId ?? '')}
+            onChange={value =>
+              setImageIds(current => ({ ...current, [row.id]: value }))
+            }
+          />
+          <Button
+            label='이미지 연결'
+            variant='secondary'
+            isDisabled={isLocked}
+            onClick={() => {
+              const input = imageIds[row.id] ?? String(row.imageFileId ?? '');
+              const imageFileId = Number(input);
+              if (
+                !/^[1-9]\d*$/.test(input) ||
+                !Number.isSafeInteger(imageFileId)
+              ) {
+                setImageError(
+                  '이미지 파일 ID는 1 이상의 정수로 입력해 주세요.',
+                );
+                return;
+              }
+              setImageError(null);
               updateRows(
                 rows.map(item =>
                   item.id === row.id
-                    ? { ...item, imageName: file?.name }
+                    ? {
+                        id: item.id,
+                        name: item.name,
+                        description: item.description,
+                        imageFileId,
+                      }
                     : item,
                 ),
               );
             }}
-            placeholder='화면 이미지를 선택하세요.'
-            value={selectedImages[row.id] ?? null}
-            width='100%'
           />
+          {row.imageFileId ? (
+            <>
+              <Text color='secondary'>
+                {row.imageName ?? `이미지 파일 ${row.imageFileId}`}
+              </Text>
+              {row.imageUrl && /^(https?:\/\/|\/(?!\/))/.test(row.imageUrl) ? (
+                <img
+                  className={styles.imagePreview}
+                  src={row.imageUrl}
+                  alt={`${row.name || `화면 ${index + 1}`} 설계 이미지`}
+                />
+              ) : null}
+              <Button
+                label='이미지 연결 해제'
+                variant='secondary'
+                isDisabled={isLocked}
+                onClick={() => {
+                  setImageIds(current => ({ ...current, [row.id]: '' }));
+                  updateRows(
+                    rows.map(item =>
+                      item.id === row.id
+                        ? {
+                            id: item.id,
+                            name: item.name,
+                            description: item.description,
+                          }
+                        : item,
+                    ),
+                  );
+                }}
+              />
+            </>
+          ) : null}
           <Button
             isDisabled={isLocked || rows.length === 1}
             label='화면 삭제'

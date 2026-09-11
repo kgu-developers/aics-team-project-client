@@ -150,7 +150,7 @@ describe('edit lock handler contract', () => {
     resetEditLockFixture();
     const target = editLockTarget(
       'MID_REPORT_BLOCK',
-      'mid-report-team-07:topic',
+      '701:topic',
     );
 
     const first = await acquireLock(target, studentHeaders);
@@ -200,7 +200,7 @@ describe('edit lock handler contract', () => {
       label: 'mid report',
       target: editLockTarget(
         'MID_REPORT_BLOCK',
-        'mid-report-team-07:engine-design',
+        '701:engine-design',
       ),
       lockedBlockKey: 'engine-design',
       getDocument: getCurrentMidReport,
@@ -458,7 +458,7 @@ describe('edit lock handler contract', () => {
     },
     {
       label: 'mid report',
-      target: editLockTarget('MID_REPORT_BLOCK', 'mid-report-team-07:topic'),
+      target: editLockTarget('MID_REPORT_BLOCK', '701:topic'),
       request: () => {
         const document = getCurrentMidReport();
         return fetch(
@@ -529,7 +529,7 @@ describe('edit lock handler contract', () => {
       label: 'mid report',
       target: editLockTarget(
         'MID_REPORT_BLOCK',
-        'mid-report-team-07:engine-design',
+        '701:engine-design',
       ),
       request: () => {
         const document = getCurrentMidReport();

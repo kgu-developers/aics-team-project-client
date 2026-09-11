@@ -2,6 +2,7 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import type {
   CompleteDocumentBlockInput,
   MidReportBlockKey,
+  MidReport,
   SubmitDocumentSessionInput,
   UpdateMidReportBlockInput,
 } from '@aics/core';
@@ -21,6 +22,39 @@ import {
   saveMidReportBlock,
   submitCurrentMidReport,
 } from '../data/midReport';
+import { midReportImages } from '../data/midReportImages';
+
+function reportResponse(report: MidReport) {
+  return HttpResponse.json({
+    ...report,
+    id: Number(report.id),
+    teamId: 7,
+    blocks: report.blocks.map(block => ({
+      ...block,
+      fields: block.fields.map(field => {
+        if (field.key !== 'guiScreens' || !field.value.trim()) return field;
+        const rows = JSON.parse(field.value) as Record<string, unknown>[];
+        return {
+          ...field,
+          value: JSON.stringify(
+            rows.map(row => {
+              const file = midReportImages.find(
+                file =>
+                  file.id === row.imageFileId &&
+                  file.teamId === report.teamId &&
+                  file.contentType.startsWith('image/'),
+              );
+              return file
+                ? { ...row, imageName: file.fileName, imageUrl: file.url }
+                : row;
+            }),
+          ),
+        };
+      }),
+      lastEditedByName: block.lastEditedBy,
+    })),
+  });
+}
 
 function error(code: string, message: string, status: number) {
   return HttpResponse.json({ code, message }, { status });
@@ -36,7 +70,7 @@ export const midReportHandlers = [
   http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, ({ request }) => {
     const student = requireStudent(request, '중간보고서');
     if ('response' in student) return student.response;
-    return HttpResponse.json(
+    return reportResponse(
       withDocumentEditLocks(
         getCurrentMidReport(),
         'MID_REPORT_BLOCK',
@@ -101,6 +135,75 @@ export const midReportHandlers = [
           `${lock.lockedBy}님이 이 영역을 편집 중이에요.`,
           409,
         );
+      if (
+        input.fields.length !== block.fields.length ||
+        new Set(input.fields.map(field => field?.key)).size !==
+          block.fields.length ||
+        input.fields.some(
+          field =>
+            !field ||
+            typeof field.value !== 'string' ||
+            !block.fields.some(expected => expected.key === field.key),
+        )
+      )
+        return error(
+          'INVALID_MID_REPORT_FIELDS',
+          '작성 영역의 필드 형식이 올바르지 않습니다.',
+          400,
+        );
+      const guiField = input.fields.find(field => field.key === 'guiScreens');
+      if (guiField) {
+        let rows: unknown;
+        try {
+          rows = JSON.parse(guiField.value);
+        } catch {
+          return error(
+            'INVALID_MID_REPORT_FIELDS',
+            'GUI 형식을 확인해 주세요.',
+            400,
+          );
+        }
+        if (
+          !Array.isArray(rows) ||
+          rows.some(row => !row || typeof row !== 'object')
+        )
+          return error(
+            'INVALID_MID_REPORT_FIELDS',
+            'GUI 형식을 확인해 주세요.',
+            400,
+          );
+        for (const row of rows) {
+          delete row.imageUrl;
+          if (row.imageFileId == null) continue;
+          if (!Number.isSafeInteger(row.imageFileId))
+            return error(
+              'INVALID_MID_REPORT_FIELDS',
+              '이미지 ID를 확인해 주세요.',
+              400,
+            );
+          const file = midReportImages.find(
+            file =>
+              file.id === row.imageFileId &&
+              file.teamId === currentReport.teamId &&
+              file.contentType.startsWith('image/'),
+          );
+          if (!file)
+            return error(
+              'MID_REPORT_GUI_IMAGE_NOT_OWNED',
+              '현재 팀원이 업로드한 이미지 파일만 연결할 수 있어요.',
+              403,
+            );
+          row.imageName = file.fileName;
+        }
+        input = {
+          ...input,
+          fields: input.fields.map(field =>
+            field.key === 'guiScreens'
+              ? { ...field, value: JSON.stringify(rows) }
+              : field,
+          ),
+        };
+      }
       const saved = saveMidReportBlock(
         params.blockKey as MidReportBlockKey,
         input.version,
@@ -113,7 +216,7 @@ export const midReportHandlers = [
           '다른 팀원의 저장 내용이 있어 최신 문서를 다시 불러와야 해요.',
           409,
         );
-      return HttpResponse.json(
+      return reportResponse(
         withDocumentEditLocks(saved, 'MID_REPORT_BLOCK', student.name),
       );
     },
@@ -191,7 +294,7 @@ export const midReportHandlers = [
           '최신 문서를 다시 불러와야 해요.',
           409,
         );
-      return HttpResponse.json(
+      return reportResponse(
         withDocumentEditLocks(completed, 'MID_REPORT_BLOCK', student.name),
       );
     },
@@ -261,7 +364,7 @@ export const midReportHandlers = [
           '최신 문서를 다시 불러와야 해요.',
           409,
         );
-      return HttpResponse.json(submitted);
+      return reportResponse(submitted);
     },
   ),
 ];

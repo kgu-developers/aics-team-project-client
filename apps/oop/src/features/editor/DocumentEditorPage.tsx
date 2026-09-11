@@ -63,6 +63,8 @@ export default function DocumentEditorPage<
 >({
   copy,
   completion,
+  access,
+  retryVersionConflict = true,
   docId,
   documentQuery,
   editLockTargetType,
@@ -98,7 +100,12 @@ export default function DocumentEditorPage<
     [],
   );
   const ownedEditLock = useEditLock(
-    currentUser && !isSubmitted && editLockTargetType && data && block
+    !access &&
+      currentUser &&
+      !isSubmitted &&
+      editLockTargetType &&
+      data &&
+      block
       ? {
           targetType: editLockTargetType,
           targetId: `${data.id}:${block.key}`,
@@ -108,6 +115,7 @@ export default function DocumentEditorPage<
   );
   const isLocked = Boolean(
     isSubmitted ||
+    (access && !access.canEdit) ||
     ownedEditLock.pending ||
     ownedEditLock.locked ||
     (block?.lock && block.lock.ownerName !== currentUser?.name),
@@ -123,6 +131,7 @@ export default function DocumentEditorPage<
     document: data,
     refreshDocument: refreshCurrentDocument,
     saveBlock,
+    retryVersionConflict,
   });
   useLayoutEffect(() => {
     editorReleaseRef.current = editor.flushBeforeRelease;
@@ -205,7 +214,8 @@ export default function DocumentEditorPage<
           fields: latestBlock.fields,
         });
       } catch (error) {
-        if (!isDocumentVersionConflict(error)) throw error;
+        if (!retryVersionConflict || !isDocumentVersionConflict(error))
+          throw error;
         const refreshedDocument = await refreshCurrentDocument();
         const refreshedBlock = refreshedDocument?.blocks.find(
           item => item.key === block.key,
@@ -245,7 +255,8 @@ export default function DocumentEditorPage<
           latestDocument.version,
         );
       } catch (error) {
-        if (!isDocumentVersionConflict(error)) throw error;
+        if (!retryVersionConflict || !isDocumentVersionConflict(error))
+          throw error;
         const refreshedDocument = await refreshCurrentDocument();
         if (
           !refreshedDocument ||
@@ -338,10 +349,23 @@ export default function DocumentEditorPage<
           <p className={styles.lockNotice}>
             {isSubmitted
               ? '이 문서는 제출되었어요. 제출된 문서는 읽기 전용이에요.'
-              : lockOwnerName
-                ? `${lockOwnerName}님이 이 영역을 편집 중이에요. 저장 내용은 읽기 전용으로 확인할 수 있어요.`
-                : '편집 권한을 확인 중이에요. 저장 내용은 읽기 전용으로 확인할 수 있어요.'}
+              : access?.notice
+                ? access.notice
+                : lockOwnerName
+                  ? `${lockOwnerName}님이 이 영역을 편집 중이에요. 저장 내용은 읽기 전용으로 확인할 수 있어요.`
+                  : '편집 권한을 확인 중이에요. 저장 내용은 읽기 전용으로 확인할 수 있어요.'}
           </p>
+        ) : null}
+        {access?.controls}
+        {access && saveState.error ? (
+          <Button
+            label='저장 다시 시도'
+            variant='secondary'
+            isDisabled={isLocked || saveState.saving}
+            onClick={() => {
+              void editor.flushBlock(block.key).catch(() => undefined);
+            }}
+          />
         ) : null}
         {renderFields?.({
           documentId: data!.id,

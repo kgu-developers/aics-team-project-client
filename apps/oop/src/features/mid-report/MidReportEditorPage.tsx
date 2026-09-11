@@ -1,6 +1,6 @@
 import type { MidReport, MidReportBlock, MidReportField } from '@aics/core';
-import { useToast } from '@aics/design-system';
-import { useCallback } from 'react';
+import { Button, useToast } from '@aics/design-system';
+import { useCallback, useRef, useState } from 'react';
 
 import { useAuthStore } from '~/features/auth/authStore';
 import DocumentEditorPage, {
@@ -10,6 +10,8 @@ import DocumentEditorPage, {
 import MidReportEngineFields from './MidReportEngineFields';
 import MidReportStructuredFields from './MidReportStructuredFields';
 import {
+  midReportKeys,
+  useMidReportEditLock,
   useCompleteMidReportBlockMutation,
   useCurrentMidReportQuery,
   useSubmitMidReportMutation,
@@ -67,8 +69,28 @@ export default function MidReportEditorPage({
   section,
 }: MidReportEditorPageProps) {
   const toast = useToast();
+  const [documentAction, setDocumentAction] = useState<
+    'complete' | 'submit' | null
+  >(null);
+  const actionPending = useRef(false);
+  const runDocumentAction = async (
+    kind: 'complete' | 'submit',
+    action: () => Promise<MidReport>,
+  ) => {
+    if (actionPending.current) throw new Error('문서 작업을 처리 중이에요.');
+    actionPending.current = true;
+    setDocumentAction(kind);
+    try {
+      return await action();
+    } finally {
+      actionPending.current = false;
+      setDocumentAction(null);
+    }
+  };
   const currentUser = useAuthStore(state => state.currentUser);
   const query = useCurrentMidReportQuery(Boolean(currentUser));
+
+  const lock = useMidReportEditLock(query.data, section);
 
   const mutation = useUpdateMidReportBlockMutation();
   const completionMutation = useCompleteMidReportBlockMutation();
@@ -80,31 +102,55 @@ export default function MidReportEditorPage({
       version: number;
       block: MidReportBlock;
       fields: MidReportField[];
-    }) =>
-      mutation.mutateAsync({
-        documentId: input.documentId,
-        version: input.version,
-        blockKey: input.block.key,
-        fields: input.fields,
-      }),
-    [mutation],
+    }) => {
+      return lock.ensureWrite(input.documentId, input.block.key).then(() =>
+        mutation.mutateAsync({
+          documentId: input.documentId,
+          version: input.version,
+          blockKey: input.block.key,
+          fields: input.fields,
+        }),
+      );
+    },
+    [mutation, lock],
   );
 
   return (
     <DocumentEditorPage
+      key={JSON.stringify(midReportKeys.current())}
       copy={COPY}
+      access={{
+        canEdit: lock.canEdit,
+        notice: lock.notice,
+        controls:
+          query.data?.status !== 'SUBMITTED' && !lock.canEdit ? (
+            <Button
+              label='편집 시작'
+              isDisabled={
+                lock.pending ||
+                Date.parse(query.data?.dueDate ?? '') <= Date.now()
+              }
+              onClick={() => void lock.startEditing()}
+              variant='secondary'
+            />
+          ) : null,
+      }}
+      retryVersionConflict={false}
       completion={{
         isBlockCompleted: block => block.status === 'COMPLETED',
-        completeBlock: async input => {
-          const report = await completionMutation.mutateAsync({
-            documentId: input.documentId,
-            version: input.version,
-            blockKey: input.block.key,
-          });
-          toast({ body: `${input.block.title} 영역을 완료 처리했어요.` });
-          return report;
-        },
-        completing: completionMutation.isPending,
+        completeBlock: input =>
+          runDocumentAction('complete', async () => {
+            await lock.ensureWrite(input.documentId, input.block.key);
+            const report = await completionMutation.mutateAsync({
+              documentId: input.documentId,
+              version: input.version,
+              blockKey: input.block.key,
+            });
+            toast({ body: `${input.block.title} 영역을 완료 처리했어요.` });
+            return report;
+          }),
+        completing:
+          documentAction === 'complete' || completionMutation.isPending,
         completeError: completionMutation.isError
           ? getSaveErrorMessage(
               completionMutation.error,
@@ -112,22 +158,25 @@ export default function MidReportEditorPage({
             )
           : null,
         isDocumentSubmitted: report => report.status === 'SUBMITTED',
-        submitDocument: async (documentId, version) => {
-          const report = await submitMutation.mutateAsync({
-            documentId,
-            version,
-          });
-          toast({
-            body: report.revision?.resubmittedAt
-              ? '피드백을 반영한 중간보고서를 다시 제출했어요.'
-              : '중간보고서를 제출했어요. 이제 읽기 전용으로 확인할 수 있어요.',
-          });
-          return report;
-        },
-        submitting: submitMutation.isPending,
+        submitDocument: (documentId, version) =>
+          runDocumentAction('submit', async () => {
+            await lock.ensureWrite(documentId, section);
+            await lock.ensureCanSubmit();
+            const report = await submitMutation.mutateAsync({
+              documentId,
+              version,
+            });
+            toast({
+              body: report.revision?.resubmittedAt
+                ? '피드백을 반영한 중간보고서를 다시 제출했어요.'
+                : '중간보고서를 제출했어요. 이제 읽기 전용으로 확인할 수 있어요.',
+            });
+            return report;
+          }),
+        submitting: documentAction === 'submit' || submitMutation.isPending,
         submitError: submitMutation.isError
           ? getSaveErrorMessage(submitMutation.error, '제출하지 못했어요.')
-          : null,
+          : lock.error,
         canSubmitDocument: report =>
           canSubmitMidReportDocument(report, currentUser?.name),
         submitDisabledReason: report =>
@@ -135,7 +184,7 @@ export default function MidReportEditorPage({
       }}
       docId='mid-review'
       documentQuery={query}
-      editLockTargetType='MID_REPORT_BLOCK'
+      editLockTargetType={null}
       metadataTag='DOC / MID-REVIEW / FORM V1'
       renderFields={({
         documentId,

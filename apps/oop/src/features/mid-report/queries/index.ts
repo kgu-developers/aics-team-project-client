@@ -3,3 +3,4 @@ export { useCompleteMidReportBlockMutation } from './useCompleteMidReportBlockMu
 export { useCurrentMidReportQuery } from './useCurrentMidReportQuery';
 export { useSubmitMidReportMutation } from './useSubmitMidReportMutation';
 export { useUpdateMidReportBlockMutation } from './useUpdateMidReportBlockMutation';
+export { useMidReportEditLock } from './useMidReportEditLock';
