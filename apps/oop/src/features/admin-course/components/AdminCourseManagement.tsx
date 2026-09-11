@@ -21,17 +21,17 @@ import {
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
+  useAdminOopSectionsQuery,
+  useSubmitAdminOopSectionMutation,
+} from '~/features/admin-section/queries';
+
+import {
   useAdminOopCourseQuery,
   useAdminOopCoursesQuery,
   useRemoveAdminOopCourseMutation,
   useSubmitAdminOopCourseMutation,
   useUpdateAdminOopCourseMutation,
 } from '../queries';
-import {
-  useAdminOopSectionsQuery,
-  useSubmitAdminOopSectionMutation,
-} from '~/features/admin-section/queries';
-
 import * as styles from './AdminCourseManagement.css';
 
 const semesterOptions: { label: string; value: AdminOopCourseSemester }[] = [
@@ -181,7 +181,6 @@ function CourseFormDialog({
                     setInput(current => ({ ...current, year: numericYear }));
                   }
                 }}
-                type='number'
                 value={String(input.year)}
                 width='100%'
               />
@@ -394,7 +393,6 @@ function CourseSectionDialog({
               onChange={capacity =>
                 setInput(current => ({ ...current, capacity }))
               }
-              type='number'
               value={input.capacity}
               width='100%'
             />

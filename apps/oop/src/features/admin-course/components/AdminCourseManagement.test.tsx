@@ -15,6 +15,8 @@ import {
   it,
 } from 'vitest';
 
+import AdminCourseManagement from './AdminCourseManagement';
+
 import {
   issueMockSession,
   mockSessionResponseHeaders,
@@ -28,8 +30,6 @@ import {
 } from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminSectionHandlers } from '~/mocks/handlers/adminSections';
-
-import AdminCourseManagement from './AdminCourseManagement';
 
 const server = setupServer(...adminCourseHandlers, ...adminSectionHandlers);
 const queryClients: QueryClient[] = [];
@@ -112,7 +112,9 @@ describe('AdminCourseManagement', () => {
     renderManager();
     await screen.findByText('객체지향 프로그래밍');
 
-    await user.click(screen.getAllByRole('button', { name: '상세/수정' })[0]);
+    await user.click(
+      screen.getAllByRole('button', { name: '상세/수정' })[0]!,
+    );
     const dialog = await screen.findByRole('dialog', {
       name: '강좌 상세 및 수정',
     });
@@ -128,7 +130,9 @@ describe('AdminCourseManagement', () => {
     renderManager();
     await screen.findByText('객체지향 프로그래밍');
 
-    await user.click(screen.getAllByRole('button', { name: '분반 관리' })[0]);
+    await user.click(
+      screen.getAllByRole('button', { name: '분반 관리' })[0]!,
+    );
     const dialog = await screen.findByRole('dialog', {
       name: '객체지향 프로그래밍 분반 관리',
     });

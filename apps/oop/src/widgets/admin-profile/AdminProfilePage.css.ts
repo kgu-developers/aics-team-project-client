@@ -123,7 +123,7 @@ export const courseUploadGroups = style({
 });
 
 export const courseUploadGroup = style({
-  border: `1px solid ${tokens.color.border.default}`,
+  border: `1px solid ${tokens.color.border.base}`,
   borderRadius: tokens.radius.container,
   display: 'grid',
   gap: 16,

@@ -50,7 +50,17 @@ export function getAdminSections({
         section.courseId === courseId &&
         section.professor.studentNumber === professorId,
     )
-    .map(({ courseId: _, ...section }) => ({ ...section, course }));
+    .map(section => ({
+      capacity: section.capacity,
+      classTime: section.classTime,
+      code: section.code,
+      contactVisibleFrom: section.contactVisibleFrom,
+      contactVisibleUntil: section.contactVisibleUntil,
+      course,
+      id: section.id,
+      name: section.name,
+      professor: section.professor,
+    }));
 }
 
 export function getAdminSectionsByCourseId(courseId: number) {
@@ -59,7 +69,17 @@ export function getAdminSectionsByCourseId(courseId: number) {
 
   return sections
     .filter(section => section.courseId === courseId)
-    .map(({ courseId: _, ...section }) => ({ ...section, course }));
+    .map(section => ({
+      capacity: section.capacity,
+      classTime: section.classTime,
+      code: section.code,
+      contactVisibleFrom: section.contactVisibleFrom,
+      contactVisibleUntil: section.contactVisibleUntil,
+      course,
+      id: section.id,
+      name: section.name,
+      professor: section.professor,
+    }));
 }
 
 export function createAdminSection(input: AdminOopSectionInput) {
@@ -100,6 +120,8 @@ export function createAdminSection(input: AdminOopSectionInput) {
     capacity: section.capacity,
     classTime: section.classTime,
     code: section.code,
+    contactVisibleFrom: section.contactVisibleFrom ?? null,
+    contactVisibleUntil: section.contactVisibleUntil ?? null,
     courseId: course.id,
     courseName: course.name,
     id: section.id,
@@ -109,8 +131,17 @@ export function createAdminSection(input: AdminOopSectionInput) {
     year: course.year,
   });
   sections = [...sections, section];
-  const { courseId: _, ...sectionDto } = section;
-  return { ...sectionDto, course };
+  return {
+    capacity: section.capacity,
+    classTime: section.classTime,
+    code: section.code,
+    contactVisibleFrom: section.contactVisibleFrom,
+    contactVisibleUntil: section.contactVisibleUntil,
+    course,
+    id: section.id,
+    name: section.name,
+    professor: section.professor,
+  };
 }
 
 export function resetAdminSectionsMockData() {

@@ -1,5 +1,5 @@
-import type { Team } from '../team/types';
 import type { SectionResponse } from '../section/types';
+import type { Team } from '../team/types';
 
 export type AuthLoginInput = {
   studentNumber: string;

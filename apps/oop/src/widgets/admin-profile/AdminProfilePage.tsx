@@ -14,11 +14,11 @@ import {
 } from '@aics/design-system';
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 
+import AdminCourseManagement from '~/features/admin-course/components/AdminCourseManagement';
 import {
   useAdminProfileQuery,
   useUpdateAdminProfileMutation,
 } from '~/features/admin-profile/queries';
-import AdminCourseManagement from '~/features/admin-course/components/AdminCourseManagement';
 import EnrollmentImportDialog from '~/features/admin-student-team/components/EnrollmentImportDialog';
 import TeamImportDialog from '~/features/admin-student-team/components/TeamImportDialog';
 import { useAdminRosterImportStatusQueries } from '~/features/admin-student-team/queries';
