@@ -175,6 +175,8 @@ const initialSubmissionsByMilestoneId = structuredClone(
 export function getAdminMilestoneSubmissionsFixture(
   milestoneId: string,
 ): AdminMilestoneSubmissionsResponse | undefined {
+  if (!Object.hasOwn(submissionsByMilestoneId, milestoneId)) return undefined;
+
   const fixture = submissionsByMilestoneId[milestoneId];
   return fixture
     ? {
