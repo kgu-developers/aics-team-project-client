@@ -12,6 +12,7 @@ describe('toAdminSubmissionDetailView', () => {
         canSubmitNow: false,
         currentVersion: 2,
         hasPendingReview: true,
+        meetingRecordCount: 0,
         id: 1001,
         milestoneId: 101,
         status: 'REVISION_REQUESTED',

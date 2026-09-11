@@ -25,12 +25,14 @@ import {
   updatePresentationOrderFixture,
 } from '~/mocks/data/adminMilestoneSubmissions';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
 import { adminPresentationEvaluationHandlers } from '~/mocks/handlers/adminPresentationEvaluations';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 
 const server = setupServer(
+  ...adminMeetingHandlers,
   ...adminMilestoneSubmissionDetailHandlers,
   ...adminMilestoneSubmissionsHandlers,
   ...adminPresentationEvaluationHandlers,
@@ -97,6 +99,8 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByText('프로젝트 주제: AI 기반 팀 프로젝트 관리 서비스'),
     ).toBeInTheDocument();
     expect(screen.getByText('프로젝트 주제: -')).toBeInTheDocument();
+    expect(screen.getByText('회의록 1건')).toBeInTheDocument();
+    expect(screen.getByText('회의록 0건')).toBeInTheDocument();
   });
 
   it('제안서와 중간 점검 목록은 왼쪽에 상태와 제출 정보를 표시한다', async () => {
@@ -123,6 +127,12 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'OOP-01 - 1팀 제출물' }),
     ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: '연결된 회의록 (1건)' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: '프로젝트 킥오프' }),
+    ).toHaveAttribute('href', '/admin/meetings/1');
   });
 
   it('제출 버전과 아티팩트를 서버 계약 기준으로 표시하고 이전 버전을 선택한다', async () => {
