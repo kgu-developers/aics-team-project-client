@@ -1,6 +1,8 @@
 import {
   API_BASE_URL,
   ENDPOINTS,
+  type AdminOopCourseSemester,
+  type AdminOopCourseStatus,
   type AdminOopSectionInput,
 } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
@@ -26,6 +28,28 @@ function guardAdmin(request: Request) {
   return null;
 }
 
+function parseSemester(
+  value: string | null,
+): AdminOopCourseSemester | undefined {
+  if (!value) return undefined;
+  return ['SPRING', 'SUMMER', 'FALL', 'WINTER'].includes(value)
+    ? (value as AdminOopCourseSemester)
+    : undefined;
+}
+
+function parseStatus(value: string | null): AdminOopCourseStatus | undefined {
+  if (!value) return undefined;
+  return ['DRAFT', 'ACTIVE', 'ARCHIVED'].includes(value)
+    ? (value as AdminOopCourseStatus)
+    : undefined;
+}
+
+function parseYear(value: string | null) {
+  if (!value) return undefined;
+  const year = Number(value);
+  return Number.isSafeInteger(year) && year > 0 ? year : undefined;
+}
+
 export const adminSectionHandlers = [
   http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_SECTIONS}`, ({ request }) => {
     const errorResponse = guardAdmin(request);
@@ -46,8 +70,26 @@ export const adminSectionHandlers = [
       });
     }
     if (professorId) {
+      const semesterParam = url.searchParams.get('semester');
+      const statusParam = url.searchParams.get('status');
+      const yearParam = url.searchParams.get('year');
+      const semester = parseSemester(semesterParam);
+      const status = parseStatus(statusParam);
+      const year = parseYear(yearParam);
+      if (
+        (semesterParam && !semester) ||
+        (statusParam && !status) ||
+        (yearParam && !year)
+      ) {
+        return HttpResponse.json({ code: 'INVALID_REQUEST' }, { status: 400 });
+      }
       return HttpResponse.json({
-        contents: getAdminSections({ courseId: 1, professorId }),
+        contents: getAdminSections({
+          professorId,
+          semester,
+          status,
+          year,
+        }),
       });
     }
     return HttpResponse.json({ code: 'INVALID_REQUEST' }, { status: 400 });

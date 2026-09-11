@@ -35,32 +35,41 @@ let sections = initialSections.map(section => ({ ...section }));
 let nextSectionId = 2;
 
 export function getAdminSections({
-  courseId,
+  semester,
+  status,
+  year,
   professorId,
 }: {
-  courseId: number;
   professorId: string;
+  semester?: AdminOopSectionDto['course']['semester'];
+  status?: AdminOopSectionDto['course']['status'];
+  year?: number;
 }) {
-  const course = getAdminCourse(courseId);
-  if (!course) return [];
-
   return sections
-    .filter(
-      section =>
-        section.courseId === courseId &&
-        section.professor.studentNumber === professorId,
-    )
-    .map(section => ({
-      capacity: section.capacity,
-      classTime: section.classTime,
-      code: section.code,
-      contactVisibleFrom: section.contactVisibleFrom,
-      contactVisibleUntil: section.contactVisibleUntil,
-      course,
-      id: section.id,
-      name: section.name,
-      professor: section.professor,
-    }));
+    .filter(section => section.professor.studentNumber === professorId)
+    .flatMap(section => {
+      const course = getAdminCourse(section.courseId);
+      if (
+        !course ||
+        (semester && course.semester !== semester) ||
+        (status && course.status !== status) ||
+        (year && course.year !== year)
+      )
+        return [];
+      return [
+        {
+          capacity: section.capacity,
+          classTime: section.classTime,
+          code: section.code,
+          contactVisibleFrom: section.contactVisibleFrom,
+          contactVisibleUntil: section.contactVisibleUntil,
+          course,
+          id: section.id,
+          name: section.name,
+          professor: section.professor,
+        },
+      ];
+    });
 }
 
 export function getAdminSectionsByCourseId(courseId: number) {

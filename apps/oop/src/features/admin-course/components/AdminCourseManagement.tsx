@@ -116,7 +116,7 @@ function CourseFormDialog({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!input.name.trim() || mutation.isPending) return;
+    if (!input.name.trim() || input.year < 1 || mutation.isPending) return;
     const normalizedInput = { ...input, name: input.name.trim() };
 
     if (courseId === null) {
@@ -234,7 +234,9 @@ function CourseFormDialog({
                 variant='secondary'
               />
               <Button
-                isDisabled={!input.name.trim() || mutation.isPending}
+                isDisabled={
+                  !input.name.trim() || input.year < 1 || mutation.isPending
+                }
                 isLoading={mutation.isPending}
                 label={isEditing ? '수정 저장' : '등록'}
                 type='submit'
@@ -257,7 +259,7 @@ function CourseSectionDialog({
   course: AdminOopCourseDto | null;
   isOpen: boolean;
   onClose: () => void;
-  onSectionCreated: () => Promise<void>;
+  onSectionCreated: () => Promise<boolean>;
   professorId: string | undefined;
 }) {
   const toast = useToast();
@@ -267,6 +269,7 @@ function CourseSectionDialog({
   const submitMutation = useSubmitAdminOopSectionMutation();
   const initializedDialog = useRef(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [hasRefreshError, setHasRefreshError] = useState(false);
   const [input, setInput] = useState({
     capacity: '40',
     classTime: '',
@@ -316,7 +319,7 @@ function CourseSectionDialog({
         toast({ body: '분반을 등록했어요.' });
         setIsCreating(false);
         setInput({ capacity: '40', classTime: '', code: '' });
-        await onSectionCreated();
+        setHasRefreshError(!(await onSectionCreated()));
       },
     });
   }
@@ -355,6 +358,21 @@ function CourseSectionDialog({
             ))}
           </ul>
         )}
+        {hasRefreshError ? (
+          <HStack gap={2} justify='end'>
+            <Text role='alert'>분반 목록 동기화에 실패했습니다.</Text>
+            <Button
+              label='분반 목록 새로고침'
+              onClick={() =>
+                void onSectionCreated().then(success =>
+                  setHasRefreshError(!success),
+                )
+              }
+              size='sm'
+              variant='secondary'
+            />
+          </HStack>
+        ) : null}
         {!isCreating ? (
           <HStack gap={2} justify='end'>
             <Button label='닫기' onClick={close} variant='secondary' />
@@ -507,7 +525,7 @@ export default function AdminCourseManagement({
   onSectionCreated,
   professorId,
 }: {
-  onSectionCreated: () => Promise<void>;
+  onSectionCreated: () => Promise<boolean>;
   professorId: string | undefined;
 }) {
   const coursesQuery = useAdminOopCoursesQuery();

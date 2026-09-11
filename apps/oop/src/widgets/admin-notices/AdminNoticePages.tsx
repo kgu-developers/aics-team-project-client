@@ -459,7 +459,11 @@ export function AdminNoticeEditPage() {
             <Text>분반</Text>
             <SectionSelect
               onChange={setSections}
-              options={accessibleSections?.map(section => section.code) ?? []}
+              options={[
+                ...new Set(
+                  accessibleSections?.map(section => section.code) ?? [],
+                ),
+              ]}
               value={sections}
             />
           </div>
@@ -545,7 +549,11 @@ export function AdminNoticeNewPage() {
             <Text>분반</Text>
             <SectionSelect
               onChange={setSections}
-              options={accessibleSections?.map(section => section.code) ?? []}
+              options={[
+                ...new Set(
+                  accessibleSections?.map(section => section.code) ?? [],
+                ),
+              ]}
               value={sections}
             />
           </div>

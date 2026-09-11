@@ -66,9 +66,10 @@ export function updateAdminCourse(
 }
 
 export function removeAdminCourse(courseId: number) {
-  const previousLength = courses.length;
-  courses = courses.filter(course => course.id !== courseId);
-  return courses.length !== previousLength;
+  const course = courses.find(candidate => candidate.id === courseId);
+  if (!course || course.status !== 'DRAFT') return false;
+  courses = courses.filter(candidate => candidate.id !== courseId);
+  return true;
 }
 
 export function resetAdminCoursesMockData() {

@@ -355,12 +355,14 @@ export default function AdminProfilePage() {
   }
 
   async function refreshCurrentUserSections() {
-    if (!sessionRole) return;
+    if (!sessionRole) return false;
 
     try {
       setCurrentUser(await fetchSessionUser(sessionRole));
+      return true;
     } catch {
       toast({ body: '분반 목록을 새로고침하지 못했습니다.' });
+      return false;
     }
   }
 

@@ -30,6 +30,20 @@ function parseCourseId(value: string | readonly string[] | undefined) {
   return Number.isSafeInteger(courseId) && courseId > 0 ? courseId : null;
 }
 
+function isCourseInput(value: unknown): value is AdminOopCourseInput {
+  if (!value || typeof value !== 'object') return false;
+  const input = value as Record<string, unknown>;
+  return (
+    typeof input.name === 'string' &&
+    input.name.trim().length > 0 &&
+    typeof input.year === 'number' &&
+    Number.isInteger(input.year) &&
+    input.year > 0 &&
+    ['SPRING', 'SUMMER', 'FALL', 'WINTER'].includes(String(input.semester)) &&
+    ['DRAFT', 'ACTIVE', 'ARCHIVED'].includes(String(input.status))
+  );
+}
+
 export const adminCourseHandlers = [
   http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`, ({ request }) => {
     const errorResponse = guardAdmin(request);
@@ -41,7 +55,9 @@ export const adminCourseHandlers = [
     async ({ request }) => {
       const errorResponse = guardAdmin(request);
       if (errorResponse) return errorResponse;
-      const input = (await request.json()) as AdminOopCourseInput;
+      const input: unknown = await request.json();
+      if (!isCourseInput(input))
+        return HttpResponse.json({ code: 'INVALID_REQUEST' }, { status: 400 });
       const course = createAdminCourse(input);
       return HttpResponse.json({ id: course.id }, { status: 201 });
     },
@@ -67,7 +83,9 @@ export const adminCourseHandlers = [
       if (!courseId) {
         return HttpResponse.json({ code: 'INVALID_REQUEST' }, { status: 400 });
       }
-      const input = (await request.json()) as AdminOopCourseInput;
+      const input: unknown = await request.json();
+      if (!isCourseInput(input))
+        return HttpResponse.json({ code: 'INVALID_REQUEST' }, { status: 400 });
       return updateAdminCourse(courseId, input)
         ? new HttpResponse(null, { status: 204 })
         : HttpResponse.json({ code: 'COURSE_NOT_FOUND' }, { status: 404 });
@@ -79,7 +97,20 @@ export const adminCourseHandlers = [
       const errorResponse = guardAdmin(request);
       if (errorResponse) return errorResponse;
       const courseId = parseCourseId(params.courseId);
-      return courseId && removeAdminCourse(courseId)
+      if (!courseId) {
+        return HttpResponse.json({ code: 'COURSE_NOT_FOUND' }, { status: 404 });
+      }
+      const course = getAdminCourse(courseId);
+      if (!course) {
+        return HttpResponse.json({ code: 'COURSE_NOT_FOUND' }, { status: 404 });
+      }
+      if (course.status !== 'DRAFT') {
+        return HttpResponse.json(
+          { code: 'COURSE_DELETE_NOT_ALLOWED' },
+          { status: 409 },
+        );
+      }
+      return removeAdminCourse(courseId)
         ? new HttpResponse(null, { status: 204 })
         : HttpResponse.json({ code: 'COURSE_NOT_FOUND' }, { status: 404 });
     },

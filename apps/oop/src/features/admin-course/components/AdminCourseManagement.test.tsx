@@ -72,7 +72,7 @@ function renderManager() {
 
   return render(
     <AdminCourseManagement
-      onSectionCreated={async () => undefined}
+      onSectionCreated={async () => true}
       professorId={demoAdmin.studentNumber}
     />,
     { wrapper: Wrapper },
