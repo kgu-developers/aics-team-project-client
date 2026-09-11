@@ -1,4 +1,11 @@
-import { Card, EmptyState, Heading, Text } from '@aics/design-system';
+import {
+  Button,
+  Card,
+  EmptyState,
+  Heading,
+  HStack,
+  Text,
+} from '@aics/design-system';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
@@ -82,6 +89,7 @@ function ArtifactValue({
 
 export default function AdminSubmissionDetailPage() {
   const [selectedVersion, setSelectedVersion] = useState<number>();
+  const [relatedMeetingsPage, setRelatedMeetingsPage] = useState(0);
   const currentUser = useAuthStore(state => state.currentUser);
   const { submissionId } = useParams({
     from: '/admin/submissions/$submissionId',
@@ -114,7 +122,7 @@ export default function AdminSubmissionDetailPage() {
     accessibleSectionIds,
     {
       milestoneId: detail?.milestoneId,
-      page: 0,
+      page: relatedMeetingsPage,
       sectionId: search.sectionId,
       size: 100,
       teamId: detail?.teamId,
@@ -122,6 +130,16 @@ export default function AdminSubmissionDetailPage() {
     Boolean(detail && isRequestedSectionAccessible && isVersionDetailAvailable),
   );
   const relatedMeetings = relatedMeetingsQuery.data?.contents ?? [];
+  const relatedMeetingsPageable = relatedMeetingsQuery.data?.pageable;
+
+  useEffect(() => {
+    setRelatedMeetingsPage(0);
+  }, [
+    detail?.milestoneId,
+    detail?.submissionId,
+    detail?.teamId,
+    search.sectionId,
+  ]);
 
   useEffect(() => {
     const isSelectedVersionAvailable = versions.some(
@@ -442,6 +460,31 @@ export default function AdminSubmissionDetailPage() {
                   </tbody>
                 </table>
               )}
+              {relatedMeetingsPageable &&
+              relatedMeetingsPageable.totalPages > 1 ? (
+                <HStack gap={2} justify='end'>
+                  <Button
+                    isDisabled={relatedMeetingsPageable.page === 0}
+                    label='이전 페이지'
+                    onClick={() =>
+                      setRelatedMeetingsPage(page => Math.max(page - 1, 0))
+                    }
+                    type='button'
+                    variant='secondary'
+                  />
+                  <Text aria-live='polite'>
+                    {relatedMeetingsPageable.page + 1} /{' '}
+                    {relatedMeetingsPageable.totalPages}
+                  </Text>
+                  <Button
+                    isDisabled={relatedMeetingsPageable.isEnd}
+                    label='다음 페이지'
+                    onClick={() => setRelatedMeetingsPage(page => page + 1)}
+                    type='button'
+                    variant='secondary'
+                  />
+                </HStack>
+              ) : null}
             </section>
           </section>
         </>
