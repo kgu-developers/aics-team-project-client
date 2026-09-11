@@ -1,4 +1,4 @@
-import type { AdminOopCourseDto } from '../adminSection/types';
+import type { AdminOopCourseDto } from './types';
 import { apiClient } from '../client';
 import { ENDPOINTS } from '../constants/endpoints';
 

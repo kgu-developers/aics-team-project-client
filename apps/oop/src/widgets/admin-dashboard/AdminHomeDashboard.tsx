@@ -1,14 +1,12 @@
+import type { AdminMilestoneType } from '@aics/api-client';
 import { Button, Heading } from '@aics/design-system';
 import { Link, useNavigate } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
-import type {
-  AdminMilestoneScheduleMilestoneView,
-  AdminMilestoneScheduleSectionView,
-} from '~/features/admin-milestone-review/model';
-import { useAdminMilestoneScheduleQuery } from '~/features/admin-milestone-review/queries';
+import { formatAdminMilestoneDate } from '~/features/admin-milestone-review/model';
+import { useAdminAccessibleSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
 import { useAdminNoticesQuery } from '~/features/admin-notices/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -36,20 +34,13 @@ function getMeetingContentPreview(content: string) {
     : normalized || '작성된 회의 내용이 없습니다.';
 }
 
-function getMilestoneColumns(
-  sections: readonly AdminMilestoneScheduleSectionView[],
-) {
-  const milestonesById = new Map<string, AdminMilestoneScheduleMilestoneView>();
+type MilestoneColumn = {
+  key: string;
+  title: string;
+};
 
-  sections.forEach(section => {
-    section.milestones.forEach(milestone => {
-      if (!milestonesById.has(milestone.id)) {
-        milestonesById.set(milestone.id, milestone);
-      }
-    });
-  });
-
-  return [...milestonesById.values()];
+function getMilestoneColumnKey(type: AdminMilestoneType, title: string) {
+  return `${type}:${title}`;
 }
 
 function List({
@@ -163,15 +154,34 @@ function Panel({
 export default function AdminHomeDashboard() {
   const navigate = useNavigate();
   const currentUser = useAuthStore(state => state.currentUser);
-  const accessibleSectionIds =
-    currentUser?.sections.map(section => section.id) ?? [];
-  const milestoneScheduleQuery =
-    useAdminMilestoneScheduleQuery(accessibleSectionIds);
+  const accessibleSections = currentUser?.sections ?? [];
+  const accessibleSectionIds = accessibleSections.map(section => section.id);
+  const milestoneQueries =
+    useAdminAccessibleSectionMilestonesQuery(accessibleSectionIds);
   const meetingRecordsQuery =
     useAdminMeetingRecordListQuery(accessibleSectionIds);
   const noticesQuery = useAdminNoticesQuery();
-  const scheduleSections = milestoneScheduleQuery.data?.sections ?? [];
-  const milestoneColumns = getMilestoneColumns(scheduleSections);
+  const scheduleSections = accessibleSections.map((section, index) => ({
+    milestones: milestoneQueries[index]?.data?.content ?? [],
+    sectionId: section.id,
+    sectionLabel: section.code,
+  }));
+  const milestoneColumns = [
+    ...new Map(
+      scheduleSections.flatMap(section =>
+        section.milestones.map(milestone => {
+          const key = getMilestoneColumnKey(milestone.type, milestone.title);
+          return [key, { key, title: milestone.title }] as const;
+        }),
+      ),
+    ).values(),
+  ] satisfies MilestoneColumn[];
+  const isMilestoneSchedulePending = milestoneQueries.some(
+    query => query.isPending,
+  );
+  const hasMilestoneScheduleError = milestoneQueries.some(
+    query => query.isError,
+  );
   const meetingItems: DashboardListItem[] = (
     meetingRecordsQuery.data?.contents ?? []
   )
@@ -222,7 +232,7 @@ export default function AdminHomeDashboard() {
             <p className={styles.scheduleState}>
               담당 분반이 없어 진행 일정을 표시할 수 없습니다.
             </p>
-          ) : milestoneScheduleQuery.isPending ? (
+          ) : isMilestoneSchedulePending ? (
             <p
               aria-live='polite'
               className={styles.scheduleState}
@@ -230,7 +240,7 @@ export default function AdminHomeDashboard() {
             >
               분반별 진행 일정을 불러오는 중입니다.
             </p>
-          ) : milestoneScheduleQuery.isError ? (
+          ) : hasMilestoneScheduleError ? (
             <p className={styles.scheduleState}>
               분반별 진행 일정을 불러오지 못했습니다. 잠시 후 다시 시도해
               주세요.
@@ -244,38 +254,38 @@ export default function AdminHomeDashboard() {
               <thead>
                 <tr>
                   <th scope='col'>분반</th>
-                  <th scope='col'>인원/팀 수</th>
                   {milestoneColumns.map(milestone => (
-                    <th key={milestone.id} scope='col'>
+                    <th key={milestone.key} scope='col'>
                       {milestone.title}
                     </th>
                   ))}
-                  <th scope='col'>쪽지</th>
                 </tr>
               </thead>
               <tbody>
                 {scheduleSections.map(section => (
                   <tr key={section.sectionId}>
                     <td>{section.sectionLabel}</td>
-                    <td>{section.memberCountLabel}</td>
                     {milestoneColumns.map(milestone => {
-                      const summary = section.milestones.find(
-                        sectionMilestone =>
-                          sectionMilestone.id === milestone.id,
-                      )?.summary;
+                      const sectionMilestone = section.milestones.find(
+                        item =>
+                          getMilestoneColumnKey(item.type, item.title) ===
+                          milestone.key,
+                      );
 
                       return (
-                        <td key={milestone.id}>
-                          {summary ? (
+                        <td key={milestone.key}>
+                          {sectionMilestone ? (
                             <Link
                               className={styles.milestoneLink}
                               search={{
-                                milestoneId: milestone.id,
+                                milestoneId: sectionMilestone.id,
                                 sectionId: section.sectionId,
                               }}
                               to={ROUTES.ADMIN_SUBMISSIONS}
                             >
-                              {summary}
+                              {formatAdminMilestoneDate(
+                                sectionMilestone.schedule.dueAt,
+                              )}
                             </Link>
                           ) : (
                             '-'
@@ -283,7 +293,6 @@ export default function AdminHomeDashboard() {
                         </td>
                       );
                     })}
-                    <td>{section.unreadMessageCountLabel}</td>
                   </tr>
                 ))}
               </tbody>

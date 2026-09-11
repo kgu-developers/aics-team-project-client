@@ -1,3 +1,4 @@
+import { adminCourseHandlers } from './adminCourses';
 import { adminMeetingHandlers } from './adminMeetings';
 import { adminMilestoneScheduleHandlers } from './adminMilestoneSchedule';
 import { adminMilestoneSubmissionDetailHandlers } from './adminMilestoneSubmissionDetails';
@@ -8,6 +9,7 @@ import { adminPresentationEvaluationHandlers } from './adminPresentationEvaluati
 import { adminProfileHandlers } from './adminProfile';
 import { adminRequiredArtifactHandlers } from './adminRequiredArtifacts';
 import { adminSectionMilestoneHandlers } from './adminSectionMilestones';
+import { adminSectionHandlers } from './adminSections';
 import { adminStudentTeamHandlers } from './adminStudentTeams';
 import { authHandlers } from './auth';
 import { editLockHandlers } from './editLock';
@@ -34,6 +36,8 @@ import { topicHandlers } from './topic';
 export const handlers = [
   ...sectionHandlers,
   ...authHandlers,
+  ...adminCourseHandlers,
+  ...adminSectionHandlers,
   ...adminMilestoneScheduleHandlers,
   ...adminSectionMilestoneHandlers,
   ...adminRequiredArtifactHandlers,
