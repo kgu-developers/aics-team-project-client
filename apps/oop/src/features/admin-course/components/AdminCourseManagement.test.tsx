@@ -117,9 +117,7 @@ describe('AdminCourseManagement', () => {
     renderManager();
     await screen.findAllByText('객체지향 프로그래밍');
 
-    await user.click(
-      screen.getAllByRole('button', { name: '상세/수정' })[0]!,
-    );
+    await user.click(screen.getAllByRole('button', { name: '상세/수정' })[0]!);
     const dialog = await screen.findByRole('dialog', {
       name: '강좌 상세 및 수정',
     });
@@ -137,9 +135,7 @@ describe('AdminCourseManagement', () => {
     renderManager();
     await screen.findAllByText('객체지향 프로그래밍');
 
-    await user.click(
-      screen.getAllByRole('button', { name: '분반 관리' })[0]!,
-    );
+    await user.click(screen.getAllByRole('button', { name: '분반 관리' })[0]!);
     const dialog = await screen.findByRole('dialog', {
       name: '객체지향 프로그래밍 분반 관리',
     });

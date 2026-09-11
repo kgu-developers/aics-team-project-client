@@ -471,9 +471,7 @@ function CourseDeleteDialog({
     >
       <div className={styles.dialogBody}>
         <Heading level={2}>이 강좌를 삭제할까요?</Heading>
-        <Text color='secondary'>
-          삭제한 강좌는 복구할 수 없습니다.
-        </Text>
+        <Text color='secondary'>삭제한 강좌는 복구할 수 없습니다.</Text>
         <Card className={styles.deletePreview} padding={3}>
           <Heading level={3}>{course?.name}</Heading>
           <Text color='secondary' type='supporting'>

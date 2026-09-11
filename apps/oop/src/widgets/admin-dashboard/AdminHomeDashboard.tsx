@@ -5,9 +5,7 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { ROUTES } from '~/app/constants/routes';
 
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
-import {
-  formatAdminMilestoneDate,
-} from '~/features/admin-milestone-review/model';
+import { formatAdminMilestoneDate } from '~/features/admin-milestone-review/model';
 import { useAdminAccessibleSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
 import { useAdminNoticesQuery } from '~/features/admin-notices/queries';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -158,9 +156,8 @@ export default function AdminHomeDashboard() {
   const currentUser = useAuthStore(state => state.currentUser);
   const accessibleSections = currentUser?.sections ?? [];
   const accessibleSectionIds = accessibleSections.map(section => section.id);
-  const milestoneQueries = useAdminAccessibleSectionMilestonesQuery(
-    accessibleSectionIds,
-  );
+  const milestoneQueries =
+    useAdminAccessibleSectionMilestonesQuery(accessibleSectionIds);
   const meetingRecordsQuery =
     useAdminMeetingRecordListQuery(accessibleSectionIds);
   const noticesQuery = useAdminNoticesQuery();
@@ -169,14 +166,16 @@ export default function AdminHomeDashboard() {
     sectionId: section.id,
     sectionLabel: section.code,
   }));
-  const milestoneColumns = [...new Map(
-    scheduleSections.flatMap(section =>
-      section.milestones.map(milestone => {
-        const key = getMilestoneColumnKey(milestone.type, milestone.title);
-        return [key, { key, title: milestone.title }] as const;
-      }),
-    ),
-  ).values()] satisfies MilestoneColumn[];
+  const milestoneColumns = [
+    ...new Map(
+      scheduleSections.flatMap(section =>
+        section.milestones.map(milestone => {
+          const key = getMilestoneColumnKey(milestone.type, milestone.title);
+          return [key, { key, title: milestone.title }] as const;
+        }),
+      ),
+    ).values(),
+  ] satisfies MilestoneColumn[];
   const isMilestoneSchedulePending = milestoneQueries.some(
     query => query.isPending,
   );
