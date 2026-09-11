@@ -117,6 +117,24 @@ export const uploadCard = style({
   minWidth: 0,
 });
 
+export const courseUploadGroups = style({
+  display: 'grid',
+  gap: 24,
+});
+
+export const courseUploadGroup = style({
+  border: `1px solid ${tokens.color.border.default}`,
+  borderRadius: tokens.radius.container,
+  display: 'grid',
+  gap: 16,
+  padding: 20,
+});
+
+export const courseUploadHeader = style({
+  display: 'grid',
+  gap: 4,
+});
+
 export const sectionStatusList = style({
   display: 'grid',
   gap: 8,

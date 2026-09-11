@@ -1,4 +1,5 @@
 import type { AdminRosterImportAppliedDto } from '@aics/api-client';
+import type { CurrentUserSection, SectionResponse } from '@aics/core';
 import {
   Button,
   Card,
@@ -11,16 +12,18 @@ import {
   useToast,
   VStack,
 } from '@aics/design-system';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useState } from 'react';
 
 import {
   useAdminProfileQuery,
   useUpdateAdminProfileMutation,
 } from '~/features/admin-profile/queries';
+import AdminCourseManagement from '~/features/admin-course/components/AdminCourseManagement';
 import EnrollmentImportDialog from '~/features/admin-student-team/components/EnrollmentImportDialog';
 import TeamImportDialog from '~/features/admin-student-team/components/TeamImportDialog';
 import { useAdminRosterImportStatusQueries } from '~/features/admin-student-team/queries';
 import { useAuthStore } from '~/features/auth/authStore';
+import { fetchSessionUser } from '~/features/auth/fetchSessionUser';
 import { getPasswordChangeErrorMessage } from '~/features/auth/getPasswordChangeErrorMessage';
 import {
   useLogoutMutation,
@@ -36,6 +39,73 @@ import * as styles from './AdminProfilePage.css';
 import { formatRosterImportAppliedAt } from './formatRosterImportAppliedAt';
 
 type UploadFileKind = 'studentRoster' | 'teamRoster';
+type UploadSection = { code: string; id: string; name: string };
+type CourseUploadSection = CurrentUserSection &
+  Required<
+    Pick<
+      SectionResponse,
+      'courseId' | 'courseName' | 'semester' | 'status' | 'year'
+    >
+  >;
+type CourseUploadGroup = {
+  courseName: string;
+  key: string;
+  sections: CourseUploadSection[];
+  semester: SectionResponse['semester'];
+  year: number;
+};
+
+function semesterLabel(semester: SectionResponse['semester']) {
+  return (
+    {
+      FALL: '2학기',
+      SPRING: '1학기',
+      SUMMER: '여름학기',
+      WINTER: '겨울학기',
+    }[semester] ?? semester
+  );
+}
+
+function toUploadSection(section: CurrentUserSection): UploadSection {
+  return { code: section.code, id: section.id, name: section.name };
+}
+
+function hasCourseDetails(
+  section: CurrentUserSection,
+): section is CourseUploadSection {
+  return (
+    typeof section.courseId === 'number' &&
+    typeof section.courseName === 'string' &&
+    typeof section.year === 'number' &&
+    section.semester !== undefined &&
+    section.status !== undefined
+  );
+}
+
+function groupSectionsByCourse(
+  sections: CurrentUserSection[],
+): CourseUploadGroup[] {
+  const grouped = new Map<string, CourseUploadGroup>();
+
+  sections.filter(hasCourseDetails).forEach(section => {
+    const key = `${section.courseId}:${section.year}:${section.semester}`;
+    const course = grouped.get(key);
+    if (course) {
+      course.sections.push(section);
+      return;
+    }
+
+    grouped.set(key, {
+      courseName: section.courseName,
+      key,
+      sections: [section],
+      semester: section.semester,
+      year: section.year,
+    });
+  });
+
+  return [...grouped.values()];
+}
 const uploadCopy: Record<
   UploadFileKind,
   { description: string; label: string; title: string }
@@ -230,21 +300,35 @@ function PasswordChangeDialog({
 
 export default function AdminProfilePage() {
   const currentUser = useAuthStore(state => state.currentUser);
+  const sessionRole = useAuthStore(state => state.sessionRole);
+  const setCurrentUser = useAuthStore(state => state.setCurrentUser);
   const toast = useToast();
   const logoutMutation = useLogoutMutation();
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [message, setMessage] = useState('');
   const [isEditingIntroduction, setIsEditingIntroduction] = useState(false);
   const [uploadKind, setUploadKind] = useState<UploadFileKind | null>(null);
+  const [uploadCourseKey, setUploadCourseKey] = useState<string | null>(null);
   const [uploadSectionId, setUploadSectionId] = useState('');
-  const sections = currentUser?.sections ?? [];
+  const currentUserSections = currentUser?.sections ?? [];
+  const uploadSections = currentUserSections.filter(hasCourseDetails);
+  const courseUploadGroups = useMemo(
+    () => groupSectionsByCourse(uploadSections),
+    [uploadSections],
+  );
+  const selectedUploadCourse = courseUploadGroups.find(
+    course => course.key === uploadCourseKey,
+  );
+  const selectedUploadSections = (selectedUploadCourse?.sections ?? []).map(
+    toUploadSection,
+  );
   const rosterImportStatusQueries = useAdminRosterImportStatusQueries(
-    sections.map(section => section.id),
+    uploadSections.map(section => section.id),
   );
   const rosterImportStatusBySectionId = new Map(
     rosterImportStatusQueries.map(({ query, sectionId }) => [sectionId, query]),
   );
-  const hasUploadSections = sections.length > 0;
+  const hasUploadSections = uploadSections.length > 0;
   const profileQuery = useAdminProfileQuery();
   const updateProfileMutation = useUpdateAdminProfileMutation();
   const [savedIntroduction, setSavedIntroduction] = useState('');
@@ -255,16 +339,29 @@ export default function AdminProfilePage() {
   }, [profileQuery.data?.introduction, updateProfileMutation.isSuccess]);
   const hasSavedIntroduction = savedIntroduction.trim().length > 0;
   const showIntroductionEditor = isEditingIntroduction || !hasSavedIntroduction;
-  function openUploadDialog(kind: UploadFileKind) {
-    if (!hasUploadSections) return;
+  function openUploadDialog(kind: UploadFileKind, course: CourseUploadGroup) {
+    const firstSection = course.sections[0];
+    if (!firstSection) return;
 
     setUploadKind(kind);
-    setUploadSectionId(sections[0]?.id ?? '');
+    setUploadCourseKey(course.key);
+    setUploadSectionId(String(firstSection.id));
   }
 
   function closeUploadDialog() {
     setUploadKind(null);
+    setUploadCourseKey(null);
     setUploadSectionId('');
+  }
+
+  async function refreshCurrentUserSections() {
+    if (!sessionRole) return;
+
+    try {
+      setCurrentUser(await fetchSessionUser(sessionRole));
+    } catch {
+      toast({ body: '분반 목록을 새로고침하지 못했습니다.' });
+    }
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -397,6 +494,11 @@ export default function AdminProfilePage() {
         </VStack>
       </Card>
 
+      <AdminCourseManagement
+        onSectionCreated={refreshCurrentUserSections}
+        professorId={currentUser?.studentNumber}
+      />
+
       <Card className={styles.uploadSection} padding={4}>
         <VStack gap={4}>
           <header className={styles.sectionHeader}>
@@ -406,78 +508,91 @@ export default function AdminProfilePage() {
             </Text>
           </header>
 
-          <div className={styles.uploadGrid}>
-            <FileSelectionCard
-              isDisabled={!hasUploadSections}
-              kind='studentRoster'
-              onOpen={() => openUploadDialog('studentRoster')}
-            />
-            <FileSelectionCard
-              isDisabled={!hasUploadSections}
-              kind='teamRoster'
-              onOpen={() => openUploadDialog('teamRoster')}
-            />
-          </div>
+          {!hasUploadSections ? (
+            <Text color='secondary' role='status'>
+              담당 분반이 없어 명단 파일을 선택할 수 없습니다.
+            </Text>
+          ) : (
+            <div className={styles.courseUploadGroups}>
+              {courseUploadGroups.map(course => (
+                <section className={styles.courseUploadGroup} key={course.key}>
+                  <header className={styles.courseUploadHeader}>
+                    <Heading level={3}>{course.courseName}</Heading>
+                    <Text color='secondary' type='supporting'>
+                      {course.year}년 {semesterLabel(course.semester)} · 분반{' '}
+                      {course.sections.length}개
+                    </Text>
+                  </header>
+                  <div className={styles.uploadGrid}>
+                    <FileSelectionCard
+                      isDisabled={false}
+                      kind='studentRoster'
+                      onOpen={() => openUploadDialog('studentRoster', course)}
+                    />
+                    <FileSelectionCard
+                      isDisabled={false}
+                      kind='teamRoster'
+                      onOpen={() => openUploadDialog('teamRoster', course)}
+                    />
+                  </div>
+                  <section
+                    aria-label={`${course.courseName} 분반별 업로드 현황`}
+                  >
+                    <Heading level={4}>분반별 업로드 현황</Heading>
+                    <div className={styles.statusGroups}>
+                      {(['studentRoster', 'teamRoster'] as const).map(kind => (
+                        <section key={kind}>
+                          <Heading level={5}>{uploadCopy[kind].title}</Heading>
+                          <ul className={styles.sectionStatusList}>
+                            {course.sections.map(section => {
+                              const statusQuery =
+                                rosterImportStatusBySectionId.get(
+                                  String(section.id),
+                                );
+                              const record = statusQuery?.data?.[kind];
 
-          <section aria-labelledby='section-upload-status'>
-            <Heading id='section-upload-status' level={3}>
-              분반별 업로드 현황
-            </Heading>
-            {sections.length === 0 ? (
-              <Text color='secondary' role='status'>
-                담당 분반이 없어 명단 파일을 선택할 수 없습니다.
-              </Text>
-            ) : (
-              <div className={styles.statusGroups}>
-                {(['studentRoster', 'teamRoster'] as const).map(kind => (
-                  <section key={kind}>
-                    <Heading level={4}>{uploadCopy[kind].title}</Heading>
-                    <ul className={styles.sectionStatusList}>
-                      {sections.map(section => {
-                        const statusQuery = rosterImportStatusBySectionId.get(
-                          section.id,
-                        );
-                        const record = statusQuery?.data?.[kind];
-
-                        return (
-                          <li key={section.id}>
-                            <strong className={styles.sectionCode}>
-                              {section.code}
-                            </strong>
-                            <span className={styles.sectionFile}>
-                              {getRosterImportStatusLabel(
-                                record,
-                                statusQuery?.isError ?? false,
-                                statusQuery?.isPending ?? false,
-                              )}
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                              return (
+                                <li key={section.id}>
+                                  <strong className={styles.sectionCode}>
+                                    {section.code}
+                                  </strong>
+                                  <span className={styles.sectionFile}>
+                                    {getRosterImportStatusLabel(
+                                      record,
+                                      statusQuery?.isError ?? false,
+                                      statusQuery?.isPending ?? false,
+                                    )}
+                                  </span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </section>
+                      ))}
+                    </div>
                   </section>
-                ))}
-              </div>
-            )}
-          </section>
+                </section>
+              ))}
+            </div>
+          )}
         </VStack>
       </Card>
 
-      <AdminPreSurveyResponses sections={sections} />
+      <AdminPreSurveyResponses sections={currentUserSections} />
 
       <EnrollmentImportDialog
         isOpen={uploadKind === 'studentRoster' && uploadSectionId !== ''}
         onClose={closeUploadDialog}
         onSectionChange={setUploadSectionId}
         sectionId={uploadSectionId}
-        sections={sections}
+        sections={selectedUploadSections}
       />
       <TeamImportDialog
         isOpen={uploadKind === 'teamRoster' && uploadSectionId !== ''}
         onClose={closeUploadDialog}
         onSectionChange={setUploadSectionId}
         sectionId={uploadSectionId}
-        sections={sections}
+        sections={selectedUploadSections}
       />
     </div>
   );
