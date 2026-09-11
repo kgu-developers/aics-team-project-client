@@ -26,7 +26,9 @@ import {
 
 import { useAuthStore } from '~/features/auth/authStore';
 
-import FinalReportSubmissionPanel from './FinalReportSubmissionPanel';
+import StudentSubmissionPanel, {
+  type StudentSubmissionTarget,
+} from './StudentSubmissionPanel';
 
 import {
   studentSubmission,
@@ -103,7 +105,7 @@ afterAll(() => {
   server.close();
   vi.unstubAllGlobals();
 });
-function setup() {
+function setup(selectedTarget: StudentSubmissionTarget = target) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -111,7 +113,7 @@ function setup() {
   const view = render(
     <AstryxThemeProvider>
       <QueryClientProvider client={client}>
-        <FinalReportSubmissionPanel target={target} />
+        <StudentSubmissionPanel target={selectedTarget} />
       </QueryClientProvider>
     </AstryxThemeProvider>,
   );
@@ -242,4 +244,24 @@ it('팀원은 최종보고서 파일을 제출할 수 없다', async () => {
   expect(screen.getByRole('button', { name: '파일 제출' })).toBeDisabled();
   fireEvent.submit(container.querySelector('form')!);
   expect(posts).toBe(0);
+});
+
+it('발표 자료는 팀장 여부 조회 없이 팀원이 실제 파일로 제출한다', async () => {
+  let kickoffCalls = 0;
+  server.use(
+    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () => {
+      kickoffCalls++;
+      return new HttpResponse(null, { status: 403 });
+    }),
+  );
+  const { container } = setup({
+    ...target,
+    type: 'PRESENTATION',
+    title: '발표 자료 제출',
+  });
+  await inputFile(container);
+  fireEvent.submit(container.querySelector('form')!);
+  await screen.findByText('파일 제출을 저장했어요. (v1)');
+  expect(posts).toBe(1);
+  expect(kickoffCalls).toBe(0);
 });

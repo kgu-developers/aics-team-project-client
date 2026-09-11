@@ -5,13 +5,13 @@ import {
   useState,
 } from 'react';
 
-import type { FinalReportSubmissionTarget } from './FinalReportSubmissionPanel';
+import type { StudentSubmissionTarget } from './StudentSubmissionPanel';
 
 export type SubmissionDialogMilestoneId = 'presentation' | 'final-report';
 
 type SubmissionDialogContextValue = {
-  finalReportTargets: Record<string, FinalReportSubmissionTarget>;
-  target: FinalReportSubmissionTarget | null;
+  submissionTargets: Record<string, StudentSubmissionTarget>;
+  target: StudentSubmissionTarget | null;
   closeDialog: () => void;
   milestoneId: SubmissionDialogMilestoneId | null;
   openDialog: (
@@ -21,7 +21,7 @@ type SubmissionDialogContextValue = {
 };
 
 const SubmissionDialogContext = createContext<SubmissionDialogContextValue>({
-  finalReportTargets: {},
+  submissionTargets: {},
   target: null,
   closeDialog: () => undefined,
   milestoneId: null,
@@ -30,9 +30,9 @@ const SubmissionDialogContext = createContext<SubmissionDialogContextValue>({
 
 export function SubmissionDialogProvider({
   children,
-  finalReportTargets = {},
+  submissionTargets = {},
 }: PropsWithChildren<{
-  finalReportTargets?: Record<string, FinalReportSubmissionTarget>;
+  submissionTargets?: Record<string, StudentSubmissionTarget>;
 }>) {
   const [actualId, setActualId] = useState<string>();
   const [milestoneId, setMilestoneId] =
@@ -41,8 +41,13 @@ export function SubmissionDialogProvider({
   return (
     <SubmissionDialogContext.Provider
       value={{
-        finalReportTargets,
-        target: actualId ? (finalReportTargets[actualId] ?? null) : null,
+        submissionTargets,
+        target:
+          actualId &&
+          submissionTargets[actualId]?.type ===
+            (milestoneId === 'presentation' ? 'PRESENTATION' : 'FINAL_REPORT')
+            ? submissionTargets[actualId]
+            : null,
         closeDialog: () => {
           setMilestoneId(null);
           setActualId(undefined);

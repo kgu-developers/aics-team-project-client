@@ -195,6 +195,7 @@ export type {
 } from './topic/apiTypes';
 
 export type {
+  MilestonePresentation,
   StudentSubmissionResponse,
   StudentSubmissionStatus,
   StudentSubmissionArtifact,

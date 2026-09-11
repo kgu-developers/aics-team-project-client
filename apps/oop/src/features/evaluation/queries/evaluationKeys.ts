@@ -10,6 +10,18 @@ export const evaluationKeys = {
       userId,
       milestoneId,
     ] as const,
+  presentationRoster: (
+    sectionId: string,
+    userId: string,
+    milestoneId: string,
+  ) =>
+    [
+      ...evaluationKeys.all,
+      'presentation-roster',
+      sectionId,
+      userId,
+      milestoneId,
+    ] as const,
   criteria: (sectionId: string) =>
     [...evaluationKeys.all, 'criteria', sectionId] as const,
   peer: (sectionId: string, userId: string, formId: string) =>

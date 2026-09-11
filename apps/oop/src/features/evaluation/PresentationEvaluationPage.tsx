@@ -1,5 +1,6 @@
 import type {
   EvaluationWindowState,
+  MilestonePresentation,
   MyPresentationEvaluation,
   PresentationEvaluationCriterion,
   PresentationEvaluationOverview,
@@ -18,12 +19,14 @@ import {
 import { useEffect, useRef, useState } from 'react';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import { safeSubmissionUrl } from '~/features/submission/submissionUploadInput';
 
 import { formatEvaluationRemainingTime } from './formatEvaluationRemainingTime';
 import { getEvaluationErrorMessage } from './getEvaluationErrorMessage';
 import * as styles from './PresentationEvaluationPage.css';
 import {
   useEvaluationContextQuery,
+  useMilestonePresentationsQuery,
   useMyPresentationEvaluationsQuery,
   useSubmitPresentationEvaluationMutation,
   useTeamEvaluationCriteriaQuery,
@@ -89,14 +92,97 @@ function formatEvaluationWindow(opensAt: string, closesAt: string) {
   return `${dateFormatter.format(new Date(opensAt))} ~ ${timeFormatter.format(new Date(closesAt))}`;
 }
 
-function PresentationViewer({ team }: { team: PresentationEvaluationTeam }) {
-  const presentation = team.presentation;
-  const material = presentation.submittedMaterial;
-  const submittedAt = new Intl.DateTimeFormat('ko-KR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(material.submittedAt));
+function PresentationViewer({ team }: { team: MilestonePresentation }) {
+  const project = team.project;
+  return (
+    <>
+      <Card padding={5} width='100%'>
+        <article
+          aria-label={`${team.teamName ?? `${team.teamId}팀`} 제출 발표 자료`}
+          className={styles.cardContent}
+        >
+          <div className={styles.section}>
+            <h3 className={styles.sectionTitle}>제출한 발표 자료</h3>
+            {team.artifacts.length ? (
+              <ul className={styles.detailList}>
+                {team.artifacts.map((artifact, index) => {
+                  const href = safeSubmissionUrl(
+                    artifact.type === 'FILE'
+                      ? artifact.downloadUrl
+                      : artifact.url,
+                  );
+                  const label =
+                    artifact.fileName ??
+                    artifact.url ??
+                    `제출 자료 ${index + 1}`;
+                  return (
+                    <li
+                      key={`${artifact.requiredArtifactId ?? index}:${label}`}
+                    >
+                      {href ? (
+                        <a
+                          className={styles.link}
+                          href={href}
+                          rel='noreferrer'
+                          target='_blank'
+                        >
+                          {label}
+                        </a>
+                      ) : (
+                        label
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className={styles.helper}>등록된 발표 자료가 없어요.</p>
+            )}
+          </div>
+        </article>
+      </Card>
 
+      <Card padding={5} width='100%'>
+        <article
+          aria-label={`${team.teamName ?? `${team.teamId}팀`} 프로젝트 정보`}
+          className={styles.cardContent}
+        >
+          <section className={styles.section}>
+            <h3 className={styles.sectionTitle}>프로젝트 소개</h3>
+            <p className={styles.bodyText}>
+              {project?.description ??
+                project?.goal ??
+                '프로젝트 설명이 등록되지 않았어요.'}
+            </p>
+          </section>
+          {project?.goal && project.goal !== project.description ? (
+            <section className={styles.section}>
+              <h3 className={styles.sectionTitle}>프로젝트 목표</h3>
+              <p className={styles.bodyText}>{project.goal}</p>
+            </section>
+          ) : null}
+          {safeSubmissionUrl(project?.repositoryUrl) ? (
+            <a
+              className={styles.link}
+              href={safeSubmissionUrl(project?.repositoryUrl)}
+              rel='noreferrer'
+              target='_blank'
+            >
+              프로젝트 저장소 열기
+            </a>
+          ) : null}
+        </article>
+      </Card>
+    </>
+  );
+}
+
+function LegacyPresentationViewer({
+  team,
+}: {
+  team: PresentationEvaluationTeam;
+}) {
+  const material = team.presentation.submittedMaterial;
   return (
     <>
       <Card padding={5} width='100%'>
@@ -106,9 +192,7 @@ function PresentationViewer({ team }: { team: PresentationEvaluationTeam }) {
         >
           <div className={styles.section}>
             <h3 className={styles.sectionTitle}>제출한 발표 자료</h3>
-            <p className={styles.helper}>
-              {material.fileName} · {submittedAt} 제출
-            </p>
+            <p className={styles.helper}>{material.fileName}</p>
             <a
               className={styles.link}
               href={material.fileUrl}
@@ -139,7 +223,6 @@ function PresentationViewer({ team }: { team: PresentationEvaluationTeam }) {
           </Carousel>
         </article>
       </Card>
-
       <Card padding={5} width='100%'>
         <article
           aria-label={`${team.name} 발표 보조 정보`}
@@ -148,24 +231,13 @@ function PresentationViewer({ team }: { team: PresentationEvaluationTeam }) {
           <section className={styles.section}>
             <h3 className={styles.sectionTitle}>프로젝트 소개</h3>
             <p className={styles.bodyText}>
-              {presentation.projectIntroduction}
+              {team.presentation.projectIntroduction}
             </p>
-          </section>
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>주요 기능</h3>
-            <ul className={styles.detailList}>
-              {presentation.mainFeatures.map(item => (
-                <li key={item.id}>
-                  <strong>{item.name}</strong>
-                  <span>{item.description}</span>
-                </li>
-              ))}
-            </ul>
           </section>
           <section className={styles.section}>
             <h3 className={styles.sectionTitle}>주요 화면</h3>
             <div className={styles.screenGrid}>
-              {presentation.mainScreens.map(item => (
+              {team.presentation.mainScreens.map(item => (
                 <article className={styles.screenItem} key={item.id}>
                   {item.imageUrl ? (
                     <img
@@ -179,27 +251,6 @@ function PresentationViewer({ team }: { team: PresentationEvaluationTeam }) {
                 </article>
               ))}
             </div>
-          </section>
-          {presentation.demoVideoUrl ? (
-            <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>시연 영상</h3>
-              <a
-                className={styles.link}
-                href={presentation.demoVideoUrl}
-                rel='noreferrer'
-                target='_blank'
-              >
-                시연 영상 새 창에서 보기
-              </a>
-            </section>
-          ) : null}
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>시연 흐름</h3>
-            <ol className={styles.detailList}>
-              {presentation.demoFlow.map(item => (
-                <li key={item}>{item}</li>
-              ))}
-            </ol>
           </section>
         </article>
       </Card>
@@ -297,7 +348,7 @@ function toScoreRecord(evaluation?: MyPresentationEvaluation) {
   );
 }
 
-function PresentationEvaluationContent({
+function LegacyPresentationEvaluationContent({
   criteria,
   milestoneId,
   onActivationReached,
@@ -499,7 +550,7 @@ function PresentationEvaluationContent({
         </div>
         <Divider className={styles.contentDivider} />
         <div className={styles.contentGrid}>
-          <PresentationViewer team={selectedTeam} />
+          <LegacyPresentationViewer team={selectedTeam} />
           <PresentationEvaluationForm
             criteria={criteria}
             evaluation={evaluation}
@@ -595,6 +646,102 @@ function PresentationEvaluationContent({
   );
 }
 
+function PresentationEvaluationContent({
+  presentations,
+}: {
+  presentations: MilestonePresentation[];
+}) {
+  const teams = [...presentations].sort(
+    (left, right) =>
+      (left.presentationOrder ?? Number.MAX_SAFE_INTEGER) -
+        (right.presentationOrder ?? Number.MAX_SAFE_INTEGER) ||
+      left.teamId - right.teamId,
+  );
+  const [selectedTeamId, setSelectedTeamId] = useState(teams[0]?.teamId);
+  const selectedIndex = teams.findIndex(team => team.teamId === selectedTeamId);
+  const selectedTeam = teams[selectedIndex] ?? teams[0];
+
+  if (!selectedTeam) return null;
+
+  const teamLabel = selectedTeam.teamName ?? `${selectedTeam.teamId}팀`;
+  const presentationLabel =
+    selectedTeam.presentationOrder == null
+      ? '발표 순서 미정'
+      : `${selectedTeam.presentationOrder}번 발표`;
+
+  return (
+    <div className={styles.root}>
+      <header>
+        <Card
+          className={styles.contextHeader}
+          padding={5}
+          variant='muted'
+          width='100%'
+        >
+          <div className={styles.headerContent}>
+            <h1 className={styles.title}>발표 평가</h1>
+            <p className={styles.description}>
+              발표 순서와 팀별 제출 자료를 확인할 수 있어요.
+            </p>
+          </div>
+        </Card>
+      </header>
+      <section
+        aria-labelledby={`presentation-team-title-${selectedTeam.teamId}`}
+        className={styles.dynamicContent}
+        key={selectedTeam.teamId}
+      >
+        <div aria-live='polite' className={styles.teamHeader}>
+          <p className={styles.teamEyebrow}>
+            {presentationLabel} · 발표 {selectedIndex + 1} / {teams.length}
+          </p>
+          <h2
+            className={styles.teamTitle}
+            id={`presentation-team-title-${selectedTeam.teamId}`}
+          >
+            {selectedTeam.project?.title ?? teamLabel}
+          </h2>
+          <p className={styles.meta}>{teamLabel}</p>
+        </div>
+        <Divider className={styles.contentDivider} />
+        <div className={styles.contentGrid}>
+          <PresentationViewer team={selectedTeam} />
+        </div>
+      </section>
+      <footer aria-label='발표 팀 이동'>
+        <Card
+          className={styles.actionFooter}
+          padding={4}
+          variant='muted'
+          width='100%'
+        >
+          <nav aria-label='발표 팀 이동' className={styles.navigation}>
+            <Button
+              isDisabled={selectedIndex <= 0}
+              label='이전 팀'
+              onClick={() => {
+                setSelectedTeamId(teams[selectedIndex - 1]?.teamId);
+              }}
+              variant='secondary'
+            />
+            <p className={`${styles.helper} ${styles.navigationStatus}`}>
+              발표 {selectedIndex + 1} / {teams.length}
+            </p>
+            <Button
+              isDisabled={selectedIndex >= teams.length - 1}
+              label='다음 팀'
+              onClick={() => {
+                setSelectedTeamId(teams[selectedIndex + 1]?.teamId);
+              }}
+              variant='secondary'
+            />
+          </nav>
+        </Card>
+      </footer>
+    </div>
+  );
+}
+
 export default function PresentationEvaluationPage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const sectionId =
@@ -602,12 +749,21 @@ export default function PresentationEvaluationPage() {
   const userId = currentUser?.studentNumber ?? '';
   const contextQuery = useEvaluationContextQuery(sectionId, userId);
   const milestoneId = contextQuery.data?.presentationMilestoneId ?? '';
-  const overviewQuery = useMyPresentationEvaluationsQuery(
+  const rosterQuery = useMilestonePresentationsQuery(
     sectionId,
     userId,
     milestoneId,
   );
-  const criteriaQuery = useTeamEvaluationCriteriaQuery(sectionId);
+  const legacyQueryEnabled = rosterQuery.isError;
+  const overviewQuery = useMyPresentationEvaluationsQuery(
+    sectionId,
+    userId,
+    legacyQueryEnabled ? milestoneId : '',
+  );
+  const criteriaQuery = useTeamEvaluationCriteriaQuery(
+    sectionId,
+    legacyQueryEnabled,
+  );
 
   if (!sectionId || !userId)
     return (
@@ -645,6 +801,23 @@ export default function PresentationEvaluationPage() {
         title='평가할 발표가 없어요.'
       />
     );
+  if (rosterQuery.isPending)
+    return (
+      <p className={styles.status} role='status'>
+        발표 평가를 불러오는 중...
+      </p>
+    );
+  if (rosterQuery.isSuccess && rosterQuery.data.length === 0)
+    return (
+      <EmptyState
+        description='발표 자료가 제출된 팀이 아직 없어요.'
+        title='조회할 발표가 없어요.'
+      />
+    );
+
+  if (rosterQuery.isSuccess)
+    return <PresentationEvaluationContent presentations={rosterQuery.data} />;
+
   if (overviewQuery.isPending || criteriaQuery.isPending)
     return (
       <p className={styles.status} role='status'>
@@ -665,6 +838,7 @@ export default function PresentationEvaluationPage() {
               await Promise.all([
                 overviewQuery.refetch(),
                 criteriaQuery.refetch(),
+                rosterQuery.refetch(),
               ]);
             }}
             label='다시 시도'
@@ -672,7 +846,7 @@ export default function PresentationEvaluationPage() {
           />
         }
         description={getEvaluationErrorMessage(
-          overviewQuery.error ?? criteriaQuery.error,
+          overviewQuery.error ?? criteriaQuery.error ?? rosterQuery.error,
         )}
         title='발표 평가를 불러오지 못했어요.'
       />
@@ -688,7 +862,7 @@ export default function PresentationEvaluationPage() {
     );
 
   return (
-    <PresentationEvaluationContent
+    <LegacyPresentationEvaluationContent
       criteria={criteriaQuery.data}
       milestoneId={milestoneId}
       onActivationReached={() => {

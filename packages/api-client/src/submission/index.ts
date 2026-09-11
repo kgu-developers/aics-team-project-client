@@ -54,3 +54,4 @@ export { fetchStudentSubmissionPreview } from './fetchStudentSubmissionPreview';
 
 export { submitStudentSubmissionVersion } from './submitStudentSubmissionVersion';
 export { fetchRequiredSubmissionArtifacts } from './fetchRequiredSubmissionArtifacts';
+export { fetchMilestonePresentations } from './fetchMilestonePresentations';

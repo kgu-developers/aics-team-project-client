@@ -6,6 +6,7 @@ export {
   submitLogout,
   submitRefresh,
 } from './auth';
+export { fetchMilestonePresentations } from './submission';
 export {
   fetchMyProfile,
   type MyProfileResponse,

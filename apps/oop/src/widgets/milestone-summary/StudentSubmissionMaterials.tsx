@@ -1,14 +1,14 @@
 import { Button, Text } from '@aics/design-system';
 
-import type { FinalReportSubmissionTarget } from '~/features/submission/FinalReportSubmissionPanel';
 import { useStudentSubmissionVersionsQuery } from '~/features/submission/queries';
+import type { StudentSubmissionTarget } from '~/features/submission/StudentSubmissionPanel';
 import { useSubmissionDialog } from '~/features/submission/SubmissionDialogContext';
 import { safeSubmissionUrl } from '~/features/submission/submissionUploadInput';
 
-import FinalReportSubmissionHistory from './FinalReportSubmissionHistory';
+import SubmissionHistory from './SubmissionHistory';
 import SubmissionMaterials from './SubmissionMaterials';
 
-function Materials({ target }: { target: FinalReportSubmissionTarget }) {
+function Materials({ target }: { target: StudentSubmissionTarget }) {
   const query = useStudentSubmissionVersionsQuery(target, target.submissionId);
   if (query.isPending)
     return <Text role='status'>제출 자료를 불러오는 중...</Text>;
@@ -55,7 +55,7 @@ function Materials({ target }: { target: FinalReportSubmissionTarget }) {
           updatedAt: latest.updatedAt,
         }}
       />
-      <FinalReportSubmissionHistory
+      <SubmissionHistory
         versions={query.data}
         onRefresh={async () => {
           await query.refetch();
@@ -65,13 +65,13 @@ function Materials({ target }: { target: FinalReportSubmissionTarget }) {
   );
 }
 
-export default function FinalReportMaterials({
+export default function StudentSubmissionMaterials({
   milestoneId,
 }: {
   milestoneId: string;
 }) {
-  const { finalReportTargets } = useSubmissionDialog();
-  const target = finalReportTargets[milestoneId];
+  const { submissionTargets } = useSubmissionDialog();
+  const target = submissionTargets[milestoneId];
   return target ? (
     <Materials
       key={`${target.studentNumber}:${target.teamId}:${milestoneId}`}

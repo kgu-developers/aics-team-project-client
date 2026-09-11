@@ -4,6 +4,8 @@ import type {
   StudentMilestoneResponse,
 } from '@aics/core';
 
+import { ROUTES } from '~/app/constants/routes';
+
 const submissionLabels: Record<
   MyTeamMilestoneSubmissionResponse['status'],
   string
@@ -39,12 +41,60 @@ export function milestoneDate(value?: string | null) {
   }).format(date);
 }
 
+export function isPresentationEvaluation(milestone: StudentMilestoneResponse) {
+  return (
+    milestone.type === 'PRESENTATION' &&
+    Boolean(
+      milestone.schedule.evaluationOpensAt &&
+      milestone.schedule.evaluationClosesAt,
+    )
+  );
+}
+
 /** Submission completion and publication closing are different facts. */
 export function studentMilestoneSummary(
   milestone: StudentMilestoneResponse,
   submission: MyTeamMilestoneSubmissionResponse | undefined,
   now: number,
 ): StudentHomeMilestone {
+  if (isPresentationEvaluation(milestone)) {
+    const start = milestoneTime(milestone.schedule.evaluationOpensAt);
+    const end = milestoneTime(milestone.schedule.evaluationClosesAt);
+    const before = now < start;
+    const closed = milestone.status === 'CLOSED' || now >= end;
+    return {
+      id: String(milestone.id),
+      title: milestone.title,
+      period: `평가 기간 : ${milestoneDate(milestone.schedule.evaluationOpensAt)} ~ ${milestoneDate(milestone.schedule.evaluationClosesAt)}`,
+      dueDate: `~ ${milestoneDate(milestone.schedule.evaluationClosesAt)}`,
+      status: closed ? 'closed' : before ? 'before-period' : 'in-progress',
+      statusLabel: closed
+        ? '평가 마감'
+        : before
+          ? '평가 기간 전'
+          : '평가 기간 중',
+      currentStepLabel: '발표 평가',
+      interaction: 'collapsible',
+      isDetailAvailable: true,
+      rows: [
+        {
+          id: 'presentation-evaluation',
+          label: '발표 평가',
+          value: '발표 자료 및 평가 확인',
+          actionLabel: '평가하기',
+          actionTo: ROUTES.STUDENT.PRESENTATION_EVALUATION,
+          tone: 'primary',
+        },
+      ],
+      body: {
+        kind: 'presentation-evaluation',
+        project: { title: '프로젝트 정보', description: '' },
+        orderGuide: '발표 순서를 확인할 수 없어요.',
+        teams: [],
+        timeGuide: `평가 기간 : ${milestoneDate(milestone.schedule.evaluationOpensAt)} ~ ${milestoneDate(milestone.schedule.evaluationClosesAt)}`,
+      },
+    };
+  }
   const opensAt = milestoneTime(milestone.schedule.opensAt);
   const dueAt = milestoneTime(milestone.schedule.dueAt);
   const revisionUntil = milestoneTime(milestone.schedule.revisionUntil);

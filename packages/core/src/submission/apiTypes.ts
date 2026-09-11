@@ -48,3 +48,20 @@ export type StudentSubmissionVersionInput = {
     content?: string;
   }[];
 };
+
+/** Swagger: GET /milestones/{milestoneId}/presentations */
+export type MilestonePresentation = {
+  artifacts: StudentSubmissionArtifact[];
+  presentationOrder?: number | null;
+  project?: {
+    description?: string | null;
+    goal?: string | null;
+    id: number;
+    repositoryUrl?: string | null;
+    teamId: number;
+    title?: string | null;
+  } | null;
+  submissionId: number;
+  teamId: number;
+  teamName?: string | null;
+};
