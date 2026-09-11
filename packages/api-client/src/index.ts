@@ -22,13 +22,24 @@ export {
   type AdminPeerEvaluationFormPersistResponse,
 } from './adminEvaluation';
 export {
+  fetchAdminOopCourse,
   fetchAdminOopCourses,
+  removeAdminOopCourse,
+  submitAdminOopCourse,
+  updateAdminOopCourse,
+  type AdminOopCourseDto,
+  type AdminOopCourseInput,
+  type AdminOopCoursePersistResponse,
+  type AdminOopCourseSemester,
+  type AdminOopCourseStatus,
   type AdminOopCoursesResponse,
 } from './adminCourse';
 export {
   fetchAdminOopSections,
-  type AdminOopCourseDto,
+  submitAdminOopSection,
   type AdminOopSectionDto,
+  type AdminOopSectionInput,
+  type AdminOopSectionPersistResponse,
   type AdminOopSectionsFilter,
   type AdminOopSectionsResponse,
   type AdminOopUserDto,

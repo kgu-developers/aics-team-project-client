@@ -19,6 +19,8 @@ export const ENDPOINTS = {
   },
   ADMIN: {
     OOP_COURSES: '/api/v1/admin/oop/courses',
+    OOP_COURSE: (courseId: string | number) =>
+      `/api/v1/admin/oop/courses/${courseId}`,
     OOP_SECTIONS: '/api/v1/admin/oop/sections',
     SECTION_ENROLLMENTS: (sectionId: string | number) =>
       `/api/v1/admin/oop/sections/${sectionId}/enrollments`,

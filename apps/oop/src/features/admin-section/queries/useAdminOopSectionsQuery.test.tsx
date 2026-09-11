@@ -73,26 +73,18 @@ function createWrapper() {
 }
 
 describe('useAdminOopSectionsQuery', () => {
-  it('과목 또는 담당 교수 정보가 없으면 분반 목록 API를 호출하지 않는다', () => {
-    const { result } = renderHook(
-      () => useAdminOopSectionsQuery({ courseId: 1 }),
-      { wrapper: createWrapper() },
-    );
+  it('조회 기준이 없으면 분반 목록 API를 호출하지 않는다', () => {
+    const { result } = renderHook(() => useAdminOopSectionsQuery(undefined), {
+      wrapper: createWrapper(),
+    });
 
     expect(result.current.fetchStatus).toBe('idle');
     expect(sectionsRequest).not.toHaveBeenCalled();
   });
 
-  it('필수 정보와 선택 필터를 전달해 분반 목록을 조회한다', async () => {
+  it('강좌 ID만 전달해 강좌별 분반 목록을 조회한다', async () => {
     const { result } = renderHook(
-      () =>
-        useAdminOopSectionsQuery({
-          courseId: 1,
-          professorId: '20260002',
-          semester: 'FALL',
-          status: 'ACTIVE',
-          year: 2026,
-        }),
+      () => useAdminOopSectionsQuery({ courseId: 1 }),
       { wrapper: createWrapper() },
     );
 
@@ -103,16 +95,7 @@ describe('useAdminOopSectionsQuery', () => {
       expect.stringContaining('courseId=1'),
     );
     expect(sectionsRequest).toHaveBeenCalledWith(
-      expect.stringContaining('professorId=20260002'),
-    );
-    expect(sectionsRequest).toHaveBeenCalledWith(
-      expect.stringContaining('semester=FALL'),
-    );
-    expect(sectionsRequest).toHaveBeenCalledWith(
-      expect.stringContaining('status=ACTIVE'),
-    );
-    expect(sectionsRequest).toHaveBeenCalledWith(
-      expect.stringContaining('year=2026'),
+      expect.not.stringContaining('professorId='),
     );
   });
 });
