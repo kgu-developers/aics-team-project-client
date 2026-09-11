@@ -47,6 +47,12 @@ export const document = style({
   padding: 'clamp(20px, 4vw, 40px)',
 });
 
+export const relatedMeetings = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
+});
+
 export const documentHeader = style({
   borderBottom: `1px solid ${tokens.color.border.base}`,
   display: 'flex',
@@ -162,12 +168,13 @@ export const table = style({
 });
 
 export const tableCell = style({
+  background: tokens.color.background.card,
   borderBottom: `1px solid ${tokens.color.border.base}`,
   padding: 12,
 });
 
 export const tableHeader = style({
-  background: tokens.color.background.muted,
+  background: tokens.color.background.card,
   fontWeight: 700,
   textAlign: 'left',
 });

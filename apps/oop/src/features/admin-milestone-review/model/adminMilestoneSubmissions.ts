@@ -22,6 +22,7 @@ export type AdminMilestoneSubmissionView = {
   completedBy: string | null;
   currentVersion: number;
   hasPendingReview: boolean;
+  meetingRecordCount: number;
   presentationOrder: number | null;
   projectTitle: string | null;
   status: AdminMilestoneSubmissionStatusDto;
@@ -45,6 +46,7 @@ function toSubmissionView(
     completedBy: submission.completedBy ?? null,
     currentVersion: submission.currentVersion,
     hasPendingReview: submission.hasPendingReview,
+    meetingRecordCount: submission.meetingRecordCount,
     presentationOrder: submission.presentationOrder ?? null,
     projectTitle: submission.projectTitle ?? null,
     status: submission.status,

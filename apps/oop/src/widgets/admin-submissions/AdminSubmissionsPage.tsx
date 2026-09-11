@@ -587,6 +587,7 @@ export default function AdminSubmissionsPage() {
                       );
                     return (
                       <AdminMilestoneSubmissionCard
+                        meetingCountLabel={`회의록 ${submission.meetingRecordCount}건`}
                         isUnread={Boolean(
                           submissionSectionId &&
                           submission.submissionId &&

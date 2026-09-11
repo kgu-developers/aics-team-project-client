@@ -5,7 +5,8 @@ export const content = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 16,
-  maxHeight: 'calc(100vh - 96px)',
+  maxHeight: 'calc(100dvh - 48px)',
+  minHeight: 0,
 });
 
 export const body = style({
@@ -20,7 +21,7 @@ export const body = style({
 export const actions = style({
   background: tokens.color.background.card,
   flexShrink: 0,
-  paddingTop: 4,
+  padding: '8px 0 4px',
 });
 
 export const summary = style({
@@ -35,7 +36,7 @@ export const summary = style({
 export const previewTableWrap = style({
   border: `1px solid ${tokens.color.border.base}`,
   borderRadius: tokens.radius.element,
-  maxHeight: 280,
+  maxHeight: 240,
   overflow: 'auto',
 });
 

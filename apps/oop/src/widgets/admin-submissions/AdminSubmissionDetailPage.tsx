@@ -1,9 +1,17 @@
-import { Card, EmptyState, Heading, Text } from '@aics/design-system';
+import {
+  Button,
+  Card,
+  EmptyState,
+  Heading,
+  HStack,
+  Text,
+} from '@aics/design-system';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import type { AdminSubmissionArtifactView } from '~/features/admin-milestone-review/model';
 import {
   useAdminMilestoneSubmissionDetailQuery,
@@ -36,6 +44,10 @@ function getMilestoneLabel(milestoneId: string | undefined) {
   }
 
   return '제출물';
+}
+
+function formatMeetingAt(value: string) {
+  return value.replace('T', ' ');
 }
 
 function ArtifactValue({
@@ -77,6 +89,7 @@ function ArtifactValue({
 
 export default function AdminSubmissionDetailPage() {
   const [selectedVersion, setSelectedVersion] = useState<number>();
+  const [relatedMeetingsPage, setRelatedMeetingsPage] = useState(0);
   const currentUser = useAuthStore(state => state.currentUser);
   const { submissionId } = useParams({
     from: '/admin/submissions/$submissionId',
@@ -105,6 +118,28 @@ export default function AdminSubmissionDetailPage() {
   );
   const versions = versionsQuery.data ?? [];
   const detail = submissionQuery.data;
+  const relatedMeetingsQuery = useAdminMeetingRecordListQuery(
+    accessibleSectionIds,
+    {
+      milestoneId: detail?.milestoneId,
+      page: relatedMeetingsPage,
+      sectionId: search.sectionId,
+      size: 100,
+      teamId: detail?.teamId,
+    },
+    Boolean(detail && isRequestedSectionAccessible && isVersionDetailAvailable),
+  );
+  const relatedMeetings = relatedMeetingsQuery.data?.contents ?? [];
+  const relatedMeetingsPageable = relatedMeetingsQuery.data?.pageable;
+
+  useEffect(() => {
+    setRelatedMeetingsPage(0);
+  }, [
+    detail?.milestoneId,
+    detail?.submissionId,
+    detail?.teamId,
+    search.sectionId,
+  ]);
 
   useEffect(() => {
     const isSelectedVersionAvailable = versions.some(
@@ -343,6 +378,115 @@ export default function AdminSubmissionDetailPage() {
               </section>
             )}
           </Card>
+          <section className={styles.relatedMeetings}>
+            <section className={styles.section}>
+              <Heading level={3}>
+                연결된 회의록
+                {relatedMeetingsQuery.data
+                  ? ` (${relatedMeetingsQuery.data.pageable.totalElements}건)`
+                  : ''}
+              </Heading>
+              {relatedMeetingsQuery.isPending ? (
+                <Text aria-live='polite' role='status'>
+                  연결된 회의록을 불러오는 중입니다.
+                </Text>
+              ) : relatedMeetingsQuery.isError ? (
+                <EmptyState
+                  description='잠시 후 다시 시도해 주세요.'
+                  title='연결된 회의록을 불러오지 못했습니다.'
+                />
+              ) : relatedMeetings.length === 0 ? (
+                <Text className={styles.sectionDescription}>
+                  이 마일스톤에 연결된 회의록이 없습니다.
+                </Text>
+              ) : (
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th
+                        className={`${styles.tableCell} ${styles.tableHeader}`}
+                        scope='col'
+                      >
+                        회의 제목
+                      </th>
+                      <th
+                        className={`${styles.tableCell} ${styles.tableHeader}`}
+                        scope='col'
+                      >
+                        회의 일시
+                      </th>
+                      <th
+                        className={`${styles.tableCell} ${styles.tableHeader}`}
+                        scope='col'
+                      >
+                        작성자
+                      </th>
+                      <th
+                        className={`${styles.tableCell} ${styles.tableHeader}`}
+                        scope='col'
+                      >
+                        참석 인원
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {relatedMeetings.map((meeting, index) => (
+                      <tr
+                        className={
+                          index === relatedMeetings.length - 1
+                            ? styles.lastTableRow
+                            : undefined
+                        }
+                        key={meeting.id}
+                      >
+                        <td className={styles.tableCell}>
+                          <Link
+                            className={styles.backLink}
+                            params={{ meetingId: String(meeting.id) }}
+                            to={ROUTES.ADMIN_MEETING_DETAIL}
+                          >
+                            {meeting.title}
+                          </Link>
+                        </td>
+                        <td className={styles.tableCell}>
+                          {formatMeetingAt(meeting.meetingAt)}
+                        </td>
+                        <td className={styles.tableCell}>{meeting.authorId}</td>
+                        <td className={styles.tableCell}>
+                          {meeting.participantCount}명
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {relatedMeetingsPageable &&
+              relatedMeetingsPageable.totalPages > 1 ? (
+                <HStack gap={2} justify='end'>
+                  <Button
+                    isDisabled={relatedMeetingsPageable.page === 0}
+                    label='이전 페이지'
+                    onClick={() =>
+                      setRelatedMeetingsPage(page => Math.max(page - 1, 0))
+                    }
+                    type='button'
+                    variant='secondary'
+                  />
+                  <Text aria-live='polite'>
+                    {relatedMeetingsPageable.page + 1} /{' '}
+                    {relatedMeetingsPageable.totalPages}
+                  </Text>
+                  <Button
+                    isDisabled={relatedMeetingsPageable.isEnd}
+                    label='다음 페이지'
+                    onClick={() => setRelatedMeetingsPage(page => page + 1)}
+                    type='button'
+                    variant='secondary'
+                  />
+                </HStack>
+              ) : null}
+            </section>
+          </section>
         </>
       )}
     </div>
