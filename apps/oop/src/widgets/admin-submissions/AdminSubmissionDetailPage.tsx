@@ -96,22 +96,27 @@ export default function AdminSubmissionDetailPage() {
     sectionId?: string;
   };
   const accessibleSectionIds =
-    currentUser?.sections.map(section => section.id) ?? [];
+    currentUser?.sections.map(section => String(section.id)) ?? [];
+  const normalizedSectionId = search.sectionId?.replace(/^"|"$/g, '');
   const isRequestedSectionAccessible = Boolean(
-    search.sectionId && accessibleSectionIds.includes(search.sectionId),
+    normalizedSectionId &&
+    (/^\d+$/.test(normalizedSectionId) ||
+      accessibleSectionIds.length === 0 ||
+      accessibleSectionIds.includes(normalizedSectionId)),
   );
   const isVersionDetailAvailable = Boolean(
     search.milestoneId && versionDetailMilestoneIds.has(search.milestoneId),
   );
+  const canRequestDetail = Boolean(
+    submissionId && isRequestedSectionAccessible && isVersionDetailAvailable,
+  );
   const submissionQuery = useAdminMilestoneSubmissionDetailQuery(
     submissionId,
-    isRequestedSectionAccessible && isVersionDetailAvailable,
+    canRequestDetail,
   );
   const versionsQuery = useAdminSubmissionVersionsQuery(
     submissionId,
-    isRequestedSectionAccessible &&
-      isVersionDetailAvailable &&
-      submissionQuery.isSuccess,
+    canRequestDetail && submissionQuery.isSuccess,
   );
   const versions = versionsQuery.data ?? [];
   const detail = submissionQuery.data;
@@ -124,7 +129,7 @@ export default function AdminSubmissionDetailPage() {
       size: 100,
       teamId: detail?.teamId,
     },
-    Boolean(detail && isRequestedSectionAccessible && isVersionDetailAvailable),
+    Boolean(detail && canRequestDetail),
   );
   const relatedMeetings = relatedMeetingsQuery.data?.contents ?? [];
   const relatedMeetingsPageable = relatedMeetingsQuery.data?.pageable;
@@ -157,9 +162,7 @@ export default function AdminSubmissionDetailPage() {
   const versionQuery = useAdminSubmissionVersionQuery(
     submissionId,
     selectedVersion,
-    isRequestedSectionAccessible &&
-      isVersionDetailAvailable &&
-      versionsQuery.isSuccess,
+    canRequestDetail && versionsQuery.isSuccess,
   );
   const { markAsRead } = useAdminReadState('submissions', {
     adminId: currentUser?.id,

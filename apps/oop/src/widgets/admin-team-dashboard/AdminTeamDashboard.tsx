@@ -338,7 +338,7 @@ export default function AdminTeamDashboard() {
               ? 'ready'
               : 'pending'
         }
-        sectionId={team.sectionId}
+        sectionId={dashboardSection?.id ?? team.sectionId}
       />
 
       <AdminTeamEvaluationTables sectionId={team.sectionId} teamId={team.id} />
