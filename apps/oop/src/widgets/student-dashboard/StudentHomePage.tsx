@@ -3,12 +3,16 @@ import { isAxiosError } from 'axios';
 
 import { editorSectionTo } from '~/app/constants/editorSections';
 
+import { useAuthStore } from '~/features/auth/authStore';
+import { canSubmitMidReportDocument } from '~/features/mid-report/MidReportEditorPage';
+import { useCurrentMidReportQuery } from '~/features/mid-report/queries';
 import { TopicApiProvider } from '~/features/project-topic/TopicApiContext';
 import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog';
 import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
 import { useTopicMilestoneEligibility } from '~/features/project-topic/useTopicMilestoneEligibility';
 import { useProposalSectionsQuery } from '~/features/proposal/queries';
 import { homeQueryState } from '~/features/student-home/model/homeQueryState';
+import { midReportSectionStatuses } from '~/features/student-home/model/midReportSectionStatuses';
 import { peerEvaluationHomeSummary } from '~/features/student-home/model/peerEvaluationHomeSummary';
 import { proposalSectionStatuses } from '~/features/student-home/model/proposalSectionStatuses';
 import { selectActiveMilestone } from '~/features/student-home/model/selectActiveMilestone';
@@ -83,6 +87,8 @@ export default function StudentHomePage() {
   const proposalProject =
     home.project.state.status === 'ready' ? home.project.data : undefined;
   const proposalSections = useProposalSectionsQuery(proposalProject?.id);
+  const midReport = useCurrentMidReportQuery(Boolean(home.teamId));
+  const currentUserName = useAuthStore(state => state.currentUser?.name);
   const peerMilestones = query.milestones.filter(
     milestone => milestone.type === 'PEER_EVALUATION',
   );
@@ -170,9 +176,42 @@ export default function StudentHomePage() {
         teamId: home.teamId,
         feedback: [],
         canSubmitResponse: false,
-        sections: [],
+        // The feedback room stays as main defines it; only the writing areas
+        // are filled with the document's block states.
+        sections: midReportSectionStatuses(
+          midReport.isSuccess
+            ? 'ready'
+            : midReport.isError
+              ? 'error'
+              : 'pending',
+          midReport.data,
+        ),
         guide: '대면 피드백과 반영 내용을 기록해 주세요.',
       };
+      const readyToSubmit =
+        midReport.isSuccess &&
+        canSubmitMidReportDocument(midReport.data, currentUserName);
+      summary.rows = [
+        readyToSubmit
+          ? {
+              id: 'mid-report-submit',
+              label: '중간보고서 제출',
+              value: '모든 작성 영역 완료',
+              tone: 'primary',
+              actionLabel: '제출하기',
+            }
+          : {
+              id: 'mid-report-writing',
+              label: '중간보고서 작성',
+              value:
+                midReport.isSuccess && midReport.data.status === 'SUBMITTED'
+                  ? '제출 완료'
+                  : '작성 영역을 차례로 완료해 주세요.',
+              tone: 'primary',
+              actionLabel: '작성하기',
+              actionTo: editorSectionTo('mid-review', 'topic'),
+            },
+      ];
       return summary;
     }
     if (

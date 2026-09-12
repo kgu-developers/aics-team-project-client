@@ -29,6 +29,7 @@ import {
   useAuthStore,
   selectHasAuthenticatedSession,
 } from '~/features/auth/authStore';
+import { documentRequestErrorMessage } from '~/features/editor/documentRequestErrorMessage';
 import {
   useAcquireLiveEditLockMutation,
   useLiveEditLockQuery,
@@ -42,7 +43,6 @@ import {
 } from './projectProposal';
 import * as styles from './ProjectProposalEditorPage.css';
 import ProjectProposalFields from './ProjectProposalFields';
-import { proposalRequestErrorMessage } from './proposalSubmitGuard';
 import {
   useProjectProposalQuery,
   useProposalSectionsQuery,
@@ -196,7 +196,7 @@ function ProjectProposalDocument({
         e.response.data?.code === 'EDIT_LOCK_CONFLICT'
       )
         return;
-      setError(proposalRequestErrorMessage(e));
+      setError(documentRequestErrorMessage(e));
     } finally {
       busyRef.current = false;
       setWorking(false);

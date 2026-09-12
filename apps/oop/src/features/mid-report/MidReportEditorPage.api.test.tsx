@@ -4,7 +4,14 @@ import {
   fetchCurrentMidReport,
 } from '@aics/api-client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, screen, waitFor, cleanup } from '@testing-library/react';
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import {
@@ -278,6 +285,84 @@ it('imageFileId를 숫자로 저장하고 재조회한 이미지 URL을 복원�
   server.events.removeAllListeners('request:start');
 });
 
+it('화면 이미지를 업로드해 받은 파일 ID를 저장 요청에 담는다', async () => {
+  useAuthStore.getState().setCurrentUser({ ...demoStudent, teamId: '7' });
+  const bodies: unknown[] = [];
+  server.use(
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.IMAGE_UPLOAD('7')}`,
+      () => HttpResponse.json({ fileId: 901 }),
+    ),
+  );
+  server.events.on('request:start', async ({ request }) => {
+    if (request.method === 'PATCH' && request.url.endsWith('/gui-design'))
+      bodies.push(await request.clone().json());
+  });
+  const view = renderEditor('gui-design');
+  try {
+    await userEvent.click(
+      await screen.findByRole('button', { name: '편집 시작' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('button', { name: '화면 이미지 추가' }),
+    );
+    const input =
+      view.container.querySelector<HTMLInputElement>('input[type="file"]');
+    if (!input) throw new Error('이미지 입력을 찾을 수 없습니다.');
+    await userEvent.upload(
+      input,
+      new File(['png'], 'gui.png', { type: 'image/png' }),
+    );
+    await userEvent.type(await screen.findByLabelText('이름'), '대출 화면');
+    await userEvent.click(screen.getByRole('button', { name: '추가' }));
+
+    // The editor autosaves the block, so the upload result reaches the server
+    // without a separate save action.
+    await waitFor(() => expect(bodies).not.toHaveLength(0), { timeout: 2500 });
+    const saved = JSON.parse(
+      (bodies.at(-1) as { fields: { value: string }[] }).fields[0]!.value,
+    );
+    expect(saved.at(-1)).toMatchObject({
+      imageFileId: 901,
+      name: '대출 화면',
+    });
+  } finally {
+    server.events.removeAllListeners('request:start');
+    view.unmount();
+  }
+});
+it('엔진부 테스트 케이스를 표에서 추가하고 지운다', async () => {
+  const view = renderEditor('engine-design');
+  try {
+    await userEvent.click(
+      await screen.findByRole('button', { name: '편집 시작' }),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText('테스트 1 설명')).toBeEnabled(),
+    );
+    expect(
+      screen.getAllByRole('columnheader').map(cell => cell.textContent),
+    ).toEqual(['설명', '입력값', '기대 출력값', '관리']);
+    expect(
+      within(screen.getAllByRole('row').at(-1)!).getByRole('button', {
+        name: '테스트 케이스 추가',
+      }),
+    ).toBeEnabled();
+
+    await userEvent.click(
+      screen.getByRole('button', { name: '테스트 케이스 추가' }),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText('테스트 2 설명')).toBeInTheDocument(),
+    );
+    await userEvent.click(screen.getAllByRole('button', { name: '삭제' })[1]!);
+    await waitFor(() =>
+      expect(screen.queryByLabelText('테스트 2 설명')).not.toBeInTheDocument(),
+    );
+  } finally {
+    view.unmount();
+  }
+});
 it('로그인 정보가 없으면 중간보고서와 잠금 API를 호출하지 않는다', async () => {
   useAuthStore.getState().clearSession();
   const request = vi.fn();

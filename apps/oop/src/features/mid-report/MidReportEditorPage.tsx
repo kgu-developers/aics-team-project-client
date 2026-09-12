@@ -8,7 +8,7 @@ import DocumentEditorPage, {
 } from '~/features/editor/DocumentEditorPage';
 
 import MidReportEngineFields from './MidReportEngineFields';
-import MidReportStructuredFields from './MidReportStructuredFields';
+import MidReportGuiScreens from './MidReportGuiScreens';
 import {
   midReportKeys,
   useMidReportEditLock,
@@ -195,7 +195,7 @@ export default function MidReportEditorPage({
       }) => {
         if (block.key === 'gui-design')
           return (
-            <MidReportStructuredFields
+            <MidReportGuiScreens
               fields={fields}
               isLocked={isLocked}
               key={`${documentId}:${block.key}`}

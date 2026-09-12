@@ -2,10 +2,9 @@ import type { ProposalSectionsResponse } from '@aics/core';
 import { AxiosError, AxiosHeaders } from 'axios';
 import { expect, it } from 'vitest';
 
-import {
-  proposalRequestErrorMessage,
-  proposalSubmitBlocker,
-} from './proposalSubmitGuard';
+import { documentRequestErrorMessage } from '~/features/editor/documentRequestErrorMessage';
+
+import { proposalSubmitBlocker } from './proposalSubmitGuard';
 
 const project = { title: '제목', description: '설명', goal: '목표' };
 function sections(completed: boolean): ProposalSectionsResponse {
@@ -48,7 +47,7 @@ it('채울 것이 없으면 막지 않는다', () => {
 });
 it('서버 원문보다 상태 코드 안내를 먼저 쓴다', () => {
   expect(
-    proposalRequestErrorMessage(
+    documentRequestErrorMessage(
       axios(500, { message: 'Internal Server Error' }),
     ),
   ).toBe(
@@ -57,13 +56,13 @@ it('서버 원문보다 상태 코드 안내를 먼저 쓴다', () => {
 });
 it('알려진 오류 코드는 코드에 맞는 안내를 쓴다', () => {
   expect(
-    proposalRequestErrorMessage(
+    documentRequestErrorMessage(
       axios(409, { code: 'PROJECT_PROPOSAL_COMPLETED' }),
     ),
   ).toBe('이미 제출된 제안서예요. 최신 내용을 다시 조회해 주세요.');
 });
 it('매핑이 없으면 서버 문구를 마지막으로 쓴다', () => {
   expect(
-    proposalRequestErrorMessage(axios(418, { message: '커스텀 오류' })),
+    documentRequestErrorMessage(axios(418, { message: '커스텀 오류' })),
   ).toBe('커스텀 오류');
 });

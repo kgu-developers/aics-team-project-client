@@ -1,8 +1,3 @@
-import type {
-  ProjectProposalResponse,
-  ProposalScreenItem,
-  UpdateProjectProposalInput,
-} from '@aics/core';
 import {
   Button,
   Dialog,
@@ -17,30 +12,55 @@ import {
 import { Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { useAuthStore } from '~/features/auth/authStore';
+import type { DocumentEditorField } from '~/features/editor/documentEditor';
 import { useSubmitProjectImageMutation } from '~/features/editor/queries';
 
-import * as styles from './ProjectProposalFields.css';
+import * as styles from './MidReportStructuredFields.css';
 
-type Props = {
-  disabled: boolean;
-  draft: UpdateProjectProposalInput;
-  project: ProjectProposalResponse;
-  onChange: (draft: UpdateProjectProposalInput) => void;
+export type GuiScreenRow = {
+  id: string;
+  name: string;
+  description: string;
+  imageName?: string;
+  imageFileId?: number;
+  imageUrl?: string;
 };
 type Editing = {
   description: string;
-  imageFileId: number | null;
+  imageFileId?: number;
   index: number | null;
+  name: string;
   preview: string | null;
-  title: string;
 };
-export default function ScreenImageBoard({
-  disabled,
-  draft,
-  project,
-  onChange,
+type Props = {
+  fields: DocumentEditorField[];
+  isLocked: boolean;
+  onFieldsChange: (fields: DocumentEditorField[]) => void;
+};
+const createId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+function readRows(value: string) {
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) ? (parsed as GuiScreenRow[]) : [];
+  } catch {
+    return [];
+  }
+}
+function savedImageUrl(row: GuiScreenRow) {
+  return row.imageUrl && /^(https?:\/\/|\/(?!\/))/.test(row.imageUrl)
+    ? row.imageUrl
+    : null;
+}
+export default function MidReportGuiScreens({
+  fields,
+  isLocked,
+  onFieldsChange,
 }: Props) {
-  const upload = useSubmitProjectImageMutation(String(project.teamId));
+  const teamId = useAuthStore(state => state.currentUser?.teamId ?? '');
+  // The upload endpoint is team scoped and takes a numeric team ID.
+  const canUploadImage = /^[1-9]\d*$/.test(teamId);
+  const upload = useSubmitProjectImageMutation(teamId);
   const [previews, setPreviews] = useState<Record<number, string>>({});
   const [editing, setEditing] = useState<Editing | null>(null);
   const previewsRef = useRef(previews);
@@ -53,15 +73,14 @@ export default function ScreenImageBoard({
     },
     [],
   );
-  const rows = draft.screenConfiguration;
-  const usedFileIds = [
+  const field = fields.find(item => item.key === 'guiScreens');
+  const rows = field ? readRows(field.value) : [];
+  const usedFileIdKey = [
     ...rows.flatMap(row => (row.imageFileId == null ? [] : [row.imageFileId])),
     ...(editing?.imageFileId == null ? [] : [editing.imageFileId]),
-  ];
-  const usedFileIdKey = usedFileIds.join(',');
+  ].join(',');
   useEffect(() => {
     // Cancelled, replaced, and deleted uploads leave their object URL behind.
-    // Drop every preview no longer referenced by a draft row or the open form.
     const used = new Set(usedFileIdKey ? usedFileIdKey.split(',') : []);
     setPreviews(current => {
       const stale = Object.keys(current).filter(id => !used.has(id));
@@ -74,79 +93,92 @@ export default function ScreenImageBoard({
       return next;
     });
   }, [usedFileIdKey]);
-  const imageUrl = (row: ProposalScreenItem) =>
-    (row.imageFileId != null ? previews[row.imageFileId] : undefined) ??
-    project.screenConfiguration.find(
-      saved =>
-        saved.imageFileId != null && saved.imageFileId === row.imageFileId,
-    )?.imageUrl ??
-    null;
+  if (!field) return null;
+  const updateRows = (nextRows: GuiScreenRow[]) =>
+    onFieldsChange(
+      fields.map(item =>
+        item.key === field.key
+          ? { ...item, value: JSON.stringify(nextRows) }
+          : item,
+      ),
+    );
+  const imageOf = (row: GuiScreenRow) =>
+    (row.imageFileId == null ? undefined : previews[row.imageFileId]) ??
+    savedImageUrl(row);
   const closeDialog = () => {
     setEditing(null);
     upload.reset();
   };
   const commit = () => {
     if (!editing) return;
-    const next: ProposalScreenItem = {
+    const next = {
       description: editing.description,
-      imageFileId: editing.imageFileId,
-      title: editing.title,
+      name: editing.name,
+      ...(editing.imageFileId == null
+        ? {}
+        : { imageFileId: editing.imageFileId }),
     };
-    onChange({
-      ...draft,
-      screenConfiguration:
-        editing.index == null
-          ? [...rows, next]
-          : rows.map((row, i) =>
-              i === editing.index ? { ...row, ...next } : row,
-            ),
-    });
+    updateRows(
+      editing.index == null
+        ? [...rows, { id: createId(), ...next }]
+        : rows.map((row, index) =>
+            index === editing.index ? { ...row, ...next } : row,
+          ),
+    );
     closeDialog();
   };
   return (
     <VStack gap={4}>
+      <Text color='secondary'>
+        화면 하나마다 이름과 그 화면에서 제공하는 기능·사용자 행동을 한 세트로
+        작성해요.
+      </Text>
       <ul className={styles.screenList}>
         {rows.map((row, index) => {
-          const url = imageUrl(row);
-          const name = row.title?.trim() || `화면 ${index + 1}`;
+          const url = imageOf(row);
+          const label = row.name.trim() || `화면 ${index + 1}`;
           return (
             <li
               aria-label={`화면 ${index + 1}`}
               className={styles.screenCard}
-              key={`${row.imageFileId ?? 'no-image'}:${index}`}
+              key={row.id}
             >
               {url ? (
-                <img alt={name} className={styles.image} src={url} />
+                <img alt={label} className={styles.imagePreview} src={url} />
               ) : (
                 <Text color='secondary'>등록한 이미지가 없습니다.</Text>
               )}
-              <Text weight='medium'>{name}</Text>
+              <Text weight='medium'>{label}</Text>
               <div className={styles.screenActions}>
                 <Button
-                  isDisabled={disabled}
+                  isDisabled={isLocked}
                   label='편집'
                   onClick={() =>
                     setEditing({
-                      description: row.description ?? '',
-                      imageFileId: row.imageFileId ?? null,
+                      description: row.description,
+                      ...(row.imageFileId == null
+                        ? {}
+                        : { imageFileId: row.imageFileId }),
                       index,
+                      name: row.name,
                       preview: url,
-                      title: row.title ?? '',
                     })
                   }
                   size='sm'
                   variant='secondary'
                 />
                 <Button
-                  isDisabled={disabled}
+                  isDisabled={isLocked || rows.length === 1}
                   label='삭제'
                   onClick={() =>
-                    onChange({
-                      ...draft,
-                      screenConfiguration: rows.filter((_, i) => i !== index),
-                    })
+                    updateRows(rows.filter(item => item.id !== row.id))
                   }
                   size='sm'
+                  tooltip={
+                    rows.length === 1
+                      ? '화면 항목은 최소 한 개가 필요해요.'
+                      : undefined
+                  }
                   variant='secondary'
                 />
               </div>
@@ -157,15 +189,14 @@ export default function ScreenImageBoard({
           <IconButton
             className={styles.screenAddButton}
             icon={<Plus aria-hidden='true' size={20} />}
-            isDisabled={disabled}
+            isDisabled={isLocked}
             label='화면 이미지 추가'
             onClick={() =>
               setEditing({
                 description: '',
-                imageFileId: null,
                 index: null,
+                name: '',
                 preview: null,
-                title: '',
               })
             }
           />
@@ -181,13 +212,13 @@ export default function ScreenImageBoard({
         width={520}
       >
         {editing && (
-          <VStack className={styles.dialogForm} gap={4}>
+          <VStack gap={4}>
             <Heading level={2}>
               {editing.index == null ? '화면 추가' : '화면 편집'}
             </Heading>
             <FileInput
               accept='image/*'
-              isDisabled={disabled || upload.isPending}
+              isDisabled={isLocked || upload.isPending || !canUploadImage}
               label='화면 이미지'
               onChange={selected => {
                 const file = Array.isArray(selected) ? selected[0] : selected;
@@ -208,6 +239,11 @@ export default function ScreenImageBoard({
               value={null}
               width='100%'
             />
+            {!canUploadImage && (
+              <Text color='secondary'>
+                팀 정보를 확인한 뒤에 이미지를 올릴 수 있어요.
+              </Text>
+            )}
             {upload.isPending && (
               <Text role='status'>이미지를 올리는 중이에요.</Text>
             )}
@@ -220,23 +256,23 @@ export default function ScreenImageBoard({
             {editing.preview && (
               <img
                 alt='선택한 화면 이미지'
-                className={styles.image}
+                className={styles.imagePreview}
                 src={editing.preview}
               />
             )}
             <TextInput
-              isDisabled={disabled}
-              label='제목'
-              onChange={title =>
+              isDisabled={isLocked}
+              label='이름'
+              onChange={name =>
                 setEditing(current =>
-                  current ? { ...current, title } : current,
+                  current ? { ...current, name } : current,
                 )
               }
-              value={editing.title}
+              value={editing.name}
               width='100%'
             />
             <TextArea
-              isDisabled={disabled}
+              isDisabled={isLocked}
               label='설명'
               onChange={description =>
                 setEditing(current =>
@@ -248,9 +284,7 @@ export default function ScreenImageBoard({
             />
             <div className={styles.screenActions}>
               <Button
-                isDisabled={
-                  disabled || upload.isPending || editing.imageFileId == null
-                }
+                isDisabled={isLocked || upload.isPending}
                 label={editing.index == null ? '추가' : '적용'}
                 onClick={commit}
               />

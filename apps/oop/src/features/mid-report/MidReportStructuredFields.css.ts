@@ -13,3 +13,42 @@ export const imagePreview = style({
   maxHeight: 400,
   objectFit: 'contain',
 });
+
+export const screenList = style({
+  display: 'flex',
+  gap: 'var(--spacing-4)',
+  listStyle: 'none',
+  margin: 0,
+  overflowX: 'auto',
+  padding: 0,
+});
+export const screenCard = style({
+  border: '1px solid var(--color-border)',
+  borderRadius: 'var(--radius-md)',
+  display: 'grid',
+  flex: '0 0 240px',
+  gap: 'var(--spacing-3)',
+  justifyItems: 'start',
+  padding: 'var(--spacing-4)',
+});
+export const screenActions = style({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 'var(--spacing-2)',
+});
+export const screenAddCell = style({
+  alignItems: 'center',
+  display: 'flex',
+  flex: '0 0 auto',
+  justifyContent: 'center',
+  padding: 'var(--spacing-2)',
+});
+export const screenAddButton = style({
+  borderRadius: '999px',
+});
+export const tableWrapper = style({
+  height: 'auto',
+  maxWidth: '100%',
+  minWidth: 0,
+  width: '100%',
+});
