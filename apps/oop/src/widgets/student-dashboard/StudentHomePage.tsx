@@ -188,30 +188,40 @@ export default function StudentHomePage() {
         ),
         guide: '대면 피드백과 반영 내용을 기록해 주세요.',
       };
+      // A submitted document is read only on the server, so the home must not
+      // offer a writing or submitting action for it any more.
+      const submittedReport =
+        midReport.isSuccess && midReport.data.status === 'SUBMITTED';
       const readyToSubmit =
         midReport.isSuccess &&
         canSubmitMidReportDocument(midReport.data, currentUserName);
-      summary.rows = [
-        readyToSubmit
-          ? {
-              id: 'mid-report-submit',
-              label: '중간보고서 제출',
-              value: '모든 작성 영역 완료',
-              tone: 'primary',
-              actionLabel: '제출하기',
-            }
-          : {
-              id: 'mid-report-writing',
-              label: '중간보고서 작성',
-              value:
-                midReport.isSuccess && midReport.data.status === 'SUBMITTED'
-                  ? '제출 완료'
-                  : '작성 영역을 차례로 완료해 주세요.',
-              tone: 'primary',
-              actionLabel: '작성하기',
-              actionTo: editorSectionTo('mid-review', 'topic'),
+      summary.rows = submittedReport
+        ? [
+            {
+              id: 'mid-report-submitted',
+              label: '중간보고서',
+              value: '제출 완료',
+              tone: 'muted',
             },
-      ];
+          ]
+        : [
+            readyToSubmit
+              ? {
+                  id: 'mid-report-submit',
+                  label: '중간보고서 제출',
+                  value: '모든 작성 영역 완료',
+                  tone: 'primary',
+                  actionLabel: '제출하기',
+                }
+              : {
+                  id: 'mid-report-writing',
+                  label: '중간보고서 작성',
+                  value: '작성 영역을 차례로 완료해 주세요.',
+                  tone: 'primary',
+                  actionLabel: '작성하기',
+                  actionTo: editorSectionTo('mid-review', 'topic'),
+                },
+          ];
       return summary;
     }
     if (
@@ -287,29 +297,39 @@ export default function StudentHomePage() {
           ),
           guide: '피드백을 반영한 내용을 답변으로 남겨 주세요.',
         };
-        // The leader submits once every area is complete; everyone else keeps writing.
+        // The leader submits once every area is complete; everyone else keeps
+        // writing. A submitted proposal is read only, so it offers no action.
         const readyToSubmit =
           proposalSections.isSuccess && proposalSections.data.allCompleted;
-        summary.rows = [
-          readyToSubmit && home.isTeamLeader
-            ? {
-                id: 'proposal-submit',
-                label: '제안서 제출',
-                value: '모든 작성 영역 완료',
-                tone: 'primary',
-                actionLabel: '제출하기',
-              }
-            : {
-                id: 'proposal-writing',
-                label: '제안서 작성',
-                value: readyToSubmit
-                  ? '팀장이 제출할 수 있어요.'
-                  : project.title?.trim() || '프로젝트 내용 확인',
-                tone: 'primary',
-                actionLabel: '작성하기',
-                actionTo: editorSectionTo('proposal', 'team-info'),
+        summary.rows = project.proposalCompletedAt
+          ? [
+              {
+                id: 'proposal-submitted',
+                label: '제안서',
+                value: '제출 완료',
+                tone: 'muted',
               },
-        ];
+            ]
+          : [
+              readyToSubmit && home.isTeamLeader
+                ? {
+                    id: 'proposal-submit',
+                    label: '제안서 제출',
+                    value: '모든 작성 영역 완료',
+                    tone: 'primary',
+                    actionLabel: '제출하기',
+                  }
+                : {
+                    id: 'proposal-writing',
+                    label: '제안서 작성',
+                    value: readyToSubmit
+                      ? '팀장이 제출할 수 있어요.'
+                      : project.title?.trim() || '프로젝트 내용 확인',
+                    tone: 'primary',
+                    actionLabel: '작성하기',
+                    actionTo: editorSectionTo('proposal', 'team-info'),
+                  },
+            ];
       }
 
       if (project) return summary;

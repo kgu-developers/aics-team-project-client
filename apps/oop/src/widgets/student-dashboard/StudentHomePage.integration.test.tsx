@@ -1005,6 +1005,33 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('제출한 제안서는 작성·제출 버튼을 남기지 않는다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+        HttpResponse.json({
+          ...teamProposalFixture(),
+          proposalCompletedAt: '2026-09-12T10:00:00',
+        }),
+      ),
+      proposalSectionsHandler([
+        { section: 'TOPIC', completed: true },
+        { section: 'DATA', completed: true },
+        { section: 'SCREEN', completed: true },
+        { section: 'TEAM_OPERATION', completed: true },
+      ]),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    const card = (await screen.findByText('제출 완료')).closest('article');
+    if (!card) throw new Error('제안서 마일스톤 카드를 찾을 수 없습니다.');
+    expect(
+      within(card).queryByRole('button', { name: '작성하기' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(card).queryByRole('button', { name: '제출하기' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('작성 영역 상태 조회가 실패하면 실패 문구를 보여준다', async () => {
     server.use(
       http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
@@ -1198,6 +1225,33 @@ describe('중간보고서 작성 영역 상태와 팀장 제출', () => {
       ),
     ).toBeInTheDocument();
     expect(submit).not.toHaveBeenCalled();
+  });
+
+  it('제출한 뒤에는 작성·제출 버튼을 남기지 않는다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+        HttpResponse.json(
+          midReportFixture(
+            [
+              { key: 'topic', status: 'COMPLETED' },
+              { key: 'gui-design', status: 'COMPLETED' },
+              { key: 'engine-design', status: 'COMPLETED' },
+              { key: 'project-plan', status: 'COMPLETED' },
+            ],
+            'SUBMITTED',
+          ),
+        ),
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    expect(await screen.findAllByText('제출 완료')).not.toHaveLength(0);
+    expect(
+      screen.queryByRole('button', { name: '제출하기' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '작성하기' }),
+    ).not.toBeInTheDocument();
   });
 
   it('팀장이 아니면 제출하기를 보여주지 않는다', async () => {
