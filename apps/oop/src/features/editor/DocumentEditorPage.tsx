@@ -156,10 +156,12 @@ export default function DocumentEditorPage<
   const isSubmitLocked = Boolean(isLocked || foreignDocumentLock);
   const getSectionStatus = (key: string) => {
     const item = data!.blocks.find(blockItem => blockItem.key === key);
+    // A response can carry fewer blocks than the editor declares.
+    if (!item) return { label: '확인 중', variant: 'neutral' } as const;
     const completed = completion
-      ? completion.isBlockCompleted(item!)
+      ? completion.isBlockCompleted(item)
       : Boolean(
-          item?.fields.length && item.fields.every(field => field.value.trim()),
+          item.fields.length && item.fields.every(field => field.value.trim()),
         );
     return {
       label: completed ? '작성 완료' : '작성 중',
@@ -333,7 +335,7 @@ export default function DocumentEditorPage<
             </div>
           </form>
         ) : null)}
-      {completion ? (
+      {completion && !isSubmitted ? (
         <DocumentActionBar
           error={completion.completeError ?? completion.submit?.submitError}
         >

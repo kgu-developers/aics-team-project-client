@@ -163,9 +163,20 @@ export const midReportHandlers = [
             400,
           );
         }
+        // 저장 응답은 mapMidReport를 통과해야 하므로 같은 규칙으로 거절한다.
         if (
           !Array.isArray(rows) ||
-          rows.some(row => !row || typeof row !== 'object')
+          rows.some(
+            row =>
+              !row ||
+              typeof row !== 'object' ||
+              ['id', 'name', 'description'].some(
+                key =>
+                  typeof (row as Record<string, unknown>)[key] !== 'string',
+              ),
+          ) ||
+          new Set(rows.map(row => (row as { id?: unknown }).id)).size !==
+            rows.length
         )
           return error(
             'INVALID_MID_REPORT_FIELDS',

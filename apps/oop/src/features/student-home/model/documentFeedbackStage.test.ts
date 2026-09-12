@@ -66,3 +66,24 @@ it('제출 이전 메시지는 피드백으로 보지 않는다', () => {
     }),
   ).toBe('awaiting-feedback');
 });
+it('팀원 목록이나 메시지를 확인하기 전에는 판정하지 않는다', () => {
+  const submittedAt = '2026-09-10 10:00';
+  expect(proposalFeedbackStage({ submittedAt, messages: [] })).toBe('unknown');
+  expect(
+    midReportFeedbackStage({
+      submittedAt,
+      messages: [],
+      teamMemberIds,
+      isMessagesReady: false,
+    }),
+  ).toBe('unknown');
+});
+it('제출 시각을 읽을 수 없으면 피드백으로 보지 않는다', () => {
+  expect(
+    proposalFeedbackStage({
+      submittedAt: '언젠가',
+      messages: [message('professor-1', '2026-09-11 09:00')],
+      teamMemberIds,
+    }),
+  ).toBe('awaiting-feedback');
+});

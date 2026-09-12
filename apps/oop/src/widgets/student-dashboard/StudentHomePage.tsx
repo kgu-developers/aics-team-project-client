@@ -207,6 +207,7 @@ export default function StudentHomePage() {
         submittedAt: midReport.data?.submittedAt,
         messages: midReportMessages.data,
         teamMemberIds: home.teamMemberIds,
+        isMessagesReady: midReportMessages.isSuccess,
       });
       summary.rows = submittedReport
         ? [
@@ -224,7 +225,12 @@ export default function StudentHomePage() {
               : {
                   id: 'mid-report-submitted',
                   label: '중간보고서',
-                  value: '제출 완료 · 대면 피드백 기록을 남겨 주세요.',
+                  value:
+                    midReportStage === 'unknown'
+                      ? midReportMessages.isError
+                        ? '제출 완료 · 피드백 상태를 불러오지 못했어요.'
+                        : '제출 완료 · 피드백 상태를 확인하는 중이에요.'
+                      : '제출 완료 · 대면 피드백 기록을 남겨 주세요.',
                   tone: 'muted',
                 },
           ]
@@ -329,6 +335,7 @@ export default function StudentHomePage() {
           submittedAt: project.proposalCompletedAt,
           messages: proposalMessages.data,
           teamMemberIds: home.teamMemberIds,
+          isMessagesReady: proposalMessages.isSuccess,
         });
         summary.rows = project.proposalCompletedAt
           ? [
@@ -346,7 +353,12 @@ export default function StudentHomePage() {
                 : {
                     id: 'proposal-submitted',
                     label: '제안서',
-                    value: '제출 완료 · 교수 피드백을 기다리는 중이에요.',
+                    value:
+                      proposalStage === 'unknown'
+                        ? proposalMessages.isError
+                          ? '제출 완료 · 피드백 상태를 불러오지 못했어요.'
+                          : '제출 완료 · 피드백 상태를 확인하는 중이에요.'
+                        : '제출 완료 · 교수 피드백을 기다리는 중이에요.',
                     tone: 'muted',
                   },
             ]

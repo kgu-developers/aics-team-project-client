@@ -87,9 +87,9 @@ export function useLiveStudentHomeQuery() {
       state: stateFor(homeQueryState(project, missingTeam)),
     },
     teamName: kickoff.data?.name,
-    teamMemberIds: (kickoff.data?.members ?? []).map(
-      member => member.studentNumber,
-    ),
+    // undefined while the kickoff query is pending or failed: an empty array
+    // would classify every message sender incorrectly.
+    teamMemberIds: kickoff.data?.members.map(member => member.studentNumber),
     isTeamLeader: Boolean(
       user?.studentNumber &&
       kickoff.data?.members.some(
