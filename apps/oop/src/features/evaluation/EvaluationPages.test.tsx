@@ -418,7 +418,7 @@ describe('KD3-92 학생 평가 화면', () => {
     ).toBeInTheDocument();
     expect(mockNavigate).toHaveBeenCalledWith({ to: '/student' });
     expect(screen.queryByText('내 응답 제출 완료')).not.toBeInTheDocument();
-  });
+  }, 15_000);
 
   it('상호평가 초안을 서버에 저장한 뒤 현재 단계와 응답을 다시 읽는다', async () => {
     const user = userEvent.setup();

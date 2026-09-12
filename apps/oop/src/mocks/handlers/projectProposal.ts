@@ -47,7 +47,11 @@ export function createProjectProposalHandlers(
     const raw = request.clone();
     try {
       const file = (await request.formData()).get('file');
-      return file instanceof File ? { type: file.type } : null;
+      // jsdom's File is from a different realm than the Node/MSW global File.
+      // Validate the multipart value by its contract instead of `instanceof`.
+      return file && typeof file !== 'string' && typeof file.type === 'string'
+        ? { type: file.type }
+        : null;
     } catch {
       const match =
         /name="file";\s*filename="[^"]*"\r?\nContent-Type:\s*([^\r\n]+)/i.exec(

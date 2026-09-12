@@ -30,9 +30,10 @@ export {
   type AdminSubmissionArtifactsDownload,
 } from './downloadAdminSubmissionArtifacts';
 export {
-  fetchAdminPresentationEvaluations,
-  type AdminPresentationEvaluationCriterionDto,
-  type AdminPresentationEvaluationTeamDto,
+  fetchLegacyAdminPresentationEvaluations,
+  type LegacyAdminPresentationEvaluationCriterionDto,
+  type LegacyAdminPresentationEvaluationTeamDto,
+  type LegacyAdminPresentationEvaluationsResponse,
   type AdminPresentationEvaluationsResponse,
 } from './fetchAdminPresentationEvaluations';
 export {

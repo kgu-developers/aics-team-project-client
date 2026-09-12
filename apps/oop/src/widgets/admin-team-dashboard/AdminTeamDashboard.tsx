@@ -14,7 +14,10 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { AdminTeamMeetingRecordList } from '~/features/admin-meeting/components';
 import { useAdminMeetingRecordsQuery } from '~/features/admin-meeting/queries';
-import { isPresentationSubmissionMilestone } from '~/features/admin-milestone-review/model';
+import {
+  isPresentationEvaluationMilestone,
+  isPresentationSubmissionMilestone,
+} from '~/features/admin-milestone-review/model';
 import {
   useAdminSectionMilestonesQuery,
   useAdminSubmissionVersionDetailsQueries,
@@ -28,6 +31,7 @@ import {
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminTeamDashboard.css';
+import AdminTeamEvaluationTables from './AdminTeamEvaluationTables';
 import AdminTeamMilestoneProgress from './AdminTeamMilestoneProgress';
 
 type TeamDashboardErrorContent = {
@@ -107,8 +111,10 @@ export default function AdminTeamDashboard() {
   const sectionMilestones = [...(sectionMilestonesQuery.data?.content ?? [])]
     .filter(
       milestone =>
-        milestone.type !== 'PRESENTATION' ||
-        isPresentationSubmissionMilestone(milestone),
+        milestone.type !== 'PEER_EVALUATION' &&
+        (milestone.type !== 'PRESENTATION' ||
+          (isPresentationSubmissionMilestone(milestone) &&
+            !isPresentationEvaluationMilestone(milestone))),
     )
     .sort((left, right) => left.weekNumber - right.weekNumber);
   const milestoneSubmissionQueries = useAdminTeamMilestoneSubmissionsQueries(
@@ -118,7 +124,7 @@ export default function AdminTeamDashboard() {
   const milestoneSubmissions = sectionMilestones.map((milestone, index) => {
     const query = milestoneSubmissionQueries[index];
     return query?.data?.submissions.find(
-      submission => submission.teamId === team?.id,
+      submission => String(submission.teamId) === String(team?.id),
     );
   });
   const versionTargets = milestoneSubmissions.flatMap((submission, index) =>
@@ -332,8 +338,10 @@ export default function AdminTeamDashboard() {
               ? 'ready'
               : 'pending'
         }
-        sectionId={team.sectionId}
+        sectionId={dashboardSection?.id ?? team.sectionId}
       />
+
+      <AdminTeamEvaluationTables sectionId={team.sectionId} teamId={team.id} />
 
       <AdminTeamMeetingRecordList
         isError={meetingRecordsQuery.isError}

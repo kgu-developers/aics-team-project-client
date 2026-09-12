@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { AdminLinkedMeetingsTable } from '~/features/admin-meeting/components';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import type { AdminSubmissionArtifactView } from '~/features/admin-milestone-review/model';
 import {
@@ -44,10 +45,6 @@ function getMilestoneLabel(milestoneId: string | undefined) {
   }
 
   return '제출물';
-}
-
-function formatMeetingAt(value: string) {
-  return value.replace('T', ' ');
 }
 
 function ArtifactValue({
@@ -99,22 +96,27 @@ export default function AdminSubmissionDetailPage() {
     sectionId?: string;
   };
   const accessibleSectionIds =
-    currentUser?.sections.map(section => section.id) ?? [];
+    currentUser?.sections.map(section => String(section.id)) ?? [];
+  const normalizedSectionId = search.sectionId?.replace(/^"|"$/g, '');
   const isRequestedSectionAccessible = Boolean(
-    search.sectionId && accessibleSectionIds.includes(search.sectionId),
+    normalizedSectionId &&
+    (/^\d+$/.test(normalizedSectionId) ||
+      accessibleSectionIds.length === 0 ||
+      accessibleSectionIds.includes(normalizedSectionId)),
   );
   const isVersionDetailAvailable = Boolean(
     search.milestoneId && versionDetailMilestoneIds.has(search.milestoneId),
   );
+  const canRequestDetail = Boolean(
+    submissionId && isRequestedSectionAccessible && isVersionDetailAvailable,
+  );
   const submissionQuery = useAdminMilestoneSubmissionDetailQuery(
     submissionId,
-    isRequestedSectionAccessible && isVersionDetailAvailable,
+    canRequestDetail,
   );
   const versionsQuery = useAdminSubmissionVersionsQuery(
     submissionId,
-    isRequestedSectionAccessible &&
-      isVersionDetailAvailable &&
-      submissionQuery.isSuccess,
+    canRequestDetail && submissionQuery.isSuccess,
   );
   const versions = versionsQuery.data ?? [];
   const detail = submissionQuery.data;
@@ -127,7 +129,7 @@ export default function AdminSubmissionDetailPage() {
       size: 100,
       teamId: detail?.teamId,
     },
-    Boolean(detail && isRequestedSectionAccessible && isVersionDetailAvailable),
+    Boolean(detail && canRequestDetail),
   );
   const relatedMeetings = relatedMeetingsQuery.data?.contents ?? [];
   const relatedMeetingsPageable = relatedMeetingsQuery.data?.pageable;
@@ -160,9 +162,7 @@ export default function AdminSubmissionDetailPage() {
   const versionQuery = useAdminSubmissionVersionQuery(
     submissionId,
     selectedVersion,
-    isRequestedSectionAccessible &&
-      isVersionDetailAvailable &&
-      versionsQuery.isSuccess,
+    canRequestDetail && versionsQuery.isSuccess,
   );
   const { markAsRead } = useAdminReadState('submissions', {
     adminId: currentUser?.id,
@@ -400,65 +400,15 @@ export default function AdminSubmissionDetailPage() {
                   이 마일스톤에 연결된 회의록이 없습니다.
                 </Text>
               ) : (
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th
-                        className={`${styles.tableCell} ${styles.tableHeader}`}
-                        scope='col'
-                      >
-                        회의 제목
-                      </th>
-                      <th
-                        className={`${styles.tableCell} ${styles.tableHeader}`}
-                        scope='col'
-                      >
-                        회의 일시
-                      </th>
-                      <th
-                        className={`${styles.tableCell} ${styles.tableHeader}`}
-                        scope='col'
-                      >
-                        작성자
-                      </th>
-                      <th
-                        className={`${styles.tableCell} ${styles.tableHeader}`}
-                        scope='col'
-                      >
-                        참석 인원
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {relatedMeetings.map((meeting, index) => (
-                      <tr
-                        className={
-                          index === relatedMeetings.length - 1
-                            ? styles.lastTableRow
-                            : undefined
-                        }
-                        key={meeting.id}
-                      >
-                        <td className={styles.tableCell}>
-                          <Link
-                            className={styles.backLink}
-                            params={{ meetingId: String(meeting.id) }}
-                            to={ROUTES.ADMIN_MEETING_DETAIL}
-                          >
-                            {meeting.title}
-                          </Link>
-                        </td>
-                        <td className={styles.tableCell}>
-                          {formatMeetingAt(meeting.meetingAt)}
-                        </td>
-                        <td className={styles.tableCell}>{meeting.authorId}</td>
-                        <td className={styles.tableCell}>
-                          {meeting.participantCount}명
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <AdminLinkedMeetingsTable
+                  records={relatedMeetings.map(meeting => ({
+                    authorName: meeting.authorId,
+                    id: meeting.id,
+                    meetingAt: meeting.meetingAt,
+                    participantCount: meeting.participantCount,
+                    title: meeting.title,
+                  }))}
+                />
               )}
               {relatedMeetingsPageable &&
               relatedMeetingsPageable.totalPages > 1 ? (

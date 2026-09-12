@@ -1,6 +1,5 @@
 import {
   AdminMilestoneType,
-  AdminPresentationEvaluationTeamDto,
   type AdminSectionMilestoneDto,
 } from '@aics/api-client';
 import {
@@ -14,7 +13,7 @@ import {
   Table,
   Text,
 } from '@aics/design-system';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { type KeyboardEvent, useMemo, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -22,6 +21,10 @@ import { ROUTES } from '~/app/constants/routes';
 import { cx } from '~/shared/lib/cx';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
+import {
+  useAdminPeerEvaluationsQuery,
+  useAdminPresentationEvaluationsQuery,
+} from '~/features/admin-evaluation/queries';
 import { AdminMilestoneSubmissionCard } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionCard';
 import {
   AdminMilestoneSubmissionBulkDownloadAction,
@@ -34,13 +37,12 @@ import {
   type AdminSubmissionVersionDetailView,
 } from '~/features/admin-milestone-review/model';
 import {
+  useAdminPresentationEvaluationsQuery as useAdminPresentationOrdersQuery,
   useAdminMilestoneSubmissionsQuery,
-  useAdminPresentationEvaluationsQuery,
   useAdminSectionMilestonesQuery,
   useAdminSubmissionVersionDetailsQueries,
   useDownloadAdminSubmissionArtifactsMutation,
 } from '~/features/admin-milestone-review/queries';
-import * as readStateStyles from '~/features/admin-read-state/adminReadState.css';
 import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -273,14 +275,36 @@ export default function AdminSubmissionsPage() {
   const readState = useAdminReadState('submissions', {
     adminId: currentUser?.id,
   });
+  const presentationEvaluationMilestone = findMilestoneForTab(
+    sectionMilestonesQuery.data?.content,
+    'presentation-evaluate',
+  );
   const presentationEvaluationsQuery = useAdminPresentationEvaluationsQuery(
     activeMilestoneId === 'presentation-evaluate' && isAccessibleSection
       ? effectiveSectionId
       : undefined,
+    presentationEvaluationMilestone
+      ? { milestoneId: presentationEvaluationMilestone.id }
+      : {},
   );
-  const presentationEvaluationMilestone = findMilestoneForTab(
-    sectionMilestonesQuery.data?.content,
-    'presentation-evaluate',
+  const presentationOrdersQuery = useAdminPresentationOrdersQuery(
+    activeMilestoneId === 'presentation-evaluate' && isAccessibleSection
+      ? effectiveSectionId
+      : undefined,
+  );
+  const peerEvaluationsQuery = useAdminPeerEvaluationsQuery(
+    activeMilestoneId === 'peer-review' && isAccessibleSection
+      ? effectiveSectionId
+      : undefined,
+  );
+  const presentationOrderTeams = useMemo(
+    () =>
+      (presentationOrdersQuery.data?.teams ?? []).map(team => ({
+        presentationOrder: team.presentationOrder,
+        teamId: team.teamId,
+        teamName: team.teamName,
+      })),
+    [presentationOrdersQuery.data?.teams],
   );
   const isPresentationMilestoneLoading = sectionMilestonesQuery.isPending;
   const isPresentationMilestoneError = sectionMilestonesQuery.isError;
@@ -402,7 +426,13 @@ export default function AdminSubmissionsPage() {
                       isDisabled={
                         isPresentationMilestoneLoading ||
                         isPresentationMilestoneError ||
-                        isPresentationMilestoneMissing
+                        isPresentationMilestoneMissing ||
+                        presentationEvaluationsQuery.isPending ||
+                        presentationEvaluationsQuery.isError ||
+                        !presentationEvaluationsQuery.data ||
+                        presentationOrdersQuery.isPending ||
+                        presentationOrdersQuery.isError ||
+                        !presentationOrdersQuery.data
                       }
                       label='순서 배정 및 평가'
                       onClick={() => setIsEvaluationSettingsOpen(true)}
@@ -413,7 +443,15 @@ export default function AdminSubmissionsPage() {
                             ? '발표 평가 마일스톤을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
                             : isPresentationMilestoneMissing
                               ? '발표 평가 마일스톤을 먼저 설정해 주세요.'
-                              : undefined
+                              : presentationEvaluationsQuery.isPending
+                                ? '발표 평가 결과를 불러오는 중입니다.'
+                                : presentationEvaluationsQuery.isError
+                                  ? '발표 평가 결과를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+                                  : presentationOrdersQuery.isPending
+                                    ? '발표 순서를 불러오는 중입니다.'
+                                    : presentationOrdersQuery.isError
+                                      ? '발표 순서를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+                                      : undefined
                       }
                     />
                     <Button
@@ -441,45 +479,44 @@ export default function AdminSubmissionsPage() {
                             align: 'start',
                             header: '팀',
                             key: 'teamName',
-                            renderCell: team => {
-                              const unread = Boolean(
-                                team.submissionId &&
-                                !readState.isRead(
-                                  effectiveSectionId!,
-                                  team.submissionId,
-                                ),
-                              );
-                              const label = team.teamName;
-                              return (
-                                <span>
-                                  {unread ? (
-                                    <span
-                                      aria-label='읽지 않음'
-                                      className={readStateStyles.unreadDot}
-                                      role='img'
-                                    />
-                                  ) : null}
-                                  {label}
-                                </span>
-                              );
-                            },
+                            renderCell: team => (
+                              <Link
+                                to={ROUTES.ADMIN_EVALUATION_DETAIL}
+                                params={{
+                                  evaluationType: 'presentation',
+                                  teamId: String(team.teamId),
+                                }}
+                                search={{
+                                  milestoneId:
+                                    presentationEvaluationsQuery.data
+                                      .milestoneId,
+                                  sectionId: effectiveSectionId,
+                                }}
+                              >
+                                {team.teamName}
+                              </Link>
+                            ),
                             width: proportional(1, { minWidth: 128 }),
                           },
                           {
                             align: 'start',
                             header: '주제',
-                            key: 'projectTopic',
-                            renderCell: team => team.projectTopic ?? '-',
+                            key: 'projectTitle',
+                            renderCell: team => team.projectTitle ?? '-',
                             width: proportional(2, { minWidth: 200 }),
                           },
                           ...presentationEvaluationsQuery.data.criteria.map(
                             criterion => ({
                               align: 'center' as const,
-                              header: criterion.label,
-                              key: criterion.id,
+                              header: `${criterion.title} (${criterion.maxScore})`,
+                              key: String(criterion.criterionId),
                               renderCell: (
-                                team: AdminPresentationEvaluationTeamDto,
-                              ) => team.criteria[criterion.id] ?? '-',
+                                team: (typeof presentationEvaluationsQuery.data.teams)[number],
+                              ) =>
+                                team.scores.find(
+                                  (score: (typeof team.scores)[number]) =>
+                                    score.criterionId === criterion.criterionId,
+                                )?.score ?? '-',
                               width: proportional(1, { minWidth: 116 }),
                             }),
                           ),
@@ -487,21 +524,14 @@ export default function AdminSubmissionsPage() {
                             align: 'center',
                             header: '합계',
                             key: 'total',
-                            renderCell: team => {
-                              const scores =
-                                presentationEvaluationsQuery.data.criteria.map(
-                                  criterion => team.criteria[criterion.id],
-                                );
-                              const submittedScores = scores.filter(
-                                (score): score is number => score !== null,
-                              );
-                              return submittedScores.length === scores.length
-                                ? submittedScores.reduce(
-                                    (sum, score) => sum + score,
-                                    0,
-                                  )
-                                : '-';
-                            },
+                            renderCell: team => team.totalScore ?? '-',
+                            width: proportional(0.7, { minWidth: 72 }),
+                          },
+                          {
+                            align: 'center',
+                            header: '평가 수',
+                            key: 'evaluationCount',
+                            renderCell: team => `${team.evaluationCount}건`,
                             width: proportional(0.7, { minWidth: 72 }),
                           },
                         ]}
@@ -517,24 +547,109 @@ export default function AdminSubmissionsPage() {
                         milestoneId={String(presentationEvaluationMilestone.id)}
                         sectionId={effectiveSectionId}
                         onClose={() => setIsEvaluationSettingsOpen(false)}
-                        teams={presentationEvaluationsQuery.data.teams}
+                        teams={presentationOrderTeams}
                       />
                     ) : null}
                   </>
                 ) : null}
               </>
             )
+          ) : activeMilestoneId === 'peer-review' ? (
+            !isAccessibleSection ? (
+              <EmptyState
+                description='담당 분반만 상호평가 결과를 조회할 수 있습니다.'
+                title='접근할 수 없는 분반입니다.'
+              />
+            ) : peerEvaluationsQuery.isPending ? (
+              <Text aria-live='polite' role='status'>
+                상호평가 결과를 불러오는 중입니다.
+              </Text>
+            ) : peerEvaluationsQuery.isError ? (
+              <EmptyState
+                description='잠시 후 다시 시도해 주세요.'
+                title='상호평가 결과를 불러오지 못했습니다.'
+              />
+            ) : peerEvaluationsQuery.data ? (
+              <>
+                <div className={styles.evaluationHeader}>
+                  <div>
+                    <Heading level={2}>상호평가 목록</Heading>
+                    <Text>
+                      {peerEvaluationsQuery.data.formId
+                        ? `마감 ${peerEvaluationsQuery.data.closesAt ? formatSeoulDateTime(peerEvaluationsQuery.data.closesAt) : '-'}`
+                        : '설정된 상호평가 양식이 없습니다.'}
+                    </Text>
+                  </div>
+                </div>
+                {peerEvaluationsQuery.data.teams.length === 0 ? (
+                  <EmptyState
+                    description='상호평가 양식 또는 팀 구성을 확인해 주세요.'
+                    title='표시할 상호평가 결과가 없습니다.'
+                  />
+                ) : (
+                  <Card>
+                    <Table
+                      columns={[
+                        {
+                          align: 'start',
+                          header: '팀',
+                          key: 'teamName',
+                          renderCell: team => (
+                            <Link
+                              to={ROUTES.ADMIN_EVALUATION_DETAIL}
+                              params={{
+                                evaluationType: 'peer',
+                                teamId: String(team.teamId),
+                              }}
+                              search={{
+                                formId:
+                                  peerEvaluationsQuery.data.formId ?? undefined,
+                                sectionId: effectiveSectionId,
+                              }}
+                            >
+                              {team.teamName}
+                            </Link>
+                          ),
+                          width: proportional(1.3, { minWidth: 160 }),
+                        },
+                        {
+                          align: 'center',
+                          header: '제출 현황',
+                          key: 'submitted',
+                          renderCell: team =>
+                            `${team.submittedCount}/${team.totalMemberCount}`,
+                          width: proportional(0.9, { minWidth: 112 }),
+                        },
+                        {
+                          align: 'center',
+                          header: '최근 제출',
+                          key: 'lastSubmittedAt',
+                          renderCell: team =>
+                            team.lastSubmittedAt
+                              ? formatSeoulDateTime(team.lastSubmittedAt)
+                              : '-',
+                          width: proportional(1.3, { minWidth: 148 }),
+                        },
+                        {
+                          align: 'center',
+                          header: '회의록',
+                          key: 'meetingRecordCount',
+                          renderCell: team => `${team.meetingRecordCount}건`,
+                          width: proportional(0.7, { minWidth: 84 }),
+                        },
+                      ]}
+                      data={peerEvaluationsQuery.data.teams}
+                      dividers='rows'
+                      verticalAlign='middle'
+                    />
+                  </Card>
+                )}
+              </>
+            ) : null
           ) : activeTab.isListAvailable ? (
             <>
               <div className={styles.evaluationHeader}>
                 <Heading level={2}>{activeTab.label} 목록</Heading>
-                {activeMilestoneId === 'peer-review' ? (
-                  <Button
-                    isDisabled
-                    label='엑셀 다운로드'
-                    tooltip='백엔드 다운로드 API 연동 후 제공 예정입니다.'
-                  />
-                ) : null}
               </div>
               {accessibleSectionIds.length === 0 ? (
                 <EmptyState
