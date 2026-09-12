@@ -155,11 +155,14 @@ function PresentationViewer({
             )}
           </div>
           {pdf ? (
-            <PdfPreview
-              onReload={onReloadMaterials}
-              title={pdf.label}
-              url={pdf.href}
-            />
+            <div className={styles.section}>
+              <h4 className={styles.previewTitle}>{pdf.label}</h4>
+              <PdfPreview
+                onReload={onReloadMaterials}
+                title={pdf.label}
+                url={pdf.href}
+              />
+            </div>
           ) : null}
         </article>
       </Card>

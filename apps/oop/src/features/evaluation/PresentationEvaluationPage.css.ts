@@ -239,3 +239,9 @@ export const helper = style({
   fontSize: 14,
   margin: 0,
 });
+export const previewTitle = style({
+  color: tokens.color.text.secondary,
+  fontSize: 14,
+  fontWeight: 600,
+  margin: 0,
+});
