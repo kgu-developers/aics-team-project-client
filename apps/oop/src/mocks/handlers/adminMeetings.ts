@@ -28,6 +28,25 @@ function getAdminMeetingRecordId(
   return Number(match[1]);
 }
 
+function isAccessibleRecordSection(
+  record: (typeof adminMeetingRecordsFixture)[number],
+  accessibleSectionIds: string[],
+) {
+  return (
+    accessibleSectionIds.includes(record.sectionId) ||
+    accessibleSectionIds.includes(String(record.apiSectionId))
+  );
+}
+
+function matchesRequestedSection(
+  record: (typeof adminMeetingRecordsFixture)[number],
+  sectionId: string,
+) {
+  return (
+    record.sectionId === sectionId || String(record.apiSectionId) === sectionId
+  );
+}
+
 export const adminMeetingHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`,
@@ -48,10 +67,8 @@ export const adminMeetingHandlers = [
 
       return HttpResponse.json({
         records: adminMeetingRecordsFixture
-          .filter(
-            record =>
-              accessibleSectionIds.includes(record.sectionId) ||
-              accessibleSectionIds.includes(String(record.apiSectionId)),
+          .filter(record =>
+            isAccessibleRecordSection(record, accessibleSectionIds),
           )
           .filter(
             record =>
@@ -100,10 +117,8 @@ export const adminMeetingHandlers = [
         100,
       );
       const records = adminMeetingRecordsFixture
-        .filter(
-          record =>
-            accessibleSectionIds.includes(record.sectionId) ||
-            accessibleSectionIds.includes(String(record.apiSectionId)),
+        .filter(record =>
+          isAccessibleRecordSection(record, accessibleSectionIds),
         )
         .filter(
           record =>
@@ -162,7 +177,7 @@ export const adminMeetingHandlers = [
         );
       }
 
-      if (!record || !accessibleSectionIds.includes(record.sectionId)) {
+      if (!record || !isAccessibleRecordSection(record, accessibleSectionIds)) {
         return HttpResponse.json(
           { code: 'MEETING_NOT_FOUND', message: '회의록을 찾을 수 없습니다.' },
           { status: 404 },
@@ -218,7 +233,15 @@ export const adminMeetingHandlers = [
         );
       }
 
-      if (!accessibleSectionIds.includes(sectionId)) {
+      const requestedSectionIsAccessible =
+        accessibleSectionIds.includes(sectionId) ||
+        adminMeetingRecordsFixture.some(
+          record =>
+            matchesRequestedSection(record, sectionId) &&
+            isAccessibleRecordSection(record, accessibleSectionIds),
+        );
+
+      if (!requestedSectionIsAccessible) {
         return HttpResponse.json(
           {
             code: 'FORBIDDEN',
@@ -229,7 +252,8 @@ export const adminMeetingHandlers = [
       }
 
       const record = adminMeetingRecordsFixture.find(
-        item => item.id === meetingId && item.sectionId === sectionId,
+        item =>
+          item.id === meetingId && matchesRequestedSection(item, sectionId),
       );
 
       if (!record) {

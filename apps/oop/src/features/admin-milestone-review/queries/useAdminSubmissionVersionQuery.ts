@@ -11,7 +11,6 @@ export function useAdminSubmissionVersionQuery(
 ) {
   return useQuery({
     enabled: Boolean(submissionId) && version !== undefined && enabled,
-    retry: false,
     queryKey: adminMilestoneSubmissionsKeys.version(
       submissionId ?? '',
       version,

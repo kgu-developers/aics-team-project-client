@@ -10,7 +10,6 @@ export function useAdminSubmissionVersionsQuery(
 ) {
   return useQuery({
     enabled: Boolean(submissionId) && enabled,
-    retry: false,
     queryKey: adminMilestoneSubmissionsKeys.versions(submissionId ?? ''),
     queryFn: async () => {
       if (!submissionId) {

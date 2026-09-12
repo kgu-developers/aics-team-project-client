@@ -10,7 +10,6 @@ export function useAdminMilestoneSubmissionDetailQuery(
 ) {
   return useQuery({
     enabled: Boolean(submissionId) && enabled,
-    retry: false,
     queryKey: adminMilestoneSubmissionsKeys.detail(submissionId ?? ''),
     queryFn: async () => {
       if (!submissionId) {

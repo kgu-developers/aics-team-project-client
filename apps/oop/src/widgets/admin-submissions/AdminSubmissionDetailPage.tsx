@@ -99,10 +99,9 @@ export default function AdminSubmissionDetailPage() {
     currentUser?.sections.map(section => String(section.id)) ?? [];
   const normalizedSectionId = search.sectionId?.replace(/^"|"$/g, '');
   const isRequestedSectionAccessible = Boolean(
+    currentUser &&
     normalizedSectionId &&
-    (/^\d+$/.test(normalizedSectionId) ||
-      accessibleSectionIds.length === 0 ||
-      accessibleSectionIds.includes(normalizedSectionId)),
+    accessibleSectionIds.includes(normalizedSectionId),
   );
   const isVersionDetailAvailable = Boolean(
     search.milestoneId && versionDetailMilestoneIds.has(search.milestoneId),
@@ -401,6 +400,7 @@ export default function AdminSubmissionDetailPage() {
                 </Text>
               ) : (
                 <AdminLinkedMeetingsTable
+                  authorLabel='작성자 학번'
                   records={relatedMeetings.map(meeting => ({
                     authorName: meeting.authorId,
                     id: meeting.id,

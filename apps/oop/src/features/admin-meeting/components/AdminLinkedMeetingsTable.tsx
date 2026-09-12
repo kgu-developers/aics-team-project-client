@@ -14,8 +14,10 @@ type LinkedMeeting = {
 };
 
 export function AdminLinkedMeetingsTable({
+  authorLabel = '작성자',
   records,
 }: {
+  authorLabel?: string;
   records: LinkedMeeting[];
 }) {
   return (
@@ -45,7 +47,7 @@ export function AdminLinkedMeetingsTable({
           },
           {
             align: 'center',
-            header: '작성자',
+            header: authorLabel,
             key: 'authorName',
             renderCell: record => record.authorName ?? '-',
             width: proportional(1, { minWidth: 120 }),
