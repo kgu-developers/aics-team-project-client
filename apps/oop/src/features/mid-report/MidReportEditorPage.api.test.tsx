@@ -347,6 +347,27 @@ it('엔진부 테스트 케이스를 표에서 추가하고 지운다', async ()
     view.unmount();
   }
 });
+it('다른 영역으로 이동하면 앞서 획득한 잠금을 해제한다', async () => {
+  const released: string[] = [];
+  const onRequest = ({ request }: { request: Request }) => {
+    if (request.method !== 'DELETE') return;
+    const sectionKey = new URL(request.url).searchParams.get('sectionKey');
+    if (sectionKey) released.push(sectionKey);
+  };
+  server.events.on('request:start', onRequest);
+  const view = renderEditor('topic');
+  try {
+    await waitFor(() =>
+      expect(
+        screen.getByRole('textbox', { name: '프로젝트 제목' }),
+      ).toBeEnabled(),
+    );
+    view.unmount();
+    await waitFor(() => expect(released).toContain('topic'));
+  } finally {
+    server.events.removeListener('request:start', onRequest);
+  }
+});
 it('로그인 정보가 없으면 중간보고서와 잠금 API를 호출하지 않는다', async () => {
   useAuthStore.getState().clearSession();
   const request = vi.fn();

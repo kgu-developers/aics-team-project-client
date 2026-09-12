@@ -8,6 +8,7 @@ import {
   liveEditLockKeys,
   useAcquireLiveEditLockMutation,
   useLiveEditLockQuery,
+  useReleaseLiveEditLockMutation,
 } from '~/features/editor/queries';
 
 /** 서버의 계정 단위 잠금. 탭 이탈 시 타 탭의 잠금을 삭제하지 않고 TTL로 만료한다. */
@@ -18,6 +19,7 @@ export function useMidReportEditLock(
   const session = useAuthStore();
   const client = useQueryClient();
   const acquire = useAcquireLiveEditLockMutation();
+  const release = useReleaseLiveEditLockMutation();
   const reportId = Number(report?.id);
   const target: LiveEditLockTarget | null =
     report &&
@@ -40,6 +42,9 @@ export function useMidReportEditLock(
   const [, setRevision] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const autoStarted = useRef(new Set<string>());
+  const acquiredTargetRef = useRef<LiveEditLockTarget | null>(null);
+  const releaseRef = useRef(release.mutateAsync);
+  releaseRef.current = release.mutateAsync;
   const identity = (id: string, key: string) => `${id}:${key}`;
   const activeKey = report ? identity(report.id, section) : '';
   const expired = Boolean(report && Date.parse(report.dueDate) <= Date.now());
@@ -66,6 +71,7 @@ export function useMidReportEditLock(
       )
         throw new Error('편집 권한을 얻지 못했어요.');
       grants.current.add(activeKey);
+      acquiredTargetRef.current = target;
       setRevision(value => value + 1);
     } catch {
       if (useAuthStore.getState() !== session) return;
@@ -155,6 +161,23 @@ export function useMidReportEditLock(
   };
   const startEditingRef = useRef(startEditing);
   startEditingRef.current = startEditing;
+  useEffect(() => {
+    // Leaving an area must hand the lock back; otherwise every visited section
+    // stays locked for the rest of the TTL.
+    const releaseAcquired = () => {
+      const acquired = acquiredTargetRef.current;
+      if (!acquired) return;
+      acquiredTargetRef.current = null;
+      grants.current.delete(
+        identity(String(acquired.targetId), acquired.sectionKey),
+      );
+      autoStarted.current.delete(
+        identity(String(acquired.targetId), acquired.sectionKey),
+      );
+      void releaseRef.current(acquired).catch(() => undefined);
+    };
+    return releaseAcquired;
+  }, [activeKey]);
   const ensureWriteRef = useRef(ensureWrite);
   ensureWriteRef.current = ensureWrite;
   useEffect(() => {
