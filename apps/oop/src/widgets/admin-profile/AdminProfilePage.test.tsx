@@ -27,16 +27,20 @@ import {
   mockSessionResponseHeaders,
   issueMockSession,
 } from '~/mocks/authSession';
+import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
 import {
   getAdminProfile,
   resetAdminProfileMockData,
 } from '~/mocks/data/adminProfile';
+import { resetAdminSectionsMockData } from '~/mocks/data/adminSections';
 import {
   demoAdmin,
   demoAdminAccessToken,
   demoUserAccounts,
 } from '~/mocks/data/users';
+import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminProfileHandlers } from '~/mocks/handlers/adminProfile';
+import { adminSectionHandlers } from '~/mocks/handlers/adminSections';
 import {
   adminStudentTeamHandlers,
   resetAdminStudentTeamMockState,
@@ -44,6 +48,8 @@ import {
 import { authHandlers, resetDemoPasswordState } from '~/mocks/handlers/auth';
 
 const server = setupServer(
+  ...adminCourseHandlers,
+  ...adminSectionHandlers,
   ...adminProfileHandlers,
   ...authHandlers,
   ...adminStudentTeamHandlers,
@@ -83,6 +89,8 @@ beforeAll(() => {
   });
 });
 beforeEach(() => {
+  resetAdminCoursesMockData();
+  resetAdminSectionsMockData();
   resetAdminProfileMockData();
   resetAdminStudentTeamMockState();
   resetDemoPasswordState();

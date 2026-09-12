@@ -18,7 +18,7 @@ afterAll(() => server.close());
 
 it('목록의 필터·페이지네이션 후에도 회의록 ID로 같은 상세를 조회한다', async () => {
   const listResponse = await fetch(
-    `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS_LIST}?teamId=11&page=0&size=1`,
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS_LIST}?teamId=1&page=0&size=1`,
     { headers: { Authorization: `Bearer ${demoAdminAccessToken}` } },
   );
   const list = (await listResponse.json()) as {

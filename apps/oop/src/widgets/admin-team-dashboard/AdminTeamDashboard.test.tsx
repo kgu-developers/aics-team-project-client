@@ -166,7 +166,7 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('2026.09.07 18:00')).toBeInTheDocument();
     expect(screen.getByText('발표 자료 제출')).toBeInTheDocument();
     expect(screen.getByText('presentation.pdf')).toBeInTheDocument();
-    expect(screen.queryByText('발표 평가')).not.toBeInTheDocument();
+    expect(screen.getByText('발표 평가')).toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: 'proposal-v2.pdf' }),
     ).not.toBeInTheDocument();
@@ -177,7 +177,7 @@ describe('AdminTeamDashboard', () => {
         [expect.objectContaining({ search: '?teamId=1' })],
       ]),
     );
-    expect(requests.mock.calls).not.toEqual(
+    expect(requests.mock.calls).toEqual(
       expect.arrayContaining([
         [
           expect.objectContaining({

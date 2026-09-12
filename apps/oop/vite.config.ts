@@ -88,6 +88,12 @@ export default defineConfig(({ command, mode }) => {
     test: {
       env: { VITE_ENABLE_MSW: 'true' },
       environment: 'jsdom',
+      // MSW's Node interceptor and mutable demo fixtures are process-global.
+      // Isolate each test worker in its own Node process so file-level servers
+      // and fixtures cannot replace or reset another file's state.
+      pool: 'forks',
+      maxWorkers: 4,
+      minWorkers: 1,
       setupFiles: './src/test/setup.ts',
     },
   };
