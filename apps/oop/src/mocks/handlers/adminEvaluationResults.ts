@@ -5,8 +5,10 @@ import { getMockAuthenticatedAccount } from '../authSession';
 import {
   adminPeerEvaluationDetailFixture,
   adminPeerEvaluationListFixture,
+  adminPeerEvaluationTeamTwoDetailFixture,
   adminPresentationEvaluationDetailFixture,
   adminPresentationEvaluationListFixture,
+  adminPresentationEvaluationTeamTwoDetailFixture,
 } from '../data/adminEvaluationResults';
 import { demoAdmin } from '../data/users';
 
@@ -21,7 +23,7 @@ function isAccessibleSection(
 }
 
 function isKnownTeam(teamId: string | readonly string[] | undefined) {
-  return teamId === '11';
+  return teamId === '1' || teamId === '2';
 }
 
 function unauthorized() {
@@ -58,7 +60,11 @@ export const adminEvaluationResultHandlers = [
           { status: 404 },
         );
       }
-      return HttpResponse.json(adminPeerEvaluationDetailFixture);
+      return HttpResponse.json(
+        params.teamId === '2'
+          ? adminPeerEvaluationTeamTwoDetailFixture
+          : adminPeerEvaluationDetailFixture,
+      );
     },
   ),
   http.get(
@@ -80,7 +86,11 @@ export const adminEvaluationResultHandlers = [
           { status: 404 },
         );
       }
-      return HttpResponse.json(adminPresentationEvaluationDetailFixture);
+      return HttpResponse.json(
+        params.teamId === '2'
+          ? adminPresentationEvaluationTeamTwoDetailFixture
+          : adminPresentationEvaluationDetailFixture,
+      );
     },
   ),
 ];

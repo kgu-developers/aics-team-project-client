@@ -15,7 +15,7 @@ export const adminPeerEvaluationListFixture: AdminPeerEvaluationListResponse = {
       lastSubmittedAt: '2026-12-13T13:00:00+09:00',
       meetingRecordCount: 2,
       submittedCount: 2,
-      teamId: 11,
+      teamId: 1,
       teamName: 'OOP-01 - 1팀',
       totalMemberCount: 2,
     },
@@ -23,7 +23,7 @@ export const adminPeerEvaluationListFixture: AdminPeerEvaluationListResponse = {
       lastSubmittedAt: null,
       meetingRecordCount: 1,
       submittedCount: 0,
-      teamId: 12,
+      teamId: 2,
       teamName: 'OOP-01 - 2팀',
       totalMemberCount: 2,
     },
@@ -34,7 +34,7 @@ export const adminPeerEvaluationDetailFixture: AdminPeerEvaluationTeamDetailResp
   {
     closesAt: '2026-12-14T14:59:00+09:00',
     formId: 501,
-    teamId: 11,
+    teamId: 1,
     teamName: 'OOP-01 - 1팀',
     members: [
       {
@@ -131,6 +131,40 @@ export const adminPeerEvaluationDetailFixture: AdminPeerEvaluationTeamDetailResp
     ],
   };
 
+export const adminPeerEvaluationTeamTwoDetailFixture: AdminPeerEvaluationTeamDetailResponse =
+  {
+    closesAt: adminPeerEvaluationListFixture.closesAt,
+    formId: 501,
+    teamId: 2,
+    teamName: 'OOP-01 - 2팀',
+    members: [
+      {
+        averageReceivedScore: null,
+        isLeader: true,
+        name: '박지훈',
+        role: '팀장',
+        userId: '20239876',
+      },
+      {
+        averageReceivedScore: null,
+        isLeader: false,
+        name: '최유진',
+        role: '팀원',
+        userId: '20234567',
+      },
+    ],
+    evaluations: [],
+    meetingRecords: [
+      {
+        id: 2,
+        meetingAt: '2026-10-08T14:00:00+09:00',
+        participantCount: 2,
+        phase: 'MID_CHECK',
+        title: '2팀 프로젝트 킥오프',
+      },
+    ],
+  };
+
 export const adminPresentationEvaluationListFixture: AdminPresentationEvaluationListResponse =
   {
     closesAt: '2026-11-26T09:00:00+09:00',
@@ -154,7 +188,7 @@ export const adminPresentationEvaluationListFixture: AdminPresentationEvaluation
           { criterionId: 1, criterionTitle: '프로젝트 완성도', score: 9 },
           { criterionId: 2, criterionTitle: '발표 전달력', score: 8 },
         ],
-        teamId: 11,
+        teamId: 1,
         teamName: 'OOP-01 - 1팀',
         totalScore: 17,
       },
@@ -162,7 +196,7 @@ export const adminPresentationEvaluationListFixture: AdminPresentationEvaluation
         evaluationCount: 0,
         projectTitle: '캠퍼스 학습 일정 관리 서비스',
         scores: [],
-        teamId: 12,
+        teamId: 2,
         teamName: 'OOP-01 - 2팀',
         totalScore: null,
       },
@@ -190,6 +224,18 @@ export const adminPresentationEvaluationDetailFixture: AdminPresentationEvaluati
     meetingRecords: adminPeerEvaluationDetailFixture.meetingRecords,
     milestoneId: 103,
     projectTitle: 'AI 기반 팀 프로젝트 관리 서비스',
-    teamId: 11,
+    teamId: 1,
     teamName: 'OOP-01 - 1팀',
+  };
+
+export const adminPresentationEvaluationTeamTwoDetailFixture: AdminPresentationEvaluationTeamDetailResponse =
+  {
+    closesAt: adminPresentationEvaluationListFixture.closesAt,
+    criteria: adminPresentationEvaluationListFixture.criteria,
+    evaluations: [],
+    meetingRecords: adminPeerEvaluationTeamTwoDetailFixture.meetingRecords,
+    milestoneId: adminPresentationEvaluationListFixture.milestoneId,
+    projectTitle: '캠퍼스 학습 일정 관리 서비스',
+    teamId: 2,
+    teamName: 'OOP-01 - 2팀',
   };

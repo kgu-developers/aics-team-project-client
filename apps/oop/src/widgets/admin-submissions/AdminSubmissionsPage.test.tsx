@@ -428,7 +428,7 @@ describe('AdminSubmissionsPage', () => {
     });
     expect(teamLink).toHaveAttribute(
       'href',
-      '/admin/evaluations/peer/teams/11?formId=501&sectionId=oop-2026-2-01',
+      '/admin/evaluations/peer/teams/1?formId=501&sectionId=oop-2026-2-01',
     );
   });
 
