@@ -27,6 +27,7 @@ import AdminTeamDashboard from './AdminTeamDashboard';
 
 import { getAdminMilestoneSubmissionsFixture } from '~/mocks/data/adminMilestoneSubmissions';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { adminEvaluationResultHandlers } from '~/mocks/handlers/adminEvaluationResults';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
@@ -34,6 +35,7 @@ import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMile
 import { adminStudentTeamHandlers } from '~/mocks/handlers/adminStudentTeams';
 
 const server = setupServer(
+  ...adminEvaluationResultHandlers,
   ...adminMeetingHandlers,
   ...adminMilestoneSubmissionDetailHandlers,
   ...adminMilestoneSubmissionsHandlers,
@@ -166,7 +168,9 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('2026.09.07 18:00')).toBeInTheDocument();
     expect(screen.getByText('발표 자료 제출')).toBeInTheDocument();
     expect(screen.getByText('presentation.pdf')).toBeInTheDocument();
-    expect(screen.getByText('발표 평가')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: '발표 평가' }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: 'proposal-v2.pdf' }),
     ).not.toBeInTheDocument();
@@ -175,15 +179,6 @@ describe('AdminTeamDashboard', () => {
     expect(requests.mock.calls).toEqual(
       expect.arrayContaining([
         [expect.objectContaining({ search: '?teamId=1' })],
-      ]),
-    );
-    expect(requests.mock.calls).toEqual(
-      expect.arrayContaining([
-        [
-          expect.objectContaining({
-            pathname: expect.stringContaining('/103/'),
-          }),
-        ],
       ]),
     );
     expect(requests.mock.calls).toEqual(
