@@ -97,7 +97,12 @@ function findPdfArtifact(team: MilestonePresentation) {
     if (artifact.mimeType !== 'application/pdf' && !/\.pdf$/i.test(label))
       continue;
     const href = safeSubmissionUrl(artifact.downloadUrl);
-    if (href) return { href, label: label || '발표 자료' };
+    if (href)
+      return {
+        href,
+        key: String(artifact.fileId ?? artifact.requiredArtifactId ?? label),
+        label: label || '발표 자료',
+      };
   }
   return null;
 }
@@ -171,6 +176,7 @@ function PresentationViewer({
             <div className={styles.section}>
               <h4 className={styles.previewTitle}>{pdf.label}</h4>
               <PdfPreview
+                fileKey={pdf.key}
                 onReload={onReloadMaterials}
                 title={pdf.label}
                 url={pdf.href}

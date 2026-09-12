@@ -5,16 +5,24 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { PdfPreview } from './PdfPreview';
 
-function renderPreview(onReload?: () => void) {
-  return render(
+const firstUrl = 'https://files.example.test/slides.pdf?expires=1';
+const refreshedUrl = 'https://files.example.test/slides.pdf?expires=2';
+
+function preview(url: string, onReload?: () => void, fileKey = 'file-19') {
+  return (
     <AstryxThemeProvider>
       <PdfPreview
+        fileKey={fileKey}
         onReload={onReload}
         title='발표자료.pdf'
-        url='https://files.example.test/slides.pdf?expires=1'
+        url={url}
       />
-    </AstryxThemeProvider>,
+    </AstryxThemeProvider>
   );
+}
+
+function renderPreview(onReload?: () => void) {
+  return render(preview(firstUrl, onReload));
 }
 
 describe('PdfPreview', () => {
@@ -25,10 +33,7 @@ describe('PdfPreview', () => {
     expect(
       screen.getByRole('region', { name: '발표자료.pdf 미리보기' }),
     ).toBeInTheDocument();
-    expect(embed).toHaveAttribute(
-      'data',
-      'https://files.example.test/slides.pdf?expires=1',
-    );
+    expect(embed).toHaveAttribute('data', firstUrl);
     expect(embed).toHaveAttribute('type', 'application/pdf');
     expect(embed).toHaveTextContent('미리보기를 표시할 수 없어요.');
   });
@@ -51,5 +56,42 @@ describe('PdfPreview', () => {
     expect(
       screen.queryByRole('button', { name: '미리보기 새로 고침' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('서명만 갱신되면 보던 문서를 그대로 유지한다', () => {
+    const onReload = vi.fn();
+    const { container, rerender } = render(preview(firstUrl, onReload));
+
+    rerender(preview(refreshedUrl, onReload));
+
+    expect(container.querySelector('object')).toHaveAttribute('data', firstUrl);
+  });
+
+  it('새로 고침을 요청한 뒤 받은 주소로 교체한다', async () => {
+    const user = userEvent.setup();
+    const onReload = vi.fn();
+    const { container, rerender } = render(preview(firstUrl, onReload));
+
+    await user.click(
+      screen.getByRole('button', { name: '미리보기 새로 고침' }),
+    );
+    rerender(preview(refreshedUrl, onReload));
+
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('object')).toHaveAttribute(
+      'data',
+      refreshedUrl,
+    );
+  });
+
+  it('다른 파일로 바뀌면 바로 교체한다', () => {
+    const { container, rerender } = render(preview(firstUrl));
+
+    rerender(preview(refreshedUrl, undefined, 'file-20'));
+
+    expect(container.querySelector('object')).toHaveAttribute(
+      'data',
+      refreshedUrl,
+    );
   });
 });
