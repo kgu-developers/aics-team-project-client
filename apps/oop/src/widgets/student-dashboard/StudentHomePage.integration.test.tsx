@@ -86,6 +86,9 @@ const server = setupServer(
   http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
     HttpResponse.json(midReportFixture()),
   ),
+  http.get(`${API_BASE_URL}${ENDPOINTS.EDIT_LOCKS.ROOT}`, () =>
+    HttpResponse.json({ locked: false }),
+  ),
   http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_THREAD.BY_TEAM('7')}`, () =>
     HttpResponse.json({
       threadId: 70,
@@ -1154,6 +1157,47 @@ describe('중간보고서 작성 영역 상태와 팀장 제출', () => {
     );
 
     await waitFor(() => expect(submit).toHaveBeenCalled());
+  });
+
+  it('다른 팀원이 영역을 편집 중이면 제출 요청을 보내지 않는다', async () => {
+    const submit = vi.fn(() => HttpResponse.json(midReportFixture()));
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+        HttpResponse.json(
+          midReportFixture([
+            { key: 'topic', status: 'COMPLETED' },
+            { key: 'gui-design', status: 'COMPLETED' },
+            { key: 'engine-design', status: 'COMPLETED' },
+            { key: 'project-plan', status: 'COMPLETED' },
+          ]),
+        ),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.EDIT_LOCKS.ROOT}`, ({ request }) =>
+        HttpResponse.json(
+          new URL(request.url).searchParams.get('sectionKey') === 'gui-design'
+            ? {
+                locked: true,
+                lockedBy: '20260003',
+                lockedByName: '다른 팀원',
+                lockedAt: '2026-09-12 10:00',
+              }
+            : { locked: false },
+        ),
+      ),
+      http.post(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.SUBMIT('701')}`, submit),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: '제출하기' }),
+    );
+
+    expect(
+      await screen.findByText(
+        /다른 팀원님이 .*영역을 편집 중이라 제출할 수 없어요/,
+      ),
+    ).toBeInTheDocument();
+    expect(submit).not.toHaveBeenCalled();
   });
 
   it('팀장이 아니면 제출하기를 보여주지 않는다', async () => {

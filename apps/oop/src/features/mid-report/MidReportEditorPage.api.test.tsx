@@ -104,10 +104,6 @@ it('버전 충돌은 한 번만 요청하고 입력을 보존한다', async () =
   await screen.findByText(/최신 문서를 확인해 주세요/);
   expect(input).toHaveValue('보존해야 하는 초안');
   expect(save).toHaveBeenCalledTimes(1);
-  expect(screen.getByRole('button', { name: '제출하기' })).toHaveAttribute(
-    'aria-disabled',
-    'true',
-  );
 });
 
 it('잠금 소유권을 잃으면 저장 요청 없이 초안을 남긴다', async () => {
@@ -155,10 +151,9 @@ it('기간이 끝난 문서는 편집과 제출을 막는다', async () => {
   expect(
     screen.getByRole('button', { name: '편집 권한 다시 확인' }),
   ).toBeDisabled();
-  expect(screen.getByRole('button', { name: '제출하기' })).toHaveAttribute(
-    'aria-disabled',
-    'true',
-  );
+  expect(
+    screen.queryByRole('button', { name: '제출하기' }),
+  ).not.toBeInTheDocument();
 });
 
 it('401 응답에서 에디터와 잠금 획득을 노출하지 않는다', async () => {
@@ -202,25 +197,6 @@ it('숫자 ID 변환과 편집자 이름을 검증하고 깨진 영역 응답은
     ),
   );
   await expect(fetchCurrentMidReport()).rejects.toThrow('중간보고서 응답 형식');
-});
-
-it('팀장 제출이 성공하면 읽기 전용으로 복원한다', async () => {
-  const { completeMidReportBlock } = await import('@aics/api-client');
-  let report = await fetchCurrentMidReport();
-  for (const block of report.blocks)
-    report = await completeMidReportBlock(report.id, block.key, {
-      version: report.version,
-    });
-  renderEditor();
-  await waitFor(() =>
-    expect(
-      screen.getByRole('button', { name: '제출하기' }),
-    ).not.toHaveAttribute('aria-disabled', 'true'),
-  );
-  fireEvent.click(screen.getByRole('button', { name: '제출하기' }));
-  await screen.findByRole('button', { name: '제출 완료' });
-  expect((await fetchCurrentMidReport()).status).toBe('SUBMITTED');
-  expect(screen.getByRole('textbox', { name: '프로젝트 제목' })).toBeDisabled();
 });
 
 it('imageFileId를 숫자로 저장하고 재조회한 이미지 URL을 복원하며 다른 팀 이미지는 거절한다', async () => {
@@ -384,39 +360,4 @@ it('로그인 정보가 없으면 중간보고서와 잠금 API를 호출하지 
   renderEditor();
   await screen.findByText('로그인이 필요해요.');
   expect(request).not.toHaveBeenCalled();
-});
-
-it('다른 영역을 팀원이 편집 중이면 최종 제출 요청을 보내지 않는다', async () => {
-  const { completeMidReportBlock } = await import('@aics/api-client');
-  let report = await fetchCurrentMidReport();
-  for (const block of report.blocks)
-    report = await completeMidReportBlock(report.id, block.key, {
-      version: report.version,
-    });
-  renderEditor();
-  await waitFor(() =>
-    expect(
-      screen.getByRole('button', { name: '제출하기' }),
-    ).not.toHaveAttribute('aria-disabled', 'true'),
-  );
-  const submit = vi.fn();
-  server.use(
-    http.get(`${API_BASE_URL}/edit-locks`, ({ request }) =>
-      new URL(request.url).searchParams.get('sectionKey') === 'gui-design'
-        ? HttpResponse.json({
-            locked: true,
-            lockedBy: 'other-student',
-            lockedByName: '팀원 B',
-            lockedAt: '2026-09-10 12:00',
-          })
-        : undefined,
-    ),
-    http.post(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.SUBMIT(':id')}`, () => {
-      submit();
-      return new HttpResponse(null, { status: 500 });
-    }),
-  );
-  fireEvent.click(screen.getByRole('button', { name: '제출하기' }));
-  await screen.findByText(/팀원 B님이.*편집 중이라 제출할 수 없어요/);
-  expect(submit).not.toHaveBeenCalled();
 });

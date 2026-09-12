@@ -229,14 +229,14 @@ export default function DocumentEditorPage<
     }
   };
   const submitCurrentDocument = async () => {
-    if (!completion || isSubmitLocked) return;
+    const submit = completion?.submit;
+    if (!submit || isSubmitLocked) return;
     try {
       const latestDocument = await editor.flushAll();
-      if (!latestDocument || !completion.canSubmitDocument(latestDocument))
-        return;
+      if (!latestDocument || !submit.canSubmitDocument(latestDocument)) return;
       let submittedDocument: D;
       try {
-        submittedDocument = await completion.submitDocument(
+        submittedDocument = await submit.submitDocument(
           latestDocument.id,
           latestDocument.version,
         );
@@ -251,11 +251,11 @@ export default function DocumentEditorPage<
           refreshedDocument.blocks.some(
             item => item.lock && item.lock.ownerName !== currentUser.name,
           ) ||
-          !completion.canSubmitDocument(refreshedDocument)
+          !submit.canSubmitDocument(refreshedDocument)
         )
           return;
         editor.acceptDocument(refreshedDocument);
-        submittedDocument = await completion.submitDocument(
+        submittedDocument = await submit.submitDocument(
           refreshedDocument.id,
           refreshedDocument.version,
         );
@@ -335,7 +335,7 @@ export default function DocumentEditorPage<
         ) : null)}
       {completion ? (
         <DocumentActionBar
-          error={completion.completeError ?? completion.submitError}
+          error={completion.completeError ?? completion.submit?.submitError}
         >
           <Button
             isDisabled={
@@ -355,30 +355,32 @@ export default function DocumentEditorPage<
             }
             variant='secondary'
           />
-          <Button
-            isDisabled={
-              isSubmitted ||
-              isSubmitLocked ||
-              completion.submitting ||
-              editor.hasDirtyDrafts ||
-              !completion.canSubmitDocument(data!)
-            }
-            label={isSubmitted ? '제출 완료' : '제출하기'}
-            onClick={() => void submitCurrentDocument()}
-            size='md'
-            tooltip={
-              isSubmitted
-                ? undefined
-                : foreignDocumentLock
-                  ? `${foreignDocumentLock.ownerName}님이 다른 작성 영역을 편집 중이라 제출할 수 없어요.`
-                  : isLocked
-                    ? '읽기 전용 상태에서는 문서를 제출할 수 없어요.'
-                    : editor.hasDirtyDrafts
-                      ? '변경 내용을 자동 저장한 뒤 제출할 수 있어요.'
-                      : completion.submitDisabledReason(data!)
-            }
-            variant='primary'
-          />
+          {completion.submit ? (
+            <Button
+              isDisabled={
+                isSubmitted ||
+                isSubmitLocked ||
+                completion.submit.submitting ||
+                editor.hasDirtyDrafts ||
+                !completion.submit.canSubmitDocument(data!)
+              }
+              label={isSubmitted ? '제출 완료' : '제출하기'}
+              onClick={() => void submitCurrentDocument()}
+              size='md'
+              tooltip={
+                isSubmitted
+                  ? undefined
+                  : foreignDocumentLock
+                    ? `${foreignDocumentLock.ownerName}님이 다른 작성 영역을 편집 중이라 제출할 수 없어요.`
+                    : isLocked
+                      ? '읽기 전용 상태에서는 문서를 제출할 수 없어요.'
+                      : editor.hasDirtyDrafts
+                        ? '변경 내용을 자동 저장한 뒤 제출할 수 있어요.'
+                        : completion.submit.submitDisabledReason(data!)
+              }
+              variant='primary'
+            />
+          ) : null}
         </DocumentActionBar>
       ) : null}
       {renderBlockAside?.(block, isLocked) ?? null}

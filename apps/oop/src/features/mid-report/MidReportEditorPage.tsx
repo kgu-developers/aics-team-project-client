@@ -14,7 +14,6 @@ import {
   useMidReportEditLock,
   useCompleteMidReportBlockMutation,
   useCurrentMidReportQuery,
-  useSubmitMidReportMutation,
   useUpdateMidReportBlockMutation,
 } from './queries';
 
@@ -94,7 +93,6 @@ export default function MidReportEditorPage({
 
   const mutation = useUpdateMidReportBlockMutation();
   const completionMutation = useCompleteMidReportBlockMutation();
-  const submitMutation = useSubmitMidReportMutation();
 
   const saveBlock = useCallback(
     (input: {
@@ -160,29 +158,6 @@ export default function MidReportEditorPage({
             )
           : null,
         isDocumentSubmitted: report => report.status === 'SUBMITTED',
-        submitDocument: (documentId, version) =>
-          runDocumentAction('submit', async () => {
-            await lock.ensureWrite(documentId, section);
-            await lock.ensureCanSubmit();
-            const report = await submitMutation.mutateAsync({
-              documentId,
-              version,
-            });
-            toast({
-              body: report.revision?.resubmittedAt
-                ? '피드백을 반영한 중간보고서를 다시 제출했어요.'
-                : '중간보고서를 제출했어요. 이제 읽기 전용으로 확인할 수 있어요.',
-            });
-            return report;
-          }),
-        submitting: documentAction === 'submit' || submitMutation.isPending,
-        submitError: submitMutation.isError
-          ? getSaveErrorMessage(submitMutation.error, '제출하지 못했어요.')
-          : lock.error,
-        canSubmitDocument: report =>
-          canSubmitMidReportDocument(report, currentUser?.name),
-        submitDisabledReason: report =>
-          getMidReportSubmitDisabledReason(report, currentUser?.name),
       }}
       docId='mid-review'
       documentQuery={query}

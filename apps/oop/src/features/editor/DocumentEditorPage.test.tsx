@@ -420,11 +420,13 @@ describe('DocumentEditorPage 자동 저장', () => {
       completing: false,
       completeError: null,
       isDocumentSubmitted: () => false,
-      submitDocument: vi.fn(async () => firstDocument),
-      submitting: false,
-      submitError: null,
-      canSubmitDocument: () => false,
-      submitDisabledReason: () => '제출할 수 없어요.',
+      submit: {
+        submitDocument: vi.fn(async () => firstDocument),
+        submitting: false,
+        submitError: null,
+        canSubmitDocument: () => false,
+        submitDisabledReason: () => '제출할 수 없어요.',
+      },
     };
     const saveBlock = vi.fn(async () => firstDocument);
     const view = renderWithRouter(
@@ -484,11 +486,13 @@ describe('DocumentEditorPage 자동 저장', () => {
       completing: false,
       completeError: null,
       isDocumentSubmitted: () => false,
-      submitDocument: vi.fn(async () => completedDocument),
-      submitting: false,
-      submitError: null,
-      canSubmitDocument: () => false,
-      submitDisabledReason: () => '제출할 수 없어요.',
+      submit: {
+        submitDocument: vi.fn(async () => completedDocument),
+        submitting: false,
+        submitError: null,
+        canSubmitDocument: () => false,
+        submitDisabledReason: () => '제출할 수 없어요.',
+      },
     };
 
     renderWithRouter(
@@ -529,11 +533,13 @@ describe('DocumentEditorPage 자동 저장', () => {
       completing: false,
       completeError: null,
       isDocumentSubmitted: () => false,
-      submitDocument,
-      submitting: false,
-      submitError: null,
-      canSubmitDocument: () => true,
-      submitDisabledReason: () => '제출할 수 있어요.',
+      submit: {
+        submitDocument,
+        submitting: false,
+        submitError: null,
+        canSubmitDocument: () => true,
+        submitDisabledReason: () => '제출할 수 있어요.',
+      },
     };
 
     renderWithRouter(
@@ -568,11 +574,13 @@ describe('DocumentEditorPage 자동 저장', () => {
       completing: false,
       completeError: null,
       isDocumentSubmitted: () => false,
-      submitDocument,
-      submitting: false,
-      submitError: null,
-      canSubmitDocument: (document: TestDocument) => document.version === 1,
-      submitDisabledReason: () => '제출할 수 있어요.',
+      submit: {
+        submitDocument,
+        submitting: false,
+        submitError: null,
+        canSubmitDocument: (document: TestDocument) => document.version === 1,
+        submitDisabledReason: () => '제출할 수 있어요.',
+      },
     };
 
     renderWithRouter(
@@ -610,11 +618,13 @@ describe('DocumentEditorPage 자동 저장', () => {
       completing: false,
       completeError: null,
       isDocumentSubmitted: () => false,
-      submitDocument,
-      submitting: false,
-      submitError: null,
-      canSubmitDocument: () => true,
-      submitDisabledReason: () => '제출할 수 있어요.',
+      submit: {
+        submitDocument,
+        submitting: false,
+        submitError: null,
+        canSubmitDocument: () => true,
+        submitDisabledReason: () => '제출할 수 있어요.',
+      },
     };
 
     renderWithRouter(
@@ -653,11 +663,13 @@ describe('DocumentEditorPage 자동 저장', () => {
       completing: false,
       completeError: null,
       isDocumentSubmitted: () => false,
-      submitDocument,
-      submitting: false,
-      submitError: null,
-      canSubmitDocument: () => true,
-      submitDisabledReason: () => '제출할 수 있어요.',
+      submit: {
+        submitDocument,
+        submitting: false,
+        submitError: null,
+        canSubmitDocument: () => true,
+        submitDisabledReason: () => '제출할 수 있어요.',
+      },
     };
 
     renderWithRouter(

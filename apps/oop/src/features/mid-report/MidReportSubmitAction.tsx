@@ -9,6 +9,7 @@ import {
 } from './MidReportEditorPage';
 import {
   useCurrentMidReportQuery,
+  useMidReportSubmitGuard,
   useSubmitMidReportMutation,
 } from './queries';
 
@@ -27,6 +28,7 @@ export default function MidReportSubmitAction({
   const userName = useAuthStore(state => state.currentUser?.name);
   const report = useCurrentMidReportQuery(true);
   const submit = useSubmitMidReportMutation();
+  const ensureAllBlocksFree = useMidReportSubmitGuard();
   return (
     <Button
       className={className}
@@ -49,17 +51,18 @@ export default function MidReportSubmitAction({
           });
           return;
         }
-        submit.mutate(
-          { documentId: document.id, version: document.version },
-          {
-            onError: error =>
-              toast({
-                body: documentRequestErrorMessage(error),
-                type: 'error',
-              }),
-            onSuccess: () => toast({ body: '중간보고서를 제출했어요.' }),
-          },
-        );
+        // A teammate editing another area would lose that work on submit.
+        void ensureAllBlocksFree(document)
+          .then(() =>
+            submit.mutateAsync({
+              documentId: document.id,
+              version: document.version,
+            }),
+          )
+          .then(() => toast({ body: '중간보고서를 제출했어요.' }))
+          .catch((error: unknown) =>
+            toast({ body: documentRequestErrorMessage(error), type: 'error' }),
+          );
       }}
       size='md'
       variant='primary'

@@ -70,11 +70,14 @@ export type DocumentEditorCompletion<D extends DocumentEditorDocument> = {
   completing: boolean;
   completeError: string | null;
   isDocumentSubmitted: (document: D) => boolean;
-  submitDocument: (documentId: string, version: number) => Promise<D>;
-  submitting: boolean;
-  submitError: string | null;
-  canSubmitDocument: (document: D) => boolean;
-  submitDisabledReason: (document: D) => string;
+  /** 제출을 편집기에서 제공하는 문서만 채운다. 학생 홈이 제출을 맡으면 생략한다. */
+  submit?: {
+    submitDocument: (documentId: string, version: number) => Promise<D>;
+    submitting: boolean;
+    submitError: string | null;
+    canSubmitDocument: (document: D) => boolean;
+    submitDisabledReason: (document: D) => string;
+  };
 };
 
 export type DocumentEditorPageProps<D extends DocumentEditorDocument> = {
