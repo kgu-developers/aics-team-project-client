@@ -9,10 +9,12 @@ import { ENDPOINTS } from '../constants/endpoints';
 
 export async function fetchStudentSubmission(
   submissionId: string,
+  signal?: AbortSignal,
 ): Promise<StudentSubmissionResponse> {
   validateStudentSubmissionId(submissionId);
   const response = await apiClient.get<unknown>(
     ENDPOINTS.SUBMISSION.DETAIL(submissionId),
+    { signal },
   );
   validateStudentSubmission(response.data);
   if (String(response.data.id) !== submissionId)

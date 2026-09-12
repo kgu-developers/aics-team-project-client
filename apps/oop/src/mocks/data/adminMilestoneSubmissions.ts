@@ -1,8 +1,18 @@
-import type { AdminMilestoneSubmissionsResponse } from '@aics/api-client';
+import type {
+  AdminMilestoneSubmissionItemDto,
+  AdminMilestoneSubmissionsResponse,
+} from '@aics/api-client';
+
+import { countAdminMeetingRecords } from './adminMeetings';
+
+type SubmissionFixture = Omit<
+  AdminMilestoneSubmissionItemDto,
+  'meetingRecordCount'
+>;
 
 const submissionsByMilestoneId: Record<
   string,
-  AdminMilestoneSubmissionsResponse
+  { contents: SubmissionFixture[] }
 > = {
   '101': {
     contents: [
@@ -165,8 +175,19 @@ const initialSubmissionsByMilestoneId = structuredClone(
 export function getAdminMilestoneSubmissionsFixture(
   milestoneId: string,
 ): AdminMilestoneSubmissionsResponse | undefined {
-  return Object.hasOwn(submissionsByMilestoneId, milestoneId)
-    ? submissionsByMilestoneId[milestoneId]
+  if (!Object.hasOwn(submissionsByMilestoneId, milestoneId)) return undefined;
+
+  const fixture = submissionsByMilestoneId[milestoneId];
+  return fixture
+    ? {
+        contents: fixture.contents.map(submission => ({
+          ...submission,
+          meetingRecordCount: countAdminMeetingRecords(
+            submission.teamId,
+            submission.milestoneId,
+          ),
+        })),
+      }
     : undefined;
 }
 

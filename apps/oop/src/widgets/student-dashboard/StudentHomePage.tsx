@@ -3,12 +3,22 @@ import { isAxiosError } from 'axios';
 
 import { editorSectionTo } from '~/app/constants/editorSections';
 
+import { useAuthStore } from '~/features/auth/authStore';
+import { canSubmitMidReportDocument } from '~/features/mid-report/MidReportEditorPage';
+import { useCurrentMidReportQuery } from '~/features/mid-report/queries';
 import { TopicApiProvider } from '~/features/project-topic/TopicApiContext';
 import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog';
 import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
 import { useTopicMilestoneEligibility } from '~/features/project-topic/useTopicMilestoneEligibility';
+import { useProposalSectionsQuery } from '~/features/proposal/queries';
+import {
+  midReportFeedbackStage,
+  proposalFeedbackStage,
+} from '~/features/student-home/model/documentFeedbackStage';
 import { homeQueryState } from '~/features/student-home/model/homeQueryState';
+import { midReportSectionStatuses } from '~/features/student-home/model/midReportSectionStatuses';
 import { peerEvaluationHomeSummary } from '~/features/student-home/model/peerEvaluationHomeSummary';
+import { proposalSectionStatuses } from '~/features/student-home/model/proposalSectionStatuses';
 import { selectActiveMilestone } from '~/features/student-home/model/selectActiveMilestone';
 import {
   isPresentationEvaluation,
@@ -23,6 +33,7 @@ import {
 import type { StudentSubmissionTarget } from '~/features/submission/StudentSubmissionPanel';
 import SubmissionDialog from '~/features/submission/SubmissionDialog';
 import { SubmissionDialogProvider } from '~/features/submission/SubmissionDialogContext';
+import { useTeamMessagesQuery } from '~/features/team-message/queries';
 
 import MilestoneList from '~/widgets/milestone-summary/MilestoneList';
 
@@ -81,6 +92,14 @@ export default function StudentHomePage() {
   const home = useLiveStudentHomeQuery();
   const sectionId = home.sectionId;
   const query = useStudentMilestonesQuery(sectionId, home.teamId);
+  const proposalProject =
+    home.project.state.status === 'ready' ? home.project.data : undefined;
+  const proposalSections = useProposalSectionsQuery(proposalProject?.id);
+  const midReport = useCurrentMidReportQuery(Boolean(home.teamId));
+  // 재제출은 서버가 아직 열어주지 않는다. 피드백 단계 판정만 메시지로 한다.
+  const proposalMessages = useTeamMessagesQuery(home.teamId, 'PROPOSAL');
+  const midReportMessages = useTeamMessagesQuery(home.teamId, 'MID_REPORT');
+  const currentUserName = useAuthStore(state => state.currentUser?.name);
   const peerMilestones = query.milestones.filter(
     milestone => milestone.type === 'PEER_EVALUATION',
   );
@@ -180,9 +199,74 @@ export default function StudentHomePage() {
         teamId: home.teamId,
         feedback: [],
         canSubmitResponse: false,
-        sections: [],
+        // The feedback room stays as main defines it; only the writing areas
+        // are filled with the document's block states.
+        sections: midReportSectionStatuses(
+          midReport.isSuccess
+            ? 'ready'
+            : midReport.isError
+              ? 'error'
+              : 'pending',
+          midReport.data,
+        ),
         guide: '대면 피드백과 반영 내용을 기록해 주세요.',
       };
+      // A submitted document is read only on the server, so the home must not
+      // offer a writing or submitting action for it any more.
+      const submittedReport =
+        midReport.isSuccess && midReport.data.status === 'SUBMITTED';
+      const readyToSubmit =
+        midReport.isSuccess &&
+        canSubmitMidReportDocument(midReport.data, currentUserName);
+      const midReportStage = midReportFeedbackStage({
+        submittedAt: midReport.data?.submittedAt,
+        messages: midReportMessages.data,
+        teamMemberIds: home.teamMemberIds,
+        isMessagesReady: midReportMessages.isSuccess,
+      });
+      summary.rows = submittedReport
+        ? [
+            midReportStage === 'feedback-arrived'
+              ? {
+                  id: 'mid-report-revision',
+                  label: '중간보고서 재제출',
+                  value: '대면 피드백 기록을 남겼어요.',
+                  tone: 'primary',
+                  actionLabel: '재제출',
+                  actionDisabled: true,
+                  actionNotice:
+                    '재제출은 담당 교수·조교가 중간보고서를 다시 열어 준 뒤에 할 수 있어요.',
+                }
+              : {
+                  id: 'mid-report-submitted',
+                  label: '중간보고서',
+                  value:
+                    midReportStage === 'unknown'
+                      ? midReportMessages.isError
+                        ? '제출 완료 · 피드백 상태를 불러오지 못했어요.'
+                        : '제출 완료 · 피드백 상태를 확인하는 중이에요.'
+                      : '제출 완료 · 대면 피드백 기록을 남겨 주세요.',
+                  tone: 'muted',
+                },
+          ]
+        : [
+            readyToSubmit
+              ? {
+                  id: 'mid-report-submit',
+                  label: '중간보고서 제출',
+                  value: '모든 작성 영역 완료',
+                  tone: 'primary',
+                  actionLabel: '제출하기',
+                }
+              : {
+                  id: 'mid-report-writing',
+                  label: '중간보고서 작성',
+                  value: '작성 영역을 차례로 완료해 주세요.',
+                  tone: 'primary',
+                  actionLabel: '작성하기',
+                  actionTo: editorSectionTo('mid-review', 'topic'),
+                },
+          ];
       return summary;
     }
     if (
@@ -257,6 +341,8 @@ export default function StudentHomePage() {
       if (project) {
         // An existing project can be continued regardless of how it was created.
         // This does not assert a selected candidate ID or invent block progress.
+        // The feedback room body stays as main defines it; only the writing
+        // areas are filled with the server's section states.
         summary.currentStepLabel = '제안서 작성';
         summary.interaction = 'collapsible';
         summary.isDetailAvailable = true;
@@ -266,19 +352,71 @@ export default function StudentHomePage() {
           feedback: [],
           canSubmitResponse: false,
           replyPlaceholder: '피드백을 반영한 내용을 작성해 주세요.',
-          sections: [],
+          sections: proposalSectionStatuses(
+            proposalSections.isSuccess
+              ? 'ready'
+              : proposalSections.isError
+                ? 'error'
+                : 'pending',
+            proposalSections.data,
+          ),
           guide: '피드백을 반영한 내용을 답변으로 남겨 주세요.',
         };
-        summary.rows = [
-          {
-            id: 'proposal-writing',
-            label: '제안서 작성',
-            value: project.title?.trim() || '프로젝트 내용 확인',
-            tone: 'primary',
-            actionLabel: '작성하기',
-            actionTo: editorSectionTo('proposal', 'team-info'),
-          },
-        ];
+        // The leader submits once every area is complete; everyone else keeps
+        // writing. A submitted proposal is read only, so it offers no action.
+        const readyToSubmit =
+          proposalSections.isSuccess && proposalSections.data.allCompleted;
+        const proposalStage = proposalFeedbackStage({
+          submittedAt: project.proposalCompletedAt,
+          messages: proposalMessages.data,
+          teamMemberIds: home.teamMemberIds,
+          isMessagesReady: proposalMessages.isSuccess,
+        });
+        summary.rows = project.proposalCompletedAt
+          ? [
+              proposalStage === 'feedback-arrived'
+                ? {
+                    id: 'proposal-revision',
+                    label: '제안서 재제출',
+                    value: '교수 피드백이 도착했어요.',
+                    tone: 'primary',
+                    actionLabel: '재제출',
+                    actionDisabled: true,
+                    actionNotice:
+                      '재제출은 담당 교수·조교가 제안서를 다시 열어 준 뒤에 할 수 있어요.',
+                  }
+                : {
+                    id: 'proposal-submitted',
+                    label: '제안서',
+                    value:
+                      proposalStage === 'unknown'
+                        ? proposalMessages.isError
+                          ? '제출 완료 · 피드백 상태를 불러오지 못했어요.'
+                          : '제출 완료 · 피드백 상태를 확인하는 중이에요.'
+                        : '제출 완료 · 교수 피드백을 기다리는 중이에요.',
+                    tone: 'muted',
+                  },
+            ]
+          : [
+              readyToSubmit && home.isTeamLeader
+                ? {
+                    id: 'proposal-submit',
+                    label: '제안서 제출',
+                    value: '모든 작성 영역 완료',
+                    tone: 'primary',
+                    actionLabel: '제출하기',
+                  }
+                : {
+                    id: 'proposal-writing',
+                    label: '제안서 작성',
+                    value: readyToSubmit
+                      ? '팀장이 제출할 수 있어요.'
+                      : project.title?.trim() || '프로젝트 내용 확인',
+                    tone: 'primary',
+                    actionLabel: '작성하기',
+                    actionTo: editorSectionTo('proposal', 'team-info'),
+                  },
+            ];
       }
 
       if (project) return summary;

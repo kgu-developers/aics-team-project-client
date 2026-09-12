@@ -52,7 +52,6 @@ export function createAdminMilestoneUpdateInput({
   title: string;
   type: AdminSectionMilestoneDto['type'];
 }): AdminMilestoneUpdateInput {
-  const isPresentationEvaluation = type === 'PRESENTATION';
   const lateSubmissionUntil = schedule.allowLateSubmission
     ? toAdminMilestoneDateTime(schedule.lateSubmissionUntil)
     : undefined;
@@ -67,19 +66,10 @@ export function createAdminMilestoneUpdateInput({
   const evaluationClosesAt = toAdminMilestoneDateTime(
     schedule.evaluationClosesAt,
   );
-  const dueAt = isPresentationEvaluation
-    ? evaluationClosesAt
-    : toAdminMilestoneDateTime(schedule.dueAt);
+  const dueAt = toAdminMilestoneDateTime(schedule.dueAt);
 
   if (!dueAt) {
-    throw new Error(
-      isPresentationEvaluation
-        ? '평가 종료 일시를 입력해주세요.'
-        : '제출 마감 일시를 입력해주세요.',
-    );
-  }
-  if (isPresentationEvaluation && !evaluationOpensAt) {
-    throw new Error('평가 시작 일시를 입력해주세요.');
+    throw new Error('제출 마감 일시를 입력해주세요.');
   }
 
   assertAdminMilestoneScheduleOrder({
@@ -97,11 +87,7 @@ export function createAdminMilestoneUpdateInput({
       dueAt,
       ...(evaluationClosesAt ? { evaluationClosesAt } : {}),
       ...(evaluationOpensAt ? { evaluationOpensAt } : {}),
-      ...(isPresentationEvaluation
-        ? { opensAt: evaluationOpensAt }
-        : opensAt
-          ? { opensAt }
-          : {}),
+      ...(opensAt ? { opensAt } : {}),
       ...(lateSubmissionUntil ? { lateSubmissionUntil } : {}),
     },
     title: title.trim(),

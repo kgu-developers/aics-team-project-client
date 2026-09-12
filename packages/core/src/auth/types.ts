@@ -1,3 +1,4 @@
+import type { SectionResponse } from '../section/types';
 import type { Team } from '../team/types';
 
 export type AuthLoginInput = {
@@ -16,15 +17,17 @@ export type CurrentUserResponse = {
   name: string;
   phone: string;
   globalRole: 'ADMIN' | 'USER';
-  sections?: { id: number; code: string; name: string }[];
+  sections?: SectionResponse[];
   teamId?: number | null;
 };
 
 export type UserGlobalRole = 'STUDENT' | 'ASSISTANT' | 'PROFESSOR';
 
-export type CurrentUserSection = {
-  id: string;
+export type CurrentUserSection = Partial<
+  Omit<SectionResponse, 'code' | 'id' | 'name'>
+> & {
   code: string;
+  id: string;
   name: string;
   role: UserGlobalRole;
 };

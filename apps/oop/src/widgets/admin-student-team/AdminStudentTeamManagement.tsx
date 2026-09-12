@@ -117,6 +117,7 @@ export default function AdminStudentTeamManagement() {
                     <tr>
                       <th scope='col'>이름</th>
                       <th scope='col'>학번</th>
+                      <th scope='col'>전공</th>
                       <th scope='col'>팀</th>
                       <th scope='col'>관리</th>
                     </tr>
@@ -126,6 +127,7 @@ export default function AdminStudentTeamManagement() {
                       <tr key={student.id}>
                         <td>{student.name}</td>
                         <td>{student.studentNumber}</td>
+                        <td>{student.major ?? '전공 정보 없음'}</td>
                         <td>
                           {teamNameByStudentNumber.get(student.studentNumber) ??
                             '미배정'}
@@ -246,6 +248,11 @@ export default function AdminStudentTeamManagement() {
       </Dialog>
       <AdminStudentDetailDialog
         onClose={() => setSelectedStudentNumber(null)}
+        major={
+          students.find(
+            student => student.studentNumber === selectedStudentNumber,
+          )?.major
+        }
         studentNumber={selectedStudentNumber}
       />
       <Dialog

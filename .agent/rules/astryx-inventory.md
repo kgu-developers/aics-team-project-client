@@ -5,13 +5,13 @@ Version-dependent inventory for `@astryxdesign/core@0.2.0`. Selection and stylin
 ## Exported by `@aics/design-system`
 
 ```text
-Avatar, Badge, Breadcrumbs, BreadcrumbItem, Button, Card, Carousel, CheckboxList, CheckboxListItem, Collapsible, CollapsibleGroup, Dialog, Divider
+AlertDialog, Avatar, Badge, Breadcrumbs, BreadcrumbItem, Button, Card, Carousel, CheckboxList, CheckboxListItem, Collapsible, CollapsibleGroup, Dialog, Divider
 EmptyState, Field, FileInput, IconButton, MetadataList, MetadataListItem, Popover, RadioList, RadioListItem, Selector, SelectorOption, StatusDot, Table, ToastViewport, useToast
 Tooltip
 Tab, TabList
 HStack, VStack
 Text, Heading
-TextInput, TextArea, DateInput, TimeInput, MultiSelector
+TextInput, TextArea, DateInput, DateTimeInput, TimeInput, MultiSelector
 AstryxThemeProvider, oopTheme, tokens
 ```
 

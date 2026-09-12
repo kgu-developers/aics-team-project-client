@@ -22,6 +22,7 @@ import {
   useAdminNoticesQuery,
   useRemoveAdminNoticeAttachmentMutation,
 } from '~/features/admin-notices/queries';
+import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminNoticePages.css';
 
@@ -389,7 +390,7 @@ export function AdminNoticeEditPage() {
     from: '/admin/notices/$noticeId/edit',
   });
   const noticeQuery = useAdminNoticeQuery(noticeId);
-  const noticesQuery = useAdminNoticesQuery();
+  const accessibleSections = useAuthStore(state => state.currentUser?.sections);
   const detail = noticeQuery.data;
   const notice = detail?.notice;
   const [content, setContent] = useState(detail?.content.join('\n\n') ?? '');
@@ -458,7 +459,11 @@ export function AdminNoticeEditPage() {
             <Text>분반</Text>
             <SectionSelect
               onChange={setSections}
-              options={noticesQuery.data?.sectionFilters ?? []}
+              options={[
+                ...new Set(
+                  accessibleSections?.map(section => section.code) ?? [],
+                ),
+              ]}
               value={sections}
             />
           </div>
@@ -519,7 +524,7 @@ export function AdminNoticeNewPage() {
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [sections, setSections] = useState<NoticeSection[]>([]);
   const [title, setTitle] = useState('');
-  const noticesQuery = useAdminNoticesQuery();
+  const accessibleSections = useAuthStore(state => state.currentUser?.sections);
 
   return (
     <div className={styles.page}>
@@ -544,7 +549,11 @@ export function AdminNoticeNewPage() {
             <Text>분반</Text>
             <SectionSelect
               onChange={setSections}
-              options={noticesQuery.data?.sectionFilters ?? []}
+              options={[
+                ...new Set(
+                  accessibleSections?.map(section => section.code) ?? [],
+                ),
+              ]}
               value={sections}
             />
           </div>

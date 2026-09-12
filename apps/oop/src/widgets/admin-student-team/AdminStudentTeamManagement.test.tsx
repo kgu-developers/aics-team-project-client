@@ -141,14 +141,14 @@ describe('AdminStudentTeamManagement', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('수강생과 팀 구성을 Swagger 응답의 학번 기준으로 표시한다', async () => {
+  it('수강생과 팀 구성을 Swagger 응답의 학번과 전공 기준으로 표시한다', async () => {
     renderPage();
 
     expect((await screen.findAllByText('김민준')).length).toBeGreaterThan(0);
     expect(screen.getAllByText('20231234')).toHaveLength(2);
     expect(
-      screen.queryByRole('columnheader', { name: '전공' }),
-    ).not.toBeInTheDocument();
+      screen.getByRole('columnheader', { name: '전공' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '1팀' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '2팀' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '1팀' })).toHaveAttribute(

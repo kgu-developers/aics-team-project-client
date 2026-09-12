@@ -27,6 +27,8 @@ export type {
   DialogPurpose,
   DialogVariant,
 } from '@astryxdesign/core/Dialog';
+export { AlertDialog } from '@astryxdesign/core/AlertDialog';
+export type { AlertDialogProps } from '@astryxdesign/core/AlertDialog';
 export { Divider } from '@astryxdesign/core/Divider';
 export type { DividerProps, DividerVariant } from '@astryxdesign/core/Divider';
 export { FileInput } from '@astryxdesign/core/FileInput';
@@ -75,6 +77,11 @@ export { TextInput } from '@astryxdesign/core/TextInput';
 export type { TextInputProps } from '@astryxdesign/core/TextInput';
 export { DateInput } from '@astryxdesign/core/DateInput';
 export type { DateInputProps } from '@astryxdesign/core/DateInput';
+export { DateTimeInput } from '@astryxdesign/core/DateTimeInput';
+export type {
+  DateTimeInputProps,
+  ISODateTimeString,
+} from '@astryxdesign/core/DateTimeInput';
 export { RadioList, RadioListItem } from '@astryxdesign/core/RadioList';
 export type {
   RadioListItemProps,

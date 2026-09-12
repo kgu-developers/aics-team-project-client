@@ -15,6 +15,7 @@ export type AdminMilestoneSubmissionItemDto = {
   completedBy?: string | null;
   currentVersion: number;
   hasPendingReview: boolean;
+  meetingRecordCount: number;
   id: number;
   milestoneId: number;
   presentationOrder?: number | null;

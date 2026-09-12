@@ -10,6 +10,7 @@ export const ROUTES = {
   ADMIN_MILESTONE_DETAIL: '/admin/milestones/$milestoneId',
   ADMIN_MILESTONE_NEW: '/admin/milestones/new',
   ADMIN_PROFILE: '/admin/profile',
+  ADMIN_SECTIONS: '/admin/sections',
   ADMIN_STUDENT_TEAM: '/admin/student-team',
   ADMIN_SUBMISSIONS: '/admin/submissions',
   ADMIN_SUBMISSION_DETAIL: '/admin/submissions/$submissionId',

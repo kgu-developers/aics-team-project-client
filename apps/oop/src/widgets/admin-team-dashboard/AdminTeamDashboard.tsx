@@ -14,7 +14,7 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { AdminTeamMeetingRecordList } from '~/features/admin-meeting/components';
 import { useAdminMeetingRecordsQuery } from '~/features/admin-meeting/queries';
-import { isPresentationEvaluationMilestone } from '~/features/admin-milestone-review/model';
+import { isPresentationSubmissionMilestone } from '~/features/admin-milestone-review/model';
 import {
   useAdminSectionMilestonesQuery,
   useAdminSubmissionVersionDetailsQueries,
@@ -105,7 +105,11 @@ export default function AdminTeamDashboard() {
     team?.sectionId,
   );
   const sectionMilestones = [...(sectionMilestonesQuery.data?.content ?? [])]
-    .filter(milestone => !isPresentationEvaluationMilestone(milestone))
+    .filter(
+      milestone =>
+        milestone.type !== 'PRESENTATION' ||
+        isPresentationSubmissionMilestone(milestone),
+    )
     .sort((left, right) => left.weekNumber - right.weekNumber);
   const milestoneSubmissionQueries = useAdminTeamMilestoneSubmissionsQueries(
     sectionMilestones.map(milestone => String(milestone.id)),

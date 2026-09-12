@@ -17,9 +17,11 @@ import { getDemoUserAccount } from '../data/users';
 export function createLiveEditLockHandlers({
   resources = liveEditLockMockResources,
   now = Date.now,
+  onlyMidReport = false,
 }: {
   resources?: readonly LiveEditLockMockResource[];
   now?: () => number;
+  onlyMidReport?: boolean;
 } = {}) {
   const locks = new Map<
     string,
@@ -49,6 +51,29 @@ export function createLiveEditLockHandlers({
     http[method](
       `${API_BASE_URL}${ENDPOINTS.EDIT_LOCKS.ROOT}`,
       async ({ request }) => {
+        if (onlyMidReport) {
+          const body: unknown =
+            method === 'post'
+              ? await request
+                  .clone()
+                  .json()
+                  .catch(() => null)
+              : null;
+          const params = new URL(request.url).searchParams;
+          const candidate =
+            body && typeof body === 'object'
+              ? (body as Record<string, unknown>)
+              : null;
+          const type =
+            method === 'post'
+              ? candidate?.targetType
+              : params.get('targetType');
+          const sectionKey =
+            method === 'post'
+              ? candidate?.sectionKey
+              : params.get('sectionKey');
+          if (type !== 'MID_REPORT_BLOCK' || !sectionKey) return;
+        }
         const account = getDemoUserAccount(getMockAccessToken(request));
         if (!account) return error('UNAUTHORIZED', 401);
         let input: Record<string, unknown>;

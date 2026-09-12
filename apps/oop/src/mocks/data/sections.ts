@@ -23,22 +23,74 @@ const oopSectionTwo: SectionResponse = {
   classTime: '화123',
 };
 
+const adminOopSection: SectionResponse = {
+  ...oopSectionOne,
+  code: 'OOP-01',
+  name: 'OOP-01',
+  semester: 'FALL',
+};
+
 const sectionsByStudentNumber: Readonly<Record<string, SectionResponse[]>> = {
   '20260001': [oopSectionOne],
-  '20260002': [oopSectionOne, oopSectionTwo],
+  '20260002': [adminOopSection],
   '20260003': [oopSectionOne],
   '20260004': [oopSectionOne],
   '20260021': [oopSectionTwo],
 };
 
+let createdSectionsByStudentNumber: Record<string, SectionResponse[]> = {};
+let contactVisibilityBySectionId: Record<
+  number,
+  Pick<SectionResponse, 'contactVisibleFrom' | 'contactVisibleUntil'>
+> = {};
+
 export function getMockMySections(
   studentNumber: string,
   filter: FetchMySectionsFilter,
 ) {
-  return (sectionsByStudentNumber[studentNumber] ?? []).filter(
-    section =>
-      (!filter.status || section.status === filter.status) &&
-      (!filter.year || section.year === filter.year) &&
-      (!filter.semester || section.semester === filter.semester),
-  );
+  return [
+    ...(sectionsByStudentNumber[studentNumber] ?? []),
+    ...(createdSectionsByStudentNumber[studentNumber] ?? []),
+  ]
+    .map(section => ({
+      ...section,
+      ...contactVisibilityBySectionId[section.id],
+    }))
+    .filter(
+      section =>
+        (!filter.status || section.status === filter.status) &&
+        (!filter.year || section.year === filter.year) &&
+        (!filter.semester || section.semester === filter.semester),
+    );
+}
+
+export function addMockMySection(
+  studentNumber: string,
+  section: SectionResponse,
+) {
+  createdSectionsByStudentNumber = {
+    ...createdSectionsByStudentNumber,
+    [studentNumber]: [
+      ...(createdSectionsByStudentNumber[studentNumber] ?? []),
+      section,
+    ],
+  };
+}
+
+export function updateMockSectionContactVisibility(
+  sectionId: number,
+  contactVisibility: Pick<
+    SectionResponse,
+    'contactVisibleFrom' | 'contactVisibleUntil'
+  >,
+) {
+  contactVisibilityBySectionId = {
+    ...contactVisibilityBySectionId,
+    [sectionId]: contactVisibility,
+  };
+}
+
+export function resetMockMySections() {
+  createdSectionsByStudentNumber = {};
+  contactVisibilityBySectionId = {};
 }

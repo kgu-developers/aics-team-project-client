@@ -74,6 +74,21 @@ export const policyList = style({
   marginTop: 8,
 });
 
+export const artifactList = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
+});
+
+export const artifact = style({
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: tokens.radius.container,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 6,
+  padding: 16,
+});
+
 export const actions = style({
   display: 'flex',
   justifyContent: 'flex-end',

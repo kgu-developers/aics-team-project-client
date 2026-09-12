@@ -1,4 +1,4 @@
-import type { MeetingRecord } from '@aics/core';
+import type { MeetingPhase, MeetingRecord } from '@aics/core';
 
 import {
   adminTeamsFixture,
@@ -6,6 +6,10 @@ import {
 } from './adminStudentTeams';
 
 export type AdminMeetingFixture = MeetingRecord & {
+  apiSectionId: number;
+  apiTeamId: number;
+  milestoneIds: number[];
+  phase: MeetingPhase;
   sectionId: string;
   sectionLabel: string;
   teamLabel: string;
@@ -49,6 +53,8 @@ const records: AdminMeetingFixture[] = [
         updatedAt: '2026-10-01T10:30:00+09:00',
       },
     ],
+    apiSectionId: 1,
+    apiTeamId: 1,
     content: {
       content: [
         {
@@ -86,6 +92,8 @@ const records: AdminMeetingFixture[] = [
     heldAt: '2026-10-01T00:00:00+09:00',
     id: 'admin-meeting-1',
     location: '공학관 301호',
+    milestoneIds: [101],
+    phase: 'PROPOSAL',
     participants: getTeamParticipants('team-1151-1'),
     sectionId,
     sectionLabel,
@@ -96,6 +104,8 @@ const records: AdminMeetingFixture[] = [
   },
   {
     actions: [],
+    apiSectionId: 1,
+    apiTeamId: 2,
     content: {
       content: [
         {
@@ -124,6 +134,8 @@ const records: AdminMeetingFixture[] = [
     heldAt: '2026-10-08T00:00:00+09:00',
     id: 'admin-meeting-2',
     location: '온라인',
+    milestoneIds: [106],
+    phase: 'FINAL',
     participants: getTeamParticipants('team-1151-2'),
     sectionId,
     sectionLabel,
@@ -139,3 +151,10 @@ const teamIds = new Set(adminTeamsFixture.map(team => team.id));
 export const adminMeetingRecordsFixture = records.filter(record =>
   teamIds.has(record.teamId),
 );
+
+export function countAdminMeetingRecords(teamId: number, milestoneId: number) {
+  return adminMeetingRecordsFixture.filter(
+    record =>
+      record.apiTeamId === teamId && record.milestoneIds.includes(milestoneId),
+  ).length;
+}

@@ -4,6 +4,59 @@ import type {
   StudentSubmissionVersionResponse,
 } from '@aics/core';
 
+import { getMockMySections } from './sections';
+import { demoUserAccounts } from './users';
+
+const confirmations = new Map<number, Map<string, number>>();
+export function submissionConsentFor(
+  submission: StudentSubmissionResponse,
+  sectionId: number,
+  studentNumber: string,
+) {
+  let members = confirmations.get(submission.id);
+  if (!members) {
+    members = new Map();
+    const leader = demoUserAccounts.find(
+      account =>
+        Number(account.user.currentTeam?.id.replace(/^team-/, '')) ===
+          submission.teamId &&
+        account.user.currentTeam?.members.some(
+          member => member.id === account.user.id && member.isLeader,
+        ),
+    );
+    if (leader && submission.currentVersion > 0)
+      members.set(leader.user.studentNumber, submission.currentVersion);
+    confirmations.set(submission.id, members);
+  }
+  const active = demoUserAccounts.filter(
+    account =>
+      account.user.globalRole === 'STUDENT' &&
+      Number(account.user.currentTeam?.id.replace(/^team-/, '')) ===
+        submission.teamId &&
+      getMockMySections(account.user.studentNumber, { status: 'ACTIVE' }).some(
+        section => section.id === sectionId,
+      ),
+  );
+  return {
+    confirmedCount: active.filter(
+      account =>
+        members.get(account.user.studentNumber) === submission.currentVersion,
+    ).length,
+    totalCount: active.length,
+    isConfirmedByMe: members.get(studentNumber) === submission.currentVersion,
+  };
+}
+export function setSubmissionConsent(
+  submissionId: number,
+  studentNumber: string,
+  version?: number,
+) {
+  const members = confirmations.get(submissionId) ?? new Map<string, number>();
+  if (version === undefined) members.delete(studentNumber);
+  else members.set(studentNumber, version);
+  confirmations.set(submissionId, members);
+}
+
 const uploadedSubmissions = new Map<number, StudentSubmissionResponse>();
 const uploadedVersions = new Map<number, StudentSubmissionVersionResponse[]>();
 export function storeStudentSubmission(
@@ -15,6 +68,7 @@ export function storeStudentSubmission(
 }
 export function resetStudentSubmissionUploads() {
   uploadedSubmissions.clear();
+  confirmations.clear();
   uploadedVersions.clear();
 }
 

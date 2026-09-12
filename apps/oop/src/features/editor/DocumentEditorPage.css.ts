@@ -115,3 +115,8 @@ export const deferred = style({
   fontSize: 'var(--font-size-sm)',
   margin: 0,
 });
+
+export const saveState = style({
+  color: 'var(--color-text-secondary)',
+  fontSize: 'var(--font-size-sm)',
+});

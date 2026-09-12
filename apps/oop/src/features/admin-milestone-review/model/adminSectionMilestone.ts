@@ -9,7 +9,9 @@ const milestoneTypeLabels: Record<AdminMilestoneType, string> = {
   GENERAL: '일반',
   MID_REPORT: '중간 점검',
   PEER_EVALUATION: '상호 평가',
-  PRESENTATION: '발표 평가',
+  // `PRESENTATION` 하나가 자료 제출과 평가 기간을 함께 가진다.
+  // 평가만을 뜻하는 유형으로 보이면 안 된다.
+  PRESENTATION: '발표',
   PROPOSAL: '제안서',
 };
 
@@ -50,11 +52,7 @@ export function isPresentationEvaluationMilestone(
 export function isPresentationSubmissionMilestone(
   milestone: AdminSectionMilestoneDto,
 ) {
-  return (
-    milestone.type === 'PRESENTATION' &&
-    Boolean(milestone.schedule.dueAt) &&
-    !isPresentationEvaluationMilestone(milestone)
-  );
+  return milestone.type === 'PRESENTATION' && Boolean(milestone.schedule.dueAt);
 }
 
 const milestoneStatusLabels: Record<AdminMilestoneStatus, string> = {

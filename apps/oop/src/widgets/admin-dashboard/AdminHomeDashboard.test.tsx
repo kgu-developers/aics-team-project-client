@@ -47,11 +47,7 @@ vi.mock('~/features/admin-meeting/queries', () => ({
 }));
 
 vi.mock('~/features/admin-milestone-review/queries', () => ({
-  useAdminMilestoneScheduleQuery: () => ({
-    data: { sections: [] },
-    isError: false,
-    isPending: false,
-  }),
+  useAdminAccessibleSectionMilestonesQuery: () => [],
 }));
 
 vi.mock('~/features/admin-notices/queries', () => ({

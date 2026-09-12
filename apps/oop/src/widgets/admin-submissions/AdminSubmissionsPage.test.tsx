@@ -12,7 +12,15 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -25,12 +33,14 @@ import {
   updatePresentationOrderFixture,
 } from '~/mocks/data/adminMilestoneSubmissions';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
 import { adminPresentationEvaluationHandlers } from '~/mocks/handlers/adminPresentationEvaluations';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 
 const server = setupServer(
+  ...adminMeetingHandlers,
   ...adminMilestoneSubmissionDetailHandlers,
   ...adminMilestoneSubmissionsHandlers,
   ...adminPresentationEvaluationHandlers,
@@ -97,6 +107,8 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByText('프로젝트 주제: AI 기반 팀 프로젝트 관리 서비스'),
     ).toBeInTheDocument();
     expect(screen.getByText('프로젝트 주제: -')).toBeInTheDocument();
+    expect(screen.getByText('회의록 1건')).toBeInTheDocument();
+    expect(screen.getByText('회의록 0건')).toBeInTheDocument();
   });
 
   it('제안서와 중간 점검 목록은 왼쪽에 상태와 제출 정보를 표시한다', async () => {
@@ -123,6 +135,72 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'OOP-01 - 1팀 제출물' }),
     ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: '연결된 회의록 (1건)' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: '프로젝트 킥오프' }),
+    ).toHaveAttribute('href', '/admin/meetings/1');
+  });
+
+  it('연결된 회의록이 여러 페이지면 다음 페이지를 조회한다', async () => {
+    const user = userEvent.setup();
+    const requestedPages = vi.fn();
+
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS_LIST}`,
+        ({ request }) => {
+          const page = Number(
+            new URL(request.url).searchParams.get('page') ?? '0',
+          );
+          requestedPages(page);
+
+          return HttpResponse.json({
+            contents: [
+              {
+                authorId: '20230001',
+                content: '',
+                id: page === 0 ? 1 : 2,
+                location: null,
+                meetingAt: '2026-10-01 00:00',
+                participantCount: 2,
+                phase: 'PROPOSAL',
+                sectionId: 1,
+                sectionName: 'OOP-01',
+                teamId: 1,
+                teamName: '1팀',
+                title: page === 0 ? '첫 번째 회의록' : '두 번째 회의록',
+              },
+            ],
+            pageable: {
+              isEnd: page === 1,
+              page,
+              size: 100,
+              totalElements: 101,
+              totalPages: 2,
+            },
+          });
+        },
+      ),
+    );
+
+    renderPage(
+      '/admin/submissions/1001?milestoneId=proposal&sectionId=oop-2026-2-01',
+    );
+
+    expect(
+      await screen.findByRole('link', { name: '첫 번째 회의록' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '다음 페이지' }));
+
+    expect(
+      await screen.findByRole('link', { name: '두 번째 회의록' }),
+    ).toBeInTheDocument();
+    expect(requestedPages).toHaveBeenCalledWith(0);
+    expect(requestedPages).toHaveBeenCalledWith(1);
   });
 
   it('제출 버전과 아티팩트를 서버 계약 기준으로 표시하고 이전 버전을 선택한다', async () => {

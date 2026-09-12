@@ -1,0 +1,1 @@
+export { useLiveSubmissionConsent } from './useLiveSubmissionConsent';

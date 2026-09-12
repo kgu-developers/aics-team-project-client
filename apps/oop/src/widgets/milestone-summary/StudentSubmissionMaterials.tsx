@@ -1,6 +1,9 @@
 import { Button, Text } from '@aics/design-system';
 
-import { useStudentSubmissionVersionsQuery } from '~/features/submission/queries';
+import {
+  useStudentSubmissionQuery,
+  useStudentSubmissionVersionsQuery,
+} from '~/features/submission/queries';
 import type { StudentSubmissionTarget } from '~/features/submission/StudentSubmissionPanel';
 import { useSubmissionDialog } from '~/features/submission/SubmissionDialogContext';
 import { safeSubmissionUrl } from '~/features/submission/submissionUploadInput';
@@ -10,6 +13,7 @@ import SubmissionMaterials from './SubmissionMaterials';
 
 function Materials({ target }: { target: StudentSubmissionTarget }) {
   const query = useStudentSubmissionVersionsQuery(target, target.submissionId);
+  const detail = useStudentSubmissionQuery(target, target.submissionId);
   if (query.isPending)
     return <Text role='status'>제출 자료를 불러오는 중...</Text>;
   if (query.isError)
@@ -19,7 +23,7 @@ function Materials({ target }: { target: StudentSubmissionTarget }) {
         <Button
           label='자료 다시 조회'
           clickAction={async () => {
-            await query.refetch();
+            await Promise.all([query.refetch(), detail.refetch()]);
           }}
         />
       </>

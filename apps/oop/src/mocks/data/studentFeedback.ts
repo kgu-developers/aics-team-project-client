@@ -6,7 +6,7 @@ import type {
 } from '@aics/core';
 
 export const demoProposalReviewId = 'review-proposal-team-07';
-export const demoMidReportSubmissionId = 'submission-mid-report-team-07';
+export const demoMidReportSubmissionId = 'submission-701';
 export const demoFeedbackTeamId = 'team-07';
 
 const proposalResponses = new Map<string, ProposalFeedbackResponse>();

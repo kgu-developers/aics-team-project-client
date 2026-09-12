@@ -1,15 +1,19 @@
 import type { StudentHomeMilestone } from '@aics/core';
 import { Button, Collapsible, StatusDot, useToast } from '@aics/design-system';
 import { useNavigate } from '@tanstack/react-router';
+import type { ReactNode } from 'react';
 
 import { editorSectionTo } from '~/app/constants/editorSections';
 
 import { cx } from '~/shared/lib/cx';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import MidReportSubmitAction from '~/features/mid-report/MidReportSubmitAction';
 import { useTopicApi } from '~/features/project-topic/TopicApiContext';
 import { useTopicCandidateDialog } from '~/features/project-topic/TopicCandidateDialogContext';
 import TopicFinalizePanel from '~/features/project-topic/TopicFinalizePanel';
+import ProposalSubmitAction from '~/features/proposal/ProposalSubmitAction';
+import FinalReportSubmissionAction from '~/features/submission/member-confirmations/FinalReportSubmissionAction';
 import { useUpdateSubmissionConfirmationMutation } from '~/features/submission/queries';
 import { useSubmissionDialog } from '~/features/submission/SubmissionDialogContext';
 
@@ -105,6 +109,102 @@ export default function MilestoneCard({
     );
   }
 
+  function renderRow(
+    row: StudentHomeMilestone['rows'][number],
+    actionOverride?: ReactNode,
+  ) {
+    return (
+      <div className={styles.milestoneRow} key={row.id}>
+        <div className={styles.rowCell}>
+          <p className={styles.rowLabel}>{row.label}</p>
+        </div>
+        <div className={styles.rowCell}>
+          <p className={cx(styles.rowValue, ROW_TONE_CLASS[row.tone])}>
+            {row.id === 'proposal-topic-selection' && topicApi
+              ? topicApi.boardQuery.data?.candidates.some(
+                  candidate => candidate.isMyVote,
+                )
+                ? '내 투표 완료'
+                : row.value
+              : row.value}
+          </p>
+        </div>
+        <div className={styles.rowCell}>
+          {actionOverride ??
+            (row.actionLabel ? (
+              <>
+                {row.id === 'proposal-submit' ? (
+                  <ProposalSubmitAction
+                    className={styles.rowAction}
+                    isDisabled={row.actionDisabled}
+                    label={row.actionLabel}
+                  />
+                ) : row.id === 'mid-report-submit' ? (
+                  <MidReportSubmitAction
+                    className={styles.rowAction}
+                    isDisabled={row.actionDisabled}
+                    label={row.actionLabel}
+                  />
+                ) : row.id === 'proposal-topic-selection' &&
+                  topicApi?.offerFinalization ? (
+                  <TopicFinalizePanel
+                    {...topicApi.scope}
+                    participationBusy={topicApi.busy}
+                    className={styles.rowAction}
+                    onFinalized={() => {
+                      void navigate({
+                        to: editorSectionTo('proposal', 'team-info'),
+                      });
+                    }}
+                  />
+                ) : (
+                  <Button
+                    className={styles.rowAction}
+                    isDisabled={
+                      row.actionDisabled ||
+                      (row.id === 'proposal-topic-selection' && topicApi
+                        ? !topicApi.canParticipate ||
+                          topicApi.busy ||
+                          topicApi.boardQuery.data?.candidates.some(
+                            candidate => candidate.isMine,
+                          )
+                        : false) ||
+                      (row.id === 'final-report-submission' &&
+                        confirmationMutation.isPending)
+                    }
+                    isLoading={
+                      row.id === 'final-report-submission' &&
+                      confirmationMutation.isPending
+                    }
+                    label={row.actionLabel}
+                    onClick={
+                      row.id === 'proposal-topic-selection'
+                        ? () => setTopicCandidateDialogOpen(true)
+                        : row.id === 'final-report-submission'
+                          ? handleFinalReportAction
+                          : milestone.body?.kind === 'presentation-material' &&
+                              row.id === 'presentation-material'
+                            ? () =>
+                                openSubmissionDialog(
+                                  'presentation',
+                                  milestone.id,
+                                )
+                            : row.actionTo
+                              ? () => navigate({ to: row.actionTo })
+                              : undefined
+                    }
+                    size='md'
+                    tooltip={row.actionNotice}
+                    variant='primary'
+                  />
+                )}
+              </>
+            ) : null)}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <article
       className={styles.milestone}
@@ -143,84 +243,39 @@ export default function MilestoneCard({
         )}
 
         <div className={styles.milestoneRows}>
-          {milestone.rows.map(row => (
-            <div className={styles.milestoneRow} key={row.id}>
-              <div className={styles.rowCell}>
-                <p className={styles.rowLabel}>{row.label}</p>
-              </div>
-              <div className={styles.rowCell}>
-                <p className={cx(styles.rowValue, ROW_TONE_CLASS[row.tone])}>
-                  {row.id === 'proposal-topic-selection' && topicApi
-                    ? topicApi.boardQuery.data?.candidates.some(
-                        candidate => candidate.isMyVote,
-                      )
-                      ? '내 투표 완료'
-                      : row.value
-                    : row.value}
-                </p>
-              </div>
-              <div className={styles.rowCell}>
-                {row.actionLabel ? (
-                  <>
-                    {row.id === 'proposal-topic-selection' &&
-                    topicApi?.offerFinalization ? (
-                      <TopicFinalizePanel
-                        {...topicApi.scope}
-                        participationBusy={topicApi.busy}
-                        className={styles.rowAction}
-                        onFinalized={() => {
-                          void navigate({
-                            to: editorSectionTo('proposal', 'team-info'),
-                          });
-                        }}
-                      />
-                    ) : (
-                      <Button
-                        className={styles.rowAction}
-                        isDisabled={
-                          row.actionDisabled ||
-                          (row.id === 'proposal-topic-selection' && topicApi
-                            ? !topicApi.canParticipate ||
-                              topicApi.busy ||
-                              topicApi.boardQuery.data?.candidates.some(
-                                candidate => candidate.isMine,
-                              )
-                            : false) ||
-                          (row.id === 'final-report-submission' &&
-                            confirmationMutation.isPending)
-                        }
-                        isLoading={
-                          row.id === 'final-report-submission' &&
-                          confirmationMutation.isPending
-                        }
-                        label={row.actionLabel}
-                        onClick={
-                          row.id === 'proposal-topic-selection'
-                            ? () => setTopicCandidateDialogOpen(true)
-                            : row.id === 'final-report-submission'
-                              ? handleFinalReportAction
-                              : milestone.body?.kind ===
-                                    'presentation-material' &&
-                                  row.id === 'presentation-material'
-                                ? () =>
-                                    openSubmissionDialog(
-                                      'presentation',
-                                      milestone.id,
-                                    )
-                                : row.actionTo
-                                  ? () => navigate({ to: row.actionTo })
-                                  : undefined
-                        }
-                        size='md'
-                        tooltip={row.actionNotice}
-                        variant='primary'
-                      />
-                    )}
-                  </>
-                ) : null}
-              </div>
-            </div>
-          ))}
+          {milestone.rows.map(row => {
+            const target =
+              row.id === 'final-report-submission'
+                ? submissionTargets[milestone.id]
+                : undefined;
+            return target ? (
+              <FinalReportSubmissionAction
+                key={row.id}
+                target={target}
+                onSubmit={() =>
+                  openSubmissionDialog('final-report', milestone.id)
+                }
+              >
+                {state =>
+                  renderRow(
+                    { ...row, value: state.value },
+                    <Button
+                      className={styles.rowAction}
+                      label={state.actionLabel}
+                      isDisabled={state.disabled}
+                      isLoading={state.busy}
+                      tooltip={state.notice}
+                      onClick={() => void state.onAction()}
+                      size='md'
+                      variant='primary'
+                    />,
+                  )
+                }
+              </FinalReportSubmissionAction>
+            ) : (
+              renderRow(row)
+            );
+          })}
         </div>
       </div>
     </article>

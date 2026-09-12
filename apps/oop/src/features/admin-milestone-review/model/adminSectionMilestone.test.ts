@@ -8,7 +8,7 @@ import {
 
 describe('adminSectionMilestone', () => {
   it('계약된 마일스톤 유형을 관리자 표시명으로 변환한다', () => {
-    expect(getAdminMilestoneTypeLabel('PRESENTATION')).toBe('발표 평가');
+    expect(getAdminMilestoneTypeLabel('PRESENTATION')).toBe('발표');
     expect(getAdminMilestoneTypeLabel('GENERAL')).toBe('일반');
   });
 

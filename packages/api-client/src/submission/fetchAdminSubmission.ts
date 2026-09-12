@@ -16,6 +16,7 @@ export type AdminSubmissionResponse = {
   currentVersion: number;
   hasPendingReview: boolean;
   id: number;
+  meetingRecordCount: number;
   milestoneId: number;
   presentationOrder?: number;
   status: AdminSubmissionStatusDto;

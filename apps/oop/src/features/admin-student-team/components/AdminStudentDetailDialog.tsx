@@ -5,11 +5,13 @@ import * as styles from './AdminStudentDetailDialog.css';
 
 type AdminStudentDetailDialogProps = {
   studentNumber: string | null;
+  major?: string | null;
   onClose: () => void;
 };
 
 export default function AdminStudentDetailDialog({
   studentNumber,
+  major,
   onClose,
 }: AdminStudentDetailDialogProps) {
   const userQuery = useAdminUserQuery(studentNumber);
@@ -46,6 +48,10 @@ export default function AdminStudentDetailDialog({
             <div>
               <dt>이메일</dt>
               <dd>{user.email}</dd>
+            </div>
+            <div>
+              <dt>전공</dt>
+              <dd>{major ?? '전공 정보 없음'}</dd>
             </div>
             <div>
               <dt>전화번호</dt>

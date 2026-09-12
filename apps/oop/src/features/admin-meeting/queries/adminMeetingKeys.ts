@@ -6,7 +6,7 @@ export const adminMeetingKeys = {
     [...adminMeetingKeys.all, 'server-detail', meetingId] as const,
   list: (
     accessibleSectionIds: readonly string[],
-    filter?: { sectionId?: string; teamId?: string },
+    filter?: { sectionId?: string; teamId?: string; milestoneId?: string },
   ) =>
     [
       ...adminMeetingKeys.all,
@@ -14,6 +14,7 @@ export const adminMeetingKeys = {
       [...accessibleSectionIds].sort(),
       filter?.sectionId ?? null,
       filter?.teamId ?? null,
+      filter?.milestoneId ?? null,
     ] as const,
   serverList: (
     accessibleSectionIds: readonly string[],
@@ -22,6 +23,7 @@ export const adminMeetingKeys = {
       sectionId?: number | string;
       size?: number;
       teamId?: number | string;
+      milestoneId?: number | string;
     },
   ) =>
     [
@@ -30,6 +32,7 @@ export const adminMeetingKeys = {
       [...accessibleSectionIds].sort(),
       filter?.sectionId ?? null,
       filter?.teamId ?? null,
+      filter?.milestoneId ?? null,
       filter?.page ?? 0,
       filter?.size ?? 20,
     ] as const,

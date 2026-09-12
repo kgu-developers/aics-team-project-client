@@ -8,7 +8,8 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
@@ -18,8 +19,12 @@ import AdminMeetingsPage from './AdminMeetingsPage';
 
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
+import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 
-const server = setupServer(...adminMeetingHandlers);
+const server = setupServer(
+  ...adminMeetingHandlers,
+  ...adminSectionMilestoneHandlers,
+);
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
@@ -72,5 +77,31 @@ describe('AdminMeetingsPage', () => {
     expect(
       screen.queryByRole('columnheader', { name: '회의 내용' }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('columnheader', { name: '단계' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('특정 분반을 선택했을 때만 마일스톤 필터를 표시한다', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(screen.queryByLabelText('마일스톤 필터')).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'OOP-01' }));
+    const milestoneFilter = await screen.findByLabelText('마일스톤 필터');
+    expect(milestoneFilter).toBeInTheDocument();
+
+    await user.click(milestoneFilter);
+    await user.click(
+      await screen.findByRole('option', { name: '3주차 · 제안서' }),
+    );
+    expect(
+      await screen.findByRole('link', { name: '프로젝트 킥오프' }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('link', { name: '발표 자료 구성 논의' }),
+      ).not.toBeInTheDocument(),
+    );
   });
 });

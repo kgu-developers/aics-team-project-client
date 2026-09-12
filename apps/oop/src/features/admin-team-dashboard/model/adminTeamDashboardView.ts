@@ -24,7 +24,7 @@ export function toAdminTeamDashboardView(
     members: response.members.map(member => ({
       id: String(member.id),
       isLeader: member.isLeader,
-      major: null,
+      major: member.major,
       name: member.name ?? member.studentNumber,
       projectRole: member.projectRole,
       studentNumber: member.studentNumber,

@@ -10,6 +10,8 @@ import { getMockMySections } from '../data/sections';
 import { studentMilestoneFixtures } from '../data/studentMilestones';
 import {
   storeStudentSubmission,
+  submissionConsentFor,
+  setSubmissionConsent,
   studentSubmissionFixture,
   studentSubmissionVersionFixtures,
   submissionPreviewPdf,
@@ -26,7 +28,20 @@ function ownSubmission(request: Request, submissionId: string) {
   });
   const submission = sections
     .flatMap(section => studentMilestoneFixtures(section.id))
-    .map(milestone => studentSubmissionFixture(milestone, teamId))
+    .map(milestone => {
+      const value = studentSubmissionFixture(milestone, teamId);
+      return {
+        ...value,
+        memberConsent:
+          milestone.type === 'FINAL_REPORT'
+            ? submissionConsentFor(
+                value,
+                milestone.sectionId,
+                account.user.studentNumber,
+              )
+            : null,
+      };
+    })
     .find(item => String(item.id) === submissionId);
   return submission ?? new HttpResponse(null, { status: 403 });
 }
@@ -67,7 +82,80 @@ function artifactRules(milestoneId: number): RequiredSubmissionArtifact[] {
     },
   ];
 }
+function consentResponse(
+  request: Request,
+  id: string,
+  action?: 'confirm' | 'cancel' | 'complete',
+) {
+  const submission = ownSubmission(request, id);
+  if (submission instanceof Response) return submission;
+  const account = getMockAuthenticatedAccount(request)!;
+  if (!submission.memberConsent)
+    return HttpResponse.json(
+      { code: 'SUBMISSION_MEMBER_CONFIRMATION_NOT_APPLICABLE' },
+      { status: 400 },
+    );
+  if (action === 'complete') {
+    if (
+      !account.user.currentTeam?.members.some(
+        member => member.id === account.user.id && member.isLeader,
+      )
+    )
+      return new HttpResponse(null, { status: 403 });
+    if (submission.status !== 'SUBMITTED')
+      return new HttpResponse(null, { status: 400 });
+    if (
+      submission.memberConsent.confirmedCount !==
+      submission.memberConsent.totalCount
+    )
+      return HttpResponse.json(
+        { code: 'SUBMISSION_MEMBER_CONFIRMATION_INCOMPLETE' },
+        { status: 428 },
+      );
+    const completed = {
+      ...submission,
+      status: 'COMPLETED' as const,
+      canSubmitNow: false,
+    };
+    storeStudentSubmission(
+      completed,
+      studentSubmissionVersionFixtures(submission),
+    );
+    return HttpResponse.json(completed);
+  }
+  if (action)
+    setSubmissionConsent(
+      submission.id,
+      account.user.studentNumber,
+      action === 'confirm' ? submission.currentVersion : undefined,
+    );
+  const updated = ownSubmission(request, id);
+  return updated instanceof Response
+    ? updated
+    : HttpResponse.json(updated.memberConsent);
+}
 export const studentSubmissionHandlers = [
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MEMBER_CONFIRMATIONS(':submissionId')}`,
+    ({ request, params }) =>
+      consentResponse(request, String(params.submissionId)),
+  ),
+  http.put(
+    `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MY_MEMBER_CONFIRMATION(':submissionId')}`,
+    ({ request, params }) =>
+      consentResponse(request, String(params.submissionId), 'confirm'),
+  ),
+  http.delete(
+    `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MY_MEMBER_CONFIRMATION(':submissionId')}`,
+    ({ request, params }) =>
+      consentResponse(request, String(params.submissionId), 'cancel'),
+  ),
+  http.patch(
+    `${API_BASE_URL}/submissions/:submissionId/complete`,
+    ({ request, params }) =>
+      consentResponse(request, String(params.submissionId), 'complete'),
+  ),
+
   http.get(
     `${API_BASE_URL}/api/v1/sections/:sectionId/milestones/:milestoneId/required-artifacts`,
     ({ request, params }) => {
@@ -200,6 +288,18 @@ export const studentSubmissionHandlers = [
         currentVersion: submission.currentVersion + 1,
         status: 'SUBMITTED' as const,
       };
+      if (milestone.type === 'FINAL_REPORT') {
+        setSubmissionConsent(
+          next.id,
+          account.user.studentNumber,
+          next.currentVersion,
+        );
+        next.memberConsent = submissionConsentFor(
+          next,
+          milestone.sectionId,
+          account.user.studentNumber,
+        );
+      }
       const timestamp = new Date().toISOString();
       storeStudentSubmission(next, [
         ...studentSubmissionVersionFixtures(submission),

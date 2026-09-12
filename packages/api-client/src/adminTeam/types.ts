@@ -15,6 +15,7 @@ export type AdminTeamMemberDto = {
   id: number;
   studentNumber: string;
   name: string;
+  major: string | null;
   isLeader: boolean;
   projectRole: string | null;
 };

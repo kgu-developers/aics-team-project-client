@@ -28,6 +28,7 @@ export function mapCurrentUserResponse(
     email: response.email,
     globalRole,
     sections: (response.sections ?? []).map(section => ({
+      ...section,
       id: String(section.id),
       code: section.code,
       name: section.name,

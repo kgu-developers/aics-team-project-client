@@ -44,12 +44,17 @@ export const adminMeetingHandlers = [
       const searchParams = new URL(request.url).searchParams;
       const sectionId = searchParams.get('sectionId');
       const teamId = searchParams.get('teamId');
+      const milestoneId = searchParams.get('milestoneId');
 
       return HttpResponse.json({
         records: adminMeetingRecordsFixture
           .filter(record => accessibleSectionIds.includes(record.sectionId))
           .filter(record => !sectionId || record.sectionId === sectionId)
           .filter(record => !teamId || record.teamId === teamId)
+          .filter(
+            record =>
+              !milestoneId || record.milestoneIds.includes(Number(milestoneId)),
+          )
           .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
           .map(record => ({
             authorName: record.createdBy.name,
@@ -79,6 +84,7 @@ export const adminMeetingHandlers = [
       const searchParams = new URL(request.url).searchParams;
       const sectionId = searchParams.get('sectionId');
       const teamId = searchParams.get('teamId');
+      const milestoneId = searchParams.get('milestoneId');
       const page = Math.max(Number(searchParams.get('page') ?? 0), 0);
       const size = Math.min(
         Math.max(Number(searchParams.get('size') ?? 20), 1),
@@ -87,10 +93,10 @@ export const adminMeetingHandlers = [
       const records = adminMeetingRecordsFixture
         .filter(record => accessibleSectionIds.includes(record.sectionId))
         .filter(record => !sectionId || record.sectionId === sectionId)
+        .filter(record => !teamId || String(record.apiTeamId) === teamId)
         .filter(
           record =>
-            !teamId ||
-            String(record.teamId === 'team-1151-1' ? 11 : 12) === teamId,
+            !milestoneId || record.milestoneIds.includes(Number(milestoneId)),
         )
         .sort((left, right) => right.heldAt.localeCompare(left.heldAt));
       const start = page * size;
@@ -103,10 +109,10 @@ export const adminMeetingHandlers = [
           location: record.location,
           meetingAt: record.heldAt.slice(0, 16).replace('T', ' '),
           participantCount: record.participants.length,
-          phase: 'MID_CHECK',
-          sectionId: 1,
+          phase: record.phase,
+          sectionId: record.apiSectionId,
           sectionName: record.sectionLabel,
-          teamId: record.teamId === 'team-1151-1' ? 11 : 12,
+          teamId: record.apiTeamId,
           teamName: record.teamLabel,
           title: record.title,
         })),
@@ -158,10 +164,10 @@ export const adminMeetingHandlers = [
               student => student.id === participant.userId,
             )?.studentNumber ?? participant.userId,
         ),
-        phase: 'MID_CHECK',
-        sectionId: 1,
+        phase: record.phase,
+        sectionId: record.apiSectionId,
         sectionName: record.sectionLabel,
-        teamId: record.teamId === 'team-1151-1' ? 11 : 12,
+        teamId: record.apiTeamId,
         teamName: record.teamLabel,
         title: record.title,
         updatedAt: record.updatedAt.slice(0, 16).replace('T', ' '),

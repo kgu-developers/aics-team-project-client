@@ -31,10 +31,10 @@ export const milestoneTemplates: readonly MilestoneTemplate[] = [
   },
   {
     id: 'presentation-submit',
-    label: '발표 자료 제출',
-    title: '발표 자료 제출',
+    label: '발표',
+    title: '발표',
     description:
-      '발표에 사용할 프로젝트 설명과 자료를 제출하는 기본 양식입니다.',
+      '발표 자료 제출과 발표 평가 기간을 함께 설정하는 기본 양식입니다.',
     fields: [
       '프로젝트 개요',
       '프레젠테이션 자료',
@@ -42,13 +42,6 @@ export const milestoneTemplates: readonly MilestoneTemplate[] = [
       '주요 화면',
       '시연 영상',
     ],
-  },
-  {
-    id: 'presentation-evaluate',
-    label: '발표 평가',
-    title: '발표 평가',
-    description: '학생이 다른 팀의 발표를 평가하는 기본 평가 항목입니다.',
-    fields: ['프로젝트 완성도', '기능 구성과 구현', '발표 전달력'],
   },
   {
     id: 'final-report',
