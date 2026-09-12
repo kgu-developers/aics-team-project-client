@@ -196,6 +196,7 @@ export type {
 
 export type {
   MilestonePresentation,
+  MilestonePresentationProject,
   StudentSubmissionResponse,
   StudentSubmissionStatus,
   StudentSubmissionArtifact,

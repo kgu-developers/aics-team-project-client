@@ -454,6 +454,36 @@ describe('KD3-92 학생 평가 화면', () => {
     ).toBeInTheDocument();
   });
 
+  it('프로젝트 화면 구성과 데이터·팀원 정보를 함께 보여 준다', async () => {
+    renderPresentationPage();
+
+    await screen.findByRole('heading', { level: 1, name: '발표 평가' });
+    const screens = screen.getByRole('article', {
+      name: 'CineFlow (7팀) 화면 구성',
+    });
+    expect(
+      within(screens).getByAltText('상영 일정 대시보드'),
+    ).toBeInTheDocument();
+    expect(
+      within(screens).getByAltText('좌석 선택 및 예매 화면'),
+    ).toBeInTheDocument();
+
+    const composition = screen.getByRole('article', {
+      name: 'CineFlow (7팀) 프로젝트 구성',
+    });
+    expect(
+      within(composition).getByRole('row', { name: /상영관별 일정 관리/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(composition).getByRole('row', {
+        name: /OOP 데모 학생 A · 팀장/,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: '진행 일정' }),
+    ).toBeInTheDocument();
+  });
+
   it('제출한 평가 점수를 다시 열 때 복원한다', async () => {
     const user = userEvent.setup();
     const overview = getMyTeamEvaluations(demoStudent.studentNumber);

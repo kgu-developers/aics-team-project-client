@@ -389,8 +389,34 @@ export function getMilestonePresentations(): MilestonePresentation[] {
         teamId: numericId,
         title: team.presentation.projectTitle,
         description: team.presentation.projectIntroduction,
-        goal: null,
-        repositoryUrl: null,
+        goal: team.presentation.demoFlow.join(' → '),
+        repositoryUrl: `https://github.com/kgu-developers/${team.id}`,
+        projectSchedule: '1~4주 기획 · 5~10주 구현 · 11~14주 검증',
+        approvalStatus: 'APPROVED' as const,
+        screenConfiguration: team.presentation.mainScreens.map(screen => ({
+          title: screen.name,
+          description: screen.description,
+          imageFileId: numericId,
+          imageUrl: screen.imageUrl ? demoAssetUrl(screen.imageUrl) : null,
+        })),
+        dataConfiguration: team.presentation.mainFeatures.map(feature => ({
+          name: feature.name,
+          description: feature.description,
+          expectedCount: '100',
+        })),
+        teamOperation: {
+          id: numericId,
+          name: team.name,
+          kickoffRule: null,
+          meetingSchedule: null,
+          members: evaluationTeamMemberIds.map((memberUserId, index) => ({
+            id: index + 1,
+            studentNumber: memberUserId,
+            name: evaluationMembersByUserId[memberUserId]?.name ?? null,
+            isLeader: index === 0,
+            projectRole: evaluationMembersByUserId[memberUserId]?.role ?? null,
+          })),
+        },
       },
       artifacts: [
         {

@@ -111,11 +111,22 @@ function PresentationViewer({
 }) {
   const project = team.project;
   const pdf = findPdfArtifact(team);
+  const teamLabel = team.teamName ?? `${team.teamId}팀`;
+  const screens = (project?.screenConfiguration ?? []).flatMap(screen => {
+    const imageUrl = safeSubmissionUrl(screen.imageUrl);
+    return imageUrl ? [{ ...screen, imageUrl }] : [];
+  });
+  const dataItems = (project?.dataConfiguration ?? []).filter(item =>
+    [item.name, item.description, item.expectedCount].some(value =>
+      value?.trim(),
+    ),
+  );
+  const members = project?.teamOperation?.members ?? [];
   return (
     <>
       <Card padding={5} width='100%'>
         <article
-          aria-label={`${team.teamName ?? `${team.teamId}팀`} 제출 발표 자료`}
+          aria-label={`${teamLabel} 제출 발표 자료`}
           className={styles.cardContent}
         >
           <div className={styles.section}>
@@ -171,7 +182,7 @@ function PresentationViewer({
 
       <Card padding={5} width='100%'>
         <article
-          aria-label={`${team.teamName ?? `${team.teamId}팀`} 프로젝트 정보`}
+          aria-label={`${teamLabel} 프로젝트 정보`}
           className={styles.cardContent}
         >
           <section className={styles.section}>
@@ -188,6 +199,12 @@ function PresentationViewer({
               <p className={styles.bodyText}>{project.goal}</p>
             </section>
           ) : null}
+          {project?.projectSchedule ? (
+            <section className={styles.section}>
+              <h3 className={styles.sectionTitle}>진행 일정</h3>
+              <p className={styles.bodyText}>{project.projectSchedule}</p>
+            </section>
+          ) : null}
           {safeSubmissionUrl(project?.repositoryUrl) ? (
             <a
               className={styles.link}
@@ -200,6 +217,98 @@ function PresentationViewer({
           ) : null}
         </article>
       </Card>
+
+      {screens.length ? (
+        <Card padding={5} width='100%'>
+          <article
+            aria-label={`${teamLabel} 화면 구성`}
+            className={styles.cardContent}
+          >
+            <section className={styles.section}>
+              <h3 className={styles.sectionTitle}>화면 구성</h3>
+              <div className={styles.screenGrid}>
+                {screens.map((screen, index) => (
+                  <figure
+                    className={styles.screenItem}
+                    key={`${screen.imageFileId ?? index}:${screen.title ?? ''}`}
+                  >
+                    <img
+                      alt={screen.title || `화면 ${index + 1}`}
+                      className={styles.screenImage}
+                      src={screen.imageUrl}
+                    />
+                    <figcaption className={styles.screenItem}>
+                      <strong>{screen.title || `화면 ${index + 1}`}</strong>
+                      {screen.description ? <p>{screen.description}</p> : null}
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            </section>
+          </article>
+        </Card>
+      ) : null}
+
+      {dataItems.length || members.length ? (
+        <Card padding={5} width='100%'>
+          <article
+            aria-label={`${teamLabel} 프로젝트 구성`}
+            className={styles.cardContent}
+          >
+            {dataItems.length ? (
+              <section className={styles.section}>
+                <h3 className={styles.sectionTitle}>데이터 구성</h3>
+                <div className={styles.tableScroll}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th scope='col'>이름</th>
+                        <th scope='col'>설명</th>
+                        <th scope='col'>예상 개수</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dataItems.map((item, index) => (
+                        <tr key={`${item.name ?? ''}:${index}`}>
+                          <td>{item.name || '-'}</td>
+                          <td>{item.description || '-'}</td>
+                          <td>{item.expectedCount || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            ) : null}
+            {members.length ? (
+              <section className={styles.section}>
+                <h3 className={styles.sectionTitle}>팀원 역할</h3>
+                <div className={styles.tableScroll}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th scope='col'>이름</th>
+                        <th scope='col'>역할</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {members.map(member => (
+                        <tr key={member.id}>
+                          <td>
+                            {member.name || member.studentNumber}
+                            {member.isLeader ? ' · 팀장' : ''}
+                          </td>
+                          <td>{member.projectRole || '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            ) : null}
+          </article>
+        </Card>
+      ) : null}
     </>
   );
 }
