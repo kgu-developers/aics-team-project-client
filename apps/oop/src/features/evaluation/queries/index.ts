@@ -1,6 +1,7 @@
 export { evaluationKeys } from './evaluationKeys';
 export { useEvaluationContextQuery } from './useEvaluationContextQuery';
 export { useMilestonePresentationsQuery } from './useMilestonePresentationsQuery';
+export { useSectionMilestonesQuery } from './useSectionMilestonesQuery';
 export { usePeerEvaluationTargetsQuery } from './usePeerEvaluationTargetsQuery';
 export { useSubmitPeerEvaluationResponseMutation } from './useSubmitPeerEvaluationResponseMutation';
 export { useTeamEvaluationCriteriaQuery } from './useTeamEvaluationCriteriaQuery';
