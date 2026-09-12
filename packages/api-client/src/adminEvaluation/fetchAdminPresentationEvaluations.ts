@@ -5,7 +5,6 @@ import type {
 } from './types';
 import { ENDPOINTS } from '../constants/endpoints';
 
-
 export async function fetchAdminPresentationEvaluations(
   sectionId: string | number,
   input: AdminPresentationEvaluationListInput = {},
