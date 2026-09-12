@@ -204,6 +204,8 @@ export type {
 
 export type * from './evaluation/apiTypes';
 export * from './editLock/apiTypes';
+
+export * from './proposal/apiTypes';
 export { teamMessageRelatedTypes } from './teamMessage/types';
 export type {
   SubmitTeamMessageInput,

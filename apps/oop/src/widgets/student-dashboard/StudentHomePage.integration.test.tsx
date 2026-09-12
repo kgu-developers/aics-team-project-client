@@ -29,7 +29,7 @@ import { studentHomeKeys } from '~/features/student-home/queries';
 
 import StudentHomePage from './StudentHomePage';
 
-import { liveHomeUser } from '~/mocks/data/studentHomeLive';
+import { liveHomeTeam, liveHomeUser } from '~/mocks/data/studentHomeLive';
 import { studentMilestoneFixtures } from '~/mocks/data/studentMilestones';
 import { studentHomeLiveHandlers } from '~/mocks/handlers/studentHomeLive';
 
@@ -859,5 +859,202 @@ describe('학생 홈의 개인 상호평가 연결', () => {
     expect(
       screen.getAllByRole('button', { name: '상호평가 확인' }),
     ).toHaveLength(2);
+  });
+});
+
+function teamProposalFixture() {
+  return {
+    id: 21,
+    teamId: 7,
+    title: '서버 프로젝트',
+    description: '도서 대출을 관리한다',
+    goal: '팀 목표',
+    dataConfiguration: [],
+    screenConfiguration: [],
+    projectSchedule: null,
+    repositoryUrl: null,
+    externalLinks: null,
+    proposalCompletedAt: null,
+    teamOperation: {
+      id: 7,
+      name: '테스트 팀',
+      kickoffRule: '매주 회고',
+      meetingSchedule: '금요일',
+      members: [
+        {
+          id: 1,
+          studentNumber: liveHomeUser.studentNumber,
+          name: liveHomeUser.name,
+          isLeader: true,
+          projectRole: '개발',
+        },
+      ],
+    },
+  };
+}
+
+function proposalSectionsHandler(
+  contents: {
+    assigneeUserId?: string | null;
+    completed: boolean;
+    completedAt?: string | null;
+    section: string;
+  }[] = [
+    { section: 'TOPIC', completed: true, completedAt: '2026-09-10T10:00:00' },
+    { section: 'DATA', completed: false, assigneeUserId: '20260001' },
+    { section: 'SCREEN', completed: false },
+    { section: 'TEAM_OPERATION', completed: false },
+  ],
+) {
+  return http.get(
+    `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.SECTIONS(21)}`,
+    () =>
+      HttpResponse.json({
+        allCompleted: contents.every(item => item.completed),
+        contents: contents.map(item => ({
+          assigneeName: null,
+          assigneeUserId: item.assigneeUserId ?? null,
+          completed: item.completed,
+          completedAt: item.completedAt ?? null,
+          section: item.section,
+        })),
+      }),
+  );
+}
+
+describe('제안서 작성 영역 상태와 팀장 제출', () => {
+  it('작성 영역 상태를 서버 값으로 채운다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+        HttpResponse.json(teamProposalFixture()),
+      ),
+      proposalSectionsHandler(),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    const topicArea = await screen.findByRole('link', { name: /주제/ });
+    expect(topicArea).toHaveAttribute('href', '/student/editor/proposal/topic');
+    expect(topicArea).toHaveTextContent('작성 완료');
+    expect(screen.getByRole('link', { name: /데이터 구성/ })).toHaveTextContent(
+      '작성 중',
+    );
+    expect(screen.getByRole('link', { name: /화면 구성/ })).toHaveTextContent(
+      '작성 전',
+    );
+    expect(
+      screen.queryByRole('link', { name: /팀 정보/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('작성 영역 상태 조회가 실패하면 실패 문구를 보여준다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+        HttpResponse.json(teamProposalFixture()),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.SECTIONS(21)}`,
+        () => HttpResponse.json({ code: 'INTERNAL_ERROR' }, { status: 500 }),
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    expect(
+      await screen.findAllByText('상태를 불러오지 못했어요.'),
+    ).toHaveLength(4);
+  });
+
+  it('모든 영역이 완료되면 팀장에게 제출하기를 보여주고 제출한다', async () => {
+    const completed = [
+      { section: 'TOPIC', completed: true },
+      { section: 'DATA', completed: true },
+      { section: 'SCREEN', completed: true },
+      { section: 'TEAM_OPERATION', completed: true },
+    ];
+    const submit = vi.fn(() => new HttpResponse(null, { status: 204 }));
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+        HttpResponse.json(teamProposalFixture()),
+      ),
+      proposalSectionsHandler(completed),
+      http.get(`${API_BASE_URL}${ENDPOINTS.EDIT_LOCKS.ROOT}`, () =>
+        HttpResponse.json({ locked: false }),
+      ),
+      http.patch(
+        `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.COMPLETE(21)}`,
+        submit,
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: '제출하기' }),
+    );
+
+    await waitFor(() => expect(submit).toHaveBeenCalled());
+  });
+
+  it('팀장이 아니면 제출하기 대신 작성하기를 보여준다', async () => {
+    const completed = [
+      { section: 'TOPIC', completed: true },
+      { section: 'DATA', completed: true },
+      { section: 'SCREEN', completed: true },
+      { section: 'TEAM_OPERATION', completed: true },
+    ];
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF('7')}`, () =>
+        HttpResponse.json({
+          ...liveHomeTeam,
+          members: liveHomeTeam.members.map(member => ({
+            ...member,
+            isLeader: false,
+          })),
+        }),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+        HttpResponse.json(teamProposalFixture()),
+      ),
+      proposalSectionsHandler(completed),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    expect(
+      await screen.findByRole('button', { name: '작성하기' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('팀장이 제출할 수 있어요.')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '제출하기' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('필수 입력이 비어 있으면 제출 대신 채워야 할 항목을 알린다', async () => {
+    const completed = [
+      { section: 'TOPIC', completed: true },
+      { section: 'DATA', completed: true },
+      { section: 'SCREEN', completed: true },
+      { section: 'TEAM_OPERATION', completed: true },
+    ];
+    const submit = vi.fn(() => new HttpResponse(null, { status: 204 }));
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+        HttpResponse.json({ ...teamProposalFixture(), goal: '   ' }),
+      ),
+      proposalSectionsHandler(completed),
+      http.patch(
+        `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.COMPLETE(21)}`,
+        submit,
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: '제출하기' }),
+    );
+
+    expect(
+      await screen.findByText(
+        '프로젝트 목표를 채워야 제출할 수 있어요. 주제 영역에서 입력해 주세요.',
+      ),
+    ).toBeInTheDocument();
+    expect(submit).not.toHaveBeenCalled();
   });
 });

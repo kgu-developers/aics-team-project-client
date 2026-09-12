@@ -292,6 +292,15 @@ export {
 } from './editLock';
 
 export {
+  fetchProjectProposal,
+  updateProjectProposal,
+  fetchProposalSections,
+  updateProposalSection,
+  submitProjectImage,
+  submitProjectProposal,
+} from './proposal';
+
+export {
   fetchTeamMessages,
   fetchTeamThread,
   submitTeamMessage,

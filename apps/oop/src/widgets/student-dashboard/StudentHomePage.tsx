@@ -7,8 +7,10 @@ import { TopicApiProvider } from '~/features/project-topic/TopicApiContext';
 import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog';
 import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
 import { useTopicMilestoneEligibility } from '~/features/project-topic/useTopicMilestoneEligibility';
+import { useProposalSectionsQuery } from '~/features/proposal/queries';
 import { homeQueryState } from '~/features/student-home/model/homeQueryState';
 import { peerEvaluationHomeSummary } from '~/features/student-home/model/peerEvaluationHomeSummary';
+import { proposalSectionStatuses } from '~/features/student-home/model/proposalSectionStatuses';
 import { selectActiveMilestone } from '~/features/student-home/model/selectActiveMilestone';
 import { studentMilestoneSummary } from '~/features/student-home/model/studentMilestoneSummary';
 import {
@@ -78,6 +80,9 @@ export default function StudentHomePage() {
   const home = useLiveStudentHomeQuery();
   const sectionId = home.sectionId;
   const query = useStudentMilestonesQuery(sectionId, home.teamId);
+  const proposalProject =
+    home.project.state.status === 'ready' ? home.project.data : undefined;
+  const proposalSections = useProposalSectionsQuery(proposalProject?.id);
   const peerMilestones = query.milestones.filter(
     milestone => milestone.type === 'PEER_EVALUATION',
   );
@@ -222,6 +227,8 @@ export default function StudentHomePage() {
       if (project) {
         // An existing project can be continued regardless of how it was created.
         // This does not assert a selected candidate ID or invent block progress.
+        // The feedback room body stays as main defines it; only the writing
+        // areas are filled with the server's section states.
         summary.currentStepLabel = '제안서 작성';
         summary.interaction = 'collapsible';
         summary.isDetailAvailable = true;
@@ -231,18 +238,38 @@ export default function StudentHomePage() {
           feedback: [],
           canSubmitResponse: false,
           replyPlaceholder: '피드백을 반영한 내용을 작성해 주세요.',
-          sections: [],
+          sections: proposalSectionStatuses(
+            proposalSections.isSuccess
+              ? 'ready'
+              : proposalSections.isError
+                ? 'error'
+                : 'pending',
+            proposalSections.data,
+          ),
           guide: '피드백을 반영한 내용을 답변으로 남겨 주세요.',
         };
+        // The leader submits once every area is complete; everyone else keeps writing.
+        const readyToSubmit =
+          proposalSections.isSuccess && proposalSections.data.allCompleted;
         summary.rows = [
-          {
-            id: 'proposal-writing',
-            label: '제안서 작성',
-            value: project.title?.trim() || '프로젝트 내용 확인',
-            tone: 'primary',
-            actionLabel: '작성하기',
-            actionTo: editorSectionTo('proposal', 'team-info'),
-          },
+          readyToSubmit && home.isTeamLeader
+            ? {
+                id: 'proposal-submit',
+                label: '제안서 제출',
+                value: '모든 작성 영역 완료',
+                tone: 'primary',
+                actionLabel: '제출하기',
+              }
+            : {
+                id: 'proposal-writing',
+                label: '제안서 작성',
+                value: readyToSubmit
+                  ? '팀장이 제출할 수 있어요.'
+                  : project.title?.trim() || '프로젝트 내용 확인',
+                tone: 'primary',
+                actionLabel: '작성하기',
+                actionTo: editorSectionTo('proposal', 'team-info'),
+              },
         ];
       }
 
