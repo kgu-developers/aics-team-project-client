@@ -96,7 +96,6 @@ function editor(
       docId='proposal'
       documentQuery={query(data)}
       editLockTargetType={null}
-      metadataTag='TEST'
       saveBlock={saveBlock}
       saveState={{ error: null, saving: false }}
       section={section}
@@ -133,7 +132,6 @@ describe('DocumentEditorPage 자동 저장', () => {
         docId='proposal'
         documentQuery={query(payload as TestDocument)}
         editLockTargetType='PROJECT_BLOCK'
-        metadataTag='TEST'
         saveBlock={save}
         saveState={{ error: null, saving: false }}
         section='team-info'
@@ -291,7 +289,6 @@ describe('DocumentEditorPage 자동 저장', () => {
         docId='proposal'
         documentQuery={query(initialDocument, refetch)}
         editLockTargetType={null}
-        metadataTag='TEST'
         saveBlock={saveBlock}
         saveState={{ error: null, saving: false }}
         section='team-info'
@@ -423,11 +420,13 @@ describe('DocumentEditorPage 자동 저장', () => {
       completing: false,
       completeError: null,
       isDocumentSubmitted: () => false,
-      submitDocument: vi.fn(async () => firstDocument),
-      submitting: false,
-      submitError: null,
-      canSubmitDocument: () => false,
-      submitDisabledReason: () => '제출할 수 없어요.',
+      submit: {
+        submitDocument: vi.fn(async () => firstDocument),
+        submitting: false,
+        submitError: null,
+        canSubmitDocument: () => false,
+        submitDisabledReason: () => '제출할 수 없어요.',
+      },
     };
     const saveBlock = vi.fn(async () => firstDocument);
     const view = renderWithRouter(
@@ -437,7 +436,6 @@ describe('DocumentEditorPage 자동 저장', () => {
         docId='proposal'
         documentQuery={query(firstDocument)}
         editLockTargetType={null}
-        metadataTag='TEST'
         saveBlock={saveBlock}
         saveState={{ error: null, saving: false }}
         section='team-info'
@@ -455,7 +453,6 @@ describe('DocumentEditorPage 자동 저장', () => {
         docId='proposal'
         documentQuery={query(secondDocument)}
         editLockTargetType={null}
-        metadataTag='TEST'
         saveBlock={saveBlock}
         saveState={{ error: null, saving: false }}
         section='team-info'
@@ -489,11 +486,13 @@ describe('DocumentEditorPage 자동 저장', () => {
       completing: false,
       completeError: null,
       isDocumentSubmitted: () => false,
-      submitDocument: vi.fn(async () => completedDocument),
-      submitting: false,
-      submitError: null,
-      canSubmitDocument: () => false,
-      submitDisabledReason: () => '제출할 수 없어요.',
+      submit: {
+        submitDocument: vi.fn(async () => completedDocument),
+        submitting: false,
+        submitError: null,
+        canSubmitDocument: () => false,
+        submitDisabledReason: () => '제출할 수 없어요.',
+      },
     };
 
     renderWithRouter(
@@ -503,7 +502,6 @@ describe('DocumentEditorPage 자동 저장', () => {
         docId='proposal'
         documentQuery={query(initialDocument, refetch)}
         editLockTargetType={null}
-        metadataTag='TEST'
         saveBlock={vi.fn(async () => initialDocument)}
         saveState={{ error: null, saving: false }}
         section='team-info'
@@ -535,11 +533,13 @@ describe('DocumentEditorPage 자동 저장', () => {
       completing: false,
       completeError: null,
       isDocumentSubmitted: () => false,
-      submitDocument,
-      submitting: false,
-      submitError: null,
-      canSubmitDocument: () => true,
-      submitDisabledReason: () => '제출할 수 있어요.',
+      submit: {
+        submitDocument,
+        submitting: false,
+        submitError: null,
+        canSubmitDocument: () => true,
+        submitDisabledReason: () => '제출할 수 있어요.',
+      },
     };
 
     renderWithRouter(
@@ -549,7 +549,6 @@ describe('DocumentEditorPage 자동 저장', () => {
         docId='proposal'
         documentQuery={query(initialDocument, refetch)}
         editLockTargetType={null}
-        metadataTag='TEST'
         saveBlock={vi.fn(async () => initialDocument)}
         saveState={{ error: null, saving: false }}
         section='team-info'
@@ -575,11 +574,13 @@ describe('DocumentEditorPage 자동 저장', () => {
       completing: false,
       completeError: null,
       isDocumentSubmitted: () => false,
-      submitDocument,
-      submitting: false,
-      submitError: null,
-      canSubmitDocument: (document: TestDocument) => document.version === 1,
-      submitDisabledReason: () => '제출할 수 있어요.',
+      submit: {
+        submitDocument,
+        submitting: false,
+        submitError: null,
+        canSubmitDocument: (document: TestDocument) => document.version === 1,
+        submitDisabledReason: () => '제출할 수 있어요.',
+      },
     };
 
     renderWithRouter(
@@ -589,7 +590,6 @@ describe('DocumentEditorPage 자동 저장', () => {
         docId='proposal'
         documentQuery={query(initialDocument, refetch)}
         editLockTargetType={null}
-        metadataTag='TEST'
         saveBlock={vi.fn(async () => initialDocument)}
         saveState={{ error: null, saving: false }}
         section='team-info'
@@ -618,11 +618,13 @@ describe('DocumentEditorPage 자동 저장', () => {
       completing: false,
       completeError: null,
       isDocumentSubmitted: () => false,
-      submitDocument,
-      submitting: false,
-      submitError: null,
-      canSubmitDocument: () => true,
-      submitDisabledReason: () => '제출할 수 있어요.',
+      submit: {
+        submitDocument,
+        submitting: false,
+        submitError: null,
+        canSubmitDocument: () => true,
+        submitDisabledReason: () => '제출할 수 있어요.',
+      },
     };
 
     renderWithRouter(
@@ -632,7 +634,6 @@ describe('DocumentEditorPage 자동 저장', () => {
         docId='proposal'
         documentQuery={query(lockedDocument)}
         editLockTargetType={null}
-        metadataTag='TEST'
         saveBlock={vi.fn(async () => lockedDocument)}
         saveState={{ error: null, saving: false }}
         section='team-info'
@@ -662,11 +663,13 @@ describe('DocumentEditorPage 자동 저장', () => {
       completing: false,
       completeError: null,
       isDocumentSubmitted: () => false,
-      submitDocument,
-      submitting: false,
-      submitError: null,
-      canSubmitDocument: () => true,
-      submitDisabledReason: () => '제출할 수 있어요.',
+      submit: {
+        submitDocument,
+        submitting: false,
+        submitError: null,
+        canSubmitDocument: () => true,
+        submitDisabledReason: () => '제출할 수 있어요.',
+      },
     };
 
     renderWithRouter(
@@ -676,7 +679,6 @@ describe('DocumentEditorPage 자동 저장', () => {
         docId='proposal'
         documentQuery={query(otherBlockLockedDocument)}
         editLockTargetType={null}
-        metadataTag='TEST'
         saveBlock={vi.fn(async () => otherBlockLockedDocument)}
         saveState={{ error: null, saving: false }}
         section='team-info'
@@ -700,7 +702,6 @@ describe('DocumentEditorPage 자동 저장', () => {
         docId='proposal'
         documentQuery={query(initialDocument)}
         editLockTargetType='PROJECT_BLOCK'
-        metadataTag='TEST'
         saveBlock={saveBlock}
         saveState={{ error: null, saving: false }}
         section={section}

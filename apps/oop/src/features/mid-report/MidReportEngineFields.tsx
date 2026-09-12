@@ -1,4 +1,12 @@
-import { Button, Text, TextArea, VStack } from '@aics/design-system';
+import {
+  Button,
+  proportional,
+  Table,
+  TextArea,
+  VStack,
+} from '@aics/design-system';
+
+import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import type { DocumentEditorField } from '~/features/editor/documentEditor';
 
@@ -10,6 +18,10 @@ type TestCase = {
   input: string;
   output: string;
 };
+
+type TestCaseRow = TestCase & { index: number };
+const ADD_ROW_ID = 'add-test-case';
+const createId = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 type MidReportEngineFieldsProps = {
   fields: DocumentEditorField[];
@@ -46,6 +58,11 @@ export default function MidReportEngineFields({
     onFieldsChange(
       updateField(fields, testCasesField.key, JSON.stringify(nextCases)),
     );
+  // The trailing row carries the add action where the next row will appear.
+  const rows: TestCaseRow[] = [
+    ...testCases.map((testCase, index) => ({ ...testCase, index })),
+    { id: ADD_ROW_ID, index: -1, description: '', input: '', output: '' },
+  ];
 
   return (
     <VStack gap={4}>
@@ -62,75 +79,140 @@ export default function MidReportEngineFields({
             value={field.value}
           />
         ))}
-      <Text color='secondary'>
-        입력과 기대 출력을 바로 붙여 넣을 수 있게 테스트 케이스별 텍스트로
-        관리해요.
-      </Text>
-      {testCases.map((testCase, index) => (
-        <div className={styles.row} key={testCase.id}>
-          <TextArea
-            isDisabled={isLocked}
-            label={`테스트 ${index + 1} 설명`}
-            onChange={description =>
-              updateCases(
-                testCases.map(item =>
-                  item.id === testCase.id ? { ...item, description } : item,
+      <div className={styles.tableWrapper}>
+        <Table
+          columns={[
+            {
+              align: 'start',
+              header: '설명',
+              key: 'description',
+              renderCell: (row: TestCaseRow) =>
+                row.index < 0 ? (
+                  <Button
+                    isDisabled={isLocked}
+                    label='테스트 케이스 추가'
+                    onClick={() =>
+                      updateCases([
+                        ...testCases,
+                        {
+                          id: createId(),
+                          description: '',
+                          input: '',
+                          output: '',
+                        },
+                      ])
+                    }
+                    size='sm'
+                    variant='secondary'
+                  />
+                ) : (
+                  <TextArea
+                    isDisabled={isLocked}
+                    isLabelHidden
+                    label={`테스트 ${row.index + 1} 설명`}
+                    onChange={value =>
+                      updateCases(
+                        testCases.map((item, index) =>
+                          index === row.index
+                            ? { ...item, description: value }
+                            : item,
+                        ),
+                      )
+                    }
+                    rows={1}
+                    value={row.description}
+                    width='100%'
+                  />
                 ),
-              )
-            }
-            value={testCase.description}
-          />
-          <TextArea
-            isDisabled={isLocked}
-            label={`테스트 ${index + 1} 입력값`}
-            onChange={input =>
-              updateCases(
-                testCases.map(item =>
-                  item.id === testCase.id ? { ...item, input } : item,
+              width: proportional(1.4, { minWidth: 0 }),
+            },
+            {
+              align: 'start',
+              header: '입력값',
+              key: 'input',
+              renderCell: (row: TestCaseRow) =>
+                row.index < 0 ? null : (
+                  <TextArea
+                    isDisabled={isLocked}
+                    isLabelHidden
+                    label={`테스트 ${row.index + 1} 입력값`}
+                    onChange={value =>
+                      updateCases(
+                        testCases.map((item, index) =>
+                          index === row.index
+                            ? { ...item, input: value }
+                            : item,
+                        ),
+                      )
+                    }
+                    rows={1}
+                    value={row.input}
+                    width='100%'
+                  />
                 ),
-              )
-            }
-            value={testCase.input}
-          />
-          <TextArea
-            isDisabled={isLocked}
-            label={`테스트 ${index + 1} 기대 출력값`}
-            onChange={output =>
-              updateCases(
-                testCases.map(item =>
-                  item.id === testCase.id ? { ...item, output } : item,
+              width: proportional(1, { minWidth: 0 }),
+            },
+            {
+              align: 'start',
+              header: '기대 출력값',
+              key: 'output',
+              renderCell: (row: TestCaseRow) =>
+                row.index < 0 ? null : (
+                  <TextArea
+                    isDisabled={isLocked}
+                    isLabelHidden
+                    label={`테스트 ${row.index + 1} 기대 출력값`}
+                    onChange={value =>
+                      updateCases(
+                        testCases.map((item, index) =>
+                          index === row.index
+                            ? { ...item, output: value }
+                            : item,
+                        ),
+                      )
+                    }
+                    rows={1}
+                    value={row.output}
+                    width='100%'
+                  />
                 ),
-              )
-            }
-            value={testCase.output}
-          />
-          <Button
-            clickAction={() =>
-              updateCases(testCases.filter(item => item.id !== testCase.id))
-            }
-            isDisabled={isLocked || testCases.length === 1}
-            label='테스트 삭제'
-            size='sm'
-            tooltip={
-              testCases.length === 1
-                ? '테스트 케이스는 최소 한 개가 필요해요.'
-                : undefined
-            }
-            variant='secondary'
-          />
-        </div>
-      ))}
-      <Button
-        clickAction={() =>
-          updateCases([
-            ...testCases,
-            { id: crypto.randomUUID(), description: '', input: '', output: '' },
-          ])
-        }
-        isDisabled={isLocked}
-        label='테스트 케이스 추가'
-        variant='secondary'
-      />
+              width: proportional(1, { minWidth: 0 }),
+            },
+            {
+              align: 'end',
+              header: '관리',
+              key: 'actions',
+              renderCell: (row: TestCaseRow) =>
+                row.index < 0 ? null : (
+                  <Button
+                    isDisabled={isLocked || testCases.length === 1}
+                    label='삭제'
+                    onClick={() =>
+                      updateCases(
+                        testCases.filter((_, index) => index !== row.index),
+                      )
+                    }
+                    size='sm'
+                    tooltip={
+                      testCases.length === 1
+                        ? '테스트 케이스는 최소 한 개가 필요해요.'
+                        : undefined
+                    }
+                    variant='secondary'
+                  />
+                ),
+              width: proportional(0.6, { minWidth: 0 }),
+            },
+          ]}
+          data={rows}
+          density='compact'
+          dividers='grid'
+          idKey='id'
+          plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
+          textOverflow='wrap'
+          verticalAlign='top'
+        />
+      </div>
     </VStack>
   );
 }

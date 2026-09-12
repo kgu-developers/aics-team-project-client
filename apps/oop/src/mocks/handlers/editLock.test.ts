@@ -148,10 +148,7 @@ describe('edit lock handler contract', () => {
   it('expires a lease after the TTL so another user can acquire the target', async () => {
     vi.useFakeTimers({ now: new Date('2026-10-01T00:00:00.000Z') });
     resetEditLockFixture();
-    const target = editLockTarget(
-      'MID_REPORT_BLOCK',
-      'mid-report-team-07:topic',
-    );
+    const target = editLockTarget('MID_REPORT_BLOCK', '701:topic');
 
     const first = await acquireLock(target, studentHeaders);
     expect(first.response.status).toBe(200);
@@ -198,10 +195,7 @@ describe('edit lock handler contract', () => {
     },
     {
       label: 'mid report',
-      target: editLockTarget(
-        'MID_REPORT_BLOCK',
-        'mid-report-team-07:engine-design',
-      ),
+      target: editLockTarget('MID_REPORT_BLOCK', '701:engine-design'),
       lockedBlockKey: 'engine-design',
       getDocument: getCurrentMidReport,
       saveUrl: (id: string, blockKey: string) =>
@@ -458,7 +452,7 @@ describe('edit lock handler contract', () => {
     },
     {
       label: 'mid report',
-      target: editLockTarget('MID_REPORT_BLOCK', 'mid-report-team-07:topic'),
+      target: editLockTarget('MID_REPORT_BLOCK', '701:topic'),
       request: () => {
         const document = getCurrentMidReport();
         return fetch(
@@ -527,10 +521,7 @@ describe('edit lock handler contract', () => {
     },
     {
       label: 'mid report',
-      target: editLockTarget(
-        'MID_REPORT_BLOCK',
-        'mid-report-team-07:engine-design',
-      ),
+      target: editLockTarget('MID_REPORT_BLOCK', '701:engine-design'),
       request: () => {
         const document = getCurrentMidReport();
         return fetch(

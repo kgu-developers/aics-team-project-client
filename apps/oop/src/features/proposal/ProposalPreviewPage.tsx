@@ -132,31 +132,32 @@ export default function ProposalPreviewPage({
             )
           : null,
         isDocumentSubmitted: proposal => proposal.status === 'SUBMITTED',
-        submitDocument: async (documentId, version) => {
-          const proposal = await submitMutation.mutateAsync({
-            documentId,
-            version,
-          });
-          toast({
-            body: proposal.revision?.resubmittedAt
-              ? '피드백을 반영한 제안서를 다시 제출했어요.'
-              : '제안서를 제출했어요. 이제 읽기 전용으로 확인할 수 있어요.',
-          });
-          return proposal;
+        submit: {
+          submitDocument: async (documentId, version) => {
+            const proposal = await submitMutation.mutateAsync({
+              documentId,
+              version,
+            });
+            toast({
+              body: proposal.revision?.resubmittedAt
+                ? '피드백을 반영한 제안서를 다시 제출했어요.'
+                : '제안서를 제출했어요. 이제 읽기 전용으로 확인할 수 있어요.',
+            });
+            return proposal;
+          },
+          submitting: submitMutation.isPending,
+          submitError: submitMutation.isError
+            ? getSaveErrorMessage(submitMutation.error, '제출하지 못했어요.')
+            : null,
+          canSubmitDocument: proposal =>
+            canSubmitProposalDocument(proposal, currentUser?.name),
+          submitDisabledReason: proposal =>
+            getProposalSubmitDisabledReason(proposal, currentUser?.name),
         },
-        submitting: submitMutation.isPending,
-        submitError: submitMutation.isError
-          ? getSaveErrorMessage(submitMutation.error, '제출하지 못했어요.')
-          : null,
-        canSubmitDocument: proposal =>
-          canSubmitProposalDocument(proposal, currentUser?.name),
-        submitDisabledReason: proposal =>
-          getProposalSubmitDisabledReason(proposal, currentUser?.name),
       }}
       docId='proposal'
       documentQuery={query}
       editLockTargetType='PROJECT_BLOCK'
-      metadataTag='DOC / PROPOSAL / FORM V1'
       renderFields={({
         documentId,
         block,

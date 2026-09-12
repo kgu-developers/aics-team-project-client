@@ -35,7 +35,60 @@ import { studentHomeLiveHandlers } from '~/mocks/handlers/studentHomeLive';
 
 const list = studentMilestoneFixtures(2).slice(0, 2);
 const requests: string[] = [];
+const midReportFieldKeys: Record<string, string[]> = {
+  topic: ['title', 'description'],
+  'gui-design': ['guiScreens'],
+  'engine-design': ['features', 'architecture', 'testCases'],
+  'project-plan': ['completed', 'inProgress', 'remaining', 'help'],
+};
+function midReportFixture(
+  blocks: { key: string; status: string; lastSavedAt?: string }[] = [
+    { key: 'topic', status: 'COMPLETED', lastSavedAt: '2026-09-10 10:00' },
+    {
+      key: 'gui-design',
+      status: 'IN_PROGRESS',
+      lastSavedAt: '2026-09-11 09:00',
+    },
+    { key: 'engine-design', status: 'IN_PROGRESS' },
+    { key: 'project-plan', status: 'IN_PROGRESS' },
+  ],
+  status = 'DRAFT',
+) {
+  return {
+    id: 701,
+    teamId: 7,
+    title: '중간 보고서',
+    version: 3,
+    dueDate: '2026-10-01 23:59',
+    status,
+    teamLeaderName: liveHomeUser.name,
+    submittedAt: null,
+    submittedBy: null,
+    blocks: blocks.map(block => ({
+      key: block.key,
+      title: block.key,
+      description: '',
+      fields: midReportFieldKeys[block.key]!.map(key => ({
+        key,
+        label: key,
+        value: '',
+      })),
+      status: block.status,
+      lock: null,
+      lastEditedBy: block.lastSavedAt ? liveHomeUser.studentNumber : '',
+      lastEditedByName: block.lastSavedAt ? liveHomeUser.name : '',
+      lastSavedAt: block.lastSavedAt ?? '2026-09-01 09:00',
+    })),
+  };
+}
+
 const server = setupServer(
+  http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+    HttpResponse.json(midReportFixture()),
+  ),
+  http.get(`${API_BASE_URL}${ENDPOINTS.EDIT_LOCKS.ROOT}`, () =>
+    HttpResponse.json({ locked: false }),
+  ),
   http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_THREAD.BY_TEAM('7')}`, () =>
     HttpResponse.json({
       threadId: 70,
@@ -360,8 +413,8 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     );
     const first = render(<StudentHomePage />, { wrapper: Wrapper });
     expect(
-      await screen.findByRole('button', { name: '작성하기' }),
-    ).toBeInTheDocument();
+      (await screen.findAllByRole('button', { name: '작성하기' })).length,
+    ).toBeGreaterThan(0);
     expect(screen.getAllByText('제안서 작성').length).toBeGreaterThan(0);
     expect(screen.getByText('서버 프로젝트')).toBeInTheDocument();
     expect(
@@ -375,8 +428,8 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     });
     render(<StudentHomePage />, { wrapper: Wrapper });
     expect(
-      await screen.findByRole('button', { name: '작성하기' }),
-    ).toBeInTheDocument();
+      (await screen.findAllByRole('button', { name: '작성하기' })).length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByText('주제 선정')).not.toBeInTheDocument();
   });
   it('확정 성공으로 홈의 후보 영역이 사라져도 작성 화면으로 이동한다', async () => {
@@ -430,8 +483,8 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
       ),
     );
     expect(
-      await screen.findByRole('button', { name: '작성하기' }),
-    ).toBeInTheDocument();
+      (await screen.findAllByRole('button', { name: '작성하기' })).length,
+    ).toBeGreaterThan(0);
     expect(
       screen.queryByRole('button', { name: '후보 추가' }),
     ).not.toBeInTheDocument();
@@ -932,17 +985,52 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
     );
     render(<StudentHomePage />, { wrapper: Wrapper });
 
-    const topicArea = await screen.findByRole('link', { name: /주제/ });
-    expect(topicArea).toHaveAttribute('href', '/student/editor/proposal/topic');
-    expect(topicArea).toHaveTextContent('작성 완료');
-    expect(screen.getByRole('link', { name: /데이터 구성/ })).toHaveTextContent(
-      '작성 중',
-    );
-    expect(screen.getByRole('link', { name: /화면 구성/ })).toHaveTextContent(
-      '작성 전',
-    );
+    const area = async (label: RegExp, href: string) => {
+      const links = await screen.findAllByRole('link', { name: label });
+      const link = links.find(item => item.getAttribute('href') === href);
+      if (!link) throw new Error(`${href} 링크를 찾을 수 없습니다.`);
+      return link;
+    };
+    expect(
+      await area(/주제/, '/student/editor/proposal/topic'),
+    ).toHaveTextContent('작성 완료');
+    expect(
+      await area(/데이터 구성/, '/student/editor/proposal/data-composition'),
+    ).toHaveTextContent('작성 중');
+    expect(
+      await area(/화면 구성/, '/student/editor/proposal/screen-composition'),
+    ).toHaveTextContent('작성 전');
     expect(
       screen.queryByRole('link', { name: /팀 정보/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('제출한 제안서는 작성·제출 버튼을 남기지 않는다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+        HttpResponse.json({
+          ...teamProposalFixture(),
+          proposalCompletedAt: '2026-09-12T10:00:00',
+        }),
+      ),
+      proposalSectionsHandler([
+        { section: 'TOPIC', completed: true },
+        { section: 'DATA', completed: true },
+        { section: 'SCREEN', completed: true },
+        { section: 'TEAM_OPERATION', completed: true },
+      ]),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    const card = (await screen.findByText(/제출 완료 · 교수 피드백/)).closest(
+      'article',
+    );
+    if (!card) throw new Error('제안서 마일스톤 카드를 찾을 수 없습니다.');
+    expect(
+      within(card).queryByRole('button', { name: '작성하기' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(card).queryByRole('button', { name: '제출하기' }),
     ).not.toBeInTheDocument();
   });
 
@@ -1018,8 +1106,8 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
     render(<StudentHomePage />, { wrapper: Wrapper });
 
     expect(
-      await screen.findByRole('button', { name: '작성하기' }),
-    ).toBeInTheDocument();
+      (await screen.findAllByRole('button', { name: '작성하기' })).length,
+    ).toBeGreaterThan(0);
     expect(screen.getByText('팀장이 제출할 수 있어요.')).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: '제출하기' }),
@@ -1056,5 +1144,191 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
       ),
     ).toBeInTheDocument();
     expect(submit).not.toHaveBeenCalled();
+  });
+});
+
+describe('중간보고서 작성 영역 상태와 팀장 제출', () => {
+  it('블록 상태를 작성 영역 상태로 보여준다', async () => {
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    const links = await screen.findAllByRole('link', { name: /주제/ });
+    const topic = links.find(
+      item => item.getAttribute('href') === '/student/editor/mid-review/topic',
+    );
+    expect(topic).toHaveTextContent('작성 완료');
+    expect(
+      screen.getByRole('link', { name: /화면 GUI 설계/ }),
+    ).toHaveTextContent('작성 중');
+    expect(screen.getByRole('link', { name: /엔진부 설계/ })).toHaveTextContent(
+      '작성 전',
+    );
+  });
+
+  it('모든 블록이 완료되면 팀장에게 제출하기를 보여주고 제출한다', async () => {
+    const submit = vi.fn(() => HttpResponse.json(midReportFixture()));
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+        HttpResponse.json(
+          midReportFixture([
+            { key: 'topic', status: 'COMPLETED' },
+            { key: 'gui-design', status: 'COMPLETED' },
+            { key: 'engine-design', status: 'COMPLETED' },
+            { key: 'project-plan', status: 'COMPLETED' },
+          ]),
+        ),
+      ),
+      http.post(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.SUBMIT('701')}`, submit),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: '제출하기' }),
+    );
+
+    await waitFor(() => expect(submit).toHaveBeenCalled());
+  });
+
+  it('다른 팀원이 영역을 편집 중이면 제출 요청을 보내지 않는다', async () => {
+    const submit = vi.fn(() => HttpResponse.json(midReportFixture()));
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+        HttpResponse.json(
+          midReportFixture([
+            { key: 'topic', status: 'COMPLETED' },
+            { key: 'gui-design', status: 'COMPLETED' },
+            { key: 'engine-design', status: 'COMPLETED' },
+            { key: 'project-plan', status: 'COMPLETED' },
+          ]),
+        ),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.EDIT_LOCKS.ROOT}`, ({ request }) =>
+        HttpResponse.json(
+          new URL(request.url).searchParams.get('sectionKey') === 'gui-design'
+            ? {
+                locked: true,
+                lockedBy: '20260003',
+                lockedByName: '다른 팀원',
+                lockedAt: '2026-09-12 10:00',
+              }
+            : { locked: false },
+        ),
+      ),
+      http.post(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.SUBMIT('701')}`, submit),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: '제출하기' }),
+    );
+
+    expect(
+      await screen.findByText(
+        /다른 팀원님이 .*영역을 편집 중이라 제출할 수 없어요/,
+      ),
+    ).toBeInTheDocument();
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it('제출한 뒤에는 작성·제출 버튼을 남기지 않는다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+        HttpResponse.json(
+          midReportFixture(
+            [
+              { key: 'topic', status: 'COMPLETED' },
+              { key: 'gui-design', status: 'COMPLETED' },
+              { key: 'engine-design', status: 'COMPLETED' },
+              { key: 'project-plan', status: 'COMPLETED' },
+            ],
+            'SUBMITTED',
+          ),
+        ),
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    expect(await screen.findAllByText(/제출 완료/)).not.toHaveLength(0);
+    expect(
+      screen.queryByRole('button', { name: '제출하기' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '작성하기' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('학생이 대면 피드백 기록을 남기면 재제출 단계로 표시한다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+        HttpResponse.json({
+          ...midReportFixture(
+            [
+              { key: 'topic', status: 'COMPLETED' },
+              { key: 'gui-design', status: 'COMPLETED' },
+              { key: 'engine-design', status: 'COMPLETED' },
+              { key: 'project-plan', status: 'COMPLETED' },
+            ],
+            'SUBMITTED',
+          ),
+          submittedAt: '2026-09-11 10:00',
+        }),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_THREAD.BY_TEAM('7')}`, () =>
+        HttpResponse.json({ threadId: 70, teamId: 7, createdAt: '2026-09-01' }),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`, () =>
+        HttpResponse.json({
+          contents: [
+            {
+              id: 11,
+              threadId: 70,
+              senderId: liveHomeUser.studentNumber,
+              relatedType: 'MID_REPORT',
+              message: '대면 피드백을 반영했어요.',
+              createdAt: '2026-09-12 09:00',
+              important: false,
+              read: true,
+            },
+          ],
+          pageable: {
+            page: 0,
+            size: 100,
+            totalElements: 1,
+            totalPages: 1,
+            isEnd: true,
+          },
+        }),
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    expect(await screen.findByText('중간보고서 재제출')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '재제출' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  });
+
+  it('팀장이 아니면 제출하기를 보여주지 않는다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+        HttpResponse.json({
+          ...midReportFixture([
+            { key: 'topic', status: 'COMPLETED' },
+            { key: 'gui-design', status: 'COMPLETED' },
+            { key: 'engine-design', status: 'COMPLETED' },
+            { key: 'project-plan', status: 'COMPLETED' },
+          ]),
+          teamLeaderName: '다른 팀원',
+        }),
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    expect(
+      (await screen.findAllByRole('button', { name: '작성하기' })).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole('button', { name: '제출하기' }),
+    ).not.toBeInTheDocument();
   });
 });

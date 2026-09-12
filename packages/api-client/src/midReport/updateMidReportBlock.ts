@@ -4,6 +4,7 @@ import type {
   UpdateMidReportBlockInput,
 } from '@aics/core';
 
+import { mapMidReport } from './mapMidReport';
 import { apiClient } from '../client';
 import { ENDPOINTS } from '../constants/endpoints';
 
@@ -12,9 +13,25 @@ export async function updateMidReportBlock(
   blockKey: MidReportBlockKey,
   input: UpdateMidReportBlockInput,
 ): Promise<MidReport> {
-  const response = await apiClient.patch<MidReport>(
+  const response = await apiClient.patch<unknown>(
     ENDPOINTS.MID_REPORT.BLOCK(midReportId, blockKey),
-    input,
+    {
+      ...input,
+      fields: input.fields.map(field => {
+        if (field.key !== 'guiScreens' || !field.value.trim()) return field;
+        const rows = JSON.parse(field.value) as Record<string, unknown>[];
+        return {
+          ...field,
+          value: JSON.stringify(
+            rows.map(row => {
+              const persisted = { ...row };
+              delete persisted.imageUrl;
+              return persisted;
+            }),
+          ),
+        };
+      }),
+    },
   );
-  return response.data;
+  return mapMidReport(response.data);
 }
