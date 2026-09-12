@@ -19,6 +19,7 @@ import {
   useStudentMilestonesQuery,
   usePeerEvaluationHomeQuery,
 } from '~/features/student-home/queries';
+import type { FinalReportSubmissionTarget } from '~/features/submission/FinalReportSubmissionPanel';
 import SubmissionDialog from '~/features/submission/SubmissionDialog';
 import { SubmissionDialogProvider } from '~/features/submission/SubmissionDialogContext';
 
@@ -141,6 +142,7 @@ export default function StudentHomePage() {
     );
   }
 
+  const finalReportTargets: Record<string, FinalReportSubmissionTarget> = {};
   const milestones = query.milestones.map((milestone, index) => {
     const submission = query.submissions[index];
     const summary = studentMilestoneSummary(
@@ -159,27 +161,83 @@ export default function StudentHomePage() {
     if (!home.teamId) summary.statusLabel = '팀 배정 대기';
     else if (submission?.isError) summary.statusLabel = '조회 실패';
     else if (submission?.isPending) summary.statusLabel = '조회 중';
+    if (milestone.type === 'MID_REPORT' && home.teamId) {
+      summary.currentStepLabel = '중간보고서 작성';
+      summary.interaction = 'collapsible';
+      summary.isDetailAvailable = true;
+      summary.body = {
+        kind: 'mid-review-feedback',
+        teamId: home.teamId,
+        feedback: [],
+        canSubmitResponse: false,
+        sections: [],
+        guide: '대면 피드백과 반영 내용을 기록해 주세요.',
+      };
+      return summary;
+    }
+    if (
+      milestone.type === 'FINAL_REPORT' &&
+      submission?.isSuccess &&
+      home.teamId &&
+      home.studentNumber &&
+      String(submission.data.milestoneId) === String(milestone.id) &&
+      String(submission.data.teamId) === home.teamId
+    ) {
+      finalReportTargets[String(milestone.id)] = {
+        sectionId,
+        teamId: home.teamId,
+        studentNumber: home.studentNumber,
+        milestoneId: String(milestone.id),
+        submissionId: String(submission.data.id),
+        type: 'FINAL_REPORT',
+        title: '최종 파일 제출',
+      };
+      summary.interaction = 'collapsible';
+      summary.isDetailAvailable = true;
+      summary.body = {
+        kind: 'final-report',
+        submissionId: String(submission.data.id),
+        notice: {
+          description:
+            milestone.description ||
+            '담당 교수자가 안내한 제출 항목과 일정을 확인해 주세요.',
+        },
+        materials: [],
+      };
+      summary.rows = [
+        {
+          id: 'final-report-submission',
+          label: '최종보고서 제출',
+          value: submission.data.currentVersion
+            ? `v${submission.data.currentVersion} 제출됨`
+            : '미제출',
+          tone: 'primary',
+          actionLabel: submission.data.canSubmitNow
+            ? submission.data.currentVersion
+              ? '파일 교체'
+              : '파일 제출'
+            : '제출 내역',
+          actionNotice: '파일 제출과 교체는 팀장만 할 수 있어요.',
+        },
+      ];
+    }
     if (milestone.type === 'PROPOSAL') {
       const project =
         home.project.state.status === 'ready' ? home.project.data : undefined;
       if (project) {
         // An existing project can be continued regardless of how it was created.
         // This does not assert a selected candidate ID or invent block progress.
-        // Once submitted the server keeps the proposal read-only until a review
-        // reopens it, so the step moves to feedback instead of writing.
-        const submitted = Boolean(project.proposalCompletedAt);
-        summary.currentStepLabel = submitted ? '제안서 피드백' : '제안서 작성';
+        // The feedback room body stays as main defines it; only the writing
+        // areas are filled with the server's section states.
+        summary.currentStepLabel = '제안서 작성';
         summary.interaction = 'collapsible';
         summary.isDetailAvailable = true;
         summary.body = {
-          kind: 'proposal',
-          project: {
-            title: project.title?.trim() || '프로젝트 제목 미정',
-            description:
-              project.description?.trim() ||
-              project.goal?.trim() ||
-              '프로젝트 설명이 아직 등록되지 않았어요.',
-          },
+          kind: 'proposal-feedback',
+          teamId: home.teamId,
+          feedback: [],
+          canSubmitResponse: false,
+          replyPlaceholder: '피드백을 반영한 내용을 작성해 주세요.',
           sections: proposalSectionStatuses(
             proposalSections.isSuccess
               ? 'ready'
@@ -188,21 +246,8 @@ export default function StudentHomePage() {
                 : 'pending',
             proposalSections.data,
           ),
+          guide: '피드백을 반영한 내용을 답변으로 남겨 주세요.',
         };
-        if (submitted) {
-          summary.rows = [
-            {
-              id: 'proposal-revision',
-              label: '제안서 재제출',
-              value: '교수 피드백을 기다리는 중이에요.',
-              tone: 'muted',
-              actionLabel: '재제출',
-              actionDisabled: true,
-              actionNotice: '교수 피드백이 등록된 뒤에 재제출할 수 있어요.',
-            },
-          ];
-          return summary;
-        }
         // The leader submits once every area is complete; everyone else keeps writing.
         const readyToSubmit =
           proposalSections.isSuccess && proposalSections.data.allCompleted;
@@ -226,8 +271,9 @@ export default function StudentHomePage() {
                 actionTo: editorSectionTo('proposal', 'team-info'),
               },
         ];
-        return summary;
       }
+
+      if (project) return summary;
 
       summary.interaction = 'collapsible';
       summary.isDetailAvailable = true;
@@ -305,7 +351,10 @@ export default function StudentHomePage() {
       >
         <TopicCandidateDialogProvider>
           <TopicCandidateDialog />
-          <SubmissionDialogProvider>
+          <SubmissionDialogProvider
+            key={`${home.studentNumber}:${sectionId}:${home.teamId}`}
+            finalReportTargets={finalReportTargets}
+          >
             <SubmissionDialog />
             {query.list.isPending || query.list.isError ? (
               <StudentHomeShortcutState

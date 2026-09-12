@@ -31,6 +31,7 @@ const submittedMilestone: TeamMilestoneProgress = {
     completedBy: null,
     currentVersion: 2,
     hasPendingReview: true,
+    meetingRecordCount: 2,
     presentationOrder: null,
     projectTitle: 'AI 기반 팀 프로젝트 운영 플랫폼',
     status: 'SUBMITTED',

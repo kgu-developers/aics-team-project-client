@@ -13,7 +13,7 @@ export type AdminPeerEvaluationFormPersistResponse = {
 };
 
 export async function createAdminPeerEvaluationForm(
-  sectionId: number,
+  sectionId: string | number,
   input: AdminPeerEvaluationFormCreateInput,
 ): Promise<AdminPeerEvaluationFormPersistResponse> {
   const response = await apiClient.post<AdminPeerEvaluationFormPersistResponse>(

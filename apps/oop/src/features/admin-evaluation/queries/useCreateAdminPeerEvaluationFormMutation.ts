@@ -6,7 +6,7 @@ import { useMutation } from '@tanstack/react-query';
 
 type CreateAdminPeerEvaluationFormVariables = {
   input: AdminPeerEvaluationFormCreateInput;
-  sectionId: number;
+  sectionId: string | number;
 };
 
 export function useCreateAdminPeerEvaluationFormMutation() {

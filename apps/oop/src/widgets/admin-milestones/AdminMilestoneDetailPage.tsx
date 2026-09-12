@@ -1,3 +1,4 @@
+import type { RequiredArtifactType } from '@aics/api-client';
 import { Button, Card, EmptyState, Heading, Text } from '@aics/design-system';
 import {
   Link,
@@ -13,7 +14,10 @@ import {
   getAdminMilestoneStatusLabel,
   getAdminMilestoneTypeLabel,
 } from '~/features/admin-milestone-review/model';
-import { useAdminSectionMilestoneQuery } from '~/features/admin-milestone-review/queries';
+import {
+  useAdminRequiredArtifactsQuery,
+  useAdminSectionMilestoneQuery,
+} from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMilestoneDetailPage.css';
@@ -30,6 +34,13 @@ function ReadOnlyField({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+const artifactTypeLabels: Record<RequiredArtifactType, string> = {
+  CHEERPJ_RUN: 'CheerpJ 실행',
+  FILE: '파일',
+  LINK: '링크',
+  TEXT: '텍스트',
+};
 
 export default function AdminMilestoneDetailPage() {
   const currentUser = useAuthStore(state => state.currentUser);
@@ -51,6 +62,10 @@ export default function AdminMilestoneDetailPage() {
     isAccessibleSection ? milestoneId : undefined,
   );
   const milestone = milestoneQuery.data;
+  const requiredArtifactsQuery = useAdminRequiredArtifactsQuery(
+    isAccessibleSection ? search.sectionId : undefined,
+    isAccessibleSection ? milestoneId : undefined,
+  );
 
   if (!search.sectionId || !isAccessibleSection) {
     return (
@@ -152,6 +167,22 @@ export default function AdminMilestoneDetailPage() {
                 label='공개 상태'
                 value={getAdminMilestoneStatusLabel(milestone.status)}
               />
+              {milestone.schedule.evaluationOpensAt ? (
+                <ReadOnlyField
+                  label='평가 시작 일시'
+                  value={formatAdminMilestoneDate(
+                    milestone.schedule.evaluationOpensAt,
+                  )}
+                />
+              ) : null}
+              {milestone.schedule.evaluationClosesAt ? (
+                <ReadOnlyField
+                  label='평가 종료 일시'
+                  value={formatAdminMilestoneDate(
+                    milestone.schedule.evaluationClosesAt,
+                  )}
+                />
+              ) : null}
             </div>
             <div>
               <Text className={styles.policyTitle} weight='medium'>
@@ -171,6 +202,50 @@ export default function AdminMilestoneDetailPage() {
               </div>
             </div>
           </article>
+        </section>
+
+        <section className={styles.section}>
+          <Heading className={styles.sectionTitle} level={2}>
+            필수 산출물
+          </Heading>
+          {requiredArtifactsQuery.isPending ? (
+            <Text aria-live='polite' role='status'>
+              필수 산출물을 불러오는 중입니다.
+            </Text>
+          ) : requiredArtifactsQuery.isError ? (
+            <Text color='secondary' type='supporting'>
+              필수 산출물을 불러오지 못했습니다. 수정 화면에서 다시
+              시도해주세요.
+            </Text>
+          ) : (requiredArtifactsQuery.data?.contents?.length ?? 0) === 0 ? (
+            <Text color='secondary' type='supporting'>
+              등록된 필수 산출물이 없습니다.
+            </Text>
+          ) : (
+            <div className={styles.artifactList}>
+              {requiredArtifactsQuery.data?.contents?.map(artifact => (
+                <article className={styles.artifact} key={artifact.id}>
+                  <Text weight='medium'>
+                    {artifact.label ?? '이름 없는 산출물'}
+                  </Text>
+                  <Text color='secondary' type='supporting'>
+                    유형:{' '}
+                    {artifact.type ? artifactTypeLabels[artifact.type] : '-'}
+                    {' · '}
+                    {artifact.required ? '필수 제출' : '선택 제출'}
+                  </Text>
+                  {artifact.type === 'FILE' ? (
+                    <Text color='secondary' type='supporting'>
+                      허용 확장자:{' '}
+                      {artifact.allowedExtensions?.join(', ') || '제한 없음'}
+                      {' · '}최대 용량: {artifact.maxFileSizeMb ?? '제한 없음'}
+                      {artifact.maxFileSizeMb === undefined ? '' : 'MB'}
+                    </Text>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
         <div className={styles.actions}>

@@ -19,17 +19,20 @@ import { Link } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
 import { type FormEvent, useState } from 'react';
 
-import { useAuthStore } from '~/features/auth/authStore';
 import ProjectTopicBoard from '~/features/project-topic/ProjectTopicBoard';
 import {
+  useProposalFeedbackQuery,
+  useMidReportFeedbackQuery,
   useSubmitMidReportFeedbackMutation,
   useSubmitProposalFeedbackResponseMutation,
 } from '~/features/student-feedback/queries';
 
+import FinalReportMaterials from './FinalReportMaterials';
 import * as styles from './MilestoneDetails.css';
 import SubmissionMaterials from './SubmissionMaterials';
 
 type MilestoneDetailsProps = {
+  milestoneId?: string;
   body: StudentHomeMilestoneBody;
 };
 
@@ -141,19 +144,16 @@ function SubmittedMidReportFeedback({
 function ProposalFeedbackResponseForm({
   canSubmit,
   blockedReason,
-  reviewId,
+  teamId,
   placeholder,
 }: {
   canSubmit: boolean;
   blockedReason?: string;
-  reviewId: string;
+  teamId?: string;
   placeholder: string;
 }) {
   const toast = useToast();
-  const sectionId = useAuthStore(
-    state => state.currentUser?.sections[0]?.id ?? '',
-  );
-  const mutation = useSubmitProposalFeedbackResponseMutation(sectionId);
+  const mutation = useSubmitProposalFeedbackResponseMutation(teamId);
   const [content, setContent] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -170,7 +170,7 @@ function ProposalFeedbackResponseForm({
 
     setValidationError(null);
     mutation.mutate(
-      { reviewId, content: trimmedContent },
+      { content: trimmedContent },
       {
         onSuccess: () => {
           setContent('');
@@ -188,7 +188,7 @@ function ProposalFeedbackResponseForm({
           '답변을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.',
         )
       : null;
-  const isDisabled = !sectionId || !canSubmit || mutation.isPending;
+  const isDisabled = !teamId || !canSubmit || mutation.isPending;
 
   return (
     <form className={styles.feedbackForm} onSubmit={handleSubmit}>
@@ -226,17 +226,14 @@ function ProposalFeedbackResponseForm({
 function MidReportFeedbackForm({
   canSubmit,
   blockedReason,
-  submissionId,
+  teamId,
 }: {
   canSubmit: boolean;
   blockedReason?: string;
-  submissionId: string;
+  teamId?: string;
 }) {
   const toast = useToast();
-  const sectionId = useAuthStore(
-    state => state.currentUser?.sections[0]?.id ?? '',
-  );
-  const mutation = useSubmitMidReportFeedbackMutation(sectionId);
+  const mutation = useSubmitMidReportFeedbackMutation(teamId);
   const [content, setContent] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -254,7 +251,6 @@ function MidReportFeedbackForm({
     setValidationError(null);
     mutation.mutate(
       {
-        submissionId,
         content: trimmedContent,
       },
       {
@@ -274,7 +270,7 @@ function MidReportFeedbackForm({
           '반영 기록을 남기지 못했습니다. 잠시 후 다시 시도해 주세요.',
         )
       : null;
-  const isDisabled = !sectionId || !canSubmit || mutation.isPending;
+  const isDisabled = !teamId || !canSubmit || mutation.isPending;
 
   return (
     <form className={styles.feedbackForm} onSubmit={handleSubmit}>
@@ -420,23 +416,25 @@ function ProposalBody({
 }
 
 function ProposalFeedbackBody({
-  body,
+  body: sourceBody,
 }: {
   body: Extract<StudentHomeMilestoneBody, { kind: 'proposal-feedback' }>;
 }) {
+  const body = useProposalFeedbackQuery(sourceBody);
   return (
     <div className={styles.root}>
-      <SectionBanner title='교수 피드백' />
+      <SectionBanner title='피드백 대화' />
       <FeedbackList feedback={body.feedback} />
       <SectionBanner title='피드백 반영 답변' />
       {body.studentResponse ? (
         <SubmittedProposalResponse response={body.studentResponse} />
       ) : (
         <ProposalFeedbackResponseForm
+          key={body.teamId}
+          teamId={body.teamId}
           blockedReason={body.responseBlockedReason}
           canSubmit={body.canSubmitResponse}
           placeholder={body.replyPlaceholder}
-          reviewId={body.reviewId}
         />
       )}
       <SectionBanner title='작성 영역별 상태' />
@@ -447,10 +445,11 @@ function ProposalFeedbackBody({
 }
 
 function MidReportFeedbackBody({
-  body,
+  body: sourceBody,
 }: {
   body: Extract<StudentHomeMilestoneBody, { kind: 'mid-review-feedback' }>;
 }) {
+  const body = useMidReportFeedbackQuery(sourceBody);
   return (
     <div className={styles.root}>
       <SectionBanner title='대면 피드백 반영 기록' />
@@ -458,14 +457,15 @@ function MidReportFeedbackBody({
         <SubmittedMidReportFeedback feedback={body.studentFeedback} />
       ) : (
         <MidReportFeedbackForm
+          key={body.teamId}
+          teamId={body.teamId}
           blockedReason={body.responseBlockedReason}
           canSubmit={body.canSubmitResponse}
-          submissionId={body.submissionId}
         />
       )}
       {body.feedback.length > 0 ? (
         <>
-          <SectionBanner title='교수 추가 답변' />
+          <SectionBanner title='피드백 대화' />
           <FeedbackList feedback={body.feedback} />
         </>
       ) : null}
@@ -520,18 +520,24 @@ function PresentationEvaluationBody({
 
 function FinalReportBody({
   body,
+  milestoneId,
 }: {
   body: Extract<StudentHomeMilestoneBody, { kind: 'final-report' }>;
+  milestoneId?: string;
 }) {
   return (
     <div className={styles.root}>
       <SectionBanner title='최종보고서 작성 공지사항' />
       <ProjectSummary description={body.notice.description} />
       {body.notice.file ? <FileRow file={body.notice.file} /> : null}
-      <SubmissionMaterials
-        materials={body.materials}
-        metadata={body.submission}
-      />
+      {milestoneId && /^\d+$/.test(milestoneId) ? (
+        <FinalReportMaterials milestoneId={milestoneId} />
+      ) : (
+        <SubmissionMaterials
+          materials={body.materials}
+          metadata={body.submission}
+        />
+      )}
     </div>
   );
 }
@@ -552,7 +558,10 @@ function PeerEvaluationBody({
   );
 }
 
-export default function MilestoneDetails({ body }: MilestoneDetailsProps) {
+export default function MilestoneDetails({
+  body,
+  milestoneId,
+}: MilestoneDetailsProps) {
   switch (body.kind) {
     case 'topic':
       return <TopicBody body={body} />;
@@ -568,7 +577,7 @@ export default function MilestoneDetails({ body }: MilestoneDetailsProps) {
     case 'presentation-evaluation':
       return <PresentationEvaluationBody body={body} />;
     case 'final-report':
-      return <FinalReportBody body={body} />;
+      return <FinalReportBody body={body} milestoneId={milestoneId} />;
     case 'peer-evaluation':
       return <PeerEvaluationBody body={body} />;
   }

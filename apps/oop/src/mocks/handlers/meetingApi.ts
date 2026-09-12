@@ -3,6 +3,8 @@ import {
   meetingPhases,
   meetingApiActionStatuses,
   type MeetingRecordCreateRequest,
+  type MeetingRecordUpdateRequest,
+  type MeetingRecordPersistResponseDto,
   type MeetingActionCreateRequest,
   type MeetingActionUpdateRequest,
   type TeamMeetingActionResponseDto,
@@ -142,6 +144,57 @@ export function createMeetingApiHandlers() {
       if (denied) return denied;
       const record = records.find(item => item.id === Number(params.id));
       return record ? HttpResponse.json(record) : fail(404);
+    }),
+    http.patch(recordPath, async ({ request, params }) => {
+      const denied = guard(request);
+      if (denied) return denied;
+      const record = records.find(item => item.id === Number(params.id));
+      if (!record)
+        return HttpResponse.json(
+          { code: 'MEETING_RECORD_NOT_FOUND' },
+          { status: 404 },
+        );
+      const input = (await request.json()) as MeetingRecordUpdateRequest;
+      const invalidDate =
+        input.meetingAt != null &&
+        (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?$/.test(
+          input.meetingAt,
+        ) ||
+          !Number.isFinite(Date.parse(input.meetingAt + 'Z')) ||
+          new Date(input.meetingAt + 'Z').toISOString().slice(0, 19) !==
+            input.meetingAt.slice(0, 19));
+      if (
+        (input.title != null &&
+          (typeof input.title !== 'string' || !input.title.trim())) ||
+        (input.content != null &&
+          (typeof input.content !== 'string' || !input.content.trim())) ||
+        (input.location != null && typeof input.location !== 'string') ||
+        (input.phase != null && !meetingPhases.includes(input.phase)) ||
+        (input.participantIds != null &&
+          (!Array.isArray(input.participantIds) ||
+            input.participantIds.some(id => typeof id !== 'string'))) ||
+        invalidDate
+      )
+        return HttpResponse.json({ code: 'INVALID_INPUT' }, { status: 400 });
+      // Null/omitted fields retain their value; an empty location clears it.
+      if (input.title != null) record.title = input.title;
+      if (input.meetingAt != null)
+        record.meetingAt = input.meetingAt.replace('T', ' ').slice(0, 16);
+      if (input.location != null) record.location = input.location;
+      if (input.phase != null) record.phase = input.phase;
+      if (input.content != null) record.content = input.content;
+      if (input.participantIds != null)
+        record.participantIds = input.participantIds;
+      record.updatedAt = now();
+      const response: MeetingRecordPersistResponseDto = {
+        id: record.id,
+        title: record.title,
+        phase: record.phase,
+        meetingAt: record.meetingAt,
+        location: record.location,
+        authorId: record.authorId,
+      };
+      return HttpResponse.json(response);
     }),
     http.delete(recordPath, ({ request, params }) => {
       const denied = guard(request);

@@ -32,6 +32,7 @@ export type AdminMeetingRecordListFilter = {
   sectionId?: number | string;
   size?: number;
   teamId?: number | string;
+  milestoneId?: number | string;
 };
 
 export async function fetchAdminMeetingRecordList(

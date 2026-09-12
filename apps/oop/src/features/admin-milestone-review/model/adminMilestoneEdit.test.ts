@@ -75,13 +75,13 @@ describe('adminMilestoneEdit', () => {
     ).toThrow('지각 제출 마감 일시는 제출 마감 일시보다 뒤여야 합니다.');
   });
 
-  it('발표 평가는 평가 기간을 기본 운영 기간에도 함께 저장한다', () => {
+  it('발표는 제출 마감과 평가 기간을 각각 저장한다', () => {
     const schedule = createAdminMilestoneSectionScheduleDraftFromDto(
       {
-        dueAt: '2026-11-25T18:00:00',
+        dueAt: '2026-11-20T18:00:00',
         evaluationClosesAt: '2026-11-25T18:00:00',
         evaluationOpensAt: '2026-11-21T09:00:00',
-        opensAt: '2026-11-21T09:00:00',
+        opensAt: '2026-11-10T09:00:00',
       },
       'DRAFT',
       false,
@@ -96,10 +96,10 @@ describe('adminMilestoneEdit', () => {
       }),
     ).toMatchObject({
       schedule: {
-        dueAt: '2026-11-25T18:00:00',
+        dueAt: '2026-11-20T18:00:00',
         evaluationClosesAt: '2026-11-25T18:00:00',
         evaluationOpensAt: '2026-11-21T09:00:00',
-        opensAt: '2026-11-21T09:00:00',
+        opensAt: '2026-11-10T09:00:00',
       },
     });
   });

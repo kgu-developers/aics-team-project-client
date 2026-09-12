@@ -1,25 +1,19 @@
-import { submitMidReportFeedback } from '@aics/api-client';
 import type { SubmitMidReportFeedbackInput } from '@aics/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { studentHomeKeys } from '~/features/student-home/queries';
+import { teamMessageMutationOptions } from '~/features/team-message/queries';
 
-export type SubmitMidReportFeedbackVariables = SubmitMidReportFeedbackInput & {
-  submissionId: string;
-};
+export type SubmitMidReportFeedbackVariables = SubmitMidReportFeedbackInput;
 
-export function useSubmitMidReportFeedbackMutation(sectionId: string) {
+export function useSubmitMidReportFeedbackMutation(teamId?: string) {
   const queryClient = useQueryClient();
-
+  const options = teamMessageMutationOptions(queryClient, teamId);
   return useMutation({
-    mutationFn: ({
-      submissionId,
-      ...input
-    }: SubmitMidReportFeedbackVariables) =>
-      submitMidReportFeedback(submissionId, input),
-    onSettled: () =>
-      queryClient.invalidateQueries({
-        queryKey: studentHomeKeys.dashboard(sectionId),
+    ...options,
+    mutationFn: (input: SubmitMidReportFeedbackVariables) =>
+      options.mutationFn({
+        message: input.content.trim(),
+        relatedType: 'MID_REPORT',
       }),
   });
 }

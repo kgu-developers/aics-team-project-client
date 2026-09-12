@@ -4,6 +4,8 @@ import {
   EmptyState,
   Heading,
   HStack,
+  Selector,
+  SelectorOption,
   Text,
 } from '@aics/design-system';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
@@ -11,16 +13,12 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ROUTES } from '~/app/constants/routes';
 
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
+import { useAdminSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMeetingsPage.css';
 
 const allSectionsValue = 'all';
-const phaseLabel = {
-  FINAL: '최종',
-  MID_CHECK: '중간 점검',
-  PROPOSAL: '제안',
-} as const;
 
 function formatDate(value: string) {
   return value.replace('T', ' ');
@@ -33,6 +31,7 @@ export default function AdminMeetingsPage() {
     page?: number;
     sectionId?: string;
     teamId?: string;
+    milestoneId?: string;
   };
   const accessibleSections = currentUser?.sections ?? [];
   const accessibleSectionIds = accessibleSections.map(section => section.id);
@@ -43,11 +42,17 @@ export default function AdminMeetingsPage() {
   const requestedPage = Number(search.page ?? 0);
   const selectedPage =
     Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 0;
+  const selectedMilestoneId =
+    selectedSectionId === allSectionsValue ? undefined : search.milestoneId;
+  const milestonesQuery = useAdminSectionMilestonesQuery(
+    selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
+  );
   const query = useAdminMeetingRecordListQuery(accessibleSectionIds, {
     page: selectedPage,
     sectionId:
       selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
     teamId: search.teamId,
+    milestoneId: selectedMilestoneId,
     size: 20,
   });
   const records = query.data?.contents ?? [];
@@ -59,6 +64,20 @@ export default function AdminMeetingsPage() {
     });
   }
 
+  function selectMilestone(milestoneId: string) {
+    void navigate({
+      search: {
+        ...(selectedSectionId === allSectionsValue
+          ? {}
+          : { sectionId: selectedSectionId }),
+        ...(search.teamId ? { teamId: search.teamId } : {}),
+        ...(milestoneId ? { milestoneId } : {}),
+        page: 0,
+      },
+      to: ROUTES.ADMIN_MEETINGS,
+    });
+  }
+
   function selectPage(page: number) {
     void navigate({
       search: {
@@ -66,6 +85,7 @@ export default function AdminMeetingsPage() {
           ? {}
           : { sectionId: selectedSectionId }),
         ...(search.teamId ? { teamId: search.teamId } : {}),
+        ...(selectedMilestoneId ? { milestoneId: selectedMilestoneId } : {}),
         page,
       },
       to: ROUTES.ADMIN_MEETINGS,
@@ -98,6 +118,24 @@ export default function AdminMeetingsPage() {
           </button>
         ))}
       </div>
+      {selectedSectionId !== allSectionsValue ? (
+        <Selector
+          label='마일스톤 필터'
+          onChange={selectMilestone}
+          options={[
+            { label: '전체 마일스톤', value: '' },
+            ...(milestonesQuery.data?.content ?? []).map(milestone => ({
+              label: `${milestone.weekNumber}주차 · ${milestone.title}`,
+              value: String(milestone.id),
+            })),
+          ]}
+          renderOption={option => (
+            <SelectorOption label={option.label ?? option.value} />
+          )}
+          value={selectedMilestoneId ?? ''}
+          width={320}
+        />
+      ) : null}
 
       {accessibleSectionIds.length === 0 ? (
         <EmptyState
@@ -126,7 +164,6 @@ export default function AdminMeetingsPage() {
                 <th scope='col'>회의 일시</th>
                 <th scope='col'>분반</th>
                 <th scope='col'>팀</th>
-                <th scope='col'>단계</th>
                 <th scope='col'>회의 제목</th>
                 <th scope='col'>작성자</th>
                 <th scope='col'>참석</th>
@@ -138,7 +175,6 @@ export default function AdminMeetingsPage() {
                   <td>{formatDate(record.meetingAt)}</td>
                   <td>{record.sectionName}</td>
                   <td>{record.teamName}</td>
-                  <td>{phaseLabel[record.phase]}</td>
                   <td>
                     <Link
                       className={styles.recordLink}
