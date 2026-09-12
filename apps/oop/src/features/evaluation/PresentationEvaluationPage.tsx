@@ -100,7 +100,13 @@ function findPdfArtifact(team: MilestonePresentation) {
   return null;
 }
 
-function PresentationViewer({ team }: { team: MilestonePresentation }) {
+function PresentationViewer({
+  onReloadMaterials,
+  team,
+}: {
+  onReloadMaterials: () => void;
+  team: MilestonePresentation;
+}) {
   const project = team.project;
   const pdf = findPdfArtifact(team);
   return (
@@ -148,7 +154,13 @@ function PresentationViewer({ team }: { team: MilestonePresentation }) {
               <p className={styles.helper}>등록된 발표 자료가 없어요.</p>
             )}
           </div>
-          {pdf ? <PdfPreview title={pdf.label} url={pdf.href} /> : null}
+          {pdf ? (
+            <PdfPreview
+              onReload={onReloadMaterials}
+              title={pdf.label}
+              url={pdf.href}
+            />
+          ) : null}
         </article>
       </Card>
 
@@ -283,12 +295,14 @@ function PresentationEvaluationContent({
   evaluations,
   milestoneId,
   myTeamId,
+  onReloadMaterials,
   presentations,
   userId,
 }: {
   evaluations: MyTeamEvaluationsResponse;
   milestoneId: string;
   myTeamId: string | null;
+  onReloadMaterials: () => void;
   presentations: MilestonePresentation[];
   userId: string;
 }) {
@@ -369,7 +383,10 @@ function PresentationEvaluationContent({
         </div>
         <Divider className={styles.contentDivider} />
         <div className={styles.contentGrid}>
-          <PresentationViewer team={selectedTeam} />
+          <PresentationViewer
+            onReloadMaterials={onReloadMaterials}
+            team={selectedTeam}
+          />
           <EvaluationForm
             criteria={criteria}
             evaluation={evaluation}
@@ -521,6 +538,9 @@ export default function PresentationEvaluationPage() {
       evaluations={evaluationsQuery.data}
       milestoneId={milestoneId}
       myTeamId={currentUser?.teamId ?? null}
+      onReloadMaterials={() => {
+        void rosterQuery.refetch();
+      }}
       presentations={rosterQuery.data}
       userId={userId}
     />

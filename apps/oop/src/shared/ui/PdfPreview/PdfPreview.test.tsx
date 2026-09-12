@@ -5,68 +5,51 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { PdfPreview } from './PdfPreview';
 
-vi.mock('react-pdf', () => import('~/test/reactPdfMock'));
-
-function renderPreview(url = 'https://example.com/slides.pdf') {
+function renderPreview(onReload?: () => void) {
   return render(
     <AstryxThemeProvider>
-      <PdfPreview title='발표자료.pdf' url={url} />
+      <PdfPreview
+        onReload={onReload}
+        title='발표자료.pdf'
+        url='https://files.example.test/slides.pdf?expires=1'
+      />
     </AstryxThemeProvider>,
   );
 }
 
 describe('PdfPreview', () => {
-  it('문서를 불러오면 첫 쪽과 전체 쪽수를 보여 준다', async () => {
-    renderPreview();
-
-    expect(
-      await screen.findByRole('region', { name: '발표자료.pdf 미리보기' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('발표 자료 1쪽')).toBeInTheDocument();
-    expect(screen.getByText('1 / 3')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '이전 쪽' })).toBeDisabled();
-  });
-
-  it('쪽 이동 버튼으로 마지막 쪽까지 넘기고 경계에서 멈춘다', async () => {
-    const user = userEvent.setup();
-    renderPreview();
-
-    await screen.findByText('발표 자료 1쪽');
-    await user.click(screen.getByRole('button', { name: '다음 쪽' }));
-    expect(screen.getByText('발표 자료 2쪽')).toBeInTheDocument();
-    expect(screen.getByText('2 / 3')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: '다음 쪽' }));
-    expect(screen.getByText('발표 자료 3쪽')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '다음 쪽' })).toBeDisabled();
-
-    await user.click(screen.getByRole('button', { name: '이전 쪽' }));
-    expect(screen.getByText('발표 자료 2쪽')).toBeInTheDocument();
-  });
-
-  it('확대 단계의 양 끝에서 해당 버튼을 잠근다', async () => {
-    const user = userEvent.setup();
-    renderPreview();
-
-    await screen.findByText('발표 자료 1쪽');
-    expect(screen.getByRole('button', { name: '축소' })).toBeDisabled();
-
-    for (let step = 0; step < 3; step += 1)
-      await user.click(screen.getByRole('button', { name: '확대' }));
-
-    expect(screen.getByRole('button', { name: '확대' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '축소' })).not.toBeDisabled();
-  });
-
-  it('문서를 읽지 못하면 브라우저 내장 뷰어로 내려간다', async () => {
-    const { container } = renderPreview('https://example.com/blocked.pdf');
-
-    await screen.findByRole('region', { name: '발표자료.pdf 미리보기' });
+  it('브라우저 내장 뷰어로 PDF를 embed하고 실패 시 안내를 남긴다', () => {
+    const { container } = renderPreview();
     const embed = container.querySelector('object');
-    expect(embed).toHaveAttribute('data', 'https://example.com/blocked.pdf');
-    expect(embed).toHaveAttribute('type', 'application/pdf');
+
     expect(
-      screen.queryByRole('button', { name: '다음 쪽' }),
+      screen.getByRole('region', { name: '발표자료.pdf 미리보기' }),
+    ).toBeInTheDocument();
+    expect(embed).toHaveAttribute(
+      'data',
+      'https://files.example.test/slides.pdf?expires=1',
+    );
+    expect(embed).toHaveAttribute('type', 'application/pdf');
+    expect(embed).toHaveTextContent('미리보기를 표시할 수 없어요.');
+  });
+
+  it('만료된 주소를 다시 받도록 새로 고침을 요청한다', async () => {
+    const user = userEvent.setup();
+    const onReload = vi.fn();
+    renderPreview(onReload);
+
+    await user.click(
+      screen.getByRole('button', { name: '미리보기 새로 고침' }),
+    );
+
+    expect(onReload).toHaveBeenCalledTimes(1);
+  });
+
+  it('새로 고침 수단이 없으면 버튼을 노출하지 않는다', () => {
+    renderPreview();
+
+    expect(
+      screen.queryByRole('button', { name: '미리보기 새로 고침' }),
     ).not.toBeInTheDocument();
   });
 });

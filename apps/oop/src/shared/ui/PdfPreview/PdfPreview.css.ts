@@ -1,5 +1,5 @@
 import { tokens } from '@aics/design-system';
-import { globalStyle, style } from '@vanilla-extract/css';
+import { style } from '@vanilla-extract/css';
 
 export const root = style({
   display: 'flex',
@@ -9,27 +9,17 @@ export const root = style({
   width: '100%',
 });
 
-export const viewport = style({
-  alignItems: 'flex-start',
+export const embed = style({
   backgroundColor: tokens.color.background.muted,
+  border: 0,
   borderRadius: tokens.radius.container,
-  boxSizing: 'border-box',
-  display: 'flex',
-  justifyContent: 'center',
-  maxHeight: 520,
-  overflow: 'auto',
-  padding: tokens.spacing['3'],
+  height: 520,
   width: '100%',
-});
-
-export const page = style({
-  maxWidth: '100%',
-});
-
-globalStyle(`${page} canvas`, {
-  display: 'block',
-  height: 'auto',
-  maxWidth: '100%',
+  '@media': {
+    'screen and (max-width: 767px)': {
+      height: 360,
+    },
+  },
 });
 
 export const message = style({
@@ -43,28 +33,5 @@ export const message = style({
 export const controls = style({
   alignItems: 'center',
   display: 'flex',
-  flexWrap: 'wrap',
-  gap: tokens.spacing['2'],
-});
-
-export const status = style({
-  color: tokens.color.text.secondary,
-  fontSize: 14,
-  margin: 0,
-  minWidth: '3.5rem',
-  textAlign: 'center',
-});
-
-export const zoom = style({
-  display: 'flex',
-  gap: tokens.spacing['1'],
-  marginLeft: 'auto',
-});
-
-export const embed = style({
-  backgroundColor: tokens.color.background.muted,
-  border: 0,
-  borderRadius: tokens.radius.container,
-  height: 520,
-  width: '100%',
+  justifyContent: 'flex-end',
 });

@@ -33,8 +33,6 @@ import { evaluationHandlers } from '~/mocks/handlers/evaluation';
 
 const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
 
-vi.mock('react-pdf', () => import('~/test/reactPdfMock'));
-
 vi.mock('@tanstack/react-router', async importOriginal => ({
   ...(await importOriginal<typeof import('@tanstack/react-router')>()),
   useNavigate: () => mockNavigate,
