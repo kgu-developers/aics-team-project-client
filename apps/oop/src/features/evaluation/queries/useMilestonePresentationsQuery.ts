@@ -1,16 +1,13 @@
 import { fetchMilestonePresentations } from '@aics/api-client';
-import { useQuery } from '@tanstack/react-query';
+import { skipToken, useQuery } from '@tanstack/react-query';
 
 import { evaluationKeys } from './evaluationKeys';
 
-export function useMilestonePresentationsQuery(
-  sectionId: string,
-  userId: string,
-  milestoneId: string,
-) {
+export function useMilestonePresentationsQuery(milestoneId: string) {
   return useQuery({
-    enabled: Boolean(milestoneId),
-    queryKey: evaluationKeys.presentationRoster(sectionId, userId, milestoneId),
-    queryFn: () => fetchMilestonePresentations(milestoneId),
+    queryKey: evaluationKeys.presentationRoster(milestoneId),
+    queryFn: milestoneId
+      ? () => fetchMilestonePresentations(milestoneId)
+      : skipToken,
   });
 }

@@ -573,11 +573,7 @@ function PresentationEvaluationBody({
   body: Extract<StudentHomeMilestoneBody, { kind: 'presentation-evaluation' }>;
   milestoneId?: string;
 }) {
-  const presentationsQuery = useMilestonePresentationsQuery(
-    '',
-    '',
-    milestoneId ?? '',
-  );
+  const presentationsQuery = useMilestonePresentationsQuery(milestoneId ?? '');
   return (
     <div className={styles.root}>
       {presentationsQuery.isPending ? (

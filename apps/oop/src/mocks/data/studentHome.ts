@@ -1120,9 +1120,6 @@ export function createStudentHomeDashboardWithEvaluationProgress(
   const submittedCount = currentEvaluations.filter(
     evaluation => evaluation.status === 'SUBMITTED',
   ).length;
-  const draftCount = currentEvaluations.filter(
-    evaluation => evaluation.status === 'DRAFT',
-  ).length;
   const targetCount = evaluatableTeamIds.size;
   const isPresentationEvaluationAvailable =
     presentation.windowState === 'OPEN' ||
@@ -1167,19 +1164,6 @@ export function createStudentHomeDashboardWithEvaluationProgress(
                 actionLabel: '평가 내역 보기',
                 actionDisabled: false,
                 actionNotice: '제출한 팀별 발표 평가 내역을 확인합니다.',
-              };
-            }
-            if (draftCount > 0) {
-              return {
-                ...row,
-                value:
-                  submittedCount > 0
-                    ? `제출 완료 ${submittedCount}/${targetCount}팀 · 작성 중 ${draftCount}팀`
-                    : `작성 중 ${draftCount}/${targetCount}팀`,
-                tone: 'primary' as const,
-                actionLabel: '이어 평가',
-                actionDisabled: false,
-                actionNotice: '저장한 발표 평가를 이어서 작성합니다.',
               };
             }
             if (submittedCount > 0) {

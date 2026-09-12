@@ -149,10 +149,10 @@ export const ENDPOINTS = {
     CONTEXT: (sectionId: string) => `/sections/${sectionId}/evaluation-context`,
     TEAM_CRITERIA: (sectionId: string) =>
       `/sections/${sectionId}/team-evaluation-criteria`,
-    TEAM_EVALUATIONS: (milestoneId: string) =>
-      `/milestones/${milestoneId}/team-evaluations`,
+    TEAM_EVALUATION: (milestoneId: string, teamId: string) =>
+      `/milestones/${milestoneId}/team-evaluations/${teamId}`,
     MY_TEAM_EVALUATIONS: (milestoneId: string) =>
-      `/milestones/${milestoneId}/team-evaluations/my`,
+      `/milestones/${milestoneId}/team-evaluations/me`,
     PEER_TARGETS: (formId: string) =>
       `/peer-evaluation-forms/${formId}/targets`,
     PEER_RESPONSES: (formId: string) =>

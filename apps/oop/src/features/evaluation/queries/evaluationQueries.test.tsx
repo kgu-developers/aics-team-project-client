@@ -16,7 +16,7 @@ import {
 
 import { useEvaluationContextQuery } from './useEvaluationContextQuery';
 import { useMilestonePresentationsQuery } from './useMilestonePresentationsQuery';
-import { useMyPresentationEvaluationsQuery } from './useMyPresentationEvaluationsQuery';
+import { useMyTeamEvaluationsQuery } from './useMyTeamEvaluationsQuery';
 import { usePeerEvaluationTargetsQuery } from './usePeerEvaluationTargetsQuery';
 import { useTeamEvaluationCriteriaQuery } from './useTeamEvaluationCriteriaQuery';
 
@@ -151,10 +151,9 @@ describe('evaluation queries', () => {
   );
 
   it('발표 마일스톤 ID가 없으면 Swagger 발표 팀 목록 API를 호출하지 않는다', () => {
-    const { result } = renderHook(
-      () => useMilestonePresentationsQuery('1', '20260001', ''),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useMilestonePresentationsQuery(''), {
+      wrapper: createWrapper(),
+    });
 
     expect(result.current.fetchStatus).toBe('idle');
     expect(presentationRosterRequest).not.toHaveBeenCalled();
@@ -179,10 +178,9 @@ describe('evaluation queries', () => {
           }),
       ),
     );
-    const { result } = renderHook(
-      () => useMilestonePresentationsQuery('1', '20260001', '22'),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useMilestonePresentationsQuery('22'), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([
@@ -191,14 +189,13 @@ describe('evaluation queries', () => {
   });
 
   it.each([
-    ['', '20260001', 'presentation'],
-    ['oop-2026-2-01', '', 'presentation'],
-    ['oop-2026-2-01', '20260001', ''],
+    ['', '303'],
+    ['20260001', ''],
   ])(
-    '분반, 사용자 또는 마일스톤 ID가 없으면 발표 평가 API를 호출하지 않는다',
-    (sectionId, userId, milestoneId) => {
+    '사용자 또는 마일스톤 ID가 없으면 발표 평가 API를 호출하지 않는다',
+    (userId, milestoneId) => {
       const { result } = renderHook(
-        () => useMyPresentationEvaluationsQuery(sectionId, userId, milestoneId),
+        () => useMyTeamEvaluationsQuery(userId, milestoneId),
         { wrapper: createWrapper() },
       );
 

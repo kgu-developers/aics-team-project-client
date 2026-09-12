@@ -115,11 +115,11 @@ export {
 export { acquireEditLock, fetchEditLock, removeEditLock } from './editLock';
 export {
   fetchEvaluationContext,
-  fetchMyPresentationEvaluations,
+  fetchMyTeamEvaluations,
+  submitTeamEvaluation,
   fetchPeerEvaluationTargets,
   fetchTeamEvaluationCriteria,
   submitPeerEvaluationResponse,
-  submitPresentationEvaluation,
 } from './evaluation';
 export {
   submitMidReportFeedback,

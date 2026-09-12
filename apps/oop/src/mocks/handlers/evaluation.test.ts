@@ -18,7 +18,6 @@ import { evaluationHandlers } from './evaluation';
 import { studentHomeHandlers } from './studentHome';
 import {
   evaluationSectionId,
-  evaluationTeamId,
   peerEvaluationFormId,
   presentationEvaluationClosesAt,
   presentationEvaluationMilestoneId,
@@ -68,11 +67,28 @@ function contributionAnswers(total = 100) {
   }));
 }
 
-const presentationScores = [
-  { criterionId: 'project-completeness', score: 5 },
-  { criterionId: 'feature-implementation', score: 4 },
-  { criterionId: 'presentation-delivery', score: 3 },
+const evaluationTeamNumericId = 7;
+const otherTeamNumericId = 1;
+const teamEvaluationScores = [
+  { criterionId: 1, score: 5 },
+  { criterionId: 2, score: 4 },
+  { criterionId: 3, score: 3 },
 ];
+
+function putTeamEvaluation(
+  teamId: number,
+  scores: { criterionId: number; score: number }[],
+  token = demoAccessToken,
+) {
+  return request(
+    ENDPOINTS.EVALUATION.TEAM_EVALUATION(
+      presentationEvaluationMilestoneId,
+      String(teamId),
+    ),
+    { method: 'PUT', body: JSON.stringify({ scores }) },
+    token,
+  );
+}
 
 async function getDashboardPreview(
   scenario: 'presentation-evaluation' | 'peer-evaluation',
@@ -229,7 +245,34 @@ describe('evaluationHandlers', () => {
     });
   });
 
-  it('로그인 학생의 팀 멤버십으로 내 팀 발표 표시를 계산한다', async () => {
+  it('발표 마일스톤의 팀 목록과 제출 자료를 반환한다', async () => {
+    const response = await request(
+      ENDPOINTS.SUBMISSION.MILESTONE_PRESENTATIONS(
+        presentationEvaluationMilestoneId,
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.contents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          teamId: evaluationTeamNumericId,
+          presentationOrder: 1,
+        }),
+        expect.objectContaining({
+          teamId: otherTeamNumericId,
+          presentationOrder: 2,
+        }),
+      ]),
+    );
+    expect(body.contents[0].artifacts[0]).toMatchObject({
+      type: 'FILE',
+      mimeType: 'application/pdf',
+    });
+  });
+
+  it('내 평가 조회로 평가 기준과 평가 기간 상태를 제공한다', async () => {
     const response = await request(
       ENDPOINTS.EVALUATION.MY_TEAM_EVALUATIONS(
         presentationEvaluationMilestoneId,
@@ -242,13 +285,10 @@ describe('evaluationHandlers', () => {
       evaluationOpensAt: presentationEvaluationOpensAt,
       evaluationClosesAt: presentationEvaluationClosesAt,
       windowState: 'OPEN',
+      evaluations: [],
     });
-    expect(body.teams).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: evaluationTeamId, isMyTeam: true }),
-        expect.objectContaining({ id: 'team-01', isMyTeam: false }),
-      ]),
-    );
+    expect(body.criteria).toHaveLength(3);
+    expect(body.criteria[0]).toMatchObject({ id: 1, maxScore: 5 });
   });
 
   it('상호평가 대상에서 로그인한 학생 본인을 제외한다', async () => {
@@ -270,20 +310,9 @@ describe('evaluationHandlers', () => {
   });
 
   it('학생이 자기 팀의 발표를 평가하지 못하게 한다', async () => {
-    const response = await request(
-      ENDPOINTS.EVALUATION.TEAM_EVALUATIONS(presentationEvaluationMilestoneId),
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          rateeTeamId: evaluationTeamId,
-          scores: [
-            { criterionId: 'project-completeness', score: 4 },
-            { criterionId: 'feature-implementation', score: 4 },
-            { criterionId: 'presentation-delivery', score: 4 },
-          ],
-          submit: true,
-        }),
-      },
+    const response = await putTeamEvaluation(
+      evaluationTeamNumericId,
+      teamEvaluationScores,
     );
 
     expect(response.status).toBe(422);
@@ -292,19 +321,27 @@ describe('evaluationHandlers', () => {
     });
   });
 
+  it('일부 항목만 담긴 평가 제출을 거절한다', async () => {
+    const response = await putTeamEvaluation(otherTeamNumericId, [
+      { criterionId: 1, score: 5 },
+    ]);
+
+    expect(response.status).toBe(422);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'INVALID_SCORE',
+    });
+  });
+
   it('발표 평가 제출 뒤에는 로그인한 학생의 내역만 반환한다', async () => {
-    const submitResponse = await request(
-      ENDPOINTS.EVALUATION.TEAM_EVALUATIONS(presentationEvaluationMilestoneId),
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          rateeTeamId: 'team-01',
-          scores: presentationScores,
-          submit: true,
-        }),
-      },
+    const submitResponse = await putTeamEvaluation(
+      otherTeamNumericId,
+      teamEvaluationScores,
     );
     expect(submitResponse.status).toBe(200);
+    await expect(submitResponse.json()).resolves.toMatchObject({
+      teamId: otherTeamNumericId,
+      scores: teamEvaluationScores,
+    });
 
     const mine = await request(
       ENDPOINTS.EVALUATION.MY_TEAM_EVALUATIONS(
@@ -312,7 +349,9 @@ describe('evaluationHandlers', () => {
       ),
     );
     await expect(mine.json()).resolves.toMatchObject({
-      myEvaluations: [{ rateeTeamId: 'team-01', status: 'SUBMITTED' }],
+      evaluations: [
+        { teamId: otherTeamNumericId, scores: teamEvaluationScores },
+      ],
     });
 
     const anotherStudent = await request(
@@ -323,57 +362,30 @@ describe('evaluationHandlers', () => {
       demoPartnerAccessToken,
     );
     await expect(anotherStudent.json()).resolves.toMatchObject({
-      myEvaluations: [],
+      evaluations: [],
     });
   });
 
-  it('발표 평가 임시 저장과 제출 뒤 대시보드 재조회에 진행 상태를 반영한다', async () => {
-    const draft = await request(
-      ENDPOINTS.EVALUATION.TEAM_EVALUATIONS(presentationEvaluationMilestoneId),
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          rateeTeamId: 'team-01',
-          scores: [presentationScores[0]],
-          submit: false,
-        }),
-      },
-    );
-    expect(draft.status).toBe(200);
-
-    const draftDashboard = await getDashboardPreview('presentation-evaluation');
-    expect(
-      draftDashboard.milestones.find(
-        milestone => milestone.id === 'presentation',
-      )?.rows[0],
-    ).toMatchObject({ value: '작성 중 1/2팀', actionLabel: '이어 평가' });
-    expect(
-      draftDashboard.milestones.find(
-        milestone => milestone.id === 'presentation',
-      ),
-    ).toMatchObject({ currentStepLabel: '발표 평가', status: 'in-progress' });
-
-    const submit = await request(
-      ENDPOINTS.EVALUATION.TEAM_EVALUATIONS(presentationEvaluationMilestoneId),
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          rateeTeamId: 'team-01',
-          scores: presentationScores,
-          submit: true,
-        }),
-      },
+  it('발표 평가 제출 뒤 대시보드 재조회에 진행 상태를 반영한다', async () => {
+    const submit = await putTeamEvaluation(
+      otherTeamNumericId,
+      teamEvaluationScores,
     );
     expect(submit.status).toBe(200);
 
-    const submittedDashboard = await getDashboardPreview(
-      'presentation-evaluation',
+    const dashboard = await getDashboardPreview('presentation-evaluation');
+    const presentation = dashboard.milestones.find(
+      milestone => milestone.id === 'presentation',
     );
-    expect(
-      submittedDashboard.milestones.find(
-        milestone => milestone.id === 'presentation',
-      )?.rows[0],
-    ).toMatchObject({ value: '제출 완료 1/2팀', actionLabel: '평가 계속' });
+
+    expect(presentation).toMatchObject({
+      currentStepLabel: '발표 평가',
+      status: 'in-progress',
+    });
+    expect(presentation?.rows[0]).toMatchObject({
+      value: '제출 완료 1/2팀',
+      actionLabel: '평가 계속',
+    });
   });
 
   it('상호평가 최종 제출 시 팀원 기여도 합계 100점을 검증한다', async () => {
@@ -419,16 +431,9 @@ describe('evaluationHandlers', () => {
   it('발표 수업 종료 후에도 발표 평가는 저장하고 상호평가는 종료 정책을 유지한다', async () => {
     setEvaluationWindowStates('CLOSED', 'CLOSED');
 
-    const presentation = await request(
-      ENDPOINTS.EVALUATION.TEAM_EVALUATIONS(presentationEvaluationMilestoneId),
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          rateeTeamId: 'team-01',
-          scores: [],
-          submit: false,
-        }),
-      },
+    const presentation = await putTeamEvaluation(
+      otherTeamNumericId,
+      teamEvaluationScores,
     );
     const peer = await request(
       ENDPOINTS.EVALUATION.PEER_RESPONSES(peerEvaluationFormId),
@@ -445,8 +450,8 @@ describe('evaluationHandlers', () => {
 
     expect(presentation.status).toBe(200);
     await expect(presentation.json()).resolves.toMatchObject({
-      rateeTeamId: 'team-01',
-      status: 'DRAFT',
+      teamId: otherTeamNumericId,
+      scores: teamEvaluationScores,
     });
     expect(peer.status).toBe(403);
   });
@@ -454,29 +459,30 @@ describe('evaluationHandlers', () => {
   it('발표 수업 시작 전에는 발표 자료 조회만 허용하고 평가 제출은 거부한다', async () => {
     setEvaluationWindowStates('UPCOMING', 'OPEN');
 
+    const presentations = await request(
+      ENDPOINTS.SUBMISSION.MILESTONE_PRESENTATIONS(
+        presentationEvaluationMilestoneId,
+      ),
+    );
     const overview = await request(
       ENDPOINTS.EVALUATION.MY_TEAM_EVALUATIONS(
         presentationEvaluationMilestoneId,
       ),
     );
-    const submission = await request(
-      ENDPOINTS.EVALUATION.TEAM_EVALUATIONS(presentationEvaluationMilestoneId),
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          rateeTeamId: 'team-01',
-          scores: presentationScores,
-          submit: true,
-        }),
-      },
+    const submission = await putTeamEvaluation(
+      otherTeamNumericId,
+      teamEvaluationScores,
     );
 
+    expect(presentations.status).toBe(200);
+    await expect(presentations.json()).resolves.toMatchObject({
+      contents: expect.arrayContaining([
+        expect.objectContaining({ teamId: otherTeamNumericId }),
+      ]),
+    });
     expect(overview.status).toBe(200);
     await expect(overview.json()).resolves.toMatchObject({
       windowState: 'UPCOMING',
-      teams: expect.arrayContaining([
-        expect.objectContaining({ id: 'team-01' }),
-      ]),
     });
     expect(submission.status).toBe(403);
     await expect(submission.json()).resolves.toMatchObject({

@@ -1,15 +1,12 @@
 import type {
-  EvaluationWindowState,
   MilestonePresentation,
-  MyPresentationEvaluation,
-  PresentationEvaluationCriterion,
-  PresentationEvaluationOverview,
-  PresentationEvaluationTeam,
+  MyTeamEvaluationsResponse,
+  TeamEvaluationCriterionDto,
+  TeamEvaluationDto,
 } from '@aics/core';
 import {
   Button,
   Card,
-  Carousel,
   Divider,
   EmptyState,
   RadioList,
@@ -27,18 +24,15 @@ import * as styles from './PresentationEvaluationPage.css';
 import {
   useEvaluationContextQuery,
   useMilestonePresentationsQuery,
-  useMyPresentationEvaluationsQuery,
-  useSubmitPresentationEvaluationMutation,
-  useTeamEvaluationCriteriaQuery,
+  useMyTeamEvaluationsQuery,
+  useSubmitTeamEvaluationMutation,
 } from './queries';
 
-type EvaluationFormProps = {
-  criteria: PresentationEvaluationCriterion[];
-  evaluation?: MyPresentationEvaluation;
-  onScoresChange: (scores: Record<string, string>) => void;
-  scores: Record<string, string>;
-  team: PresentationEvaluationTeam;
-  windowState: EvaluationWindowState;
+const windowCopy: Record<MyTeamEvaluationsResponse['windowState'], string> = {
+  UNAVAILABLE: '평가 기간이 설정되지 않아 자료만 확인할 수 있어요.',
+  UPCOMING: '평가 기간이 시작되면 점수를 입력할 수 있어요.',
+  OPEN: '평가 기간이에요. 팀별로 점수를 입력하고 제출해 주세요.',
+  CLOSED: '평가가 마감되어 자료와 제출한 점수만 확인할 수 있어요.',
 };
 
 function EvaluationTimer({
@@ -177,148 +171,72 @@ function PresentationViewer({ team }: { team: MilestonePresentation }) {
   );
 }
 
-function LegacyPresentationViewer({
-  team,
-}: {
-  team: PresentationEvaluationTeam;
-}) {
-  const material = team.presentation.submittedMaterial;
-  return (
-    <>
-      <Card padding={5} width='100%'>
-        <article
-          aria-label={`${team.name} 제출 발표 자료`}
-          className={styles.cardContent}
-        >
-          <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>제출한 발표 자료</h3>
-            <p className={styles.helper}>{material.fileName}</p>
-            <a
-              className={styles.link}
-              href={material.fileUrl}
-              rel='noreferrer'
-              target='_blank'
-            >
-              PDF 원본 열기
-            </a>
-          </div>
-          <Carousel
-            aria-label={`${team.name} 제출 PDF 미리보기`}
-            gap={2}
-            hasEdgeFade={false}
-            hasSnap
-          >
-            {material.previewPages.map(page => (
-              <figure className={styles.previewPage} key={page.id}>
-                <img
-                  alt={page.alt}
-                  className={styles.previewImage}
-                  src={page.imageUrl}
-                />
-                <figcaption className={styles.previewCaption}>
-                  {page.pageNumber} / {material.previewPages.length}
-                </figcaption>
-              </figure>
-            ))}
-          </Carousel>
-        </article>
-      </Card>
-      <Card padding={5} width='100%'>
-        <article
-          aria-label={`${team.name} 발표 보조 정보`}
-          className={styles.cardContent}
-        >
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>프로젝트 소개</h3>
-            <p className={styles.bodyText}>
-              {team.presentation.projectIntroduction}
-            </p>
-          </section>
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>주요 화면</h3>
-            <div className={styles.screenGrid}>
-              {team.presentation.mainScreens.map(item => (
-                <article className={styles.screenItem} key={item.id}>
-                  {item.imageUrl ? (
-                    <img
-                      alt={`${item.name} 미리보기`}
-                      className={styles.screenImage}
-                      src={item.imageUrl}
-                    />
-                  ) : null}
-                  <strong>{item.name}</strong>
-                  <p>{item.description}</p>
-                </article>
-              ))}
-            </div>
-          </section>
-        </article>
-      </Card>
-    </>
-  );
-}
-
-function PresentationEvaluationForm({
+function EvaluationForm({
   criteria,
   evaluation,
-  onScoresChange,
-  scores,
-  team,
+  isMyTeam,
+  isSubmitting,
+  onSubmit,
   windowState,
-}: EvaluationFormProps) {
-  const isSubmitted = evaluation?.status === 'SUBMITTED';
-  const isDisabled = team.isMyTeam || isSubmitted || windowState === 'UPCOMING';
-  const disabledMessage = isSubmitted
-    ? '제출한 평가는 수정할 수 없어요.'
-    : windowState === 'UPCOMING'
-      ? '발표 평가 수업 시간이 시작되면 입력할 수 있어요.'
-      : undefined;
+}: {
+  criteria: TeamEvaluationCriterionDto[];
+  evaluation?: TeamEvaluationDto;
+  isMyTeam: boolean;
+  isSubmitting: boolean;
+  onSubmit: (scores: Record<number, number>) => void;
+  windowState: MyTeamEvaluationsResponse['windowState'];
+}) {
+  const submitted = Object.fromEntries(
+    (evaluation?.scores ?? []).map(score => [score.criterionId, score.score]),
+  );
+  const [scores, setScores] = useState<Record<number, number>>(submitted);
+  const scoreKey = JSON.stringify(submitted);
+  const lastKey = useRef(scoreKey);
+  if (lastKey.current !== scoreKey) {
+    lastKey.current = scoreKey;
+    setScores(submitted);
+  }
+  const editable = windowState === 'OPEN' && !isMyTeam;
+  const missing = criteria.filter(criterion => scores[criterion.id] == null);
 
   return (
     <Card padding={5} width='100%'>
-      <section
-        aria-labelledby='evaluation-panel-heading'
-        className={styles.form}
-      >
+      <section aria-label='발표 평가 입력' className={styles.form}>
         <div className={styles.section}>
-          <h3 className={styles.sectionTitle} id='evaluation-panel-heading'>
-            발표 평가
-          </h3>
+          <h3 className={styles.sectionTitle}>발표 평가</h3>
           <p className={styles.helper}>
-            각 항목을 1점(보완 필요)부터 5점(매우 우수)까지 평가해 주세요.
+            {isMyTeam
+              ? '우리 팀 발표는 평가 대상이 아니에요.'
+              : windowCopy[windowState]}
           </p>
+          {evaluation?.submittedAt ? (
+            <p className={styles.helper}>
+              제출한 평가예요. 기간 안에는 다시 제출해 점수를 고칠 수 있어요.
+            </p>
+          ) : null}
         </div>
-        {team.isMyTeam ? (
-          <p className={styles.helper}>
-            자신의 팀 발표는 확인만 가능하며 평가 대상에서 제외돼요.
-          </p>
-        ) : null}
-        {windowState === 'UPCOMING' ? (
-          <p className={styles.helper}>
-            수업 시간이 시작되기 전에는 발표 자료만 확인할 수 있어요.
-          </p>
-        ) : null}
-        {windowState === 'CLOSED' ? (
-          <p className={styles.helper}>
-            발표 수업은 종료됐지만 평가는 계속 작성하고 제출할 수 있어요.
-          </p>
-        ) : null}
         {criteria.map(criterion => (
           <RadioList
             className={styles.scoreList}
-            description={criterion.description}
-            disabledMessage={disabledMessage}
-            isDisabled={isDisabled}
+            isDisabled={!editable}
             isRequired
             key={criterion.id}
-            label={criterion.title}
+            label={`${criterion.title} (최대 ${criterion.maxScore}점)`}
             onChange={value =>
-              onScoresChange({ ...scores, [criterion.id]: value })
+              setScores(current => ({
+                ...current,
+                [criterion.id]: Number(value),
+              }))
             }
             orientation='horizontal'
-            value={scores[criterion.id] ?? ''}
+            value={
+              scores[criterion.id] == null ? '' : String(scores[criterion.id])
+            }
           >
-            {[1, 2, 3, 4, 5].map(score => (
+            {Array.from(
+              { length: criterion.maxScore },
+              (_, index) => index + 1,
+            ).map(score => (
               <RadioListItem
                 key={score}
                 label={`${score}점`}
@@ -327,330 +245,39 @@ function PresentationEvaluationForm({
             ))}
           </RadioList>
         ))}
+        {editable ? (
+          <Button
+            isDisabled={isSubmitting || missing.length > 0}
+            isLoading={isSubmitting}
+            label={evaluation?.submittedAt ? '평가 다시 제출' : '평가 제출'}
+            onClick={() => onSubmit(scores)}
+            tooltip={
+              missing.length
+                ? `${missing.map(criterion => criterion.title).join(', ')} 항목을 입력해 주세요.`
+                : undefined
+            }
+          />
+        ) : null}
       </section>
     </Card>
   );
 }
 
-type PresentationEvaluationContentProps = {
-  criteria: PresentationEvaluationCriterion[];
-  milestoneId: string;
-  onActivationReached: () => void;
-  overview: PresentationEvaluationOverview;
-  sectionId: string;
-  userId: string;
-};
-
-function toScoreRecord(evaluation?: MyPresentationEvaluation) {
-  return Object.fromEntries(
-    evaluation?.scores.map(item => [item.criterionId, String(item.score)]) ??
-      [],
-  );
-}
-
-function LegacyPresentationEvaluationContent({
-  criteria,
-  milestoneId,
-  onActivationReached,
-  overview,
-  sectionId,
-  userId,
-}: PresentationEvaluationContentProps) {
-  const toast = useToast();
-  const eligibleTeams = overview.teams.filter(team => !team.isMyTeam);
-  const [selectedTeamId, setSelectedTeamId] = useState(
-    eligibleTeams[0]?.id ?? overview.teams[0]?.id ?? '',
-  );
-  const [draftsByTeam, setDraftsByTeam] = useState<
-    Record<string, Record<string, string>>
-  >(() =>
-    Object.fromEntries(
-      eligibleTeams.map(team => {
-        const evaluation = overview.myEvaluations.find(
-          item => item.rateeTeamId === team.id,
-        );
-        return [team.id, toScoreRecord(evaluation)];
-      }),
-    ),
-  );
-  const [submittedTeamIds, setSubmittedTeamIds] = useState(
-    () =>
-      new Set(
-        overview.myEvaluations
-          .filter(item => item.status === 'SUBMITTED')
-          .map(item => item.rateeTeamId),
-      ),
-  );
-  const draftMutation = useSubmitPresentationEvaluationMutation(
-    sectionId,
-    userId,
-    milestoneId,
-  );
-  const submitMutation = useSubmitPresentationEvaluationMutation(
-    sectionId,
-    userId,
-    milestoneId,
-  );
-
-  useEffect(() => {
-    setSubmittedTeamIds(current => {
-      const next = new Set(current);
-      for (const item of overview.myEvaluations)
-        if (item.status === 'SUBMITTED') next.add(item.rateeTeamId);
-      return next;
-    });
-  }, [overview.myEvaluations]);
-
-  const isSubmitted = (teamId: string) => submittedTeamIds.has(teamId);
-  const submittedTeamCount = eligibleTeams.filter(team =>
-    isSubmitted(team.id),
-  ).length;
-  const selectedTeam =
-    overview.teams.find(team => team.id === selectedTeamId) ??
-    eligibleTeams[0] ??
-    overview.teams[0];
-
-  if (!selectedTeam)
-    return (
-      <EmptyState
-        description='발표 팀 정보를 찾지 못했어요. 잠시 후 다시 시도해 주세요.'
-        title='평가할 발표가 없어요.'
-      />
-    );
-
-  const selectedIndex = overview.teams.findIndex(
-    team => team.id === selectedTeam.id,
-  );
-  const evaluation = overview.myEvaluations.find(
-    item => item.rateeTeamId === selectedTeam.id,
-  );
-
-  const selectedScores =
-    draftsByTeam[selectedTeam.id] ?? toScoreRecord(evaluation);
-  const selectedIsComplete = criteria.every(
-    criterion => selectedScores[criterion.id],
-  );
-  const selectedIsSubmitted = isSubmitted(selectedTeam.id);
-  const canSubmitSelected =
-    !selectedTeam.isMyTeam &&
-    !selectedIsSubmitted &&
-    overview.windowState !== 'UPCOMING' &&
-    selectedIsComplete;
-
-  const saveSelectedDraft = async () => {
-    if (
-      selectedTeam.isMyTeam ||
-      selectedIsSubmitted ||
-      overview.windowState === 'UPCOMING' ||
-      Object.keys(selectedScores).length === 0
-    )
-      return;
-
-    await draftMutation.mutateAsync({
-      rateeTeamId: selectedTeam.id,
-      scores: criteria.flatMap(criterion => {
-        const score = selectedScores[criterion.id];
-        return score
-          ? [{ criterionId: criterion.id, score: Number(score) }]
-          : [];
-      }),
-      submit: false,
-    });
-  };
-
-  const moveToTeam = async (nextTeamId: string) => {
-    draftMutation.reset();
-    try {
-      await saveSelectedDraft();
-    } catch {
-      // The mutation error is rendered without blocking team navigation.
-    } finally {
-      submitMutation.reset();
-      setSelectedTeamId(nextTeamId);
-    }
-  };
-
-  const submitSelected = () => {
-    submitMutation.reset();
-    submitMutation.mutate(
-      {
-        rateeTeamId: selectedTeam.id,
-        scores: criteria.map(criterion => ({
-          criterionId: criterion.id,
-          score: Number(selectedScores[criterion.id]),
-        })),
-        submit: true,
-      },
-      {
-        onSuccess: () => {
-          setSubmittedTeamIds(current => new Set(current).add(selectedTeam.id));
-          toast({ body: `${selectedTeam.name} 발표 평가를 제출했어요.` });
-        },
-      },
-    );
-  };
-
-  const submitTooltip = selectedTeam.isMyTeam
-    ? '자신의 팀 발표는 평가 대상에서 제외돼요.'
-    : selectedIsSubmitted
-      ? '이 팀의 평가는 제출했어요.'
-      : overview.windowState === 'UPCOMING'
-        ? '발표 평가가 시작되면 작성하고 제출할 수 있어요.'
-        : !selectedIsComplete
-          ? '현재 팀의 모든 평가 항목을 입력해 주세요.'
-          : '현재 팀 평가를 제출해요.';
-
-  return (
-    <div className={styles.root}>
-      <header>
-        <Card
-          className={styles.contextHeader}
-          padding={5}
-          variant='muted'
-          width='100%'
-        >
-          <div className={styles.headerContent}>
-            <h1 className={styles.title}>발표 평가</h1>
-            <p className={styles.description}>{overview.windowMessage}</p>
-            <div className={styles.windowRow}>
-              <p className={styles.windowTime}>
-                발표 수업 시간{' '}
-                {formatEvaluationWindow(
-                  overview.evaluationOpensAt,
-                  overview.evaluationClosesAt,
-                )}
-              </p>
-              {overview.windowState === 'UPCOMING' ? (
-                <EvaluationTimer
-                  label='평가 시작까지'
-                  onComplete={onActivationReached}
-                  targetAt={overview.evaluationOpensAt}
-                />
-              ) : null}
-            </div>
-          </div>
-        </Card>
-      </header>
-      <section
-        aria-labelledby={`presentation-team-title-${selectedTeam.id}`}
-        className={styles.dynamicContent}
-        key={selectedTeam.id}
-      >
-        <div aria-live='polite' className={styles.teamHeader}>
-          <p className={styles.teamEyebrow}>
-            발표 {selectedIndex + 1} / {overview.teams.length}
-          </p>
-          <h2
-            className={styles.teamTitle}
-            id={`presentation-team-title-${selectedTeam.id}`}
-          >
-            {selectedTeam.presentation.projectTitle}
-          </h2>
-          <p className={styles.meta}>{selectedTeam.scheduledAt}</p>
-        </div>
-        <Divider className={styles.contentDivider} />
-        <div className={styles.contentGrid}>
-          <LegacyPresentationViewer team={selectedTeam} />
-          <PresentationEvaluationForm
-            criteria={criteria}
-            evaluation={evaluation}
-            onScoresChange={scores =>
-              setDraftsByTeam(current => ({
-                ...current,
-                [selectedTeam.id]: scores,
-              }))
-            }
-            scores={selectedScores}
-            team={selectedTeam}
-            windowState={overview.windowState}
-          />
-        </div>
-      </section>
-      <footer aria-label='발표 평가 작업'>
-        <Card
-          className={styles.actionFooter}
-          padding={4}
-          variant='muted'
-          width='100%'
-        >
-          <nav aria-label='발표 팀 이동' className={styles.navigation}>
-            <Button
-              isDisabled={selectedIndex <= 0 || draftMutation.isPending}
-              isLoading={draftMutation.isPending}
-              label='이전 팀'
-              onClick={() => {
-                void moveToTeam(
-                  overview.teams[selectedIndex - 1]?.id ?? selectedTeam.id,
-                );
-              }}
-              variant='secondary'
-            />
-            <p className={`${styles.helper} ${styles.navigationStatus}`}>
-              발표 {selectedIndex + 1} / {overview.teams.length} · 제출 완료{' '}
-              {submittedTeamCount} / {eligibleTeams.length}팀
-            </p>
-            <Button
-              isDisabled={
-                selectedIndex >= overview.teams.length - 1 ||
-                draftMutation.isPending
-              }
-              isLoading={draftMutation.isPending}
-              label='다음 팀'
-              onClick={() => {
-                void moveToTeam(
-                  overview.teams[selectedIndex + 1]?.id ?? selectedTeam.id,
-                );
-              }}
-              variant='secondary'
-            />
-          </nav>
-          <Divider />
-          <section
-            aria-label='현재 팀 발표 평가 제출'
-            className={styles.submitPanel}
-          >
-            <div className={styles.section}>
-              <p className={styles.submitTitle}>
-                {selectedTeam.name}{' '}
-                {selectedIsSubmitted ? '평가 제출 완료' : '평가 제출'}
-              </p>
-              <p className={styles.helper}>
-                팀을 이동하면 작성한 점수는 임시 저장돼요. 최종 제출은 팀별로
-                진행해 주세요.
-              </p>
-            </div>
-            <Button
-              isDisabled={!canSubmitSelected}
-              isLoading={submitMutation.isPending}
-              label={selectedIsSubmitted ? '제출 완료' : '제출하기'}
-              onClick={submitSelected}
-              tooltip={submitTooltip}
-              variant='primary'
-            />
-          </section>
-          {draftMutation.isError ? (
-            <p className={styles.error} role='alert'>
-              작성한 평가를 임시 저장하지 못했어요.{' '}
-              {getEvaluationErrorMessage(draftMutation.error)}
-            </p>
-          ) : null}
-          {submitMutation.isError ? (
-            <p className={styles.error} role='alert'>
-              평가를 제출하지 못했어요.{' '}
-              {getEvaluationErrorMessage(submitMutation.error)}
-            </p>
-          ) : null}
-        </Card>
-      </footer>
-    </div>
-  );
-}
-
 function PresentationEvaluationContent({
+  evaluations,
+  milestoneId,
+  myTeamId,
   presentations,
+  userId,
 }: {
+  evaluations: MyTeamEvaluationsResponse;
+  milestoneId: string;
+  myTeamId: string | null;
   presentations: MilestonePresentation[];
+  userId: string;
 }) {
+  const toast = useToast();
+  const submitMutation = useSubmitTeamEvaluationMutation(userId, milestoneId);
   const teams = [...presentations].sort(
     (left, right) =>
       (left.presentationOrder ?? Number.MAX_SAFE_INTEGER) -
@@ -660,14 +287,19 @@ function PresentationEvaluationContent({
   const [selectedTeamId, setSelectedTeamId] = useState(teams[0]?.teamId);
   const selectedIndex = teams.findIndex(team => team.teamId === selectedTeamId);
   const selectedTeam = teams[selectedIndex] ?? teams[0];
-
   if (!selectedTeam) return null;
 
+  const criteria = [...evaluations.criteria].sort(
+    (left, right) => left.displayOrder - right.displayOrder,
+  );
   const teamLabel = selectedTeam.teamName ?? `${selectedTeam.teamId}팀`;
   const presentationLabel =
     selectedTeam.presentationOrder == null
       ? '발표 순서 미정'
       : `${selectedTeam.presentationOrder}번 발표`;
+  const evaluation = evaluations.evaluations.find(
+    item => item.teamId === selectedTeam.teamId,
+  );
 
   return (
     <div className={styles.root}>
@@ -681,8 +313,24 @@ function PresentationEvaluationContent({
           <div className={styles.headerContent}>
             <h1 className={styles.title}>발표 평가</h1>
             <p className={styles.description}>
-              발표 순서와 팀별 제출 자료를 확인할 수 있어요.
+              {windowCopy[evaluations.windowState]}
             </p>
+            {evaluations.evaluationOpensAt && evaluations.evaluationClosesAt ? (
+              <div className={styles.windowRow}>
+                <p className={styles.windowTime}>
+                  {formatEvaluationWindow(
+                    evaluations.evaluationOpensAt,
+                    evaluations.evaluationClosesAt,
+                  )}
+                </p>
+                {evaluations.windowState === 'OPEN' ? (
+                  <EvaluationTimer
+                    label='평가 마감까지'
+                    targetAt={evaluations.evaluationClosesAt}
+                  />
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </Card>
       </header>
@@ -706,6 +354,35 @@ function PresentationEvaluationContent({
         <Divider className={styles.contentDivider} />
         <div className={styles.contentGrid}>
           <PresentationViewer team={selectedTeam} />
+          <EvaluationForm
+            criteria={criteria}
+            evaluation={evaluation}
+            isMyTeam={String(selectedTeam.teamId) === myTeamId}
+            isSubmitting={submitMutation.isPending}
+            onSubmit={scores =>
+              submitMutation.mutate(
+                {
+                  teamId: String(selectedTeam.teamId),
+                  input: {
+                    scores: criteria.map(criterion => ({
+                      criterionId: criterion.id,
+                      score: scores[criterion.id] ?? 0,
+                    })),
+                  },
+                },
+                {
+                  onError: error =>
+                    toast({
+                      body: getEvaluationErrorMessage(error),
+                      type: 'error',
+                    }),
+                  onSuccess: () =>
+                    toast({ body: `${teamLabel} 평가를 제출했어요.` }),
+                },
+              )
+            }
+            windowState={evaluations.windowState}
+          />
         </div>
       </section>
       <footer aria-label='발표 팀 이동'>
@@ -719,9 +396,9 @@ function PresentationEvaluationContent({
             <Button
               isDisabled={selectedIndex <= 0}
               label='이전 팀'
-              onClick={() => {
-                setSelectedTeamId(teams[selectedIndex - 1]?.teamId);
-              }}
+              onClick={() =>
+                setSelectedTeamId(teams[selectedIndex - 1]?.teamId)
+              }
               variant='secondary'
             />
             <p className={`${styles.helper} ${styles.navigationStatus}`}>
@@ -730,9 +407,9 @@ function PresentationEvaluationContent({
             <Button
               isDisabled={selectedIndex >= teams.length - 1}
               label='다음 팀'
-              onClick={() => {
-                setSelectedTeamId(teams[selectedIndex + 1]?.teamId);
-              }}
+              onClick={() =>
+                setSelectedTeamId(teams[selectedIndex + 1]?.teamId)
+              }
               variant='secondary'
             />
           </nav>
@@ -749,27 +426,14 @@ export default function PresentationEvaluationPage() {
   const userId = currentUser?.studentNumber ?? '';
   const contextQuery = useEvaluationContextQuery(sectionId, userId);
   const milestoneId = contextQuery.data?.presentationMilestoneId ?? '';
-  const rosterQuery = useMilestonePresentationsQuery(
-    sectionId,
-    userId,
-    milestoneId,
-  );
-  const legacyQueryEnabled = rosterQuery.isError;
-  const overviewQuery = useMyPresentationEvaluationsQuery(
-    sectionId,
-    userId,
-    legacyQueryEnabled ? milestoneId : '',
-  );
-  const criteriaQuery = useTeamEvaluationCriteriaQuery(
-    sectionId,
-    legacyQueryEnabled,
-  );
+  const rosterQuery = useMilestonePresentationsQuery(milestoneId);
+  const evaluationsQuery = useMyTeamEvaluationsQuery(userId, milestoneId);
 
   if (!sectionId || !userId)
     return (
       <EmptyState
-        description='소속 분반과 학생 계정을 확인해 주세요.'
-        title='평가 범위가 없어요.'
+        description='분반과 학생 정보를 확인한 뒤 다시 시도해 주세요.'
+        title='발표 평가를 열 수 없어요.'
       />
     );
   if (contextQuery.isPending)
@@ -778,7 +442,7 @@ export default function PresentationEvaluationPage() {
         발표 평가를 불러오는 중...
       </p>
     );
-  if (contextQuery.isError || !contextQuery.data)
+  if (contextQuery.isError)
     return (
       <EmptyState
         actions={
@@ -787,7 +451,7 @@ export default function PresentationEvaluationPage() {
               await contextQuery.refetch();
             }}
             label='다시 시도'
-            variant='primary'
+            variant='secondary'
           />
         }
         description={getEvaluationErrorMessage(contextQuery.error)}
@@ -797,17 +461,38 @@ export default function PresentationEvaluationPage() {
   if (!milestoneId)
     return (
       <EmptyState
-        description='현재 분반에 열린 발표 평가 일정이 없어요.'
+        description='분반에 발표 마일스톤이 등록되면 평가할 수 있어요.'
         title='평가할 발표가 없어요.'
       />
     );
-  if (rosterQuery.isPending)
+  if (rosterQuery.isPending || evaluationsQuery.isPending)
     return (
       <p className={styles.status} role='status'>
         발표 평가를 불러오는 중...
       </p>
     );
-  if (rosterQuery.isSuccess && rosterQuery.data.length === 0)
+  if (rosterQuery.isError || evaluationsQuery.isError)
+    return (
+      <EmptyState
+        actions={
+          <Button
+            clickAction={async () => {
+              await Promise.all([
+                rosterQuery.refetch(),
+                evaluationsQuery.refetch(),
+              ]);
+            }}
+            label='다시 시도'
+            variant='secondary'
+          />
+        }
+        description={getEvaluationErrorMessage(
+          rosterQuery.error ?? evaluationsQuery.error,
+        )}
+        title='발표 평가를 불러오지 못했어요.'
+      />
+    );
+  if (!rosterQuery.data.length)
     return (
       <EmptyState
         description='발표 자료가 제출된 팀이 아직 없어요.'
@@ -815,61 +500,12 @@ export default function PresentationEvaluationPage() {
       />
     );
 
-  if (rosterQuery.isSuccess)
-    return <PresentationEvaluationContent presentations={rosterQuery.data} />;
-
-  if (overviewQuery.isPending || criteriaQuery.isPending)
-    return (
-      <p className={styles.status} role='status'>
-        발표 평가를 불러오는 중...
-      </p>
-    );
-  if (
-    overviewQuery.isError ||
-    criteriaQuery.isError ||
-    !overviewQuery.data ||
-    !criteriaQuery.data
-  )
-    return (
-      <EmptyState
-        actions={
-          <Button
-            clickAction={async () => {
-              await Promise.all([
-                overviewQuery.refetch(),
-                criteriaQuery.refetch(),
-                rosterQuery.refetch(),
-              ]);
-            }}
-            label='다시 시도'
-            variant='primary'
-          />
-        }
-        description={getEvaluationErrorMessage(
-          overviewQuery.error ?? criteriaQuery.error ?? rosterQuery.error,
-        )}
-        title='발표 평가를 불러오지 못했어요.'
-      />
-    );
-
-  const overview = overviewQuery.data;
-  if (overview.windowState === 'NOT_CONFIGURED' || overview.teams.length === 0)
-    return (
-      <EmptyState
-        description={overview.windowMessage}
-        title='평가할 발표가 없어요.'
-      />
-    );
-
   return (
-    <LegacyPresentationEvaluationContent
-      criteria={criteriaQuery.data}
+    <PresentationEvaluationContent
+      evaluations={evaluationsQuery.data}
       milestoneId={milestoneId}
-      onActivationReached={() => {
-        void overviewQuery.refetch();
-      }}
-      overview={overview}
-      sectionId={sectionId}
+      myTeamId={currentUser?.teamId ?? null}
+      presentations={rosterQuery.data}
       userId={userId}
     />
   );

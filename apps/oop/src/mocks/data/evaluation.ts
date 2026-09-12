@@ -1,15 +1,20 @@
 import type {
   EvaluationWindowState,
+  MilestonePresentation,
   MyPeerEvaluationResponse,
   MyPresentationEvaluation,
+  MyTeamEvaluationsResponse,
   PeerEvaluationTarget,
   PresentationEvaluationCriterion,
   PresentationEvaluationOverview,
   PresentationEvaluationTeam,
+  TeamEvaluationCriterionDto,
+  TeamEvaluationDto,
+  TeamEvaluationScoreDto,
 } from '@aics/core';
 
 export const evaluationSectionId = 'oop-2026-2-01';
-export const presentationEvaluationMilestoneId = 'presentation';
+export const presentationEvaluationMilestoneId = '303';
 export const presentationEvaluationOpensAt = '2026-11-10T14:00:00+09:00';
 export const presentationEvaluationClosesAt = '2026-11-10T16:00:00+09:00';
 export const peerEvaluationFormId = '2026';
@@ -109,6 +114,24 @@ export const presentationEvaluationCriteria: PresentationEvaluationCriterion[] =
       maxScore: 5,
     },
   ];
+
+/** Swagger 계약(team-evaluations)의 숫자 기준 ID projection. */
+export const teamEvaluationCriteria: TeamEvaluationCriterionDto[] =
+  presentationEvaluationCriteria.map((criterion, index) => ({
+    id: index + 1,
+    title: criterion.title,
+    maxScore: criterion.maxScore,
+    displayOrder: index + 1,
+  }));
+
+/** 데모 정적 자료는 상대 경로로 보관하고 계약 응답에서만 절대 URL로 노출한다. */
+function demoAssetUrl(path: string) {
+  return new URL(path, globalThis.location?.origin ?? 'http://localhost').href;
+}
+
+export function teamNumericId(teamId: string) {
+  return Number(teamId.replace(/\D/g, ''));
+}
 
 function submittedMaterial(slug: string, fileName: string) {
   return {
@@ -291,7 +314,7 @@ const teams: PresentationEvaluationTeamFixture[] = [
   },
 ];
 
-const teamEvaluationsByUser = new Map<string, MyPresentationEvaluation[]>();
+const teamEvaluationsByUser = new Map<string, TeamEvaluationDto[]>();
 const peerResponsesByUser = new Map<string, MyPeerEvaluationResponse>();
 let presentationWindowState: EvaluationWindowState = 'OPEN';
 let peerWindowState: EvaluationWindowState = 'OPEN';
@@ -322,29 +345,114 @@ export function getPresentationEvaluationOverview(
       ...team,
       isMyTeam: team.id === membership?.teamId,
     })),
-    myEvaluations: teamEvaluationsByUser.get(userId) ?? [],
+    myEvaluations: (teamEvaluationsByUser.get(userId) ?? []).flatMap(
+      evaluation => {
+        const team = getPresentationTeamByNumericId(evaluation.teamId);
+        return team
+          ? [
+              {
+                id: `team-evaluation-${userId}-${team.id}`,
+                rateeTeamId: team.id,
+                scores: evaluation.scores.flatMap(score => {
+                  const index = teamEvaluationCriteria.findIndex(
+                    criterion => criterion.id === score.criterionId,
+                  );
+                  const criterion = presentationEvaluationCriteria[index];
+                  return criterion
+                    ? [{ criterionId: criterion.id, score: score.score }]
+                    : [];
+                }),
+                status: 'SUBMITTED' as const,
+                updatedAt: evaluation.submittedAt ?? '',
+                submittedAt: evaluation.submittedAt ?? undefined,
+              } satisfies MyPresentationEvaluation,
+            ]
+          : [];
+      },
+    ),
   };
 }
 
-export function getPresentationTeam(teamId: string) {
-  return teams.find(team => team.id === teamId);
+/** Swagger: GET /milestones/{milestoneId}/presentations */
+export function getMilestonePresentations(): MilestonePresentation[] {
+  return teams.map(team => {
+    const numericId = teamNumericId(team.id);
+    const material = team.presentation.submittedMaterial;
+
+    return {
+      teamId: numericId,
+      teamName: team.name,
+      submissionId: 1900 + numericId,
+      presentationOrder: team.order,
+      project: {
+        id: numericId,
+        teamId: numericId,
+        title: team.presentation.projectTitle,
+        description: team.presentation.projectIntroduction,
+        goal: null,
+        repositoryUrl: null,
+      },
+      artifacts: [
+        {
+          type: 'FILE' as const,
+          requiredArtifactId: 1,
+          fileId: numericId,
+          fileName: material.fileName,
+          mimeType: material.mimeType,
+          downloadUrl: demoAssetUrl(material.fileUrl),
+        },
+        ...(team.presentation.demoVideoUrl
+          ? [
+              {
+                type: 'LINK' as const,
+                requiredArtifactId: 2,
+                url: team.presentation.demoVideoUrl,
+              },
+            ]
+          : []),
+      ],
+    };
+  });
 }
 
-export function upsertPresentationEvaluation(
+/** Swagger: GET /milestones/{milestoneId}/team-evaluations/me */
+export function getMyTeamEvaluations(
   userId: string,
-  evaluation: MyPresentationEvaluation,
-) {
+): MyTeamEvaluationsResponse {
+  return {
+    milestoneId: Number(presentationEvaluationMilestoneId),
+    criteria: teamEvaluationCriteria,
+    evaluations: teamEvaluationsByUser.get(userId) ?? [],
+    evaluationOpensAt: presentationEvaluationOpensAt,
+    evaluationClosesAt: presentationEvaluationClosesAt,
+    windowState:
+      presentationWindowState === 'NOT_CONFIGURED'
+        ? 'UNAVAILABLE'
+        : presentationWindowState,
+  };
+}
+
+export function getPresentationTeamByNumericId(teamId: number) {
+  return teams.find(team => teamNumericId(team.id) === teamId);
+}
+
+export function upsertTeamEvaluation(
+  userId: string,
+  teamId: number,
+  scores: TeamEvaluationScoreDto[],
+): TeamEvaluationDto {
   const current = teamEvaluationsByUser.get(userId) ?? [];
+  const evaluation: TeamEvaluationDto = {
+    id: current.find(item => item.teamId === teamId)?.id ?? current.length + 1,
+    teamId,
+    scores,
+    submittedAt: new Date().toISOString(),
+  };
   teamEvaluationsByUser.set(userId, [
-    ...current.filter(item => item.rateeTeamId !== evaluation.rateeTeamId),
+    ...current.filter(item => item.teamId !== teamId),
     evaluation,
   ]);
-}
-
-export function getPresentationEvaluation(userId: string, teamId: string) {
-  return teamEvaluationsByUser
-    .get(userId)
-    ?.find(item => item.rateeTeamId === teamId);
+  return evaluation;
 }
 
 export function getPeerTargets(userId: string) {
