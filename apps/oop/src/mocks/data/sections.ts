@@ -39,6 +39,10 @@ const sectionsByStudentNumber: Readonly<Record<string, SectionResponse[]>> = {
 };
 
 let createdSectionsByStudentNumber: Record<string, SectionResponse[]> = {};
+let contactVisibilityBySectionId: Record<
+  number,
+  Pick<SectionResponse, 'contactVisibleFrom' | 'contactVisibleUntil'>
+> = {};
 
 export function getMockMySections(
   studentNumber: string,
@@ -47,12 +51,17 @@ export function getMockMySections(
   return [
     ...(sectionsByStudentNumber[studentNumber] ?? []),
     ...(createdSectionsByStudentNumber[studentNumber] ?? []),
-  ].filter(
-    section =>
-      (!filter.status || section.status === filter.status) &&
-      (!filter.year || section.year === filter.year) &&
-      (!filter.semester || section.semester === filter.semester),
-  );
+  ]
+    .map(section => ({
+      ...section,
+      ...contactVisibilityBySectionId[section.id],
+    }))
+    .filter(
+      section =>
+        (!filter.status || section.status === filter.status) &&
+        (!filter.year || section.year === filter.year) &&
+        (!filter.semester || section.semester === filter.semester),
+    );
 }
 
 export function addMockMySection(
@@ -68,6 +77,20 @@ export function addMockMySection(
   };
 }
 
+export function updateMockSectionContactVisibility(
+  sectionId: number,
+  contactVisibility: Pick<
+    SectionResponse,
+    'contactVisibleFrom' | 'contactVisibleUntil'
+  >,
+) {
+  contactVisibilityBySectionId = {
+    ...contactVisibilityBySectionId,
+    [sectionId]: contactVisibility,
+  };
+}
+
 export function resetMockMySections() {
   createdSectionsByStudentNumber = {};
+  contactVisibilityBySectionId = {};
 }

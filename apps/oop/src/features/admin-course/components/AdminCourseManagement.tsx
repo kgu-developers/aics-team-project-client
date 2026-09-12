@@ -407,6 +407,7 @@ function SectionSettingsDialog({
       <form className={styles.sectionSettingsForm} onSubmit={handleSubmit}>
         <Heading level={2}>{section?.code ?? '분반'} 분반 정보 수정</Heading>
         <TextInput
+          isDisabled={isPending}
           isRequired
           label='분반 코드'
           onChange={setCode}
@@ -414,6 +415,7 @@ function SectionSettingsDialog({
           width='100%'
         />
         <TextInput
+          isDisabled={isPending}
           isRequired
           label='수업 시간'
           onChange={setClassTime}
@@ -421,6 +423,7 @@ function SectionSettingsDialog({
           width='100%'
         />
         <TextInput
+          isDisabled={isPending}
           isRequired
           label='정원'
           onChange={setCapacity}
@@ -450,6 +453,7 @@ function SectionSettingsDialog({
           </HStack>
           <div className={styles.formRow}>
             <DateTimeInput
+              isDisabled={isPending}
               label='공개 시작'
               onChange={value => setVisibleFrom(value ?? '')}
               value={
@@ -458,6 +462,7 @@ function SectionSettingsDialog({
               width='100%'
             />
             <DateTimeInput
+              isDisabled={isPending}
               label='공개 종료'
               onChange={value => setVisibleUntil(value ?? '')}
               value={

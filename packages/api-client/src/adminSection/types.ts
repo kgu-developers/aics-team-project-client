@@ -43,10 +43,7 @@ export type AdminOopSectionPersistResponse = {
 };
 
 export type AdminOopSectionUpdateInput = Partial<
-  Pick<
-    AdminOopSectionInput,
-    'capacity' | 'classTime' | 'code' | 'courseId' | 'professorId'
-  >
+  Pick<AdminOopSectionInput, 'capacity' | 'classTime' | 'code'>
 >;
 
 export type AdminOopSectionContactVisibilityInput = {
