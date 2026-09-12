@@ -67,9 +67,6 @@ it('숫자 ID 문서를 읽고 잠금 획득 후 저장·완료한 내용을 재
   renderEditor();
   const input = await screen.findByRole('textbox', { name: '프로젝트 제목' });
   expect(input).toBeDisabled();
-  const start = await screen.findByRole('button', { name: '편집 시작' });
-  await waitFor(() => expect(start).toBeEnabled());
-  fireEvent.click(start);
   await waitFor(() => expect(input).toBeEnabled());
   fireEvent.change(input, { target: { value: '수정한 프로젝트 제목' } });
   await waitFor(
@@ -102,9 +99,6 @@ it('버전 충돌은 한 번만 요청하고 입력을 보존한다', async () =
   );
   renderEditor();
   const input = await screen.findByRole('textbox', { name: '프로젝트 제목' });
-  const start = await screen.findByRole('button', { name: '편집 시작' });
-  await waitFor(() => expect(start).toBeEnabled());
-  fireEvent.click(start);
   await waitFor(() => expect(input).toBeEnabled());
   fireEvent.change(input, { target: { value: '보존해야 하는 초안' } });
   await screen.findByText(/최신 문서를 확인해 주세요/);
@@ -119,9 +113,6 @@ it('버전 충돌은 한 번만 요청하고 입력을 보존한다', async () =
 it('잠금 소유권을 잃으면 저장 요청 없이 초안을 남긴다', async () => {
   renderEditor();
   const input = await screen.findByRole('textbox', { name: '프로젝트 제목' });
-  const start = await screen.findByRole('button', { name: '편집 시작' });
-  await waitFor(() => expect(start).toBeEnabled());
-  fireEvent.click(start);
   await waitFor(() => expect(input).toBeEnabled());
   const save = vi.fn();
   server.use(
@@ -161,7 +152,9 @@ it('기간이 끝난 문서는 편집과 제출을 막는다', async () => {
   expect(
     await screen.findByRole('textbox', { name: '프로젝트 제목' }),
   ).toBeDisabled();
-  expect(screen.getByRole('button', { name: '편집 시작' })).toBeDisabled();
+  expect(
+    screen.getByRole('button', { name: '편집 권한 다시 확인' }),
+  ).toBeDisabled();
   expect(screen.getByRole('button', { name: '제출하기' })).toHaveAttribute(
     'aria-disabled',
     'true',
@@ -178,7 +171,7 @@ it('401 응답에서 에디터와 잠금 획득을 노출하지 않는다', asyn
   await screen.findByText('문서를 열 수 없어요.');
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   expect(
-    screen.queryByRole('button', { name: '편집 시작' }),
+    screen.queryByRole('button', { name: '편집 권한 다시 확인' }),
   ).not.toBeInTheDocument();
 });
 
@@ -219,9 +212,6 @@ it('팀장 제출이 성공하면 읽기 전용으로 복원한다', async () =>
       version: report.version,
     });
   renderEditor();
-  const start = await screen.findByRole('button', { name: '편집 시작' });
-  await waitFor(() => expect(start).toBeEnabled());
-  fireEvent.click(start);
   await waitFor(() =>
     expect(
       screen.getByRole('button', { name: '제출하기' }),
@@ -301,9 +291,6 @@ it('화면 이미지를 업로드해 받은 파일 ID를 저장 요청에 담는
   const view = renderEditor('gui-design');
   try {
     await userEvent.click(
-      await screen.findByRole('button', { name: '편집 시작' }),
-    );
-    await userEvent.click(
       await screen.findByRole('button', { name: '화면 이미지 추가' }),
     );
     const input =
@@ -334,9 +321,6 @@ it('화면 이미지를 업로드해 받은 파일 ID를 저장 요청에 담는
 it('엔진부 테스트 케이스를 표에서 추가하고 지운다', async () => {
   const view = renderEditor('engine-design');
   try {
-    await userEvent.click(
-      await screen.findByRole('button', { name: '편집 시작' }),
-    );
     await waitFor(() =>
       expect(screen.getByLabelText('테스트 1 설명')).toBeEnabled(),
     );
@@ -389,9 +373,6 @@ it('다른 영역을 팀원이 편집 중이면 최종 제출 요청을 보내�
       version: report.version,
     });
   renderEditor();
-  const start = await screen.findByRole('button', { name: '편집 시작' });
-  await waitFor(() => expect(start).toBeEnabled());
-  fireEvent.click(start);
   await waitFor(() =>
     expect(
       screen.getByRole('button', { name: '제출하기' }),

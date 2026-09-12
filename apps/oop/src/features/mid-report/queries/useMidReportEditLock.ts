@@ -39,6 +39,7 @@ export function useMidReportEditLock(
   }
   const [, setRevision] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const autoStarted = useRef(new Set<string>());
   const identity = (id: string, key: string) => `${id}:${key}`;
   const activeKey = report ? identity(report.id, section) : '';
   const expired = Boolean(report && Date.parse(report.dueDate) <= Date.now());
@@ -53,6 +54,7 @@ export function useMidReportEditLock(
       throw new Error('로그인 상태가 변경되었어요.');
   }, [session]);
   const startEditing = async () => {
+    autoStarted.current.add(activeKey);
     if (!target || !mutable || acquire.isPending) return;
     setError(null);
     try {
@@ -151,8 +153,28 @@ export function useMidReportEditLock(
       throw cause;
     }
   };
+  const startEditingRef = useRef(startEditing);
+  startEditingRef.current = startEditing;
   const ensureWriteRef = useRef(ensureWrite);
   ensureWriteRef.current = ensureWrite;
+  useEffect(() => {
+    // The proposal editor takes the lock when the area opens; do the same here
+    // so both documents behave alike. A section held by someone else is never
+    // taken, and an expired grant can be retried once the area is free again.
+    if (!activeKey || !mutable || query.isPending || acquire.isPending) return;
+    if (query.data?.locked && !owner) return;
+    if (granted && owner) return;
+    if (autoStarted.current.has(activeKey) && query.data?.locked) return;
+    void startEditingRef.current();
+  }, [
+    activeKey,
+    mutable,
+    granted,
+    owner,
+    query.isPending,
+    query.data?.locked,
+    acquire.isPending,
+  ]);
   useEffect(() => {
     if (!report) return;
     const timer = window.setInterval(() => {

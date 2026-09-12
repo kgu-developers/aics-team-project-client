@@ -122,15 +122,17 @@ export default function MidReportEditorPage({
       access={{
         canEdit: lock.canEdit,
         notice: lock.notice,
+        // The lock is taken when the area opens; the control only retries.
         controls:
           query.data?.status !== 'SUBMITTED' && !lock.canEdit ? (
             <Button
-              label='편집 시작'
+              label='편집 권한 다시 확인'
               isDisabled={
                 lock.pending ||
                 Date.parse(query.data?.dueDate ?? '') <= Date.now()
               }
               onClick={() => void lock.startEditing()}
+              size='sm'
               variant='secondary'
             />
           ) : null,
