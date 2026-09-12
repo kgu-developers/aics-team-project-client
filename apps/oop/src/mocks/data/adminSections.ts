@@ -29,10 +29,19 @@ const initialSections: AdminSectionFixture[] = [
     name: 'OOP-01',
     professor,
   },
+  {
+    capacity: 35,
+    classTime: '화요일 3-4교시',
+    code: 'WEB-01',
+    courseId: 2,
+    id: 2,
+    name: 'WEB-01',
+    professor,
+  },
 ];
 
 let sections = initialSections.map(section => ({ ...section }));
-let nextSectionId = 2;
+let nextSectionId = 3;
 
 export function getAdminSections({
   semester,
@@ -153,9 +162,28 @@ export function createAdminSection(input: AdminOopSectionInput) {
   };
 }
 
+export function updateAdminSectionFixture(
+  sectionId: number,
+  input: Partial<AdminOopSectionInput>,
+) {
+  const index = sections.findIndex(section => section.id === sectionId);
+  if (index < 0) return null;
+  const section = {
+    ...sections[index]!,
+    ...input,
+    courseId: input.courseId ?? sections[index]!.courseId,
+  };
+  sections = sections.map(item => (item.id === sectionId ? section : item));
+  return (
+    getAdminSectionsByCourseId(section.courseId).find(
+      item => item.id === sectionId,
+    ) ?? null
+  );
+}
+
 export function resetAdminSectionsMockData() {
   resetDemoAdminSections();
   resetMockMySections();
   sections = initialSections.map(section => ({ ...section }));
-  nextSectionId = 2;
+  nextSectionId = 3;
 }
