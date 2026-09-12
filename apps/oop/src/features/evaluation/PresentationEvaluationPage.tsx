@@ -22,13 +22,11 @@ import { safeSubmissionUrl } from '~/features/submission/submissionUploadInput';
 
 import { formatEvaluationRemainingTime } from './formatEvaluationRemainingTime';
 import { getEvaluationErrorMessage } from './getEvaluationErrorMessage';
-import { resolvePresentationEvaluationMilestone } from './model/presentationEvaluationMilestone';
 import * as styles from './PresentationEvaluationPage.css';
 import {
   useEvaluationContextQuery,
   useMilestonePresentationsQuery,
   useMyTeamEvaluationsQuery,
-  useSectionMilestonesQuery,
   useSubmitTeamEvaluationMutation,
 } from './queries';
 
@@ -578,14 +576,7 @@ export default function PresentationEvaluationPage() {
     currentUser?.sections.find(section => section.role === 'STUDENT')?.id ?? '';
   const userId = currentUser?.studentNumber ?? '';
   const contextQuery = useEvaluationContextQuery(sectionId, userId);
-  const milestonesQuery = useSectionMilestonesQuery(sectionId);
-  // 평가 창이 설정된 발표 마일스톤을 우선한다. 서버 컨텍스트는 주차가 빠른 발표를 먼저 고른다.
-  const milestoneId = String(
-    resolvePresentationEvaluationMilestone(milestonesQuery.data, Date.now())
-      ?.id ??
-      contextQuery.data?.presentationMilestoneId ??
-      '',
-  );
+  const milestoneId = contextQuery.data?.presentationMilestoneId ?? '';
   const rosterQuery = useMilestonePresentationsQuery(milestoneId);
   const evaluationsQuery = useMyTeamEvaluationsQuery(userId, milestoneId);
 
@@ -596,33 +587,25 @@ export default function PresentationEvaluationPage() {
         title='발표 평가를 열 수 없어요.'
       />
     );
-  // 목록을 못 쓰는 분반에서는 서버 컨텍스트 값으로 진행한다.
-  const isResolvingMilestone =
-    milestonesQuery.isPending && milestonesQuery.fetchStatus !== 'idle';
-  if (contextQuery.isPending || isResolvingMilestone)
+  if (contextQuery.isPending)
     return (
       <p className={styles.status} role='status'>
         발표 평가를 불러오는 중...
       </p>
     );
-  if (contextQuery.isError && milestonesQuery.isError)
+  if (contextQuery.isError)
     return (
       <EmptyState
         actions={
           <Button
             clickAction={async () => {
-              await Promise.all([
-                contextQuery.refetch(),
-                milestonesQuery.refetch(),
-              ]);
+              await contextQuery.refetch();
             }}
             label='다시 시도'
             variant='secondary'
           />
         }
-        description={getEvaluationErrorMessage(
-          milestonesQuery.error ?? contextQuery.error,
-        )}
+        description={getEvaluationErrorMessage(contextQuery.error)}
         title='발표 평가를 불러오지 못했어요.'
       />
     );
