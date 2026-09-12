@@ -25,7 +25,7 @@ export function proposalSubmitBlocker(
     ] as const
   ).flatMap(([label, value]) => (value?.trim() ? [] : [label]));
   if (blanks.length)
-    return `${blanks.join(', ')}을 채워야 제출할 수 있어요. 주제 영역에서 입력해 주세요.`;
+    return `${blanks.join(', ')}를 채워야 제출할 수 있어요. 주제 영역에서 입력해 주세요.`;
   const incomplete = sections.contents
     .filter(section => !section.completed)
     .map(section => SECTION_LABELS[section.section]);
@@ -47,7 +47,6 @@ export function proposalRequestErrorMessage(error: unknown) {
     case 'ACCESS_DENIED':
       return '이 작업을 수행할 권한이 없어요. 팀장 여부를 확인해 주세요.';
   }
-  if (message) return message;
   switch (error.response?.status) {
     case 400:
       return '입력하지 않은 필수 항목이 있어요. 제목·설명·목표와 각 영역 입력을 확인해 주세요.';
@@ -60,5 +59,7 @@ export function proposalRequestErrorMessage(error: unknown) {
     case 500:
       return '서버가 요청을 처리하지 못했어요. 빈 입력이 없는지 확인한 뒤 다시 시도해 주세요.';
   }
+  // The raw server text is the last resort, after the mapped guidance.
+  if (message) return message;
   return '요청을 처리하지 못했어요. 입력 내용을 유지한 채 다시 시도해 주세요.';
 }

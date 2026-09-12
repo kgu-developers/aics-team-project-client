@@ -1052,7 +1052,7 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
 
     expect(
       await screen.findByText(
-        '프로젝트 목표을 채워야 제출할 수 있어요. 주제 영역에서 입력해 주세요.',
+        '프로젝트 목표를 채워야 제출할 수 있어요. 주제 영역에서 입력해 주세요.',
       ),
     ).toBeInTheDocument();
     expect(submit).not.toHaveBeenCalled();

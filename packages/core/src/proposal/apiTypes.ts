@@ -65,7 +65,8 @@ export type ProposalSectionsResponse = {
   contents: ProposalSectionResponse[];
   allCompleted: boolean;
 };
+/** Swagger keeps assigneeUserId optional and non-nullable: there is no clear API. */
 export type UpdateProposalSectionInput = {
-  assigneeUserId?: string | null;
+  assigneeUserId?: string;
   completed: boolean;
 };

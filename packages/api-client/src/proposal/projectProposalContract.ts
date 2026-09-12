@@ -24,7 +24,12 @@ export function parseProjectProposal(
     !record(value) ||
     !Number.isSafeInteger(value.id) ||
     Number(value.id) <= 0 ||
+    !Number.isSafeInteger(value.teamId) ||
     String(value.teamId) !== teamId ||
+    !(
+      value.topicCandidateId == null ||
+      Number.isSafeInteger(value.topicCandidateId)
+    ) ||
     !['title', 'description', 'goal'].every(
       key => typeof value[key] === 'string',
     ) ||

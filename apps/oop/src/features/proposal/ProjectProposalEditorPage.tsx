@@ -188,7 +188,14 @@ function ProjectProposalDocument({
     try {
       await work();
     } catch (e) {
-      if (isAxiosError(e) && e.response?.status === 409) return;
+      // Only the lock conflict is silent; the lock query already shows its owner.
+      // Save and completion also answer 409, and those must reach the user.
+      if (
+        isAxiosError<{ code?: string }>(e) &&
+        e.response?.status === 409 &&
+        e.response.data?.code === 'EDIT_LOCK_CONFLICT'
+      )
+        return;
       setError(proposalRequestErrorMessage(e));
     } finally {
       busyRef.current = false;
@@ -225,6 +232,12 @@ function ProjectProposalDocument({
     target?.sectionKey,
     user.globalRole,
   ]);
+  useEffect(() => {
+    // Ownership can expire while the editor stays mounted. Once the section is
+    // free again, allow one more acquisition instead of leaving the draft
+    // permanently read-only.
+    if (editing && !owned && !lock.data?.locked) autoStartRef.current = false;
+  }, [editing, owned, lock.data?.locked]);
   useEffect(() => {
     if (!editing || !target) return;
     const id = window.setInterval(() => void lock.refetch(), 15000);

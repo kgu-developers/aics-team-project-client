@@ -14,10 +14,13 @@ export async function fetchProjectProposal(teamId: string) {
     );
     return parseProjectProposal(response.data, teamId);
   } catch (error) {
+    const body = isAxiosError<unknown>(error) ? error.response?.data : null;
     if (
-      isAxiosError<{ code?: string }>(error) &&
+      isAxiosError(error) &&
       error.response?.status === 404 &&
-      error.response.data.code === 'PROJECT_NOT_FOUND'
+      typeof body === 'object' &&
+      body !== null &&
+      (body as { code?: unknown }).code === 'PROJECT_NOT_FOUND'
     )
       return null;
     throw error;

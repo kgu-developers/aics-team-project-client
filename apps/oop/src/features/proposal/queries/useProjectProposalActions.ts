@@ -34,7 +34,7 @@ type Action =
       draft: UpdateProjectProposalInput;
       section: ProposalSectionType;
       /** Present only when the section assignee changed in the same 저장. */
-      assigneeUserId?: string | null;
+      assigneeUserId?: string;
     }
   | {
       kind: 'complete';
@@ -153,7 +153,10 @@ export function useProjectProposalActions() {
           s => s.section === action.section,
         )!;
         await updateProposalSection(projectId, action.section, {
-          assigneeUserId: current.assigneeUserId,
+          // Keep the stored assignee; omitting it leaves the server value as is.
+          ...(current.assigneeUserId
+            ? { assigneeUserId: current.assigneeUserId }
+            : {}),
           completed: true,
         });
       }

@@ -53,6 +53,26 @@ export default function ScreenImageBoard({
     [],
   );
   const rows = draft.screenConfiguration;
+  const usedFileIds = [
+    ...rows.flatMap(row => (row.imageFileId == null ? [] : [row.imageFileId])),
+    ...(editing?.imageFileId == null ? [] : [editing.imageFileId]),
+  ];
+  const usedFileIdKey = usedFileIds.join(',');
+  useEffect(() => {
+    // Cancelled, replaced, and deleted uploads leave their object URL behind.
+    // Drop every preview no longer referenced by a draft row or the open form.
+    const used = new Set(usedFileIdKey ? usedFileIdKey.split(',') : []);
+    setPreviews(current => {
+      const stale = Object.keys(current).filter(id => !used.has(id));
+      if (!stale.length) return current;
+      const next = { ...current };
+      stale.forEach(id => {
+        URL.revokeObjectURL(next[Number(id)]!);
+        delete next[Number(id)];
+      });
+      return next;
+    });
+  }, [usedFileIdKey]);
   const imageUrl = (row: ProposalScreenItem) =>
     (row.imageFileId != null ? previews[row.imageFileId] : undefined) ??
     project.screenConfiguration.find(

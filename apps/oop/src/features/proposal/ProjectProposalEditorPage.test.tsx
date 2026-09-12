@@ -232,6 +232,28 @@ it('작성 완료를 저장한 뒤 내용 변경 시 다시 작성 중이 된다
     expect(screen.getByRole('button', { name: '작성 완료' })).toBeEnabled(),
   );
 });
+it('잠금 충돌이 아닌 409는 오류로 알린다', async () => {
+  render();
+  await start();
+  server.use(
+    http.put(projectUrl, () =>
+      HttpResponse.json(
+        { code: 'PROJECT_PROPOSAL_COMPLETED' },
+        { status: 409 },
+      ),
+    ),
+  );
+  await userEvent.clear(screen.getByLabelText(/프로젝트 제목/));
+  await userEvent.type(screen.getByLabelText(/프로젝트 제목/), '충돌 확인');
+  await userEvent.click(screen.getByRole('button', { name: '저장' }));
+
+  expect(
+    await screen.findByText(
+      '이미 제출된 제안서예요. 최신 내용을 다시 조회해 주세요.',
+    ),
+  ).toBeInTheDocument();
+  expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue('충돌 확인');
+});
 it('제출한 제안서는 읽기 전용으로 연다', async () => {
   const project = createProjectProposalFixture();
   project.proposalCompletedAt = '2026-09-12T10:00:00';
