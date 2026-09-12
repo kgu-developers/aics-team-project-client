@@ -1,25 +1,22 @@
 import { fetchLiveEditLock } from '@aics/api-client';
 import type { LiveEditLockTarget, MidReport } from '@aics/core';
 import { useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { useAuthStore } from '~/features/auth/authStore';
 import {
   liveEditLockKeys,
-  useAcquireLiveEditLockMutation,
-  useLiveEditLockQuery,
-  useReleaseLiveEditLockMutation,
+  useDocumentSectionLock,
 } from '~/features/editor/queries';
 
-/** 서버의 계정 단위 잠금. 탭 이탈 시 타 탭의 잠금을 삭제하지 않고 TTL로 만료한다. */
+/** 서버의 계정 단위 잠금. 획득·해제·갱신 정책은 공용 훅이 소유한다. */
 export function useMidReportEditLock(
   report: MidReport | undefined,
   section: string,
 ) {
   const session = useAuthStore();
   const client = useQueryClient();
-  const acquire = useAcquireLiveEditLockMutation();
-  const release = useReleaseLiveEditLockMutation();
+  const [error, setError] = useState<string | null>(null);
   const reportId = Number(report?.id);
   const target: LiveEditLockTarget | null =
     report &&
@@ -32,47 +29,19 @@ export function useMidReportEditLock(
           sectionKey: section,
         }
       : null;
-  const query = useLiveEditLockQuery(target);
-  const grants = useRef(new Set<string>());
-  const grantSession = useRef(session);
-  if (grantSession.current !== session) {
-    grants.current.clear();
-    grantSession.current = session;
-  }
-  const [, setRevision] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const autoStarted = useRef(new Set<string>());
-  const acquiredTargetRef = useRef<LiveEditLockTarget | null>(null);
-  const releaseRef = useRef(release.mutateAsync);
-  releaseRef.current = release.mutateAsync;
-  const identity = (id: string, key: string) => `${id}:${key}`;
-  const activeKey = report ? identity(report.id, section) : '';
   const expired = Boolean(report && Date.parse(report.dueDate) <= Date.now());
   const mutable = Boolean(report && report.status !== 'SUBMITTED' && !expired);
-  const granted = grants.current.has(activeKey);
-  const owner =
-    query.data?.locked &&
-    query.data.lockedBy === session.currentUser?.studentNumber;
-  const canEdit = Boolean(mutable && granted && owner && !query.isError);
-  const assertSession = useCallback(() => {
+  const lock = useDocumentSectionLock({ target, isWritable: mutable });
+  const assertSession = () => {
     if (useAuthStore.getState() !== session)
       throw new Error('로그인 상태가 변경되었어요.');
-  }, [session]);
+  };
   const startEditing = async () => {
-    autoStarted.current.add(activeKey);
-    if (!target || !mutable || acquire.isPending) return;
     setError(null);
     try {
-      const status = await acquire.mutateAsync(target);
+      const status = await lock.retry();
       assertSession();
-      if (
-        !status.locked ||
-        status.lockedBy !== session.currentUser?.studentNumber
-      )
-        throw new Error('편집 권한을 얻지 못했어요.');
-      grants.current.add(activeKey);
-      acquiredTargetRef.current = target;
-      setRevision(value => value + 1);
+      if (!status?.locked) throw new Error('편집 권한을 얻지 못했어요.');
     } catch {
       if (useAuthStore.getState() !== session) return;
       setError(
@@ -82,48 +51,20 @@ export function useMidReportEditLock(
   };
   const ensureWrite = async (documentId: string, blockKey: string) => {
     assertSession();
-    if (
-      !report ||
-      report.id !== documentId ||
-      report.status === 'SUBMITTED' ||
-      Date.parse(report.dueDate) <= Date.now() ||
-      !grants.current.has(identity(documentId, blockKey))
-    )
-      throw new Error('편집을 시작한 뒤 제출 기간 안에 저장해 주세요.');
-    const writeTarget: LiveEditLockTarget = {
-      targetType: 'MID_REPORT_BLOCK',
-      targetId: Number(documentId),
-      sectionKey: blockKey,
-    };
+    if (!report || report.id !== documentId || blockKey !== section || !mutable)
+      throw new Error('편집 권한을 확인한 뒤 제출 기간 안에 저장해 주세요.');
     try {
-      const status = await client.fetchQuery({
-        queryKey: liveEditLockKeys.detail(session, writeTarget),
-        queryFn: () => fetchLiveEditLock(writeTarget),
-        staleTime: 0,
-      });
+      await lock.ensureWrite();
       assertSession();
-      if (
-        !status.locked ||
-        status.lockedBy !== session.currentUser?.studentNumber
-      )
-        throw new Error('편집 잠금이 만료되었어요.');
-      const renewed = await acquire.mutateAsync(writeTarget);
-      assertSession();
-      if (
-        !renewed.locked ||
-        renewed.lockedBy !== session.currentUser?.studentNumber
-      )
-        throw new Error('편집 권한을 확인할 수 없어요.');
     } catch (cause) {
       if (useAuthStore.getState() !== session) throw cause;
-      grants.current.delete(identity(documentId, blockKey));
-      setRevision(value => value + 1);
       setError(
-        '편집 권한이 만료되었거나 확인에 실패했어요. 입력은 유지되며 편집 시작 후 다시 저장할 수 있어요.',
+        '편집 권한이 만료되었거나 확인에 실패했어요. 입력은 유지되며 권한을 다시 확인한 뒤 저장할 수 있어요.',
       );
       throw cause;
     }
   };
+  /** 제출은 문서 전체를 잠그므로 다른 영역의 소유자까지 확인한다. */
   const ensureCanSubmit = async () => {
     assertSession();
     setError(null);
@@ -159,68 +100,20 @@ export function useMidReportEditLock(
       throw cause;
     }
   };
-  const startEditingRef = useRef(startEditing);
-  startEditingRef.current = startEditing;
-  useEffect(() => {
-    // Leaving an area must hand the lock back; otherwise every visited section
-    // stays locked for the rest of the TTL.
-    const releaseAcquired = () => {
-      const acquired = acquiredTargetRef.current;
-      if (!acquired) return;
-      acquiredTargetRef.current = null;
-      grants.current.delete(
-        identity(String(acquired.targetId), acquired.sectionKey),
-      );
-      autoStarted.current.delete(
-        identity(String(acquired.targetId), acquired.sectionKey),
-      );
-      void releaseRef.current(acquired).catch(() => undefined);
-    };
-    return releaseAcquired;
-  }, [activeKey]);
-  const ensureWriteRef = useRef(ensureWrite);
-  ensureWriteRef.current = ensureWrite;
-  useEffect(() => {
-    // The proposal editor takes the lock when the area opens; do the same here
-    // so both documents behave alike. A section held by someone else is never
-    // taken, and an expired grant can be retried once the area is free again.
-    if (!activeKey || !mutable || query.isPending || acquire.isPending) return;
-    if (query.data?.locked && !owner) return;
-    if (granted && owner) return;
-    if (autoStarted.current.has(activeKey) && query.data?.locked) return;
-    void startEditingRef.current();
-  }, [
-    activeKey,
-    mutable,
-    granted,
-    owner,
-    query.isPending,
-    query.data?.locked,
-    acquire.isPending,
-  ]);
-  useEffect(() => {
-    if (!report) return;
-    const timer = window.setInterval(() => {
-      setRevision(value => value + 1);
-      if (canEdit)
-        void ensureWriteRef.current(report.id, section).catch(() => undefined);
-    }, 30_000);
-    return () => window.clearInterval(timer);
-  }, [canEdit, report?.id, section]);
   return {
-    canEdit,
+    canEdit: lock.canEdit,
     startEditing,
     ensureWrite,
     ensureCanSubmit,
     error,
-    pending: acquire.isPending || query.isPending,
+    pending: lock.pending,
     notice: expired
       ? '제출 기간이 종료되어 읽기 전용으로 확인할 수 있어요.'
       : (error ??
-        (query.isError
+        (lock.isUnavailable
           ? '편집 권한을 확인하지 못했어요. 다시 시도해 주세요.'
-          : query.data?.locked && !owner
-            ? `${query.data.lockedByName ?? '다른 팀원'}님이 편집 중이에요.`
-            : '편집 시작을 누르면 이 영역을 수정할 수 있어요.')),
+          : lock.lockedByOther
+            ? `${lock.ownerName ?? '다른 팀원'}님이 편집 중이에요.`
+            : undefined)),
   };
 }
