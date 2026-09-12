@@ -17,6 +17,8 @@ import { cx } from '~/shared/lib/cx';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
+import DocumentAccessNotice from './DocumentAccessNotice';
+import DocumentActionBar from './DocumentActionBar';
 import {
   isDocumentEditorDocument,
   isDocumentVersionConflict,
@@ -345,18 +347,18 @@ export default function DocumentEditorPage<
           </Heading>
           <p className={styles.description}>{block.description}</p>
         </div>
-        {isLocked ? (
-          <p className={styles.lockNotice}>
-            {isSubmitted
-              ? '이 문서는 제출되었어요. 제출된 문서는 읽기 전용이에요.'
-              : access?.notice
-                ? access.notice
-                : lockOwnerName
-                  ? `${lockOwnerName}님이 이 영역을 편집 중이에요. 저장 내용은 읽기 전용으로 확인할 수 있어요.`
-                  : '편집 권한을 확인 중이에요. 저장 내용은 읽기 전용으로 확인할 수 있어요.'}
-          </p>
-        ) : null}
-        {access?.controls}
+        <DocumentAccessNotice
+          action={access?.controls}
+          canEdit={Boolean(access ? access.canEdit : !isLocked)}
+          isEditing={Boolean(
+            access && !access.canEdit && lockOwnerName == null,
+          )}
+          isSubmitted={isSubmitted}
+          lockedByOther={Boolean(!isSubmitted && lockOwnerName)}
+          // The document hook owns the copy while the area is read only.
+          message={isLocked && !isSubmitted ? access?.notice : undefined}
+          ownerName={lockOwnerName}
+        />
         {access && saveState.error ? (
           <Button
             label='저장 다시 시도'
@@ -403,7 +405,9 @@ export default function DocumentEditorPage<
             </form>
           ) : null)}
         {completion ? (
-          <div className={styles.actions}>
+          <DocumentActionBar
+            error={completion.completeError ?? completion.submitError}
+          >
             <Button
               isDisabled={
                 isLocked ||
@@ -446,12 +450,7 @@ export default function DocumentEditorPage<
               }
               variant='primary'
             />
-            {(completion.completeError ?? completion.submitError) ? (
-              <p className={styles.actionError}>
-                {completion.completeError ?? completion.submitError}
-              </p>
-            ) : null}
-          </div>
+          </DocumentActionBar>
         ) : null}
         {renderBlockAside?.(block, isLocked) ?? null}
       </section>

@@ -261,7 +261,9 @@ it('제출한 제안서는 읽기 전용으로 연다', async () => {
   render();
 
   expect(
-    await screen.findByText('제출한 제안서는 읽기 전용입니다.'),
+    await screen.findByText(
+      '제출한 문서예요. 내용은 읽기 전용으로 확인할 수 있어요.',
+    ),
   ).toBeInTheDocument();
   expect(screen.getByLabelText(/프로젝트 제목/)).toBeDisabled();
   expect(

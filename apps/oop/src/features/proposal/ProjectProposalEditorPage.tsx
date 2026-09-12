@@ -29,6 +29,8 @@ import {
   useAuthStore,
   selectHasAuthenticatedSession,
 } from '~/features/auth/authStore';
+import DocumentAccessNotice from '~/features/editor/DocumentAccessNotice';
+import DocumentActionBar from '~/features/editor/DocumentActionBar';
 import { documentRequestErrorMessage } from '~/features/editor/documentRequestErrorMessage';
 import {
   useAcquireLiveEditLockMutation,
@@ -164,9 +166,6 @@ function ProjectProposalDocument({
       member => member.studentNumber === lock.data?.lockedBy,
     )?.name ??
     null;
-  const lockedNotice = `지금은 수정할 수 없어요. ${
-    lockOwnerName ? `${lockOwnerName} 님이` : '다른 팀원이'
-  } 편집 중입니다. 편집이 끝난 뒤 다시 열어 주세요.`;
   // The account that saves the section owns it; there is no separate picker.
   const assigneeChanged = Boolean(
     current && current.assigneeUserId !== user.studentNumber,
@@ -340,9 +339,7 @@ function ProjectProposalDocument({
         <Text>
           {project.teamOperation.name} · {project.title}
         </Text>
-        {submitted && (
-          <p className={styles.notice}>제출한 제안서는 읽기 전용입니다.</p>
-        )}
+        {submitted && <DocumentAccessNotice isSubmitted />}
         {states.isError && (
           <p role='alert' className={styles.error}>
             작성 상태를 불러오지 못했습니다.{' '}
@@ -355,19 +352,25 @@ function ProjectProposalDocument({
         {sectionType ? (
           <>
             {!submitted && (
-              <>
-                <p className={styles.notice}>
-                  {lock.isError
-                    ? '편집 권한을 확인하지 못했습니다.'
-                    : lock.data?.locked && !owned
-                      ? lockedNotice
-                      : editing && !owned
-                        ? '편집 권한이 만료되었습니다. 입력 내용을 유지하고 권한을 다시 확인해 주세요.'
-                        : editing
-                          ? '편집 중입니다. 변경한 내용은 저장 버튼으로 저장해 주세요.'
-                          : '편집 권한을 확인하는 중이에요.'}
-                </p>
-              </>
+              <DocumentAccessNotice
+                action={
+                  !owned && !lock.data?.locked ? (
+                    <Button
+                      isDisabled={pending}
+                      label='편집 권한 다시 확인'
+                      onClick={() => void run(startEditing)}
+                      size='sm'
+                      variant='secondary'
+                    />
+                  ) : undefined
+                }
+                canEdit={Boolean(owned)}
+                isEditing={editing}
+                isLockUnavailable={lock.isError}
+                isSubmitted={false}
+                lockedByOther={Boolean(lock.data?.locked && !owned)}
+                ownerName={lockOwnerName}
+              />
             )}
             <ProjectProposalFields
               project={project}
@@ -377,7 +380,7 @@ function ProjectProposalDocument({
               onChange={setDraft}
             />
             {!submitted && (
-              <div className={styles.actions}>
+              <DocumentActionBar error={error}>
                 <Button
                   label='저장'
                   isDisabled={!editable || !dirty}
@@ -405,7 +408,7 @@ function ProjectProposalDocument({
                     })
                   }
                 />
-              </div>
+              </DocumentActionBar>
             )}
           </>
         ) : (
@@ -418,7 +421,7 @@ function ProjectProposalDocument({
             ))}
           </>
         )}
-        {error && (
+        {error && (!sectionType || submitted) && (
           <p className={styles.error} role='alert'>
             {error}
           </p>
