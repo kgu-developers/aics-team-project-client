@@ -16,8 +16,8 @@ export type AdminOopSectionDto = {
   capacity: number;
   classTime: string;
   code: string;
-  contactVisibleFrom?: string;
-  contactVisibleUntil?: string;
+  contactVisibleFrom?: string | null;
+  contactVisibleUntil?: string | null;
   course: AdminOopCourseDto;
   id: number;
   name: string;
@@ -32,14 +32,23 @@ export type AdminOopSectionInput = {
   capacity: number;
   classTime: string;
   code: string;
-  contactVisibleFrom?: string;
-  contactVisibleUntil?: string;
+  contactVisibleFrom?: string | null;
+  contactVisibleUntil?: string | null;
   courseId: number;
   professorId: string;
 };
 
 export type AdminOopSectionPersistResponse = {
   id: number;
+};
+
+export type AdminOopSectionUpdateInput = Partial<
+  Pick<AdminOopSectionInput, 'capacity' | 'classTime' | 'code'>
+>;
+
+export type AdminOopSectionContactVisibilityInput = {
+  visibleFrom: string | null;
+  visibleUntil: string | null;
 };
 
 export type AdminOopSectionsFilter =

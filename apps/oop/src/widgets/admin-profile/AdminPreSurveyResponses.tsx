@@ -57,18 +57,18 @@ function formatPreferredRoles(roles: unknown) {
 export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
   const toast = useToast();
   const [sectionId, setSectionId] = useState(sections[0]?.id ?? '');
+  const firstSectionId = sections[0]?.id ?? '';
+  const sectionIds = sections.map(section => section.id).join('|');
 
   useEffect(() => {
     setSectionId(currentSectionId => {
-      const isCurrentSectionAvailable = sections.some(
-        section => section.id === currentSectionId,
-      );
+      const isCurrentSectionAvailable = sectionIds
+        .split('|')
+        .includes(currentSectionId);
 
-      return isCurrentSectionAvailable
-        ? currentSectionId
-        : (sections[0]?.id ?? '');
+      return isCurrentSectionAvailable ? currentSectionId : firstSectionId;
     });
-  }, [sections]);
+  }, [firstSectionId, sectionIds]);
 
   const responsesQuery = useAdminPreSurveyResponsesQuery(
     sectionId || undefined,
