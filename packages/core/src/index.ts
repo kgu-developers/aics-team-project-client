@@ -204,3 +204,21 @@ export type {
 
 export type * from './evaluation/apiTypes';
 export * from './editLock/apiTypes';
+
+export * from './proposal/apiTypes';
+export { teamMessageRelatedTypes } from './teamMessage/types';
+export type {
+  SubmitTeamMessageInput,
+  TeamMessage,
+  TeamMessagePage,
+  TeamMessagePersistResponse,
+  TeamMessageRelatedType,
+  TeamMessagesParams,
+  TeamThread,
+} from './teamMessage/types';
+export type {
+  RequiredSubmissionArtifact,
+  StudentSubmissionVersionInput,
+} from './submission/apiTypes';
+
+export type { StudentSubmissionMemberConsent } from './submission/memberConsentApiTypes';

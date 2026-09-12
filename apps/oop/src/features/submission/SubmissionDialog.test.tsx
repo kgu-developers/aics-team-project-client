@@ -10,6 +10,13 @@ import {
 } from './SubmissionDialogContext';
 
 const submissionPanel = vi.hoisted(() => vi.fn());
+const finalPanel = vi.hoisted(() => vi.fn());
+vi.mock('./FinalReportSubmissionPanel', () => ({
+  default: (props: unknown) => {
+    finalPanel(props);
+    return <div>실제 최종보고서 폼</div>;
+  },
+}));
 
 vi.mock('@aics/design-system', async importOriginal => {
   const actual = await importOriginal<typeof import('@aics/design-system')>();
@@ -90,10 +97,45 @@ describe('SubmissionDialog', () => {
     expect(
       screen.getByRole('dialog', { name: '최종 파일 제출' }),
     ).toBeInTheDocument();
-    expect(submissionPanel).toHaveBeenLastCalledWith({
-      milestoneId: 'final-report',
-      showCurrentFiles: false,
-      title: '최종 파일 제출',
-    });
+    expect(
+      screen.getByText('최종보고서 제출 대상을 확인할 수 없어요.'),
+    ).toBeInTheDocument();
   });
+});
+
+it('선택한 최종보고서의 실제 ID를 기존 다이얼로그에 전달한다', async () => {
+  const target = {
+    sectionId: '1',
+    teamId: '7',
+    studentNumber: '20260001',
+    milestoneId: '20',
+    submissionId: '15',
+    type: 'FINAL_REPORT' as const,
+    title: '최종 파일 제출',
+  };
+  function ActualReport() {
+    const { openDialog } = useSubmissionDialog();
+    return (
+      <>
+        <button onClick={() => openDialog('final-report', '20')}>
+          20번 최종보고서
+        </button>
+        <SubmissionDialog />
+      </>
+    );
+  }
+  render(
+    <SubmissionDialogProvider finalReportTargets={{ '20': target }}>
+      <ActualReport />
+    </SubmissionDialogProvider>,
+  );
+  await userEvent.click(
+    screen.getByRole('button', { name: '20번 최종보고서' }),
+  );
+  expect(finalPanel).toHaveBeenLastCalledWith({ target });
+  expect(
+    screen.getByRole('dialog', { name: '최종 파일 제출' }),
+  ).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: '닫기' }));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 });

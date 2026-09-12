@@ -1,4 +1,15 @@
 export const ENDPOINTS = {
+  PROJECT_PROPOSAL: {
+    BY_TEAM: (teamId: string) => `/api/v1/teams/${teamId}/project`,
+    IMAGE_UPLOAD: (teamId: string) =>
+      `/api/v1/teams/${teamId}/project/images/upload`,
+    SECTIONS: (projectId: number) =>
+      `/api/v1/projects/${projectId}/proposal/sections`,
+    SECTION: (projectId: number, section: string) =>
+      `/api/v1/projects/${projectId}/proposal/sections/${section}`,
+    COMPLETE: (projectId: number) =>
+      `/api/v1/projects/${projectId}/proposal-complete`,
+  },
   STUDENT_MILESTONE: {
     LIST: (sectionId: string) => `/api/v1/sections/${sectionId}/milestones`,
     MY_TEAM_SUBMISSION: (milestoneId: string) =>
@@ -19,6 +30,8 @@ export const ENDPOINTS = {
   },
   ADMIN: {
     OOP_COURSES: '/api/v1/admin/oop/courses',
+    OOP_COURSE: (courseId: string | number) =>
+      `/api/v1/admin/oop/courses/${courseId}`,
     OOP_SECTIONS: '/api/v1/admin/oop/sections',
     SECTION_ENROLLMENTS: (sectionId: string | number) =>
       `/api/v1/admin/oop/sections/${sectionId}/enrollments`,
@@ -40,7 +53,7 @@ export const ENDPOINTS = {
       `/api/v1/admin/oop/enrollment-imports/${importId}/apply`,
     SECTION_ROSTER_IMPORT_STATUS: (sectionId: string | number) =>
       `/api/v1/admin/oop/sections/${sectionId}/roster-import-status`,
-    OOP_PEER_EVALUATION_FORM: (sectionId: number) =>
+    OOP_PEER_EVALUATION_FORM: (sectionId: string | number) =>
       `/api/v1/admin/oop/sections/${sectionId}/peer-evaluation-forms`,
     OOP_PRE_SURVEY_RESPONSES: (sectionId: string) =>
       `/api/v1/admin/oop/sections/${sectionId}/pre-survey-responses`,
@@ -59,6 +72,14 @@ export const ENDPOINTS = {
       `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}`,
     SECTION_MILESTONE_STATUS: (sectionId: string, milestoneId: string) =>
       `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/status`,
+    REQUIRED_ARTIFACTS: (sectionId: string, milestoneId: string) =>
+      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/required-artifacts`,
+    REQUIRED_ARTIFACT: (
+      sectionId: string,
+      milestoneId: string,
+      requiredArtifactId: string,
+    ) =>
+      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/required-artifacts/${requiredArtifactId}`,
     SECTION_MILESTONE_WEEK_NUMBERS: (sectionId: string) =>
       `/api/v1/admin/oop/sections/${sectionId}/milestones/week-numbers`,
     MILESTONE_SUBMISSIONS: (milestoneId: string) =>
@@ -102,6 +123,12 @@ export const ENDPOINTS = {
     LEADER_CLAIM: (teamId: string) =>
       `/api/v1/oop/teams/${teamId}/leader-claim`,
     ROOT: '/teams',
+  },
+  TEAM_MESSAGE: {
+    BY_TEAM: (teamId: string) => `/api/v1/teams/${teamId}/messages`,
+  },
+  TEAM_THREAD: {
+    BY_TEAM: (teamId: string) => `/api/v1/teams/${teamId}/thread`,
   },
   MEETING: {
     RECORDS: (teamId: string) => `/teams/${teamId}/meeting-records`,
@@ -147,6 +174,10 @@ export const ENDPOINTS = {
       `/submissions/${submissionId}/versions/${version}`,
     CONFIRMATION: (submissionId: string) =>
       `/submissions/${submissionId}/confirmation`,
+    MEMBER_CONFIRMATIONS: (submissionId: string) =>
+      `/submissions/${submissionId}/member-confirmations`,
+    MY_MEMBER_CONFIRMATION: (submissionId: string) =>
+      `/submissions/${submissionId}/member-confirmations/me`,
     MID_REPORT_FEEDBACK: (submissionId: string) =>
       `/submissions/${submissionId}/mid-report-feedback`,
   },

@@ -27,6 +27,8 @@ export type {
   DialogPurpose,
   DialogVariant,
 } from '@astryxdesign/core/Dialog';
+export { AlertDialog } from '@astryxdesign/core/AlertDialog';
+export type { AlertDialogProps } from '@astryxdesign/core/AlertDialog';
 export { Divider } from '@astryxdesign/core/Divider';
 export type { DividerProps, DividerVariant } from '@astryxdesign/core/Divider';
 export { FileInput } from '@astryxdesign/core/FileInput';

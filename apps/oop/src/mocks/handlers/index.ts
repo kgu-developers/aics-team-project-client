@@ -1,11 +1,15 @@
+import { adminCourseHandlers } from './adminCourses';
 import { adminMeetingHandlers } from './adminMeetings';
 import { adminMilestoneScheduleHandlers } from './adminMilestoneSchedule';
 import { adminMilestoneSubmissionDetailHandlers } from './adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from './adminMilestoneSubmissions';
 import { adminNoticeHandlers } from './adminNotices';
+import { adminPeerEvaluationFormHandlers } from './adminPeerEvaluationForms';
 import { adminPresentationEvaluationHandlers } from './adminPresentationEvaluations';
 import { adminProfileHandlers } from './adminProfile';
+import { adminRequiredArtifactHandlers } from './adminRequiredArtifacts';
 import { adminSectionMilestoneHandlers } from './adminSectionMilestones';
+import { adminSectionHandlers } from './adminSections';
 import { adminStudentTeamHandlers } from './adminStudentTeams';
 import { authHandlers } from './auth';
 import { editLockHandlers } from './editLock';
@@ -27,19 +31,24 @@ import {
   teamAssignmentHandlers,
   teamAssignmentUserHandlers,
 } from './teamAssignment';
+import { createTeamMessageHandlers } from './teamMessages';
 import { topicHandlers } from './topic';
 import { liveEditLockMockResources } from '../data/liveEditLock';
 
 export const handlers = [
   ...sectionHandlers,
   ...authHandlers,
+  ...adminCourseHandlers,
+  ...adminSectionHandlers,
   ...adminMilestoneScheduleHandlers,
   ...adminSectionMilestoneHandlers,
+  ...adminRequiredArtifactHandlers,
   ...adminMilestoneSubmissionDetailHandlers,
   ...adminMilestoneSubmissionsHandlers,
   ...adminMeetingHandlers,
   ...adminNoticeHandlers,
   ...adminPresentationEvaluationHandlers,
+  ...adminPeerEvaluationFormHandlers,
   ...createLiveEditLockHandlers({
     onlyMidReport: true,
     resources: liveEditLockMockResources.map(resource => ({
@@ -50,6 +59,7 @@ export const handlers = [
   ...editLockHandlers,
   ...evaluationHandlers,
   ...topicHandlers,
+  ...createTeamMessageHandlers(),
   ...createMeetingApiHandlers(),
   ...meetingHandlers,
   ...midReportHandlers,

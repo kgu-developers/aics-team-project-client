@@ -9,3 +9,5 @@ export { useStudentSubmissionQuery } from './useStudentSubmissionQuery';
 export { useStudentSubmissionVersionsQuery } from './useStudentSubmissionVersionsQuery';
 export { useStudentSubmissionVersionQuery } from './useStudentSubmissionVersionQuery';
 export { useSubmissionFilePreviewQuery } from './useSubmissionFilePreviewQuery';
+export { useRequiredSubmissionArtifactsQuery } from './useRequiredSubmissionArtifactsQuery';
+export { useSubmitStudentSubmissionVersionMutation } from './useSubmitStudentSubmissionVersionMutation';

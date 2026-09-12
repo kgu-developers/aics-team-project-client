@@ -63,43 +63,50 @@ describe('createAdminMilestoneCreateInput', () => {
     ).toThrow('공개 시작 일시는 제출 마감 일시보다 앞서야 합니다.');
   });
 
-  it('단계 구분이 확정되지 않은 발표 양식은 생성하지 않는다', () => {
+  it('발표 양식은 제출 마감과 평가 기간을 함께 포함해 PRESENTATION으로 생성한다', () => {
     const schedule = createAdminMilestoneSectionScheduleDraft();
     schedule.dueAt = { date: '2026-09-10', time: '23:59' };
-
-    expect(() =>
-      createAdminMilestoneCreateInput({
-        description: '',
-        schedule,
-        templateId: 'presentation-submit',
-        title: '발표 자료 제출',
-        weekNumber: 2,
-      }),
-    ).toThrow('아직 생성할 수 없는 마일스톤 양식입니다.');
-  });
-
-  it('발표 평가 양식은 평가 기간을 포함해 PRESENTATION 마일스톤으로 생성한다', () => {
-    const schedule = createAdminMilestoneSectionScheduleDraft();
-    schedule.dueAt = { date: '2026-11-20', time: '18:00' };
-    schedule.evaluationOpensAt = { date: '2026-11-21', time: '09:00' };
-    schedule.evaluationClosesAt = { date: '2026-11-25', time: '18:00' };
+    schedule.evaluationOpensAt = { date: '2026-09-11', time: '09:00' };
+    schedule.evaluationClosesAt = { date: '2026-09-15', time: '18:00' };
 
     expect(
       createAdminMilestoneCreateInput({
-        description: '발표 평가를 진행합니다.',
+        description: '발표 자료를 제출합니다.',
         schedule,
-        templateId: 'presentation-evaluate',
-        title: '발표 평가',
-        weekNumber: 12,
+        templateId: 'presentation-submit',
+        title: '발표',
+        weekNumber: 2,
       }),
     ).toMatchObject({
       schedule: {
-        dueAt: '2026-11-25T18:00:00',
-        evaluationClosesAt: '2026-11-25T18:00:00',
-        evaluationOpensAt: '2026-11-21T09:00:00',
-        opensAt: '2026-11-21T09:00:00',
+        dueAt: '2026-09-10T23:59:00',
+        evaluationClosesAt: '2026-09-15T18:00:00',
+        evaluationOpensAt: '2026-09-11T09:00:00',
       },
       type: 'PRESENTATION',
+    });
+  });
+
+  it('상호 평가 양식은 평가 기간을 포함해 PEER_EVALUATION으로 생성한다', () => {
+    const schedule = createAdminMilestoneSectionScheduleDraft();
+    schedule.evaluationOpensAt = { date: '2026-12-08', time: '09:00' };
+    schedule.evaluationClosesAt = { date: '2026-12-14', time: '23:59' };
+
+    expect(
+      createAdminMilestoneCreateInput({
+        description: '팀원 상호 평가',
+        schedule,
+        templateId: 'peer-review',
+        title: '상호 평가',
+        weekNumber: 13,
+      }),
+    ).toMatchObject({
+      schedule: {
+        dueAt: '2026-12-14T23:59:00',
+        evaluationClosesAt: '2026-12-14T23:59:00',
+        evaluationOpensAt: '2026-12-08T09:00:00',
+      },
+      type: 'PEER_EVALUATION',
     });
   });
 });

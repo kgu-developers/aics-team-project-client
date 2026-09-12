@@ -98,7 +98,10 @@ export type StudentHomeMilestoneBody =
     }
   | {
       kind: 'proposal-feedback';
-      reviewId: string;
+      /** Team resolved by the consuming page's current server identity. */
+      teamId?: string;
+      /** Legacy preview metadata; the team-message contract has no review ID. */
+      reviewId?: string;
       feedback: StudentHomeFeedbackMessage[];
       studentResponse?: ProposalFeedbackResponse;
       canSubmitResponse: boolean;
@@ -114,7 +117,9 @@ export type StudentHomeMilestoneBody =
     }
   | {
       kind: 'mid-review-feedback';
-      submissionId: string;
+      teamId?: string;
+      /** Legacy preview metadata; feedback messages are scoped to the team. */
+      submissionId?: string;
       feedback: StudentHomeFeedbackMessage[];
       studentFeedback?: MidReportFeedback;
       canSubmitResponse: boolean;

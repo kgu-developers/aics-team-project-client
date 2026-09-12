@@ -1,6 +1,6 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import type { PropsWithChildren } from 'react';
@@ -9,230 +9,101 @@ import {
   afterEach,
   beforeAll,
   beforeEach,
-  describe,
   expect,
   it,
+  vi,
 } from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
-import { studentHomeKeys } from '~/features/student-home/queries';
+import { teamMessageKeys } from '~/features/team-message/queries';
 
 import { useSubmitMidReportFeedbackMutation } from './useSubmitMidReportFeedbackMutation';
 import { useSubmitProposalFeedbackResponseMutation } from './useSubmitProposalFeedbackResponseMutation';
 
-import {
-  completeMidReportBlock,
-  ensureMidReportFeedbackRevision,
-  resetMidReportMockData,
-  saveMidReportBlock,
-  submitCurrentMidReport,
-} from '~/mocks/data/midReport';
-import {
-  completeProposalBlock,
-  ensureProposalFeedbackRevision,
-  resetProposalFixture,
-  saveProposalBlock,
-  submitCurrentProposal,
-} from '~/mocks/data/proposal';
-import {
-  demoMidReportSubmissionId,
-  demoProposalReviewId,
-  resetStudentFeedbackMockData,
-} from '~/mocks/data/studentFeedback';
-import { demoAccessToken } from '~/mocks/data/users';
-import { studentFeedbackHandlers } from '~/mocks/handlers/studentFeedback';
+import { demoAccessToken, demoStudent } from '~/mocks/data/users';
+import { createTeamMessageHandlers } from '~/mocks/handlers/teamMessages';
 
-const sectionId = 'oop-2026-2-01';
-const otherSectionId = 'oop-2026-2-02';
-const server = setupServer(...studentFeedbackHandlers);
-
+const server = setupServer();
+const client = new QueryClient({
+  defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+});
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-function prepareResubmittedProposalRevision() {
-  const requested = ensureProposalFeedbackRevision();
-  const topic = requested.blocks.find(block => block.key === 'topic');
-  if (!topic) throw new Error('proposal topic block is required');
-  const saved = saveProposalBlock(
-    topic.key,
-    requested.version,
-    topic.fields.map(field =>
-      field.key === 'description'
-        ? { ...field, value: `${field.value} 핵심 사용자를 구체화했습니다.` }
-        : field,
-    ),
-    requested.teamLeaderName,
-  );
-  if (!saved) throw new Error('proposal revision save is required');
-  const completed = completeProposalBlock(
-    topic.key,
-    saved.version,
-    requested.teamLeaderName,
-  );
-  if (!completed) throw new Error('proposal revision completion is required');
-  if (!submitCurrentProposal(completed.version, requested.teamLeaderName)) {
-    throw new Error('proposal revision resubmission is required');
-  }
-}
-
-function prepareResubmittedMidReportRevision() {
-  const requested = ensureMidReportFeedbackRevision();
-  const gui = requested.blocks.find(block => block.key === 'gui-design');
-  if (!gui) throw new Error('mid-report GUI block is required');
-  const saved = saveMidReportBlock(
-    gui.key,
-    requested.version,
-    gui.fields.map(field =>
-      field.key === 'guiScreens'
-        ? { ...field, value: field.value.replace('메인 화면', '홈 화면') }
-        : field,
-    ),
-    requested.teamLeaderName,
-  );
-  if (!saved) throw new Error('mid-report revision save is required');
-  const completed = completeMidReportBlock(
-    gui.key,
-    saved.version,
-    requested.teamLeaderName,
-  );
-  if (!completed) throw new Error('mid-report revision completion is required');
-  if (!submitCurrentMidReport(completed.version, requested.teamLeaderName)) {
-    throw new Error('mid-report revision resubmission is required');
-  }
-}
-
 beforeEach(() => {
   useAuthStore.getState().setAccessToken(demoAccessToken);
-  resetProposalFixture();
-  resetMidReportMockData();
-  prepareResubmittedProposalRevision();
-  prepareResubmittedMidReportRevision();
+  useAuthStore.getState().setCurrentUser({ ...demoStudent, teamId: '7' });
+  server.use(...createTeamMessageHandlers());
 });
 afterEach(() => {
-  resetStudentFeedbackMockData();
-  resetProposalFixture();
-  resetMidReportMockData();
+  client.clear();
   server.resetHandlers();
   useAuthStore.getState().clearSession();
 });
 afterAll(() => server.close());
-
-function createQueryClient() {
-  return new QueryClient({
-    defaultOptions: {
-      queries: { retry: false },
-      mutations: { retry: false },
-    },
-  });
+function Wrapper({ children }: PropsWithChildren) {
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-function createWrapper(queryClient: QueryClient) {
-  return function Wrapper({ children }: PropsWithChildren) {
-    return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
-  };
-}
-
-function seedDashboardQueries(queryClient: QueryClient) {
-  queryClient.setQueryData(studentHomeKeys.dashboard(sectionId), {
-    scope: 'target',
+it('중간보고서 반영 기록은 팀 메시지로 보내고 원래 팀 대화만 갱신한다', async () => {
+  const key = teamMessageKeys.messages('7', 'MID_REPORT');
+  const other = teamMessageKeys.messages('8', 'MID_REPORT');
+  client.setQueryData(key, []);
+  client.setQueryData(other, []);
+  const { result } = renderHook(() => useSubmitMidReportFeedbackMutation('7'), {
+    wrapper: Wrapper,
   });
-  queryClient.setQueryData(studentHomeKeys.dashboard(otherSectionId), {
-    scope: 'other',
+  const response = await result.current.mutateAsync({
+    content: '  검색 흐름을 보완했습니다.  ',
   });
-}
-
-describe('student feedback mutations', () => {
-  it('제안서 답변 제출 뒤 현재 분반 대시보드만 무효화한다', async () => {
-    const queryClient = createQueryClient();
-    seedDashboardQueries(queryClient);
-    const { result } = renderHook(
-      () => useSubmitProposalFeedbackResponseMutation(sectionId),
-      { wrapper: createWrapper(queryClient) },
-    );
-
-    const response = await result.current.mutateAsync({
-      reviewId: demoProposalReviewId,
-      content: '제안서의 사용자 흐름을 구체화했습니다.',
-    });
-
-    expect(response).toMatchObject({
-      reviewId: demoProposalReviewId,
-      content: '제안서의 사용자 흐름을 구체화했습니다.',
-    });
-    expect(
-      queryClient.getQueryState(studentHomeKeys.dashboard(sectionId))
-        ?.isInvalidated,
-    ).toBe(true);
-    expect(
-      queryClient.getQueryState(studentHomeKeys.dashboard(otherSectionId))
-        ?.isInvalidated,
-    ).toBe(false);
+  expect(response).toMatchObject({
+    threadId: 70,
+    message: '검색 흐름을 보완했습니다.',
+    relatedType: 'MID_REPORT',
+    senderId: demoStudent.studentNumber,
   });
-
-  it('중간보고서 반영 내용 제출 뒤 현재 분반 대시보드만 무효화한다', async () => {
-    const queryClient = createQueryClient();
-    seedDashboardQueries(queryClient);
-    const { result } = renderHook(
-      () => useSubmitMidReportFeedbackMutation(sectionId),
-      { wrapper: createWrapper(queryClient) },
-    );
-
-    const response = await result.current.mutateAsync({
-      submissionId: demoMidReportSubmissionId,
-      content:
-        '검색 흐름을 단순화하라는 피드백을 받아 검색 단계를 두 단계로 줄였습니다.',
-    });
-
-    expect(response).toMatchObject({
-      submissionId: demoMidReportSubmissionId,
-      content:
-        '검색 흐름을 단순화하라는 피드백을 받아 검색 단계를 두 단계로 줄였습니다.',
-    });
-    expect(
-      queryClient.getQueryState(studentHomeKeys.dashboard(sectionId))
-        ?.isInvalidated,
-    ).toBe(true);
-    expect(
-      queryClient.getQueryState(studentHomeKeys.dashboard(otherSectionId))
-        ?.isInvalidated,
-    ).toBe(false);
-  });
-
-  it('동시 제출 충돌 뒤에도 현재 분반 대시보드를 무효화한다', async () => {
-    server.use(
-      http.post(
-        `${API_BASE_URL}${ENDPOINTS.REVIEW.REVISION_RESPONSE(':reviewId')}`,
-        () =>
-          HttpResponse.json(
-            {
-              code: 'PROPOSAL_FEEDBACK_RESPONSE_ALREADY_SUBMITTED',
-              message: '이미 답변을 제출했어요.',
-            },
-            { status: 409 },
-          ),
-      ),
-    );
-    const queryClient = createQueryClient();
-    seedDashboardQueries(queryClient);
-    const { result } = renderHook(
-      () => useSubmitProposalFeedbackResponseMutation(sectionId),
-      { wrapper: createWrapper(queryClient) },
-    );
-
-    await expect(
-      result.current.mutateAsync({
-        reviewId: demoProposalReviewId,
-        content: '제안서의 사용자 흐름을 구체화했습니다.',
-      }),
-    ).rejects.toMatchObject({ response: { status: 409 } });
-
-    expect(
-      queryClient.getQueryState(studentHomeKeys.dashboard(sectionId))
-        ?.isInvalidated,
-    ).toBe(true);
-    expect(
-      queryClient.getQueryState(studentHomeKeys.dashboard(otherSectionId))
-        ?.isInvalidated,
-    ).toBe(false);
-  });
+  expect(response).not.toHaveProperty('submissionId');
+  expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+  expect(client.getQueryState(other)?.isInvalidated).toBe(false);
 });
+
+const feedbackHooks = [
+  useSubmitProposalFeedbackResponseMutation,
+  useSubmitMidReportFeedbackMutation,
+];
+it.each(feedbackHooks)(
+  '%s preserves input variables in success callbacks and mutation state',
+  async useFeedback => {
+    const { result } = renderHook(() => useFeedback('7'), { wrapper: Wrapper });
+    const input = { content: '  원본 입력  ' };
+    const onSuccess = vi.fn();
+    const onSettled = vi.fn();
+    await act(async () => {
+      await result.current.mutateAsync(input, { onSuccess, onSettled });
+    });
+    expect(onSuccess.mock.calls[0]?.[1]).toBe(input);
+    expect(onSettled.mock.calls[0]?.[2]).toBe(input);
+    await waitFor(() => expect(result.current.variables).toBe(input));
+    expect(result.current.data?.message).toBe('원본 입력');
+  },
+);
+it.each(feedbackHooks)(
+  '%s preserves input variables on error without retrying',
+  async useFeedback => {
+    let posts = 0;
+    server.use(
+      http.post(`${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`, () => {
+        posts++;
+        return HttpResponse.json({ code: 'ACCESS_DENIED' }, { status: 403 });
+      }),
+    );
+    const { result } = renderHook(() => useFeedback('7'), { wrapper: Wrapper });
+    const input = { content: '실패한 원본 입력' };
+    const onError = vi.fn();
+    const onSettled = vi.fn();
+    act(() => result.current.mutate(input, { onError, onSettled }));
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(onError.mock.calls[0]?.[1]).toBe(input);
+    expect(onSettled.mock.calls[0]?.[2]).toBe(input);
+    await waitFor(() => expect(result.current.variables).toBe(input));
+    expect(posts).toBe(1);
+  },
+);

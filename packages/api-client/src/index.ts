@@ -22,13 +22,24 @@ export {
   type AdminPeerEvaluationFormPersistResponse,
 } from './adminEvaluation';
 export {
+  fetchAdminOopCourse,
   fetchAdminOopCourses,
+  removeAdminOopCourse,
+  submitAdminOopCourse,
+  updateAdminOopCourse,
+  type AdminOopCourseDto,
+  type AdminOopCourseInput,
+  type AdminOopCoursePersistResponse,
+  type AdminOopCourseSemester,
+  type AdminOopCourseStatus,
   type AdminOopCoursesResponse,
 } from './adminCourse';
 export {
   fetchAdminOopSections,
-  type AdminOopCourseDto,
+  submitAdminOopSection,
   type AdminOopSectionDto,
+  type AdminOopSectionInput,
+  type AdminOopSectionPersistResponse,
   type AdminOopSectionsFilter,
   type AdminOopSectionsResponse,
   type AdminOopUserDto,
@@ -121,6 +132,16 @@ export {
   type AdminNoticesResponse,
 } from './notices';
 export { ENDPOINTS } from './constants/endpoints';
+export {
+  fetchRequiredArtifacts,
+  removeRequiredArtifact,
+  submitRequiredArtifact,
+  updateRequiredArtifact,
+  type RequiredArtifactDto,
+  type RequiredArtifactInput,
+  type RequiredArtifactsResponse,
+  type RequiredArtifactType,
+} from './requiredArtifacts';
 export { fetchStudentHomeDashboard } from './studentHome/fetchStudentHomeDashboard';
 export {
   fetchAdminMilestoneSchedule,
@@ -269,3 +290,31 @@ export {
   submitLiveEditLock,
   removeLiveEditLock,
 } from './editLock';
+
+export {
+  fetchProjectProposal,
+  updateProjectProposal,
+  fetchProposalSections,
+  updateProposalSection,
+  submitProjectImage,
+  submitProjectProposal,
+} from './proposal';
+
+export {
+  fetchTeamMessages,
+  fetchTeamThread,
+  submitTeamMessage,
+} from './teamMessage';
+
+export {
+  submitStudentSubmissionVersion,
+  fetchRequiredSubmissionArtifacts,
+} from './submission';
+
+export {
+  fetchStudentSubmissionMemberConsent,
+  updateStudentSubmissionMemberConsent,
+  removeStudentSubmissionMemberConsent,
+} from './submission';
+
+export { updateStudentSubmissionCompletion } from './submission';

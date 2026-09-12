@@ -37,6 +37,8 @@ vi.mock('~/features/project-topic/ProjectTopicBoard', () => ({
 }));
 
 vi.mock('~/features/student-feedback/queries', () => ({
+  useProposalFeedbackQuery: (body: object) => ({ ...body, teamId: '7' }),
+  useMidReportFeedbackQuery: (body: object) => ({ ...body, teamId: '7' }),
   useSubmitMidReportFeedbackMutation: () => ({
     error: feedbackMutationState.midError,
     isError: Boolean(feedbackMutationState.midError),
@@ -95,7 +97,7 @@ describe('MilestoneList', () => {
     updateSubmissionConfirmation.mockReset();
     toast.mockReset();
     resetSubmissionMockData();
-    useAuthStore.setState({ currentUser: demoStudent });
+    useAuthStore.setState({ currentUser: { ...demoStudent, teamId: '7' } });
   });
 
   it('팀 배정이 끝난 학생에게 5개 상위 단계를 순서대로 표시한다', () => {
@@ -128,7 +130,7 @@ describe('MilestoneList', () => {
       'true',
     );
     expect(screen.queryByText('최종 선정 주제')).not.toBeInTheDocument();
-    expect(screen.queryByText('교수 피드백')).not.toBeInTheDocument();
+    expect(screen.queryByText('피드백 대화')).not.toBeInTheDocument();
   });
 
   it('제안서 피드백 반영과 조기 활성화된 중간 단계를 함께 상세로 표시한다', () => {
@@ -150,7 +152,7 @@ describe('MilestoneList', () => {
     writingButtons.forEach(button => expect(button).toBeEnabled());
     expect(screen.getByText('중간보고서 작성')).toBeInTheDocument();
     expect(screen.getByText('최종 선정 주제')).toBeInTheDocument();
-    expect(screen.getByText('교수 피드백')).toBeInTheDocument();
+    expect(screen.getByText('피드백 대화')).toBeInTheDocument();
   });
 
   it('새로 활성화된 마일스톤은 데이터 갱신 뒤에도 기본으로 상세를 연다', () => {
@@ -171,7 +173,7 @@ describe('MilestoneList', () => {
       />,
     );
 
-    expect(screen.getByText('교수 피드백')).toBeInTheDocument();
+    expect(screen.getByText('피드백 대화')).toBeInTheDocument();
     expect(screen.getByText('최종 선정 주제')).toBeInTheDocument();
   });
 
@@ -329,7 +331,7 @@ describe('MilestoneDetails', () => {
     resetMidMutation.mockReset();
     resetProposalMutation.mockReset();
     toast.mockReset();
-    useAuthStore.setState({ currentUser: demoStudent });
+    useAuthStore.setState({ currentUser: { ...demoStudent, teamId: '7' } });
   });
 
   it('현재 주제 선정 세부 단계의 후보와 완료 현황을 표시한다', () => {
@@ -376,7 +378,6 @@ describe('MilestoneDetails', () => {
 
     expect(submitProposalFeedbackResponse).toHaveBeenCalledWith(
       {
-        reviewId: body.reviewId,
         content: '서비스 구독 조건과 해지 흐름을 추가했습니다.',
       },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
@@ -414,7 +415,6 @@ describe('MilestoneDetails', () => {
 
     expect(submitMidReportFeedback).toHaveBeenCalledWith(
       {
-        submissionId: body.submissionId,
         content:
           '예외 처리와 시연 흐름을 보완하라는 피드백을 받아 오류 화면과 재시도 동선을 추가했습니다.',
       },
@@ -486,7 +486,6 @@ describe('MilestoneDetails', () => {
 
     expect(submitMidReportFeedback).toHaveBeenCalledWith(
       {
-        submissionId: body.submissionId,
         content: '오류 처리 피드백을 반영했습니다.',
       },
       expect.objectContaining({ onSuccess: expect.any(Function) }),

@@ -23,3 +23,4 @@ export { useMeetingTeamQuery } from './useMeetingTeamQuery';
 
 export { useRemoveMeetingActionMutation } from './useRemoveMeetingActionMutation';
 export { useCreateMeetingWithActions } from './useCreateMeetingWithActions';
+export { useMeetingEditLock, type MeetingEditLock } from './useMeetingEditLock';

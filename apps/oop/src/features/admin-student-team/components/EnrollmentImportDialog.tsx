@@ -63,7 +63,7 @@ export default function EnrollmentImportDialog({
         if (!open) close();
       }}
       purpose='info'
-      width={920}
+      width={1040}
     >
       <div className={styles.content}>
         <div className={styles.body}>
@@ -125,6 +125,7 @@ export default function EnrollmentImportDialog({
                       <th scope='col'>학번</th>
                       <th scope='col'>이름</th>
                       <th scope='col'>이메일</th>
+                      <th scope='col'>전공</th>
                       <th scope='col'>상태</th>
                       <th scope='col'>안내</th>
                     </tr>
@@ -136,6 +137,7 @@ export default function EnrollmentImportDialog({
                         <td>{row.studentNumber}</td>
                         <td>{row.name ?? '-'}</td>
                         <td>{row.email ?? '-'}</td>
+                        <td>{row.major ?? '-'}</td>
                         <td>{row.status}</td>
                         <td>{row.message ?? '-'}</td>
                       </tr>

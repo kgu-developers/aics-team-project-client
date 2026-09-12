@@ -31,6 +31,10 @@ export {
   isSupportedMilestoneCreationTemplate,
 } from './adminMilestoneCreation';
 export {
+  createAdminRequiredArtifactDrafts,
+  type AdminRequiredArtifactDraft,
+} from './adminRequiredArtifactDraft';
+export {
   createAdminMilestoneSectionScheduleDraftFromDto,
   createAdminMilestoneUpdateInput,
 } from './adminMilestoneEdit';

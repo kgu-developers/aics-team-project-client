@@ -1,12 +1,6 @@
-export type AdminOopCourseDto = {
-  created_at?: string;
-  id: number;
-  name: string;
-  semester: 'SPRING' | 'SUMMER' | 'FALL' | 'WINTER';
-  status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
-  updated_at?: string;
-  year: number;
-};
+import type { AdminOopCourseDto } from '../adminCourse/types';
+
+export type { AdminOopCourseDto } from '../adminCourse/types';
 
 export type AdminOopUserDto = {
   createdAt?: string;
@@ -34,10 +28,25 @@ export type AdminOopSectionsResponse = {
   contents: AdminOopSectionDto[];
 };
 
-export type AdminOopSectionsFilter = {
+export type AdminOopSectionInput = {
+  capacity: number;
+  classTime: string;
+  code: string;
+  contactVisibleFrom?: string;
+  contactVisibleUntil?: string;
   courseId: number;
   professorId: string;
-  semester?: AdminOopCourseDto['semester'];
-  status?: AdminOopCourseDto['status'];
-  year?: number;
 };
+
+export type AdminOopSectionPersistResponse = {
+  id: number;
+};
+
+export type AdminOopSectionsFilter =
+  | { courseId: number }
+  | {
+      professorId: string;
+      semester?: AdminOopCourseDto['semester'];
+      status?: AdminOopCourseDto['status'];
+      year?: number;
+    };

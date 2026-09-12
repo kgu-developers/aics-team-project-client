@@ -73,12 +73,37 @@ export const demoAdmin: CurrentUser = {
     {
       id: demoStudentSection.id,
       code: 'OOP-01',
+      capacity: 40,
+      classTime: '월요일 1-2교시',
+      contactVisibleFrom: null,
+      contactVisibleUntil: null,
+      courseId: 1,
+      courseName: '객체지향 프로그래밍',
       name: '객체지향프로그래밍 01분반',
       role: 'ASSISTANT',
+      semester: 'FALL',
+      status: 'ACTIVE',
+      year: 2026,
     },
   ],
   currentTeam: null,
 };
+
+let demoAdminSections = demoAdmin.sections.map(section => ({ ...section }));
+
+export function getDemoAdminSections(studentNumber: string) {
+  return studentNumber === demoAdmin.studentNumber
+    ? demoAdminSections
+    : undefined;
+}
+
+export function addDemoAdminSection(section: CurrentUser['sections'][number]) {
+  demoAdminSections = [...demoAdminSections, section];
+}
+
+export function resetDemoAdminSections() {
+  demoAdminSections = demoAdmin.sections.map(section => ({ ...section }));
+}
 
 export const demoAccessToken = 'msw-oop-demo-student-a-access-token';
 export const demoPartnerAccessToken = 'msw-oop-demo-student-b-access-token';

@@ -69,5 +69,19 @@ export function useMeetingRecordQuery(meetingId: string | null | undefined) {
             detail.refetch(),
             ...(sameTeam ? [actions.refetch()] : []),
           ]),
+    reloadForEdit: async () => {
+      const result = await detail.refetch({ throwOnError: true });
+      if (
+        !result.data ||
+        result.data.teamId !== context.teamId ||
+        !context.kickoff
+      )
+        throw new Error('현재 팀의 회의록을 확인하지 못했어요.');
+      return mapStudentMeeting(
+        result.data,
+        actions.data ?? [],
+        context.kickoff,
+      );
+    },
   };
 }

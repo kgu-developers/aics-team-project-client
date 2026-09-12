@@ -41,6 +41,7 @@ import {
   demoPartnerStudent,
   demoStudent,
 } from '~/mocks/data/users';
+import { createLiveEditLockHandlers } from '~/mocks/handlers/liveEditLock';
 import { createMeetingApiHandlers } from '~/mocks/handlers/meetingApi';
 import { renderWithRouter } from '~/test/renderWithRouter';
 
@@ -60,6 +61,7 @@ beforeEach(() => {
     .setCurrentUser({ ...demoStudent, teamId: '7', currentTeam: null });
   server.use(
     ...createMeetingApiHandlers(),
+    ...createLiveEditLockHandlers(),
     http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
       HttpResponse.json(meetingApiTeam),
     ),
@@ -89,7 +91,7 @@ function renderPage(page = <MeetingDetailPage meetingId='19' />) {
   );
 }
 
-it('회의록 본문 수정은 막고 액션 관리와 상태 변경은 제공한다', async () => {
+it('회의록 본문 수정 진입과 액션 관리·상태 변경을 제공한다', async () => {
   renderPage();
   expect(
     await screen.findByRole('heading', { name: '진행 점검 회의' }),
@@ -104,25 +106,23 @@ it('회의록 본문 수정은 막고 액션 관리와 상태 변경은 제공�
     screen.getByRole('combobox', { name: '회의록 상세 화면 검증 상태' }),
   ).toBeEnabled();
   expect(screen.getByRole('button', { name: '액션 추가' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: '회의록 수정' })).toBeEnabled();
 });
 
-it('실 API에서 수정 URL에 직접 진입해도 편집 폼과 저장 요청을 제공하지 않는다', async () => {
-  const writes = vi.fn();
+it('수정 URL 직접 진입은 잠금을 획득한 뒤 폼을 제공하며 저장 전에는 PATCH하지 않는다', async () => {
+  const writes: string[] = [];
   server.events.on('request:start', ({ request }) => {
-    if (request.method !== 'GET') writes();
+    if (request.method !== 'GET') writes.push(request.method);
   });
   renderPage(<MeetingEditPage meetingId='19' />);
-  expect(await screen.findByText('회의록 수정은 준비 중이에요.')).toBeVisible();
-  expect(
-    screen.queryByRole('textbox', { name: /회의 제목/ }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole('button', { name: '저장' }),
-  ).not.toBeInTheDocument();
+  expect(await screen.findByRole('textbox', { name: /회의 제목/ })).toHaveValue(
+    '진행 점검 회의',
+  );
+  expect(screen.getByRole('button', { name: '저장' })).toBeEnabled();
   expect(
     screen.getByRole('link', { name: '회의록 상세로 돌아가기' }),
   ).toHaveAttribute('href', '/student/meetings/19');
-  expect(writes).not.toHaveBeenCalled();
+  expect(writes).toEqual(['POST']);
 });
 
 async function fillNewMeeting() {

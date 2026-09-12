@@ -116,3 +116,33 @@ describe('학생 제출 HTTP 경계', () => {
     ).rejects.toThrow();
   });
 });
+
+it('상세 조회 도중 AbortSignal을 취소하면 HTTP 요청도 취소한다', async () => {
+  let started!: () => void;
+  const received = new Promise<void>(resolve => {
+    started = resolve;
+  });
+  let release!: () => void;
+  const response = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  server.use(
+    http.get(`${API_BASE_URL}/submissions/31`, async () => {
+      started();
+      await response;
+      return HttpResponse.json(studentSubmission);
+    }),
+  );
+  const controller = new AbortController();
+  const request = fetchStudentSubmission('31', controller.signal);
+  const rejected = expect(request).rejects.toMatchObject({
+    code: 'ERR_CANCELED',
+  });
+  try {
+    await received;
+    controller.abort();
+    await rejected;
+  } finally {
+    release();
+  }
+});
