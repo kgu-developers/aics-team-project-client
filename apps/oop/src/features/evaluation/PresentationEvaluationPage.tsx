@@ -15,6 +15,8 @@ import {
 } from '@aics/design-system';
 import { useEffect, useRef, useState } from 'react';
 
+import { PdfPreview } from '~/shared/ui/PdfPreview';
+
 import { useAuthStore } from '~/features/auth/authStore';
 import { safeSubmissionUrl } from '~/features/submission/submissionUploadInput';
 
@@ -86,8 +88,21 @@ function formatEvaluationWindow(opensAt: string, closesAt: string) {
   return `${dateFormatter.format(new Date(opensAt))} ~ ${timeFormatter.format(new Date(closesAt))}`;
 }
 
+function findPdfArtifact(team: MilestonePresentation) {
+  for (const artifact of team.artifacts) {
+    if (artifact.type !== 'FILE') continue;
+    const label = artifact.fileName ?? '';
+    if (artifact.mimeType !== 'application/pdf' && !/\.pdf$/i.test(label))
+      continue;
+    const href = safeSubmissionUrl(artifact.downloadUrl);
+    if (href) return { href, label: label || '발표 자료' };
+  }
+  return null;
+}
+
 function PresentationViewer({ team }: { team: MilestonePresentation }) {
   const project = team.project;
+  const pdf = findPdfArtifact(team);
   return (
     <>
       <Card padding={5} width='100%'>
@@ -133,6 +148,7 @@ function PresentationViewer({ team }: { team: MilestonePresentation }) {
               <p className={styles.helper}>등록된 발표 자료가 없어요.</p>
             )}
           </div>
+          {pdf ? <PdfPreview title={pdf.label} url={pdf.href} /> : null}
         </article>
       </Card>
 

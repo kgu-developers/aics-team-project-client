@@ -33,6 +33,8 @@ import { evaluationHandlers } from '~/mocks/handlers/evaluation';
 
 const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
 
+vi.mock('react-pdf', () => import('~/test/reactPdfMock'));
+
 vi.mock('@tanstack/react-router', async importOriginal => ({
   ...(await importOriginal<typeof import('@tanstack/react-router')>()),
   useNavigate: () => mockNavigate,
@@ -427,6 +429,11 @@ describe('KD3-92 학생 평가 화면', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'bookloop-final-presentation.pdf' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', {
+        name: 'bookloop-final-presentation.pdf 미리보기',
+      }),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '평가 제출' })).toHaveAttribute(
       'aria-disabled',
