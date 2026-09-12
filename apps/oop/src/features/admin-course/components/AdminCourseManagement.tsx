@@ -4,10 +4,12 @@ import type {
   AdminOopCourseSemester,
   AdminOopCourseStatus,
   AdminOopSectionInput,
+  AdminOopSectionDto,
 } from '@aics/api-client';
 import {
   Button,
   Card,
+  DateTimeInput,
   Dialog,
   EmptyState,
   Heading,
@@ -17,12 +19,16 @@ import {
   Text,
   TextInput,
   useToast,
+  VStack,
+  type ISODateTimeString,
 } from '@aics/design-system';
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   useAdminOopSectionsQuery,
   useSubmitAdminOopSectionMutation,
+  useUpdateAdminOopSectionMutation,
+  useUpdateAdminOopSectionContactVisibilityMutation,
 } from '~/features/admin-section/queries';
 
 import {
@@ -54,6 +60,8 @@ const initialInput: AdminOopCourseInput = {
   year: new Date().getFullYear(),
 };
 
+type CourseFormInput = Omit<AdminOopCourseInput, 'year'> & { year: string };
+
 function semesterLabel(value: AdminOopCourseSemester) {
   return semesterOptions.find(option => option.value === value)?.label ?? value;
 }
@@ -62,12 +70,27 @@ function statusLabel(value: AdminOopCourseStatus) {
   return statusOptions.find(option => option.value === value)?.label ?? value;
 }
 
-function toInput(course: AdminOopCourseDto): AdminOopCourseInput {
+function contactVisibilityStatus(visibleFrom: string, visibleUntil: string) {
+  if (!visibleFrom && !visibleUntil) return '미설정';
+
+  const startsAt = Date.parse(visibleFrom);
+  const endsAt = Date.parse(visibleUntil);
+  if (Number.isNaN(startsAt) || Number.isNaN(endsAt) || startsAt >= endsAt) {
+    return '입력 확인 필요';
+  }
+
+  const now = Date.now();
+  if (now < startsAt) return '공개 예정';
+  if (now <= endsAt) return '공개 중';
+  return '공개 종료';
+}
+
+function toInput(course: AdminOopCourseDto): CourseFormInput {
   return {
     name: course.name,
     semester: course.semester,
     status: course.status,
-    year: course.year,
+    year: String(course.year),
   };
 }
 
@@ -84,7 +107,10 @@ function CourseFormDialog({
   const courseQuery = useAdminOopCourseQuery(courseId ?? undefined);
   const submitMutation = useSubmitAdminOopCourseMutation();
   const updateMutation = useUpdateAdminOopCourseMutation();
-  const [input, setInput] = useState<AdminOopCourseInput>(initialInput);
+  const [input, setInput] = useState<CourseFormInput>({
+    ...initialInput,
+    year: String(initialInput.year),
+  });
   const hydratedDialogKey = useRef<string | undefined>(undefined);
   const isEditing = courseId !== null;
   const mutation = isEditing ? updateMutation : submitMutation;
@@ -97,7 +123,7 @@ function CourseFormDialog({
     if (!isEditing) {
       if (hydratedDialogKey.current === 'create') return;
       hydratedDialogKey.current = 'create';
-      setInput(initialInput);
+      setInput({ ...initialInput, year: String(initialInput.year) });
       submitMutation.reset();
       return;
     }
@@ -116,8 +142,19 @@ function CourseFormDialog({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!input.name.trim() || input.year < 1 || mutation.isPending) return;
-    const normalizedInput = { ...input, name: input.name.trim() };
+    const year = Number(input.year);
+    if (
+      !input.name.trim() ||
+      !Number.isInteger(year) ||
+      year < 1 ||
+      mutation.isPending
+    )
+      return;
+    const normalizedInput: AdminOopCourseInput = {
+      ...input,
+      name: input.name.trim(),
+      year,
+    };
 
     if (courseId === null) {
       submitMutation.mutate(normalizedInput, {
@@ -175,13 +212,8 @@ function CourseFormDialog({
                 isDisabled={mutation.isPending}
                 isRequired
                 label='연도'
-                onChange={year => {
-                  const numericYear = Number(year);
-                  if (Number.isInteger(numericYear)) {
-                    setInput(current => ({ ...current, year: numericYear }));
-                  }
-                }}
-                value={String(input.year)}
+                onChange={year => setInput(current => ({ ...current, year }))}
+                value={input.year}
                 width='100%'
               />
               <Selector
@@ -235,7 +267,10 @@ function CourseFormDialog({
               />
               <Button
                 isDisabled={
-                  !input.name.trim() || input.year < 1 || mutation.isPending
+                  !input.name.trim() ||
+                  !Number.isInteger(Number(input.year)) ||
+                  Number(input.year) < 1 ||
+                  mutation.isPending
                 }
                 isLoading={mutation.isPending}
                 label={isEditing ? '수정 저장' : '등록'}
@@ -245,6 +280,268 @@ function CourseFormDialog({
           </form>
         )}
       </div>
+    </Dialog>
+  );
+}
+
+function SectionSettingsDialog({
+  isOpen,
+  onClose,
+  onSaved,
+  section,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSaved: () => Promise<boolean>;
+  section: AdminOopSectionDto | null;
+}) {
+  const toast = useToast();
+  const updateSectionMutation = useUpdateAdminOopSectionMutation();
+  const updateVisibilityMutation =
+    useUpdateAdminOopSectionContactVisibilityMutation();
+  const resetUpdateSectionMutation = updateSectionMutation.reset;
+  const resetUpdateVisibilityMutation = updateVisibilityMutation.reset;
+  const [capacity, setCapacity] = useState('');
+  const [classTime, setClassTime] = useState('');
+  const [code, setCode] = useState('');
+  const [visibleFrom, setVisibleFrom] = useState('');
+  const [visibleUntil, setVisibleUntil] = useState('');
+  const [saveError, setSaveError] = useState<
+    'basic' | 'visibility' | 'refresh' | null
+  >(null);
+
+  useEffect(() => {
+    if (!isOpen || !section) return;
+    setCapacity(String(section.capacity));
+    setClassTime(section.classTime);
+    setCode(section.code);
+    setVisibleFrom(section.contactVisibleFrom ?? '');
+    setVisibleUntil(section.contactVisibleUntil ?? '');
+    resetUpdateSectionMutation();
+    resetUpdateVisibilityMutation();
+    setSaveError(null);
+  }, [
+    isOpen,
+    resetUpdateSectionMutation,
+    resetUpdateVisibilityMutation,
+    section,
+  ]);
+
+  const isPending =
+    updateSectionMutation.isPending || updateVisibilityMutation.isPending;
+  const isVisibilityRangeValid =
+    (!visibleFrom && !visibleUntil) ||
+    (Boolean(visibleFrom && visibleUntil) &&
+      Date.parse(visibleFrom) < Date.parse(visibleUntil));
+  const visibilityStatus = contactVisibilityStatus(visibleFrom, visibleUntil);
+
+  function visibilityInput() {
+    return visibleFrom || visibleUntil
+      ? { visibleFrom, visibleUntil }
+      : { visibleFrom: null, visibleUntil: null };
+  }
+
+  async function finishSave() {
+    const refreshed = await onSaved();
+    if (!refreshed) {
+      setSaveError('refresh');
+      return;
+    }
+    toast({ body: '분반 설정을 저장했어요.' });
+    onClose();
+  }
+
+  function saveVisibility() {
+    if (!section || !isVisibilityRangeValid || isPending) return;
+    setSaveError(null);
+    updateVisibilityMutation.mutate(
+      { sectionId: section.id, input: visibilityInput() },
+      {
+        onError: () => setSaveError('visibility'),
+        onSuccess: () => void finishSave(),
+      },
+    );
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const parsedCapacity = Number(capacity);
+    if (
+      !section ||
+      !code.trim() ||
+      !classTime.trim() ||
+      !Number.isInteger(parsedCapacity) ||
+      parsedCapacity < 1 ||
+      !isVisibilityRangeValid ||
+      isPending
+    )
+      return;
+
+    setSaveError(null);
+    updateSectionMutation.mutate(
+      {
+        sectionId: section.id,
+        input: {
+          capacity: parsedCapacity,
+          classTime: classTime.trim(),
+          code: code.trim(),
+        },
+      },
+      {
+        onError: () => setSaveError('basic'),
+        onSuccess: saveVisibility,
+      },
+    );
+  }
+
+  return (
+    <Dialog
+      aria-label='분반 정보 수정'
+      isOpen={isOpen}
+      onOpenChange={open => {
+        if (!open && !isPending) onClose();
+      }}
+      purpose='form'
+      width={480}
+    >
+      <form className={styles.sectionSettingsForm} onSubmit={handleSubmit}>
+        <Heading level={2}>{section?.code ?? '분반'} 분반 정보 수정</Heading>
+        <TextInput
+          isRequired
+          label='분반 코드'
+          onChange={setCode}
+          value={code}
+          width='100%'
+        />
+        <TextInput
+          isRequired
+          label='수업 시간'
+          onChange={setClassTime}
+          value={classTime}
+          width='100%'
+        />
+        <TextInput
+          isRequired
+          label='정원'
+          onChange={setCapacity}
+          value={capacity}
+          width='100%'
+        />
+        <section
+          aria-labelledby='contact-visibility-heading'
+          className={styles.optionalSettings}
+        >
+          <HStack
+            className={styles.optionalSettingsHeader}
+            gap={2}
+            justify='between'
+          >
+            <VStack gap={1}>
+              <Heading id='contact-visibility-heading' level={3}>
+                연락처 공개 기간 (선택)
+              </Heading>
+              <Text color='secondary' type='supporting'>
+                설정한 기간에만 학생에게 연락처가 공개됩니다.
+              </Text>
+            </VStack>
+            <Text className={styles.optionalSettingsStatus} type='supporting'>
+              {visibilityStatus}
+            </Text>
+          </HStack>
+          <div className={styles.formRow}>
+            <DateTimeInput
+              label='공개 시작'
+              onChange={value => setVisibleFrom(value ?? '')}
+              value={
+                visibleFrom ? (visibleFrom as ISODateTimeString) : undefined
+              }
+              width='100%'
+            />
+            <DateTimeInput
+              label='공개 종료'
+              onChange={value => setVisibleUntil(value ?? '')}
+              value={
+                visibleUntil ? (visibleUntil as ISODateTimeString) : undefined
+              }
+              width='100%'
+            />
+          </div>
+          {!isVisibilityRangeValid && (visibleFrom || visibleUntil) ? (
+            <Text className={styles.error} role='alert'>
+              종료 시각은 시작 시각보다 뒤여야 합니다.
+            </Text>
+          ) : null}
+          {visibleFrom || visibleUntil ? (
+            <Button
+              isDisabled={isPending}
+              label='공개 기간 해제'
+              onClick={() => {
+                setVisibleFrom('');
+                setVisibleUntil('');
+              }}
+              size='sm'
+              type='button'
+              variant='secondary'
+            />
+          ) : null}
+        </section>
+        {saveError === 'basic' ? (
+          <Text className={styles.error} role='alert'>
+            분반 기본 정보를 저장하지 못했습니다. 다시 시도해 주세요.
+          </Text>
+        ) : null}
+        {saveError === 'visibility' ? (
+          <VStack gap={2}>
+            <Text className={styles.error} role='alert'>
+              분반 기본 정보는 저장됐지만 연락처 공개 기간을 저장하지
+              못했습니다.
+            </Text>
+            <Button
+              label='공개 기간 다시 저장'
+              onClick={saveVisibility}
+              size='sm'
+              type='button'
+              variant='secondary'
+            />
+          </VStack>
+        ) : null}
+        {saveError === 'refresh' ? (
+          <VStack gap={2}>
+            <Text className={styles.error} role='alert'>
+              저장됐지만 분반 목록을 새로고침하지 못했습니다.
+            </Text>
+            <Button
+              label='분반 목록 새로고침'
+              onClick={() => void finishSave()}
+              size='sm'
+              type='button'
+              variant='secondary'
+            />
+          </VStack>
+        ) : null}
+        <HStack className={styles.dialogActions} gap={2} justify='end'>
+          <Button
+            isDisabled={isPending}
+            label='취소'
+            onClick={onClose}
+            type='button'
+            variant='secondary'
+          />
+          <Button
+            isDisabled={
+              !code.trim() ||
+              !classTime.trim() ||
+              !Number.isInteger(Number(capacity)) ||
+              Number(capacity) < 1 ||
+              !isVisibilityRangeValid ||
+              isPending
+            }
+            isLoading={isPending}
+            label='저장'
+            type='submit'
+          />
+        </HStack>
+      </form>
     </Dialog>
   );
 }
@@ -269,6 +566,9 @@ function CourseSectionDialog({
   const submitMutation = useSubmitAdminOopSectionMutation();
   const initializedDialog = useRef(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [sectionToEdit, setSectionToEdit] = useState<AdminOopSectionDto | null>(
+    null,
+  );
   const [hasRefreshError, setHasRefreshError] = useState(false);
   const [input, setInput] = useState({
     capacity: '40',
@@ -285,6 +585,7 @@ function CourseSectionDialog({
     initializedDialog.current = true;
     setIsCreating(false);
     setInput({ capacity: '40', classTime: '', code: '' });
+    setHasRefreshError(false);
     submitMutation.reset();
   }, [isOpen, submitMutation]);
 
@@ -316,137 +617,157 @@ function CourseSectionDialog({
     };
     submitMutation.mutate(sectionInput, {
       onSuccess: async () => {
-        toast({ body: '분반을 등록했어요.' });
         setIsCreating(false);
         setInput({ capacity: '40', classTime: '', code: '' });
-        setHasRefreshError(!(await onSectionCreated()));
+        const refreshed = await onSectionCreated();
+        if (!refreshed) {
+          setHasRefreshError(true);
+          return;
+        }
+        toast({ body: '분반을 등록했어요.' });
       },
     });
   }
 
   return (
-    <Dialog
-      aria-label={course ? `${course.name} 분반 관리` : '분반 관리'}
-      isOpen={isOpen}
-      onOpenChange={open => {
-        if (!open) close();
-      }}
-      purpose='form'
-      width={560}
-    >
-      <div className={styles.dialogBody}>
-        <Heading level={2}>{course?.name ?? '강좌'} 분반 관리</Heading>
-        {!professorId ? (
-          <Text role='alert'>로그인한 관리자 정보를 확인할 수 없습니다.</Text>
-        ) : sectionsQuery.isPending ? (
-          <Text aria-live='polite' role='status'>
-            연결된 분반을 불러오는 중입니다.
-          </Text>
-        ) : sectionsQuery.isError ? (
-          <Text role='alert'>연결된 분반을 불러오지 못했습니다.</Text>
-        ) : (sectionsQuery.data?.contents.length ?? 0) === 0 ? (
-          <Text color='secondary'>등록된 분반이 없습니다.</Text>
-        ) : (
-          <ul aria-label='연결된 분반 목록' className={styles.sectionList}>
-            {sectionsQuery.data?.contents.map(section => (
-              <li className={styles.sectionItem} key={section.id}>
-                <strong>{section.code}</strong>
-                <span className={styles.sectionMeta}>
-                  {section.classTime} · 정원 {section.capacity}명
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-        {hasRefreshError ? (
-          <HStack gap={2} justify='end'>
-            <Text role='alert'>분반 목록 동기화에 실패했습니다.</Text>
-            <Button
-              label='분반 목록 새로고침'
-              onClick={() =>
-                void onSectionCreated().then(success =>
-                  setHasRefreshError(!success),
-                )
-              }
-              size='sm'
-              variant='secondary'
-            />
-          </HStack>
-        ) : null}
-        {!isCreating ? (
-          <HStack gap={2} justify='end'>
-            <Button label='닫기' onClick={close} variant='secondary' />
-            <Button
-              isDisabled={!professorId || sectionsQuery.isPending}
-              label='분반 등록'
-              onClick={() => setIsCreating(true)}
-            />
-          </HStack>
-        ) : (
-          <form className={styles.form} onSubmit={handleSubmit}>
-            <TextInput
-              isDisabled={submitMutation.isPending}
-              isRequired
-              label='분반 코드'
-              onChange={code => setInput(current => ({ ...current, code }))}
-              placeholder='예) OOP-01'
-              value={input.code}
-              width='100%'
-            />
-            <TextInput
-              isDisabled={submitMutation.isPending}
-              isRequired
-              label='수업 시간'
-              onChange={classTime =>
-                setInput(current => ({ ...current, classTime }))
-              }
-              placeholder='예) 월요일 1-2교시'
-              value={input.classTime}
-              width='100%'
-            />
-            <TextInput
-              isDisabled={submitMutation.isPending}
-              isRequired
-              label='정원'
-              onChange={capacity =>
-                setInput(current => ({ ...current, capacity }))
-              }
-              value={input.capacity}
-              width='100%'
-            />
-            <Text color='secondary' type='supporting'>
-              담당 교수는 현재 로그인한 관리자 계정으로 등록됩니다.
+    <>
+      <Dialog
+        aria-label={course ? `${course.name} 분반 관리` : '분반 관리'}
+        isOpen={isOpen}
+        onOpenChange={open => {
+          if (!open) close();
+        }}
+        purpose='form'
+        width={560}
+      >
+        <div className={styles.dialogBody}>
+          <Heading level={2}>{course?.name ?? '강좌'} 분반 관리</Heading>
+          {!professorId ? (
+            <Text role='alert'>로그인한 관리자 정보를 확인할 수 없습니다.</Text>
+          ) : sectionsQuery.isPending ? (
+            <Text aria-live='polite' role='status'>
+              연결된 분반을 불러오는 중입니다.
             </Text>
-            {submitMutation.isError ? (
-              <Text className={styles.error} role='alert'>
-                분반을 등록하지 못했습니다. 다시 시도해 주세요.
-              </Text>
-            ) : null}
-            <HStack className={styles.dialogActions} gap={2} justify='end'>
+          ) : sectionsQuery.isError ? (
+            <Text role='alert'>연결된 분반을 불러오지 못했습니다.</Text>
+          ) : (sectionsQuery.data?.contents.length ?? 0) === 0 ? (
+            <Text color='secondary'>등록된 분반이 없습니다.</Text>
+          ) : (
+            <ul aria-label='연결된 분반 목록' className={styles.sectionList}>
+              {sectionsQuery.data?.contents.map(section => (
+                <li className={styles.sectionItem} key={section.id}>
+                  <strong>{section.code}</strong>
+                  <span className={styles.sectionMeta}>
+                    {section.classTime} · 정원 {section.capacity}명
+                  </span>
+                  <Button
+                    className={styles.sectionEditButton}
+                    label='분반 정보 수정'
+                    onClick={() => setSectionToEdit(section)}
+                    size='sm'
+                    variant='secondary'
+                    width='100%'
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+          {hasRefreshError ? (
+            <HStack gap={2} justify='end'>
+              <Text role='alert'>분반 목록을 새로고침하지 못했습니다.</Text>
               <Button
-                isDisabled={submitMutation.isPending}
-                label='취소'
-                onClick={() => setIsCreating(false)}
-                type='button'
+                label='분반 목록 새로고침'
+                onClick={() =>
+                  void onSectionCreated().then(success =>
+                    setHasRefreshError(!success),
+                  )
+                }
+                size='sm'
                 variant='secondary'
               />
+            </HStack>
+          ) : null}
+          {!isCreating ? (
+            <HStack gap={2} justify='end'>
+              <Button label='닫기' onClick={close} variant='secondary' />
               <Button
-                isDisabled={
-                  !input.code.trim() ||
-                  !input.classTime.trim() ||
-                  !Number.isInteger(Number(input.capacity)) ||
-                  Number(input.capacity) < 1 ||
-                  submitMutation.isPending
-                }
-                isLoading={submitMutation.isPending}
-                label='등록'
-                type='submit'
+                isDisabled={!professorId || sectionsQuery.isPending}
+                label='분반 등록'
+                onClick={() => setIsCreating(true)}
               />
             </HStack>
-          </form>
-        )}
-      </div>
-    </Dialog>
+          ) : (
+            <form className={styles.form} onSubmit={handleSubmit}>
+              <TextInput
+                isDisabled={submitMutation.isPending}
+                isRequired
+                label='분반 코드'
+                onChange={code => setInput(current => ({ ...current, code }))}
+                placeholder='예) OOP-01'
+                value={input.code}
+                width='100%'
+              />
+              <TextInput
+                isDisabled={submitMutation.isPending}
+                isRequired
+                label='수업 시간'
+                onChange={classTime =>
+                  setInput(current => ({ ...current, classTime }))
+                }
+                placeholder='예) 월요일 1-2교시'
+                value={input.classTime}
+                width='100%'
+              />
+              <TextInput
+                isDisabled={submitMutation.isPending}
+                isRequired
+                label='정원'
+                onChange={capacity =>
+                  setInput(current => ({ ...current, capacity }))
+                }
+                value={input.capacity}
+                width='100%'
+              />
+              <Text color='secondary' type='supporting'>
+                담당 교수는 현재 로그인한 관리자 계정으로 등록됩니다.
+              </Text>
+              {submitMutation.isError ? (
+                <Text className={styles.error} role='alert'>
+                  분반을 등록하지 못했습니다. 다시 시도해 주세요.
+                </Text>
+              ) : null}
+              <HStack className={styles.dialogActions} gap={2} justify='end'>
+                <Button
+                  isDisabled={submitMutation.isPending}
+                  label='취소'
+                  onClick={() => setIsCreating(false)}
+                  type='button'
+                  variant='secondary'
+                />
+                <Button
+                  isDisabled={
+                    !input.code.trim() ||
+                    !input.classTime.trim() ||
+                    !Number.isInteger(Number(input.capacity)) ||
+                    Number(input.capacity) < 1 ||
+                    submitMutation.isPending
+                  }
+                  isLoading={submitMutation.isPending}
+                  label='등록'
+                  type='submit'
+                />
+              </HStack>
+            </form>
+          )}
+        </div>
+      </Dialog>
+      <SectionSettingsDialog
+        isOpen={sectionToEdit !== null}
+        onClose={() => setSectionToEdit(null)}
+        onSaved={onSectionCreated}
+        section={sectionToEdit}
+      />
+    </>
   );
 }
 

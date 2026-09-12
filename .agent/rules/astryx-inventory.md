@@ -11,7 +11,7 @@ Tooltip
 Tab, TabList
 HStack, VStack
 Text, Heading
-TextInput, TextArea, DateInput, TimeInput, MultiSelector
+TextInput, TextArea, DateInput, DateTimeInput, TimeInput, MultiSelector
 AstryxThemeProvider, oopTheme, tokens
 ```
 

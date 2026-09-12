@@ -179,6 +179,10 @@ export const tableHeader = style({
   textAlign: 'left',
 });
 
+globalStyle(`${table} tbody tr:hover td`, {
+  background: tokens.color.background.muted,
+});
+
 export const peerMemberButton = style({
   background: 'transparent',
   border: 0,
