@@ -14,6 +14,7 @@ export const ROUTES = {
   ADMIN_STUDENT_TEAM: '/admin/student-team',
   ADMIN_SUBMISSIONS: '/admin/submissions',
   ADMIN_SUBMISSION_DETAIL: '/admin/submissions/$submissionId',
+  ADMIN_EVALUATION_DETAIL: '/admin/evaluations/$evaluationType/teams/$teamId',
   ADMIN_TEAM_DETAIL: '/admin/teams/$teamId',
   STUDENT: {
     HOME: '/student',
