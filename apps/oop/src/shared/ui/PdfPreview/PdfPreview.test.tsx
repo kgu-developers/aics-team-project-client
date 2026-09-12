@@ -7,10 +7,10 @@ import { PdfPreview } from './PdfPreview';
 
 vi.mock('react-pdf', () => import('~/test/reactPdfMock'));
 
-function renderPreview() {
+function renderPreview(url = 'https://example.com/slides.pdf') {
   return render(
     <AstryxThemeProvider>
-      <PdfPreview title='발표자료.pdf' url='https://example.com/slides.pdf' />
+      <PdfPreview title='발표자료.pdf' url={url} />
     </AstryxThemeProvider>,
   );
 }
@@ -56,5 +56,17 @@ describe('PdfPreview', () => {
 
     expect(screen.getByRole('button', { name: '확대' })).toBeDisabled();
     expect(screen.getByRole('button', { name: '축소' })).not.toBeDisabled();
+  });
+
+  it('문서를 읽지 못하면 브라우저 내장 뷰어로 내려간다', async () => {
+    const { container } = renderPreview('https://example.com/blocked.pdf');
+
+    await screen.findByRole('region', { name: '발표자료.pdf 미리보기' });
+    const embed = container.querySelector('object');
+    expect(embed).toHaveAttribute('data', 'https://example.com/blocked.pdf');
+    expect(embed).toHaveAttribute('type', 'application/pdf');
+    expect(
+      screen.queryByRole('button', { name: '다음 쪽' }),
+    ).not.toBeInTheDocument();
   });
 });

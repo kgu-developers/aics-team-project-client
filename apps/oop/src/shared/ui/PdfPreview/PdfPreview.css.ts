@@ -60,3 +60,11 @@ export const zoom = style({
   gap: tokens.spacing['1'],
   marginLeft: 'auto',
 });
+
+export const embed = style({
+  backgroundColor: tokens.color.background.muted,
+  border: 0,
+  borderRadius: tokens.radius.container,
+  height: 520,
+  width: '100%',
+});

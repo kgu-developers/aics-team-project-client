@@ -15,6 +15,9 @@ export function PdfPreview({ title, url }: { title: string; url: string }) {
   const [pageNumber, setPageNumber] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [zoomIndex, setZoomIndex] = useState(0);
+  // presigned S3 주소는 버킷 CORS가 없으면 pdf.js fetch가 막힌다.
+  // 그때는 fetch를 쓰지 않는 브라우저 내장 뷰어로 내려간다.
+  const [isEmbedFallback, setIsEmbedFallback] = useState(false);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -34,9 +37,26 @@ export function PdfPreview({ title, url }: { title: string; url: string }) {
     setPageNumber(1);
     setTotalPages(0);
     setZoomIndex(0);
+    setIsEmbedFallback(false);
   }
 
   const zoom = zoomSteps[zoomIndex] ?? 1;
+
+  if (isEmbedFallback)
+    return (
+      <section aria-label={`${title} 미리보기`} className={styles.root}>
+        <object
+          className={styles.embed}
+          data={url}
+          title={`${title} 미리보기`}
+          type='application/pdf'
+        >
+          <p className={styles.message}>
+            미리보기를 불러오지 못했어요. 파일을 내려받아 확인해 주세요.
+          </p>
+        </object>
+      </section>
+    );
 
   return (
     <section aria-label={`${title} 미리보기`} className={styles.root}>
@@ -51,7 +71,9 @@ export function PdfPreview({ title, url }: { title: string; url: string }) {
           loading={
             <p className={styles.message}>미리보기를 불러오는 중이에요.</p>
           }
+          onLoadError={() => setIsEmbedFallback(true)}
           onLoadSuccess={({ numPages }) => setTotalPages(numPages)}
+          onSourceError={() => setIsEmbedFallback(true)}
         >
           <Page
             className={styles.page}
