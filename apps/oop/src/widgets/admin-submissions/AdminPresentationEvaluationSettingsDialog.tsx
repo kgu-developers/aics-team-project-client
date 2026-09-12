@@ -1,4 +1,3 @@
-import type { AdminPresentationEvaluationTeamDto } from '@aics/api-client';
 import {
   Button,
   Dialog,
@@ -18,7 +17,11 @@ import * as styles from './AdminPresentationEvaluationSettingsDialog.css';
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  teams: AdminPresentationEvaluationTeamDto[];
+  teams: Array<{
+    presentationOrder: number | null;
+    teamId: number;
+    teamName: string;
+  }>;
   milestoneId: string;
   sectionId: string;
 };
