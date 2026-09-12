@@ -37,9 +37,13 @@ export {
 export {
   fetchAdminOopSections,
   submitAdminOopSection,
+  updateAdminOopSection,
+  updateAdminOopSectionContactVisibility,
+  type AdminOopSectionContactVisibilityInput,
   type AdminOopSectionDto,
   type AdminOopSectionInput,
   type AdminOopSectionPersistResponse,
+  type AdminOopSectionUpdateInput,
   type AdminOopSectionsFilter,
   type AdminOopSectionsResponse,
   type AdminOopUserDto,

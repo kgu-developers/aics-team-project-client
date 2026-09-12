@@ -4,8 +4,16 @@ import type {
 } from '@aics/api-client';
 
 import { getAdminCourse } from './adminCourses';
-import { addMockMySection, resetMockMySections } from './sections';
-import { addDemoAdminSection, resetDemoAdminSections } from './users';
+import {
+  addMockMySection,
+  resetMockMySections,
+  updateMockSectionContactVisibility,
+} from './sections';
+import {
+  addDemoAdminSection,
+  resetDemoAdminSections,
+  updateDemoAdminSectionContactVisibility,
+} from './users';
 
 const professor = {
   email: 'admin@kgu.ac.kr',
@@ -19,6 +27,17 @@ type AdminSectionFixture = Omit<AdminOopSectionDto, 'course'> & {
   courseId: number;
 };
 
+type AdminSectionFixtureUpdate = Partial<
+  Pick<
+    AdminOopSectionInput,
+    | 'capacity'
+    | 'classTime'
+    | 'code'
+    | 'contactVisibleFrom'
+    | 'contactVisibleUntil'
+  >
+>;
+
 const initialSections: AdminSectionFixture[] = [
   {
     capacity: 40,
@@ -29,10 +48,19 @@ const initialSections: AdminSectionFixture[] = [
     name: 'OOP-01',
     professor,
   },
+  {
+    capacity: 35,
+    classTime: '화요일 3-4교시',
+    code: 'WEB-01',
+    courseId: 2,
+    id: 2,
+    name: 'WEB-01',
+    professor,
+  },
 ];
 
 let sections = initialSections.map(section => ({ ...section }));
-let nextSectionId = 2;
+let nextSectionId = 3;
 
 export function getAdminSections({
   semester,
@@ -153,9 +181,35 @@ export function createAdminSection(input: AdminOopSectionInput) {
   };
 }
 
+export function updateAdminSectionFixture(
+  sectionId: number,
+  input: AdminSectionFixtureUpdate,
+) {
+  const index = sections.findIndex(section => section.id === sectionId);
+  if (index < 0) return null;
+  const section = {
+    ...sections[index]!,
+    ...input,
+  };
+  sections = sections.map(item => (item.id === sectionId ? section : item));
+  if ('contactVisibleFrom' in input || 'contactVisibleUntil' in input) {
+    const contactVisibility = {
+      contactVisibleFrom: section.contactVisibleFrom ?? null,
+      contactVisibleUntil: section.contactVisibleUntil ?? null,
+    };
+    updateMockSectionContactVisibility(sectionId, contactVisibility);
+    updateDemoAdminSectionContactVisibility(sectionId, contactVisibility);
+  }
+  return (
+    getAdminSectionsByCourseId(section.courseId).find(
+      item => item.id === sectionId,
+    ) ?? null
+  );
+}
+
 export function resetAdminSectionsMockData() {
   resetDemoAdminSections();
   resetMockMySections();
   sections = initialSections.map(section => ({ ...section }));
-  nextSectionId = 2;
+  nextSectionId = 3;
 }

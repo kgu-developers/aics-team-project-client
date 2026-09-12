@@ -101,6 +101,20 @@ export function addDemoAdminSection(section: CurrentUser['sections'][number]) {
   demoAdminSections = [...demoAdminSections, section];
 }
 
+export function updateDemoAdminSectionContactVisibility(
+  sectionId: string | number,
+  contactVisibility: Pick<
+    CurrentUser['sections'][number],
+    'contactVisibleFrom' | 'contactVisibleUntil'
+  >,
+) {
+  demoAdminSections = demoAdminSections.map(section =>
+    String(section.id) === String(sectionId)
+      ? { ...section, ...contactVisibility }
+      : section,
+  );
+}
+
 export function resetDemoAdminSections() {
   demoAdminSections = demoAdmin.sections.map(section => ({ ...section }));
 }

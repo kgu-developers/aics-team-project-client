@@ -70,6 +70,31 @@ export const form = style({
   gap: tokens.spacing['3'],
 });
 
+export const sectionSettingsForm = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['3'],
+});
+
+export const optionalSettings = style({
+  background: tokens.color.background.muted,
+  borderRadius: tokens.radius.container,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['2'],
+  padding: tokens.spacing['3'],
+});
+
+export const optionalSettingsHeader = style({
+  alignItems: 'flex-start',
+});
+
+export const optionalSettingsStatus = style({
+  color: tokens.color.text.secondary,
+  fontSize: 13,
+  whiteSpace: 'nowrap',
+});
+
 export const formRow = style({
   display: 'grid',
   gap: tokens.spacing['2'],
@@ -117,6 +142,10 @@ export const sectionItem = style({
   gap: tokens.spacing['1'],
   gridTemplateColumns: 'minmax(0, 1fr) auto',
   padding: tokens.spacing['3'],
+});
+
+export const sectionEditButton = style({
+  gridColumn: '1 / -1',
 });
 
 export const sectionMeta = style({

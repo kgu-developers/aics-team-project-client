@@ -31,7 +31,7 @@ function parseCourseId(value: string | readonly string[] | undefined) {
 }
 
 function isCourseInput(value: unknown): value is AdminOopCourseInput {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const input = value as Record<string, unknown>;
   return (
     typeof input.name === 'string' &&
@@ -56,8 +56,9 @@ export const adminCourseHandlers = [
       const errorResponse = guardAdmin(request);
       if (errorResponse) return errorResponse;
       const input: unknown = await request.json();
-      if (!isCourseInput(input))
+      if (!isCourseInput(input)) {
         return HttpResponse.json({ code: 'INVALID_REQUEST' }, { status: 400 });
+      }
       const course = createAdminCourse(input);
       return HttpResponse.json({ id: course.id }, { status: 201 });
     },
@@ -84,8 +85,9 @@ export const adminCourseHandlers = [
         return HttpResponse.json({ code: 'INVALID_REQUEST' }, { status: 400 });
       }
       const input: unknown = await request.json();
-      if (!isCourseInput(input))
+      if (!isCourseInput(input)) {
         return HttpResponse.json({ code: 'INVALID_REQUEST' }, { status: 400 });
+      }
       return updateAdminCourse(courseId, input)
         ? new HttpResponse(null, { status: 204 })
         : HttpResponse.json({ code: 'COURSE_NOT_FOUND' }, { status: 404 });
@@ -97,7 +99,7 @@ export const adminCourseHandlers = [
       const errorResponse = guardAdmin(request);
       if (errorResponse) return errorResponse;
       const courseId = parseCourseId(params.courseId);
-      if (!courseId) {
+      if (courseId === null) {
         return HttpResponse.json({ code: 'COURSE_NOT_FOUND' }, { status: 404 });
       }
       const course = getAdminCourse(courseId);

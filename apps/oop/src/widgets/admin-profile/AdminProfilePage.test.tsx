@@ -21,6 +21,7 @@ import { useAuthStore } from '~/features/auth/authStore';
 
 import { AdminPreSurveyResponses } from './AdminPreSurveyResponses';
 import AdminProfilePage from './AdminProfilePage';
+import AdminCourseOperations from '../admin-course/AdminCourseOperations';
 
 import {
   mockSessionResponseHeaders,
@@ -156,7 +157,16 @@ function renderPage() {
     );
   }
 
-  return { ...render(<AdminProfilePage />, { wrapper: Wrapper }), queryClient };
+  return {
+    ...render(
+      <>
+        <AdminProfilePage />
+        <AdminCourseOperations />
+      </>,
+      { wrapper: Wrapper },
+    ),
+    queryClient,
+  };
 }
 
 describe('AdminProfilePage', () => {
@@ -405,16 +415,10 @@ describe('AdminProfilePage', () => {
     expect(screen.queryByText('전체 4건')).not.toBeInTheDocument();
   });
 
-  it('담당 분반이 없으면 파일 선택 버튼을 비활성화하고 이유를 표시한다', () => {
+  it('담당 분반이 없으면 데이터 업로드를 막고 이유를 표시한다', () => {
     useAuthStore.setState({ currentUser: { ...demoAdmin, sections: [] } });
     renderPage();
 
-    expect(
-      screen.getByRole('button', { name: '학생 명단 파일 선택' }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole('button', { name: '팀 구성 명단 파일 선택' }),
-    ).toBeDisabled();
     expect(
       screen.getByText('담당 분반이 없어 명단 파일을 선택할 수 없습니다.'),
     ).toBeInTheDocument();

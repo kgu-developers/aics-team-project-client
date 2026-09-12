@@ -33,6 +33,10 @@ export const ENDPOINTS = {
     OOP_COURSE: (courseId: string | number) =>
       `/api/v1/admin/oop/courses/${courseId}`,
     OOP_SECTIONS: '/api/v1/admin/oop/sections',
+    OOP_SECTION: (sectionId: string | number) =>
+      `/api/v1/admin/oop/sections/${sectionId}`,
+    OOP_SECTION_CONTACT_VISIBILITY: (sectionId: string | number) =>
+      `/api/v1/admin/oop/sections/${sectionId}/contact-visibility`,
     SECTION_ENROLLMENTS: (sectionId: string | number) =>
       `/api/v1/admin/oop/sections/${sectionId}/enrollments`,
     SECTION_ENROLLMENT: (sectionId: string | number, studentNumber: string) =>
