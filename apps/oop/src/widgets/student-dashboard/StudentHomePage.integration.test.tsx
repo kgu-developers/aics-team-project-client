@@ -29,7 +29,7 @@ import { studentHomeKeys } from '~/features/student-home/queries';
 
 import StudentHomePage from './StudentHomePage';
 
-import { liveHomeUser } from '~/mocks/data/studentHomeLive';
+import { liveHomeTeam, liveHomeUser } from '~/mocks/data/studentHomeLive';
 import { studentMilestoneFixtures } from '~/mocks/data/studentMilestones';
 import { studentHomeLiveHandlers } from '~/mocks/handlers/studentHomeLive';
 
@@ -991,6 +991,39 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
     );
 
     await waitFor(() => expect(submit).toHaveBeenCalled());
+  });
+
+  it('팀장이 아니면 제출하기 대신 작성하기를 보여준다', async () => {
+    const completed = [
+      { section: 'TOPIC', completed: true },
+      { section: 'DATA', completed: true },
+      { section: 'SCREEN', completed: true },
+      { section: 'TEAM_OPERATION', completed: true },
+    ];
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF('7')}`, () =>
+        HttpResponse.json({
+          ...liveHomeTeam,
+          members: liveHomeTeam.members.map(member => ({
+            ...member,
+            isLeader: false,
+          })),
+        }),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+        HttpResponse.json(teamProposalFixture()),
+      ),
+      proposalSectionsHandler(completed),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    expect(
+      await screen.findByRole('button', { name: '작성하기' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('팀장이 제출할 수 있어요.')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '제출하기' }),
+    ).not.toBeInTheDocument();
   });
 
   it('필수 입력이 비어 있으면 제출 대신 채워야 할 항목을 알린다', async () => {

@@ -232,37 +232,22 @@ it('작성 완료를 저장한 뒤 내용 변경 시 다시 작성 중이 된다
     expect(screen.getByRole('button', { name: '작성 완료' })).toBeEnabled(),
   );
 });
-it('모든 영역 완료 후 팀장 제출 결과를 조회하고 읽기 전용으로 전환한다', async () => {
-  const sections = createProposalSectionsFixture();
-  sections.contents.forEach(s => (s.completed = true));
-  sections.allCompleted = true;
-  server.use(...createProjectProposalHandlers({ sections }));
+it('제출한 제안서는 읽기 전용으로 연다', async () => {
+  const project = createProjectProposalFixture();
+  project.proposalCompletedAt = '2026-09-12T10:00:00';
+  server.use(...createProjectProposalHandlers({ project }));
   render();
-  const submit = await screen.findByRole('button', { name: '제안서 제출' });
-  await waitFor(() => expect(submit).toBeEnabled());
-  await userEvent.click(submit);
+
   expect(
     await screen.findByText('제출한 제안서는 읽기 전용입니다.'),
   ).toBeInTheDocument();
   expect(screen.getByLabelText(/프로젝트 제목/)).toBeDisabled();
   expect(
-    screen.queryByRole('button', { name: '제안서 제출' }),
+    screen.queryByRole('button', { name: '저장' }),
   ).not.toBeInTheDocument();
-});
-it('팀원이 팀장과 이름이 같아도 제출 권한을 주지 않는다', async () => {
-  const sections = createProposalSectionsFixture();
-  sections.contents.forEach(s => (s.completed = true));
-  sections.allCompleted = true;
-  useAuthStore.getState().setCurrentUser({
-    ...demoPartnerStudent,
-    name: demoStudent.name,
-    teamId: '19',
-  });
-  server.use(...createProjectProposalHandlers({ sections }));
-  render();
   expect(
-    await screen.findByRole('button', { name: '제안서 제출' }),
-  ).toBeDisabled();
+    screen.queryByRole('button', { name: '작성 완료' }),
+  ).not.toBeInTheDocument();
 });
 it('주제 저장은 최신 다른 영역과 링크를 보존하고 kickoff는 보내지 않는다', () => {
   const baseline = createProjectProposalFixture(),
