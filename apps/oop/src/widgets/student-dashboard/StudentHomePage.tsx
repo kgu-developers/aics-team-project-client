@@ -11,6 +11,10 @@ import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog'
 import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
 import { useTopicMilestoneEligibility } from '~/features/project-topic/useTopicMilestoneEligibility';
 import { useProposalSectionsQuery } from '~/features/proposal/queries';
+import {
+  midReportFeedbackStage,
+  proposalFeedbackStage,
+} from '~/features/student-home/model/documentFeedbackStage';
 import { homeQueryState } from '~/features/student-home/model/homeQueryState';
 import { midReportSectionStatuses } from '~/features/student-home/model/midReportSectionStatuses';
 import { peerEvaluationHomeSummary } from '~/features/student-home/model/peerEvaluationHomeSummary';
@@ -26,6 +30,7 @@ import {
 import type { FinalReportSubmissionTarget } from '~/features/submission/FinalReportSubmissionPanel';
 import SubmissionDialog from '~/features/submission/SubmissionDialog';
 import { SubmissionDialogProvider } from '~/features/submission/SubmissionDialogContext';
+import { useTeamMessagesQuery } from '~/features/team-message/queries';
 
 import MilestoneList from '~/widgets/milestone-summary/MilestoneList';
 
@@ -88,6 +93,9 @@ export default function StudentHomePage() {
     home.project.state.status === 'ready' ? home.project.data : undefined;
   const proposalSections = useProposalSectionsQuery(proposalProject?.id);
   const midReport = useCurrentMidReportQuery(Boolean(home.teamId));
+  // 재제출은 서버가 아직 열어주지 않는다. 피드백 단계 판정만 메시지로 한다.
+  const proposalMessages = useTeamMessagesQuery(home.teamId, 'PROPOSAL');
+  const midReportMessages = useTeamMessagesQuery(home.teamId, 'MID_REPORT');
   const currentUserName = useAuthStore(state => state.currentUser?.name);
   const peerMilestones = query.milestones.filter(
     milestone => milestone.type === 'PEER_EVALUATION',
@@ -195,14 +203,30 @@ export default function StudentHomePage() {
       const readyToSubmit =
         midReport.isSuccess &&
         canSubmitMidReportDocument(midReport.data, currentUserName);
+      const midReportStage = midReportFeedbackStage({
+        submittedAt: midReport.data?.submittedAt,
+        messages: midReportMessages.data,
+        teamMemberIds: home.teamMemberIds,
+      });
       summary.rows = submittedReport
         ? [
-            {
-              id: 'mid-report-submitted',
-              label: '중간보고서',
-              value: '제출 완료',
-              tone: 'muted',
-            },
+            midReportStage === 'feedback-arrived'
+              ? {
+                  id: 'mid-report-revision',
+                  label: '중간보고서 재제출',
+                  value: '대면 피드백 기록을 남겼어요.',
+                  tone: 'primary',
+                  actionLabel: '재제출',
+                  actionDisabled: true,
+                  actionNotice:
+                    '재제출은 담당 교수·조교가 중간보고서를 다시 열어 준 뒤에 할 수 있어요.',
+                }
+              : {
+                  id: 'mid-report-submitted',
+                  label: '중간보고서',
+                  value: '제출 완료 · 대면 피드백 기록을 남겨 주세요.',
+                  tone: 'muted',
+                },
           ]
         : [
             readyToSubmit
@@ -301,14 +325,30 @@ export default function StudentHomePage() {
         // writing. A submitted proposal is read only, so it offers no action.
         const readyToSubmit =
           proposalSections.isSuccess && proposalSections.data.allCompleted;
+        const proposalStage = proposalFeedbackStage({
+          submittedAt: project.proposalCompletedAt,
+          messages: proposalMessages.data,
+          teamMemberIds: home.teamMemberIds,
+        });
         summary.rows = project.proposalCompletedAt
           ? [
-              {
-                id: 'proposal-submitted',
-                label: '제안서',
-                value: '제출 완료',
-                tone: 'muted',
-              },
+              proposalStage === 'feedback-arrived'
+                ? {
+                    id: 'proposal-revision',
+                    label: '제안서 재제출',
+                    value: '교수 피드백이 도착했어요.',
+                    tone: 'primary',
+                    actionLabel: '재제출',
+                    actionDisabled: true,
+                    actionNotice:
+                      '재제출은 담당 교수·조교가 제안서를 다시 열어 준 뒤에 할 수 있어요.',
+                  }
+                : {
+                    id: 'proposal-submitted',
+                    label: '제안서',
+                    value: '제출 완료 · 교수 피드백을 기다리는 중이에요.',
+                    tone: 'muted',
+                  },
             ]
           : [
               readyToSubmit && home.isTeamLeader

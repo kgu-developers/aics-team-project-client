@@ -1022,7 +1022,9 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
     );
     render(<StudentHomePage />, { wrapper: Wrapper });
 
-    const card = (await screen.findByText('제출 완료')).closest('article');
+    const card = (await screen.findByText(/제출 완료 · 교수 피드백/)).closest(
+      'article',
+    );
     if (!card) throw new Error('제안서 마일스톤 카드를 찾을 수 없습니다.');
     expect(
       within(card).queryByRole('button', { name: '작성하기' }),
@@ -1245,13 +1247,65 @@ describe('중간보고서 작성 영역 상태와 팀장 제출', () => {
     );
     render(<StudentHomePage />, { wrapper: Wrapper });
 
-    expect(await screen.findAllByText('제출 완료')).not.toHaveLength(0);
+    expect(await screen.findAllByText(/제출 완료/)).not.toHaveLength(0);
     expect(
       screen.queryByRole('button', { name: '제출하기' }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: '작성하기' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('학생이 대면 피드백 기록을 남기면 재제출 단계로 표시한다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+        HttpResponse.json({
+          ...midReportFixture(
+            [
+              { key: 'topic', status: 'COMPLETED' },
+              { key: 'gui-design', status: 'COMPLETED' },
+              { key: 'engine-design', status: 'COMPLETED' },
+              { key: 'project-plan', status: 'COMPLETED' },
+            ],
+            'SUBMITTED',
+          ),
+          submittedAt: '2026-09-11 10:00',
+        }),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_THREAD.BY_TEAM('7')}`, () =>
+        HttpResponse.json({ threadId: 70, teamId: 7, createdAt: '2026-09-01' }),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`, () =>
+        HttpResponse.json({
+          contents: [
+            {
+              id: 11,
+              threadId: 70,
+              senderId: liveHomeUser.studentNumber,
+              relatedType: 'MID_REPORT',
+              message: '대면 피드백을 반영했어요.',
+              createdAt: '2026-09-12 09:00',
+              important: false,
+              read: true,
+            },
+          ],
+          pageable: {
+            page: 0,
+            size: 100,
+            totalElements: 1,
+            totalPages: 1,
+            isEnd: true,
+          },
+        }),
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    expect(await screen.findByText('중간보고서 재제출')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '재제출' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   });
 
   it('팀장이 아니면 제출하기를 보여주지 않는다', async () => {
