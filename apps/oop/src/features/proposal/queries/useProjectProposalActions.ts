@@ -33,13 +33,14 @@ type Action =
       baseline: ProjectProposalResponse;
       draft: UpdateProjectProposalInput;
       section: ProposalSectionType;
+      /** Present only when the section assignee changed in the same 저장. */
+      assigneeUserId?: string | null;
     }
   | {
-      kind: 'complete' | 'assign';
+      kind: 'complete';
       baseline: ProjectProposalResponse;
       projectId: number;
       section: ProposalSectionType;
-      assigneeUserId: string | null;
     }
   | { kind: 'submit'; projectId: number };
 
@@ -84,6 +85,20 @@ export function useProjectProposalActions() {
           '제안서가 변경되었거나 이미 제출되었습니다. 다시 조회해 주세요.',
         );
       if (action.kind === 'save') {
+        // The assignee is written first so a failed body save leaves nothing
+        // half-applied that the next 저장 cannot repeat.
+        if (action.assigneeUserId !== undefined) {
+          const states = await fetchProposalSections(projectId);
+          assertSession();
+          const section = states.contents.find(
+            s => s.section === action.section,
+          )!;
+          await updateProposalSection(projectId, action.section, {
+            assigneeUserId: action.assigneeUserId,
+            completed: section.completed,
+          });
+          assertSession();
+        }
         const body = mergeProposalSection(
           latest,
           action.baseline,
@@ -138,11 +153,8 @@ export function useProjectProposalActions() {
           s => s.section === action.section,
         )!;
         await updateProposalSection(projectId, action.section, {
-          assigneeUserId:
-            action.kind === 'complete'
-              ? current.assigneeUserId
-              : action.assigneeUserId,
-          completed: action.kind === 'complete' ? true : current.completed,
+          assigneeUserId: current.assigneeUserId,
+          completed: true,
         });
       }
       assertSession();

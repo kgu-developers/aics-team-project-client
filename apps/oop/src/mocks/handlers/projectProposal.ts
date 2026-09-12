@@ -39,6 +39,36 @@ export function createProjectProposalHandlers(
       return failure('ACCESS_DENIED', 403);
     return null;
   }
+  /**
+   * The browser worker parses multipart normally. Under jsdom the File instance
+   * is not the one Node's multipart parser accepts, so fall back to the raw part.
+   */
+  async function readFilePart(request: Request) {
+    const raw = request.clone();
+    try {
+      const file = (await request.formData()).get('file');
+      return file instanceof File ? { type: file.type } : null;
+    } catch {
+      const match =
+        /name="file";\s*filename="[^"]*"\r?\nContent-Type:\s*([^\r\n]+)/i.exec(
+          await raw.text(),
+        );
+      return match?.[1] ? { type: match[1].trim() } : null;
+    }
+  }
+  const uploadedImages = new Map<number, string>();
+  let nextImageFileId = 900;
+  /** The server enriches saved imageFileId values with a temporary URL on read. */
+  const withImageUrls = (value: ProjectProposalResponse) => ({
+    ...value,
+    screenConfiguration: value.screenConfiguration.map(screen => {
+      const url =
+        screen.imageFileId == null
+          ? undefined
+          : uploadedImages.get(screen.imageFileId);
+      return url ? { ...screen, imageUrl: url } : screen;
+    }),
+  });
   const sectionList = () => ({
     ...sections,
     allCompleted: sections.contents.every(s => s.completed),
@@ -51,7 +81,25 @@ export function createProjectProposalHandlers(
         access(request) ??
         (String(project.teamId) !== params.teamId
           ? failure('PROJECT_NOT_FOUND', 404)
-          : HttpResponse.json(project)),
+          : HttpResponse.json(withImageUrls(project))),
+    ),
+    http.post(
+      `${base}/teams/:teamId/project/images/upload`,
+      async ({ request, params }) => {
+        const denied = access(request);
+        if (denied) return denied;
+        if (String(project.teamId) !== params.teamId)
+          return failure('PROJECT_NOT_FOUND', 404);
+        const file = await readFilePart(request);
+        if (!file?.type.startsWith('image/'))
+          return failure('INVALID_INPUT', 400);
+        const fileId = nextImageFileId++;
+        uploadedImages.set(
+          fileId,
+          `https://files.invalid/project-images/${fileId}`,
+        );
+        return HttpResponse.json({ fileId });
+      },
     ),
     http.put(`${base}/teams/:teamId/project`, async ({ request, params }) => {
       const denied = access(request);
@@ -129,7 +177,7 @@ export function createProjectProposalHandlers(
           s.completedAt = null;
         }
       });
-      return HttpResponse.json(project);
+      return HttpResponse.json(withImageUrls(project));
     }),
     http.get(
       `${base}/projects/:projectId/proposal/sections`,

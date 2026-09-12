@@ -87,5 +87,12 @@ export function useLiveStudentHomeQuery() {
       state: stateFor(homeQueryState(project, missingTeam)),
     },
     teamName: kickoff.data?.name,
+    isTeamLeader: Boolean(
+      user?.studentNumber &&
+      kickoff.data?.members.some(
+        member =>
+          member.studentNumber === user.studentNumber && member.isLeader,
+      ),
+    ),
   };
 }

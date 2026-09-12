@@ -10,6 +10,7 @@ import { useAuthStore } from '~/features/auth/authStore';
 import { useTopicApi } from '~/features/project-topic/TopicApiContext';
 import { useTopicCandidateDialog } from '~/features/project-topic/TopicCandidateDialogContext';
 import TopicFinalizePanel from '~/features/project-topic/TopicFinalizePanel';
+import ProposalSubmitAction from '~/features/proposal/ProposalSubmitAction';
 import { useUpdateSubmissionConfirmationMutation } from '~/features/submission/queries';
 import { useSubmissionDialog } from '~/features/submission/SubmissionDialogContext';
 
@@ -161,8 +162,14 @@ export default function MilestoneCard({
               <div className={styles.rowCell}>
                 {row.actionLabel ? (
                   <>
-                    {row.id === 'proposal-topic-selection' &&
-                    topicApi?.offerFinalization ? (
+                    {row.id === 'proposal-submit' ? (
+                      <ProposalSubmitAction
+                        className={styles.rowAction}
+                        isDisabled={row.actionDisabled}
+                        label={row.actionLabel}
+                      />
+                    ) : row.id === 'proposal-topic-selection' &&
+                      topicApi?.offerFinalization ? (
                       <TopicFinalizePanel
                         {...topicApi.scope}
                         participationBusy={topicApi.busy}

@@ -8,3 +8,4 @@ export { useProjectProposalQuery } from './useProjectProposalQuery';
 export { useProposalSectionsQuery } from './useProposalSectionsQuery';
 export { useProjectProposalActions } from './useProjectProposalActions';
 export { useProposalEditorSource } from './useProposalEditorSource';
+export { useSubmitProjectImageMutation } from './useSubmitProjectImageMutation';

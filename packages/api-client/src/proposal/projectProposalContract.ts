@@ -1,5 +1,6 @@
 import {
   PROPOSAL_SECTIONS,
+  type ProjectImageUploadResponse,
   type ProjectProposalResponse,
   type ProposalSectionsResponse,
   type ProposalSectionResponse,
@@ -70,6 +71,17 @@ export function parseProjectProposal(
       '제안서 응답 형식을 확인할 수 없습니다. 입력 내용을 덮어쓰지 않고 다시 시도해 주세요.',
     );
   return value as ProjectProposalResponse;
+}
+export function parseProjectImageUpload(
+  value: unknown,
+): ProjectImageUploadResponse {
+  if (
+    !record(value) ||
+    !Number.isSafeInteger(value.fileId) ||
+    Number(value.fileId) <= 0
+  )
+    throw new Error('이미지 업로드 응답을 확인할 수 없습니다.');
+  return value as ProjectImageUploadResponse;
 }
 export function parseProposalSection(value: unknown): ProposalSectionResponse {
   if (

@@ -50,6 +50,10 @@ export type UpdateProjectProposalInput = Pick<
   meetingSchedule?: string | null;
   memberRoles?: { studentNumber: string; projectRole: string | null }[];
 };
+/** Swagger: POST /api/v1/teams/{teamId}/project/images/upload */
+export type ProjectImageUploadResponse = {
+  fileId: number;
+};
 export type ProposalSectionResponse = {
   section: ProposalSectionType;
   assigneeUserId: string | null;
@@ -61,7 +65,7 @@ export type ProposalSectionsResponse = {
   contents: ProposalSectionResponse[];
   allCompleted: boolean;
 };
-export type UpdateProposalSectionInput = Pick<
-  ProposalSectionResponse,
-  'assigneeUserId' | 'completed'
->;
+export type UpdateProposalSectionInput = {
+  assigneeUserId?: string | null;
+  completed: boolean;
+};

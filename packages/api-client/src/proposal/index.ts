@@ -11,3 +11,4 @@ export { updateProjectProposal } from './updateProjectProposal';
 export { fetchProposalSections } from './fetchProposalSections';
 export { updateProposalSection } from './updateProposalSection';
 export { submitProjectProposal } from './submitProjectProposal';
+export { submitProjectImage } from './submitProjectImage';

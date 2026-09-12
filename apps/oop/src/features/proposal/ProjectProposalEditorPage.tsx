@@ -42,6 +42,7 @@ import {
 } from './projectProposal';
 import * as styles from './ProjectProposalEditorPage.css';
 import ProjectProposalFields from './ProjectProposalFields';
+import { proposalRequestErrorMessage } from './proposalSubmitGuard';
 import {
   useProjectProposalQuery,
   useProposalSectionsQuery,
@@ -150,14 +151,26 @@ function ProjectProposalDocument({
     sectionType &&
     !sameProposalSection(proposalDraft(baseline), draft, sectionType),
   );
-  const pending =
-    working || actions.isPending || acquire.isPending;
+  const pending = working || actions.isPending || acquire.isPending;
   const owned =
     !lock.isError &&
     lock.data?.locked &&
     lock.data.lockedBy === user.studentNumber;
   const editable = editing && owned && !pending && !submitted;
   const current = states.data?.contents.find(s => s.section === sectionType);
+  const lockOwnerName =
+    lock.data?.lockedByName ??
+    project.teamOperation.members.find(
+      member => member.studentNumber === lock.data?.lockedBy,
+    )?.name ??
+    null;
+  const lockedNotice = `지금은 수정할 수 없어요. ${
+    lockOwnerName ? `${lockOwnerName} 님이` : '다른 팀원이'
+  } 편집 중입니다. 편집이 끝난 뒤 다시 열어 주세요.`;
+  // The account that saves the section owns it; there is no separate picker.
+  const assigneeChanged = Boolean(
+    current && current.assigneeUserId !== user.studentNumber,
+  );
   const blocker = useBlocker({
     shouldBlockFn: () => dirty || busyRef.current,
     withResolver: true,
@@ -176,11 +189,7 @@ function ProjectProposalDocument({
       await work();
     } catch (e) {
       if (isAxiosError(e) && e.response?.status === 409) return;
-      setError(
-        e instanceof Error
-          ? e.message
-          : '요청을 처리하지 못했습니다. 입력 내용을 유지하고 다시 시도해 주세요.',
-      );
+      setError(proposalRequestErrorMessage(e));
     } finally {
       busyRef.current = false;
       setWorking(false);
@@ -246,6 +255,7 @@ function ProjectProposalDocument({
       baseline,
       draft,
       section: sectionType,
+      ...(assigneeChanged ? { assigneeUserId: user.studentNumber } : {}),
     });
     setBaseline(saved);
     setDraft(proposalDraft(saved));
@@ -337,7 +347,7 @@ function ProjectProposalDocument({
                   {lock.isError
                     ? '편집 권한을 확인하지 못했습니다.'
                     : lock.data?.locked && !owned
-                        ? '현재 편집 중인 섹션이에요.'
+                      ? lockedNotice
                       : editing && !owned
                         ? '편집 권한이 만료되었습니다. 입력 내용을 유지하고 권한을 다시 확인해 주세요.'
                         : editing
@@ -346,33 +356,6 @@ function ProjectProposalDocument({
                 </p>
               </>
             )}
-            <Selector
-              label='영역 담당자'
-              placeholder='담당자 미지정'
-              value={current?.assigneeUserId ?? ''}
-              isDisabled={!editable || !current || states.isError || dirty}
-              options={[
-                { value: '', label: '담당자 미지정' },
-                ...project.teamOperation.members.map(m => ({
-                  value: m.studentNumber,
-                  label: `${m.name ?? m.studentNumber} (${m.studentNumber})`,
-                })),
-              ]}
-              renderOption={option => (
-                <SelectorOption label={option.label ?? option.value} />
-              )}
-              onChange={value =>
-                void run(async () => {
-                  await actions.mutateAsync({
-                    kind: 'assign',
-                    baseline,
-                    projectId: project.id,
-                    section: sectionType,
-                    assigneeUserId: value || null,
-                  });
-                })
-              }
-            />
             <ProjectProposalFields
               project={project}
               section={sectionType}
@@ -404,7 +387,6 @@ function ProjectProposalDocument({
                         baseline,
                         projectId: project.id,
                         section: sectionType,
-                        assigneeUserId: current?.assigneeUserId ?? null,
                       });
                       toast({ body: '영역을 작성 완료했어요.' });
                     })

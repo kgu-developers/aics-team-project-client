@@ -275,5 +275,6 @@ export {
   updateProjectProposal,
   fetchProposalSections,
   updateProposalSection,
+  submitProjectImage,
   submitProjectProposal,
 } from './proposal';

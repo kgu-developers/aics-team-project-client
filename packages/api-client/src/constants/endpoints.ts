@@ -1,6 +1,8 @@
 export const ENDPOINTS = {
   PROJECT_PROPOSAL: {
     BY_TEAM: (teamId: string) => `/api/v1/teams/${teamId}/project`,
+    IMAGE_UPLOAD: (teamId: string) =>
+      `/api/v1/teams/${teamId}/project/images/upload`,
     SECTIONS: (projectId: number) =>
       `/api/v1/projects/${projectId}/proposal/sections`,
     SECTION: (projectId: number, section: string) =>

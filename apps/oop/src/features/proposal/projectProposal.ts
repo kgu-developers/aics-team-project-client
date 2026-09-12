@@ -84,6 +84,29 @@ export function sameProposalSection(
     stable(proposalSectionFields(b, section))
   );
 }
+/**
+ * 팀 운영 방식의 팀 규칙·회의 방식·역할 분담은 킥오프 저장소에 그대로 쓰인다. 서버는 넘기지 않은
+ * 항목은 현재 값을 유지하고, 값이 실제로 바뀐 경우에만 제안서 리비전을 올리며 이 영역의 작성 완료를
+ * 해제한다. 그래서 바뀐 항목만 담아 보낸다. 서버의 null과 화면의 빈 문자열은 같은 "미입력"이므로
+ * 정규화한 값끼리 비교한다.
+ */
+function pruneUnchangedKickoff(
+  body: UpdateProjectProposalInput,
+  latest: UpdateProjectProposalInput,
+) {
+  if (body.kickoffRule === latest.kickoffRule) delete body.kickoffRule;
+  if (body.meetingSchedule === latest.meetingSchedule)
+    delete body.meetingSchedule;
+  const changedRoles = (body.memberRoles ?? []).filter(
+    role =>
+      latest.memberRoles?.find(
+        member => member.studentNumber === role.studentNumber,
+      )?.projectRole !== role.projectRole,
+  );
+  if (changedRoles.length) body.memberRoles = changedRoles;
+  else delete body.memberRoles;
+}
+
 export function mergeProposalSection(
   latest: ProjectProposalResponse,
   baseline: ProjectProposalResponse,
@@ -109,6 +132,7 @@ export function mergeProposalSection(
   delete body.meetingSchedule;
   delete body.memberRoles;
   const merged = { ...body, ...proposalSectionFields(draft, section) };
+  if (section === 'TEAM_OPERATION') pruneUnchangedKickoff(merged, current);
   if (!merged.title.trim() || !merged.description.trim() || !merged.goal.trim())
     throw new Error('주제의 제목, 설명, 목표를 모두 입력해 주세요.');
   if (merged.title.length > 200)
