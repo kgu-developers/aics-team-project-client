@@ -1,9 +1,8 @@
 import { Button, useToast } from '@aics/design-system';
 
-import {
-  proposalRequestErrorMessage,
-  proposalSubmitBlocker,
-} from './proposalSubmitGuard';
+import { documentRequestErrorMessage } from '~/features/editor/documentRequestErrorMessage';
+
+import { proposalSubmitBlocker } from './proposalSubmitGuard';
 import {
   useProjectProposalActions,
   useProjectProposalQuery,
@@ -50,7 +49,7 @@ export default function ProposalSubmitAction({
           .mutateAsync({ kind: 'submit', projectId: project.id })
           .then(() => toast({ body: '제안서를 제출했어요.' }))
           .catch((error: unknown) =>
-            toast({ body: proposalRequestErrorMessage(error), type: 'error' }),
+            toast({ body: documentRequestErrorMessage(error), type: 'error' }),
           );
       }}
       size='md'

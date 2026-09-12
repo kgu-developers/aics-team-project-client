@@ -8,6 +8,7 @@ import { editorSectionTo } from '~/app/constants/editorSections';
 import { cx } from '~/shared/lib/cx';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import MidReportSubmitAction from '~/features/mid-report/MidReportSubmitAction';
 import { useTopicApi } from '~/features/project-topic/TopicApiContext';
 import { useTopicCandidateDialog } from '~/features/project-topic/TopicCandidateDialogContext';
 import TopicFinalizePanel from '~/features/project-topic/TopicFinalizePanel';
@@ -134,6 +135,12 @@ export default function MilestoneCard({
               <>
                 {row.id === 'proposal-submit' ? (
                   <ProposalSubmitAction
+                    className={styles.rowAction}
+                    isDisabled={row.actionDisabled}
+                    label={row.actionLabel}
+                  />
+                ) : row.id === 'mid-report-submit' ? (
+                  <MidReportSubmitAction
                     className={styles.rowAction}
                     isDisabled={row.actionDisabled}
                     label={row.actionLabel}

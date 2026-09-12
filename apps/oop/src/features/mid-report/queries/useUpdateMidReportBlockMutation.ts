@@ -2,6 +2,8 @@ import { updateMidReportBlock } from '@aics/api-client';
 import type { MidReport, MidReportBlockKey, MidReportField } from '@aics/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { useAuthStore } from '~/features/auth/authStore';
+
 import { midReportKeys } from './midReportKeys';
 
 type UpdateMidReportBlockVariables = {
@@ -13,6 +15,7 @@ type UpdateMidReportBlockVariables = {
 
 export function useUpdateMidReportBlockMutation() {
   const queryClient = useQueryClient();
+  const session = useAuthStore();
 
   return useMutation({
     mutationFn: ({
@@ -23,7 +26,8 @@ export function useUpdateMidReportBlockMutation() {
     }: UpdateMidReportBlockVariables): Promise<MidReport> =>
       updateMidReportBlock(documentId, blockKey, { version, fields }),
     onSuccess: report => {
-      queryClient.setQueryData(midReportKeys.current(), report);
+      if (useAuthStore.getState() !== session) return;
+      queryClient.setQueryData(midReportKeys.current(session), report);
     },
   });
 }

@@ -14,6 +14,7 @@ const apiProxyPrefixes = [
   '/meeting-actions',
   '/meeting-records',
   '/milestones',
+  '/mid-reports',
   '/peer-evaluation-forms',
   '/sections',
   '/submissions',

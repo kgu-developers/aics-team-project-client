@@ -26,6 +26,7 @@ type PreservedDraft = Pick<Draft, 'fields' | 'revision'>;
 type UseDocumentEditorAutosaveInput<D extends DocumentEditorDocument> = {
   block: D['blocks'][number] | null;
   canSave: boolean;
+  retryVersionConflict?: boolean;
   document: D | null;
   refreshDocument: () => Promise<D | null>;
   saveBlock: DocumentEditorSaveBlocker<D>;
@@ -44,12 +45,15 @@ export function useDocumentEditorAutosave<D extends DocumentEditorDocument>({
   document,
   refreshDocument,
   saveBlock,
+  retryVersionConflict = true,
 }: UseDocumentEditorAutosaveInput<D>) {
   const [, rerender] = useReducer(value => value + 1, 0);
   const draftsRef = useRef(new Map<string, Draft>());
   const latestDocumentRef = useRef<D | null>(document);
   const refreshDocumentRef = useRef(refreshDocument);
   const saveBlockRef = useRef(saveBlock);
+  const retryConflictRef = useRef(retryVersionConflict);
+  retryConflictRef.current = retryVersionConflict;
   const savePermissionsRef = useRef(new Map<string, boolean>());
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const exitFlushesRef = useRef(new Map<string, Promise<unknown>>());
@@ -180,6 +184,7 @@ export function useDocumentEditorAutosave<D extends DocumentEditorDocument>({
           });
         } catch (error) {
           if (
+            !retryConflictRef.current ||
             retriedVersionConflict ||
             !isDocumentVersionConflict(error) ||
             latestDocumentRef.current?.id !== expectedDocument.id

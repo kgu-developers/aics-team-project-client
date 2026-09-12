@@ -30,7 +30,7 @@ const block = (
 });
 
 let midReport: MidReport = {
-  id: 'mid-report-team-07',
+  id: '701',
   teamId: demoMidReportTeamId,
   title: 'CineFlow 중간보고서',
   version: 3,

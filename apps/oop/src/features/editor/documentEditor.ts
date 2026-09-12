@@ -70,22 +70,27 @@ export type DocumentEditorCompletion<D extends DocumentEditorDocument> = {
   completing: boolean;
   completeError: string | null;
   isDocumentSubmitted: (document: D) => boolean;
-  submitDocument: (documentId: string, version: number) => Promise<D>;
-  submitting: boolean;
-  submitError: string | null;
-  canSubmitDocument: (document: D) => boolean;
-  submitDisabledReason: (document: D) => string;
+  /** 제출을 편집기에서 제공하는 문서만 채운다. 학생 홈이 제출을 맡으면 생략한다. */
+  submit?: {
+    submitDocument: (documentId: string, version: number) => Promise<D>;
+    submitting: boolean;
+    submitError: string | null;
+    canSubmitDocument: (document: D) => boolean;
+    submitDisabledReason: (document: D) => string;
+  };
 };
 
 export type DocumentEditorPageProps<D extends DocumentEditorDocument> = {
   docId: EditorDocId;
   section: string;
-  metadataTag: string;
   copy: DocumentEditorCopy;
   documentQuery: UseQueryResult<D>;
   saveBlock: DocumentEditorSaveBlocker<D>;
   saveState: DocumentEditorSaveState;
   completion?: DocumentEditorCompletion<D>;
+  /** 문서별 서버 잠금/기간 정책. 기존 lease 흐름과 동시에 사용하지 않는다. */
+  access?: { canEdit: boolean; notice?: string; controls?: React.ReactNode };
+  retryVersionConflict?: boolean;
   /** 공통 셸이 문서 id와 section으로 잠금 대상을 조립할 때 사용한다. */
   editLockTargetType: EditLockTargetType | null;
   renderFields?: (input: {
