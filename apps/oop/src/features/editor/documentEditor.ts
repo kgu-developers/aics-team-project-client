@@ -80,7 +80,6 @@ export type DocumentEditorCompletion<D extends DocumentEditorDocument> = {
 export type DocumentEditorPageProps<D extends DocumentEditorDocument> = {
   docId: EditorDocId;
   section: string;
-  metadataTag: string;
   copy: DocumentEditorCopy;
   documentQuery: UseQueryResult<D>;
   saveBlock: DocumentEditorSaveBlocker<D>;

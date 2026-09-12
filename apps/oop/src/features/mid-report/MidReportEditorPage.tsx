@@ -187,7 +187,6 @@ export default function MidReportEditorPage({
       docId='mid-review'
       documentQuery={query}
       editLockTargetType={null}
-      metadataTag='DOC / MID-REVIEW / FORM V1'
       renderFields={({
         documentId,
         block,

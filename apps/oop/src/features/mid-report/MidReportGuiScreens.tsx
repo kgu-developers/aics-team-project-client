@@ -129,10 +129,6 @@ export default function MidReportGuiScreens({
   };
   return (
     <VStack gap={4}>
-      <Text color='secondary'>
-        화면 하나마다 이름과 그 화면에서 제공하는 기능·사용자 행동을 한 세트로
-        작성해요.
-      </Text>
       <ul className={styles.screenList}>
         {rows.map((row, index) => {
           const url = imageOf(row);

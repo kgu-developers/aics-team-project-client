@@ -2,7 +2,6 @@ import {
   Button,
   proportional,
   Table,
-  Text,
   TextArea,
   VStack,
 } from '@aics/design-system';
@@ -80,10 +79,6 @@ export default function MidReportEngineFields({
             value={field.value}
           />
         ))}
-      <Text color='secondary'>
-        입력과 기대 출력을 바로 붙여 넣을 수 있게 테스트 케이스별 텍스트로
-        관리해요.
-      </Text>
       <div className={styles.tableWrapper}>
         <Table
           columns={[

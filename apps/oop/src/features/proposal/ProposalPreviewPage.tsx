@@ -156,7 +156,6 @@ export default function ProposalPreviewPage({
       docId='proposal'
       documentQuery={query}
       editLockTargetType='PROJECT_BLOCK'
-      metadataTag='DOC / PROPOSAL / FORM V1'
       renderFields={({
         documentId,
         block,

@@ -7,19 +7,10 @@ import {
   AlertDialog,
   Button,
   EmptyState,
-  Heading,
-  Selector,
-  SelectorOption,
-  StatusDot,
   Text,
   useToast,
 } from '@aics/design-system';
-import {
-  Link,
-  Navigate,
-  useBlocker,
-  useNavigate,
-} from '@tanstack/react-router';
+import { Navigate, useBlocker } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
 import { useEffect, useRef, useState } from 'react';
 
@@ -31,6 +22,7 @@ import {
 } from '~/features/auth/authStore';
 import DocumentAccessNotice from '~/features/editor/DocumentAccessNotice';
 import DocumentActionBar from '~/features/editor/DocumentActionBar';
+import DocumentEditorLayout from '~/features/editor/DocumentEditorLayout';
 import { documentRequestErrorMessage } from '~/features/editor/documentRequestErrorMessage';
 import {
   useAcquireLiveEditLockMutation,
@@ -125,7 +117,6 @@ function ProjectProposalDocument({
   const session = useAuthStore();
   const user = session.currentUser!;
   const toast = useToast();
-  const navigate = useNavigate();
   const states = useProposalSectionsQuery(project.id);
   const actions = useProjectProposalActions();
   const sectionType = proposalSectionBySlug[section];
@@ -274,169 +265,137 @@ function ProjectProposalDocument({
     toast({ body: '제안서를 저장했어요.' });
   }
   return (
-    <div className={styles.layout}>
-      <nav className={styles.navigation} aria-label='제안서 작성 영역'>
-        <Heading level={2}>제안서</Heading>
-        <div className={styles.mobileSections}>
-          <Selector
-            label='제안서 작성 영역 선택'
-            value={section}
-            options={EDITOR_DOCS.proposal.sections.map(s => ({
-              value: s.slug,
-              label: s.label,
-            }))}
-            renderOption={option => (
-              <SelectorOption label={option.label ?? option.value} />
-            )}
-            onChange={value =>
-              void navigate({ to: editorSectionTo('proposal', value) })
-            }
-            width='100%'
-          />
-        </div>
-        <div className={styles.desktopSections}>
-          {EDITOR_DOCS.proposal.sections.map(s => {
-            const type = proposalSectionBySlug[s.slug];
-            const state = states.data?.contents.find(
-              item => item.section === type,
-            );
-            return (
-              <Link
-                className={styles.link}
-                aria-current={s.slug === section ? 'page' : undefined}
-                key={s.slug}
-                to={editorSectionTo('proposal', s.slug)}
-              >
-                {s.label}
-                {type && (
-                  <StatusDot
-                    label={
-                      state
-                        ? state.completed
-                          ? '작성 완료'
-                          : '작성 중'
-                        : '확인 중'
-                    }
-                    variant={state?.completed ? 'success' : 'accent'}
-                  />
-                )}
-              </Link>
-            );
-          })}
-        </div>
-        <Link
-          className={styles.link}
-          to='/student'
-          activeOptions={{ exact: true }}
-        >
-          학생 홈으로
-        </Link>
-      </nav>
-      <section className={styles.document}>
-        <Heading level={2}>
-          {EDITOR_DOCS.proposal.sections.find(s => s.slug === section)!.label}
-        </Heading>
+    <DocumentEditorLayout
+      activeSlug={section}
+      docId='proposal'
+      heading={
+        EDITOR_DOCS.proposal.sections.find(item => item.slug === section)!.label
+      }
+      meta={
         <Text>
           {project.teamOperation.name} · {project.title}
         </Text>
-        {submitted && <DocumentAccessNotice isSubmitted />}
-        {states.isError && (
-          <p role='alert' className={styles.error}>
-            작성 상태를 불러오지 못했습니다.{' '}
-            <Button
-              label='작성 상태 다시 조회'
-              onClick={() => void states.refetch()}
+      }
+      sections={EDITOR_DOCS.proposal.sections.map(item => {
+        const type = proposalSectionBySlug[item.slug];
+        const state = states.data?.contents.find(
+          entry => entry.section === type,
+        );
+        return {
+          ...item,
+          status: type
+            ? {
+                label: state
+                  ? state.completed
+                    ? '작성 완료'
+                    : '작성 중'
+                  : '확인 중',
+                variant: state?.completed
+                  ? ('success' as const)
+                  : ('accent' as const),
+              }
+            : null,
+        };
+      })}
+      title={EDITOR_DOCS.proposal.title}
+    >
+      {submitted && <DocumentAccessNotice isSubmitted />}
+      {states.isError && (
+        <p role='alert' className={styles.error}>
+          작성 상태를 불러오지 못했습니다.{' '}
+          <Button
+            label='작성 상태 다시 조회'
+            onClick={() => void states.refetch()}
+          />
+        </p>
+      )}
+      {sectionType ? (
+        <>
+          {!submitted && (
+            <DocumentAccessNotice
+              action={
+                !owned && !lock.data?.locked ? (
+                  <Button
+                    isDisabled={pending}
+                    label='편집 권한 다시 확인'
+                    onClick={() => void run(startEditing)}
+                    size='sm'
+                    variant='secondary'
+                  />
+                ) : undefined
+              }
+              canEdit={Boolean(owned)}
+              isEditing={editing}
+              isLockUnavailable={lock.isError}
+              isSubmitted={false}
+              lockedByOther={Boolean(lock.data?.locked && !owned)}
+              ownerName={lockOwnerName}
             />
-          </p>
-        )}
-        {sectionType ? (
-          <>
-            {!submitted && (
-              <DocumentAccessNotice
-                action={
-                  !owned && !lock.data?.locked ? (
-                    <Button
-                      isDisabled={pending}
-                      label='편집 권한 다시 확인'
-                      onClick={() => void run(startEditing)}
-                      size='sm'
-                      variant='secondary'
-                    />
-                  ) : undefined
-                }
-                canEdit={Boolean(owned)}
-                isEditing={editing}
-                isLockUnavailable={lock.isError}
-                isSubmitted={false}
-                lockedByOther={Boolean(lock.data?.locked && !owned)}
-                ownerName={lockOwnerName}
+          )}
+          <ProjectProposalFields
+            project={project}
+            section={sectionType}
+            draft={displayed}
+            disabled={!editable}
+            onChange={setDraft}
+          />
+          {!submitted && (
+            <DocumentActionBar error={error}>
+              <Button
+                label='저장'
+                isDisabled={!editable || !dirty}
+                onClick={() => void run(save)}
               />
-            )}
-            <ProjectProposalFields
-              project={project}
-              section={sectionType}
-              draft={displayed}
-              disabled={!editable}
-              onChange={setDraft}
-            />
-            {!submitted && (
-              <DocumentActionBar error={error}>
-                <Button
-                  label='저장'
-                  isDisabled={!editable || !dirty}
-                  onClick={() => void run(save)}
-                />
-                <Button
-                  label='작성 완료'
-                  variant='secondary'
-                  isDisabled={
-                    !editable ||
-                    dirty ||
-                    !current ||
-                    states.isError ||
-                    current.completed
-                  }
-                  onClick={() =>
-                    void run(async () => {
-                      await actions.mutateAsync({
-                        kind: 'complete',
-                        baseline,
-                        projectId: project.id,
-                        section: sectionType,
-                      });
-                      toast({ body: '영역을 작성 완료했어요.' });
-                    })
-                  }
-                />
-              </DocumentActionBar>
-            )}
-          </>
-        ) : (
-          <>
-            {project.teamOperation.members.map(m => (
-              <Text key={m.studentNumber}>
-                {m.name ?? m.studentNumber} · {m.studentNumber}
-                {m.isLeader ? ' · 팀장' : ''}
-              </Text>
-            ))}
-          </>
-        )}
-        {error && (!sectionType || submitted) && (
-          <p className={styles.error} role='alert'>
-            {error}
-          </p>
-        )}
-        <AlertDialog
-          isOpen={blocker.status === 'blocked'}
-          onOpenChange={open => open || resetBlocker()}
-          title='저장하지 않은 내용이 있어요.'
-          description='이동하면 변경 내용이 사라집니다.'
-          cancelLabel='계속 작성'
-          actionLabel='변경 버리고 이동'
-          isActionLoading={pending}
-          onAction={proceedBlocker}
-        />
-      </section>
-    </div>
+              <Button
+                label='작성 완료'
+                variant='secondary'
+                isDisabled={
+                  !editable ||
+                  dirty ||
+                  !current ||
+                  states.isError ||
+                  current.completed
+                }
+                onClick={() =>
+                  void run(async () => {
+                    await actions.mutateAsync({
+                      kind: 'complete',
+                      baseline,
+                      projectId: project.id,
+                      section: sectionType,
+                    });
+                    toast({ body: '영역을 작성 완료했어요.' });
+                  })
+                }
+              />
+            </DocumentActionBar>
+          )}
+        </>
+      ) : (
+        <>
+          {project.teamOperation.members.map(m => (
+            <Text key={m.studentNumber}>
+              {m.name ?? m.studentNumber} · {m.studentNumber}
+              {m.isLeader ? ' · 팀장' : ''}
+            </Text>
+          ))}
+        </>
+      )}
+      {error && (!sectionType || submitted) && (
+        <p className={styles.error} role='alert'>
+          {error}
+        </p>
+      )}
+      <AlertDialog
+        isOpen={blocker.status === 'blocked'}
+        onOpenChange={open => open || resetBlocker()}
+        title='저장하지 않은 내용이 있어요.'
+        description='이동하면 변경 내용이 사라집니다.'
+        cancelLabel='계속 작성'
+        actionLabel='변경 버리고 이동'
+        isActionLoading={pending}
+        onAction={proceedBlocker}
+      />
+    </DocumentEditorLayout>
   );
 }
