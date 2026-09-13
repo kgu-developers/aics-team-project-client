@@ -5,6 +5,7 @@ import {
   Heading,
   HStack,
   Text,
+  TextArea,
 } from '@aics/design-system';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
@@ -20,6 +21,10 @@ import {
 } from '~/features/admin-milestone-review/queries';
 import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import { useAuthStore } from '~/features/auth/authStore';
+import {
+  useSubmitTeamMessageMutation,
+  useTeamMessagesQuery,
+} from '~/features/team-message/queries';
 
 import * as styles from './AdminSubmissionDetailPage.css';
 
@@ -38,12 +43,30 @@ const versionDetailMilestoneIds = new Set([
   'proposal',
 ]);
 
+const feedbackRelatedTypeByMilestoneId = {
+  midterm: 'MID_REPORT',
+  proposal: 'PROPOSAL',
+} as const;
+
 function getMilestoneLabel(milestoneId: string | undefined) {
   if (milestoneId && Object.hasOwn(milestoneLabels, milestoneId)) {
     return milestoneLabels[milestoneId as keyof typeof milestoneLabels];
   }
 
   return '제출물';
+}
+
+function getFeedbackRelatedType(milestoneId: string | undefined) {
+  if (
+    milestoneId &&
+    Object.hasOwn(feedbackRelatedTypeByMilestoneId, milestoneId)
+  ) {
+    return feedbackRelatedTypeByMilestoneId[
+      milestoneId as keyof typeof feedbackRelatedTypeByMilestoneId
+    ];
+  }
+
+  return undefined;
 }
 
 function formatMeetingAt(value: string) {
@@ -90,6 +113,7 @@ function ArtifactValue({
 export default function AdminSubmissionDetailPage() {
   const [selectedVersion, setSelectedVersion] = useState<number>();
   const [relatedMeetingsPage, setRelatedMeetingsPage] = useState(0);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
   const currentUser = useAuthStore(state => state.currentUser);
   const { submissionId } = useParams({
     from: '/admin/submissions/$submissionId',
@@ -118,6 +142,17 @@ export default function AdminSubmissionDetailPage() {
   );
   const versions = versionsQuery.data ?? [];
   const detail = submissionQuery.data;
+  const feedbackRelatedType = getFeedbackRelatedType(search.milestoneId);
+  const feedbackMessagesQuery = useTeamMessagesQuery(
+    feedbackRelatedType ? detail?.teamId : undefined,
+    feedbackRelatedType,
+  );
+  const submitFeedbackMutation = useSubmitTeamMessageMutation(
+    feedbackRelatedType ? detail?.teamId : undefined,
+  );
+  const feedbackMessages = (feedbackMessagesQuery.data ?? []).filter(
+    message => String(message.relatedId) === detail?.submissionId,
+  );
   const relatedMeetingsQuery = useAdminMeetingRecordListQuery(
     accessibleSectionIds,
     {
@@ -190,6 +225,7 @@ export default function AdminSubmissionDetailPage() {
       <div className={styles.pageHeader}>
         <Heading level={1}>제출물 &gt; {milestoneLabel}</Heading>
         <Link
+          aria-label={`${milestoneLabel} 목록으로`}
           className={styles.backLink}
           search={search}
           to={ROUTES.ADMIN_SUBMISSIONS}
@@ -378,6 +414,74 @@ export default function AdminSubmissionDetailPage() {
               </section>
             )}
           </Card>
+          {feedbackRelatedType ? (
+            <section className={styles.relatedMeetings}>
+              <section className={styles.section}>
+                <Heading level={3}>{milestoneLabel} 피드백</Heading>
+                {feedbackMessagesQuery.isPending ? (
+                  <Text aria-live='polite' role='status'>
+                    피드백을 불러오는 중입니다.
+                  </Text>
+                ) : feedbackMessagesQuery.isError ? (
+                  <EmptyState
+                    description='잠시 후 다시 시도해 주세요.'
+                    title='피드백을 불러오지 못했습니다.'
+                  />
+                ) : feedbackMessages.length === 0 ? (
+                  <Text className={styles.sectionDescription}>
+                    이 제출물에 연결된 피드백이 없습니다.
+                  </Text>
+                ) : (
+                  <div className={styles.feedbackList}>
+                    {feedbackMessages.map(message => (
+                      <article
+                        className={styles.feedbackMessage}
+                        key={message.id}
+                      >
+                        <Text className={styles.fieldLabel}>
+                          {message.senderName ?? message.senderId} ·{' '}
+                          {message.createdAt}
+                        </Text>
+                        <Text className={styles.fieldValue}>
+                          {message.message}
+                        </Text>
+                      </article>
+                    ))}
+                  </div>
+                )}
+                <div className={styles.feedbackComposer}>
+                  <TextArea
+                    aria-label={`${milestoneLabel} 피드백 내용`}
+                    label={`${milestoneLabel} 피드백 작성`}
+                    onChange={setFeedbackMessage}
+                    placeholder={`${detail.teamName}에 전달할 피드백을 입력하세요.`}
+                    value={feedbackMessage}
+                  />
+                  <div className={styles.feedbackSubmitAction}>
+                    <Button
+                      isDisabled={
+                        !feedbackMessage.trim() ||
+                        submitFeedbackMutation.isPending
+                      }
+                      label='피드백 보내기'
+                      onClick={() => {
+                        if (!feedbackMessage.trim()) return;
+
+                        submitFeedbackMutation.mutate(
+                          {
+                            message: feedbackMessage,
+                            relatedId: Number(detail.submissionId),
+                            relatedType: feedbackRelatedType,
+                          },
+                          { onSuccess: () => setFeedbackMessage('') },
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+              </section>
+            </section>
+          ) : null}
           <section className={styles.relatedMeetings}>
             <section className={styles.section}>
               <Heading level={3}>

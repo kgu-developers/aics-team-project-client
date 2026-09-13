@@ -223,7 +223,7 @@ export default function AdminTeamMilestoneProgress({
                   submissionId &&
                   !submissionReadState.isRead(sectionId, submissionId),
                 )}
-                key={milestone.milestone.id}
+                key={`${milestone.milestone.id}-${milestone.milestone.type}`}
                 label={milestone.milestone.title}
                 messageCountLabel='쪽지: -'
                 secondaryLabel={submission?.statusLabel ?? '제출 정보 없음'}

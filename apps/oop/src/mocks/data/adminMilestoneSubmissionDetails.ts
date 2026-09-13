@@ -174,6 +174,44 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
       ],
     },
   },
+  '1008': {
+    detail: {
+      canSubmitNow: false,
+      currentVersion: 1,
+      hasPendingReview: false,
+      id: 1008,
+      milestoneId: 103,
+      presentationOrder: 1,
+      status: 'SUBMITTED',
+      teamId: 1,
+      teamName: 'OOP-01 - 1팀',
+    },
+    versionDetails: {
+      1: {
+        artifacts: [
+          {
+            downloadUrl: 'https://files.example.com/presentation-material.pdf',
+            fileName: 'presentation-material.pdf',
+            type: 'FILE',
+          },
+        ],
+        late: false,
+        submittedAt: '2026-11-06T09:00:00Z',
+        submittedBy: '20230001',
+        version: 1,
+      },
+    },
+    versions: {
+      contents: [
+        {
+          late: false,
+          submittedAt: '2026-11-06T09:00:00Z',
+          submittedBy: '20230001',
+          version: 1,
+        },
+      ],
+    },
+  },
   '1005': {
     detail: {
       canSubmitNow: false,

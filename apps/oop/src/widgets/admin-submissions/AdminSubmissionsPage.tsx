@@ -290,6 +290,19 @@ export default function AdminSubmissionsPage() {
     label: `${section.code} · ${section.name}`,
     value: section.id,
   }));
+  const presentationEvaluationTeams =
+    presentationEvaluationsQuery.data?.teams.map(team => {
+      const submission = submissionsQuery.data?.submissions.find(
+        candidate => String(candidate.teamId) === String(team.teamId),
+      );
+
+      return {
+        ...team,
+        submissionId: submission?.submissionId ?? team.submissionId,
+        presentationOrder:
+          submission?.presentationOrder ?? team.presentationOrder,
+      };
+    }) ?? [];
 
   if (!activeTab) return null;
 
@@ -505,7 +518,7 @@ export default function AdminSubmissionsPage() {
                             width: proportional(0.7, { minWidth: 72 }),
                           },
                         ]}
-                        data={presentationEvaluationsQuery.data.teams}
+                        data={presentationEvaluationTeams}
                         dividers='rows'
                         textOverflow='wrap'
                         verticalAlign='middle'
@@ -517,7 +530,7 @@ export default function AdminSubmissionsPage() {
                         milestoneId={String(presentationEvaluationMilestone.id)}
                         sectionId={effectiveSectionId}
                         onClose={() => setIsEvaluationSettingsOpen(false)}
-                        teams={presentationEvaluationsQuery.data.teams}
+                        teams={presentationEvaluationTeams}
                       />
                     ) : null}
                   </>

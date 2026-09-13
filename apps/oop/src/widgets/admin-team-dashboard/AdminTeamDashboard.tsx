@@ -263,6 +263,7 @@ export default function AdminTeamDashboard() {
   }
 
   const sectionCode = dashboardSection?.code ?? '분반 정보 없음';
+  const detailSectionId = dashboardSection?.id ?? team.sectionId;
 
   return (
     <div className={styles.page}>
@@ -293,7 +294,7 @@ export default function AdminTeamDashboard() {
 
           <ul className={styles.memberList}>
             {team.members.map(member => (
-              <li key={member.id}>
+              <li key={`${member.id}-${member.studentNumber}`}>
                 <Card className={styles.memberCard} padding={4}>
                   <button
                     className={styles.memberButton}
@@ -332,7 +333,7 @@ export default function AdminTeamDashboard() {
               ? 'ready'
               : 'pending'
         }
-        sectionId={team.sectionId}
+        sectionId={detailSectionId}
       />
 
       <AdminTeamMeetingRecordList

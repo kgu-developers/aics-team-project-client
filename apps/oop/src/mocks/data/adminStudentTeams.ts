@@ -19,6 +19,15 @@ const adminStudentTeamDemoSectionId = 'oop-2026-2-01';
 
 export const adminStudentsFixture: AdminStudentFixture[] = [
   {
+    id: 'student-message-1',
+    name: '검수 학생',
+    studentNumber: '20260001',
+    major: '컴퓨터공학과',
+    sectionId: adminStudentTeamDemoSectionId,
+    teamId: null,
+    isLeader: false,
+  },
+  {
     id: 'student-1151-1',
     name: '김민준',
     studentNumber: '20231234',

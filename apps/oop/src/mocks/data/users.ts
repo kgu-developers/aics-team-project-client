@@ -79,7 +79,7 @@ export const demoAdmin: CurrentUser = {
       contactVisibleUntil: null,
       courseId: 1,
       courseName: '객체지향 프로그래밍',
-      name: '객체지향프로그래밍 01분반',
+      name: 'OOP-01',
       role: 'ASSISTANT',
       semester: 'FALL',
       status: 'ACTIVE',
