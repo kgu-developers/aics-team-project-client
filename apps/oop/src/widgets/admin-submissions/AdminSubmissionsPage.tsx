@@ -14,7 +14,7 @@ import {
   Table,
   Text,
 } from '@aics/design-system';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { type KeyboardEvent, useMemo, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -625,7 +625,17 @@ export default function AdminSubmissionsPage() {
                       );
                     return (
                       <AdminMilestoneSubmissionCard
-                        meetingCountLabel={`회의록 ${submission.meetingRecordCount}건`}
+                        meetingCountLabel={
+                          <Link
+                            to={ROUTES.ADMIN_MEETINGS}
+                            search={{
+                              sectionId: effectiveSectionId,
+                              teamId: String(submission.teamId),
+                            }}
+                          >
+                            회의록 {submission.meetingRecordCount}건
+                          </Link>
+                        }
                         isUnread={Boolean(
                           submissionSectionId &&
                           submission.submissionId &&
@@ -654,6 +664,7 @@ export default function AdminSubmissionsPage() {
                               milestoneId={activeTab.id}
                               sectionId={effectiveSectionId}
                               submissionId={submissionId}
+                              teamId={submission.teamId}
                               unavailableReason={
                                 isVersionDetailAvailable
                                   ? undefined

@@ -15,7 +15,10 @@ import {
 
 type TeamMessageHandlerOptions = {
   getAuthenticatedUserId?: (request: Request) => string | undefined;
+  persist?: boolean;
 };
+
+const teamMessageStorageKey = 'aics.oop.msw.team-messages';
 
 function error(status: number, code: string) {
   return HttpResponse.json({ code }, { status });
@@ -32,12 +35,23 @@ function isId(value: unknown): value is number {
 export function createTeamMessageHandlers(
   options: TeamMessageHandlerOptions = {},
 ) {
-  const data = createTeamMessageData();
+  const initialData = createTeamMessageData();
+  const data = loadTeamMessageData(initialData, options.persist ?? false);
   const authenticatedUserId =
     options.getAuthenticatedUserId ??
     ((request: Request) =>
       getMockAuthenticatedAccount(request)?.user.studentNumber);
   const now = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
+
+  function persistData() {
+    if (!options.persist || typeof localStorage === 'undefined') return;
+
+    try {
+      localStorage.setItem(teamMessageStorageKey, JSON.stringify(data));
+    } catch {
+      // Persistence is only a development convenience for the MSW scenario.
+    }
+  }
 
   function guard(request: Request, teamId: string) {
     const userId = authenticatedUserId(request);
@@ -78,6 +92,7 @@ export function createTeamMessageHandlers(
     if (!thread) {
       thread = { threadId: data.nextThreadId++, teamId, createdAt: now() };
       data.threads.push(thread);
+      persistData();
     }
     return thread;
   }
@@ -154,6 +169,7 @@ export function createTeamMessageHandlers(
         const guarded = guardMessage(request, String(params.messageId));
         if (!('message' in guarded)) return guarded.response;
         guarded.message.read = true;
+        persistData();
         return new HttpResponse(null, { status: 204 });
       },
     ),
@@ -238,6 +254,7 @@ export function createTeamMessageHandlers(
           createdAt: now(),
         };
         data.messages.push({ ...message, important: false, read: false });
+        persistData();
         return HttpResponse.json(message, { status: 201 });
       },
     ),
@@ -272,6 +289,7 @@ export function createTeamMessageHandlers(
           return error(400, 'INVALID_REQUEST');
         }
         guarded.message.important = body.important;
+        persistData();
         return new HttpResponse(null, { status: 204 });
       },
     ),
@@ -281,8 +299,38 @@ export function createTeamMessageHandlers(
         const guarded = guardMessage(request, String(params.messageId));
         if (!('message' in guarded)) return guarded.response;
         guarded.message.read = true;
+        persistData();
         return new HttpResponse(null, { status: 204 });
       },
     ),
   ];
+}
+
+function loadTeamMessageData(
+  initialData: ReturnType<typeof createTeamMessageData>,
+  shouldPersist: boolean,
+) {
+  if (!shouldPersist || typeof localStorage === 'undefined') return initialData;
+
+  try {
+    const stored = localStorage.getItem(teamMessageStorageKey);
+    if (!stored) return initialData;
+
+    const parsed = JSON.parse(stored) as Partial<
+      ReturnType<typeof createTeamMessageData>
+    >;
+    if (
+      !Array.isArray(parsed.messages) ||
+      !Array.isArray(parsed.teams) ||
+      !Array.isArray(parsed.threads) ||
+      !Number.isSafeInteger(parsed.nextMessageId) ||
+      !Number.isSafeInteger(parsed.nextThreadId)
+    ) {
+      return initialData;
+    }
+
+    return parsed as ReturnType<typeof createTeamMessageData>;
+  } catch {
+    return initialData;
+  }
 }

@@ -9,6 +9,7 @@ import {
   createRouter,
 } from '@tanstack/react-router';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 import {
@@ -121,7 +122,7 @@ function renderPage(teamId: string) {
       sections: [
         {
           code: 'OOP-01',
-          id: '1',
+          id: 'oop-2026-2-01',
           name: '객체지향프로그래밍 01분반',
           role: 'ASSISTANT',
         },
@@ -184,6 +185,19 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('발표 자료 제출')).toBeInTheDocument();
     expect(screen.getByText('presentation.pdf')).toBeInTheDocument();
     expect(screen.getByText('발표 평가')).toBeInTheDocument();
+    const proposalDetailLink = screen
+      .getAllByRole('link', { name: '상세보기' })
+      .find(link =>
+        link.getAttribute('href')?.includes('milestoneId=proposal'),
+      );
+    expect(proposalDetailLink).toHaveAttribute(
+      'href',
+      expect.stringContaining('sectionId=oop-2026-2-01'),
+    );
+    expect(proposalDetailLink).toHaveAttribute(
+      'href',
+      expect.stringContaining('apiSectionId='),
+    );
     expect(
       screen.queryByRole('link', { name: 'proposal-v2.pdf' }),
     ).not.toBeInTheDocument();
@@ -228,5 +242,20 @@ describe('AdminTeamDashboard', () => {
       await screen.findByText('팀 정보를 찾을 수 없습니다.'),
     ).toBeInTheDocument();
     expect(submissionsRequest).not.toHaveBeenCalled();
+  });
+
+  it('팀원의 기본 정보를 기존 관리자 상세 모달로 조회한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage('1');
+
+    await user.click(await screen.findByRole('button', { name: '김민준' }));
+
+    expect(
+      await screen.findByRole('heading', { name: '김민준 정보' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('20231234@example.com')).toBeInTheDocument();
+    expect(screen.getByText('010-1234-5678')).toBeInTheDocument();
+    expect(screen.getByText('컴퓨터공학과')).toBeInTheDocument();
   });
 });

@@ -26,6 +26,7 @@ import {
   useTeamMessagesQuery,
 } from '~/features/team-message/queries';
 
+import { AdminMidReportDetail } from './AdminMidReportDetail';
 import * as styles from './AdminSubmissionDetailPage.css';
 
 const milestoneLabels = {
@@ -119,16 +120,21 @@ export default function AdminSubmissionDetailPage() {
     from: '/admin/submissions/$submissionId',
   });
   const search = useSearch({ from: '/admin/submissions/$submissionId' }) as {
+    apiSectionId?: string;
     milestoneId?: string;
     sectionId?: string;
+    teamId?: string;
   };
   const accessibleSectionIds =
     currentUser?.sections.map(section => section.id) ?? [];
   const isRequestedSectionAccessible = Boolean(
     search.sectionId && accessibleSectionIds.includes(search.sectionId),
   );
+  const isMidReport = search.milestoneId === 'midterm';
   const isVersionDetailAvailable = Boolean(
-    search.milestoneId && versionDetailMilestoneIds.has(search.milestoneId),
+    search.milestoneId &&
+    versionDetailMilestoneIds.has(search.milestoneId) &&
+    !isMidReport,
   );
   const submissionQuery = useAdminMilestoneSubmissionDetailQuery(
     submissionId,
@@ -219,6 +225,33 @@ export default function AdminSubmissionDetailPage() {
   ]);
 
   const milestoneLabel = getMilestoneLabel(search.milestoneId);
+
+  if (
+    isRequestedSectionAccessible &&
+    isMidReport &&
+    search.sectionId &&
+    search.teamId
+  ) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.pageHeader}>
+          <Heading level={1}>제출물 &gt; {milestoneLabel}</Heading>
+          <Link
+            aria-label={`${milestoneLabel} 목록으로`}
+            className={styles.backLink}
+            search={search}
+            to={ROUTES.ADMIN_SUBMISSIONS}
+          >
+            ← {milestoneLabel} 목록으로
+          </Link>
+        </div>
+        <AdminMidReportDetail
+          sectionId={search.apiSectionId ?? search.sectionId}
+          teamId={search.teamId}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>

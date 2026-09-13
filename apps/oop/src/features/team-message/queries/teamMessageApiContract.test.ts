@@ -91,6 +91,33 @@ it('전송은 인증된 학번을 저장하고 같은 팀 방의 후속 조회�
   expect(page.pageable.totalElements).toBe(4);
 });
 
+it('개발용 MSW 메시지는 새 핸들러가 시작된 뒤에도 저장소에서 복원한다', async () => {
+  const storageKey = 'aics.oop.msw.team-messages';
+  localStorage.removeItem(storageKey);
+
+  try {
+    server.resetHandlers();
+    server.use(...createTeamMessageHandlers({ persist: true }));
+
+    const message = await submitTeamMessage('7', {
+      message: '새로고침 후에도 유지되는 제안서 피드백입니다.',
+      relatedType: 'PROPOSAL',
+    });
+
+    server.resetHandlers();
+    server.use(...createTeamMessageHandlers({ persist: true }));
+
+    const page = await fetchTeamMessages('7', { relatedType: 'PROPOSAL' });
+    expect(page.contents).toContainEqual({
+      ...message,
+      important: false,
+      read: false,
+    });
+  } finally {
+    localStorage.removeItem(storageKey);
+  }
+});
+
 it('관련 유형을 생략한 전송은 GENERAL이며 실제 relatedId 수치를 유지한다', async () => {
   const message = await submitTeamMessage('7', {
     message: '다음 상담 시간을 문의합니다.',

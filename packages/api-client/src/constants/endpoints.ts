@@ -107,6 +107,10 @@ export const ENDPOINTS = {
       teamId: string | number,
     ) =>
       `/api/v1/admin/oop/sections/${sectionId}/presentation-evaluations/teams/${teamId}`,
+    SECTION_TEAM_MID_REPORT: (
+      sectionId: string | number,
+      teamId: string | number,
+    ) => `/api/v1/admin/oop/sections/${sectionId}/teams/${teamId}/mid-report`,
     SECTION_PRESENTATION_EVALUATION_SETTINGS: (sectionId: string) =>
       `/admin/sections/${sectionId}/presentation-evaluation-settings`,
     SECTION_STUDENTS: (sectionId: string) =>

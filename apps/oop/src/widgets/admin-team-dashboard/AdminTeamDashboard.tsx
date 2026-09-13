@@ -19,7 +19,7 @@ import {
   useAdminSectionMilestonesQuery,
   useAdminSubmissionVersionDetailsQueries,
 } from '~/features/admin-milestone-review/queries';
-import StudentDetailDialog from '~/features/admin-student-team/components/StudentDetailDialog';
+import AdminStudentDetailDialog from '~/features/admin-student-team/components/AdminStudentDetailDialog';
 import type { TeamMilestoneProgress } from '~/features/admin-team-dashboard/model';
 import {
   useAdminTeamDashboardQuery,
@@ -262,21 +262,12 @@ export default function AdminTeamDashboard() {
   const selectedMember = selectedMemberId
     ? (team.members.find(member => member.id === selectedMemberId) ?? null)
     : null;
-  const selectedStudent = selectedMember
-    ? {
-        name: selectedMember.name,
-        studentNumber: selectedMember.studentNumber,
-        major: selectedMember.major,
-        team: { name: team.name },
-      }
-    : null;
-
   function openStudentDetail(memberId: string) {
     setSelectedMemberId(memberId);
   }
 
   const sectionCode = dashboardSection?.code ?? '분반 정보 없음';
-  const detailSectionId = team.sectionId;
+  const detailSectionId = dashboardSection?.id ?? team.sectionId;
 
   return (
     <div className={styles.page}>
@@ -336,6 +327,7 @@ export default function AdminTeamDashboard() {
       </section>
 
       <AdminTeamMilestoneProgress
+        apiSectionId={team.sectionId}
         milestones={
           sectionMilestonesQuery.isSuccess ? teamMilestoneProgresses : []
         }
@@ -357,10 +349,10 @@ export default function AdminTeamDashboard() {
         teamId={team.id}
       />
 
-      <StudentDetailDialog
-        isOpen={selectedStudent !== null}
+      <AdminStudentDetailDialog
+        major={selectedMember?.major}
         onClose={() => setSelectedMemberId(null)}
-        student={selectedStudent}
+        studentNumber={selectedMember?.studentNumber ?? null}
       />
     </div>
   );

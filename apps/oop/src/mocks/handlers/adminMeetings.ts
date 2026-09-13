@@ -49,7 +49,12 @@ export const adminMeetingHandlers = [
       return HttpResponse.json({
         records: adminMeetingRecordsFixture
           .filter(record => accessibleSectionIds.includes(record.sectionId))
-          .filter(record => !sectionId || record.sectionId === sectionId)
+          .filter(
+            record =>
+              !sectionId ||
+              record.sectionId === sectionId ||
+              String(record.apiSectionId) === sectionId,
+          )
           .filter(record => !teamId || record.teamId === teamId)
           .filter(
             record =>
@@ -92,7 +97,12 @@ export const adminMeetingHandlers = [
       );
       const records = adminMeetingRecordsFixture
         .filter(record => accessibleSectionIds.includes(record.sectionId))
-        .filter(record => !sectionId || record.sectionId === sectionId)
+        .filter(
+          record =>
+            !sectionId ||
+            record.sectionId === sectionId ||
+            String(record.apiSectionId) === sectionId,
+        )
         .filter(record => !teamId || String(record.apiTeamId) === teamId)
         .filter(
           record =>
