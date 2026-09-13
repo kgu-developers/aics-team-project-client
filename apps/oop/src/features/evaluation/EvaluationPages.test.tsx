@@ -1,7 +1,7 @@
 import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -517,6 +517,40 @@ describe('KD3-92 학생 평가 화면', () => {
     expect(
       screen.getByRole('button', { name: '평가 다시 제출' }),
     ).not.toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('마감 시각이 지나면 평가 기간 상태를 다시 읽어 입력을 잠근다', async () => {
+    const user = userEvent.setup();
+    const overview = getMyTeamEvaluations(demoStudent.studentNumber);
+    let requestCount = 0;
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.MY_TEAM_EVALUATIONS(':milestoneId')}`,
+        () => {
+          requestCount += 1;
+          return HttpResponse.json({
+            ...overview,
+            evaluationClosesAt: new Date(Date.now() - 1_000).toISOString(),
+            windowState: requestCount === 1 ? 'OPEN' : 'CLOSED',
+          });
+        },
+      ),
+    );
+    renderPresentationPage();
+
+    await screen.findByRole('heading', { level: 1, name: '발표 평가' });
+    await user.click(screen.getByRole('button', { name: '다음 팀' }));
+    await waitFor(() => expect(requestCount).toBeGreaterThan(1));
+
+    expect(
+      await screen.findAllByText(
+        '평가가 마감되어 자료와 제출한 점수만 확인할 수 있어요.',
+      ),
+    ).not.toHaveLength(0);
+    expect(
+      screen.queryByRole('button', { name: '평가 제출' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('timer')).not.toBeInTheDocument();
   });
 
   it('평가 기간 전에는 자료만 보여 주고 제출을 막는다', async () => {

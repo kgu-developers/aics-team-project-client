@@ -253,8 +253,8 @@ export const evaluationHandlers = [
           '발표 평가 일정을 찾을 수 없어요.',
           404,
         );
-      const windowState = getPresentationWindowState();
-      if (windowState !== 'OPEN' && windowState !== 'CLOSED')
+      // 서버는 평가 창이 열려 있을 때만 저장한다(TeamEvaluationFacade#accessContext).
+      if (getPresentationWindowState() !== 'OPEN')
         return error('EVALUATION_NOT_OPEN', '발표 평가 기간이 아니에요.', 403);
       const input = await parseBody<unknown>(request);
       if (!isTeamEvaluationInput(input))
@@ -284,7 +284,7 @@ export const evaluationHandlers = [
         return (
           !criterion ||
           !Number.isInteger(score.score) ||
-          score.score < 1 ||
+          score.score < 0 ||
           score.score > criterion.maxScore
         );
       });

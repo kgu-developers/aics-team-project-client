@@ -414,6 +414,7 @@ function PresentationEvaluationContent({
   milestoneId,
   myTeamId,
   onReloadMaterials,
+  onWindowClosed,
   presentations,
   userId,
 }: {
@@ -421,6 +422,7 @@ function PresentationEvaluationContent({
   milestoneId: string;
   myTeamId: string | null;
   onReloadMaterials: () => void;
+  onWindowClosed: () => void;
   presentations: MilestonePresentation[];
   userId: string;
 }) {
@@ -474,6 +476,7 @@ function PresentationEvaluationContent({
                 {evaluations.windowState === 'OPEN' ? (
                   <EvaluationTimer
                     label='평가 마감까지'
+                    onComplete={onWindowClosed}
                     targetAt={evaluations.evaluationClosesAt}
                   />
                 ) : null}
@@ -658,6 +661,9 @@ export default function PresentationEvaluationPage() {
       myTeamId={currentUser?.teamId ?? null}
       onReloadMaterials={() => {
         void rosterQuery.refetch();
+      }}
+      onWindowClosed={() => {
+        void evaluationsQuery.refetch();
       }}
       presentations={rosterQuery.data}
       userId={userId}

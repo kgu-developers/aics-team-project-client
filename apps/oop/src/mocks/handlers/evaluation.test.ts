@@ -428,9 +428,14 @@ describe('evaluationHandlers', () => {
     });
   });
 
-  it('발표 수업 종료 후에도 발표 평가는 저장하고 상호평가는 종료 정책을 유지한다', async () => {
+  it('발표 평가 기간이 끝나면 조회만 열어 두고 저장을 막는다', async () => {
     setEvaluationWindowStates('CLOSED', 'CLOSED');
 
+    const overview = await request(
+      ENDPOINTS.EVALUATION.MY_TEAM_EVALUATIONS(
+        presentationEvaluationMilestoneId,
+      ),
+    );
     const presentation = await putTeamEvaluation(
       otherTeamNumericId,
       teamEvaluationScores,
@@ -448,10 +453,13 @@ describe('evaluationHandlers', () => {
       },
     );
 
-    expect(presentation.status).toBe(200);
+    expect(overview.status).toBe(200);
+    await expect(overview.json()).resolves.toMatchObject({
+      windowState: 'CLOSED',
+    });
+    expect(presentation.status).toBe(403);
     await expect(presentation.json()).resolves.toMatchObject({
-      teamId: otherTeamNumericId,
-      scores: teamEvaluationScores,
+      code: 'EVALUATION_NOT_OPEN',
     });
     expect(peer.status).toBe(403);
   });
