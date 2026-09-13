@@ -32,6 +32,6 @@ export async function fetchLegacyAdminPresentationEvaluations(
   const response =
     await apiClient.get<LegacyAdminPresentationEvaluationsResponse>(
       ENDPOINTS.ADMIN.SECTION_PRESENTATION_EVALUATIONS(sectionId),
-  );
+    );
   return response.data;
 }
