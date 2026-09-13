@@ -166,35 +166,19 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('2026.09.07 18:00')).toBeInTheDocument();
     expect(screen.getByText('발표 자료 제출')).toBeInTheDocument();
     expect(screen.getByText('presentation.pdf')).toBeInTheDocument();
-    expect(screen.queryByText('발표 평가')).not.toBeInTheDocument();
+    expect(screen.getByText('발표 평가')).toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: 'proposal-v2.pdf' }),
     ).not.toBeInTheDocument();
 
     await waitFor(() => expect(requests).toHaveBeenCalled());
-    expect(requests.mock.calls).toEqual(
-      expect.arrayContaining([
-        [expect.objectContaining({ search: '?teamId=1' })],
-      ]),
-    );
-    expect(requests.mock.calls).not.toEqual(
-      expect.arrayContaining([
-        [
-          expect.objectContaining({
-            pathname: expect.stringContaining('/103/'),
-          }),
-        ],
-      ]),
-    );
-    expect(requests.mock.calls).toEqual(
-      expect.arrayContaining([
-        [
-          expect.objectContaining({
-            pathname: expect.stringContaining('/106/'),
-          }),
-        ],
-      ]),
-    );
+    const requestUrls = requests.mock.calls.flat().map(String);
+    expect(
+      requestUrls.some(url => url.includes('/106/submissions?teamId=1')),
+    ).toBe(true);
+    expect(
+      requestUrls.some(url => url.includes('/103/submissions?teamId=1')),
+    ).toBe(true);
   });
 
   it('팀 상세 조회에 실패하면 마일스톤 요청 없이 팀 오류 안내를 표시한다', async () => {

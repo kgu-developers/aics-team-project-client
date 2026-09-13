@@ -38,6 +38,7 @@ import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMi
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
 import { adminPresentationEvaluationHandlers } from '~/mocks/handlers/adminPresentationEvaluations';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
+import { createTeamMessageHandlers } from '~/mocks/handlers/teamMessages';
 
 const server = setupServer(
   ...adminMeetingHandlers,
@@ -45,6 +46,7 @@ const server = setupServer(
   ...adminMilestoneSubmissionsHandlers,
   ...adminPresentationEvaluationHandlers,
   ...adminSectionMilestoneHandlers,
+  ...createTeamMessageHandlers(),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -141,6 +143,52 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('link', { name: '프로젝트 킥오프' }),
     ).toHaveAttribute('href', '/admin/meetings/1');
+  });
+
+  it('제안서와 중간 점검 상세에서 현재 제출물에 연결된 피드백을 회의록보다 먼저 표시한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage(
+      '/admin/submissions/1001?milestoneId=proposal&sectionId=oop-2026-2-01',
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: '제안서 피드백' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('제안서의 문제 정의와 구현 범위를 보완해 주세요.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('다른 제안서 제출물에 연결된 피드백입니다.'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: '연결된 회의록 (1건)' }),
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: '제안서 피드백 내용' }),
+      '제안서 피드백을 상세 화면에서 바로 보냅니다.',
+    );
+    await user.click(screen.getByRole('button', { name: '피드백 보내기' }));
+    expect(
+      await screen.findByText('제안서 피드백을 상세 화면에서 바로 보냅니다.'),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: '제안서 목록으로' }));
+    await user.click(await screen.findByRole('tab', { name: '중간 점검' }));
+    const midtermDetailLinks = await screen.findAllByRole('link', {
+      name: '상세보기',
+    });
+    await user.click(midtermDetailLinks[0]!);
+
+    expect(
+      await screen.findByRole('heading', { name: '중간 점검 피드백' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        '중간점검에는 현재 구현 결과와 남은 작업을 정리해 주세요.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('연결된 회의록이 여러 페이지면 다음 페이지를 조회한다', async () => {
