@@ -1,5 +1,5 @@
 import { Card, Heading, Text } from '@aics/design-system';
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -54,6 +54,13 @@ export default function AdminMessagesPage() {
       </div>
       {query.isLoading ? (
         <Text>불러오는 중...</Text>
+      ) : query.isError ? (
+        <Card className={styles.tableCard}>
+          <Text>쪽지함을 불러오지 못했습니다.</Text>
+          <button onClick={() => void query.refetch()} type='button'>
+            다시 시도
+          </button>
+        </Card>
       ) : (
         <Card className={styles.tableCard}>
           <table className={styles.table}>
@@ -70,13 +77,25 @@ export default function AdminMessagesPage() {
                 <tr
                   className={styles.messageRow}
                   key={row.id}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      event.currentTarget.click();
+                    }
+                  }}
                   onClick={async () => {
-                    if (!row.read) await readMutation.mutateAsync(row.id);
+                    if (!row.read) {
+                      void readMutation
+                        .mutateAsync(row.id)
+                        .catch(() => undefined);
+                    }
                     await navigate({
                       params: { teamId: String(row.teamId) },
                       to: ROUTES.ADMIN_MESSAGE_TEAM,
                     });
                   }}
+                  role='link'
+                  tabIndex={0}
                 >
                   <td>
                     {row.read ? null : (
@@ -87,7 +106,14 @@ export default function AdminMessagesPage() {
                     )}
                     {row.sectionName}
                   </td>
-                  <td>{row.teamName}</td>
+                  <td>
+                    <Link
+                      params={{ teamId: String(row.teamId) }}
+                      to={ROUTES.ADMIN_MESSAGE_TEAM}
+                    >
+                      {row.teamName}
+                    </Link>
+                  </td>
                   <td>{row.senderName ?? row.senderId}</td>
                   <td>{row.message}</td>
                 </tr>

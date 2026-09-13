@@ -263,7 +263,7 @@ export default function AdminTeamDashboard() {
   }
 
   const sectionCode = dashboardSection?.code ?? '분반 정보 없음';
-  const detailSectionId = dashboardSection?.id ?? team.sectionId;
+  const detailSectionId = team.sectionId;
 
   return (
     <div className={styles.page}>

@@ -18,19 +18,28 @@ const teams = [
     memberIds: ['20230001', '20230002'],
     name: '1팀',
     professorId: teamMessageProfessorId,
+    sectionId: 'oop-2026-2-01',
   },
   {
     id: 7,
     memberIds: ['20260001', '20260003', '20260004'],
     name: '1팀',
     professorId: teamMessageProfessorId,
+    sectionId: 'oop-2026-2-01',
   },
-  { id: 8, memberIds: [], name: '2팀', professorId: teamMessageProfessorId },
+  {
+    id: 8,
+    memberIds: [],
+    name: '2팀',
+    professorId: teamMessageProfessorId,
+    sectionId: 'oop-2026-2-01',
+  },
   {
     id: 9,
     memberIds: [],
     name: '다른 분반 팀',
     professorId: 'other-section-professor',
+    sectionId: 'oop-2026-2-02',
   },
 ];
 
@@ -134,6 +143,6 @@ export function createTeamMessageData() {
       senderName: teamMessageSenderNames[message.senderId],
     })),
     nextThreadId: 71,
-    nextMessageId: 706,
+    nextMessageId: 713,
   };
 }

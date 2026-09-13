@@ -16,11 +16,11 @@ import { ROUTES } from '~/app/constants/routes';
 import { cx } from '~/shared/lib/cx';
 
 import {
-  useAdminMessagesQuery,
   useAdminRelatedSubmissionQuery,
   useUpdateTeamMessageImportantMutation,
 } from '~/features/admin-message/queries';
 import AdminStudentDetailDialog from '~/features/admin-student-team/components/AdminStudentDetailDialog';
+import { useAdminTeamDashboardQuery } from '~/features/admin-team-dashboard/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 import {
   useSubmitTeamMessageMutation,
@@ -40,7 +40,7 @@ const relatedTypeLabels: Record<RelatedType, string> = {
 export default function AdminTeamMessagesPage() {
   const { teamId } = useParams({ from: '/admin/messages/teams/$teamId' });
   const currentUser = useAuthStore(state => state.currentUser);
-  const adminMessagesQuery = useAdminMessagesQuery();
+  const teamQuery = useAdminTeamDashboardQuery(teamId);
   const messagesQuery = useTeamMessagesQuery(teamId);
   const submitMutation = useSubmitTeamMessageMutation(teamId);
   const importantMutation = useUpdateTeamMessageImportantMutation(teamId);
@@ -50,10 +50,7 @@ export default function AdminTeamMessagesPage() {
     string | null
   >(null);
   const messages = messagesQuery.data ?? [];
-  const teamMessage = adminMessagesQuery.data?.contents.find(
-    item => String(item.teamId) === teamId,
-  );
-  const sectionId = teamMessage ? String(teamMessage.sectionId) : undefined;
+  const sectionId = teamQuery.data?.sectionId;
   const feedbackType = relatedType === 'GENERAL' ? undefined : relatedType;
   const relatedSubmissionQuery = useAdminRelatedSubmissionQuery(
     sectionId,
@@ -61,7 +58,7 @@ export default function AdminTeamMessagesPage() {
     feedbackType,
   );
   const relatedSubmission = relatedSubmissionQuery.data;
-  const title = teamMessage?.teamName ?? `${teamId}팀`;
+  const title = teamQuery.data?.name ?? `${teamId}팀`;
 
   return (
     <main className={styles.page}>
@@ -190,8 +187,10 @@ export default function AdminTeamMessagesPage() {
           <Button
             isDisabled={
               !message.trim() ||
+              submitMutation.isPending ||
               (relatedType !== 'GENERAL' && !relatedSubmission)
             }
+            isLoading={submitMutation.isPending}
             label='메시지 보내기'
             onClick={() => {
               if (!message.trim()) return;

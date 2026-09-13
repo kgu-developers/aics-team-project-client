@@ -61,9 +61,7 @@ function List({
         <li
           className={styles.item}
           key={
-            isMeetingList && item.meetingId
-              ? item.meetingId
-              : [item.section, item.title].join('-')
+            item.id ?? item.meetingId ?? [item.section, item.title].join('-')
           }
         >
           <span className={styles.itemMeta}>
@@ -236,6 +234,7 @@ export default function AdminHomeDashboard() {
   const messageItems: DashboardListItem[] = (messagesQuery.data?.contents ?? [])
     .slice(0, 3)
     .map(message => ({
+      id: String(message.id),
       date: formatMeetingCreatedAt(message.createdAt),
       section: `${message.sectionName} · ${message.teamName}`,
       teamId: String(message.teamId),

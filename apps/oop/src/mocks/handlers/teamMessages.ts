@@ -47,8 +47,14 @@ export function createTeamMessageHandlers(
       return { response: error(400, 'INVALID_REQUEST') };
     const team = data.teams.find(team => team.id === Number(teamId));
     const isAdmin = Boolean(account && account.user.globalRole !== 'STUDENT');
+    const isAdminSectionMember = Boolean(
+      account?.user.sections.some(
+        section => String(section.id) === team?.sectionId,
+      ),
+    );
     if (
       !team ||
+      (isAdmin && !isAdminSectionMember) ||
       (!isAdmin &&
         !team.memberIds.includes(userId) &&
         team.professorId !== userId)
@@ -117,11 +123,15 @@ export function createTeamMessageHandlers(
         );
         const team = data.teams.find(item => item.id === thread?.teamId);
         if (!team) return [];
+        if (!accessible.includes(team.sectionId)) return [];
 
         return {
           ...message,
-          sectionId: section.id,
-          sectionName: section.name ?? String(section.id),
+          sectionId: team.sectionId,
+          sectionName:
+            account.user.sections.find(
+              candidate => String(candidate.id) === team.sectionId,
+            )?.name ?? team.sectionId,
           teamId: team.id,
           teamName: team.name,
         };
@@ -252,7 +262,12 @@ export function createTeamMessageHandlers(
       async ({ request, params }) => {
         const guarded = guardMessage(request, String(params.messageId));
         if (!('message' in guarded)) return guarded.response;
-        const body = (await request.json()) as { important?: unknown };
+        let body: { important?: unknown };
+        try {
+          body = (await request.json()) as { important?: unknown };
+        } catch {
+          return error(400, 'INVALID_REQUEST');
+        }
         if (typeof body?.important !== 'boolean') {
           return error(400, 'INVALID_REQUEST');
         }
