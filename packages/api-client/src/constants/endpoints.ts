@@ -61,6 +61,20 @@ export const ENDPOINTS = {
       `/api/v1/admin/oop/sections/${sectionId}/peer-evaluation-forms`,
     OOP_TEAM_EVALUATION_CRITERIA: (sectionId: string | number) =>
       `/api/v1/admin/oop/sections/${sectionId}/team-evaluation-criteria`,
+    OOP_PEER_EVALUATIONS: (sectionId: string | number) =>
+      `/api/v1/admin/oop/sections/${sectionId}/peer-evaluations`,
+    OOP_PEER_EVALUATION_TEAM: (
+      sectionId: string | number,
+      teamId: string | number,
+    ) =>
+      `/api/v1/admin/oop/sections/${sectionId}/peer-evaluations/teams/${teamId}`,
+    OOP_PRESENTATION_EVALUATIONS: (sectionId: string | number) =>
+      `/api/v1/admin/oop/sections/${sectionId}/presentation-evaluations`,
+    OOP_PRESENTATION_EVALUATION_TEAM: (
+      sectionId: string | number,
+      teamId: string | number,
+    ) =>
+      `/api/v1/admin/oop/sections/${sectionId}/presentation-evaluations/teams/${teamId}`,
     OOP_PRE_SURVEY_RESPONSES: (sectionId: string) =>
       `/api/v1/admin/oop/sections/${sectionId}/pre-survey-responses`,
     OOP_PRE_SURVEY_RESPONSES_DOWNLOAD: (sectionId: string) =>

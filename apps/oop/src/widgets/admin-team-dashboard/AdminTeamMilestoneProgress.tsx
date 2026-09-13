@@ -176,12 +176,12 @@ export default function AdminTeamMilestoneProgress({
           {milestones.map(milestone => {
             const submission = milestone.submission;
             const submissionId = submission?.submissionId ?? null;
-            const isDownloadMilestone =
-              milestone.milestone.type === 'FINAL_REPORT' ||
-              milestone.milestone.type === 'PRESENTATION';
             const isVersionDetailAvailable =
               milestone.milestone.type === 'PROPOSAL' ||
               milestone.milestone.type === 'MID_REPORT';
+            const isDownloadMilestone =
+              milestone.milestone.type === 'FINAL_REPORT' ||
+              milestone.milestone.type === 'PRESENTATION';
             const shouldShowSubmissionMetadata =
               milestone.milestone.type !== 'PEER_EVALUATION';
             const unavailableReason = !isVersionDetailAvailable
@@ -215,9 +215,7 @@ export default function AdminTeamMilestoneProgress({
                       milestoneId={
                         milestone.milestone.type === 'PROPOSAL'
                           ? 'proposal'
-                          : milestone.milestone.type === 'MID_REPORT'
-                            ? 'midterm'
-                            : 'peer-review'
+                          : 'midterm'
                       }
                       sectionId={sectionId}
                       submissionId={submissionId}

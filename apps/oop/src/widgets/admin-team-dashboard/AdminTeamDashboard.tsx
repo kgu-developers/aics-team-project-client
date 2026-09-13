@@ -28,6 +28,7 @@ import {
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminTeamDashboard.css';
+import AdminTeamEvaluationTables from './AdminTeamEvaluationTables';
 import AdminTeamMilestoneProgress from './AdminTeamMilestoneProgress';
 
 type TeamDashboardErrorContent = {
@@ -107,8 +108,9 @@ export default function AdminTeamDashboard() {
   const sectionMilestones = [...(sectionMilestonesQuery.data?.content ?? [])]
     .filter(
       milestone =>
-        milestone.type !== 'PRESENTATION' ||
-        isPresentationSubmissionMilestone(milestone),
+        milestone.type !== 'PEER_EVALUATION' &&
+        (milestone.type !== 'PRESENTATION' ||
+          isPresentationSubmissionMilestone(milestone)),
     )
     .sort((left, right) => left.weekNumber - right.weekNumber);
   const milestoneSubmissionQueries = useAdminTeamMilestoneSubmissionsQueries(
@@ -118,7 +120,7 @@ export default function AdminTeamDashboard() {
   const milestoneSubmissions = sectionMilestones.map((milestone, index) => {
     const query = milestoneSubmissionQueries[index];
     return query?.data?.submissions.find(
-      submission => submission.teamId === team?.id,
+      submission => String(submission.teamId) === String(team?.id),
     );
   });
   const versionTargets = milestoneSubmissions.flatMap((submission, index) =>
@@ -340,6 +342,8 @@ export default function AdminTeamDashboard() {
         }
         sectionId={detailSectionId}
       />
+
+      <AdminTeamEvaluationTables sectionId={team.sectionId} teamId={team.id} />
 
       <AdminTeamMeetingRecordList
         isError={meetingRecordsQuery.isError}
