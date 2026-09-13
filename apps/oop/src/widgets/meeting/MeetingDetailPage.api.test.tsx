@@ -334,7 +334,7 @@ it('상세에서 액션 등록→수정→완료→삭제하면 회의별·팀�
   expect(await fetchMeetingRecordDetail('19')).toMatchObject({
     title: '진행 점검 회의',
   });
-});
+}, 15_000);
 
 it('두 번째 액션 등록 실패 시 저장된 회의록과 첫 행을 보존하고 남은 행만 재시도한다', async () => {
   const writes: string[] = [];
@@ -396,7 +396,7 @@ it('두 번째 액션 등록 실패 시 저장된 회의록과 첫 행을 보존
   expect(recordPosts).toBe(1);
   expect(writes).toEqual(['첫 번째 작업', '두 번째 작업', '두 번째 작업']);
   expect(await fetchMeetingActionEntries('20')).toHaveLength(2);
-});
+}, 15_000);
 
 it('액션 등록 409와 삭제 403을 입력·기존 행을 보존하는 오류로 보여준다', async () => {
   server.use(

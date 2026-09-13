@@ -31,6 +31,25 @@ export const adminMilestoneSubmissionsHandlers = [
 
       const teamId = new URL(request.url).searchParams.get('teamId');
 
+      if (teamId === '7' && (milestoneId === '101' || milestoneId === '102')) {
+        return HttpResponse.json({
+          contents: [
+            {
+              canSubmitNow: false,
+              currentVersion: milestoneId === '101' ? 2 : 1,
+              hasPendingReview: false,
+              id: milestoneId === '101' ? 1701 : 1702,
+              meetingRecordCount: 0,
+              milestoneId: Number(milestoneId),
+              projectTitle: milestoneId === '101' ? '검수 프로젝트' : undefined,
+              status: 'SUBMITTED',
+              teamId: 7,
+              teamName: '1팀',
+            },
+          ],
+        });
+      }
+
       return HttpResponse.json(
         teamId
           ? {

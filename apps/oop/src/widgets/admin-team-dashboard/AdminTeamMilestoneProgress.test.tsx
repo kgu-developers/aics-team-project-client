@@ -115,6 +115,10 @@ describe('AdminTeamMilestoneProgress', () => {
       screen.getByText('프로젝트 주제: AI 기반 팀 프로젝트 운영 플랫폼'),
     ).toBeInTheDocument();
     expect(screen.getByText('검토 대기 중')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '회의록 2건' })).toHaveAttribute(
+      'href',
+      '/admin/meetings?sectionId=%221%22&teamId=%221%22',
+    );
     expect(
       screen.queryByRole('link', { name: 'proposal.pdf' }),
     ).not.toBeInTheDocument();

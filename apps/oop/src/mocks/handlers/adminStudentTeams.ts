@@ -169,6 +169,7 @@ function getAdminTeamResponse(teamId: string) {
         {
           id: getEnrollmentId(student.id),
           isLeader: student.isLeader,
+          major: student.major,
           name: student.name,
           projectRole: null,
           studentNumber: student.studentNumber,

@@ -30,11 +30,20 @@ export {
   type AdminSubmissionArtifactsDownload,
 } from './downloadAdminSubmissionArtifacts';
 export {
-  fetchAdminPresentationEvaluations,
-  type AdminPresentationEvaluationCriterionDto,
-  type AdminPresentationEvaluationTeamDto,
+  fetchLegacyAdminPresentationEvaluations,
+  type LegacyAdminPresentationEvaluationCriterionDto,
+  type LegacyAdminPresentationEvaluationTeamDto,
+  type LegacyAdminPresentationEvaluationsResponse,
   type AdminPresentationEvaluationsResponse,
 } from './fetchAdminPresentationEvaluations';
+export {
+  fetchAdminPresentationEvaluationTeam,
+  type AdminPresentationEvaluationTeamDetailCriterionDto,
+  type AdminPresentationEvaluationTeamDetailEvaluationDto,
+  type AdminPresentationEvaluationTeamDetailResponse,
+  type AdminPresentationEvaluationTeamDetailScoreDto,
+  type AdminPresentationEvaluationTeamMeetingRecordDto,
+} from './fetchAdminPresentationEvaluationTeam';
 export {
   updatePresentationOrder,
   type UpdatePresentationOrderInput,

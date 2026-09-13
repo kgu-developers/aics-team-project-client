@@ -5,12 +5,14 @@ import {
   Heading,
   HStack,
   Text,
+  TextArea,
 } from '@aics/design-system';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { AdminLinkedMeetingsTable } from '~/features/admin-meeting/components';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import type { AdminSubmissionArtifactView } from '~/features/admin-milestone-review/model';
 import {
@@ -20,7 +22,12 @@ import {
 } from '~/features/admin-milestone-review/queries';
 import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import { useAuthStore } from '~/features/auth/authStore';
+import {
+  useSubmitTeamMessageMutation,
+  useTeamMessagesQuery,
+} from '~/features/team-message/queries';
 
+import { AdminMidReportDetail } from './AdminMidReportDetail';
 import * as styles from './AdminSubmissionDetailPage.css';
 
 const milestoneLabels = {
@@ -38,6 +45,11 @@ const versionDetailMilestoneIds = new Set([
   'proposal',
 ]);
 
+const feedbackRelatedTypeByMilestoneId = {
+  midterm: 'MID_REPORT',
+  proposal: 'PROPOSAL',
+} as const;
+
 function getMilestoneLabel(milestoneId: string | undefined) {
   if (milestoneId && Object.hasOwn(milestoneLabels, milestoneId)) {
     return milestoneLabels[milestoneId as keyof typeof milestoneLabels];
@@ -46,10 +58,22 @@ function getMilestoneLabel(milestoneId: string | undefined) {
   return '제출물';
 }
 
+function getFeedbackRelatedType(milestoneId: string | undefined) {
+  if (
+    milestoneId &&
+    Object.hasOwn(feedbackRelatedTypeByMilestoneId, milestoneId)
+  ) {
+    return feedbackRelatedTypeByMilestoneId[
+      milestoneId as keyof typeof feedbackRelatedTypeByMilestoneId
+    ];
+  }
+
+  return undefined;
+}
+
 function formatMeetingAt(value: string) {
   return value.replace('T', ' ');
 }
-
 function ArtifactValue({
   artifact,
 }: {
@@ -90,34 +114,55 @@ function ArtifactValue({
 export default function AdminSubmissionDetailPage() {
   const [selectedVersion, setSelectedVersion] = useState<number>();
   const [relatedMeetingsPage, setRelatedMeetingsPage] = useState(0);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
   const currentUser = useAuthStore(state => state.currentUser);
   const { submissionId } = useParams({
     from: '/admin/submissions/$submissionId',
   });
   const search = useSearch({ from: '/admin/submissions/$submissionId' }) as {
+    apiSectionId?: string;
     milestoneId?: string;
     sectionId?: string;
+    teamId?: string;
   };
   const accessibleSectionIds =
-    currentUser?.sections.map(section => section.id) ?? [];
+    currentUser?.sections.map(section => String(section.id)) ?? [];
+  const normalizedSectionId = search.sectionId?.replace(/^"|"$/g, '');
   const isRequestedSectionAccessible = Boolean(
-    search.sectionId && accessibleSectionIds.includes(search.sectionId),
+    currentUser &&
+    normalizedSectionId &&
+    accessibleSectionIds.includes(normalizedSectionId),
   );
+  const isMidReport = search.milestoneId === 'midterm';
   const isVersionDetailAvailable = Boolean(
-    search.milestoneId && versionDetailMilestoneIds.has(search.milestoneId),
+    search.milestoneId &&
+    versionDetailMilestoneIds.has(search.milestoneId) &&
+    !isMidReport,
+  );
+  const canRequestDetail = Boolean(
+    submissionId && isRequestedSectionAccessible && isVersionDetailAvailable,
   );
   const submissionQuery = useAdminMilestoneSubmissionDetailQuery(
     submissionId,
-    isRequestedSectionAccessible && isVersionDetailAvailable,
+    canRequestDetail,
   );
   const versionsQuery = useAdminSubmissionVersionsQuery(
     submissionId,
-    isRequestedSectionAccessible &&
-      isVersionDetailAvailable &&
-      submissionQuery.isSuccess,
+    canRequestDetail && submissionQuery.isSuccess,
   );
   const versions = versionsQuery.data ?? [];
   const detail = submissionQuery.data;
+  const feedbackRelatedType = getFeedbackRelatedType(search.milestoneId);
+  const feedbackMessagesQuery = useTeamMessagesQuery(
+    feedbackRelatedType ? detail?.teamId : undefined,
+    feedbackRelatedType,
+  );
+  const submitFeedbackMutation = useSubmitTeamMessageMutation(
+    feedbackRelatedType ? detail?.teamId : undefined,
+  );
+  const feedbackMessages = (feedbackMessagesQuery.data ?? []).filter(
+    message => String(message.relatedId) === detail?.submissionId,
+  );
   const relatedMeetingsQuery = useAdminMeetingRecordListQuery(
     accessibleSectionIds,
     {
@@ -127,7 +172,7 @@ export default function AdminSubmissionDetailPage() {
       size: 100,
       teamId: detail?.teamId,
     },
-    Boolean(detail && isRequestedSectionAccessible && isVersionDetailAvailable),
+    Boolean(detail && canRequestDetail),
   );
   const relatedMeetings = relatedMeetingsQuery.data?.contents ?? [];
   const relatedMeetingsPageable = relatedMeetingsQuery.data?.pageable;
@@ -160,9 +205,7 @@ export default function AdminSubmissionDetailPage() {
   const versionQuery = useAdminSubmissionVersionQuery(
     submissionId,
     selectedVersion,
-    isRequestedSectionAccessible &&
-      isVersionDetailAvailable &&
-      versionsQuery.isSuccess,
+    canRequestDetail && versionsQuery.isSuccess,
   );
   const { markAsRead } = useAdminReadState('submissions', {
     adminId: currentUser?.id,
@@ -185,11 +228,39 @@ export default function AdminSubmissionDetailPage() {
 
   const milestoneLabel = getMilestoneLabel(search.milestoneId);
 
+  if (
+    isRequestedSectionAccessible &&
+    isMidReport &&
+    search.sectionId &&
+    search.teamId
+  ) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.pageHeader}>
+          <Heading level={1}>제출물 &gt; {milestoneLabel}</Heading>
+          <Link
+            aria-label={`${milestoneLabel} 목록으로`}
+            className={styles.backLink}
+            search={search}
+            to={ROUTES.ADMIN_SUBMISSIONS}
+          >
+            ← {milestoneLabel} 목록으로
+          </Link>
+        </div>
+        <AdminMidReportDetail
+          sectionId={search.apiSectionId ?? search.sectionId}
+          teamId={search.teamId}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
         <Heading level={1}>제출물 &gt; {milestoneLabel}</Heading>
         <Link
+          aria-label={`${milestoneLabel} 목록으로`}
           className={styles.backLink}
           search={search}
           to={ROUTES.ADMIN_SUBMISSIONS}
@@ -378,6 +449,74 @@ export default function AdminSubmissionDetailPage() {
               </section>
             )}
           </Card>
+          {feedbackRelatedType ? (
+            <section className={styles.relatedMeetings}>
+              <section className={styles.section}>
+                <Heading level={3}>{milestoneLabel} 피드백</Heading>
+                {feedbackMessagesQuery.isPending ? (
+                  <Text aria-live='polite' role='status'>
+                    피드백을 불러오는 중입니다.
+                  </Text>
+                ) : feedbackMessagesQuery.isError ? (
+                  <EmptyState
+                    description='잠시 후 다시 시도해 주세요.'
+                    title='피드백을 불러오지 못했습니다.'
+                  />
+                ) : feedbackMessages.length === 0 ? (
+                  <Text className={styles.sectionDescription}>
+                    이 제출물에 연결된 피드백이 없습니다.
+                  </Text>
+                ) : (
+                  <div className={styles.feedbackList}>
+                    {feedbackMessages.map(message => (
+                      <article
+                        className={styles.feedbackMessage}
+                        key={message.id}
+                      >
+                        <Text className={styles.fieldLabel}>
+                          {message.senderName ?? message.senderId} ·{' '}
+                          {message.createdAt}
+                        </Text>
+                        <Text className={styles.fieldValue}>
+                          {message.message}
+                        </Text>
+                      </article>
+                    ))}
+                  </div>
+                )}
+                <div className={styles.feedbackComposer}>
+                  <TextArea
+                    aria-label={`${milestoneLabel} 피드백 내용`}
+                    label={`${milestoneLabel} 피드백 작성`}
+                    onChange={setFeedbackMessage}
+                    placeholder={`${detail.teamName}에 전달할 피드백을 입력하세요.`}
+                    value={feedbackMessage}
+                  />
+                  <div className={styles.feedbackSubmitAction}>
+                    <Button
+                      isDisabled={
+                        !feedbackMessage.trim() ||
+                        submitFeedbackMutation.isPending
+                      }
+                      label='피드백 보내기'
+                      onClick={() => {
+                        if (!feedbackMessage.trim()) return;
+
+                        submitFeedbackMutation.mutate(
+                          {
+                            message: feedbackMessage,
+                            relatedId: Number(detail.submissionId),
+                            relatedType: feedbackRelatedType,
+                          },
+                          { onSuccess: () => setFeedbackMessage('') },
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+              </section>
+            </section>
+          ) : null}
           <section className={styles.relatedMeetings}>
             <section className={styles.section}>
               <Heading level={3}>
@@ -400,65 +539,16 @@ export default function AdminSubmissionDetailPage() {
                   이 마일스톤에 연결된 회의록이 없습니다.
                 </Text>
               ) : (
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th
-                        className={`${styles.tableCell} ${styles.tableHeader}`}
-                        scope='col'
-                      >
-                        회의 제목
-                      </th>
-                      <th
-                        className={`${styles.tableCell} ${styles.tableHeader}`}
-                        scope='col'
-                      >
-                        회의 일시
-                      </th>
-                      <th
-                        className={`${styles.tableCell} ${styles.tableHeader}`}
-                        scope='col'
-                      >
-                        작성자
-                      </th>
-                      <th
-                        className={`${styles.tableCell} ${styles.tableHeader}`}
-                        scope='col'
-                      >
-                        참석 인원
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {relatedMeetings.map((meeting, index) => (
-                      <tr
-                        className={
-                          index === relatedMeetings.length - 1
-                            ? styles.lastTableRow
-                            : undefined
-                        }
-                        key={meeting.id}
-                      >
-                        <td className={styles.tableCell}>
-                          <Link
-                            className={styles.backLink}
-                            params={{ meetingId: String(meeting.id) }}
-                            to={ROUTES.ADMIN_MEETING_DETAIL}
-                          >
-                            {meeting.title}
-                          </Link>
-                        </td>
-                        <td className={styles.tableCell}>
-                          {formatMeetingAt(meeting.meetingAt)}
-                        </td>
-                        <td className={styles.tableCell}>{meeting.authorId}</td>
-                        <td className={styles.tableCell}>
-                          {meeting.participantCount}명
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <AdminLinkedMeetingsTable
+                  authorLabel='작성자 학번'
+                  records={relatedMeetings.map(meeting => ({
+                    authorName: meeting.authorId,
+                    id: meeting.id,
+                    meetingAt: meeting.meetingAt,
+                    participantCount: meeting.participantCount,
+                    title: meeting.title,
+                  }))}
+                />
               )}
               {relatedMeetingsPageable &&
               relatedMeetingsPageable.totalPages > 1 ? (

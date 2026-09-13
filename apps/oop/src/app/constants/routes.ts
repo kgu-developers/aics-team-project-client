@@ -5,6 +5,8 @@ export const ROUTES = {
   ADMIN_NOTICE_NEW: '/admin/notices/new',
   ADMIN_NOTICE_EDIT: '/admin/notices/$noticeId/edit',
   ADMIN_MEETINGS: '/admin/meetings',
+  ADMIN_MESSAGES: '/admin/messages',
+  ADMIN_MESSAGE_TEAM: '/admin/messages/teams/$teamId',
   ADMIN_MEETING_DETAIL: '/admin/meetings/$meetingId',
   ADMIN_MILESTONES: '/admin/milestones',
   ADMIN_MILESTONE_DETAIL: '/admin/milestones/$milestoneId',
@@ -14,6 +16,7 @@ export const ROUTES = {
   ADMIN_STUDENT_TEAM: '/admin/student-team',
   ADMIN_SUBMISSIONS: '/admin/submissions',
   ADMIN_SUBMISSION_DETAIL: '/admin/submissions/$submissionId',
+  ADMIN_EVALUATION_DETAIL: '/admin/evaluations/$evaluationType/teams/$teamId',
   ADMIN_TEAM_DETAIL: '/admin/teams/$teamId',
   STUDENT: {
     HOME: '/student',

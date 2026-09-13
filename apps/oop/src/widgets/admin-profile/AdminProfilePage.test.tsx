@@ -27,16 +27,20 @@ import {
   mockSessionResponseHeaders,
   issueMockSession,
 } from '~/mocks/authSession';
+import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
 import {
   getAdminProfile,
   resetAdminProfileMockData,
 } from '~/mocks/data/adminProfile';
+import { resetAdminSectionsMockData } from '~/mocks/data/adminSections';
 import {
   demoAdmin,
   demoAdminAccessToken,
   demoUserAccounts,
 } from '~/mocks/data/users';
+import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminProfileHandlers } from '~/mocks/handlers/adminProfile';
+import { adminSectionHandlers } from '~/mocks/handlers/adminSections';
 import {
   adminStudentTeamHandlers,
   resetAdminStudentTeamMockState,
@@ -44,6 +48,8 @@ import {
 import { authHandlers, resetDemoPasswordState } from '~/mocks/handlers/auth';
 
 const server = setupServer(
+  ...adminCourseHandlers,
+  ...adminSectionHandlers,
   ...adminProfileHandlers,
   ...authHandlers,
   ...adminStudentTeamHandlers,
@@ -83,6 +89,8 @@ beforeAll(() => {
   });
 });
 beforeEach(() => {
+  resetAdminCoursesMockData();
+  resetAdminSectionsMockData();
   resetAdminProfileMockData();
   resetAdminStudentTeamMockState();
   resetDemoPasswordState();
@@ -308,8 +316,8 @@ describe('AdminProfilePage', () => {
     });
     await user.upload(fileInput, excelFile);
     await user.click(screen.getByRole('button', { name: '미리보기' }));
-    expect(await screen.findByText('전체 4건')).toBeInTheDocument();
-    expect(screen.getByText('중복 4건')).toBeInTheDocument();
+    expect(await screen.findByText('전체 5건')).toBeInTheDocument();
+    expect(screen.getByText('중복 5건')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '반영하기' })).toBeEnabled();
   });
 
@@ -405,7 +413,7 @@ describe('AdminProfilePage', () => {
 
     await user.upload(fileInput, new File(['excel data'], '1151.xlsx'));
     await user.click(screen.getByRole('button', { name: '미리보기' }));
-    expect(await screen.findByText('전체 4건')).toBeInTheDocument();
+    expect(await screen.findByText('전체 5건')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '취소' }));
     await user.click(
