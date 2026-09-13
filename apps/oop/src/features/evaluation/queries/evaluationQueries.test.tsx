@@ -15,7 +15,8 @@ import {
 } from 'vitest';
 
 import { useEvaluationContextQuery } from './useEvaluationContextQuery';
-import { useMyPresentationEvaluationsQuery } from './useMyPresentationEvaluationsQuery';
+import { useMilestonePresentationsQuery } from './useMilestonePresentationsQuery';
+import { useMyTeamEvaluationsQuery } from './useMyTeamEvaluationsQuery';
 import { usePeerEvaluationTargetsQuery } from './usePeerEvaluationTargetsQuery';
 import { useTeamEvaluationCriteriaQuery } from './useTeamEvaluationCriteriaQuery';
 
@@ -23,6 +24,7 @@ const contextRequest = vi.fn();
 const presentationRequest = vi.fn();
 const peerRequest = vi.fn();
 const criteriaRequest = vi.fn();
+const presentationRosterRequest = vi.fn();
 
 const server = setupServer(
   http.get(
@@ -53,6 +55,13 @@ const server = setupServer(
       return HttpResponse.json([]);
     },
   ),
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MILESTONE_PRESENTATIONS(':milestoneId')}`,
+    () => {
+      presentationRosterRequest();
+      return HttpResponse.json({ contents: [] });
+    },
+  ),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -61,6 +70,7 @@ afterEach(() => {
   presentationRequest.mockClear();
   peerRequest.mockClear();
   criteriaRequest.mockClear();
+  presentationRosterRequest.mockClear();
   server.resetHandlers();
 });
 afterAll(() => server.close());
@@ -140,15 +150,52 @@ describe('evaluation queries', () => {
     },
   );
 
+  it('발표 마일스톤 ID가 없으면 Swagger 발표 팀 목록 API를 호출하지 않는다', () => {
+    const { result } = renderHook(() => useMilestonePresentationsQuery(''), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(presentationRosterRequest).not.toHaveBeenCalled();
+  });
+
+  it('Swagger 발표 팀 목록 API 응답을 조회한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MILESTONE_PRESENTATIONS(':milestoneId')}`,
+        () =>
+          HttpResponse.json({
+            contents: [
+              {
+                teamId: 7,
+                teamName: 'CineFlow',
+                submissionId: 19,
+                presentationOrder: 1,
+                project: { id: 1, teamId: 7, title: '영화관 관리' },
+                artifacts: [],
+              },
+            ],
+          }),
+      ),
+    );
+    const { result } = renderHook(() => useMilestonePresentationsQuery('22'), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual([
+      expect.objectContaining({ teamId: 7, presentationOrder: 1 }),
+    ]);
+  });
+
   it.each([
-    ['', '20260001', 'presentation'],
-    ['oop-2026-2-01', '', 'presentation'],
-    ['oop-2026-2-01', '20260001', ''],
+    ['', '303'],
+    ['20260001', ''],
   ])(
-    '분반, 사용자 또는 마일스톤 ID가 없으면 발표 평가 API를 호출하지 않는다',
-    (sectionId, userId, milestoneId) => {
+    '사용자 또는 마일스톤 ID가 없으면 발표 평가 API를 호출하지 않는다',
+    (userId, milestoneId) => {
       const { result } = renderHook(
-        () => useMyPresentationEvaluationsQuery(sectionId, userId, milestoneId),
+        () => useMyTeamEvaluationsQuery(userId, milestoneId),
         { wrapper: createWrapper() },
       );
 

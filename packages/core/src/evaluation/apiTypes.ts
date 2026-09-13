@@ -36,3 +36,33 @@ export type PeerEvaluationTargetsResponse = {
   targets: PeerEvaluationTarget[];
   myResponse: PeerEvaluationResponseDto | null;
 };
+
+/** Swagger: GET /milestones/{milestoneId}/team-evaluations/me */
+export type TeamEvaluationCriterionDto = {
+  id: number;
+  title: string;
+  maxScore: number;
+  displayOrder: number;
+};
+export type TeamEvaluationScoreDto = {
+  criterionId: number;
+  score: number;
+};
+export type TeamEvaluationDto = {
+  id: number;
+  teamId: number;
+  scores: TeamEvaluationScoreDto[];
+  submittedAt?: string | null;
+};
+export type MyTeamEvaluationsResponse = {
+  milestoneId: number;
+  criteria: TeamEvaluationCriterionDto[];
+  evaluations: TeamEvaluationDto[];
+  evaluationOpensAt?: string | null;
+  evaluationClosesAt?: string | null;
+  windowState: 'UNAVAILABLE' | 'UPCOMING' | 'OPEN' | 'CLOSED';
+};
+/** Swagger: PUT /milestones/{milestoneId}/team-evaluations/{teamId} */
+export type SubmitTeamEvaluationInput = {
+  scores: TeamEvaluationScoreDto[];
+};

@@ -239,3 +239,33 @@ export const helper = style({
   fontSize: 14,
   margin: 0,
 });
+export const previewTitle = style({
+  color: tokens.color.text.secondary,
+  fontSize: 14,
+  fontWeight: 600,
+  margin: 0,
+});
+export const tableScroll = style({
+  overflowX: 'auto',
+  width: '100%',
+});
+export const table = style({
+  borderCollapse: 'collapse',
+  fontSize: 14,
+  minWidth: 320,
+  width: '100%',
+});
+globalStyle(`${table} th, ${table} td`, {
+  borderBottom: `1px solid ${tokens.color.border.base}`,
+  padding: `${tokens.spacing['2']} ${tokens.spacing['3']}`,
+  textAlign: 'left',
+  verticalAlign: 'top',
+});
+globalStyle(`${table} th`, {
+  color: tokens.color.text.secondary,
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+});
+globalStyle(`${table} td`, {
+  color: tokens.color.text.primary,
+});

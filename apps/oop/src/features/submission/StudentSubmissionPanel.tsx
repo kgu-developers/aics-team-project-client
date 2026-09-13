@@ -13,26 +13,26 @@ import { useRef, useState } from 'react';
 import { useAuthStore } from '~/features/auth/authStore';
 import { useTeamKickoffQuery } from '~/features/team-assignment/queries';
 
-import * as styles from './FinalReportSubmissionPanel.css';
 import {
   useRequiredSubmissionArtifactsQuery,
   useStudentSubmissionQuery,
   useStudentSubmissionVersionsQuery,
   useSubmitStudentSubmissionVersionMutation,
 } from './queries';
+import * as styles from './StudentSubmissionPanel.css';
 import type { StudentSubmissionScope } from './submissionScope';
 import { submissionUploadInput } from './submissionUploadInput';
 
-export type FinalReportSubmissionTarget = StudentSubmissionScope & {
+export type StudentSubmissionTarget = StudentSubmissionScope & {
   submissionId: string;
-  type: 'FINAL_REPORT';
+  type: 'PRESENTATION' | 'FINAL_REPORT';
   title: string;
 };
 
-export default function FinalReportSubmissionPanel({
+export default function StudentSubmissionPanel({
   target,
 }: {
-  target: FinalReportSubmissionTarget;
+  target: StudentSubmissionTarget;
 }) {
   const user = useAuthStore(state => state.currentUser);
   const detail = useStudentSubmissionQuery(target, target.submissionId);

@@ -1,10 +1,9 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import type {
   MyPeerEvaluationResponse,
-  MyPresentationEvaluation,
   PeerEvaluationTeammateAnswer,
   SubmitPeerEvaluationResponseInput,
-  SubmitPresentationEvaluationInput,
+  SubmitTeamEvaluationInput,
 } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
@@ -12,18 +11,20 @@ import { getMockAccessToken } from '../authSession';
 import {
   evaluationSectionId,
   getEvaluationMembership,
+  getMilestonePresentations,
+  getMyTeamEvaluations,
   getPeerWindowState,
   getPeerResponse,
   getPeerTargets,
-  getPresentationEvaluation,
-  getPresentationEvaluationOverview,
-  getPresentationTeam,
+  getPresentationTeamByNumericId,
   getPresentationWindowState,
   peerEvaluationFormId,
   presentationEvaluationCriteria,
   presentationEvaluationMilestoneId,
   setPeerResponse,
-  upsertPresentationEvaluation,
+  teamEvaluationCriteria,
+  teamNumericId,
+  upsertTeamEvaluation,
 } from '../data/evaluation';
 import { getDemoUserAccount } from '../data/users';
 
@@ -101,18 +102,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function isPresentationInput(
+function isTeamEvaluationInput(
   value: unknown,
-): value is SubmitPresentationEvaluationInput {
+): value is SubmitTeamEvaluationInput {
   return (
     isRecord(value) &&
-    typeof value.rateeTeamId === 'string' &&
-    typeof value.submit === 'boolean' &&
     Array.isArray(value.scores) &&
     value.scores.every(
       score =>
         isRecord(score) &&
-        typeof score.criterionId === 'string' &&
+        typeof score.criterionId === 'number' &&
         typeof score.score === 'number',
     )
   );
@@ -210,6 +209,22 @@ export const evaluationHandlers = [
     },
   ),
   http.get(
+    `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MILESTONE_PRESENTATIONS(':milestoneId')}`,
+    ({ params, request }) => {
+      const student = requireEvaluationStudent(request);
+      if ('response' in student) return student.response;
+      const scopeError = requireEvaluationResourceScope(student);
+      if (scopeError) return scopeError;
+      if (params.milestoneId !== presentationEvaluationMilestoneId)
+        return error(
+          'MILESTONE_NOT_FOUND',
+          '발표 마일스톤을 찾을 수 없어요.',
+          404,
+        );
+      return HttpResponse.json({ contents: getMilestonePresentations() });
+    },
+  ),
+  http.get(
     `${API_BASE_URL}${ENDPOINTS.EVALUATION.MY_TEAM_EVALUATIONS(':milestoneId')}`,
     ({ params, request }) => {
       const student = requireEvaluationStudent(request);
@@ -222,13 +237,11 @@ export const evaluationHandlers = [
           '발표 평가 일정을 찾을 수 없어요.',
           404,
         );
-      return HttpResponse.json(
-        getPresentationEvaluationOverview(student.userId),
-      );
+      return HttpResponse.json(getMyTeamEvaluations(student.userId));
     },
   ),
-  http.post(
-    `${API_BASE_URL}${ENDPOINTS.EVALUATION.TEAM_EVALUATIONS(':milestoneId')}`,
+  http.put(
+    `${API_BASE_URL}${ENDPOINTS.EVALUATION.TEAM_EVALUATION(':milestoneId', ':teamId')}`,
     async ({ params, request }) => {
       const student = requireEvaluationStudent(request);
       if ('response' in student) return student.response;
@@ -240,86 +253,54 @@ export const evaluationHandlers = [
           '발표 평가 일정을 찾을 수 없어요.',
           404,
         );
-      const windowState = getPresentationWindowState();
-      if (windowState === 'UPCOMING')
-        return error(
-          'EVALUATION_NOT_OPEN',
-          '발표 평가가 아직 시작되지 않았어요.',
-          403,
-        );
-      if (windowState === 'NOT_CONFIGURED')
-        return error(
-          'EVALUATION_NOT_CONFIGURED',
-          '발표 평가 시작 시간이 설정되지 않았어요.',
-          403,
-        );
+      // 서버는 평가 창이 열려 있을 때만 저장한다(TeamEvaluationFacade#accessContext).
+      if (getPresentationWindowState() !== 'OPEN')
+        return error('EVALUATION_NOT_OPEN', '발표 평가 기간이 아니에요.', 403);
       const input = await parseBody<unknown>(request);
-      if (!isPresentationInput(input))
+      if (!isTeamEvaluationInput(input))
         return error(
           'INVALID_REQUEST',
           '발표 평가 요청 형식이 올바르지 않아요.',
           400,
         );
-      const team = getPresentationTeam(input.rateeTeamId);
+      const teamId = Number(params.teamId);
+      const team = getPresentationTeamByNumericId(teamId);
       if (!team)
         return error('TARGET_NOT_FOUND', '평가 대상 팀을 찾을 수 없어요.', 404);
-      if (input.rateeTeamId === student.teamId)
+      if (teamId === teamNumericId(student.teamId))
         return error(
           'OWN_TEAM_NOT_ALLOWED',
           '자신의 팀 발표는 평가할 수 없어요.',
           422,
         );
-      const existing = getPresentationEvaluation(
-        student.userId,
-        input.rateeTeamId,
-      );
-      if (existing?.status === 'SUBMITTED')
-        return error(
-          'ALREADY_SUBMITTED',
-          '이미 제출한 팀 평가는 수정할 수 없어요.',
-          409,
-        );
-      const knownCriteria = new Set(
-        presentationEvaluationCriteria.map(item => item.id),
+      const criteria = new Map(
+        teamEvaluationCriteria.map(criterion => [criterion.id, criterion]),
       );
       const uniqueCriteria = new Set(
-        input.scores.map(item => item.criterionId),
+        input.scores.map(score => score.criterionId),
       );
-      const hasInvalidScore = input.scores.some(
-        item =>
-          !knownCriteria.has(item.criterionId) ||
-          !Number.isInteger(item.score) ||
-          item.score < 1 ||
-          item.score > 5,
-      );
-      if (hasInvalidScore || uniqueCriteria.size !== input.scores.length)
-        return error(
-          'INVALID_SCORE',
-          '각 평가 항목은 1점부터 5점까지 한 번씩 입력해 주세요.',
-          422,
+      const hasInvalidScore = input.scores.some(score => {
+        const criterion = criteria.get(score.criterionId);
+        return (
+          !criterion ||
+          !Number.isInteger(score.score) ||
+          score.score < 0 ||
+          score.score > criterion.maxScore
         );
+      });
       if (
-        input.submit &&
-        uniqueCriteria.size !== presentationEvaluationCriteria.length
+        hasInvalidScore ||
+        uniqueCriteria.size !== input.scores.length ||
+        uniqueCriteria.size !== teamEvaluationCriteria.length
       )
         return error(
-          'INCOMPLETE_EVALUATION',
-          '모든 발표 평가 항목의 점수를 선택해 주세요.',
+          'INVALID_SCORE',
+          '모든 평가 항목의 점수를 한 번씩 입력해 주세요.',
           422,
         );
-      const now = new Date().toISOString();
-      const evaluation: MyPresentationEvaluation = {
-        id:
-          existing?.id ??
-          `team-evaluation-${student.userId}-${input.rateeTeamId}`,
-        rateeTeamId: input.rateeTeamId,
-        scores: input.scores,
-        status: input.submit ? 'SUBMITTED' : 'DRAFT',
-        updatedAt: now,
-        submittedAt: input.submit ? now : undefined,
-      };
-      upsertPresentationEvaluation(student.userId, evaluation);
-      return HttpResponse.json(evaluation);
+      return HttpResponse.json(
+        upsertTeamEvaluation(student.userId, teamId, input.scores),
+      );
     },
   ),
   http.get(

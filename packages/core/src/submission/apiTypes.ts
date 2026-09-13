@@ -1,4 +1,9 @@
 import type { MyTeamMilestoneSubmissionResponse } from '../milestone/studentMilestone';
+import type {
+  ProposalDataItem,
+  ProposalScreenItem,
+} from '../proposal/apiTypes';
+import type { TeamKickoffResponse } from '../team/types';
 
 export type StudentSubmissionResponse = MyTeamMilestoneSubmissionResponse;
 export type StudentSubmissionStatus = StudentSubmissionResponse['status'];
@@ -47,4 +52,29 @@ export type StudentSubmissionVersionInput = {
     url?: string;
     content?: string;
   }[];
+};
+
+/** Swagger: GET /milestones/{milestoneId}/presentations */
+export type MilestonePresentationProject = {
+  approvalStatus?: 'DRAFT' | 'PENDING' | 'APPROVED' | 'REJECTED' | null;
+  dataConfiguration?: ProposalDataItem[] | null;
+  description?: string | null;
+  goal?: string | null;
+  id: number;
+  projectSchedule?: string | null;
+  proposalCompletedAt?: string | null;
+  repositoryUrl?: string | null;
+  screenConfiguration?: ProposalScreenItem[] | null;
+  teamId: number;
+  teamOperation?: TeamKickoffResponse | null;
+  title?: string | null;
+  topicCandidateId?: number | null;
+};
+export type MilestonePresentation = {
+  artifacts: StudentSubmissionArtifact[];
+  presentationOrder?: number | null;
+  project?: MilestonePresentationProject | null;
+  submissionId: number;
+  teamId: number;
+  teamName?: string | null;
 };

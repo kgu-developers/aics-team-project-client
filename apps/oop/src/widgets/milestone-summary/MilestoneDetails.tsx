@@ -1,11 +1,11 @@
 import type {
   MidReportFeedback,
+  MilestonePresentation,
   ProposalFeedbackResponse,
   StudentHomeFeedbackMessage,
   StudentHomeFile,
   StudentHomeMilestoneBody,
   StudentHomeSectionStatus,
-  StudentHomeTeamStatus,
 } from '@aics/core';
 import {
   Button,
@@ -19,6 +19,7 @@ import { Link } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
 import { type FormEvent, useState } from 'react';
 
+import { useMilestonePresentationsQuery } from '~/features/evaluation/queries';
 import ProjectTopicBoard from '~/features/project-topic/ProjectTopicBoard';
 import {
   useProposalFeedbackQuery,
@@ -26,9 +27,10 @@ import {
   useSubmitMidReportFeedbackMutation,
   useSubmitProposalFeedbackResponseMutation,
 } from '~/features/student-feedback/queries';
+import { safeSubmissionUrl } from '~/features/submission/submissionUploadInput';
 
-import FinalReportMaterials from './FinalReportMaterials';
 import * as styles from './MilestoneDetails.css';
+import StudentSubmissionMaterials from './StudentSubmissionMaterials';
 import SubmissionMaterials from './SubmissionMaterials';
 
 type MilestoneDetailsProps = {
@@ -352,20 +354,80 @@ function SectionStatusList({
   );
 }
 
-function TeamList({ teams }: { teams: StudentHomeTeamStatus[] }) {
+function PresentationTeamDetails({
+  presentations,
+}: {
+  presentations: MilestonePresentation[];
+}) {
+  const teams = [...presentations].sort(
+    (left, right) =>
+      (left.presentationOrder ?? Number.MAX_SAFE_INTEGER) -
+        (right.presentationOrder ?? Number.MAX_SAFE_INTEGER) ||
+      left.teamId - right.teamId,
+  );
+
   return (
-    <ul className={styles.sectionList}>
-      {teams.map(team => (
-        <li className={styles.sectionRow} key={team.id}>
-          <span className={styles.sectionLabelWrap}>
-            <span className={styles.sectionLabel}>{team.label}</span>
-            {team.isMine ? (
-              <span className={styles.teamMine}>내 팀</span>
+    <>
+      {teams.map(team => {
+        const project = team.project;
+        const materials = team.artifacts.flatMap((artifact, index) => {
+          if (artifact.type !== 'FILE' && artifact.type !== 'LINK') return [];
+          const value = artifact.fileName ?? artifact.url ?? undefined;
+          return [
+            {
+              extension:
+                artifact.type === 'FILE'
+                  ? (artifact.fileName?.split('.').pop()?.toUpperCase() ??
+                    'FILE')
+                  : 'LINK',
+              href: safeSubmissionUrl(
+                artifact.type === 'FILE' ? artifact.downloadUrl : artifact.url,
+              ),
+              id: `${team.submissionId}:${index}`,
+              kind: artifact.type,
+              label: artifact.type === 'FILE' ? '제출 파일' : '제출 링크',
+              value,
+            },
+          ];
+        });
+        return (
+          <section className={styles.feedbackList} key={team.teamId}>
+            <SectionBanner
+              title={
+                team.presentationOrder == null
+                  ? `${team.teamName ?? `${team.teamId}팀`} · 발표 순서 미정`
+                  : `${team.presentationOrder}번 발표 · ${team.teamName ?? `${team.teamId}팀`}`
+              }
+            />
+            <ProjectSummary
+              description={
+                project?.description ??
+                project?.goal ??
+                '프로젝트 설명이 등록되지 않았어요.'
+              }
+              title={project?.title ?? '프로젝트 제목이 등록되지 않았어요.'}
+            />
+            {project?.goal && project.goal !== project.description ? (
+              <p className={styles.guide}>목표: {project.goal}</p>
             ) : null}
-          </span>
-        </li>
-      ))}
-    </ul>
+            {safeSubmissionUrl(project?.repositoryUrl) ? (
+              <a
+                className={styles.sectionLink}
+                href={safeSubmissionUrl(project?.repositoryUrl)}
+                rel='noreferrer'
+                target='_blank'
+              >
+                프로젝트 저장소 열기
+              </a>
+            ) : null}
+            <SubmissionMaterials
+              materials={materials}
+              showMetadataTitle={false}
+            />
+          </section>
+        );
+      })}
+    </>
   );
 }
 
@@ -478,8 +540,10 @@ function MidReportFeedbackBody({
 
 function PresentationMaterialBody({
   body,
+  milestoneId,
 }: {
   body: Extract<StudentHomeMilestoneBody, { kind: 'presentation-material' }>;
+  milestoneId?: string;
 }) {
   return (
     <div className={styles.root}>
@@ -489,30 +553,42 @@ function PresentationMaterialBody({
         title={body.project.title}
       />
       <SectionBanner title='제출 자료' />
-      <SubmissionMaterials
-        materials={body.materials}
-        metadata={body.submission}
-        showMetadataTitle={false}
-      />
+      {milestoneId && /^\d+$/.test(milestoneId) ? (
+        <StudentSubmissionMaterials milestoneId={milestoneId} />
+      ) : (
+        <SubmissionMaterials
+          materials={body.materials}
+          metadata={body.submission}
+          showMetadataTitle={false}
+        />
+      )}
     </div>
   );
 }
 
 function PresentationEvaluationBody({
   body,
+  milestoneId,
 }: {
   body: Extract<StudentHomeMilestoneBody, { kind: 'presentation-evaluation' }>;
+  milestoneId?: string;
 }) {
+  const presentationsQuery = useMilestonePresentationsQuery(milestoneId ?? '');
   return (
     <div className={styles.root}>
-      <SectionBanner title='내 팀 발표 자료' />
-      <ProjectSummary
-        description={body.project.description}
-        title={body.project.title}
-      />
-      <p className={styles.guide}>{body.orderGuide}</p>
-      <SectionBanner title='팀별 상태' />
-      <TeamList teams={body.teams} />
+      {presentationsQuery.isPending ? (
+        <p className={styles.guide}>발표 팀 정보를 불러오는 중이에요.</p>
+      ) : null}
+      {presentationsQuery.isSuccess ? (
+        presentationsQuery.data.length ? (
+          <PresentationTeamDetails presentations={presentationsQuery.data} />
+        ) : (
+          <p className={styles.guide}>제출된 발표 자료가 아직 없어요.</p>
+        )
+      ) : null}
+      {presentationsQuery.isError ? (
+        <p className={styles.guide}>발표 팀 정보를 불러오지 못했어요.</p>
+      ) : null}
       <p className={styles.guide}>{body.timeGuide}</p>
     </div>
   );
@@ -531,7 +607,7 @@ function FinalReportBody({
       <ProjectSummary description={body.notice.description} />
       {body.notice.file ? <FileRow file={body.notice.file} /> : null}
       {milestoneId && /^\d+$/.test(milestoneId) ? (
-        <FinalReportMaterials milestoneId={milestoneId} />
+        <StudentSubmissionMaterials milestoneId={milestoneId} />
       ) : (
         <SubmissionMaterials
           materials={body.materials}
@@ -573,9 +649,11 @@ export default function MilestoneDetails({
     case 'mid-review-feedback':
       return <MidReportFeedbackBody body={body} />;
     case 'presentation-material':
-      return <PresentationMaterialBody body={body} />;
+      return <PresentationMaterialBody body={body} milestoneId={milestoneId} />;
     case 'presentation-evaluation':
-      return <PresentationEvaluationBody body={body} />;
+      return (
+        <PresentationEvaluationBody body={body} milestoneId={milestoneId} />
+      );
     case 'final-report':
       return <FinalReportBody body={body} milestoneId={milestoneId} />;
     case 'peer-evaluation':

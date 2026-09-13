@@ -54,6 +54,7 @@ export { fetchStudentSubmissionPreview } from './fetchStudentSubmissionPreview';
 
 export { submitStudentSubmissionVersion } from './submitStudentSubmissionVersion';
 export { fetchRequiredSubmissionArtifacts } from './fetchRequiredSubmissionArtifacts';
+export { fetchMilestonePresentations } from './fetchMilestonePresentations';
 
 export { fetchStudentSubmissionMemberConsent } from './fetchStudentSubmissionMemberConsent';
 export { updateStudentSubmissionMemberConsent } from './updateStudentSubmissionMemberConsent';

@@ -3,9 +3,9 @@ import { Button, Text, VStack } from '@aics/design-system';
 
 import { safeSubmissionUrl } from '~/features/submission/submissionUploadInput';
 
-import * as styles from './FinalReportSubmissionHistory.css';
+import * as styles from './SubmissionHistory.css';
 
-export default function FinalReportSubmissionHistory({
+export default function SubmissionHistory({
   versions,
   onRefresh,
 }: {

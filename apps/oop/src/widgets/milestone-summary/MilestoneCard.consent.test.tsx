@@ -14,8 +14,8 @@ import {
   useSubmissionDialog,
 } from '~/features/submission/SubmissionDialogContext';
 
-import FinalReportMaterials from './FinalReportMaterials';
 import MilestoneCard from './MilestoneCard';
+import StudentSubmissionMaterials from './StudentSubmissionMaterials';
 
 import { studentSubmissionConsent } from '~/mocks/data/studentSubmissionConsent';
 import {
@@ -129,7 +129,7 @@ function setup({
     <AstryxThemeProvider>
       <QueryClientProvider client={client}>
         <SubmissionDialogProvider
-          finalReportTargets={{
+          submissionTargets={{
             '21': {
               sectionId: '1',
               teamId: '7',
@@ -144,7 +144,7 @@ function setup({
           <MilestoneCard milestone={milestone} isOpen />
           {showFiles ? (
             <section aria-label='제출 자료 본문'>
-              <FinalReportMaterials milestoneId='21' />
+              <StudentSubmissionMaterials milestoneId='21' />
             </section>
           ) : null}
           <DialogObserver />
