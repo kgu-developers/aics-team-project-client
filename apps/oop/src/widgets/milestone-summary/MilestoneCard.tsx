@@ -49,7 +49,7 @@ export default function MilestoneCard({
   const toast = useToast();
   const currentUser = useAuthStore(state => state.currentUser);
   const { setIsOpen: setTopicCandidateDialogOpen } = useTopicCandidateDialog();
-  const { openDialog: openSubmissionDialog, finalReportTargets } =
+  const { openDialog: openSubmissionDialog, submissionTargets } =
     useSubmissionDialog();
   const sectionId =
     currentUser?.sections.find(section => section.role === 'STUDENT')?.id ?? '';
@@ -82,7 +82,7 @@ export default function MilestoneCard({
     ) : null;
 
   function handleFinalReportAction() {
-    if (finalReportTargets[milestone.id] || isTeamLeader) {
+    if (submissionTargets[milestone.id] || isTeamLeader) {
       openSubmissionDialog('final-report', milestone.id);
       return;
     }
@@ -184,7 +184,11 @@ export default function MilestoneCard({
                           ? handleFinalReportAction
                           : milestone.body?.kind === 'presentation-material' &&
                               row.id === 'presentation-material'
-                            ? () => openSubmissionDialog('presentation')
+                            ? () =>
+                                openSubmissionDialog(
+                                  'presentation',
+                                  milestone.id,
+                                )
                             : row.actionTo
                               ? () => navigate({ to: row.actionTo })
                               : undefined
@@ -242,7 +246,7 @@ export default function MilestoneCard({
           {milestone.rows.map(row => {
             const target =
               row.id === 'final-report-submission'
-                ? finalReportTargets[milestone.id]
+                ? submissionTargets[milestone.id]
                 : undefined;
             return target ? (
               <FinalReportSubmissionAction

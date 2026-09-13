@@ -1,12 +1,11 @@
 import { Dialog, EmptyState } from '@aics/design-system';
 
-import FinalReportSubmissionPanel from './FinalReportSubmissionPanel';
+import StudentSubmissionPanel from './StudentSubmissionPanel';
 import * as styles from './SubmissionDialog.css';
 import {
   type SubmissionDialogMilestoneId,
   useSubmissionDialog,
 } from './SubmissionDialogContext';
-import SubmissionFilePanel from './SubmissionFilePanel';
 
 const dialogCopy: Record<
   SubmissionDialogMilestoneId,
@@ -42,21 +41,13 @@ export default function SubmissionDialog() {
       purpose='form'
     >
       <div className={styles.content}>
-        {milestoneId === 'final-report' ? (
-          target ? (
-            <FinalReportSubmissionPanel
-              key={`${target.studentNumber}:${target.sectionId}:${target.teamId}:${target.milestoneId}`}
-              target={target}
-            />
-          ) : (
-            <EmptyState title='최종보고서 제출 대상을 확인할 수 없어요.' />
-          )
-        ) : (
-          <SubmissionFilePanel
-            milestoneId={milestoneId}
-            showCurrentFiles={false}
-            title={copy.title}
+        {target ? (
+          <StudentSubmissionPanel
+            key={`${target.studentNumber}:${target.sectionId}:${target.teamId}:${target.milestoneId}`}
+            target={target}
           />
+        ) : (
+          <EmptyState title='제출 대상을 확인할 수 없어요.' />
         )}
       </div>
     </Dialog>

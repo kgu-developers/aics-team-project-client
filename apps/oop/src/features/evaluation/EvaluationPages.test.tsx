@@ -23,9 +23,10 @@ import PeerEvaluationPage from './PeerEvaluationPage';
 import PresentationEvaluationPage from './PresentationEvaluationPage';
 
 import {
-  getPresentationEvaluationOverview,
+  getMyTeamEvaluations,
   resetEvaluationMockData,
   setEvaluationWindowStates,
+  teamEvaluationCriteria,
 } from '~/mocks/data/evaluation';
 import { demoAccessToken, demoStudent } from '~/mocks/data/users';
 import { evaluationHandlers } from '~/mocks/handlers/evaluation';
@@ -73,6 +74,11 @@ function renderPage(element: ReactElement) {
   }
 
   return render(element, { wrapper: Wrapper });
+}
+
+function renderPresentationPage() {
+  useAuthStore.getState().setCurrentUser({ ...demoStudent, teamId: '7' });
+  return renderPage(<PresentationEvaluationPage />);
 }
 
 describe('KD3-92 학생 평가 화면', () => {
@@ -254,103 +260,6 @@ describe('KD3-92 학생 평가 화면', () => {
     );
   });
 
-  it('현재 팀 평가를 완료한 뒤 팀별로 제출한다', async () => {
-    const user = userEvent.setup();
-    renderPage(<PresentationEvaluationPage />);
-
-    expect(
-      await screen.findByRole('heading', { level: 1, name: '발표 평가' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('프로젝트 완성도')).toBeInTheDocument();
-    expect(screen.getByText('기능 구성과 구현')).toBeInTheDocument();
-    expect(screen.getByText('발표 전달력')).toBeInTheDocument();
-    expect(
-      screen.getByRole('region', { name: /제출 PDF 미리보기/ }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText('bookloop-final-presentation.pdf', { exact: false }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'PDF 원본 열기' })).toHaveAttribute(
-      'href',
-      '/evaluation/bookloop-presentation.pdf',
-    );
-    expect(screen.getByAltText('도서 검색 화면 미리보기')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('navigation', { name: '발표 팀 진행 상황' }),
-    ).not.toBeInTheDocument();
-    const evaluationForm = screen.getByRole('region', { name: '발표 평가' });
-    const teamNavigation = screen.getByRole('navigation', {
-      name: '발표 팀 이동',
-    });
-    const teamSubmit = screen.getByRole('region', {
-      name: '현재 팀 발표 평가 제출',
-    });
-    const teamContent = screen.getByRole('region', {
-      name: 'BookLoop · 도서 대여 관리 프로그램',
-    });
-    const actionFooter = screen.getByLabelText('발표 평가 작업');
-    expect(teamContent).toContainElement(evaluationForm);
-    expect(actionFooter).toContainElement(teamNavigation);
-    expect(actionFooter).toContainElement(teamSubmit);
-    expect(
-      evaluationForm.compareDocumentPosition(teamNavigation) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(
-      teamNavigation.compareDocumentPosition(teamSubmit) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(screen.queryByRole('timer')).not.toBeInTheDocument();
-    expect(screen.getByText(/발표 수업 시간/)).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: '임시 저장' }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '제출하기' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-
-    for (const option of screen.getAllByRole('radio', { name: '4점' }))
-      await user.click(option);
-    expect(
-      screen.getByRole('button', { name: '제출하기' }),
-    ).not.toHaveAttribute('aria-disabled', 'true');
-    await user.click(screen.getByRole('button', { name: '제출하기' }));
-
-    expect(
-      await screen.findByText('BookLoop (1팀) 발표 평가를 제출했어요.'),
-    ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: '제출 완료' })).toHaveAttribute(
-        'aria-disabled',
-        'true',
-      ),
-    );
-
-    await user.click(screen.getByRole('button', { name: '다음 팀' }));
-    expect(
-      screen.getByRole('region', {
-        name: 'CafeQueue · 카페 주문 관리 프로그램',
-      }),
-    ).toBeInTheDocument();
-    for (const option of screen.getAllByRole('radio', { name: '5점' }))
-      await user.click(option);
-    expect(
-      screen.getByRole('button', { name: '제출하기' }),
-    ).not.toHaveAttribute('aria-disabled', 'true');
-    await user.click(screen.getByRole('button', { name: '제출하기' }));
-
-    expect(
-      await screen.findByText('CafeQueue (3팀) 발표 평가를 제출했어요.'),
-    ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: '제출 완료' })).toHaveAttribute(
-        'aria-disabled',
-        'true',
-      ),
-    );
-  });
-
   it('상호평가의 팀원 기여도와 개인보고서를 한 번에 제출한다', async () => {
     const user = userEvent.setup();
     renderPage(<PeerEvaluationPage />);
@@ -484,155 +393,182 @@ describe('KD3-92 학생 평가 화면', () => {
     ).toBeInTheDocument();
   });
 
-  it('발표평가 점수를 팀 이동 시 서버 초안에 저장하고 복원한다', async () => {
-    const user = userEvent.setup();
-    const view = renderPage(<PresentationEvaluationPage />);
+  it('우리 팀 발표는 자료만 보여 주고 평가 입력을 잠근다', async () => {
+    renderPresentationPage();
 
-    await screen.findByRole('heading', { level: 1, name: '발표 평가' });
-    const firstFourPointOption = screen.getAllByRole('radio', {
-      name: '4점',
-    })[0];
-    expect(firstFourPointOption).toBeDefined();
-    await user.click(firstFourPointOption!);
-    await user.click(screen.getByRole('button', { name: '다음 팀' }));
-
-    view.unmount();
-    renderPage(<PresentationEvaluationPage />);
-    await screen.findByRole('heading', { level: 1, name: '발표 평가' });
-
-    expect(screen.getAllByRole('radio', { name: '4점' })[0]).toBeChecked();
+    expect(
+      await screen.findByRole('heading', {
+        level: 2,
+        name: 'CineFlow · 영화관 통합 관리 시스템',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('timer')).toHaveTextContent('평가 마감까지');
+    expect(
+      screen.getByText('우리 팀 발표는 평가 대상이 아니에요.'),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('radio', { name: '5점' })[0]).toBeDisabled();
+    expect(
+      screen.queryByRole('button', { name: '평가 제출' }),
+    ).not.toBeInTheDocument();
   });
 
-  it('수업 시작 refetch에서 추가된 팀의 서버 초안 점수로 제출을 활성화한다', async () => {
-    const overview = getPresentationEvaluationOverview(
-      demoStudent.studentNumber,
-    );
-    const initialTeam = overview.teams.find(team => team.id === 'team-03');
-    const savedTeam = overview.teams.find(team => team.id === 'team-01');
-    if (!initialTeam || !savedTeam)
-      throw new Error('발표 평가 회귀 테스트 팀 fixture가 필요합니다.');
+  it('다른 팀 발표 자료를 확인하고 평가를 제출한다', async () => {
+    const user = userEvent.setup();
+    renderPresentationPage();
 
+    await screen.findByRole('heading', { level: 1, name: '발표 평가' });
+    await user.click(screen.getByRole('button', { name: '다음 팀' }));
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 2,
+        name: 'BookLoop · 도서 대여 관리 프로그램',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: 'bookloop-final-presentation.pdf' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', {
+        name: 'bookloop-final-presentation.pdf 미리보기',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '평가 제출' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+
+    for (const option of screen.getAllByRole('radio', { name: '5점' }))
+      await user.click(option);
+    const submit = screen.getByRole('button', { name: '평가 제출' });
+    expect(submit).not.toHaveAttribute('aria-disabled', 'true');
+    await user.click(submit);
+
+    expect(
+      await screen.findAllByText('BookLoop (1팀) 평가를 제출했어요.'),
+    ).not.toHaveLength(0);
+    expect(
+      await screen.findByText(
+        '제출한 평가예요. 기간 안에는 다시 제출해 점수를 고칠 수 있어요.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('프로젝트 화면 구성과 데이터·팀원 정보를 함께 보여 준다', async () => {
+    renderPresentationPage();
+
+    await screen.findByRole('heading', { level: 1, name: '발표 평가' });
+    const screens = screen.getByRole('article', {
+      name: 'CineFlow (7팀) 화면 구성',
+    });
+    expect(
+      within(screens).getByAltText('상영 일정 대시보드'),
+    ).toBeInTheDocument();
+    expect(
+      within(screens).getByAltText('좌석 선택 및 예매 화면'),
+    ).toBeInTheDocument();
+
+    const composition = screen.getByRole('article', {
+      name: 'CineFlow (7팀) 프로젝트 구성',
+    });
+    expect(
+      within(composition).getByRole('row', { name: /상영관별 일정 관리/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(composition).getByRole('row', {
+        name: /OOP 데모 학생 A · 팀장/,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: '진행 일정' }),
+    ).toBeInTheDocument();
+  });
+
+  it('제출한 평가 점수를 다시 열 때 복원한다', async () => {
+    const user = userEvent.setup();
+    const overview = getMyTeamEvaluations(demoStudent.studentNumber);
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.MY_TEAM_EVALUATIONS(':milestoneId')}`,
+        () =>
+          HttpResponse.json({
+            ...overview,
+            evaluations: [
+              {
+                id: 1,
+                teamId: 1,
+                scores: teamEvaluationCriteria.map(criterion => ({
+                  criterionId: criterion.id,
+                  score: 4,
+                })),
+                submittedAt: '2026-11-10T15:00:00+09:00',
+              },
+            ],
+          }),
+      ),
+    );
+    renderPresentationPage();
+
+    await screen.findByRole('heading', { level: 1, name: '발표 평가' });
+    await user.click(screen.getByRole('button', { name: '다음 팀' }));
+
+    for (const option of await screen.findAllByRole('radio', { name: '4점' }))
+      expect(option).toBeChecked();
+    expect(
+      screen.getByRole('button', { name: '평가 다시 제출' }),
+    ).not.toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('마감 시각이 지나면 평가 기간 상태를 다시 읽어 입력을 잠근다', async () => {
+    const user = userEvent.setup();
+    const overview = getMyTeamEvaluations(demoStudent.studentNumber);
     let requestCount = 0;
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.EVALUATION.MY_TEAM_EVALUATIONS(':milestoneId')}`,
         () => {
           requestCount += 1;
-          if (requestCount === 1)
-            return HttpResponse.json({
-              ...overview,
-              evaluationOpensAt: new Date(Date.now() - 1_000).toISOString(),
-              myEvaluations: [],
-              teams: [initialTeam],
-              windowState: 'UPCOMING' as const,
-            });
-
           return HttpResponse.json({
             ...overview,
-            myEvaluations: [
-              {
-                id: 'presentation-evaluation-refetched-draft',
-                rateeTeamId: savedTeam.id,
-                scores: [
-                  { criterionId: 'project-completeness', score: 4 },
-                  { criterionId: 'feature-implementation', score: 4 },
-                  { criterionId: 'presentation-delivery', score: 4 },
-                ],
-                status: 'DRAFT' as const,
-                updatedAt: new Date().toISOString(),
-              },
-            ],
-            teams: [savedTeam],
-            windowState: 'OPEN' as const,
+            evaluationClosesAt: new Date(Date.now() - 1_000).toISOString(),
+            windowState: requestCount === 1 ? 'OPEN' : 'CLOSED',
           });
         },
       ),
     );
+    renderPresentationPage();
 
-    renderPage(<PresentationEvaluationPage />);
-
-    expect(
-      await screen.findByRole('heading', {
-        level: 2,
-        name: savedTeam.presentation.projectTitle,
-      }),
-    ).toBeInTheDocument();
-    await waitFor(() => expect(requestCount).toBeGreaterThan(1));
-    for (const option of screen.getAllByRole('radio', { name: '4점' }))
-      expect(option).toBeChecked();
-    expect(
-      screen.getByRole('button', { name: '제출하기' }),
-    ).not.toHaveAttribute('aria-disabled', 'true');
-  });
-
-  it('학생이 변경할 수 없는 발표 진행 상태 배지를 표시하지 않는다', async () => {
-    const user = userEvent.setup();
-    renderPage(<PresentationEvaluationPage />);
-
-    expect(
-      await screen.findByRole('heading', { level: 1, name: '발표 평가' }),
-    ).toBeInTheDocument();
+    await screen.findByRole('heading', { level: 1, name: '발표 평가' });
     await user.click(screen.getByRole('button', { name: '다음 팀' }));
-    expect(screen.queryByText('현재 발표')).not.toBeInTheDocument();
-    expect(screen.queryByText('발표 예정')).not.toBeInTheDocument();
-    expect(screen.queryByText('발표 완료')).not.toBeInTheDocument();
-  });
-
-  it('발표 수업 전에는 자료만 보여 주고 평가 입력과 제출을 잠근다', async () => {
-    setEvaluationWindowStates('UPCOMING', 'OPEN');
-    renderPage(<PresentationEvaluationPage />);
+    await waitFor(() => expect(requestCount).toBeGreaterThan(1));
 
     expect(
-      await screen.findByText(
-        '발표 평가 수업 시간이 아직 시작되지 않았어요. 발표 자료는 미리 확인할 수 있어요.',
+      await screen.findAllByText(
+        '평가가 마감되어 자료와 제출한 점수만 확인할 수 있어요.',
       ),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('timer')).toHaveTextContent('평가 시작까지');
-    expect(
-      screen.getByRole('region', { name: /제출 PDF 미리보기/ }),
-    ).toBeInTheDocument();
-    expect(screen.getAllByRole('radio', { name: '4점' })[0]).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-    expect(screen.getByRole('button', { name: '제출하기' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-    expect(
-      screen.getByText(
-        '수업 시간이 시작되기 전에는 발표 자료만 확인할 수 있어요.',
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it('발표 수업 종료 후에도 평가 입력과 팀별 제출을 허용한다', async () => {
-    const user = userEvent.setup();
-    setEvaluationWindowStates('CLOSED', 'OPEN');
-    renderPage(<PresentationEvaluationPage />);
-
-    expect(
-      await screen.findByText(
-        '발표 수업은 종료됐지만 아직 제출하지 않은 평가는 계속 작성할 수 있어요.',
-      ),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole('timer')).not.toBeInTheDocument();
-    expect(
-      screen.getAllByRole('radio', { name: '4점' })[0],
-    ).not.toHaveAttribute('aria-disabled');
-    for (const option of screen.getAllByRole('radio', { name: '4점' }))
-      await user.click(option);
-    expect(
-      screen.getByRole('button', { name: '제출하기' }),
-    ).not.toHaveAttribute('aria-disabled', 'true');
-    expect(
-      screen.getByText(
-        '발표 수업은 종료됐지만 평가는 계속 작성하고 제출할 수 있어요.',
-      ),
-    ).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '제출하기' }));
-    expect(
-      await screen.findAllByText('BookLoop (1팀) 발표 평가를 제출했어요.'),
     ).not.toHaveLength(0);
+    expect(
+      screen.queryByRole('button', { name: '평가 제출' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('timer')).not.toBeInTheDocument();
+  });
+
+  it('평가 기간 전에는 자료만 보여 주고 제출을 막는다', async () => {
+    const user = userEvent.setup();
+    setEvaluationWindowStates('UPCOMING', 'OPEN');
+    renderPresentationPage();
+
+    await screen.findByRole('heading', { level: 1, name: '발표 평가' });
+    await user.click(screen.getByRole('button', { name: '다음 팀' }));
+
+    expect(
+      await screen.findAllByText(
+        '평가 기간이 시작되면 점수를 입력할 수 있어요.',
+      ),
+    ).not.toHaveLength(0);
+    expect(screen.getAllByRole('radio', { name: '5점' })[0]).toBeDisabled();
+    expect(
+      screen.queryByRole('button', { name: '평가 제출' }),
+    ).not.toBeInTheDocument();
   });
 });

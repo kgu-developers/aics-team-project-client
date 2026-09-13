@@ -10,11 +10,10 @@ import {
 } from './SubmissionDialogContext';
 
 const submissionPanel = vi.hoisted(() => vi.fn());
-const finalPanel = vi.hoisted(() => vi.fn());
-vi.mock('./FinalReportSubmissionPanel', () => ({
+vi.mock('./StudentSubmissionPanel', () => ({
   default: (props: unknown) => {
-    finalPanel(props);
-    return <div>실제 최종보고서 폼</div>;
+    submissionPanel(props);
+    return <div>실제 제출 폼</div>;
   },
 }));
 
@@ -43,17 +42,6 @@ vi.mock('@aics/design-system', async importOriginal => {
       ) : null,
   };
 });
-
-vi.mock('./SubmissionFilePanel', () => ({
-  default: (props: {
-    milestoneId: string;
-    showCurrentFiles: boolean;
-    title: string;
-  }) => {
-    submissionPanel(props);
-    return <div>{props.title}</div>;
-  },
-}));
 
 function DialogHarness() {
   const { openDialog } = useSubmissionDialog();
@@ -86,11 +74,9 @@ describe('SubmissionDialog', () => {
     expect(
       screen.getByRole('dialog', { name: '발표 자료 제출' }),
     ).toBeInTheDocument();
-    expect(submissionPanel).toHaveBeenLastCalledWith({
-      milestoneId: 'presentation',
-      showCurrentFiles: false,
-      title: '발표 자료 제출',
-    });
+    expect(
+      screen.getByText('제출 대상을 확인할 수 없어요.'),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '닫기' }));
     await user.click(screen.getByRole('button', { name: '최종 열기' }));
@@ -98,7 +84,7 @@ describe('SubmissionDialog', () => {
       screen.getByRole('dialog', { name: '최종 파일 제출' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('최종보고서 제출 대상을 확인할 수 없어요.'),
+      screen.getByText('제출 대상을 확인할 수 없어요.'),
     ).toBeInTheDocument();
   });
 });
@@ -125,17 +111,53 @@ it('선택한 최종보고서의 실제 ID를 기존 다이얼로그에 전달�
     );
   }
   render(
-    <SubmissionDialogProvider finalReportTargets={{ '20': target }}>
+    <SubmissionDialogProvider submissionTargets={{ '20': target }}>
       <ActualReport />
     </SubmissionDialogProvider>,
   );
   await userEvent.click(
     screen.getByRole('button', { name: '20번 최종보고서' }),
   );
-  expect(finalPanel).toHaveBeenLastCalledWith({ target });
+  expect(submissionPanel).toHaveBeenLastCalledWith({ target });
   expect(
     screen.getByRole('dialog', { name: '최종 파일 제출' }),
   ).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: '닫기' }));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+it('발표 종류와 실제 마일스톤 ID가 일치할 때만 폼을 연다', async () => {
+  const target = {
+    sectionId: '1',
+    teamId: '7',
+    studentNumber: '20260001',
+    milestoneId: '21',
+    submissionId: '16',
+    type: 'PRESENTATION' as const,
+    title: '발표 자료 제출',
+  };
+  function Harness() {
+    const { openDialog } = useSubmissionDialog();
+    return (
+      <>
+        <button onClick={() => openDialog('presentation', '21')}>
+          발표 제출
+        </button>
+        <button onClick={() => openDialog('final-report', '21')}>
+          잘못된 종류
+        </button>
+        <SubmissionDialog />
+      </>
+    );
+  }
+  render(
+    <SubmissionDialogProvider submissionTargets={{ '21': target }}>
+      <Harness />
+    </SubmissionDialogProvider>,
+  );
+  await userEvent.click(screen.getByRole('button', { name: '발표 제출' }));
+  expect(submissionPanel).toHaveBeenLastCalledWith({ target });
+  await userEvent.click(screen.getByRole('button', { name: '닫기' }));
+  await userEvent.click(screen.getByRole('button', { name: '잘못된 종류' }));
+  expect(screen.getByText('제출 대상을 확인할 수 없어요.')).toBeInTheDocument();
 });

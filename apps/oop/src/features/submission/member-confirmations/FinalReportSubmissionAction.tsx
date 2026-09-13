@@ -2,11 +2,11 @@ import type { ReactNode } from 'react';
 
 import { useTeamKickoffQuery } from '~/features/team-assignment/queries';
 
-import type { FinalReportSubmissionTarget } from '../FinalReportSubmissionPanel';
 import {
   useStudentSubmissionQuery,
   useStudentSubmissionVersionsQuery,
 } from '../queries';
+import type { StudentSubmissionTarget } from '../StudentSubmissionPanel';
 import { submissionConsentErrorMessage } from './consentScope';
 import { useLiveSubmissionConsent } from './queries';
 
@@ -25,7 +25,7 @@ export default function FinalReportSubmissionAction({
   onSubmit,
   children,
 }: {
-  target: FinalReportSubmissionTarget;
+  target: StudentSubmissionTarget;
   onSubmit: () => void;
   children: (state: ActionState) => ReactNode;
 }) {

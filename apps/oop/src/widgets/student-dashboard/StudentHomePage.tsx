@@ -20,14 +20,17 @@ import { midReportSectionStatuses } from '~/features/student-home/model/midRepor
 import { peerEvaluationHomeSummary } from '~/features/student-home/model/peerEvaluationHomeSummary';
 import { proposalSectionStatuses } from '~/features/student-home/model/proposalSectionStatuses';
 import { selectActiveMilestone } from '~/features/student-home/model/selectActiveMilestone';
-import { studentMilestoneSummary } from '~/features/student-home/model/studentMilestoneSummary';
+import {
+  isPresentationEvaluation,
+  studentMilestoneSummary,
+} from '~/features/student-home/model/studentMilestoneSummary';
 import {
   useLiveStudentHomeQuery,
   useMilestoneScheduleClock,
   useStudentMilestonesQuery,
   usePeerEvaluationHomeQuery,
 } from '~/features/student-home/queries';
-import type { FinalReportSubmissionTarget } from '~/features/submission/FinalReportSubmissionPanel';
+import type { StudentSubmissionTarget } from '~/features/submission/StudentSubmissionPanel';
 import SubmissionDialog from '~/features/submission/SubmissionDialog';
 import { SubmissionDialogProvider } from '~/features/submission/SubmissionDialogContext';
 import { useTeamMessagesQuery } from '~/features/team-message/queries';
@@ -156,7 +159,7 @@ export default function StudentHomePage() {
     );
   }
 
-  const finalReportTargets: Record<string, FinalReportSubmissionTarget> = {};
+  const submissionTargets: Record<string, StudentSubmissionTarget> = {};
   const milestones = query.milestones.map((milestone, index) => {
     const submission = query.submissions[index];
     const summary = studentMilestoneSummary(
@@ -164,6 +167,18 @@ export default function StudentHomePage() {
       submission?.isSuccess ? submission.data : undefined,
       now,
     );
+    if (isPresentationEvaluation(milestone)) {
+      if (summary.body?.kind === 'presentation-evaluation') {
+        const project =
+          home.project.state.status === 'ready' ? home.project.data : undefined;
+        summary.body.project = {
+          title: project?.title || '프로젝트 정보',
+          description:
+            project?.description || '프로젝트 정보를 확인할 수 없어요.',
+        };
+      }
+      return summary;
+    }
     if (milestone.type === 'PEER_EVALUATION') {
       return peerEvaluationHomeSummary(
         summary,
@@ -255,38 +270,56 @@ export default function StudentHomePage() {
       return summary;
     }
     if (
-      milestone.type === 'FINAL_REPORT' &&
+      (milestone.type === 'FINAL_REPORT' ||
+        milestone.type === 'PRESENTATION') &&
       submission?.isSuccess &&
       home.teamId &&
       home.studentNumber &&
       String(submission.data.milestoneId) === String(milestone.id) &&
       String(submission.data.teamId) === home.teamId
     ) {
-      finalReportTargets[String(milestone.id)] = {
+      submissionTargets[String(milestone.id)] = {
         sectionId,
         teamId: home.teamId,
         studentNumber: home.studentNumber,
         milestoneId: String(milestone.id),
         submissionId: String(submission.data.id),
-        type: 'FINAL_REPORT',
-        title: '최종 파일 제출',
+        type: milestone.type,
+        title:
+          milestone.type === 'FINAL_REPORT'
+            ? '최종 파일 제출'
+            : '발표 자료 제출',
       };
       summary.interaction = 'collapsible';
       summary.isDetailAvailable = true;
-      summary.body = {
-        kind: 'final-report',
-        submissionId: String(submission.data.id),
-        notice: {
-          description:
-            milestone.description ||
-            '담당 교수자가 안내한 제출 항목과 일정을 확인해 주세요.',
-        },
-        materials: [],
-      };
+      const isFinalReport = milestone.type === 'FINAL_REPORT';
+      summary.body = isFinalReport
+        ? {
+            kind: 'final-report',
+            submissionId: String(submission.data.id),
+            notice: {
+              description:
+                milestone.description ||
+                '담당 교수자가 안내한 제출 항목과 일정을 확인해 주세요.',
+            },
+            materials: [],
+          }
+        : {
+            kind: 'presentation-material',
+            project: {
+              title: home.project.data?.title || milestone.title,
+              description:
+                home.project.data?.description || milestone.description || '',
+            },
+            sections: [],
+            materials: [],
+          };
       summary.rows = [
         {
-          id: 'final-report-submission',
-          label: '최종보고서 제출',
+          id: isFinalReport
+            ? 'final-report-submission'
+            : 'presentation-material',
+          label: isFinalReport ? '최종보고서 제출' : '발표 자료 제출',
           value: submission.data.currentVersion
             ? `v${submission.data.currentVersion} 제출됨`
             : '미제출',
@@ -296,7 +329,9 @@ export default function StudentHomePage() {
               ? '파일 교체'
               : '파일 제출'
             : '제출 내역',
-          actionNotice: '파일 제출과 교체는 팀장만 할 수 있어요.',
+          actionNotice: isFinalReport
+            ? '파일 제출과 교체는 팀장만 할 수 있어요.'
+            : undefined,
         },
       ];
     }
@@ -464,7 +499,7 @@ export default function StudentHomePage() {
           <TopicCandidateDialog />
           <SubmissionDialogProvider
             key={`${home.studentNumber}:${sectionId}:${home.teamId}`}
-            finalReportTargets={finalReportTargets}
+            submissionTargets={submissionTargets}
           >
             <SubmissionDialog />
             {query.list.isPending || query.list.isError ? (
