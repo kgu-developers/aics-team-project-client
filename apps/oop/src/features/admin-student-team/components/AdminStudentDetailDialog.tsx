@@ -1,4 +1,5 @@
 import { Button, Dialog, Heading, HStack, Text } from '@aics/design-system';
+import type { ReactNode } from 'react';
 
 import { useAdminUserQuery } from '../queries';
 import * as styles from './AdminStudentDetailDialog.css';
@@ -6,12 +7,14 @@ import * as styles from './AdminStudentDetailDialog.css';
 type AdminStudentDetailDialogProps = {
   studentNumber: string | null;
   major?: string | null;
+  details?: ReactNode;
   onClose: () => void;
 };
 
 export default function AdminStudentDetailDialog({
   studentNumber,
   major,
+  details,
   onClose,
 }: AdminStudentDetailDialogProps) {
   const userQuery = useAdminUserQuery(studentNumber);
@@ -59,6 +62,7 @@ export default function AdminStudentDetailDialog({
             </div>
           </dl>
         ) : null}
+        {user && details ? details : null}
         <HStack gap={2} justify='end'>
           <Button label='닫기' onClick={onClose} variant='secondary' />
         </HStack>

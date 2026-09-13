@@ -16,6 +16,7 @@ import {
   afterAll,
   afterEach,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
@@ -27,12 +28,14 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminSubmissionDetailPage from './AdminSubmissionDetailPage';
 import AdminSubmissionsPage from './AdminSubmissionsPage';
 
+import { resetMockSessionState } from '~/mocks/authSession';
 import {
   getAdminMilestoneSubmissionsFixture,
   resetAdminMilestoneSubmissionsFixture,
   updatePresentationOrderFixture,
 } from '~/mocks/data/adminMilestoneSubmissions';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { adminEvaluationResultHandlers } from '~/mocks/handlers/adminEvaluationResults';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
@@ -44,12 +47,15 @@ const server = setupServer(
   ...adminMilestoneSubmissionDetailHandlers,
   ...adminMilestoneSubmissionsHandlers,
   ...adminPresentationEvaluationHandlers,
+  ...adminEvaluationResultHandlers,
   ...adminSectionMilestoneHandlers,
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => resetMockSessionState());
 afterEach(() => {
   resetAdminMilestoneSubmissionsFixture();
+  resetMockSessionState();
   setApiAccessToken(null);
   useAuthStore.setState({ accessToken: null, currentUser: null });
   server.resetHandlers();
@@ -390,9 +396,9 @@ describe('AdminSubmissionsPage', () => {
     const settingsButton = await screen.findByRole('button', {
       name: '순서 배정 및 평가',
     });
-    expect(settingsButton).toBeEnabled();
+    await waitFor(() => expect(settingsButton).toBeEnabled());
 
-    await user.click(settingsButton);
+    await user.click(screen.getByRole('button', { name: '순서 배정 및 평가' }));
     expect(
       await screen.findByRole('heading', { name: '발표 순서 설정' }),
     ).toBeInTheDocument();
@@ -411,17 +417,19 @@ describe('AdminSubmissionsPage', () => {
     ).toHaveAttribute('download', 'presentation.pdf');
   });
 
-  it('상호 평가는 전용 표 조회 계약 전까지 범용 버전 상세로 이동하지 않는다', async () => {
+  it('상호 평가 목록에서 팀별 결과 상세로 이동한다', async () => {
     const user = userEvent.setup();
 
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '상호 평가' }));
 
-    const detailButtons = await screen.findAllByTitle(
-      '이 마일스톤의 전용 상세 조회 API 확인 후 제공 예정입니다.',
+    const teamLink = await screen.findByRole('link', {
+      name: 'OOP-01 - 1팀',
+    });
+    expect(teamLink).toHaveAttribute(
+      'href',
+      '/admin/evaluations/peer/teams/1?formId=501&sectionId=oop-2026-2-01',
     );
-    expect(detailButtons).not.toHaveLength(0);
-    detailButtons.forEach(button => expect(button).toBeDisabled());
   });
 
   it('알 수 없는 마일스톤 키는 제출 목록 fixture에서 찾지 않는다', () => {
