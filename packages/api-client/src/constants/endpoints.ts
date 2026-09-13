@@ -59,6 +59,8 @@ export const ENDPOINTS = {
       `/api/v1/admin/oop/sections/${sectionId}/roster-import-status`,
     OOP_PEER_EVALUATION_FORM: (sectionId: string | number) =>
       `/api/v1/admin/oop/sections/${sectionId}/peer-evaluation-forms`,
+    OOP_TEAM_EVALUATION_CRITERIA: (sectionId: string | number) =>
+      `/api/v1/admin/oop/sections/${sectionId}/team-evaluation-criteria`,
     OOP_PRE_SURVEY_RESPONSES: (sectionId: string) =>
       `/api/v1/admin/oop/sections/${sectionId}/pre-survey-responses`,
     OOP_PRE_SURVEY_RESPONSES_DOWNLOAD: (sectionId: string) =>

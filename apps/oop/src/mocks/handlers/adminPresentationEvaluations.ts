@@ -16,10 +16,43 @@ import {
 } from '../data/adminSectionMilestones';
 import { demoAdmin } from '../data/users';
 
+type TeamEvaluationCriterionRequest = {
+  displayOrder: number;
+  maxScore: number;
+  title: string;
+};
+
+const initialCriteria = [
+  { displayOrder: 0, id: 1, maxScore: 5, title: '프로젝트 완성도' },
+  { displayOrder: 1, id: 2, maxScore: 5, title: '기능 구성과 구현' },
+  { displayOrder: 2, id: 3, maxScore: 5, title: '발표 전달력' },
+];
+let criteria = structuredClone(initialCriteria);
+
 function resetPresentationEvaluationScenario() {
   resetAdminMilestoneSubmissionsFixture();
   resetAdminPresentationEvaluationsFixture();
   resetAdminSectionMilestonesFixture();
+  criteria = structuredClone(initialCriteria);
+}
+
+function isTeamEvaluationCriterionRequest(
+  value: unknown,
+): value is TeamEvaluationCriterionRequest {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+
+  const body = value as Record<string, unknown>;
+  const { displayOrder, maxScore, title } = body;
+  return (
+    typeof title === 'string' &&
+    title.trim().length > 0 &&
+    typeof maxScore === 'number' &&
+    Number.isInteger(maxScore) &&
+    maxScore > 0 &&
+    typeof displayOrder === 'number' &&
+    Number.isInteger(displayOrder) &&
+    displayOrder >= 0
+  );
 }
 
 function getPresentationEvaluationPeriod() {
@@ -58,6 +91,65 @@ function isPresentationOrderRequest(
 }
 
 export const adminPresentationEvaluationHandlers = [
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA(':sectionId')}`,
+    ({ params, request }) => {
+      if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
+        return HttpResponse.json(
+          { message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+      if (params.sectionId !== adminPresentationEvaluationsFixture.section.id) {
+        return HttpResponse.json(
+          { message: '담당 분반만 조회할 수 있습니다.' },
+          { status: 403 },
+        );
+      }
+
+      return HttpResponse.json({ contents: structuredClone(criteria) });
+    },
+  ),
+  http.post(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA(':sectionId')}`,
+    async ({ params, request }) => {
+      if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
+        return HttpResponse.json(
+          { message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+      if (params.sectionId !== adminPresentationEvaluationsFixture.section.id) {
+        return HttpResponse.json(
+          { message: '담당 분반만 생성할 수 있습니다.' },
+          { status: 403 },
+        );
+      }
+
+      let body: unknown;
+      try {
+        body = await request.json();
+      } catch {
+        body = undefined;
+      }
+      if (!isTeamEvaluationCriterionRequest(body)) {
+        return HttpResponse.json(
+          { message: '평가 항목 입력값이 올바르지 않습니다.' },
+          { status: 400 },
+        );
+      }
+
+      const criterion = {
+        ...body,
+        id: Math.max(0, ...criteria.map(item => item.id)) + 1,
+      };
+      criteria = [...criteria, criterion].sort(
+        (left, right) => left.displayOrder - right.displayOrder,
+      );
+
+      return HttpResponse.json({ id: criterion.id }, { status: 201 });
+    },
+  ),
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_PRESENTATION_EVALUATIONS(':sectionId')}`,
     ({ params, request }) => {

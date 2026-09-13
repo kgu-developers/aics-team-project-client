@@ -36,7 +36,10 @@ import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
-import { adminPresentationEvaluationHandlers } from '~/mocks/handlers/adminPresentationEvaluations';
+import {
+  adminPresentationEvaluationHandlers,
+  resetPresentationEvaluationScenario,
+} from '~/mocks/handlers/adminPresentationEvaluations';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 import { createTeamMessageHandlers } from '~/mocks/handlers/teamMessages';
 
@@ -52,6 +55,7 @@ const server = setupServer(
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   resetAdminMilestoneSubmissionsFixture();
+  resetPresentationEvaluationScenario();
   setApiAccessToken(null);
   useAuthStore.setState({ accessToken: null, currentUser: null });
   server.resetHandlers();
@@ -444,6 +448,44 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('heading', { name: '발표 순서 설정' }),
     ).toBeInTheDocument();
+  });
+
+  it('발표 평가 설정에서 분반별 평가 항목을 조회하고 생성한다', async () => {
+    const user = userEvent.setup();
+    const createRequest = vi.fn();
+
+    server.use(
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA('oop-2026-2-01')}`,
+        async ({ request }) => {
+          createRequest(await request.json());
+          return HttpResponse.json({ id: 4 }, { status: 201 });
+        },
+      ),
+    );
+
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+    await user.click(
+      await screen.findByRole('button', { name: '순서 배정 및 평가' }),
+    );
+
+    expect(await screen.findByText('프로젝트 완성도')).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: /평가 항목명/ }),
+      '문제 해결 과정',
+    );
+    await user.type(screen.getByRole('spinbutton', { name: '배점' }), '20');
+    await user.click(screen.getByRole('button', { name: '평가 항목 추가' }));
+
+    await waitFor(() =>
+      expect(createRequest).toHaveBeenCalledWith({
+        displayOrder: 3,
+        maxScore: 20,
+        title: '문제 해결 과정',
+      }),
+    );
   });
 
   it('발표 자료 제출 fixture의 최신 버전을 조회한다', async () => {

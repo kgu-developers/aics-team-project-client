@@ -18,8 +18,14 @@ export { updateUserPassword, type UpdateUserPasswordInput } from './profile';
 export { API_BASE_URL, apiClient } from './client';
 export {
   createAdminPeerEvaluationForm,
+  createAdminTeamEvaluationCriterion,
+  fetchAdminTeamEvaluationCriteria,
   type AdminPeerEvaluationFormCreateInput,
   type AdminPeerEvaluationFormPersistResponse,
+  type AdminTeamEvaluationCriteriaResponse,
+  type AdminTeamEvaluationCriterionCreateInput,
+  type AdminTeamEvaluationCriterionDto,
+  type AdminTeamEvaluationCriterionPersistResponse,
 } from './adminEvaluation';
 export {
   fetchAdminOopCourse,
