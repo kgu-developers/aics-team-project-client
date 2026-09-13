@@ -87,6 +87,7 @@ export default defineConfig(({ command, mode }) => {
         : {}),
     },
     test: {
+      include: ['src/**/*.test.{ts,tsx}'],
       env: { VITE_ENABLE_MSW: 'true' },
       environment: 'jsdom',
       setupFiles: './src/test/setup.ts',

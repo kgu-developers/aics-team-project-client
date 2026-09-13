@@ -1,0 +1,94 @@
+# OOP 학생 Playwright E2E
+
+`pnpm test:e2e`는 실제 서버를 사용한다. API 응답을 모킹하거나 인증 store를 주입하지 않고 화면에서 로그인한다. 각 테스트는 새 브라우저 context를 사용하며 같은 계정의 세션과 편집 잠금 충돌을 피하려고 worker 1개, 자동 재시도 0회로 실행한다.
+
+## 수동 실행과 서버 데이터 준비
+
+- [유저 플로우별 수동 실행 가이드](./docs/user-flows.md): 로그인 계정, 화면 이동, 입력값, 기대 결과, 실행 후 남는 데이터.
+- [데이터 생성·초기화 가이드](./docs/reset-and-seed.md): 관리자 준비 순서, API 본문 연결, ID 기록, 제출 후 초기화, 새 분반으로 재생성.
+- [초기 데이터셋](./datasets/team2.seed.json): 합성 학생 7명, 팀 2개, 프로젝트 2개, 마일스톤 5개와 초기 상태.
+- [전체 실행 후 기대 상태](./datasets/team2.after-full-run.json): 제출까지 포함한 20개를 새 데이터에서 한 번 실행한 뒤의 비교 기준.
+
+데이터셋에는 합성 학번과 입력값만 포함한다. 실제 비밀번호·서버 주소·현재 서버의 생성 ID는 로컬 설정과 인계 자료에서 관리한다.
+
+## 실행
+
+```sh
+pnpm --filter @aics/oop exec playwright install chromium
+pnpm test:e2e
+pnpm --filter @aics/oop test:e2e:ui
+pnpm --filter @aics/oop test:e2e:live meetings.spec.ts
+```
+
+접속 정보는 저장소 루트의 `.agent-local/e2e/live.env`에서 읽는다. 파일을 바꾸려면 `OOP_E2E_ENV_FILE=/absolute/path/live.env`를 지정한다. 환경변수로 직접 제공해도 된다. 계정과 실제 서버 주소는 커밋하지 않는다.
+
+```dotenv
+# 이미 실행 중인 프런트엔드. 생략하면 localhost:5173에 Vite를 시작한다.
+OOP_E2E_BASE_URL=http://localhost:5173
+# Vite를 자동 시작하는 경우 필요한 개발 API 주소
+OOP_E2E_API_URL=https://api.example.test
+OOP_E2E_STUDENT_NUMBER=<팀장 학번>
+OOP_E2E_PASSWORD=<팀장 비밀번호>
+OOP_E2E_MEMBER_NUMBER=<동일 팀의 팀원 학번>
+OOP_E2E_MEMBER_PASSWORD=<팀원 비밀번호>
+OOP_E2E_SURVEY_NUMBER=<설문 미제출·팀 미배정 학생 학번>
+OOP_E2E_SURVEY_PASSWORD=<설문 학생 비밀번호>
+OOP_E2E_TEAM_ID=<팀 ID>
+OOP_E2E_SECTION_ID=<분반 ID>
+OOP_E2E_PRESENTATION_ID=<발표 마일스톤 ID>
+OOP_E2E_FINAL_REPORT_ID=<최종보고서 마일스톤 ID>
+```
+
+자동 실행 시 API의 CORS 허용 origin에 `http://localhost:5173`이 포함돼야 한다. 이미 그 포트에 실서버 연동 앱이 실행 중이면 `OOP_E2E_BASE_URL`을 지정한다. 다른 서버를 임의로 재사용하거나 CORS를 우회하지 않는다. 해당 앱은 `VITE_ENABLE_MSW=false`여야 한다.
+
+## 테스트 데이터 조건
+
+- 팀장·팀원은 동일한 ACTIVE 분반, 팀장 확정이 완료된 팀에 속해야 한다. 로그인 후 `/onboarding/team`을 거쳐 `/student`에 도착해야 한다.
+- 확정된 프로젝트가 있어야 하고 제안서·중간보고서는 아직 제출하지 않은 상태여야 한다.
+- 해당 분반에 제안서, 중간보고서, 발표, 최종보고서, 상호평가 마일스톤을 공개한다. 작성·제출 기간은 열려 있어야 한다.
+- 상호평가 폼에는 실제 팀원 대상이 있어야 하고 팀원의 응답은 미제출 또는 초안이어야 한다.
+- 파일 제출 테스트는 발표·최종보고서에 필수 PDF 항목 하나씩을 기대한다. 마감 전 재제출을 허용하면 다시 실행할 수 있다.
+- 최종보고서 승인·취소 테스트는 파일이 제출돼 있고 최종 완료 전이며 테스트 팀원이 아직 승인하지 않은 상태를 기대한다.
+- 공지 목록은 서버가 빈 목록을 반환하면 빈 상태를 검증하고, 공지가 있으면 실제 제목·본문과 읽음 상태를 검증한다.
+
+## 시나리오
+
+| 파일                      | 검증                                                                                                                      |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `live/student.spec.ts`    | 비로그인 가드, 잘못된 비밀번호, 학생 로그인, HttpOnly refresh 쿠키, 새로고침 복원, 로그아웃, 키보드 탭, 공지, 모바일 메뉴 |
+| `live/documents.spec.ts`  | 제안서 저장·복원, 서로 다른 계정의 편집 잠금, 홈→문서→팀 이동, 중간보고서 자동 저장                                       |
+| `live/meetings.spec.ts`   | 회의록 필수값, 생성, 액션 추가, 수정, 본문 보존, 삭제                                                                     |
+| `live/evaluation.spec.ts` | 프로젝트 평가·팀원별 기여도 초안, 합계 100%, 서버 저장 복원, 최종 제출 후 읽기 전용                                       |
+| `live/onboarding.spec.ts` | 역할 선택 필수 조건, 설문 제출 확인, 팀 배정 대기, 재접속                                                                 |
+| `live/submission.spec.ts` | 실제 PDF 업로드, 제출 API, 버전 증가, 홈 제출 상태 복원, 팀원 승인·새로고침·승인 취소                                     |
+
+회의록은 해당 테스트에서 만든 ID만 삭제한다. 제안서 제목과 중간보고서 설명은 원래 값으로 복구한다. 승인 테스트에서 추가한 팀원 승인도 취소한다. 제안서 저장은 서버 규칙에 따라 영역 완료 상태를 해제할 수 있으므로 기본 테스트용 프로젝트는 작성 중 상태로 유지한다. 상호평가 초안은 테스트 데이터로 남는다.
+
+실서버 20개 시나리오 중 기본 실행은 15개이며 제출 관련 5개는 별도로 선택한다. 제안서 최종 제출과 오류 응답 처리는 아래 보조 검증에서 다룬다. 발표 평가, 전원 승인 후 최종 완료, 관리자 기능 전체는 이 학생 E2E 묶음의 검증 범위에 포함하지 않는다.
+
+## 제출 테스트
+
+`@submit`은 기본 실행에서 제외한다. 제출 이력을 만들거나 설문·평가를 읽기 전용 상태로 바꾸므로 전용 계정과 열린 제출 기간을 준비한 뒤 선택해서 실행한다.
+
+```sh
+# 초기화된 데이터로 기본 + 제출 시나리오 전체 20개
+OOP_E2E_SUBMIT=1 pnpm test:e2e
+# 제출 관련 5개만 선택
+OOP_E2E_SUBMIT=1 pnpm --filter @aics/oop test:e2e:live --grep @submit
+# 파일 제출만 선택
+OOP_E2E_SUBMIT=1 pnpm --filter @aics/oop test:e2e:live submission.spec.ts
+```
+
+설문·상호평가 최종 제출은 새 미제출 계정/평가 폼이 필요하다. 이미 제출한 경우 테스트를 건너뛰어 성공으로 표시하지 않는다. 새 데이터를 준비하거나 해당 테스트를 선택에서 제외한다.
+
+## 로컬 보조 검증
+
+```sh
+pnpm test:e2e:contract
+```
+
+`playwright.config.ts`는 별도 Vite 서버와 Playwright route 응답을 사용한다. 실제 연동 UI를 실행하고 성공·실패·분반 미배정·편집 충돌을 독립적으로 재현한다. MSW 데모는 꺼져 있다. 요청은 테스트별 상태로 분리하고 미처리 API와 JavaScript 오류는 실패 처리한다. 실제 쿠키·CORS·서버 권한 검증 결과로 해석하면 안 된다. Vitest는 `src/**/*.test.{ts,tsx}`만 수집하므로 E2E 파일을 실행하지 않는다.
+
+보조 검증은 실제 서버 없이 프런트엔드 회귀를 확인하기 위한 것이며, 실서버 기능 검증 결과는 `live` 실행 결과로 판단한다. Playwright 공식 [webServer](https://playwright.dev/docs/test-webserver), [authentication](https://playwright.dev/docs/auth), [network](https://playwright.dev/docs/network) 문서를 참고했다.
+
+스크린샷·결과는 `.agent-local/playwright/`에 저장한다. 실서버 trace는 기본 비활성화하며 필요할 때만 `OOP_E2E_TRACE=1`을 사용한다. trace에는 요청·쿠키·입력값이 담길 수 있어 공유 전에 확인한다. 테스트 코드에는 계정·토큰·실제 학생 데이터를 넣지 않는다.

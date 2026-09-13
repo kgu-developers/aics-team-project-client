@@ -13,6 +13,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test --config playwright.live.config.ts",
+    "test:e2e:ui": "playwright test --config playwright.live.config.ts --ui",
+    "test:e2e:live": "playwright test --config playwright.live.config.ts",
+    "test:e2e:contract": "playwright test --config playwright.config.ts",
     "lint": "eslint .",
     "lint:fix": "eslint --fix ."
   },
@@ -38,6 +42,7 @@
   },
   "devDependencies": {
     "@aics/typescript": "workspace:*",
+    "@playwright/test": "^1.63.0",
     "@tanstack/router-devtools": "^1.114.3",
     "@tanstack/router-plugin": "^1.114.3",
     "@testing-library/jest-dom": "^7.0.0",
