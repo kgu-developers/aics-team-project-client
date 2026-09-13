@@ -29,6 +29,20 @@ const initialCriteria = [
 ];
 let criteria = structuredClone(initialCriteria);
 
+function getTeamCriterionScore(
+  team: (typeof adminPresentationEvaluationsFixture.teams)[number],
+  criterion: (typeof initialCriteria)[number],
+) {
+  const legacyKey = ['completion', 'implementation', 'delivery'][
+    criterion.displayOrder
+  ];
+  return (
+    team.criteria[String(criterion.id)] ??
+    (legacyKey ? team.criteria[legacyKey] : null) ??
+    null
+  );
+}
+
 function resetPresentationEvaluationScenario() {
   resetAdminMilestoneSubmissionsFixture();
   resetAdminPresentationEvaluationsFixture();
@@ -151,6 +165,79 @@ export const adminPresentationEvaluationHandlers = [
     },
   ),
   http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_PRESENTATION_EVALUATION_TEAM(':sectionId', ':teamId')}`,
+    ({ params, request }) => {
+      if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
+        return HttpResponse.json(
+          { message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+      if (params.sectionId !== adminPresentationEvaluationsFixture.section.id) {
+        return HttpResponse.json(
+          { message: '담당 분반만 조회할 수 있습니다.' },
+          { status: 403 },
+        );
+      }
+
+      const team = adminPresentationEvaluationsFixture.teams.find(
+        candidate => String(candidate.teamId) === params.teamId,
+      );
+      if (!team) {
+        return HttpResponse.json({ code: 'TEAM_NOT_FOUND' }, { status: 404 });
+      }
+
+      return HttpResponse.json({
+        closesAt: adminPresentationEvaluationsFixture.evaluationPeriod.endsAt,
+        criteria: criteria.map(criterion => ({
+          criterionId: criterion.id,
+          displayOrder: criterion.displayOrder,
+          maxScore: criterion.maxScore,
+          title: criterion.title,
+        })),
+        evaluations: [
+          {
+            evaluatorId: '20260001',
+            evaluatorName: '테스트 평가자',
+            isSubmitted: team.submittedEvaluatorCount > 0,
+            submittedAt:
+              team.submittedEvaluatorCount > 0 ? '2026-11-26T15:30:00' : null,
+            teamName: 'OOP-01 - 2팀',
+            scores: criteria.map(criterion => ({
+              criterionId: criterion.id,
+              criterionTitle: criterion.title,
+              score: getTeamCriterionScore(team, criterion),
+            })),
+            totalScore:
+              team.submittedEvaluatorCount > 0 &&
+              criteria.every(criterion =>
+                Number.isFinite(getTeamCriterionScore(team, criterion)),
+              )
+                ? criteria.reduce(
+                    (sum, criterion) =>
+                      sum + getTeamCriterionScore(team, criterion)!,
+                    0,
+                  )
+                : null,
+          },
+        ],
+        meetingRecords: [
+          {
+            id: 1,
+            meetingAt: '2026-10-01T14:00:00',
+            participantCount: 4,
+            phase: 'MID_CHECK',
+            title: `${team.teamName} 프로젝트 킥오프`,
+          },
+        ],
+        milestoneId: 103,
+        projectTitle: team.projectTopic,
+        teamId: team.teamId,
+        teamName: team.teamName,
+      });
+    },
+  ),
+  http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_PRESENTATION_EVALUATIONS(':sectionId')}`,
     ({ params, request }) => {
       if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
@@ -167,6 +254,10 @@ export const adminPresentationEvaluationHandlers = [
       }
       return HttpResponse.json({
         ...structuredClone(adminPresentationEvaluationsFixture),
+        criteria: criteria.map(criterion => ({
+          id: String(criterion.id),
+          label: criterion.title,
+        })),
         evaluationPeriod: getPresentationEvaluationPeriod(),
       });
     },

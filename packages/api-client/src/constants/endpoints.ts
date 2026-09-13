@@ -102,6 +102,11 @@ export const ENDPOINTS = {
       `/api/v1/admin/oop/submissions/${submissionId}/versions`,
     SECTION_PRESENTATION_EVALUATIONS: (sectionId: string) =>
       `/api/v1/admin/oop/sections/${sectionId}/presentation-evaluations`,
+    SECTION_PRESENTATION_EVALUATION_TEAM: (
+      sectionId: string | number,
+      teamId: string | number,
+    ) =>
+      `/api/v1/admin/oop/sections/${sectionId}/presentation-evaluations/teams/${teamId}`,
     SECTION_PRESENTATION_EVALUATION_SETTINGS: (sectionId: string) =>
       `/admin/sections/${sectionId}/presentation-evaluation-settings`,
     SECTION_STUDENTS: (sectionId: string) =>

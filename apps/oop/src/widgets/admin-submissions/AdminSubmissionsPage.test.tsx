@@ -488,6 +488,26 @@ describe('AdminSubmissionsPage', () => {
     );
   });
 
+  it('발표 평가 목록에서 팀을 선택하면 평가자별 결과와 회의록을 조회한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'OOP-01 - 1팀' }),
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'OOP-01 - 1팀 발표 평가 결과',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('테스트 평가자')).toBeInTheDocument();
+    expect(
+      screen.getByText(/OOP-01 - 1팀 프로젝트 킥오프/),
+    ).toBeInTheDocument();
+  });
+
   it('발표 자료 제출 fixture의 최신 버전을 조회한다', async () => {
     renderPage(
       '/admin/submissions/1011?milestoneId=presentation-submit&sectionId=oop-2026-2-01',

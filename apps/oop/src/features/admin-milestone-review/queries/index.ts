@@ -19,6 +19,7 @@ export { useAdminMilestoneSubmissionsQuery } from './useAdminMilestoneSubmission
 export { useDownloadAdminSubmissionArtifactsMutation } from './useDownloadAdminSubmissionArtifactsMutation';
 export { adminMilestoneSubmissionsKeys } from './adminMilestoneSubmissionsKeys';
 export { useAdminPresentationEvaluationsQuery } from './useAdminPresentationEvaluationsQuery';
+export { useAdminPresentationEvaluationTeamQuery } from './useAdminPresentationEvaluationTeamQuery';
 export { useUpdatePresentationOrderMutation } from './useUpdatePresentationOrderMutation';
 export { adminTeamEvaluationCriteriaKeys } from './adminTeamEvaluationCriteriaKeys';
 export { useAdminTeamEvaluationCriteriaQuery } from './useAdminTeamEvaluationCriteriaQuery';

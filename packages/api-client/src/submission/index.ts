@@ -36,6 +36,14 @@ export {
   type AdminPresentationEvaluationsResponse,
 } from './fetchAdminPresentationEvaluations';
 export {
+  fetchAdminPresentationEvaluationTeam,
+  type AdminPresentationEvaluationTeamDetailCriterionDto,
+  type AdminPresentationEvaluationTeamDetailEvaluationDto,
+  type AdminPresentationEvaluationTeamDetailResponse,
+  type AdminPresentationEvaluationTeamDetailScoreDto,
+  type AdminPresentationEvaluationTeamMeetingRecordDto,
+} from './fetchAdminPresentationEvaluationTeam';
+export {
   updatePresentationOrder,
   type UpdatePresentationOrderInput,
 } from './updatePresentationOrder';

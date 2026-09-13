@@ -10,6 +10,7 @@ import {
   TextInput,
   VStack,
 } from '@aics/design-system';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
 import {
@@ -17,6 +18,7 @@ import {
   useCreateAdminTeamEvaluationCriterionMutation,
   useUpdatePresentationOrderMutation,
 } from '~/features/admin-milestone-review/queries';
+import { adminPresentationEvaluationKeys } from '~/features/admin-milestone-review/queries/adminPresentationEvaluationKeys';
 
 import * as styles from './AdminPresentationEvaluationSettingsDialog.css';
 
@@ -35,6 +37,7 @@ export function AdminPresentationEvaluationSettingsDialog({
   milestoneId,
   sectionId,
 }: Props) {
+  const queryClient = useQueryClient();
   const saveMutation = useUpdatePresentationOrderMutation();
   const criteriaQuery = useAdminTeamEvaluationCriteriaQuery(sectionId);
   const createCriterionMutation =
@@ -86,7 +89,12 @@ export function AdminPresentationEvaluationSettingsDialog({
         })),
       },
       {
-        onSuccess: onClose,
+        onSuccess: async () => {
+          await queryClient.invalidateQueries({
+            queryKey: adminPresentationEvaluationKeys.list(sectionId),
+          });
+          onClose();
+        },
         onError: () => setError('저장하지 못했습니다. 다시 시도해 주세요.'),
       },
     );

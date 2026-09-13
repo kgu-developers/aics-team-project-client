@@ -45,6 +45,7 @@ import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState
 import { useAuthStore } from '~/features/auth/authStore';
 
 import { AdminPresentationEvaluationSettingsDialog } from './AdminPresentationEvaluationSettingsDialog';
+import { AdminPresentationEvaluationTeamDetailDialog } from './AdminPresentationEvaluationTeamDetailDialog';
 import * as styles from './AdminSubmissionsPage.css';
 
 const MILESTONE_TABS = [
@@ -211,6 +212,8 @@ export default function AdminSubmissionsPage() {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [isEvaluationSettingsOpen, setIsEvaluationSettingsOpen] =
     useState(false);
+  const [selectedPresentationTeamId, setSelectedPresentationTeamId] =
+    useState<number>();
   const downloadArtifactsMutation =
     useDownloadAdminSubmissionArtifactsMutation();
   const search = useSearch({ from: '/admin/submissions' }) as {
@@ -464,7 +467,14 @@ export default function AdminSubmissionsPage() {
                               );
                               const label = team.teamName;
                               return (
-                                <span>
+                                <Button
+                                  label={label}
+                                  onClick={() =>
+                                    setSelectedPresentationTeamId(team.teamId)
+                                  }
+                                  type='button'
+                                  variant='secondary'
+                                >
                                   {unread ? (
                                     <span
                                       aria-label='읽지 않음'
@@ -473,7 +483,7 @@ export default function AdminSubmissionsPage() {
                                     />
                                   ) : null}
                                   {label}
-                                </span>
+                                </Button>
                               );
                             },
                             width: proportional(1, { minWidth: 128 }),
@@ -506,7 +516,9 @@ export default function AdminSubmissionsPage() {
                                   criterion => team.criteria[criterion.id],
                                 );
                               const submittedScores = scores.filter(
-                                (score): score is number => score !== null,
+                                (score): score is number =>
+                                  typeof score === 'number' &&
+                                  Number.isFinite(score),
                               );
                               return submittedScores.length === scores.length
                                 ? submittedScores.reduce(
@@ -531,6 +543,19 @@ export default function AdminSubmissionsPage() {
                         sectionId={effectiveSectionId}
                         onClose={() => setIsEvaluationSettingsOpen(false)}
                         teams={presentationEvaluationTeams}
+                      />
+                    ) : null}
+                    {effectiveSectionId ? (
+                      <AdminPresentationEvaluationTeamDetailDialog
+                        isOpen={selectedPresentationTeamId !== undefined}
+                        milestoneId={
+                          presentationEvaluationMilestone
+                            ? String(presentationEvaluationMilestone.id)
+                            : undefined
+                        }
+                        onClose={() => setSelectedPresentationTeamId(undefined)}
+                        sectionId={effectiveSectionId}
+                        teamId={selectedPresentationTeamId}
                       />
                     ) : null}
                   </>
