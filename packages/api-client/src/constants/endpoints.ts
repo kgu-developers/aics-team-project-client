@@ -99,7 +99,7 @@ export const ENDPOINTS = {
     SUBMISSION_VERSIONS: (submissionId: string | number) =>
       `/api/v1/admin/oop/submissions/${submissionId}/versions`,
     SECTION_PRESENTATION_EVALUATIONS: (sectionId: string) =>
-      `/admin/sections/${sectionId}/presentation-evaluations`,
+      `/api/v1/admin/oop/sections/${sectionId}/presentation-evaluations`,
     SECTION_PRESENTATION_EVALUATION_SETTINGS: (sectionId: string) =>
       `/admin/sections/${sectionId}/presentation-evaluation-settings`,
     SECTION_STUDENTS: (sectionId: string) =>
@@ -130,9 +130,19 @@ export const ENDPOINTS = {
   },
   TEAM_MESSAGE: {
     BY_TEAM: (teamId: string) => `/api/v1/teams/${teamId}/messages`,
+    UNREAD_COUNT: (teamId: string) =>
+      `/api/v1/teams/${teamId}/unread-message-count`,
+    IMPORTANT: (messageId: string | number) =>
+      `/api/v1/messages/${messageId}/important`,
+    READ: (messageId: string | number) => `/api/v1/messages/${messageId}/read`,
   },
   TEAM_THREAD: {
     BY_TEAM: (teamId: string) => `/api/v1/teams/${teamId}/thread`,
+  },
+  ADMIN_MESSAGE: {
+    LIST: '/api/v1/admin/oop/messages',
+    READ: (messageId: string | number) =>
+      `/api/v1/admin/oop/messages/${messageId}/read`,
   },
   MEETING: {
     RECORDS: (teamId: string) => `/teams/${teamId}/meeting-records`,

@@ -12,6 +12,7 @@ const menuItems = [
   { label: '공지사항', to: ROUTES.ADMIN_NOTICES },
   { label: '분반별 제출물', to: ROUTES.ADMIN_SUBMISSIONS },
   { label: '회의록', to: ROUTES.ADMIN_MEETINGS },
+  { label: '쪽지함', to: ROUTES.ADMIN_MESSAGES },
 ] as const;
 
 function isMenuItemActive(pathname: string, itemPath: string) {
@@ -19,6 +20,10 @@ function isMenuItemActive(pathname: string, itemPath: string) {
 
   if (itemPath === ROUTES.ADMIN_STUDENT_TEAM) {
     return pathname === itemPath || pathname.startsWith('/admin/teams/');
+  }
+
+  if (itemPath === ROUTES.ADMIN_MESSAGES) {
+    return pathname === itemPath || pathname.startsWith('/admin/messages/');
   }
 
   return pathname === itemPath || pathname.startsWith(`${itemPath}/`);

@@ -5,18 +5,19 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { ROUTES } from '~/app/constants/routes';
 
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
+import { useAdminMessagesQuery } from '~/features/admin-message/queries';
 import { formatAdminMilestoneDate } from '~/features/admin-milestone-review/model';
 import { useAdminAccessibleSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
 import { useAdminNoticesQuery } from '~/features/admin-notices/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminHomeDashboard.css';
-import { dashboardInbox } from '../../mocks/data/adminDashboard';
 
 type DashboardListItem = {
   date: string;
   id?: string;
   meetingId?: string;
+  teamId?: string;
   section: string;
   sectionId?: string;
   title: string;
@@ -45,10 +46,12 @@ function getMilestoneColumnKey(type: AdminMilestoneType, title: string) {
 
 function List({
   isMeetingList = false,
+  isMessageList = false,
   isNoticeList = false,
   items,
 }: {
   isMeetingList?: boolean;
+  isMessageList?: boolean;
   isNoticeList?: boolean;
   items: readonly DashboardListItem[];
 }) {
@@ -78,6 +81,14 @@ function List({
             <Link className={styles.itemTitle} to={ROUTES.ADMIN_MEETINGS}>
               {item.title}
             </Link>
+          ) : isMessageList && item.teamId ? (
+            <Link
+              className={styles.itemTitle}
+              params={{ teamId: item.teamId }}
+              to={ROUTES.ADMIN_MESSAGE_TEAM}
+            >
+              {item.title}
+            </Link>
           ) : (
             <span className={styles.itemTitle}>{item.title}</span>
           )}
@@ -91,6 +102,7 @@ function List({
 function Panel({
   emptyMessage,
   isMeetingPanel = false,
+  isMessagePanel = false,
   title,
   items,
   action,
@@ -98,6 +110,7 @@ function Panel({
 }: {
   emptyMessage?: string;
   isMeetingPanel?: boolean;
+  isMessagePanel?: boolean;
   title: string;
   items: readonly DashboardListItem[];
   action?: boolean;
@@ -117,6 +130,10 @@ function Panel({
           <Link className={styles.more} to={ROUTES.ADMIN_MEETINGS}>
             전체보기 ›
           </Link>
+        ) : isMessagePanel ? (
+          <Link className={styles.more} to={ROUTES.ADMIN_MESSAGES}>
+            전체보기 ›
+          </Link>
         ) : (
           <button className={styles.more} type='button'>
             전체보기 ›
@@ -127,6 +144,7 @@ function Panel({
         {items.length > 0 ? (
           <List
             isMeetingList={isMeetingPanel}
+            isMessageList={isMessagePanel}
             isNoticeList={isNoticePanel}
             items={items}
           />
@@ -160,6 +178,7 @@ export default function AdminHomeDashboard() {
     useAdminAccessibleSectionMilestonesQuery(accessibleSectionIds);
   const meetingRecordsQuery =
     useAdminMeetingRecordListQuery(accessibleSectionIds);
+  const messagesQuery = useAdminMessagesQuery();
   const noticesQuery = useAdminNoticesQuery();
   const scheduleSections = accessibleSections.map((section, index) => ({
     milestones: milestoneQueries[index]?.data?.content ?? [],
@@ -214,6 +233,19 @@ export default function AdminHomeDashboard() {
     : noticesQuery.isError
       ? '공지사항을 불러오지 못했습니다.'
       : '등록된 공지사항이 없습니다.';
+  const messageItems: DashboardListItem[] = (messagesQuery.data?.contents ?? [])
+    .slice(0, 3)
+    .map(message => ({
+      date: formatMeetingCreatedAt(message.createdAt),
+      section: `${message.sectionName} · ${message.teamName}`,
+      teamId: String(message.teamId),
+      title: message.message,
+    }));
+  const messageEmptyMessage = messagesQuery.isPending
+    ? '쪽지함을 불러오는 중입니다.'
+    : messagesQuery.isError
+      ? '쪽지함을 불러오지 못했습니다.'
+      : '도착한 메시지가 없습니다.';
 
   return (
     <div className={styles.content}>
@@ -315,7 +347,16 @@ export default function AdminHomeDashboard() {
           title='회의록'
         />
       </div>
-      <Panel items={dashboardInbox} title='쪽지함' />
+      <Panel
+        emptyMessage={messageEmptyMessage}
+        isMessagePanel
+        items={messageItems}
+        title={
+          messagesQuery.data
+            ? `쪽지함 · 미확인 ${messagesQuery.data.unreadCount}건`
+            : '쪽지함'
+        }
+      />
     </div>
   );
 }

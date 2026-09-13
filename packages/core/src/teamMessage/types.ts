@@ -52,8 +52,25 @@ export type TeamMessagePage = {
   };
 };
 
+export type TeamUnreadMessageCount = {
+  count: number;
+};
+
 export type TeamThread = {
   threadId: number;
   teamId: number;
   createdAt: string;
+};
+
+export type AdminMessage = TeamMessage & {
+  sectionId: number | string;
+  sectionName: string;
+  teamId: number;
+  teamName: string;
+};
+
+export type AdminMessagePage = {
+  contents: AdminMessage[];
+  unreadCount: number;
+  pageable: TeamMessagePage['pageable'];
 };

@@ -210,11 +210,14 @@ export { teamMessageRelatedTypes } from './teamMessage/types';
 export type {
   SubmitTeamMessageInput,
   TeamMessage,
+  AdminMessage,
+  AdminMessagePage,
   TeamMessagePage,
   TeamMessagePersistResponse,
   TeamMessageRelatedType,
   TeamMessagesParams,
   TeamThread,
+  TeamUnreadMessageCount,
 } from './teamMessage/types';
 export type {
   RequiredSubmissionArtifact,

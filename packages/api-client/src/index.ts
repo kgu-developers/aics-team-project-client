@@ -101,6 +101,8 @@ export {
   type AdminMeetingRecordSummaryDto,
   type AdminMeetingRecordsResponse,
 } from './adminMeeting';
+export { fetchAdminMessages, updateAdminMessageRead } from './adminMessage';
+export type { AdminMessagesParams } from './adminMessage';
 export {
   fetchAdminMeetingRecordList,
   type AdminMeetingRecordListFilter,
@@ -307,7 +309,10 @@ export {
 export {
   fetchTeamMessages,
   fetchTeamThread,
+  fetchTeamUnreadMessageCount,
   submitTeamMessage,
+  updateTeamMessageImportant,
+  updateTeamMessageRead,
 } from './teamMessage';
 
 export {

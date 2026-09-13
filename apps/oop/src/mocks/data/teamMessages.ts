@@ -1,6 +1,8 @@
 import type { TeamMessage, TeamThread } from '@aics/core';
 
-export const teamMessageProfessorId = 'professor-oop-demo';
+// Keep the mock professor identity coherent with the signed-in admin session so
+// the administrator's own messages render on the right, as they do in production.
+export const teamMessageProfessorId = '20260002';
 
 export const teamMessageSenderNames: Record<string, string> = {
   [teamMessageProfessorId]: '검수 교수',
@@ -12,19 +14,65 @@ export const teamMessageSenderNames: Record<string, string> = {
 
 const teams = [
   {
-    id: 7,
-    memberIds: ['20260001', '20260003', '20260004'],
+    id: 1,
+    memberIds: ['20230001', '20230002'],
+    name: '1팀',
     professorId: teamMessageProfessorId,
   },
-  { id: 8, memberIds: [], professorId: teamMessageProfessorId },
-  { id: 9, memberIds: [], professorId: 'other-section-professor' },
+  {
+    id: 7,
+    memberIds: ['20260001', '20260003', '20260004'],
+    name: '1팀',
+    professorId: teamMessageProfessorId,
+  },
+  { id: 8, memberIds: [], name: '2팀', professorId: teamMessageProfessorId },
+  {
+    id: 9,
+    memberIds: [],
+    name: '다른 분반 팀',
+    professorId: 'other-section-professor',
+  },
 ];
 
 const threads: TeamThread[] = [
+  { threadId: 10, teamId: 1, createdAt: '2026-09-01 09:00' },
   { threadId: 70, teamId: 7, createdAt: '2026-09-01 09:00' },
 ];
 
 const messages: TeamMessage[] = [
+  {
+    id: 710,
+    threadId: 10,
+    senderId: teamMessageProfessorId,
+    relatedId: 1001,
+    relatedType: 'PROPOSAL',
+    message: '제안서의 문제 정의와 구현 범위를 보완해 주세요.',
+    important: false,
+    read: false,
+    createdAt: '2026-09-01 09:30',
+  },
+  {
+    id: 711,
+    threadId: 10,
+    senderId: teamMessageProfessorId,
+    relatedId: 1003,
+    relatedType: 'MID_REPORT',
+    message: '중간점검에는 현재 구현 결과와 남은 작업을 정리해 주세요.',
+    important: false,
+    read: false,
+    createdAt: '2026-10-10 10:00',
+  },
+  {
+    id: 712,
+    threadId: 10,
+    senderId: teamMessageProfessorId,
+    relatedId: 9999,
+    relatedType: 'PROPOSAL',
+    message: '다른 제안서 제출물에 연결된 피드백입니다.',
+    important: false,
+    read: false,
+    createdAt: '2026-09-02 09:30',
+  },
   {
     id: 701,
     threadId: 70,
