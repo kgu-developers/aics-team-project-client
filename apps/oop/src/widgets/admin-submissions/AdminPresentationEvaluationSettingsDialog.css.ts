@@ -25,3 +25,16 @@ export const content = style({
   overflowY: 'auto',
   paddingRight: 4,
 });
+export const meetingLink = style({
+  color: 'var(--color-text-accent)',
+  textDecoration: 'underline',
+});
+export const dialogActions = style({
+  display: 'flex',
+  justifyContent: 'flex-end',
+  width: '100%',
+});
+export const closeButton = style({
+  minWidth: 64,
+  padding: '6px 14px',
+});

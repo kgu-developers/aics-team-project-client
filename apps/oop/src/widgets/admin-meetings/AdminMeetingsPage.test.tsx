@@ -34,7 +34,7 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderPage() {
+function renderPage(initialEntry = '/admin/meetings/') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
@@ -51,7 +51,7 @@ function renderPage() {
     path: '/admin/meetings/',
   });
   const router = createRouter({
-    history: createMemoryHistory({ initialEntries: ['/admin/meetings/'] }),
+    history: createMemoryHistory({ initialEntries: [initialEntry] }),
     routeTree: rootRoute.addChildren([meetingsRoute]),
   });
 
@@ -103,5 +103,16 @@ describe('AdminMeetingsPage', () => {
         screen.queryByRole('link', { name: '발표 자료 구성 논의' }),
       ).not.toBeInTheDocument(),
     );
+  });
+
+  it('분반과 팀 필터가 있는 URL은 해당 팀의 회의록만 표시한다', async () => {
+    renderPage('/admin/meetings/?sectionId=oop-2026-2-01&teamId=1');
+
+    expect(
+      await screen.findByRole('link', { name: '프로젝트 킥오프' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: '발표 자료 구성 논의' }),
+    ).not.toBeInTheDocument();
   });
 });

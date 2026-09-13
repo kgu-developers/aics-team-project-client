@@ -13,13 +13,13 @@ import { useEffect, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { AdminTeamMeetingRecordList } from '~/features/admin-meeting/components';
-import { useAdminMeetingRecordsQuery } from '~/features/admin-meeting/queries';
+import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { isPresentationSubmissionMilestone } from '~/features/admin-milestone-review/model';
 import {
   useAdminSectionMilestonesQuery,
   useAdminSubmissionVersionDetailsQueries,
 } from '~/features/admin-milestone-review/queries';
-import StudentDetailDialog from '~/features/admin-student-team/components/StudentDetailDialog';
+import AdminStudentDetailDialog from '~/features/admin-student-team/components/AdminStudentDetailDialog';
 import type { TeamMilestoneProgress } from '~/features/admin-team-dashboard/model';
 import {
   useAdminTeamDashboardQuery,
@@ -180,15 +180,28 @@ export default function AdminTeamDashboard() {
       ? milestoneSubmissions[proposalMilestoneIndex]
       : undefined;
   const projectTopic = proposalSubmission?.projectTitle ?? null;
-  const meetingRecordsQuery = useAdminMeetingRecordsQuery(
+  const meetingRecordsQuery = useAdminMeetingRecordListQuery(
     accessibleSectionIds,
     team
       ? {
+          page: 0,
           sectionId: team.sectionId,
+          size: 3,
           teamId: team.id,
         }
       : undefined,
     Boolean(team),
+  );
+  const meetingRecords = (meetingRecordsQuery.data?.contents ?? []).map(
+    record => ({
+      createdAt: record.meetingAt,
+      id: String(record.id),
+      sectionId: String(record.sectionId),
+      sectionLabel: record.sectionName,
+      teamId: String(record.teamId),
+      teamLabel: record.teamName,
+      title: record.title,
+    }),
   );
 
   useEffect(() => {
@@ -251,20 +264,12 @@ export default function AdminTeamDashboard() {
   const selectedMember = selectedMemberId
     ? (team.members.find(member => member.id === selectedMemberId) ?? null)
     : null;
-  const selectedStudent = selectedMember
-    ? {
-        name: selectedMember.name,
-        studentNumber: selectedMember.studentNumber,
-        major: selectedMember.major,
-        team: { name: team.name },
-      }
-    : null;
-
   function openStudentDetail(memberId: string) {
     setSelectedMemberId(memberId);
   }
 
   const sectionCode = dashboardSection?.code ?? '분반 정보 없음';
+  const detailSectionId = dashboardSection?.id ?? team.sectionId;
 
   return (
     <div className={styles.page}>
@@ -295,7 +300,7 @@ export default function AdminTeamDashboard() {
 
           <ul className={styles.memberList}>
             {team.members.map(member => (
-              <li key={member.id}>
+              <li key={`${member.id}-${member.studentNumber}`}>
                 <Card className={styles.memberCard} padding={4}>
                   <button
                     className={styles.memberButton}
@@ -324,6 +329,7 @@ export default function AdminTeamDashboard() {
       </section>
 
       <AdminTeamMilestoneProgress
+        apiSectionId={team.sectionId}
         milestones={
           sectionMilestonesQuery.isSuccess ? teamMilestoneProgresses : []
         }
@@ -334,7 +340,7 @@ export default function AdminTeamDashboard() {
               ? 'ready'
               : 'pending'
         }
-        sectionId={dashboardSection?.id ?? team.sectionId}
+        sectionId={detailSectionId}
       />
 
       <AdminTeamEvaluationTables sectionId={team.sectionId} teamId={team.id} />
@@ -342,15 +348,15 @@ export default function AdminTeamDashboard() {
       <AdminTeamMeetingRecordList
         isError={meetingRecordsQuery.isError}
         isPending={meetingRecordsQuery.isPending}
-        records={meetingRecordsQuery.data?.records ?? []}
+        records={meetingRecords}
         sectionId={team.sectionId}
         teamId={team.id}
       />
 
-      <StudentDetailDialog
-        isOpen={selectedStudent !== null}
+      <AdminStudentDetailDialog
+        major={selectedMember?.major}
         onClose={() => setSelectedMemberId(null)}
-        student={selectedStudent}
+        studentNumber={selectedMember?.studentNumber ?? null}
       />
     </div>
   );

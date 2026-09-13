@@ -6,11 +6,18 @@ import {
   Selector,
   SelectorOption,
   Text,
+  TextInput,
   VStack,
 } from '@aics/design-system';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
-import { useUpdatePresentationOrderMutation } from '~/features/admin-milestone-review/queries';
+import {
+  useAdminTeamEvaluationCriteriaQuery,
+  useCreateAdminTeamEvaluationCriterionMutation,
+  useUpdatePresentationOrderMutation,
+} from '~/features/admin-milestone-review/queries';
+import { adminPresentationEvaluationKeys } from '~/features/admin-milestone-review/queries/adminPresentationEvaluationKeys';
 
 import * as styles from './AdminPresentationEvaluationSettingsDialog.css';
 
@@ -33,7 +40,11 @@ export function AdminPresentationEvaluationSettingsDialog({
   milestoneId,
   sectionId,
 }: Props) {
+  const queryClient = useQueryClient();
   const saveMutation = useUpdatePresentationOrderMutation();
+  const criteriaQuery = useAdminTeamEvaluationCriteriaQuery(sectionId);
+  const createCriterionMutation =
+    useCreateAdminTeamEvaluationCriterionMutation();
   const initialOrders = useMemo(
     () =>
       Object.fromEntries(
@@ -46,11 +57,15 @@ export function AdminPresentationEvaluationSettingsDialog({
   );
   const [orders, setOrders] = useState<Record<string, number>>(initialOrders);
   const [error, setError] = useState<string | null>(null);
+  const [criterionTitle, setCriterionTitle] = useState('');
+  const [criterionMaxScore, setCriterionMaxScore] = useState('');
+  const [criterionError, setCriterionError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isOpen) return;
     setOrders(initialOrders);
     setError(null);
+    setCriterionError(null);
   }, [initialOrders, isOpen]);
 
   if (!isOpen) return null;
@@ -77,15 +92,56 @@ export function AdminPresentationEvaluationSettingsDialog({
         })),
       },
       {
-        onSuccess: onClose,
+        onSuccess: async () => {
+          await queryClient.invalidateQueries({
+            queryKey: adminPresentationEvaluationKeys.list(sectionId),
+          });
+          onClose();
+        },
         onError: () => setError('저장하지 못했습니다. 다시 시도해 주세요.'),
+      },
+    );
+  }
+
+  function handleCreateCriterion() {
+    const title = criterionTitle.trim();
+    const maxScore = Number(criterionMaxScore);
+
+    if (!title) {
+      setCriterionError('평가 항목명을 입력해 주세요.');
+      return;
+    }
+    if (!Number.isInteger(maxScore) || maxScore <= 0) {
+      setCriterionError('배점은 1 이상의 정수로 입력해 주세요.');
+      return;
+    }
+
+    setCriterionError(null);
+    createCriterionMutation.mutate(
+      {
+        input: {
+          displayOrder: criteriaQuery.data?.contents.length ?? 0,
+          maxScore,
+          title,
+        },
+        sectionId,
+      },
+      {
+        onError: () =>
+          setCriterionError(
+            '평가 항목을 추가하지 못했습니다. 다시 시도해 주세요.',
+          ),
+        onSuccess: () => {
+          setCriterionTitle('');
+          setCriterionMaxScore('');
+        },
       },
     );
   }
 
   return (
     <Dialog
-      aria-label='발표 순서 설정'
+      aria-label='발표 평가 설정'
       isOpen={isOpen}
       onOpenChange={nextIsOpen => {
         if (!nextIsOpen) onClose();
@@ -126,6 +182,76 @@ export function AdminPresentationEvaluationSettingsDialog({
               />
             </HStack>
           ))}
+        </VStack>
+        <VStack gap={2}>
+          <Heading level={3}>평가 항목</Heading>
+          <Text color='secondary' type='supporting'>
+            평가 항목은 표시 순서대로 학생 발표 평가에 적용됩니다.
+          </Text>
+          {criteriaQuery.isPending ? (
+            <Text aria-live='polite' role='status'>
+              평가 항목을 불러오는 중입니다.
+            </Text>
+          ) : criteriaQuery.isError ? (
+            <VStack gap={2}>
+              <Text role='alert'>평가 항목을 불러오지 못했습니다.</Text>
+              <Button
+                label='다시 시도'
+                onClick={() => void criteriaQuery.refetch()}
+                type='button'
+                variant='secondary'
+              />
+            </VStack>
+          ) : criteriaQuery.data?.contents.length ? (
+            <VStack gap={1}>
+              {criteriaQuery.data.contents.map(criterion => (
+                <Text key={criterion.id}>
+                  {criterion.displayOrder + 1}. {criterion.title} ·{' '}
+                  {criterion.maxScore}점
+                </Text>
+              ))}
+            </VStack>
+          ) : (
+            <Text color='secondary'>등록된 평가 항목이 없습니다.</Text>
+          )}
+          <TextInput
+            isDisabled={createCriterionMutation.isPending}
+            isRequired
+            label='평가 항목명'
+            onChange={setCriterionTitle}
+            value={criterionTitle}
+            width='100%'
+          />
+          <label>
+            <Text weight='medium'>배점</Text>
+            <input
+              aria-label='배점'
+              className={styles.timeInput}
+              disabled={createCriterionMutation.isPending}
+              min='1'
+              onChange={event => setCriterionMaxScore(event.target.value)}
+              step='1'
+              type='number'
+              value={criterionMaxScore}
+            />
+          </label>
+          {criterionError ? (
+            <Text className={styles.errorText} role='alert'>
+              {criterionError}
+            </Text>
+          ) : null}
+          <HStack justify='end'>
+            <Button
+              isDisabled={
+                createCriterionMutation.isPending || criteriaQuery.isPending
+              }
+              isLoading={createCriterionMutation.isPending}
+              label='평가 항목 추가'
+              onClick={handleCreateCriterion}
+              type='button'
+              variant='secondary'
+            />
+          </HStack>
         </VStack>
         {error ? <Text className={styles.errorText}>{error}</Text> : null}
         <HStack justify='end' gap={2}>

@@ -1,6 +1,7 @@
 import { adminCourseHandlers } from './adminCourses';
 import { adminEvaluationResultHandlers } from './adminEvaluationResults';
 import { adminMeetingHandlers } from './adminMeetings';
+import { adminMidReportHandlers } from './adminMidReports';
 import { adminMilestoneScheduleHandlers } from './adminMilestoneSchedule';
 import { adminMilestoneSubmissionDetailHandlers } from './adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from './adminMilestoneSubmissions';
@@ -48,6 +49,7 @@ export const handlers = [
   ...adminMilestoneSubmissionDetailHandlers,
   ...adminMilestoneSubmissionsHandlers,
   ...adminMeetingHandlers,
+  ...adminMidReportHandlers,
   ...adminNoticeHandlers,
   ...adminPresentationEvaluationHandlers,
   ...adminPeerEvaluationFormHandlers,
@@ -61,7 +63,7 @@ export const handlers = [
   ...editLockHandlers,
   ...evaluationHandlers,
   ...topicHandlers,
-  ...createTeamMessageHandlers(),
+  ...createTeamMessageHandlers({ persist: true }),
   ...createMeetingApiHandlers(),
   ...meetingHandlers,
   ...midReportHandlers,

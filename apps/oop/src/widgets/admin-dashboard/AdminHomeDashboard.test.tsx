@@ -46,6 +46,28 @@ vi.mock('~/features/admin-meeting/queries', () => ({
   }),
 }));
 
+vi.mock('~/features/admin-message/queries', () => ({
+  useAdminMessagesQuery: () => ({
+    data: {
+      contents: [
+        {
+          createdAt: '2026-10-09 10:00',
+          id: 1,
+          message: '제안서 보완 사항을 확인해 주세요.',
+          read: false,
+          sectionId: 'oop-2026-2-01',
+          sectionName: '객체지향프로그래밍',
+          teamId: 7,
+          teamName: '1팀',
+        },
+      ],
+      unreadCount: 1,
+    },
+    isError: false,
+    isPending: false,
+  }),
+}));
+
 vi.mock('~/features/admin-milestone-review/queries', () => ({
   useAdminAccessibleSectionMilestonesQuery: () => [],
 }));
@@ -74,9 +96,18 @@ function renderPage() {
     getParentRoute: () => rootRoute,
     path: '/admin/meetings',
   });
+  const teamMessagesRoute = createRoute({
+    component: () => <div>팀 대화</div>,
+    getParentRoute: () => rootRoute,
+    path: '/admin/messages/teams/$teamId',
+  });
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: ['/admin'] }),
-    routeTree: rootRoute.addChildren([homeRoute, meetingsRoute]),
+    routeTree: rootRoute.addChildren([
+      homeRoute,
+      meetingsRoute,
+      teamMessagesRoute,
+    ]),
   });
 
   useAuthStore.setState({ currentUser: demoAdmin });
@@ -100,5 +131,16 @@ describe('AdminHomeDashboard', () => {
     expect(
       screen.queryByText('등록된 회의록이 없습니다.'),
     ).not.toBeInTheDocument();
+  });
+
+  it('홈 쪽지함은 통합 쪽지함 응답의 미확인 수와 메시지로 표시한다', async () => {
+    renderPage();
+
+    expect(
+      await screen.findByRole('heading', { name: '쪽지함 · 미확인 1건' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: '제안서 보완 사항을 확인해 주세요.' }),
+    ).toHaveAttribute('href', '/admin/messages/teams/7');
   });
 });

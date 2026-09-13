@@ -47,6 +47,7 @@ import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState
 import { useAuthStore } from '~/features/auth/authStore';
 
 import { AdminPresentationEvaluationSettingsDialog } from './AdminPresentationEvaluationSettingsDialog';
+import { AdminPresentationEvaluationTeamDetailDialog } from './AdminPresentationEvaluationTeamDetailDialog';
 import * as styles from './AdminSubmissionsPage.css';
 
 const MILESTONE_TABS = [
@@ -213,6 +214,8 @@ export default function AdminSubmissionsPage() {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [isEvaluationSettingsOpen, setIsEvaluationSettingsOpen] =
     useState(false);
+  const [selectedPresentationTeamId, setSelectedPresentationTeamId] =
+    useState<number>();
   const downloadArtifactsMutation =
     useDownloadAdminSubmissionArtifactsMutation();
   const search = useSearch({ from: '/admin/submissions' }) as {
@@ -314,6 +317,8 @@ export default function AdminSubmissionsPage() {
     label: `${section.code} · ${section.name}`,
     value: section.id,
   }));
+  const presentationEvaluationTeams =
+    presentationEvaluationsQuery.data?.teams ?? [];
 
   if (!activeTab) return null;
 
@@ -535,7 +540,7 @@ export default function AdminSubmissionsPage() {
                             width: proportional(0.7, { minWidth: 72 }),
                           },
                         ]}
-                        data={presentationEvaluationsQuery.data.teams}
+                        data={presentationEvaluationTeams}
                         dividers='rows'
                         textOverflow='wrap'
                         verticalAlign='middle'
@@ -702,7 +707,17 @@ export default function AdminSubmissionsPage() {
                       );
                     return (
                       <AdminMilestoneSubmissionCard
-                        meetingCountLabel={`회의록 ${submission.meetingRecordCount}건`}
+                        meetingCountLabel={
+                          <Link
+                            to={ROUTES.ADMIN_MEETINGS}
+                            search={{
+                              sectionId: effectiveSectionId,
+                              teamId: String(submission.teamId),
+                            }}
+                          >
+                            회의록 {submission.meetingRecordCount}건
+                          </Link>
+                        }
                         isUnread={Boolean(
                           submissionSectionId &&
                           submission.submissionId &&
@@ -731,6 +746,7 @@ export default function AdminSubmissionsPage() {
                               milestoneId={activeTab.id}
                               sectionId={effectiveSectionId}
                               submissionId={submissionId}
+                              teamId={submission.teamId}
                               unavailableReason={
                                 isVersionDetailAvailable
                                   ? undefined

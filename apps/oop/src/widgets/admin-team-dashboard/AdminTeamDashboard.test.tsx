@@ -159,6 +159,7 @@ describe('AdminTeamDashboard', () => {
 
   it('분반 마일스톤마다 teamId 필터 제출 현황과 최신 버전을 연결해 표시한다', async () => {
     const requests = vi.fn();
+    const meetingRequests = vi.fn();
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS(':milestoneId')}`,
@@ -176,6 +177,22 @@ describe('AdminTeamDashboard', () => {
           });
         },
       ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS_LIST}`,
+        ({ request }) => {
+          meetingRequests(new URL(request.url));
+          return HttpResponse.json({
+            contents: [],
+            pageable: {
+              isEnd: true,
+              page: 0,
+              size: 3,
+              totalElements: 0,
+              totalPages: 0,
+            },
+          });
+        },
+      ),
     );
 
     renderPage('1');
@@ -190,6 +207,20 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('2026.09.07 18:00')).toBeInTheDocument();
     expect(screen.getByText('발표 자료 제출')).toBeInTheDocument();
     expect(screen.getByText('presentation.pdf')).toBeInTheDocument();
+    expect(screen.getByText('발표 평가')).toBeInTheDocument();
+    const proposalDetailLink = screen
+      .getAllByRole('link', { name: '상세보기' })
+      .find(link =>
+        link.getAttribute('href')?.includes('milestoneId=proposal'),
+      );
+    expect(proposalDetailLink).toHaveAttribute(
+      'href',
+      expect.stringContaining('sectionId=oop-2026-2-01'),
+    );
+    expect(proposalDetailLink).toHaveAttribute(
+      'href',
+      expect.stringContaining('apiSectionId='),
+    );
     expect(screen.getByText('회의록: 1건')).toBeInTheDocument();
     expect(screen.getByText('프로젝트 킥오프')).toBeInTheDocument();
     expect(
@@ -207,20 +238,19 @@ describe('AdminTeamDashboard', () => {
     ).not.toBeInTheDocument();
 
     await waitFor(() => expect(requests).toHaveBeenCalled());
-    expect(requests.mock.calls).toEqual(
-      expect.arrayContaining([
-        [expect.objectContaining({ search: '?teamId=1' })],
-      ]),
-    );
-    expect(requests.mock.calls).toEqual(
-      expect.arrayContaining([
-        [
-          expect.objectContaining({
-            pathname: expect.stringContaining('/106/'),
-          }),
-        ],
-      ]),
-    );
+    const requestUrls = requests.mock.calls.flat().map(String);
+    expect(
+      requestUrls.some(url => url.includes('/106/submissions?teamId=1')),
+    ).toBe(true);
+    expect(
+      requestUrls.some(url => url.includes('/103/submissions?teamId=1')),
+    ).toBe(true);
+
+    await waitFor(() => expect(meetingRequests).toHaveBeenCalledOnce());
+    const meetingRequestUrl = meetingRequests.mock.calls[0]?.[0] as URL;
+    expect(meetingRequestUrl.searchParams.get('sectionId')).toBe('1');
+    expect(meetingRequestUrl.searchParams.get('teamId')).toBe('1');
+    expect(meetingRequestUrl.searchParams.get('size')).toBe('3');
   });
 
   it('팀 API의 숫자 분반 ID와 세션 분반 ID가 달라도 상세 링크에는 세션 분반 ID를 사용한다', async () => {
@@ -275,5 +305,20 @@ describe('AdminTeamDashboard', () => {
       await screen.findByText('팀 정보를 찾을 수 없습니다.'),
     ).toBeInTheDocument();
     expect(submissionsRequest).not.toHaveBeenCalled();
+  });
+
+  it('팀원의 기본 정보를 기존 관리자 상세 모달로 조회한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage('1');
+
+    await user.click(await screen.findByRole('button', { name: '김민준' }));
+
+    expect(
+      await screen.findByRole('heading', { name: '김민준 정보' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('20231234@example.com')).toBeInTheDocument();
+    expect(screen.getByText('010-1234-5678')).toBeInTheDocument();
+    expect(screen.getByText('컴퓨터공학과')).toBeInTheDocument();
   });
 });

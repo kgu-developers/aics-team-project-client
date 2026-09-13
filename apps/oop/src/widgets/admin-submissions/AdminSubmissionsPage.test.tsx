@@ -37,24 +37,36 @@ import {
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminEvaluationResultHandlers } from '~/mocks/handlers/adminEvaluationResults';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
+import {
+  adminMidReportHandlers,
+  resetAdminMidReportScenario,
+} from '~/mocks/handlers/adminMidReports';
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
-import { adminPresentationEvaluationHandlers } from '~/mocks/handlers/adminPresentationEvaluations';
+import {
+  adminPresentationEvaluationHandlers,
+  resetPresentationEvaluationScenario,
+} from '~/mocks/handlers/adminPresentationEvaluations';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
+import { createTeamMessageHandlers } from '~/mocks/handlers/teamMessages';
 
 const server = setupServer(
   ...adminMeetingHandlers,
+  ...adminMidReportHandlers,
   ...adminMilestoneSubmissionDetailHandlers,
   ...adminMilestoneSubmissionsHandlers,
   ...adminPresentationEvaluationHandlers,
   ...adminEvaluationResultHandlers,
   ...adminSectionMilestoneHandlers,
+  ...createTeamMessageHandlers(),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => resetMockSessionState());
 afterEach(() => {
   resetAdminMilestoneSubmissionsFixture();
+  resetAdminMidReportScenario();
+  resetPresentationEvaluationScenario();
   resetMockSessionState();
   setApiAccessToken(null);
   useAuthStore.setState({ accessToken: null, currentUser: null });
@@ -113,8 +125,14 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByText('프로젝트 주제: AI 기반 팀 프로젝트 관리 서비스'),
     ).toBeInTheDocument();
     expect(screen.getByText('프로젝트 주제: -')).toBeInTheDocument();
-    expect(screen.getByText('회의록 1건')).toBeInTheDocument();
-    expect(screen.getByText('회의록 0건')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '회의록 1건' })).toHaveAttribute(
+      'href',
+      '/admin/meetings?sectionId=oop-2026-2-01&teamId=%221%22',
+    );
+    expect(screen.getByRole('link', { name: '회의록 0건' })).toHaveAttribute(
+      'href',
+      '/admin/meetings?sectionId=oop-2026-2-01&teamId=%222%22',
+    );
   });
 
   it('제안서와 중간 점검 목록은 왼쪽에 상태와 제출 정보를 표시한다', async () => {
@@ -147,6 +165,80 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('link', { name: '프로젝트 킥오프' }),
     ).toHaveAttribute('href', '/admin/meetings/1');
+  });
+
+  it('제안서와 중간 점검 상세에서 현재 제출물에 연결된 피드백을 회의록보다 먼저 표시한다', async () => {
+    const user = userEvent.setup();
+    const midReportFeedbackRequest = vi.fn();
+
+    server.use(
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT('oop-2026-2-01', '1')}/feedback`,
+        async ({ request }) => {
+          midReportFeedbackRequest(await request.json());
+          return HttpResponse.json({
+            createdAt: '2026-09-13 16:00',
+            message: '중간보고서 수정 요청을 전송합니다.',
+            messageId: 702,
+            midReportId: 401,
+            senderId: demoAdmin.id,
+            senderName: demoAdmin.name,
+            teamId: 1,
+          });
+        },
+      ),
+    );
+
+    renderPage(
+      '/admin/submissions/1001?milestoneId=proposal&sectionId=oop-2026-2-01',
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: '제안서 피드백' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('제안서의 문제 정의와 구현 범위를 보완해 주세요.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('다른 제안서 제출물에 연결된 피드백입니다.'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: '연결된 회의록 (1건)' }),
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: '제안서 피드백 내용' }),
+      '제안서 피드백을 상세 화면에서 바로 보냅니다.',
+    );
+    await user.click(screen.getByRole('button', { name: '피드백 보내기' }));
+    expect(
+      await screen.findByText('제안서 피드백을 상세 화면에서 바로 보냅니다.'),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: '제안서 목록으로' }));
+    await user.click(await screen.findByRole('tab', { name: '중간 점검' }));
+    const midtermDetailLinks = await screen.findAllByRole('link', {
+      name: '상세보기',
+    });
+    await user.click(midtermDetailLinks[0]!);
+
+    expect(
+      await screen.findByRole('heading', { name: 'OOP-01 - 1팀 중간보고서' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('GUI 화면 흐름과 예외 처리 계획을 보완해 주세요.'),
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: '중간 점검 피드백 내용' }),
+      '중간보고서 수정 요청을 전송합니다.',
+    );
+    await user.click(screen.getByRole('button', { name: '수정 요청 보내기' }));
+    await waitFor(() =>
+      expect(midReportFeedbackRequest).toHaveBeenCalledWith({
+        message: '중간보고서 수정 요청을 전송합니다.',
+      }),
+    );
   });
 
   it('연결된 회의록이 여러 페이지면 다음 페이지를 조회한다', async () => {
@@ -274,43 +366,37 @@ describe('AdminSubmissionsPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('중간 점검의 현재 버전과 버전 이력을 일치하게 표시한다', async () => {
-    const user = userEvent.setup();
-
+  it('중간 점검은 팀 식별자로 전용 조회 API의 블록과 제출 상태를 표시한다', async () => {
     renderPage(
-      '/admin/submissions/1003?milestoneId=midterm&sectionId=oop-2026-2-01',
+      '/admin/submissions/1003?milestoneId=midterm&sectionId=oop-2026-2-01&teamId=1',
     );
 
     expect(
-      await screen.findAllByText(
-        (_, element) =>
-          element?.textContent?.includes('현재 버전: 2차') ?? false,
-      ),
-    ).not.toHaveLength(0);
-    expect(
-      screen.getByRole('button', { name: /2차 · 20230001/ }),
+      await screen.findByRole('heading', { name: 'OOP-01 - 1팀 중간보고서' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /1차 · 20230001/ }),
+      screen.getByText(/상태: SUBMITTED · 현재 버전: 1차/),
     ).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: /1차 · 20230001/ }));
     expect(
-      await screen.findByText('초기 중간 점검 결과입니다.'),
+      screen.getByRole('heading', { name: '3. 핵심 로직/엔진 설계' }),
     ).toBeInTheDocument();
   });
 
-  it('중간 점검 2팀의 제출 상세와 버전 정보를 표시한다', async () => {
+  it('중간 점검 2팀을 팀 식별자로 분리해 조회한다', async () => {
     renderPage(
-      '/admin/submissions/1004?milestoneId=midterm&sectionId=oop-2026-2-01',
+      '/admin/submissions/1004?milestoneId=midterm&sectionId=oop-2026-2-01&teamId=2',
     );
 
     expect(
-      await screen.findByRole('heading', { name: 'OOP-01 - 2팀 제출물' }),
+      await screen.findByRole('heading', { name: 'OOP-01 - 2팀 중간보고서' }),
     ).toBeInTheDocument();
     expect(
-      await screen.findByRole('link', { name: 'midterm-team-2.pdf' }),
-    ).toHaveAttribute('download', 'midterm-team-2.pdf');
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === 'PRE' &&
+          element.textContent?.includes('캠퍼스 학습 일정 관리 서비스'),
+      ),
+    ).toBeInTheDocument();
   });
 
   it('담당하지 않은 분반의 상세 URL은 서버 요청을 보내지 않는다', async () => {
@@ -401,6 +487,64 @@ describe('AdminSubmissionsPage', () => {
     await user.click(screen.getByRole('button', { name: '순서 배정 및 평가' }));
     expect(
       await screen.findByRole('heading', { name: '발표 순서 설정' }),
+    ).toBeInTheDocument();
+  });
+
+  it('발표 평가 설정에서 분반별 평가 항목을 조회하고 생성한다', async () => {
+    const user = userEvent.setup();
+    const createRequest = vi.fn();
+
+    server.use(
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA('oop-2026-2-01')}`,
+        async ({ request }) => {
+          createRequest(await request.json());
+          return HttpResponse.json({ id: 4 }, { status: 201 });
+        },
+      ),
+    );
+
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+    await user.click(
+      await screen.findByRole('button', { name: '순서 배정 및 평가' }),
+    );
+
+    expect(await screen.findByText('프로젝트 완성도')).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole('textbox', { name: /평가 항목명/ }),
+      '문제 해결 과정',
+    );
+    await user.type(screen.getByRole('spinbutton', { name: '배점' }), '20');
+    await user.click(screen.getByRole('button', { name: '평가 항목 추가' }));
+
+    await waitFor(() =>
+      expect(createRequest).toHaveBeenCalledWith({
+        displayOrder: 3,
+        maxScore: 20,
+        title: '문제 해결 과정',
+      }),
+    );
+  });
+
+  it('발표 평가 목록에서 팀을 선택하면 평가자별 결과와 회의록을 조회한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+    await user.click(
+      await screen.findByRole('button', { name: 'OOP-01 - 1팀' }),
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'OOP-01 - 1팀 발표 평가 결과',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('테스트 평가자')).toBeInTheDocument();
+    expect(
+      screen.getByText(/OOP-01 - 1팀 프로젝트 킥오프/),
     ).toBeInTheDocument();
   });
 

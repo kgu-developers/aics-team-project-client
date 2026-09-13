@@ -12,7 +12,7 @@ export type LegacyAdminPresentationEvaluationTeamDto = {
   projectTopic: string | null;
   presentationOrder: number | null;
   submittedEvaluatorCount: number;
-  evaluatorCount: number;
+  evaluatorCount?: number;
   criteria: Record<string, number | null>;
 };
 export type LegacyAdminPresentationEvaluationsResponse = {

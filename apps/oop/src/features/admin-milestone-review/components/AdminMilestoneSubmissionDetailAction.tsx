@@ -5,19 +5,28 @@ import { ROUTES } from '~/app/constants/routes';
 import * as styles from './AdminMilestoneSubmissionCard.css';
 
 type AdminMilestoneSubmissionDetailActionProps = {
+  apiSectionId?: string;
   milestoneId: string;
   sectionId: string | undefined;
   submissionId: string | null;
+  teamId?: string | number;
   unavailableReason?: string;
 };
 
 export function AdminMilestoneSubmissionDetailAction({
+  apiSectionId,
   milestoneId,
   sectionId,
   submissionId,
+  teamId,
   unavailableReason,
 }: AdminMilestoneSubmissionDetailActionProps) {
-  if (!sectionId || !submissionId || unavailableReason) {
+  if (
+    !sectionId ||
+    !submissionId ||
+    unavailableReason ||
+    (milestoneId === 'midterm' && teamId === undefined)
+  ) {
     return (
       <button
         aria-label={
@@ -37,7 +46,12 @@ export function AdminMilestoneSubmissionDetailAction({
     <Link
       className={styles.detailLink}
       params={{ submissionId }}
-      search={{ milestoneId, sectionId }}
+      search={{
+        milestoneId,
+        sectionId,
+        ...(teamId === undefined ? {} : { teamId: String(teamId) }),
+        ...(apiSectionId === undefined ? {} : { apiSectionId }),
+      }}
       to={ROUTES.ADMIN_SUBMISSION_DETAIL}
     >
       상세보기

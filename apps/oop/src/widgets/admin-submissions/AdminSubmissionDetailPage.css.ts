@@ -158,6 +158,33 @@ export const evaluationItem = style({
   padding: 14,
 });
 
+export const feedbackList = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['3'],
+});
+
+export const feedbackMessage = style({
+  background: tokens.color.background.muted,
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: 8,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['2'],
+  padding: tokens.spacing['4'],
+});
+
+export const feedbackComposer = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['3'],
+});
+
+export const feedbackSubmitAction = style({
+  display: 'flex',
+  justifyContent: 'flex-end',
+});
+
 export const table = style({
   border: `1px solid ${tokens.color.border.base}`,
   borderCollapse: 'separate',

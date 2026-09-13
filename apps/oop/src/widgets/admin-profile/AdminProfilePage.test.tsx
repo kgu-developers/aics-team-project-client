@@ -316,8 +316,8 @@ describe('AdminProfilePage', () => {
     });
     await user.upload(fileInput, excelFile);
     await user.click(screen.getByRole('button', { name: '미리보기' }));
-    expect(await screen.findByText('전체 4건')).toBeInTheDocument();
-    expect(screen.getByText('중복 4건')).toBeInTheDocument();
+    expect(await screen.findByText('전체 5건')).toBeInTheDocument();
+    expect(screen.getByText('중복 5건')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '반영하기' })).toBeEnabled();
   });
 
@@ -413,7 +413,7 @@ describe('AdminProfilePage', () => {
 
     await user.upload(fileInput, new File(['excel data'], '1151.xlsx'));
     await user.click(screen.getByRole('button', { name: '미리보기' }));
-    expect(await screen.findByText('전체 4건')).toBeInTheDocument();
+    expect(await screen.findByText('전체 5건')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '취소' }));
     await user.click(
