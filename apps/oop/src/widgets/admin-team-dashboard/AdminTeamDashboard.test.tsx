@@ -135,6 +135,7 @@ function renderPage(teamId: string) {
 describe('AdminTeamDashboard', () => {
   it('분반 마일스톤마다 teamId 필터 제출 현황과 최신 버전을 연결해 표시한다', async () => {
     const requests = vi.fn();
+    const meetingRequests = vi.fn();
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS(':milestoneId')}`,
@@ -149,6 +150,22 @@ describe('AdminTeamDashboard', () => {
 
           return HttpResponse.json({
             contents: teamSubmission ? [teamSubmission] : [],
+          });
+        },
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS_LIST}`,
+        ({ request }) => {
+          meetingRequests(new URL(request.url));
+          return HttpResponse.json({
+            contents: [],
+            pageable: {
+              isEnd: true,
+              page: 0,
+              size: 3,
+              totalElements: 0,
+              totalPages: 0,
+            },
           });
         },
       ),
@@ -179,6 +196,12 @@ describe('AdminTeamDashboard', () => {
     expect(
       requestUrls.some(url => url.includes('/103/submissions?teamId=1')),
     ).toBe(true);
+
+    await waitFor(() => expect(meetingRequests).toHaveBeenCalledOnce());
+    const meetingRequestUrl = meetingRequests.mock.calls[0]?.[0] as URL;
+    expect(meetingRequestUrl.searchParams.get('sectionId')).toBe('1');
+    expect(meetingRequestUrl.searchParams.get('teamId')).toBe('1');
+    expect(meetingRequestUrl.searchParams.get('size')).toBe('3');
   });
 
   it('팀 상세 조회에 실패하면 마일스톤 요청 없이 팀 오류 안내를 표시한다', async () => {

@@ -57,6 +57,28 @@ const server = setupServer(
       });
     },
   ),
+  http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('7')}`, () =>
+    HttpResponse.json({
+      dataConfiguration: [],
+      description: '프로젝트 설명',
+      goal: '프로젝트 목표',
+      id: 3001,
+      proposalCompletedAt: '2026-09-01T10:00:00Z',
+      projectSchedule: null,
+      repositoryUrl: null,
+      screenConfiguration: [],
+      teamId: 7,
+      teamOperation: {
+        id: 7,
+        kickoffRule: null,
+        meetingSchedule: null,
+        members: [],
+        name: '1팀',
+      },
+      title: '프로젝트',
+      topicCandidateId: null,
+    }),
+  ),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -76,7 +98,7 @@ function createWrapper() {
 }
 
 describe('useAdminRelatedSubmissionQuery', () => {
-  it('피드백 유형별 팀 제출물 ID를 relatedId로 사용할 수 있게 조회한다', async () => {
+  it('제안서는 projectId를, 중간점검은 midReportId 계약값을 준비한다', async () => {
     const { result, rerender } = renderHook(
       ({ relatedType }: { relatedType: 'PROPOSAL' | 'MID_REPORT' }) =>
         useAdminRelatedSubmissionQuery('1', '7', relatedType),
@@ -90,12 +112,14 @@ describe('useAdminRelatedSubmissionQuery', () => {
     expect(result.current.data).toEqual({
       milestoneId: 101,
       milestoneTitle: '제안서',
+      relatedId: 3001,
       submissionId: 1701,
     });
 
     rerender({ relatedType: 'MID_REPORT' as const });
     await waitFor(() => expect(result.current.data?.submissionId).toBe(1702));
     expect(result.current.data?.milestoneId).toBe(102);
+    expect(result.current.data?.relatedId).toBe(1702);
   });
 
   it('일반 메시지에는 마일스톤·제출물 API를 요청하지 않는다', () => {

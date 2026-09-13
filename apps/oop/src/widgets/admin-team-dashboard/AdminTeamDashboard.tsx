@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { AdminTeamMeetingRecordList } from '~/features/admin-meeting/components';
-import { useAdminMeetingRecordsQuery } from '~/features/admin-meeting/queries';
+import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { isPresentationSubmissionMilestone } from '~/features/admin-milestone-review/model';
 import {
   useAdminSectionMilestonesQuery,
@@ -178,15 +178,28 @@ export default function AdminTeamDashboard() {
       ? milestoneSubmissions[proposalMilestoneIndex]
       : undefined;
   const projectTopic = proposalSubmission?.projectTitle ?? null;
-  const meetingRecordsQuery = useAdminMeetingRecordsQuery(
+  const meetingRecordsQuery = useAdminMeetingRecordListQuery(
     accessibleSectionIds,
     team
       ? {
+          page: 0,
           sectionId: team.sectionId,
+          size: 3,
           teamId: team.id,
         }
       : undefined,
     Boolean(team),
+  );
+  const meetingRecords = (meetingRecordsQuery.data?.contents ?? []).map(
+    record => ({
+      createdAt: record.meetingAt,
+      id: String(record.id),
+      sectionId: String(record.sectionId),
+      sectionLabel: record.sectionName,
+      teamId: String(record.teamId),
+      teamLabel: record.teamName,
+      title: record.title,
+    }),
   );
 
   useEffect(() => {
@@ -339,7 +352,7 @@ export default function AdminTeamDashboard() {
       <AdminTeamMeetingRecordList
         isError={meetingRecordsQuery.isError}
         isPending={meetingRecordsQuery.isPending}
-        records={meetingRecordsQuery.data?.records ?? []}
+        records={meetingRecords}
         sectionId={team.sectionId}
         teamId={team.id}
       />

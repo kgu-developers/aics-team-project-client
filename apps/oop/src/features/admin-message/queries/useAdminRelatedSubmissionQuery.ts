@@ -1,6 +1,7 @@
 import {
   fetchAdminMilestoneSubmissions,
   fetchAdminSectionMilestones,
+  fetchProjectProposal,
 } from '@aics/api-client';
 import { useQuery } from '@tanstack/react-query';
 
@@ -11,6 +12,8 @@ export type AdminMessageFeedbackType = 'PROPOSAL' | 'MID_REPORT';
 export type AdminRelatedSubmission = {
   milestoneId: number;
   milestoneTitle: string;
+  /** ID required by the message contract (projectId for PROPOSAL). */
+  relatedId: number;
   submissionId: number;
 };
 
@@ -51,9 +54,16 @@ export function useAdminRelatedSubmissionQuery(
       );
       if (!submission) return null;
 
+      const relatedId =
+        relatedType === 'PROPOSAL'
+          ? (await fetchProjectProposal(teamId))?.id
+          : submission.id;
+      if (!relatedId) return null;
+
       return {
         milestoneId: milestone.id,
         milestoneTitle: milestone.title,
+        relatedId,
         submissionId: submission.id,
       };
     },

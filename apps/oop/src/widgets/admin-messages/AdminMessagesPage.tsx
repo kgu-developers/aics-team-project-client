@@ -1,5 +1,5 @@
-import { Card, Heading, Text } from '@aics/design-system';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { Button, Card, Heading, Text } from '@aics/design-system';
+import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -17,7 +17,6 @@ export default function AdminMessagesPage() {
   const [sectionId, setSectionId] = useState<string>();
   const query = useAdminMessagesQuery(sectionId);
   const readMutation = useUpdateAdminMessageReadMutation();
-  const navigate = useNavigate();
   const messages = useMemo(() => query.data?.contents ?? [], [query.data]);
 
   return (
@@ -57,9 +56,7 @@ export default function AdminMessagesPage() {
       ) : query.isError ? (
         <Card className={styles.tableCard}>
           <Text>쪽지함을 불러오지 못했습니다.</Text>
-          <button onClick={() => void query.refetch()} type='button'>
-            다시 시도
-          </button>
+          <Button label='다시 시도' onClick={() => void query.refetch()} />
         </Card>
       ) : (
         <Card className={styles.tableCard}>
@@ -74,29 +71,7 @@ export default function AdminMessagesPage() {
             </thead>
             <tbody>
               {messages.map(row => (
-                <tr
-                  className={styles.messageRow}
-                  key={row.id}
-                  onKeyDown={event => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      event.currentTarget.click();
-                    }
-                  }}
-                  onClick={async () => {
-                    if (!row.read) {
-                      void readMutation
-                        .mutateAsync(row.id)
-                        .catch(() => undefined);
-                    }
-                    await navigate({
-                      params: { teamId: String(row.teamId) },
-                      to: ROUTES.ADMIN_MESSAGE_TEAM,
-                    });
-                  }}
-                  role='link'
-                  tabIndex={0}
-                >
+                <tr className={styles.messageRow} key={row.id}>
                   <td>
                     {row.read ? null : (
                       <span
@@ -108,6 +83,9 @@ export default function AdminMessagesPage() {
                   </td>
                   <td>
                     <Link
+                      onClick={() => {
+                        if (!row.read) readMutation.mutate(row.id);
+                      }}
                       params={{ teamId: String(row.teamId) }}
                       to={ROUTES.ADMIN_MESSAGE_TEAM}
                     >
