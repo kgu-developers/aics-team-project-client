@@ -26,6 +26,7 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   useAdminOopSectionsQuery,
+  useRemoveAdminOopSectionMutation,
   useSubmitAdminOopSectionMutation,
   useUpdateAdminOopSectionMutation,
   useUpdateAdminOopSectionContactVisibilityMutation,
@@ -297,9 +298,11 @@ function SectionSettingsDialog({
 }) {
   const toast = useToast();
   const updateSectionMutation = useUpdateAdminOopSectionMutation();
+  const removeSectionMutation = useRemoveAdminOopSectionMutation();
   const updateVisibilityMutation =
     useUpdateAdminOopSectionContactVisibilityMutation();
   const resetUpdateSectionMutation = updateSectionMutation.reset;
+  const resetRemoveSectionMutation = removeSectionMutation.reset;
   const resetUpdateVisibilityMutation = updateVisibilityMutation.reset;
   const [capacity, setCapacity] = useState('');
   const [classTime, setClassTime] = useState('');
@@ -307,8 +310,9 @@ function SectionSettingsDialog({
   const [visibleFrom, setVisibleFrom] = useState('');
   const [visibleUntil, setVisibleUntil] = useState('');
   const [saveError, setSaveError] = useState<
-    'basic' | 'visibility' | 'refresh' | null
+    'basic' | 'visibility' | 'refresh' | 'delete' | 'deleteRefresh' | null
   >(null);
+  const [isDeleteConfirming, setIsDeleteConfirming] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !section) return;
@@ -318,17 +322,22 @@ function SectionSettingsDialog({
     setVisibleFrom(section.contactVisibleFrom ?? '');
     setVisibleUntil(section.contactVisibleUntil ?? '');
     resetUpdateSectionMutation();
+    resetRemoveSectionMutation();
     resetUpdateVisibilityMutation();
     setSaveError(null);
+    setIsDeleteConfirming(false);
   }, [
     isOpen,
     resetUpdateSectionMutation,
+    resetRemoveSectionMutation,
     resetUpdateVisibilityMutation,
     section,
   ]);
 
   const isPending =
-    updateSectionMutation.isPending || updateVisibilityMutation.isPending;
+    updateSectionMutation.isPending ||
+    removeSectionMutation.isPending ||
+    updateVisibilityMutation.isPending;
   const isVisibilityRangeValid =
     (!visibleFrom && !visibleUntil) ||
     (Boolean(visibleFrom && visibleUntil) &&
@@ -394,6 +403,24 @@ function SectionSettingsDialog({
     );
   }
 
+  function removeSection() {
+    if (!section || isPending) return;
+
+    setSaveError(null);
+    removeSectionMutation.mutate(section.id, {
+      onError: () => setSaveError('delete'),
+      onSuccess: async () => {
+        const refreshed = await onSaved();
+        if (!refreshed) {
+          setSaveError('deleteRefresh');
+          return;
+        }
+        toast({ body: '분반을 삭제했어요.' });
+        onClose();
+      },
+    });
+  }
+
   return (
     <Dialog
       aria-label='분반 정보 수정'
@@ -402,7 +429,7 @@ function SectionSettingsDialog({
         if (!open && !isPending) onClose();
       }}
       purpose='form'
-      width={480}
+      width={640}
     >
       <form className={styles.sectionSettingsForm} onSubmit={handleSubmit}>
         <Heading level={2}>{section?.code ?? '분반'} 분반 정보 수정</Heading>
@@ -524,7 +551,60 @@ function SectionSettingsDialog({
             />
           </VStack>
         ) : null}
+        {saveError === 'delete' ? (
+          <Text className={styles.error} role='alert'>
+            분반을 삭제하지 못했습니다. 수강생 또는 팀이 연결된 분반은 삭제할 수
+            없을 수 있습니다.
+          </Text>
+        ) : null}
+        {saveError === 'deleteRefresh' ? (
+          <VStack gap={2}>
+            <Text className={styles.error} role='alert'>
+              분반은 삭제됐지만 목록을 새로고침하지 못했습니다.
+            </Text>
+            <Button
+              label='분반 목록 새로고침'
+              onClick={() => void onSaved()}
+              size='sm'
+              type='button'
+              variant='secondary'
+            />
+          </VStack>
+        ) : null}
+        {isDeleteConfirming ? (
+          <Text className={styles.error} role='alert'>
+            삭제한 분반은 복구할 수 없습니다. 수강생 또는 팀이 연결된 분반은
+            삭제되지 않을 수 있습니다.
+          </Text>
+        ) : null}
         <HStack className={styles.dialogActions} gap={2} justify='end'>
+          {isDeleteConfirming ? (
+            <>
+              <Button
+                isDisabled={isPending}
+                label='삭제 취소'
+                onClick={() => setIsDeleteConfirming(false)}
+                type='button'
+                variant='secondary'
+              />
+              <Button
+                isDisabled={isPending}
+                isLoading={removeSectionMutation.isPending}
+                label='분반 삭제 확인'
+                onClick={removeSection}
+                type='button'
+                variant='ghost'
+              />
+            </>
+          ) : (
+            <Button
+              isDisabled={isPending}
+              label='분반 삭제'
+              onClick={() => setIsDeleteConfirming(true)}
+              type='button'
+              variant='ghost'
+            />
+          )}
           <Button
             isDisabled={isPending}
             label='취소'

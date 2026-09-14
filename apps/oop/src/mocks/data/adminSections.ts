@@ -11,6 +11,7 @@ import {
 } from './sections';
 import {
   addDemoAdminSection,
+  removeDemoAdminSection,
   resetDemoAdminSections,
   updateDemoAdminSectionContactVisibility,
 } from './users';
@@ -205,6 +206,15 @@ export function updateAdminSectionFixture(
       item => item.id === sectionId,
     ) ?? null
   );
+}
+
+export function removeAdminSectionFixture(sectionId: number) {
+  const section = sections.find(item => item.id === sectionId);
+  if (!section) return false;
+
+  sections = sections.filter(item => item.id !== sectionId);
+  removeDemoAdminSection(sectionId);
+  return true;
 }
 
 export function resetAdminSectionsMockData() {

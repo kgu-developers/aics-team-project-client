@@ -400,6 +400,36 @@ describe('AdminCourseManagement', () => {
     });
   });
 
+  it('분반 설정에서 삭제 확인 후 목록에서 제거한다', async () => {
+    const user = userEvent.setup();
+    renderManager();
+    await screen.findAllByText('객체지향 프로그래밍');
+
+    await user.click(screen.getAllByRole('button', { name: '분반 관리' })[0]!);
+    const sectionDialog = await screen.findByRole('dialog', {
+      name: '객체지향 프로그래밍 분반 관리',
+    });
+    await user.click(
+      within(sectionDialog).getByRole('button', { name: '분반 정보 수정' }),
+    );
+    const settingsDialog = await screen.findByRole('dialog', {
+      name: '분반 정보 수정',
+    });
+
+    await user.click(
+      within(settingsDialog).getByRole('button', { name: '분반 삭제' }),
+    );
+    await user.click(
+      within(settingsDialog).getByRole('button', { name: '분반 삭제 확인' }),
+    );
+
+    await waitFor(() => {
+      expect(
+        within(sectionDialog).queryByText('OOP-01'),
+      ).not.toBeInTheDocument();
+    });
+  });
+
   it('임시 저장 강좌는 삭제 확인 후 목록에서 제거한다', async () => {
     const user = userEvent.setup();
     renderManager();

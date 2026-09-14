@@ -76,6 +76,7 @@ export {
 } from './adminCourse';
 export {
   fetchAdminOopSections,
+  removeAdminOopSection,
   submitAdminOopSection,
   updateAdminOopSection,
   updateAdminOopSectionContactVisibility,

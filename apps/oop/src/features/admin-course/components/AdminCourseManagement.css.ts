@@ -99,7 +99,7 @@ export const formRow = style({
   display: 'grid',
   gap: tokens.spacing['2'],
   gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  '@media': { '(max-width: 520px)': { gridTemplateColumns: '1fr' } },
+  '@media': { '(max-width: 680px)': { gridTemplateColumns: '1fr' } },
 });
 
 export const dialogActions = style({

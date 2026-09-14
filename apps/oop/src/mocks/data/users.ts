@@ -101,6 +101,12 @@ export function addDemoAdminSection(section: CurrentUser['sections'][number]) {
   demoAdminSections = [...demoAdminSections, section];
 }
 
+export function removeDemoAdminSection(sectionId: string | number) {
+  demoAdminSections = demoAdminSections.filter(
+    section => String(section.id) !== String(sectionId),
+  );
+}
+
 export function updateDemoAdminSectionContactVisibility(
   sectionId: string | number,
   contactVisibility: Pick<

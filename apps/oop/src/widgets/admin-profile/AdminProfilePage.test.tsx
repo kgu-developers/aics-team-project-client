@@ -442,6 +442,11 @@ describe('AdminProfilePage', () => {
       screen.getByRole('heading', { name: '팀 구성 사전 정보' }),
     ).toBeInTheDocument();
     expect(
+      screen.queryByText(
+        '팀 구성 Excel 업로드와 실제 저장은 서버 연동 후 지원합니다.',
+      ),
+    ).not.toBeInTheDocument();
+    expect(
       await screen.findByText(
         '응답 수: 2명 · 미응답 학생은 현재 API 응답에 포함되지 않습니다.',
       ),

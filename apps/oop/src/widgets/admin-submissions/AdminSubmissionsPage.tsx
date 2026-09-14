@@ -46,7 +46,6 @@ import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState
 import { useAuthStore } from '~/features/auth/authStore';
 
 import { AdminPresentationEvaluationSettingsDialog } from './AdminPresentationEvaluationSettingsDialog';
-import { AdminPresentationEvaluationTeamDetailDialog } from './AdminPresentationEvaluationTeamDetailDialog';
 import * as styles from './AdminSubmissionsPage.css';
 
 const MILESTONE_TABS = [
@@ -459,11 +458,6 @@ export default function AdminSubmissionsPage() {
                                       ? '발표 순서를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
                                       : undefined
                       }
-                    />
-                    <Button
-                      isDisabled
-                      label='엑셀 다운로드'
-                      tooltip='백엔드 다운로드 API 연동 후 제공 예정입니다.'
                     />
                   </div>
                 </div>

@@ -98,7 +98,6 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
           <Heading level={2}>팀 구성 사전 정보</Heading>
           <Text color='secondary' type='supporting'>
             학생이 제출한 희망 역할, 주제 의견, 기타 의견을 확인하는 영역입니다.
-            팀 구성 Excel 업로드와 실제 저장은 서버 연동 후 지원합니다.
           </Text>
           <Button
             isDisabled={!sectionId || downloadMutation.isPending}

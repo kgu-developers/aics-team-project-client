@@ -244,6 +244,17 @@ describe('AdminSubmissionsPage', () => {
     ).toHaveTextContent('1번');
   });
 
+  it('발표 평가 결과 Excel 다운로드 버튼을 표시하지 않는다', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    expect(
+      screen.queryByRole('button', { name: '엑셀 다운로드' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('제안서 목록에 팀별 프로젝트 주제를 표시한다', async () => {
     renderPage();
 
