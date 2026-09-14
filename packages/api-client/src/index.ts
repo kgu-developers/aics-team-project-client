@@ -172,6 +172,8 @@ export {
   fetchAdminNotice,
   fetchAdminNotices,
   fetchSectionAnnouncements,
+  submitSectionAnnouncement,
+  updateSectionAnnouncement,
   removeAdminNoticeAttachment,
   type AdminNoticeDetailDto,
   type AdminNoticeDto,

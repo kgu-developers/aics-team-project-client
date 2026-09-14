@@ -136,6 +136,8 @@ export const ENDPOINTS = {
   },
   ANNOUNCEMENTS: {
     SECTION_LIST: (sectionId: string) => `/sections/${sectionId}/announcements`,
+    DETAIL: (announcementId: string | number) =>
+      `/announcements/${announcementId}`,
   },
   SECTION: {
     MY_SECTIONS: '/api/v1/oop/sections',

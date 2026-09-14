@@ -177,7 +177,7 @@ export default function AdminHomeDashboard() {
   const meetingRecordsQuery =
     useAdminMeetingRecordListQuery(accessibleSectionIds);
   const messagesQuery = useAdminMessagesQuery();
-  const noticesQuery = useAdminNoticesQuery();
+  const noticesQuery = useAdminNoticesQuery(accessibleSectionIds[0]);
   const scheduleSections = accessibleSections.map((section, index) => ({
     milestones: milestoneQueries[index]?.data?.content ?? [],
     sectionId: section.id,
@@ -218,12 +218,12 @@ export default function AdminHomeDashboard() {
         : meetingRecordsQuery.isError
           ? '회의록을 불러오지 못했습니다.'
           : '등록된 회의록이 없습니다.';
-  const noticeItems: DashboardListItem[] = (noticesQuery.data?.notices ?? [])
+  const noticeItems: DashboardListItem[] = (noticesQuery.data ?? [])
     .slice(0, 3)
     .map(notice => ({
-      date: notice.date,
-      id: notice.id,
-      section: notice.section,
+      date: notice.publishedAt,
+      id: String(notice.id),
+      section: accessibleSections[0]?.code ?? '',
       title: notice.title,
     }));
   const noticeEmptyMessage = noticesQuery.isPending

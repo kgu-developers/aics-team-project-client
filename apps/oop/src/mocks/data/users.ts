@@ -71,7 +71,7 @@ export const demoAdmin: CurrentUser = {
   globalRole: 'ASSISTANT',
   sections: [
     {
-      id: demoStudentSection.id,
+      id: '1',
       code: 'OOP-01',
       capacity: 40,
       classTime: '월요일 1-2교시',

@@ -4,29 +4,35 @@ import {
   Card,
   Dialog,
   EmptyState,
-  FileInput,
   Heading,
-  MultiSelector,
+  Selector,
+  SelectorOption,
   Text,
   TextArea,
   TextInput,
 } from '@aics/design-system';
-import { Link, useNavigate, useParams } from '@tanstack/react-router';
-import { isAxiosError } from 'axios';
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearch,
+} from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import {
   useAdminNoticeQuery,
+  useAdminAllNoticesQuery,
   useAdminNoticesQuery,
-  useRemoveAdminNoticeAttachmentMutation,
+  useSubmitSectionAnnouncementMutation,
+  useUpdateSectionAnnouncementMutation,
 } from '~/features/admin-notices/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminNoticePages.css';
 
-const productDateTimeFormatter = new Intl.DateTimeFormat('sv-SE', {
+const formatter = new Intl.DateTimeFormat('sv-SE', {
   day: '2-digit',
   hour: '2-digit',
   hourCycle: 'h23',
@@ -35,10 +41,7 @@ const productDateTimeFormatter = new Intl.DateTimeFormat('sv-SE', {
   timeZone: 'Asia/Seoul',
   year: 'numeric',
 });
-
-function isNoticeNotFoundError(error: unknown) {
-  return isAxiosError(error) && error.response?.status === 404;
-}
+const requestDate = () => formatter.format(new Date()).replace(' ', 'T');
 
 function BackToList() {
   return (
@@ -48,41 +51,36 @@ function BackToList() {
   );
 }
 
+/** Deletion is not exposed by the supplied announcement API contract. */
 export function DeleteNoticeDialog({
   detail,
   isOpen,
   onClose,
 }: {
-  isOpen: boolean;
   detail: AdminNoticeDetailDto;
+  isOpen: boolean;
   onClose: () => void;
 }) {
-  const { notice } = detail;
-
   return (
     <Dialog
       aria-label='공지사항 삭제 확인'
       isOpen={isOpen}
-      onOpenChange={nextIsOpen => {
-        if (!nextIsOpen) onClose();
+      onOpenChange={open => {
+        if (!open) onClose();
       }}
       purpose='form'
       width={480}
     >
-      <Heading
-        className={styles.deleteTitle}
-        id='delete-notice-title'
-        level={2}
-      >
+      <Heading className={styles.deleteTitle} level={2}>
         이 공지사항을 삭제할까요?
       </Heading>
       <Text color='secondary'>삭제한 공지사항은 복구할 수 없습니다.</Text>
       <Card className={styles.deletePreview}>
-        <Heading level={3}>{notice.title}</Heading>
+        <Heading level={3}>{detail.notice.title}</Heading>
         <Text className={styles.meta} color='secondary'>
           작성일 : {detail.createdAt}
         </Text>
-        <Text>공개 범위 : {notice.section}</Text>
+        <Text>공개 범위 : {detail.notice.section}</Text>
         <div className={styles.divider} />
         {detail.content.map(content => (
           <Text key={content}>{content}</Text>
@@ -90,8 +88,8 @@ export function DeleteNoticeDialog({
       </Card>
       <div className={styles.modalActions}>
         <Button
-          label='취소'
           data-autofocus=''
+          label='취소'
           onClick={onClose}
           variant='secondary'
         />
@@ -106,180 +104,177 @@ export function DeleteNoticeDialog({
   );
 }
 
-type NoticeSection = Exclude<NoticeSectionFilter, '전체'>;
+const allSectionsValue = 'all';
 
-type NoticeSectionFilter = string;
-
-function isNoticeSection(value: string): value is NoticeSection {
-  return value !== '전체';
-}
-
-function SectionSelect({
-  options,
+function SectionSelector({
+  includeAll = false,
+  selectedId,
   onChange,
-  value,
 }: {
-  options: NoticeSectionFilter[];
-  onChange: (sections: NoticeSection[]) => void;
-  value: NoticeSection[];
+  includeAll?: boolean;
+  selectedId: string | undefined;
+  onChange: (id: string) => void;
 }) {
+  const sections = useAuthStore(state => state.currentUser?.sections ?? []);
+  if (!sections.length)
+    return (
+      <Text role='alert'>
+        접근 가능한 분반이 없어 공지사항을 관리할 수 없습니다.
+      </Text>
+    );
   return (
-    <MultiSelector
-      hasClear
-      hasSelectAll
+    <Selector
       label='분반'
-      onChange={nextValue => onChange(nextValue.filter(isNoticeSection))}
-      options={options}
-      placeholder='분반을 선택해 주세요.'
-      selectAllLabel='전체 선택'
-      triggerDisplay='labels'
-      value={value}
-      width='100%'
+      onChange={onChange}
+      options={[
+        ...(includeAll
+          ? [{ label: '전체 분반', value: allSectionsValue }]
+          : []),
+        ...sections.map(section => ({
+          label: section.code,
+          value: section.id,
+        })),
+      ]}
+      renderOption={option => (
+        <SelectorOption label={option.label ?? option.value} />
+      )}
+      value={selectedId ?? (includeAll ? allSectionsValue : '')}
+      width={320}
     />
   );
 }
 
-function NoticeAttachmentField({
-  existingFileName,
-  file,
-  isRemoving,
-  label,
-  onChange,
-  onRemoveExisting,
-  removeError,
+function NoticeForm({
+  content,
+  onContentChange,
+  onSubmit,
+  onTitleChange,
+  submitError,
+  submitLabel,
+  submitting,
+  title,
 }: {
-  existingFileName?: string;
-  file: File | null;
-  isRemoving?: boolean;
-  label: string;
-  onChange: (file: File | null) => void;
-  onRemoveExisting?: () => void;
-  removeError?: string;
+  content: string;
+  onContentChange: (value: string) => void;
+  onSubmit: () => void;
+  onTitleChange: (value: string) => void;
+  submitError: boolean;
+  submitLabel: string;
+  submitting: boolean;
+  title: string;
 }) {
   return (
-    <div className={styles.fieldGroup}>
-      <FileInput
-        label={label}
-        mode='input'
-        onChange={selected => {
-          const nextFile = Array.isArray(selected) ? selected[0] : selected;
-          onChange(nextFile ?? null);
-        }}
-        placeholder='파일 선택'
-        value={file}
-        width='100%'
-      />
-      {existingFileName && !file ? (
-        <>
-          <Text color='secondary'>📎 {existingFileName}</Text>
-          {onRemoveExisting ? (
-            <Button
-              isDisabled={isRemoving}
-              isLoading={isRemoving}
-              label='기존 파일 삭제'
-              onClick={onRemoveExisting}
-              variant='secondary'
-            />
-          ) : null}
-          {removeError ? <Text role='alert'>{removeError}</Text> : null}
-        </>
+    <>
+      <div className={styles.fields}>
+        <TextInput
+          label='제목'
+          onChange={onTitleChange}
+          placeholder='제목을 입력해 주세요.'
+          value={title}
+          width='100%'
+        />
+        <TextArea
+          label='내용'
+          onChange={onContentChange}
+          placeholder='공지 내용을 입력해 주세요.'
+          rows={9}
+          value={content}
+          width='100%'
+        />
+      </div>
+      <div className={styles.actions}>
+        <Button
+          isDisabled={!title.trim() || !content.trim()}
+          isLoading={submitting}
+          label={submitLabel}
+          onClick={onSubmit}
+          variant='primary'
+        />
+      </div>
+      {submitError ? (
+        <Text role='alert'>저장에 실패했습니다. 다시 시도해 주세요.</Text>
       ) : null}
-      {file ? (
-        <>
-          <Text color='secondary' role='status' type='supporting'>
-            {file.name} 선택됨 · 아직 업로드되지 않았습니다.
-          </Text>
-          <Button
-            label='선택한 파일 제거'
-            onClick={() => onChange(null)}
-            variant='secondary'
-          />
-        </>
-      ) : null}
-    </div>
+    </>
   );
 }
 
 export function AdminNoticeListPage() {
   const navigate = useNavigate();
-  const [currentPage, setCurrentPage] = useState(1);
-  const noticesQuery = useAdminNoticesQuery();
-  const [selectedSection, setSelectedSection] =
-    useState<NoticeSectionFilter>('전체');
-  const notices = noticesQuery.data?.notices ?? [];
-  const sectionFilters = noticesQuery.data?.sectionFilters ?? ['전체'];
-  const pageSize = noticesQuery.data?.pageSize ?? 1;
-  const filteredNotices =
-    selectedSection === '전체'
-      ? notices
-      : notices.filter(notice => notice.section === selectedSection);
-  const totalPages = Math.max(1, Math.ceil(filteredNotices.length / pageSize));
-  const displayedNotices = filteredNotices.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
+  const search = useSearch({ from: '/admin/notices/' }) as {
+    sectionId?: string;
+  };
+  const sections = useAuthStore(state => state.currentUser?.sections ?? []);
+  const accessibleSectionIds = sections.map(section => section.id);
+  const selectedSectionId =
+    search.sectionId && accessibleSectionIds.includes(search.sectionId)
+      ? search.sectionId
+      : allSectionsValue;
+  const sectionQuery = useAdminNoticesQuery(
+    selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
   );
+  const allSectionsQuery = useAdminAllNoticesQuery(
+    selectedSectionId === allSectionsValue ? accessibleSectionIds : [],
+  );
+  const query =
+    selectedSectionId === allSectionsValue ? allSectionsQuery : sectionQuery;
+  const notices = query.data ?? [];
 
-  function selectSection(section: NoticeSectionFilter) {
-    setSelectedSection(section);
-    setCurrentPage(1);
+  function selectSection(sectionId: string) {
+    void navigate({
+      search: sectionId === allSectionsValue ? {} : { sectionId },
+      to: ROUTES.ADMIN_NOTICES,
+    });
   }
-
   return (
     <div className={styles.page}>
       <Heading level={1}>공지사항</Heading>
-      <div className={styles.filters} role='group' aria-label='분반 필터'>
-        {sectionFilters.map(label => (
-          <button
-            aria-pressed={selectedSection === label}
-            className={
-              selectedSection === label ? styles.filterActive : styles.filter
-            }
-            key={label}
-            onClick={() => selectSection(label)}
-            type='button'
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-      {noticesQuery.isLoading ? (
-        <Text>공지사항을 불러오는 중입니다.</Text>
-      ) : null}
-      {noticesQuery.isError ? (
+      <SectionSelector
+        includeAll
+        onChange={selectSection}
+        selectedId={selectedSectionId}
+      />
+      {query.isPending ? <Text>공지사항을 불러오는 중입니다.</Text> : null}
+      {query.isError ? (
         <Text role='alert'>공지사항을 불러오지 못했습니다.</Text>
       ) : null}
       <Card className={styles.tableCard}>
         <table className={styles.table}>
           <thead>
             <tr>
-              <th scope='col'>날짜 ↕</th>
+              <th scope='col'>게시일시</th>
               <th scope='col'>분반</th>
               <th scope='col'>제목</th>
-              <th scope='col'>작성자</th>
             </tr>
           </thead>
           <tbody>
-            {displayedNotices.length > 0 ? (
-              displayedNotices.map(notice => (
+            {notices.length ? (
+              notices.map(notice => (
                 <tr key={notice.id}>
-                  <td>{notice.date}</td>
-                  <td>{notice.section}</td>
+                  <td>{notice.publishedAt}</td>
+                  <td>
+                    {sections.find(
+                      section =>
+                        String(section.id) === String(notice.sectionId),
+                    )?.code ?? '알 수 없는 분반'}
+                  </td>
                   <td>
                     <Link
                       className={styles.titleLink}
-                      params={{ noticeId: notice.id }}
+                      params={{ noticeId: String(notice.id) }}
+                      search={{ sectionId: String(notice.sectionId) }}
                       to='/admin/notices/$noticeId'
                     >
                       {notice.title}
                     </Link>
                   </td>
-                  <td>{notice.writer}</td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td className={styles.emptyCell} colSpan={4}>
-                  {selectedSection}에 등록된 공지사항이 없어요.
+                <td className={styles.emptyCell} colSpan={3}>
+                  {selectedSectionId === allSectionsValue
+                    ? '등록된 공지사항이 없어요.'
+                    : '선택한 분반에 등록된 공지사항이 없어요.'}
                 </td>
               </tr>
             )}
@@ -287,28 +282,6 @@ export function AdminNoticeListPage() {
         </table>
       </Card>
       <div className={styles.listFooter}>
-        <div className={styles.pagination} aria-label='공지사항 페이지'>
-          {Array.from({ length: totalPages }, (_, index) => index + 1).map(
-            page => (
-              <button
-                aria-current={currentPage === page ? 'page' : undefined}
-                className={currentPage === page ? styles.pageActive : undefined}
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                type='button'
-              >
-                {page}
-              </button>
-            ),
-          )}
-          <button
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage(page => page + 1)}
-            type='button'
-          >
-            다음
-          </button>
-        </div>
         <Button
           label='작성하기'
           onClick={() => navigate({ to: ROUTES.ADMIN_NOTICE_NEW })}
@@ -320,16 +293,22 @@ export function AdminNoticeListPage() {
 }
 
 export function AdminNoticeDetailPage() {
+  const navigate = useNavigate();
   const { noticeId } = useParams({ from: '/admin/notices/$noticeId/' });
-  const noticeQuery = useAdminNoticeQuery(noticeId);
-  const detail = noticeQuery.data;
-  const notice = detail?.notice;
-
-  if (noticeQuery.isLoading) {
+  const search = useSearch({ from: '/admin/notices/$noticeId/' }) as {
+    sectionId?: string;
+  };
+  const sections = useAuthStore(state => state.currentUser?.sections ?? []);
+  const sectionIds = sections.map(section => section.id);
+  const sectionId =
+    search.sectionId && sectionIds.includes(search.sectionId)
+      ? search.sectionId
+      : sectionIds[0];
+  const query = useAdminNoticeQuery(sectionId, noticeId);
+  const notice = query.data;
+  if (query.isPending)
     return <div className={styles.page}>공지사항을 불러오는 중입니다.</div>;
-  }
-
-  if (noticeQuery.isError && !isNoticeNotFoundError(noticeQuery.error)) {
+  if (query.isError)
     return (
       <div className={styles.page}>
         <EmptyState
@@ -338,17 +317,13 @@ export function AdminNoticeDetailPage() {
         />
       </div>
     );
-  }
-
-  if (!notice || !detail) {
+  if (!notice)
     return (
       <div className={styles.page}>
         <Heading level={1}>공지사항을 찾을 수 없어요.</Heading>
         <BackToList />
       </div>
     );
-  }
-
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
@@ -358,27 +333,23 @@ export function AdminNoticeDetailPage() {
       <Card className={styles.detailCard}>
         <Heading level={2}>{notice.title}</Heading>
         <Text className={styles.meta} color='secondary'>
-          작성일 : {detail.createdAt}
+          게시일시 : {notice.publishedAt}
         </Text>
-        <Text>공개 범위 : {notice.section}</Text>
         <div className={styles.divider} />
-        {detail.content.map(content => (
-          <Text key={content}>{content}</Text>
-        ))}
-        <div className={styles.attachment}>
-          <span>제출 파일</span>
-          <Text color='secondary'>📎 {detail.attachment}</Text>
-          <Text color='secondary' type='supporting'>
-            파일 다운로드 API 연동 후 제공됩니다.
-          </Text>
-        </div>
+        <Text>{notice.content}</Text>
         <div className={styles.actions}>
-          <Button isDisabled label='삭제' variant='secondary' />
-          <Button isDisabled label='수정' variant='primary' />
+          <Button
+            label='수정'
+            onClick={() =>
+              navigate({
+                to: '/admin/notices/$noticeId/edit',
+                params: { noticeId: String(notice.id) },
+                search: { sectionId: String(notice.sectionId) },
+              })
+            }
+            variant='primary'
+          />
         </div>
-        <Text color='secondary' type='supporting'>
-          공지사항 수정·삭제 API 연동 후 사용할 수 있습니다.
-        </Text>
       </Card>
     </div>
   );
@@ -386,38 +357,30 @@ export function AdminNoticeDetailPage() {
 
 export function AdminNoticeEditPage() {
   const navigate = useNavigate();
-  const { noticeId } = useParams({
-    from: '/admin/notices/$noticeId/edit',
-  });
-  const noticeQuery = useAdminNoticeQuery(noticeId);
-  const accessibleSections = useAuthStore(state => state.currentUser?.sections);
-  const detail = noticeQuery.data;
-  const notice = detail?.notice;
-  const [content, setContent] = useState(detail?.content.join('\n\n') ?? '');
-  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
-  const [isExistingAttachmentRemoved, setIsExistingAttachmentRemoved] =
-    useState(false);
-  const [sections, setSections] = useState<NoticeSection[]>(
-    notice && isNoticeSection(notice.section) ? [notice.section] : [],
-  );
-  const [title, setTitle] = useState(notice?.title ?? '');
-  const removeAttachmentMutation = useRemoveAdminNoticeAttachmentMutation();
-
+  const { noticeId } = useParams({ from: '/admin/notices/$noticeId/edit' });
+  const search = useSearch({ from: '/admin/notices/$noticeId/edit' }) as {
+    sectionId?: string;
+  };
+  const sections = useAuthStore(state => state.currentUser?.sections ?? []);
+  const sectionIds = sections.map(section => section.id);
+  const sectionId =
+    search.sectionId && sectionIds.includes(search.sectionId)
+      ? search.sectionId
+      : sectionIds[0];
+  const query = useAdminNoticeQuery(sectionId, noticeId);
+  const mutation = useUpdateSectionAnnouncementMutation();
+  const notice = query.data;
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
   useEffect(() => {
-    if (!notice || !detail) return;
-
-    setContent(detail.content.join('\n\n'));
-    setAttachmentFile(null);
-    setIsExistingAttachmentRemoved(false);
-    if (isNoticeSection(notice.section)) setSections([notice.section]);
-    setTitle(notice.title);
-  }, [noticeId, notice, detail]);
-
-  if (noticeQuery.isLoading) {
+    if (notice) {
+      setTitle(notice.title);
+      setContent(notice.content);
+    }
+  }, [notice]);
+  if (query.isPending)
     return <div className={styles.page}>공지사항을 불러오는 중입니다.</div>;
-  }
-
-  if (noticeQuery.isError && !isNoticeNotFoundError(noticeQuery.error)) {
+  if (query.isError)
     return (
       <div className={styles.page}>
         <EmptyState
@@ -426,17 +389,13 @@ export function AdminNoticeEditPage() {
         />
       </div>
     );
-  }
-
-  if (!notice || !detail) {
+  if (!notice)
     return (
       <div className={styles.page}>
         <Heading level={1}>공지사항을 찾을 수 없어요.</Heading>
         <BackToList />
       </div>
     );
-  }
-
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
@@ -446,86 +405,47 @@ export function AdminNoticeEditPage() {
       <Card className={styles.formCard}>
         <Heading level={2}>공지사항 수정</Heading>
         <Text className={styles.meta} color='secondary'>
-          작성일 : {detail.createdAt}
+          게시일시 : {notice.publishedAt}
         </Text>
-        <div className={styles.fields}>
-          <TextInput
-            label='제목'
-            onChange={setTitle}
-            value={title}
-            width='100%'
-          />
-          <div className={styles.fieldGroup}>
-            <Text>분반</Text>
-            <SectionSelect
-              onChange={setSections}
-              options={[
-                ...new Set(
-                  accessibleSections?.map(section => section.code) ?? [],
-                ),
-              ]}
-              value={sections}
-            />
-          </div>
-          <TextArea
-            label='내용'
-            onChange={setContent}
-            rows={9}
-            value={content}
-            width='100%'
-          />
-          <NoticeAttachmentField
-            existingFileName={
-              isExistingAttachmentRemoved ? undefined : detail.attachment
-            }
-            file={attachmentFile}
-            isRemoving={removeAttachmentMutation.isPending}
-            label='첨부 파일 변경'
-            onChange={setAttachmentFile}
-            onRemoveExisting={() => {
-              removeAttachmentMutation.mutate(notice.id, {
-                onSuccess: () => setIsExistingAttachmentRemoved(true),
-              });
-            }}
-            removeError={
-              removeAttachmentMutation.isError
-                ? '첨부 파일 삭제에 실패했습니다. 다시 시도해 주세요.'
-                : undefined
-            }
-          />
-        </div>
-        <div className={styles.actions}>
-          <Button
-            label='취소'
-            onClick={() =>
-              navigate({
-                to: '/admin/notices/$noticeId',
-                params: { noticeId: notice.id },
-              })
-            }
-            variant='secondary'
-          />
-          <Button isDisabled label='저장' variant='primary' />
-        </div>
-        <Text color='secondary' type='supporting'>
-          공지사항 수정 API 연동 후 저장할 수 있습니다.
-        </Text>
+        <NoticeForm
+          content={content}
+          onContentChange={setContent}
+          onSubmit={() =>
+            mutation.mutate(
+              {
+                announcementId: notice.id,
+                content: content.trim(),
+                title: title.trim(),
+              },
+              {
+                onSuccess: updated =>
+                  navigate({
+                    to: '/admin/notices/$noticeId',
+                    params: { noticeId: String(updated.id) },
+                  }),
+              },
+            )
+          }
+          onTitleChange={setTitle}
+          submitError={mutation.isError}
+          submitLabel='저장'
+          submitting={mutation.isPending}
+          title={title}
+        />
       </Card>
     </div>
   );
 }
 
 export function AdminNoticeNewPage() {
-  const [createdAt] = useState(() =>
-    productDateTimeFormatter.format(new Date()),
-  );
   const navigate = useNavigate();
-  const [content, setContent] = useState('');
-  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
-  const [sections, setSections] = useState<NoticeSection[]>([]);
+  const sections = useAuthStore(state => state.currentUser?.sections ?? []);
+  const [sectionId, setSectionId] = useState<string | undefined>(
+    () => sections[0]?.id,
+  );
   const [title, setTitle] = useState('');
-  const accessibleSections = useAuthStore(state => state.currentUser?.sections);
-
+  const [content, setContent] = useState('');
+  const mutation = useSubmitSectionAnnouncementMutation();
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
@@ -535,53 +455,32 @@ export function AdminNoticeNewPage() {
       <Card className={styles.formCard}>
         <Heading level={2}>공지사항 작성</Heading>
         <Text className={styles.meta} color='secondary'>
-          작성일 : {createdAt}
+          게시일시 : {formatter.format(new Date())}
         </Text>
-        <div className={styles.fields}>
-          <TextInput
-            label='제목'
-            onChange={setTitle}
-            placeholder='제목을 입력해 주세요.'
-            value={title}
-            width='100%'
-          />
-          <div className={styles.fieldGroup}>
-            <Text>분반</Text>
-            <SectionSelect
-              onChange={setSections}
-              options={[
-                ...new Set(
-                  accessibleSections?.map(section => section.code) ?? [],
-                ),
-              ]}
-              value={sections}
-            />
-          </div>
-          <TextArea
-            label='내용'
-            onChange={setContent}
-            placeholder='공지 내용을 입력해 주세요.'
-            rows={9}
-            value={content}
-            width='100%'
-          />
-          <NoticeAttachmentField
-            file={attachmentFile}
-            label='첨부 파일'
-            onChange={setAttachmentFile}
-          />
-        </div>
-        <div className={styles.actions}>
-          <Button
-            label='취소'
-            onClick={() => navigate({ to: ROUTES.ADMIN_NOTICES })}
-            variant='secondary'
-          />
-          <Button isDisabled label='저장' variant='primary' />
-        </div>
-        <Text color='secondary' type='supporting'>
-          공지사항 작성 API 연동 후 저장할 수 있습니다.
-        </Text>
+        <SectionSelector onChange={setSectionId} selectedId={sectionId} />
+        <NoticeForm
+          content={content}
+          onContentChange={setContent}
+          onSubmit={() => {
+            if (sectionId)
+              mutation.mutate(
+                {
+                  sectionId,
+                  content: content.trim(),
+                  publishedAt: requestDate(),
+                  title: title.trim(),
+                },
+                {
+                  onSuccess: () => navigate({ to: ROUTES.ADMIN_NOTICES }),
+                },
+              );
+          }}
+          onTitleChange={setTitle}
+          submitError={mutation.isError}
+          submitLabel='등록'
+          submitting={mutation.isPending}
+          title={title}
+        />
       </Card>
     </div>
   );
