@@ -281,17 +281,20 @@ describe('AdminTeamDashboard', () => {
     const track = ({ request }: { request: Request }) =>
       requests.push(new URL(request.url).pathname);
     server.events.on('request:start', track);
-    renderPage('1', 'oop-2026-2-01');
-    expect(
-      await screen.findByText('이 팀에 접근할 수 없습니다.'),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: '김민준' }),
-    ).not.toBeInTheDocument();
-    expect(requests).toEqual([
-      new URL(`${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM('1')}`).pathname,
-    ]);
-    server.events.removeListener('request:start', track);
+    try {
+      renderPage('1', 'oop-2026-2-01');
+      expect(
+        await screen.findByText('이 팀에 접근할 수 없습니다.'),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: '김민준' }),
+      ).not.toBeInTheDocument();
+      expect(requests).toEqual([
+        new URL(`${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM('1')}`).pathname,
+      ]);
+    } finally {
+      server.events.removeListener('request:start', track);
+    }
   });
 
   it('2팀 대시보드에는 1팀 평가 상세 fixture를 표시하지 않는다', async () => {

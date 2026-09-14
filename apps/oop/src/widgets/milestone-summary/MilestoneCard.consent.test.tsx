@@ -67,6 +67,14 @@ function setup({
   version = 2,
   showFiles = false,
   detailError = false,
+  cardMilestone = milestone,
+}: {
+  leader?: boolean;
+  allConfirmed?: boolean;
+  version?: number;
+  showFiles?: boolean;
+  detailError?: boolean;
+  cardMilestone?: StudentHomeMilestone;
 } = {}) {
   const user = leader ? demoStudent : demoPartnerStudent;
   useAuthStore
@@ -143,7 +151,7 @@ function setup({
             },
           }}
         >
-          <MilestoneCard milestone={milestone} isOpen />
+          <MilestoneCard milestone={cardMilestone} isOpen />
           {showFiles ? (
             <section aria-label='제출 자료 본문'>
               <StudentSubmissionMaterials milestoneId='21' />
@@ -288,6 +296,73 @@ it('blocks final-report reads and approval actions for an unattributed live team
   expect(action).toBeDisabled();
   await userEvent.click(action);
   expect(screen.queryByText('파일 제출 폼 열림')).not.toBeInTheDocument();
+  expect(requests.sort()).toEqual([
+    '/api/v1/oop/sections',
+    '/api/v1/oop/users/me',
+  ]);
+});
+
+it('does not read the current mid-report before live student context attribution succeeds', async () => {
+  vi.stubEnv('VITE_ENABLE_MSW', 'false');
+  useAuthStore.getState().markAuthenticated('STUDENT');
+  const first = {
+    id: 1,
+    code: 'OOP-01',
+    name: '01분반',
+    classTime: '',
+    capacity: 40,
+    contactVisibleFrom: null,
+    contactVisibleUntil: null,
+    courseId: 1,
+    courseName: 'OOP',
+    year: 2026,
+    semester: 'FALL',
+    status: 'ACTIVE',
+  };
+  const requests: string[] = [];
+  server.events.on('request:start', ({ request }) =>
+    requests.push(new URL(request.url).pathname),
+  );
+  server.use(
+    http.get(`${API_BASE_URL}/api/v1/oop/users/me`, () =>
+      HttpResponse.json({
+        ...demoPartnerStudent,
+        globalRole: 'USER',
+        teamId: 7,
+        sections: [first, { ...first, id: 2 }],
+      }),
+    ),
+    http.get(`${API_BASE_URL}/api/v1/oop/sections`, () =>
+      HttpResponse.json({ contents: [first] }),
+    ),
+  );
+  setup({
+    cardMilestone: {
+      ...milestone,
+      id: '22',
+      title: '중간 점검',
+      rows: [
+        {
+          id: 'mid-report-submit',
+          label: '중간 점검 제출',
+          value: '작성 중',
+          tone: 'primary',
+          actionLabel: '제출하기',
+        },
+      ],
+    },
+  });
+  await waitFor(() =>
+    expect(
+      client.getQueryData([
+        'student-home',
+        'user',
+        demoPartnerStudent.studentNumber,
+        'STUDENT',
+      ]),
+    ).toBeDefined(),
+  );
+  expect(screen.getByRole('button', { name: '제출하기' })).toBeDisabled();
   expect(requests.sort()).toEqual([
     '/api/v1/oop/sections',
     '/api/v1/oop/users/me',

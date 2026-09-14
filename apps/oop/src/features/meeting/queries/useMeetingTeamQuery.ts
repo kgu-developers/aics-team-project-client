@@ -12,6 +12,7 @@ import { hasMeetingApiId } from './api/meetingApiKeys';
 
 export function useMeetingTeamQuery() {
   const user = useAuthStore(state => state.currentUser);
+  const sessionRole = useAuthStore(state => state.sessionRole);
   const isDemo = isMockDevelopmentMode(
     import.meta.env.DEV,
     import.meta.env.VITE_ENABLE_MSW,
@@ -78,7 +79,7 @@ export function useMeetingTeamQuery() {
     requiresPhaseAndTime: !isDemo,
     canEditRecord:
       Boolean(team) &&
-      (isDemo ? user?.globalRole : identity?.globalRole) === 'STUDENT',
+      (isDemo ? user?.globalRole === 'STUDENT' : sessionRole === 'STUDENT'),
     canManageActions: Boolean(teamId),
     canDeleteRecord: (authorId: string) =>
       !isDemo ||

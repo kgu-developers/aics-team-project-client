@@ -152,10 +152,10 @@ export default function MilestoneCard({
                     isDisabled={!canAct || row.actionDisabled}
                     label={row.actionLabel}
                   />
-                ) : row.id === 'mid-report-submit' ? (
+                ) : row.id === 'mid-report-submit' && canAct ? (
                   <MidReportSubmitAction
                     className={styles.rowAction}
-                    isDisabled={!canAct || row.actionDisabled}
+                    isDisabled={row.actionDisabled}
                     label={row.actionLabel}
                   />
                 ) : row.id === 'proposal-topic-selection' &&
