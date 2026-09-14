@@ -73,9 +73,6 @@ function getFeedbackRelatedType(milestoneId: string | undefined) {
   return undefined;
 }
 
-function formatMeetingAt(value: string) {
-  return value.replace('T', ' ');
-}
 function ArtifactValue({
   artifact,
 }: {
