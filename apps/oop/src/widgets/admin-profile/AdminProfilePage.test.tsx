@@ -28,10 +28,7 @@ import {
   issueMockSession,
 } from '~/mocks/authSession';
 import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
-import {
-  getAdminProfile,
-  resetAdminProfileMockData,
-} from '~/mocks/data/adminProfile';
+import { resetAdminProfileMockData } from '~/mocks/data/adminProfile';
 import { resetAdminSectionsMockData } from '~/mocks/data/adminSections';
 import {
   demoAdmin,
@@ -238,64 +235,6 @@ describe('AdminProfilePage', () => {
 
     expect(screen.getByLabelText('이름')).toBeDisabled();
     expect(screen.getByLabelText('이메일')).toBeDisabled();
-  });
-
-  it('소개 메시지를 MSW에 저장하고 최신 값을 다시 표시한다', async () => {
-    const user = userEvent.setup();
-    renderPage();
-
-    const introduction = await screen.findByLabelText('간단한 메시지');
-    await waitFor(() => expect(introduction).toBeEnabled());
-    const introductionText = '안녕하세요. OOP 팀프로젝트 담당 조교입니다.';
-    await user.type(introduction, introductionText);
-    expect(screen.getByLabelText('간단한 메시지')).toHaveValue(
-      introductionText,
-    );
-    expect(
-      screen.getByRole('button', { name: '저장하기' }),
-    ).toBeInTheDocument();
-    expect(getAdminProfile().introduction).toBe('');
-    await user.click(screen.getByRole('button', { name: '저장하기' }));
-
-    await waitFor(() =>
-      expect(getAdminProfile().introduction).toBe(introductionText),
-    );
-    expect(screen.getByText(introductionText)).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: '수정하기' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole('textbox', { name: '간단한 메시지' }),
-    ).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '수정하기' }));
-    expect(screen.getByLabelText('간단한 메시지')).toHaveValue(
-      introductionText,
-    );
-    expect(
-      screen.getByRole('button', { name: '저장하기' }),
-    ).toBeInTheDocument();
-  });
-
-  it('소개 메시지 저장이 실패하면 오류를 표시한다', async () => {
-    const user = userEvent.setup();
-    server.use(
-      http.patch(`${API_BASE_URL}${ENDPOINTS.PROFILE.ME}`, () =>
-        HttpResponse.json({ code: 'PROFILE_UPDATE_FAILED' }, { status: 500 }),
-      ),
-    );
-    renderPage();
-
-    await user.type(
-      await screen.findByRole('textbox', { name: '간단한 메시지' }),
-      '저장에 실패하는 소개 메시지',
-    );
-    await user.click(screen.getByRole('button', { name: '저장하기' }));
-
-    expect(
-      await screen.findByText(
-        '소개 메시지를 저장하지 못했습니다. 다시 시도해 주세요.',
-      ),
-    ).toBeInTheDocument();
   });
 
   it('수강생 명단 Excel 파일을 미리보기로 검증하고 반영할 수 있다', async () => {

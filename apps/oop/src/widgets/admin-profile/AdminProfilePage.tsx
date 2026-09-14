@@ -5,17 +5,12 @@ import {
   Heading,
   HStack,
   Text,
-  TextArea,
   TextInput,
   useToast,
   VStack,
 } from '@aics/design-system';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 
-import {
-  useAdminProfileQuery,
-  useUpdateAdminProfileMutation,
-} from '~/features/admin-profile/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 import { getPasswordChangeErrorMessage } from '~/features/auth/getPasswordChangeErrorMessage';
 import {
@@ -166,36 +161,8 @@ function PasswordChangeDialog({
 
 export default function AdminProfilePage() {
   const currentUser = useAuthStore(state => state.currentUser);
-  const toast = useToast();
   const logoutMutation = useLogoutMutation();
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
-  const [message, setMessage] = useState('');
-  const [isEditingIntroduction, setIsEditingIntroduction] = useState(false);
-  const profileQuery = useAdminProfileQuery();
-  const updateProfileMutation = useUpdateAdminProfileMutation();
-  const [savedIntroduction, setSavedIntroduction] = useState('');
-  useEffect(() => {
-    if (!updateProfileMutation.isSuccess) {
-      setSavedIntroduction(profileQuery.data?.introduction ?? '');
-    }
-  }, [profileQuery.data?.introduction, updateProfileMutation.isSuccess]);
-  const hasSavedIntroduction = savedIntroduction.trim().length > 0;
-  const showIntroductionEditor = isEditingIntroduction || !hasSavedIntroduction;
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    updateProfileMutation.mutate(
-      { introduction: message },
-      {
-        onSuccess: profile => {
-          setMessage(profile.introduction);
-          setSavedIntroduction(profile.introduction);
-          setIsEditingIntroduction(false);
-          toast({ body: '소개 메시지를 저장했어요.' });
-        },
-      },
-    );
-  }
-
   return (
     <div className={styles.page}>
       <HStack className={styles.pageHeader} justify='between'>
@@ -228,8 +195,7 @@ export default function AdminProfilePage() {
           <header className={styles.sectionHeader}>
             <Heading level={2}>프로필 정보</Heading>
             <Text color='secondary' type='supporting'>
-              학생 화면에서 교수 상세보기로 노출될 정보입니다. 이름, 이메일,
-              간단한 메시지를 입력해 주세요.
+              로그인한 계정의 이름과 이메일입니다.
             </Text>
           </header>
 
@@ -247,66 +213,6 @@ export default function AdminProfilePage() {
               value={currentUser?.email ?? ''}
               width='100%'
             />
-            {showIntroductionEditor ? (
-              <form className={styles.introductionForm} onSubmit={handleSubmit}>
-                <TextArea
-                  isDisabled={profileQuery.isPending}
-                  label='간단한 메시지'
-                  onChange={setMessage}
-                  placeholder='예) 안녕하세요. OOP 팀프로젝트를 담당하는 교수자입니다. 궁금한 점은 쪽지로 남겨주세요.'
-                  value={message}
-                  width='100%'
-                />
-                <Text color='secondary' type='supporting'>
-                  학생들에게 노출되는 소개 메시지입니다.
-                </Text>
-                <div className={styles.actions}>
-                  <Button
-                    isDisabled={
-                      profileQuery.isLoading || updateProfileMutation.isPending
-                    }
-                    label='저장하기'
-                    type='submit'
-                    variant='primary'
-                  />
-                </div>
-              </form>
-            ) : (
-              <section className={styles.introductionForm}>
-                <Text className={styles.fieldLabel}>간단한 메시지</Text>
-                <div
-                  aria-label='간단한 메시지'
-                  className={styles.introductionPreview}
-                >
-                  {savedIntroduction}
-                </div>
-                <Text color='secondary' type='supporting'>
-                  학생들에게 노출되는 소개 메시지입니다.
-                </Text>
-                <div className={styles.actions}>
-                  <Button
-                    label='수정하기'
-                    onClick={() => {
-                      updateProfileMutation.reset();
-                      setMessage(savedIntroduction);
-                      setIsEditingIntroduction(true);
-                    }}
-                    type='button'
-                    variant='secondary'
-                  />
-                </div>
-              </section>
-            )}
-            {profileQuery.isError ? (
-              <Text role='alert'>
-                소개 메시지를 불러오지 못했습니다. 저장하면 다시 시도합니다.
-              </Text>
-            ) : null}
-            {updateProfileMutation.isError ? (
-              <Text role='alert'>
-                소개 메시지를 저장하지 못했습니다. 다시 시도해 주세요.
-              </Text>
-            ) : null}
           </div>
         </VStack>
       </Card>
