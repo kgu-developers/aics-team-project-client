@@ -1,4 +1,5 @@
 import { Button, useToast } from '@aics/design-system';
+import { useRef } from 'react';
 
 import { documentRequestErrorMessage } from '~/features/editor/documentRequestErrorMessage';
 
@@ -24,6 +25,7 @@ export default function ProposalSubmitAction({
   const proposal = useProjectProposalQuery();
   const sections = useProposalSectionsQuery(proposal.data?.id);
   const actions = useProjectProposalActions();
+  const submitting = useRef(false);
   return (
     <Button
       className={className}
@@ -37,7 +39,8 @@ export default function ProposalSubmitAction({
       }
       isLoading={actions.isPending}
       label={label}
-      onClick={() => {
+      onClick={async () => {
+        if (submitting.current) return;
         const project = proposal.data;
         const sectionList = sections.data;
         if (!project || !sectionList) {
@@ -52,12 +55,15 @@ export default function ProposalSubmitAction({
           toast({ body: blocker, type: 'error' });
           return;
         }
-        void actions
-          .mutateAsync({ kind: 'submit', projectId: project.id })
-          .then(() => toast({ body: '제안서를 제출했어요.' }))
-          .catch((error: unknown) =>
-            toast({ body: documentRequestErrorMessage(error), type: 'error' }),
-          );
+        submitting.current = true;
+        try {
+          await actions.mutateAsync({ kind: 'submit', projectId: project.id });
+          toast({ body: '제안서를 제출했어요.' });
+        } catch (error) {
+          toast({ body: documentRequestErrorMessage(error), type: 'error' });
+        } finally {
+          submitting.current = false;
+        }
       }}
       size='md'
       variant='primary'

@@ -14,8 +14,20 @@ export default function AdminProposalDocument({
   teamId: string;
 }) {
   const query = useAdminProjectProposalQuery(sectionId, teamId);
-  if (query.isPending)
-    return <Text role='status'>제안서를 불러오는 중입니다.</Text>;
+  if (query.isPending) {
+    if (query.fetchStatus === 'fetching')
+      return <Text role='status'>제안서를 불러오는 중입니다.</Text>;
+    return (
+      <EmptyState
+        title='제안서를 불러올 수 없습니다.'
+        description={
+          query.fetchStatus === 'paused'
+            ? '네트워크 연결 후 다시 확인해 주세요.'
+            : '담당 분반과 팀을 확인해 주세요.'
+        }
+      />
+    );
+  }
   if (query.isError)
     return (
       <EmptyState

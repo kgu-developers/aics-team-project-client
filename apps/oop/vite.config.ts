@@ -87,7 +87,7 @@ export default defineConfig(({ command, mode }) => {
         : {}),
     },
     test: {
-      include: ['src/**/*.test.{ts,tsx}'],
+      include: ['src/**/*.test.{ts,tsx}', 'vite.config.test.ts'],
       env: { VITE_ENABLE_MSW: 'true' },
       environment: 'jsdom',
       // MSW's Node interceptor and mutable demo fixtures are process-global.
