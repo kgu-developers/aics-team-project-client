@@ -29,6 +29,7 @@ import { studentHomeKeys } from '~/features/student-home/queries';
 
 import StudentHomePage from './StudentHomePage';
 
+import { createProjectProposalFixture } from '~/mocks/data/projectProposal';
 import { liveHomeTeam, liveHomeUser } from '~/mocks/data/studentHomeLive';
 import { studentMilestoneFixtures } from '~/mocks/data/studentMilestones';
 import { studentHomeLiveHandlers } from '~/mocks/handlers/studentHomeLive';
@@ -193,6 +194,11 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     server.use(
       http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
         HttpResponse.json({
+          ...createProjectProposalFixture(),
+          teamOperation: {
+            ...createProjectProposalFixture().teamOperation,
+            id: 7,
+          },
           id: 21,
           teamId: 7,
           title: '서버 프로젝트',
@@ -273,10 +279,12 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     expect(
       await screen.findByText('핵심 기능과 역할 분담을 반영했습니다.'),
     ).toBeInTheDocument();
+    await waitFor(() => expect(posts).toHaveLength(1));
     expect(posts).toEqual([
       {
         message: '핵심 기능과 역할 분담을 반영했습니다.',
         relatedType: 'PROPOSAL',
+        relatedId: 21,
       },
     ]);
     expect(
@@ -1186,6 +1194,59 @@ describe('중간보고서 작성 영역 상태와 팀장 제출', () => {
     );
 
     await waitFor(() => expect(submit).toHaveBeenCalled());
+  });
+
+  it('제출 직전 최신 버전을 조회하고 잠금 확인 중에는 중복 제출을 막는다', async () => {
+    let version = 3;
+    let lockReads = 0;
+    const posts: unknown[] = [];
+    let releaseLocks!: () => void;
+    const locksPending = new Promise<void>(resolve => {
+      releaseLocks = resolve;
+    });
+    const completed = [
+      'topic',
+      'gui-design',
+      'engine-design',
+      'project-plan',
+    ].map(key => ({ key, status: 'COMPLETED' }));
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+        HttpResponse.json({ ...midReportFixture(completed), version }),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.EDIT_LOCKS.ROOT}`, async () => {
+        lockReads++;
+        await locksPending;
+        return HttpResponse.json({ locked: false });
+      }),
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.MID_REPORT.SUBMIT('701')}`,
+        async ({ request }) => {
+          posts.push(await request.json());
+          return HttpResponse.json({
+            ...midReportFixture(completed, 'SUBMITTED'),
+            version: 8,
+          });
+        },
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+    const button = await screen.findByRole('button', { name: '제출하기' });
+    await waitFor(() => expect(button).toBeEnabled());
+    version = 7;
+    const user = userEvent.setup();
+    await user.click(button);
+    await waitFor(() => expect(lockReads).toBe(4));
+    expect(button).toBeDisabled();
+    await user.click(button);
+    expect(posts).toEqual([]);
+    releaseLocks();
+    await waitFor(() => expect(posts).toEqual([{ version: 7 }]));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('button', { name: '제출하기' }),
+      ).not.toBeInTheDocument(),
+    );
   });
 
   it('다른 팀원이 영역을 편집 중이면 제출 요청을 보내지 않는다', async () => {

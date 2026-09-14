@@ -33,6 +33,7 @@ import {
   isSupportedMilestoneCreationTemplate,
   milestoneTemplates,
   syncAdminMilestoneSectionScheduleDrafts,
+  toAdminMilestoneDateTime,
   type AdminMilestoneSectionScheduleDraft,
   type AdminRequiredArtifactDraft,
   type MilestoneTemplateId,
@@ -378,11 +379,15 @@ export default function AdminMilestoneSetupPage() {
       const peerEvaluationFormResults = isPeerEvaluation
         ? await Promise.all(
             createdMilestones.map(async result => {
-              const sectionInput = sectionsToSubmit.find(
-                section => section.sectionId === result.sectionId,
-              );
-              const opensAt = sectionInput?.input.schedule.evaluationOpensAt;
-              const closesAt = sectionInput?.input.schedule.evaluationClosesAt;
+              // Peer evaluation has its own form window. Milestone evaluation
+              // fields describe the period after a presentation submission closes.
+              const schedule = sectionSchedules[result.sectionId];
+              const opensAt = schedule
+                ? toAdminMilestoneDateTime(schedule.evaluationOpensAt)
+                : undefined;
+              const closesAt = schedule
+                ? toAdminMilestoneDateTime(schedule.evaluationClosesAt)
+                : undefined;
 
               if (!opensAt || !closesAt) return { sectionId: result.sectionId };
 

@@ -35,7 +35,9 @@ export function useTeamMessagesQuery(
               if (message.threadId !== thread.threadId) {
                 throw new Error('현재 팀의 메시지 방을 확인할 수 없어요.');
               }
-              messages.set(message.id, message);
+              if (!relatedType || message.relatedType === relatedType) {
+                messages.set(message.id, message);
+              }
             }
             if (result.pageable.isEnd) break;
             if (!result.contents.length) {

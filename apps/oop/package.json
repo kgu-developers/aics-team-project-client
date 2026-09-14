@@ -18,7 +18,8 @@
     "test:e2e:live": "playwright test --config playwright.live.config.ts",
     "test:e2e:contract": "playwright test --config playwright.config.ts",
     "lint": "eslint .",
-    "lint:fix": "eslint --fix ."
+    "lint:fix": "eslint --fix .",
+    "test:e2e:integrated": "playwright test --config playwright.integrated.config.ts"
   },
   "dependencies": {
     "@aics/api-client": "workspace:*",
@@ -52,6 +53,7 @@
     "@types/react-dom": "19.1.2",
     "@vanilla-extract/vite-plugin": "^5.0.1",
     "@vitejs/plugin-react": "^4.4.2",
+    "exceljs": "^4.4.0",
     "jsdom": "^30.0.1",
     "msw": "^2.15.0",
     "typescript": "^5.8.3",

@@ -34,6 +34,7 @@ import {
   resetAdminMilestoneSubmissionsFixture,
   updatePresentationOrderFixture,
 } from '~/mocks/data/adminMilestoneSubmissions';
+import { createProjectProposalFixture } from '~/mocks/data/projectProposal';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminEvaluationResultHandlers } from '~/mocks/handlers/adminEvaluationResults';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
@@ -51,12 +52,16 @@ import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMile
 import { createTeamMessageHandlers } from '~/mocks/handlers/teamMessages';
 
 const server = setupServer(
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM(':teamId')}`,
+    () => HttpResponse.json({ code: 'PROJECT_NOT_FOUND' }, { status: 404 }),
+  ),
   ...adminMeetingHandlers,
   ...adminMidReportHandlers,
   ...adminMilestoneSubmissionDetailHandlers,
   ...adminMilestoneSubmissionsHandlers,
-  ...adminPresentationEvaluationHandlers,
   ...adminEvaluationResultHandlers,
+  ...adminPresentationEvaluationHandlers,
   ...adminSectionMilestoneHandlers,
   ...createTeamMessageHandlers(),
 );
@@ -118,6 +123,127 @@ function renderPage(
 }
 
 describe('AdminSubmissionsPage', () => {
+  it.each(['2026-09-13T10:00:00', null])(
+    '일반 제출 버전 없이도 프로젝트 문서·이미지를 조회하며 전송 실패 시 입력을 유지한다 (%s)',
+    async completedAt => {
+      const project = {
+        ...createProjectProposalFixture(),
+        teamId: 1,
+        teamOperation: {
+          ...createProjectProposalFixture().teamOperation,
+          id: 1,
+        },
+        proposalCompletedAt: completedAt,
+        screenConfiguration: [
+          {
+            title: '도서 검색',
+            description: '제출한 화면',
+            imageFileId: 41,
+            imageUrl: 'https://example.test/screen.png',
+          },
+        ],
+      };
+      const response = getAdminMilestoneSubmissionsFixture('101')!;
+      response.contents[0] = {
+        ...response.contents[0]!,
+        currentVersion: 0,
+        status: 'NOT_SUBMITTED',
+      };
+      server.use(
+        http.get(
+          `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('101')}`,
+          () => HttpResponse.json(response),
+        ),
+        http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION('1001')}`, () =>
+          HttpResponse.json(response.contents[0]),
+        ),
+        http.get(
+          `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('1')}`,
+          () => HttpResponse.json(project),
+        ),
+      );
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole('link', { name: '상세보기' }));
+      expect(
+        await screen.findByRole('heading', { name: project.title }),
+      ).toBeVisible();
+      expect(screen.getByText(project.goal)).toBeVisible();
+      expect(screen.getByRole('img', { name: '도서 검색' })).toHaveAttribute(
+        'src',
+        'https://example.test/screen.png',
+      );
+      expect(
+        screen.getByText(completedAt ? /제출 완료 ·/ : '작성 중'),
+      ).toBeVisible();
+      expect(
+        screen.queryByText('표시할 제출 버전이 없습니다.'),
+      ).not.toBeInTheDocument();
+      const posted = vi.fn();
+      server.use(
+        http.post(
+          `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('1')}`,
+          async ({ request }) => {
+            posted(await request.json());
+            return HttpResponse.json(
+              {
+                code: 'DATA_CONFLICT',
+                message: '요청이 기존 데이터와 충돌합니다.',
+              },
+              { status: 409 },
+            );
+          },
+        ),
+      );
+      await user.type(
+        screen.getByRole('textbox', { name: '제안서 피드백 내용' }),
+        '예외 처리를 보완해 주세요.',
+      );
+      await user.click(screen.getByRole('button', { name: '피드백 보내기' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        '피드백을 보내지 못했습니다.',
+      );
+      expect(posted).toHaveBeenCalledExactlyOnceWith({
+        relatedType: 'PROPOSAL',
+        relatedId: 19,
+        message: '예외 처리를 보완해 주세요.',
+      });
+      expect(
+        screen.getByRole('textbox', { name: '제안서 피드백 내용' }),
+      ).toHaveValue('예외 처리를 보완해 주세요.');
+    },
+  );
+
+  it('저장한 발표 순서를 설정 창 재진입 후에도 제출 목록 API에서 복원한다', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+    const open = await screen.findByRole('button', {
+      name: '순서 배정 및 평가',
+    });
+    await waitFor(() => expect(open).toBeEnabled());
+    await user.click(open);
+    await user.click(
+      screen.getByRole('combobox', { name: 'OOP-01 - 1팀 발표 순서' }),
+    );
+    await user.click(screen.getByRole('option', { name: '2번' }));
+    await user.click(
+      screen.getByRole('combobox', { name: 'OOP-01 - 2팀 발표 순서' }),
+    );
+    await user.click(screen.getByRole('option', { name: '1번' }));
+    await user.click(screen.getByRole('button', { name: '저장' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    );
+    await user.click(open);
+    expect(
+      screen.getByRole('combobox', { name: 'OOP-01 - 1팀 발표 순서' }),
+    ).toHaveTextContent('2번');
+    expect(
+      screen.getByRole('combobox', { name: 'OOP-01 - 2팀 발표 순서' }),
+    ).toHaveTextContent('1번');
+  });
+
   it('제안서 목록에 팀별 프로젝트 주제를 표시한다', async () => {
     renderPage();
 
@@ -172,6 +298,18 @@ describe('AdminSubmissionsPage', () => {
     const midReportFeedbackRequest = vi.fn();
 
     server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('1')}`,
+        () => {
+          const project = createProjectProposalFixture();
+          return HttpResponse.json({
+            ...project,
+            id: 1001,
+            teamId: 1,
+            teamOperation: { ...project.teamOperation, id: 1 },
+          });
+        },
+      ),
       http.post(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT('oop-2026-2-01', '1')}/feedback`,
         async ({ request }) => {
@@ -510,7 +648,9 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByRole('button', { name: '순서 배정 및 평가' }),
     );
 
-    expect(await screen.findByText('프로젝트 완성도')).toBeInTheDocument();
+    expect(
+      await screen.findByText(/프로젝트 완성도 · 5점/),
+    ).toBeInTheDocument();
 
     await user.type(
       screen.getByRole('textbox', { name: /평가 항목명/ }),
@@ -528,24 +668,16 @@ describe('AdminSubmissionsPage', () => {
     );
   });
 
-  it('발표 평가 목록에서 팀을 선택하면 평가자별 결과와 회의록을 조회한다', async () => {
+  it('발표 평가 목록에서 팀별 결과 상세로 이동한다', async () => {
     const user = userEvent.setup();
-
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
-    await user.click(
-      await screen.findByRole('button', { name: 'OOP-01 - 1팀' }),
+    expect(
+      await screen.findByRole('link', { name: 'OOP-01 - 1팀' }),
+    ).toHaveAttribute(
+      'href',
+      '/admin/evaluations/presentation/teams/1?milestoneId=103&sectionId=oop-2026-2-01',
     );
-
-    expect(
-      await screen.findByRole('heading', {
-        name: 'OOP-01 - 1팀 발표 평가 결과',
-      }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('테스트 평가자')).toBeInTheDocument();
-    expect(
-      screen.getByText(/OOP-01 - 1팀 프로젝트 킥오프/),
-    ).toBeInTheDocument();
   });
 
   it('발표 자료 제출 fixture의 최신 버전을 조회한다', async () => {

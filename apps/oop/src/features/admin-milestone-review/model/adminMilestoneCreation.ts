@@ -90,8 +90,10 @@ export function createAdminMilestoneCreateInput({
     description: description.trim() || undefined,
     schedule: {
       dueAt,
-      ...(evaluationClosesAt ? { evaluationClosesAt } : {}),
-      ...(evaluationOpensAt ? { evaluationOpensAt } : {}),
+      ...(!isPeerEvaluation && evaluationClosesAt
+        ? { evaluationClosesAt }
+        : {}),
+      ...(!isPeerEvaluation && evaluationOpensAt ? { evaluationOpensAt } : {}),
       ...(opensAt ? { opensAt } : {}),
       ...(lateSubmissionUntil ? { lateSubmissionUntil } : {}),
     },

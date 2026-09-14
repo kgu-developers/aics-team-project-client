@@ -87,7 +87,7 @@ describe('createAdminMilestoneCreateInput', () => {
     });
   });
 
-  it('상호 평가 양식은 평가 기간을 포함해 PEER_EVALUATION으로 생성한다', () => {
+  it('상호평가 기간은 별도 양식이 소유하고 마일스톤에는 종료일만 보낸다', () => {
     const schedule = createAdminMilestoneSectionScheduleDraft();
     schedule.evaluationOpensAt = { date: '2026-12-08', time: '09:00' };
     schedule.evaluationClosesAt = { date: '2026-12-14', time: '23:59' };
@@ -100,13 +100,13 @@ describe('createAdminMilestoneCreateInput', () => {
         title: '상호 평가',
         weekNumber: 13,
       }),
-    ).toMatchObject({
-      schedule: {
-        dueAt: '2026-12-14T23:59:00',
-        evaluationClosesAt: '2026-12-14T23:59:00',
-        evaluationOpensAt: '2026-12-08T09:00:00',
-      },
+    ).toEqual({
+      allowResubmissionBeforeDueAt: false,
+      description: '팀원 상호 평가',
+      schedule: { dueAt: '2026-12-14T23:59:00' },
+      title: '상호 평가',
       type: 'PEER_EVALUATION',
+      weekNumber: 13,
     });
   });
 });

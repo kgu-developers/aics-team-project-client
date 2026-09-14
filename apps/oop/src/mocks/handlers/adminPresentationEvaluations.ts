@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
 import {
+  getAdminMilestoneSubmissionsFixture,
   resetAdminMilestoneSubmissionsFixture,
   updatePresentationOrderFixture,
 } from '../data/adminMilestoneSubmissions';
@@ -291,9 +292,9 @@ export const adminPresentationEvaluationHandlers = [
         );
       }
 
-      const expectedTeamIds = adminPresentationEvaluationsFixture.teams.map(
-        team => team.teamId,
-      );
+      const expectedTeamIds = getAdminMilestoneSubmissionsFixture(
+        String(params.milestoneId),
+      )!.contents.map(team => team.teamId);
       const submittedTeamIds = body.teamOrders.map(team => team.teamId);
       const orders = body.teamOrders.map(team => team.order);
       const hasValidTeams =

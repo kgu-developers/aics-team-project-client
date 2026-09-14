@@ -27,7 +27,14 @@ export default function ProposalSubmitAction({
   return (
     <Button
       className={className}
-      isDisabled={isDisabled || actions.isPending}
+      isDisabled={
+        isDisabled ||
+        proposal.isPending ||
+        proposal.isFetching ||
+        sections.isPending ||
+        sections.isFetching ||
+        actions.isPending
+      }
       isLoading={actions.isPending}
       label={label}
       onClick={() => {

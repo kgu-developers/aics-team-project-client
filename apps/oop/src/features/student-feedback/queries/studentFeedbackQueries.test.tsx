@@ -20,6 +20,8 @@ import { teamMessageKeys } from '~/features/team-message/queries';
 import { useSubmitMidReportFeedbackMutation } from './useSubmitMidReportFeedbackMutation';
 import { useSubmitProposalFeedbackResponseMutation } from './useSubmitProposalFeedbackResponseMutation';
 
+import { getCurrentMidReport } from '~/mocks/data/midReport';
+import { createProjectProposalFixture } from '~/mocks/data/projectProposal';
 import { demoAccessToken, demoStudent } from '~/mocks/data/users';
 import { createTeamMessageHandlers } from '~/mocks/handlers/teamMessages';
 
@@ -31,7 +33,23 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   useAuthStore.getState().setAccessToken(demoAccessToken);
   useAuthStore.getState().setCurrentUser({ ...demoStudent, teamId: '7' });
-  server.use(...createTeamMessageHandlers());
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('7')}`,
+      () => {
+        const project = createProjectProposalFixture();
+        return HttpResponse.json({
+          ...project,
+          teamId: 7,
+          teamOperation: { ...project.teamOperation, id: 7 },
+        });
+      },
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+      HttpResponse.json({ ...getCurrentMidReport(), id: 701, teamId: 7 }),
+    ),
+    ...createTeamMessageHandlers(),
+  );
 });
 afterEach(() => {
   client.clear();
@@ -105,5 +123,62 @@ it.each(feedbackHooks)(
     expect(onSettled.mock.calls[0]?.[2]).toBe(input);
     await waitFor(() => expect(result.current.variables).toBe(input));
     expect(posts).toBe(1);
+  },
+);
+
+it.each([
+  [useSubmitProposalFeedbackResponseMutation, 'PROPOSAL', 19],
+  [useSubmitMidReportFeedbackMutation, 'MID_REPORT', 701],
+] as const)(
+  '%s sends the actual document ID with feedback',
+  async (useFeedback, relatedType, relatedId) => {
+    let body: unknown;
+    server.use(
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`,
+        async ({ request }) => {
+          body = await request.json();
+          return HttpResponse.json({
+            id: 900,
+            threadId: 70,
+            senderId: demoStudent.studentNumber,
+            createdAt: '2026-09-13 10:00',
+            ...(body as object),
+          });
+        },
+      ),
+    );
+    const { result } = renderHook(() => useFeedback('7'), { wrapper: Wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({ content: '답변' });
+    });
+    expect(body).toEqual({ message: '답변', relatedType, relatedId });
+  },
+);
+
+it.each(feedbackHooks)(
+  '%s never posts feedback for another team document',
+  async useFeedback => {
+    let posts = 0;
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('7')}`,
+        () => HttpResponse.json(createProjectProposalFixture()),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+        HttpResponse.json({ ...getCurrentMidReport(), id: 701, teamId: 8 }),
+      ),
+      http.post(`${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`, () => {
+        posts++;
+        return HttpResponse.json({});
+      }),
+    );
+    const { result } = renderHook(() => useFeedback('7'), { wrapper: Wrapper });
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({ content: '답변' }),
+      ).rejects.toThrow();
+    });
+    expect(posts).toBe(0);
   },
 );

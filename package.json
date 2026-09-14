@@ -22,7 +22,8 @@
     "agent:api-contract:refresh": "node .agent/scripts/openapi-contract.mjs refresh",
     "agent:api-contract:test": "node --test .agent/scripts/openapi-contract.test.mjs",
     "agent:suggest-verification": "node .agent/scripts/suggest-verification.mjs",
-    "agent:collect-pr-evidence": "node .agent/scripts/collect-pr-evidence.mjs"
+    "agent:collect-pr-evidence": "node .agent/scripts/collect-pr-evidence.mjs",
+    "test:e2e:integrated": "pnpm --filter @aics/oop test:e2e:integrated"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.0",
