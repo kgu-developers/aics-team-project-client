@@ -37,7 +37,6 @@ import {
   type AdminSubmissionVersionDetailView,
 } from '~/features/admin-milestone-review/model';
 import {
-  useAdminPresentationEvaluationsQuery as useAdminPresentationOrdersQuery,
   useAdminMilestoneSubmissionsQuery,
   useAdminSectionMilestonesQuery,
   useAdminSubmissionVersionDetailsQueries,
@@ -214,8 +213,6 @@ export default function AdminSubmissionsPage() {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [isEvaluationSettingsOpen, setIsEvaluationSettingsOpen] =
     useState(false);
-  const [selectedPresentationTeamId, setSelectedPresentationTeamId] =
-    useState<number>();
   const downloadArtifactsMutation =
     useDownloadAdminSubmissionArtifactsMutation();
   const search = useSearch({ from: '/admin/submissions' }) as {
@@ -248,6 +245,8 @@ export default function AdminSubmissionsPage() {
   const submissionsQuery = useAdminMilestoneSubmissionsQuery(
     selectedMilestone ? String(selectedMilestone.id) : undefined,
     isAccessibleSection && selectedMilestone !== undefined,
+    undefined,
+    activeMilestoneId === 'proposal',
   );
   const versionMetadataTargets = useMemo(
     () =>
@@ -290,10 +289,12 @@ export default function AdminSubmissionsPage() {
       ? { milestoneId: presentationEvaluationMilestone.id }
       : {},
   );
-  const presentationOrdersQuery = useAdminPresentationOrdersQuery(
-    activeMilestoneId === 'presentation-evaluate' && isAccessibleSection
-      ? effectiveSectionId
+  // The order is stored on each milestone submission, not on evaluation scores.
+  const presentationOrdersQuery = useAdminMilestoneSubmissionsQuery(
+    presentationEvaluationMilestone
+      ? String(presentationEvaluationMilestone.id)
       : undefined,
+    activeMilestoneId === 'presentation-evaluate' && isAccessibleSection,
   );
   const peerEvaluationsQuery = useAdminPeerEvaluationsQuery(
     activeMilestoneId === 'peer-review' && isAccessibleSection
@@ -302,12 +303,12 @@ export default function AdminSubmissionsPage() {
   );
   const presentationOrderTeams = useMemo(
     () =>
-      (presentationOrdersQuery.data?.teams ?? []).map(team => ({
+      (presentationOrdersQuery.data?.submissions ?? []).map(team => ({
         presentationOrder: team.presentationOrder,
-        teamId: team.teamId,
+        teamId: Number(team.teamId),
         teamName: team.teamName,
       })),
-    [presentationOrdersQuery.data?.teams],
+    [presentationOrdersQuery.data?.submissions],
   );
   const isPresentationMilestoneLoading = sectionMilestonesQuery.isPending;
   const isPresentationMilestoneError = sectionMilestonesQuery.isError;

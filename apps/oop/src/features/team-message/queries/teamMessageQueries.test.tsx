@@ -21,6 +21,8 @@ import { studentHomeKeys } from '~/features/student-home/queries';
 import { teamMessageKeys } from './teamMessageKeys';
 import { useTeamMessagesQuery } from './useTeamMessagesQuery';
 
+import { getCurrentMidReport } from '~/mocks/data/midReport';
+import { createProjectProposalFixture } from '~/mocks/data/projectProposal';
 import {
   createTeamMessageData,
   teamMessageProfessorId,
@@ -33,7 +35,23 @@ const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   useAuthStore.getState().setAccessToken(demoAccessToken);
-  server.use(...createTeamMessageHandlers());
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('7')}`,
+      () => {
+        const project = createProjectProposalFixture();
+        return HttpResponse.json({
+          ...project,
+          teamId: 7,
+          teamOperation: { ...project.teamOperation, id: 7 },
+        });
+      },
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+      HttpResponse.json({ ...getCurrentMidReport(), id: 701, teamId: 7 }),
+    ),
+    ...createTeamMessageHandlers(),
+  );
 });
 afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
@@ -98,7 +116,7 @@ describe('team message queries', () => {
 
   it('여러 페이지의 제안서 메시지를 모두 조회하고 같은 방의 다른 유형과 구분한다', async () => {
     const messages = createTeamMessageData().messages.filter(
-      message => message.relatedType === 'PROPOSAL',
+      message => message.threadId === 70 && message.relatedType === 'PROPOSAL',
     );
     const requestedPages: number[] = [];
     server.use(
@@ -157,7 +175,7 @@ describe('team message queries', () => {
         message: '구현 범위를 반영했습니다.',
       });
       expect(response).not.toHaveProperty('reviewId');
-      expect(response).not.toHaveProperty('relatedId');
+      expect(response).toHaveProperty('relatedId', 19);
     });
     await waitFor(() =>
       expect(result.current.messages.data?.at(-1)?.message).toBe(

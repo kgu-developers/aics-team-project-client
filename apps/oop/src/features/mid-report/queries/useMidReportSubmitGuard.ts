@@ -10,19 +10,24 @@ export function useMidReportSubmitGuard() {
   const session = useAuthStore();
   const client = useQueryClient();
   return async (report: MidReport) => {
-    for (const block of report.blocks) {
-      const target: LiveEditLockTarget = {
-        targetType: 'MID_REPORT_BLOCK',
-        targetId: Number(report.id),
-        sectionKey: block.key,
-      };
-      const status = await client.fetchQuery({
-        queryKey: liveEditLockKeys.detail(session, target),
-        queryFn: () => fetchLiveEditLock(target),
-        staleTime: 0,
-      });
-      if (useAuthStore.getState() !== session)
-        throw new Error('로그인 상태가 변경되었어요.');
+    const locks = await Promise.all(
+      report.blocks.map(async block => {
+        const target: LiveEditLockTarget = {
+          targetType: 'MID_REPORT_BLOCK',
+          targetId: Number(report.id),
+          sectionKey: block.key,
+        };
+        const status = await client.fetchQuery({
+          queryKey: liveEditLockKeys.detail(session, target),
+          queryFn: () => fetchLiveEditLock(target),
+          staleTime: 0,
+        });
+        return { block, status };
+      }),
+    );
+    if (useAuthStore.getState() !== session)
+      throw new Error('로그인 상태가 변경되었어요.');
+    for (const { block, status } of locks) {
       if (
         status.locked &&
         status.lockedBy !== session.currentUser?.studentNumber

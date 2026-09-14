@@ -1,4 +1,5 @@
 import { Button, useToast } from '@aics/design-system';
+import { useRef, useState } from 'react';
 
 import { useAuthStore } from '~/features/auth/authStore';
 import { documentRequestErrorMessage } from '~/features/editor/documentRequestErrorMessage';
@@ -29,40 +30,41 @@ export default function MidReportSubmitAction({
   const report = useCurrentMidReportQuery(true);
   const submit = useSubmitMidReportMutation();
   const ensureAllBlocksFree = useMidReportSubmitGuard();
+  const pending = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   return (
     <Button
       className={className}
-      isDisabled={isDisabled || submit.isPending}
-      isLoading={submit.isPending}
+      isDisabled={isDisabled || report.isFetching || isSubmitting}
+      isLoading={isSubmitting}
       label={label}
-      onClick={() => {
-        const document = report.data;
-        if (!document) {
-          toast({
-            body: '중간보고서 상태를 아직 불러오지 못했어요. 잠시 후 다시 시도해 주세요.',
-            type: 'error',
+      onClick={async () => {
+        if (pending.current) return;
+        pending.current = true;
+        setIsSubmitting(true);
+        try {
+          // Refetch before submitting: another actor may have reopened the
+          // document, or the last block completion may have changed its version.
+          const latest = await report.refetch();
+          if (latest.isError) throw latest.error;
+          const document = latest.data;
+          if (!document) throw new Error('중간보고서 상태를 확인할 수 없어요.');
+          if (!canSubmitMidReportDocument(document, userName))
+            throw new Error(
+              getMidReportSubmitDisabledReason(document, userName),
+            );
+          await ensureAllBlocksFree(document);
+          await submit.mutateAsync({
+            documentId: document.id,
+            version: document.version,
           });
-          return;
+          toast({ body: '중간보고서를 제출했어요.' });
+        } catch (error) {
+          toast({ body: documentRequestErrorMessage(error), type: 'error' });
+        } finally {
+          pending.current = false;
+          setIsSubmitting(false);
         }
-        if (!canSubmitMidReportDocument(document, userName)) {
-          toast({
-            body: getMidReportSubmitDisabledReason(document, userName),
-            type: 'error',
-          });
-          return;
-        }
-        // A teammate editing another area would lose that work on submit.
-        void ensureAllBlocksFree(document)
-          .then(() =>
-            submit.mutateAsync({
-              documentId: document.id,
-              version: document.version,
-            }),
-          )
-          .then(() => toast({ body: '중간보고서를 제출했어요.' }))
-          .catch((error: unknown) =>
-            toast({ body: documentRequestErrorMessage(error), type: 'error' }),
-          );
       }}
       size='md'
       variant='primary'

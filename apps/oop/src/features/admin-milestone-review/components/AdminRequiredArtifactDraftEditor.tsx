@@ -12,6 +12,7 @@ import {
   TextInput,
 } from '@aics/design-system';
 import { useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 
 import type { AdminRequiredArtifactDraft } from '../model';
 import * as styles from './AdminRequiredArtifactDraftEditor.css';
@@ -124,6 +125,7 @@ export default function AdminRequiredArtifactDraftEditor({
 
   const submitForm = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    event.stopPropagation();
     if (!form) return;
 
     try {
@@ -213,114 +215,120 @@ export default function AdminRequiredArtifactDraftEditor({
         </div>
       )}
 
-      <Dialog
-        aria-label={editingId ? '산출물 초안 수정' : '산출물 초안 추가'}
-        isOpen={Boolean(form)}
-        onOpenChange={isOpen => {
-          if (!isOpen) closeForm();
-        }}
-        purpose='form'
-        width={680}
-      >
-        {form ? (
-          <form className={styles.dialogForm} onSubmit={submitForm}>
-            <Heading level={2}>
-              {editingId ? '산출물 초안 수정' : '산출물 초안 추가'}
-            </Heading>
-            <TextInput
-              isRequired
-              label='산출물 이름'
-              onChange={label =>
-                setForm(current => (current ? { ...current, label } : current))
-              }
-              value={form.label}
-              width='100%'
-            />
-            <Selector
-              label='유형'
-              onChange={type =>
-                setForm(current =>
-                  current
-                    ? { ...current, type: type as RequiredArtifactType }
-                    : current,
-                )
-              }
-              options={(
-                Object.keys(artifactTypeLabels) as RequiredArtifactType[]
-              ).map(type => ({
-                label: artifactTypeLabels[type],
-                value: type,
-              }))}
-              renderOption={option => (
-                <SelectorOption label={option.label ?? option.value} />
-              )}
-              value={form.type}
-              width='100%'
-            />
-            <CheckboxList
-              label='제출 여부'
-              onChange={values =>
-                setForm(current =>
-                  current
-                    ? { ...current, required: values.includes('required') }
-                    : current,
-                )
-              }
-              value={form.required ? ['required'] : []}
-            >
-              <CheckboxListItem
-                description='학생이 제출을 완료하려면 이 항목이 필요합니다.'
-                label='필수 제출'
-                value='required'
+      {/* Native Dialog keeps its DOM position, so its form must live outside the milestone form. */}
+      {createPortal(
+        <Dialog
+          aria-label={editingId ? '산출물 초안 수정' : '산출물 초안 추가'}
+          isOpen={Boolean(form)}
+          onOpenChange={isOpen => {
+            if (!isOpen) closeForm();
+          }}
+          purpose='form'
+          width={680}
+        >
+          {form ? (
+            <form className={styles.dialogForm} onSubmit={submitForm}>
+              <Heading level={2}>
+                {editingId ? '산출물 초안 수정' : '산출물 초안 추가'}
+              </Heading>
+              <TextInput
+                isRequired
+                label='산출물 이름'
+                onChange={label =>
+                  setForm(current =>
+                    current ? { ...current, label } : current,
+                  )
+                }
+                value={form.label}
+                width='100%'
               />
-            </CheckboxList>
-            {form.type === 'FILE' ? (
-              <>
-                <TextInput
-                  description='쉼표로 구분해 입력합니다. 예: pdf, zip'
-                  isOptional
-                  label='허용 확장자'
-                  onChange={allowedExtensions =>
-                    setForm(current =>
-                      current ? { ...current, allowedExtensions } : current,
-                    )
-                  }
-                  value={form.allowedExtensions}
-                  width='100%'
+              <Selector
+                label='유형'
+                onChange={type =>
+                  setForm(current =>
+                    current
+                      ? { ...current, type: type as RequiredArtifactType }
+                      : current,
+                  )
+                }
+                options={(
+                  Object.keys(artifactTypeLabels) as RequiredArtifactType[]
+                ).map(type => ({
+                  label: artifactTypeLabels[type],
+                  value: type,
+                }))}
+                renderOption={option => (
+                  <SelectorOption label={option.label ?? option.value} />
+                )}
+                value={form.type}
+                width='100%'
+              />
+              <CheckboxList
+                label='제출 여부'
+                onChange={values =>
+                  setForm(current =>
+                    current
+                      ? { ...current, required: values.includes('required') }
+                      : current,
+                  )
+                }
+                value={form.required ? ['required'] : []}
+              >
+                <CheckboxListItem
+                  description='학생이 제출을 완료하려면 이 항목이 필요합니다.'
+                  label='필수 제출'
+                  value='required'
                 />
-                <label>
-                  <Text weight='medium'>최대 파일 용량(MB)</Text>
-                  <input
-                    aria-label='최대 파일 용량(MB)'
-                    className={styles.numberInput}
-                    min='0'
-                    onChange={event =>
+              </CheckboxList>
+              {form.type === 'FILE' ? (
+                <>
+                  <TextInput
+                    description='쉼표로 구분해 입력합니다. 예: pdf, zip'
+                    isOptional
+                    label='허용 확장자'
+                    onChange={allowedExtensions =>
                       setForm(current =>
-                        current
-                          ? { ...current, maxFileSizeMb: event.target.value }
-                          : current,
+                        current ? { ...current, allowedExtensions } : current,
                       )
                     }
-                    step='1'
-                    type='number'
-                    value={form.maxFileSizeMb}
+                    value={form.allowedExtensions}
+                    width='100%'
                   />
-                </label>
-              </>
-            ) : null}
-            {error ? <Text role='alert'>{error}</Text> : null}
-            <div className={styles.dialogActions}>
-              <Button label='취소' onClick={closeForm} variant='secondary' />
-              <Button
-                isDisabled={!form.label.trim()}
-                label={editingId ? '저장' : '추가'}
-                type='submit'
-                variant='primary'
-              />
-            </div>
-          </form>
-        ) : null}
-      </Dialog>
+                  <label>
+                    <Text weight='medium'>최대 파일 용량(MB)</Text>
+                    <input
+                      aria-label='최대 파일 용량(MB)'
+                      className={styles.numberInput}
+                      min='0'
+                      onChange={event =>
+                        setForm(current =>
+                          current
+                            ? { ...current, maxFileSizeMb: event.target.value }
+                            : current,
+                        )
+                      }
+                      step='1'
+                      type='number'
+                      value={form.maxFileSizeMb}
+                    />
+                  </label>
+                </>
+              ) : null}
+              {error ? <Text role='alert'>{error}</Text> : null}
+              <div className={styles.dialogActions}>
+                <Button label='취소' onClick={closeForm} variant='secondary' />
+                <Button
+                  isDisabled={!form.label.trim()}
+                  label={editingId ? '저장' : '추가'}
+                  type='submit'
+                  variant='primary'
+                />
+              </div>
+            </form>
+          ) : null}
+        </Dialog>,
+        document.body,
+      )}
     </section>
   );
 }

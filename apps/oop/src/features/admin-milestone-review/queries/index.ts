@@ -37,3 +37,5 @@ export {
   type SubmitAdminRequiredArtifactsResult,
 } from './useSubmitAdminRequiredArtifactsMutation';
 export { useUpdateRequiredArtifactMutation } from './useUpdateRequiredArtifactMutation';
+
+export { useAdminProjectProposalQuery } from './useAdminProjectProposalQuery';

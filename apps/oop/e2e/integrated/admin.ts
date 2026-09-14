@@ -1,0 +1,132 @@
+import { expect, type Page } from '@playwright/test';
+
+import { enrollmentFile, teamFile, type Run } from './data';
+import { choose } from './ui';
+
+export async function prepareCourse(page: Page, run: Run) {
+  await page
+    .getByRole('navigation', { name: '관리자 메뉴' })
+    .getByRole('link', { name: '강좌·분반 관리', exact: true })
+    .click();
+  await page.getByRole('button', { name: '강좌 등록', exact: true }).click();
+  const courseDialog = page.getByRole('dialog', {
+    name: '강좌 등록',
+    exact: true,
+  });
+  await courseDialog.getByRole('textbox', { name: /^강좌명/ }).fill(run.course);
+  await choose(courseDialog, '운영 상태', '운영 중');
+  await courseDialog.getByRole('button', { name: '등록', exact: true }).click();
+  await expect(courseDialog).toBeHidden();
+  const row = page
+    .getByRole('row')
+    .filter({ has: page.getByRole('cell', { name: run.course, exact: true }) });
+  await row.getByRole('button', { name: '분반 관리', exact: true }).click();
+  const sectionDialog = page.getByRole('dialog', {
+    name: `${run.course} 분반 관리`,
+    exact: true,
+  });
+  await sectionDialog
+    .getByRole('button', { name: '분반 등록', exact: true })
+    .click();
+  await sectionDialog
+    .getByRole('textbox', { name: /^분반 코드/ })
+    .fill(run.section);
+  await sectionDialog
+    .getByRole('textbox', { name: /^수업 시간/ })
+    .fill('통합 테스트 전용');
+  await sectionDialog.getByLabel(/^정원/).fill('20');
+  await sectionDialog
+    .getByRole('button', { name: '등록', exact: true })
+    .click();
+  await expect(
+    sectionDialog.getByText(run.section, { exact: true }),
+  ).toBeVisible();
+  await sectionDialog
+    .getByRole('button', { name: '닫기', exact: true })
+    .click();
+}
+
+export async function importStudents(page: Page, run: Run) {
+  await page.reload();
+  const course = page
+    .locator('section')
+    .filter({
+      has: page.getByRole('heading', { name: run.course, exact: true }),
+    })
+    .filter({
+      has: page.getByRole('button', {
+        name: '학생 명단 파일 선택',
+        exact: true,
+      }),
+    });
+  await course
+    .getByRole('button', { name: '학생 명단 파일 선택', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: '수강생 명단 엑셀 업로드',
+    exact: true,
+  });
+  await expect(
+    dialog.getByRole('combobox', { name: '분반', exact: true }),
+  ).toContainText(run.section);
+  await dialog
+    .locator('input[type="file"]')
+    .setInputFiles(await enrollmentFile(run));
+  await dialog.getByRole('button', { name: '미리보기', exact: true }).click();
+  await expect(dialog.getByText('전체 7건', { exact: true })).toBeVisible();
+  await expect(
+    dialog.getByText('신규 계정 7건', { exact: true }),
+  ).toBeVisible();
+  await expect(dialog.getByText('오류 0건', { exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: '반영하기', exact: true }).click();
+  await expect(dialog).toBeHidden();
+}
+
+export async function importTeams(page: Page, run: Run) {
+  await page.goto('/admin/sections');
+  const course = page
+    .locator('section')
+    .filter({
+      has: page.getByRole('heading', { name: run.course, exact: true }),
+    })
+    .filter({
+      has: page.getByRole('button', {
+        name: '팀 구성 명단 파일 선택',
+        exact: true,
+      }),
+    });
+  await course
+    .getByRole('button', { name: '팀 구성 명단 파일 선택', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', {
+    name: '팀 명단 엑셀 업로드',
+    exact: true,
+  });
+  await expect(
+    dialog.getByRole('combobox', { name: '분반', exact: true }),
+  ).toContainText(run.section);
+  await dialog.locator('input[type="file"]').setInputFiles(await teamFile(run));
+  await dialog.getByRole('button', { name: '미리보기', exact: true }).click();
+  await expect(dialog.getByText('전체 6건', { exact: true })).toBeVisible();
+  await expect(dialog.getByText('오류 0건', { exact: true })).toBeVisible();
+  await dialog.getByRole('button', { name: '반영하기', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await page.goto('/admin/student-team');
+  await page
+    .getByRole('group', { name: '분반 선택' })
+    .getByRole('button', { name: run.section, exact: true })
+    .click();
+  await expect(
+    page.getByRole('heading', { name: `${run.section} 팀 구성`, exact: true }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: '팀 배정 확정', exact: true }).click();
+  const confirmation = page.getByRole('alertdialog', {
+    name: '팀 배정 확정 확인',
+    exact: true,
+  });
+  await confirmation
+    .getByRole('button', { name: '확정하기', exact: true })
+    .click();
+  await expect(confirmation).toBeHidden();
+  await expect(page.getByText(run.team, { exact: true }).first()).toBeVisible();
+}

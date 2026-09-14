@@ -96,7 +96,7 @@ export default function StudentHomePage() {
     home.project.state.status === 'ready' ? home.project.data : undefined;
   const proposalSections = useProposalSectionsQuery(proposalProject?.id);
   const midReport = useCurrentMidReportQuery(Boolean(home.teamId));
-  // 재제출은 서버가 아직 열어주지 않는다. 피드백 단계 판정만 메시지로 한다.
+  // 피드백 대화와 문서의 실제 제출 상태를 각각 조회한다.
   const proposalMessages = useTeamMessagesQuery(home.teamId, 'PROPOSAL');
   const midReportMessages = useTeamMessagesQuery(home.teamId, 'MID_REPORT');
   const currentUserName = useAuthStore(state => state.currentUser?.name);
@@ -224,6 +224,19 @@ export default function StudentHomePage() {
         teamMemberIds: home.teamMemberIds,
         isMessagesReady: midReportMessages.isSuccess,
       });
+      if (
+        submission?.isSuccess &&
+        submission.data?.status === 'NOT_SUBMITTED' &&
+        midReport.data &&
+        midReport.data.status !== 'DRAFT'
+      ) {
+        summary.statusLabel =
+          midReport.data.status === 'SUBMITTED'
+            ? '제출 완료'
+            : midReport.data.status === 'REVISION_REQUESTED'
+              ? '수정 요청'
+              : '작성 중';
+      }
       summary.rows = submittedReport
         ? [
             midReportStage === 'feedback-arrived'
@@ -366,6 +379,8 @@ export default function StudentHomePage() {
         // writing. A submitted proposal is read only, so it offers no action.
         const readyToSubmit =
           proposalSections.isSuccess && proposalSections.data.allCompleted;
+        if (submission?.isSuccess && project.proposalCompletedAt)
+          summary.statusLabel = '제출 완료';
         const proposalStage = proposalFeedbackStage({
           submittedAt: project.proposalCompletedAt,
           messages: proposalMessages.data,

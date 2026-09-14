@@ -20,6 +20,8 @@ import { useAuthStore } from '~/features/auth/authStore';
 
 import MilestoneDetails from './MilestoneDetails';
 
+import { getCurrentMidReport } from '~/mocks/data/midReport';
+import { createProjectProposalFixture } from '~/mocks/data/projectProposal';
 import {
   createTeamMessageData,
   teamMessageProfessorId,
@@ -52,7 +54,23 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   useAuthStore.getState().setAccessToken(demoAccessToken);
   useAuthStore.getState().setCurrentUser({ ...demoStudent, teamId: '7' });
-  server.use(...createTeamMessageHandlers());
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('7')}`,
+      () => {
+        const project = createProjectProposalFixture();
+        return HttpResponse.json({
+          ...project,
+          teamId: 7,
+          teamOperation: { ...project.teamOperation, id: 7 },
+        });
+      },
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+      HttpResponse.json({ ...getCurrentMidReport(), id: 701, teamId: 7 }),
+    ),
+    ...createTeamMessageHandlers(),
+  );
 });
 afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
@@ -103,7 +121,14 @@ describe('existing proposal feedback form with team messages', () => {
       server.use(
         http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`, () =>
           HttpResponse.json({
-            contents: [{ ...createTeamMessageData().messages[1], senderName }],
+            contents: [
+              {
+                ...createTeamMessageData().messages.find(
+                  message => message.id === 702,
+                )!,
+                senderName,
+              },
+            ],
             pageable: {
               page: 0,
               size: 100,
@@ -168,8 +193,16 @@ describe('existing proposal feedback form with team messages', () => {
     ).toBeInTheDocument();
     await waitFor(() =>
       expect(requests).toEqual([
-        { message: '핵심 기능을 구체화했습니다.', relatedType: 'PROPOSAL' },
-        { message: '역할 분담도 정리했습니다.', relatedType: 'PROPOSAL' },
+        {
+          message: '핵심 기능을 구체화했습니다.',
+          relatedType: 'PROPOSAL',
+          relatedId: 19,
+        },
+        {
+          message: '역할 분담도 정리했습니다.',
+          relatedType: 'PROPOSAL',
+          relatedId: 19,
+        },
       ]),
     );
     view.unmount();
@@ -291,9 +324,12 @@ describe('중간보고서 피드백 메시지', () => {
   };
   it('학생의 첫 반영 기록과 교수 답변을 같은 대화에 저장하고 재조회한다', async () => {
     const messages: Array<Record<string, unknown>> = [];
-    const requests: string[] = [];
+    const requests: { path: string; method: string }[] = [];
     server.events.on('request:start', ({ request }) => {
-      requests.push(new URL(request.url).pathname);
+      requests.push({
+        path: new URL(request.url).pathname,
+        method: request.method,
+      });
     });
     server.use(
       http.get(
@@ -321,6 +357,7 @@ describe('중간보고서 피드백 메시지', () => {
           expect(input).toEqual({
             message: '대면 피드백을 기록했습니다.',
             relatedType: 'MID_REPORT',
+            relatedId: 701,
           });
           const message = {
             id: 901,
@@ -379,12 +416,17 @@ describe('중간보고서 피드백 메시지', () => {
     ).toBeInTheDocument();
     expect(
       requests.some(
-        path =>
-          path.includes('/submissions') ||
-          path.includes('/reviews') ||
-          path.includes('/mid-reports'),
+        ({ path, method }) =>
+          method !== 'GET' &&
+          (path.includes('/submissions') ||
+            path.includes('/reviews') ||
+            path.includes('/mid-reports')),
       ),
     ).toBe(false);
+    expect(requests).toContainEqual({
+      method: 'GET',
+      path: ENDPOINTS.MID_REPORT.CURRENT,
+    });
   });
   it('전송 실패 시 입력을 보존하고 제안서 대화는 섞지 않는다', async () => {
     server.use(

@@ -1,0 +1,405 @@
+{
+  "datasetKey": "oop-student-team2-v1",
+  "schemaVersion": 1,
+  "description": "수동 재생성용 합성 데이터. API로 파일 전체를 보내지 않고 문서에 따라 각 Body를 사용한다. 비밀번호와 생성 ID는 실행 환경에서 주입한다.",
+  "timeZone": "Asia/Seoul",
+  "section": {
+    "key": "section",
+    "createBody": {
+      "professorId": "{{PROFESSOR_ID}}",
+      "courseId": 1,
+      "code": "E2E-TEAM2",
+      "classTime": "E2E 전용",
+      "capacity": 20,
+      "contactVisibleFrom": "2026-09-01T00:00:00",
+      "contactVisibleUntil": "2027-03-01T00:00:00"
+    }
+  },
+  "users": [
+    {
+      "key": "leader",
+      "createBody": {
+        "studentNumber": "209900201",
+        "name": "E2E 팀2 팀장",
+        "email": "oop-e2e-team2-1@example.test",
+        "phone": "010-0000-0000",
+        "globalRole": "USER",
+        "password": "{{E2E_SEED_PASSWORD}}"
+      },
+      "enrollmentRole": "STUDENT",
+      "teamKey": "team2"
+    },
+    {
+      "key": "memberA",
+      "createBody": {
+        "studentNumber": "209900202",
+        "name": "E2E 팀2 팀원A",
+        "email": "oop-e2e-team2-2@example.test",
+        "phone": "010-0000-0000",
+        "globalRole": "USER",
+        "password": "{{E2E_SEED_PASSWORD}}"
+      },
+      "enrollmentRole": "STUDENT",
+      "teamKey": "team2"
+    },
+    {
+      "key": "memberB",
+      "createBody": {
+        "studentNumber": "209900203",
+        "name": "E2E 팀2 팀원B",
+        "email": "oop-e2e-team2-3@example.test",
+        "phone": "010-0000-0000",
+        "globalRole": "USER",
+        "password": "{{E2E_SEED_PASSWORD}}"
+      },
+      "enrollmentRole": "STUDENT",
+      "teamKey": "team2"
+    },
+    {
+      "key": "memberC",
+      "createBody": {
+        "studentNumber": "209900204",
+        "name": "E2E 팀2 팀원C",
+        "email": "oop-e2e-team2-4@example.test",
+        "phone": "010-0000-0000",
+        "globalRole": "USER",
+        "password": "{{E2E_SEED_PASSWORD}}"
+      },
+      "enrollmentRole": "STUDENT",
+      "teamKey": "team2"
+    },
+    {
+      "key": "comparisonLeader",
+      "createBody": {
+        "studentNumber": "209900205",
+        "name": "E2E 비교팀 팀장",
+        "email": "oop-e2e-team2-5@example.test",
+        "phone": "010-0000-0000",
+        "globalRole": "USER",
+        "password": "{{E2E_SEED_PASSWORD}}"
+      },
+      "enrollmentRole": "STUDENT",
+      "teamKey": "comparison"
+    },
+    {
+      "key": "comparisonMember",
+      "createBody": {
+        "studentNumber": "209900206",
+        "name": "E2E 비교팀 팀원",
+        "email": "oop-e2e-team2-6@example.test",
+        "phone": "010-0000-0000",
+        "globalRole": "USER",
+        "password": "{{E2E_SEED_PASSWORD}}"
+      },
+      "enrollmentRole": "STUDENT",
+      "teamKey": "comparison"
+    },
+    {
+      "key": "survey",
+      "createBody": {
+        "studentNumber": "209900207",
+        "name": "E2E 설문 학생",
+        "email": "oop-e2e-team2-7@example.test",
+        "phone": "010-0000-0000",
+        "globalRole": "USER",
+        "password": "{{E2E_SEED_PASSWORD}}"
+      },
+      "enrollmentRole": "STUDENT",
+      "teamKey": null
+    }
+  ],
+  "teams": [
+    {
+      "key": "team2",
+      "name": "테스트 팀2",
+      "leaderKey": "leader",
+      "memberKeys": ["leader", "memberA", "memberB", "memberC"]
+    },
+    {
+      "key": "comparison",
+      "name": "테스트 팀2 비교팀",
+      "leaderKey": "comparisonLeader",
+      "memberKeys": ["comparisonLeader", "comparisonMember"]
+    }
+  ],
+  "teamImport": {
+    "headers": ["팀명", "학번", "이름", "팀장", "역할"],
+    "rows": [
+      ["테스트 팀2", "209900201", "E2E 팀2 팀장", "Y", "팀장"],
+      ["테스트 팀2", "209900202", "E2E 팀2 팀원A", "", "개발"],
+      ["테스트 팀2", "209900203", "E2E 팀2 팀원B", "", "개발"],
+      ["테스트 팀2", "209900204", "E2E 팀2 팀원C", "", "개발"],
+      ["테스트 팀2 비교팀", "209900205", "E2E 비교팀 팀장", "Y", "팀장"],
+      ["테스트 팀2 비교팀", "209900206", "E2E 비교팀 팀원", "", "개발"]
+    ],
+    "expectedPreview": {
+      "total": 6,
+      "valid": 6,
+      "invalid": 0
+    }
+  },
+  "milestones": [
+    {
+      "key": "PROPOSAL",
+      "createBody": {
+        "title": "제안서",
+        "description": "테스트 팀2 E2E 검증용",
+        "weekNumber": 1,
+        "type": "PROPOSAL",
+        "allowResubmissionBeforeDueAt": true,
+        "schedule": {
+          "opensAt": "2026-09-01T00:00:00",
+          "dueAt": "2027-02-01T23:59:59"
+        }
+      },
+      "publishBody": {
+        "status": "PUBLISHED"
+      },
+      "requiredArtifacts": []
+    },
+    {
+      "key": "MID_REPORT",
+      "createBody": {
+        "title": "중간보고서",
+        "description": "테스트 팀2 E2E 검증용",
+        "weekNumber": 2,
+        "type": "MID_REPORT",
+        "allowResubmissionBeforeDueAt": true,
+        "schedule": {
+          "opensAt": "2026-09-01T00:00:00",
+          "dueAt": "2027-02-01T23:59:59"
+        }
+      },
+      "publishBody": {
+        "status": "PUBLISHED"
+      },
+      "requiredArtifacts": []
+    },
+    {
+      "key": "PRESENTATION",
+      "createBody": {
+        "title": "발표",
+        "description": "테스트 팀2 E2E 검증용",
+        "weekNumber": 3,
+        "type": "PRESENTATION",
+        "allowResubmissionBeforeDueAt": true,
+        "schedule": {
+          "opensAt": "2026-09-01T00:00:00",
+          "dueAt": "2027-02-01T23:59:59"
+        }
+      },
+      "publishBody": {
+        "status": "PUBLISHED"
+      },
+      "requiredArtifacts": [
+        {
+          "type": "FILE",
+          "label": "E2E 검증 PDF",
+          "required": true,
+          "allowedExtensions": ["pdf"],
+          "maxFileSizeMb": 5
+        }
+      ]
+    },
+    {
+      "key": "FINAL_REPORT",
+      "createBody": {
+        "title": "최종보고서",
+        "description": "테스트 팀2 E2E 검증용",
+        "weekNumber": 4,
+        "type": "FINAL_REPORT",
+        "allowResubmissionBeforeDueAt": true,
+        "schedule": {
+          "opensAt": "2026-09-01T00:00:00",
+          "dueAt": "2027-02-01T23:59:59"
+        }
+      },
+      "publishBody": {
+        "status": "PUBLISHED"
+      },
+      "requiredArtifacts": [
+        {
+          "type": "FILE",
+          "label": "E2E 검증 PDF",
+          "required": true,
+          "allowedExtensions": ["pdf"],
+          "maxFileSizeMb": 5
+        }
+      ]
+    },
+    {
+      "key": "PEER_EVALUATION",
+      "createBody": {
+        "title": "상호 평가",
+        "description": "테스트 팀2 E2E 검증용",
+        "weekNumber": 5,
+        "type": "PEER_EVALUATION",
+        "allowResubmissionBeforeDueAt": true,
+        "schedule": {
+          "opensAt": "2026-09-01T00:00:00",
+          "dueAt": "2027-02-01T23:59:59"
+        }
+      },
+      "publishBody": {
+        "status": "PUBLISHED"
+      },
+      "requiredArtifacts": []
+    }
+  ],
+  "peerEvaluationForm": {
+    "createBody": {
+      "milestoneId": "{{PEER_EVALUATION_ID}}",
+      "anonymous": true,
+      "opensAt": "2026-09-01T00:00:00",
+      "closesAt": "2027-02-01T23:59:59"
+    }
+  },
+  "projects": [
+    {
+      "teamKey": "team2",
+      "candidateBody": {
+        "title": "테스트 팀2 도서 관리",
+        "description": "E2E 검증용 도서 대출·반납 프로그램"
+      },
+      "finalizeBody": {
+        "candidateId": "{{candidateId}}",
+        "goal": "학생 사용자 기능을 검증한다"
+      },
+      "updateBody": {
+        "title": "테스트 팀2 도서 관리",
+        "description": "E2E 검증용 도서 대출·반납 프로그램",
+        "goal": "학생 사용자 기능을 검증한다",
+        "dataConfiguration": [
+          {
+            "name": "도서",
+            "description": "대출 가능한 도서",
+            "expectedCount": "100권"
+          }
+        ],
+        "screenConfiguration": [
+          {
+            "title": "도서 목록",
+            "description": "도서를 검색한다",
+            "imageFileId": null
+          }
+        ],
+        "projectSchedule": "9월 설계, 10월 구현",
+        "kickoffRule": "매주 진행 상황 확인",
+        "meetingSchedule": "금요일 온라인 회의"
+      }
+    },
+    {
+      "teamKey": "comparison",
+      "candidateBody": {
+        "title": "테스트 팀2 비교 프로젝트",
+        "description": "E2E 검증용 도서 대출·반납 프로그램"
+      },
+      "finalizeBody": {
+        "candidateId": "{{candidateId}}",
+        "goal": "학생 사용자 기능을 검증한다"
+      },
+      "updateBody": {
+        "title": "테스트 팀2 비교 프로젝트",
+        "description": "E2E 검증용 도서 대출·반납 프로그램",
+        "goal": "학생 사용자 기능을 검증한다",
+        "dataConfiguration": [
+          {
+            "name": "도서",
+            "description": "대출 가능한 도서",
+            "expectedCount": "100권"
+          }
+        ],
+        "screenConfiguration": [
+          {
+            "title": "도서 목록",
+            "description": "도서를 검색한다",
+            "imageFileId": null
+          }
+        ],
+        "projectSchedule": "9월 설계, 10월 구현",
+        "kickoffRule": "매주 진행 상황 확인",
+        "meetingSchedule": "금요일 온라인 회의"
+      }
+    }
+  ],
+  "baseline": {
+    "section": {
+      "activeStudentEnrollments": 7,
+      "activeSectionsPerStudent": 1,
+      "teamAssignmentFinalized": true
+    },
+    "teams": {
+      "team2MemberCount": 4,
+      "comparisonMemberCount": 2,
+      "leaderConfirmed": true
+    },
+    "survey": {
+      "userKey": "survey",
+      "teamId": null,
+      "responseExists": false,
+      "preferredPeerRequests": []
+    },
+    "proposals": {
+      "approvalStatus": "DRAFT",
+      "proposalCompletedAt": null,
+      "completedSectionCount": 0,
+      "activeLocks": 0
+    },
+    "midReport": {
+      "creation": "GET /mid-reports/current에서 필요할 때 생성",
+      "status": "DRAFT",
+      "submittedAt": null,
+      "completedBlocks": 0,
+      "activeLocks": 0
+    },
+    "fileSubmissions": {
+      "milestoneKeys": ["PRESENTATION", "FINAL_REPORT"],
+      "status": "NOT_SUBMITTED",
+      "currentVersion": 0,
+      "versionCount": 0,
+      "confirmedMembers": [],
+      "completedAt": null,
+      "hasPendingReview": false
+    },
+    "peerEvaluation": {
+      "responseCount": 0,
+      "expectedTargetsForLeader": ["memberA", "memberB", "memberC"],
+      "expectedTargetsForMemberA": ["leader", "memberB", "memberC"]
+    },
+    "meetings": [],
+    "actions": [],
+    "announcements": [],
+    "presentationEvaluations": []
+  },
+  "manualInputs": {
+    "survey": {
+      "preferredRoles": ["DEVELOPMENT"],
+      "topicOpinion": "E2E 도서 관리 프로그램",
+      "etcOpinion": "테스트 전용 설문 응답",
+      "preferredPeerUserId": null
+    },
+    "meeting": {
+      "titlePrefix": "E2E 회의",
+      "phaseLabel": "기획",
+      "date": "<실행일 YYYY-MM-DD>",
+      "time": "10:30",
+      "location": "E2E 테스트실",
+      "body": "E2E 회의록 본문. 역할과 진행 일정을 확인합니다.",
+      "actionSuffix": "구현 확인"
+    },
+    "peerEvaluation": {
+      "ownRole": "E2E 기능 테스트와 API 검증",
+      "projectEvaluation": "사용자 플로우를 함께 검증했습니다.",
+      "impression": "팀원들이 역할을 나누어 검증했습니다.",
+      "contributionsInDisplayedOrder": [34, 33, 33],
+      "contributionText": "설계와 구현 내용을 검증했습니다.",
+      "oneLineReview": "협업과 역할 수행이 좋았습니다."
+    },
+    "fileUpload": {
+      "fileName": "e2e-submission.pdf",
+      "fileRequirement": "유효한 PDF 1개, 5MB 이하; 수동 실행자는 테스트 문서를 준비한다.",
+      "description": "E2E 파일 제출 검증",
+      "changeNote": "E2E 재제출 검증"
+    }
+  }
+}

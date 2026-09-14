@@ -17,6 +17,7 @@ import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries
 import type { AdminSubmissionArtifactView } from '~/features/admin-milestone-review/model';
 import {
   useAdminMilestoneSubmissionDetailQuery,
+  useAdminProjectProposalQuery,
   useAdminSubmissionVersionQuery,
   useAdminSubmissionVersionsQuery,
 } from '~/features/admin-milestone-review/queries';
@@ -28,6 +29,7 @@ import {
 } from '~/features/team-message/queries';
 
 import { AdminMidReportDetail } from './AdminMidReportDetail';
+import AdminProposalDocument from './AdminProposalDocument';
 import * as styles from './AdminSubmissionDetailPage.css';
 
 const milestoneLabels = {
@@ -134,6 +136,7 @@ export default function AdminSubmissionDetailPage() {
     accessibleSectionIds.includes(normalizedSectionId),
   );
   const isMidReport = search.milestoneId === 'midterm';
+  const isProposal = search.milestoneId === 'proposal';
   const isVersionDetailAvailable = Boolean(
     search.milestoneId &&
     versionDetailMilestoneIds.has(search.milestoneId) &&
@@ -146,12 +149,19 @@ export default function AdminSubmissionDetailPage() {
     submissionId,
     canRequestDetail,
   );
+  const detail = submissionQuery.data;
+  const isProjectProposal = isProposal && detail?.currentVersion === 0;
   const versionsQuery = useAdminSubmissionVersionsQuery(
     submissionId,
-    canRequestDetail && submissionQuery.isSuccess,
+    canRequestDetail && submissionQuery.isSuccess && !isProjectProposal,
   );
   const versions = versionsQuery.data ?? [];
-  const detail = submissionQuery.data;
+  const proposalQuery = useAdminProjectProposalQuery(
+    normalizedSectionId ?? '',
+    canRequestDetail && isProposal ? detail?.teamId : undefined,
+  );
+  // Proposal feedback belongs to the project, not the generic submission row.
+  const feedbackRelatedId = isProposal ? proposalQuery.data?.id : undefined;
   const feedbackRelatedType = getFeedbackRelatedType(search.milestoneId);
   const feedbackMessagesQuery = useTeamMessagesQuery(
     feedbackRelatedType ? detail?.teamId : undefined,
@@ -161,7 +171,8 @@ export default function AdminSubmissionDetailPage() {
     feedbackRelatedType ? detail?.teamId : undefined,
   );
   const feedbackMessages = (feedbackMessagesQuery.data ?? []).filter(
-    message => String(message.relatedId) === detail?.submissionId,
+    message =>
+      feedbackRelatedId != null && message.relatedId === feedbackRelatedId,
   );
   const relatedMeetingsQuery = useAdminMeetingRecordListQuery(
     accessibleSectionIds,
@@ -290,165 +301,173 @@ export default function AdminSubmissionDetailPage() {
         />
       ) : (
         <>
-          <Card className={styles.document}>
-            <div className={styles.documentHeader}>
-              <Text className={styles.documentLabel}>
-                SUBMISSION / READ ONLY
-              </Text>
-              <Heading level={2}>{detail.teamName} 제출물</Heading>
-              <Text className={styles.metadata}>
-                상태: {detail.statusLabel} · 현재 버전: {detail.currentVersion}
-                차
-              </Text>
-            </div>
-
-            <section className={styles.section}>
-              <Heading level={3}>제출 현황</Heading>
-              <div className={styles.fieldGrid}>
-                <div className={styles.field}>
-                  <Text className={styles.fieldLabel}>팀</Text>
-                  <Text className={styles.fieldValue}>{detail.teamName}</Text>
-                </div>
-                <div className={styles.field}>
-                  <Text className={styles.fieldLabel}>제출 상태</Text>
-                  <Text className={styles.fieldValue}>
-                    {detail.statusLabel}
-                  </Text>
-                </div>
-                {detail.presentationOrder !== null ? (
-                  <div className={styles.field}>
-                    <Text className={styles.fieldLabel}>발표 순서</Text>
-                    <Text className={styles.fieldValue}>
-                      {detail.presentationOrder}번
-                    </Text>
-                  </div>
-                ) : null}
-                <div className={styles.field}>
-                  <Text className={styles.fieldLabel}>검토 상태</Text>
-                  <Text className={styles.fieldValue}>
-                    {detail.hasPendingReview
-                      ? '검토 대기 중'
-                      : '검토 대기 없음'}
-                  </Text>
-                </div>
-                {detail.completedAt ? (
-                  <div className={styles.field}>
-                    <Text className={styles.fieldLabel}>완료 일시</Text>
-                    <Text className={styles.fieldValue}>
-                      {detail.completedAt}
-                    </Text>
-                  </div>
-                ) : null}
-                {detail.completedBy ? (
-                  <div className={styles.field}>
-                    <Text className={styles.fieldLabel}>완료 처리자</Text>
-                    <Text className={styles.fieldValue}>
-                      {detail.completedBy}
-                    </Text>
-                  </div>
-                ) : null}
-              </div>
-            </section>
-
-            <section className={styles.section}>
-              <Heading level={3}>제출 버전</Heading>
-              {versionsQuery.isPending ? (
-                <Text aria-live='polite' role='status'>
-                  제출 버전 목록을 불러오는 중입니다.
+          {isProjectProposal ? (
+            <AdminProposalDocument
+              sectionId={normalizedSectionId!}
+              teamId={detail.teamId}
+            />
+          ) : (
+            <Card className={styles.document}>
+              <div className={styles.documentHeader}>
+                <Text className={styles.documentLabel}>
+                  SUBMISSION / READ ONLY
                 </Text>
-              ) : versionsQuery.isError ? (
-                <EmptyState
-                  description='잠시 후 다시 시도해 주세요.'
-                  title='제출 버전 목록을 불러오지 못했습니다.'
-                />
-              ) : versions.length === 0 ? (
-                <EmptyState
-                  description='서버에서 반환한 제출 버전이 없습니다.'
-                  title='표시할 제출 버전이 없습니다.'
-                />
-              ) : (
-                <div className={styles.fieldGrid}>
-                  {versions.map(version => (
-                    <button
-                      aria-pressed={selectedVersion === version.version}
-                      className={styles.evaluatorButton}
-                      key={version.version}
-                      onClick={() => setSelectedVersion(version.version)}
-                      type='button'
-                    >
-                      {version.version}차 · {version.submittedBy} ·{' '}
-                      {version.submittedAt}
-                      {version.isLate ? ' · 지각 제출' : ''}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </section>
+                <Heading level={2}>{detail.teamName} 제출물</Heading>
+                <Text className={styles.metadata}>
+                  상태: {detail.statusLabel} · 현재 버전:{' '}
+                  {detail.currentVersion}차
+                </Text>
+              </div>
 
-            {selectedVersion === undefined ? null : versionQuery.isPending ? (
-              <Text aria-live='polite' role='status'>
-                선택한 버전을 불러오는 중입니다.
-              </Text>
-            ) : versionQuery.isError || !versionQuery.data ? (
-              <EmptyState
-                description='잠시 후 다시 시도해 주세요.'
-                title='선택한 제출 버전을 불러오지 못했습니다.'
-              />
-            ) : (
               <section className={styles.section}>
-                <Heading level={3}>
-                  {versionQuery.data.version}차 제출 내용
-                </Heading>
+                <Heading level={3}>제출 현황</Heading>
                 <div className={styles.fieldGrid}>
-                  <div className={`${styles.field} ${styles.fullWidthField}`}>
-                    <Text className={styles.fieldLabel}>설명</Text>
-                    <Text className={styles.fieldValue}>
-                      {versionQuery.data.description ?? '-'}
-                    </Text>
-                  </div>
-                  <div className={`${styles.field} ${styles.fullWidthField}`}>
-                    <Text className={styles.fieldLabel}>변경 메모</Text>
-                    <Text className={styles.fieldValue}>
-                      {versionQuery.data.changeNote ?? '-'}
-                    </Text>
+                  <div className={styles.field}>
+                    <Text className={styles.fieldLabel}>팀</Text>
+                    <Text className={styles.fieldValue}>{detail.teamName}</Text>
                   </div>
                   <div className={styles.field}>
-                    <Text className={styles.fieldLabel}>제출자</Text>
+                    <Text className={styles.fieldLabel}>제출 상태</Text>
                     <Text className={styles.fieldValue}>
-                      {versionQuery.data.submittedBy}
+                      {detail.statusLabel}
                     </Text>
                   </div>
+                  {detail.presentationOrder !== null ? (
+                    <div className={styles.field}>
+                      <Text className={styles.fieldLabel}>발표 순서</Text>
+                      <Text className={styles.fieldValue}>
+                        {detail.presentationOrder}번
+                      </Text>
+                    </div>
+                  ) : null}
                   <div className={styles.field}>
-                    <Text className={styles.fieldLabel}>제출 일시</Text>
+                    <Text className={styles.fieldLabel}>검토 상태</Text>
                     <Text className={styles.fieldValue}>
-                      {versionQuery.data.submittedAt}
+                      {detail.hasPendingReview
+                        ? '검토 대기 중'
+                        : '검토 대기 없음'}
                     </Text>
                   </div>
-                </div>
-
-                <div className={styles.field}>
-                  <Text className={styles.fieldLabel}>아티팩트</Text>
-                  {versionQuery.data.artifacts.length === 0 ? (
-                    <Text className={styles.fieldValue}>
-                      등록된 아티팩트가 없습니다.
-                    </Text>
-                  ) : (
-                    versionQuery.data.artifacts.map((artifact, index) => (
-                      <div
-                        className={styles.attachment}
-                        key={`${artifact.type}-${index}`}
-                      >
-                        <Text className={styles.fieldLabel}>
-                          {artifact.label}
-                        </Text>
-                        <ArtifactValue artifact={artifact} />
-                      </div>
-                    ))
-                  )}
+                  {detail.completedAt ? (
+                    <div className={styles.field}>
+                      <Text className={styles.fieldLabel}>완료 일시</Text>
+                      <Text className={styles.fieldValue}>
+                        {detail.completedAt}
+                      </Text>
+                    </div>
+                  ) : null}
+                  {detail.completedBy ? (
+                    <div className={styles.field}>
+                      <Text className={styles.fieldLabel}>완료 처리자</Text>
+                      <Text className={styles.fieldValue}>
+                        {detail.completedBy}
+                      </Text>
+                    </div>
+                  ) : null}
                 </div>
               </section>
-            )}
-          </Card>
+
+              <section className={styles.section}>
+                <Heading level={3}>제출 버전</Heading>
+                {versionsQuery.isPending ? (
+                  <Text aria-live='polite' role='status'>
+                    제출 버전 목록을 불러오는 중입니다.
+                  </Text>
+                ) : versionsQuery.isError ? (
+                  <EmptyState
+                    description='잠시 후 다시 시도해 주세요.'
+                    title='제출 버전 목록을 불러오지 못했습니다.'
+                  />
+                ) : versions.length === 0 ? (
+                  <EmptyState
+                    description='서버에서 반환한 제출 버전이 없습니다.'
+                    title='표시할 제출 버전이 없습니다.'
+                  />
+                ) : (
+                  <div className={styles.fieldGrid}>
+                    {versions.map(version => (
+                      <button
+                        aria-pressed={selectedVersion === version.version}
+                        className={styles.evaluatorButton}
+                        key={version.version}
+                        onClick={() => setSelectedVersion(version.version)}
+                        type='button'
+                      >
+                        {version.version}차 · {version.submittedBy} ·{' '}
+                        {version.submittedAt}
+                        {version.isLate ? ' · 지각 제출' : ''}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </section>
+
+              {selectedVersion === undefined ? null : versionQuery.isPending ? (
+                <Text aria-live='polite' role='status'>
+                  선택한 버전을 불러오는 중입니다.
+                </Text>
+              ) : versionQuery.isError || !versionQuery.data ? (
+                <EmptyState
+                  description='잠시 후 다시 시도해 주세요.'
+                  title='선택한 제출 버전을 불러오지 못했습니다.'
+                />
+              ) : (
+                <section className={styles.section}>
+                  <Heading level={3}>
+                    {versionQuery.data.version}차 제출 내용
+                  </Heading>
+                  <div className={styles.fieldGrid}>
+                    <div className={`${styles.field} ${styles.fullWidthField}`}>
+                      <Text className={styles.fieldLabel}>설명</Text>
+                      <Text className={styles.fieldValue}>
+                        {versionQuery.data.description ?? '-'}
+                      </Text>
+                    </div>
+                    <div className={`${styles.field} ${styles.fullWidthField}`}>
+                      <Text className={styles.fieldLabel}>변경 메모</Text>
+                      <Text className={styles.fieldValue}>
+                        {versionQuery.data.changeNote ?? '-'}
+                      </Text>
+                    </div>
+                    <div className={styles.field}>
+                      <Text className={styles.fieldLabel}>제출자</Text>
+                      <Text className={styles.fieldValue}>
+                        {versionQuery.data.submittedBy}
+                      </Text>
+                    </div>
+                    <div className={styles.field}>
+                      <Text className={styles.fieldLabel}>제출 일시</Text>
+                      <Text className={styles.fieldValue}>
+                        {versionQuery.data.submittedAt}
+                      </Text>
+                    </div>
+                  </div>
+
+                  <div className={styles.field}>
+                    <Text className={styles.fieldLabel}>아티팩트</Text>
+                    {versionQuery.data.artifacts.length === 0 ? (
+                      <Text className={styles.fieldValue}>
+                        등록된 아티팩트가 없습니다.
+                      </Text>
+                    ) : (
+                      versionQuery.data.artifacts.map((artifact, index) => (
+                        <div
+                          className={styles.attachment}
+                          key={`${artifact.type}-${index}`}
+                        >
+                          <Text className={styles.fieldLabel}>
+                            {artifact.label}
+                          </Text>
+                          <ArtifactValue artifact={artifact} />
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </section>
+              )}
+            </Card>
+          )}
+
           {feedbackRelatedType ? (
             <section className={styles.relatedMeetings}>
               <section className={styles.section}>
@@ -484,6 +503,18 @@ export default function AdminSubmissionDetailPage() {
                     ))}
                   </div>
                 )}
+                {proposalQuery.isError ||
+                (proposalQuery.isSuccess && !proposalQuery.data) ? (
+                  <Text role='alert'>
+                    프로젝트 정보를 확인할 수 없어 피드백을 보낼 수 없습니다.
+                  </Text>
+                ) : null}
+                {submitFeedbackMutation.isError ? (
+                  <Text role='alert'>
+                    피드백을 보내지 못했습니다. 입력 내용을 확인한 뒤 다시
+                    시도해 주세요.
+                  </Text>
+                ) : null}
                 <div className={styles.feedbackComposer}>
                   <TextArea
                     aria-label={`${milestoneLabel} 피드백 내용`}
@@ -496,16 +527,18 @@ export default function AdminSubmissionDetailPage() {
                     <Button
                       isDisabled={
                         !feedbackMessage.trim() ||
+                        !feedbackRelatedId ||
                         submitFeedbackMutation.isPending
                       }
                       label='피드백 보내기'
                       onClick={() => {
-                        if (!feedbackMessage.trim()) return;
+                        if (!feedbackMessage.trim() || !feedbackRelatedId)
+                          return;
 
                         submitFeedbackMutation.mutate(
                           {
                             message: feedbackMessage,
-                            relatedId: Number(detail.submissionId),
+                            relatedId: feedbackRelatedId,
                             relatedType: feedbackRelatedType,
                           },
                           { onSuccess: () => setFeedbackMessage('') },

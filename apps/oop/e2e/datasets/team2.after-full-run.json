@@ -1,0 +1,66 @@
+{
+  "datasetKey": "oop-student-team2-v1",
+  "source": "새 baseline에서 기존 실서버 20개 전체를 1회 실행했을 때의 기대 상태; 현재 DB 덤프가 아님",
+  "unchanged": [
+    "section",
+    "users",
+    "enrollments",
+    "teams",
+    "teamLeaders",
+    "projects.content",
+    "milestones",
+    "peerEvaluationForm"
+  ],
+  "survey": {
+    "userKey": "survey",
+    "responseExists": true,
+    "teamId": null
+  },
+  "peerEvaluation": [
+    {
+      "userKey": "leader",
+      "state": "SUBMITTED"
+    },
+    {
+      "userKey": "memberA",
+      "state": "DRAFT"
+    },
+    {
+      "userKey": "memberB",
+      "state": "NO_RESPONSE"
+    },
+    {
+      "userKey": "memberC",
+      "state": "NO_RESPONSE"
+    }
+  ],
+  "proposals": {
+    "proposalCompletedAt": null,
+    "activeLocks": 0,
+    "note": "저장한 원문은 복원. 최종 제출하지 않음."
+  },
+  "midReport": {
+    "status": "DRAFT",
+    "submittedAt": null,
+    "note": "최초 조회로 생성 가능. 변경한 주제 설명은 복원; 문서 버전은 저장 과정에서 증가할 수 있음."
+  },
+  "fileSubmissions": [
+    {
+      "milestoneKey": "PRESENTATION",
+      "currentVersion": 1,
+      "status": "SUBMITTED"
+    },
+    {
+      "milestoneKey": "FINAL_REPORT",
+      "currentVersion": 1,
+      "status": "SUBMITTED",
+      "confirmedUserKeys": ["leader"],
+      "confirmedCount": 1,
+      "totalCount": 4,
+      "completedAt": null
+    }
+  ],
+  "meetingsCreatedByRunRemaining": 0,
+  "memberAConsentAddedByRunRemaining": false,
+  "repeatRule": "파일 재실행마다 currentVersion은 이전 값+1. 제안서 저장 이력·문서 버전·감사 로그까지 원래와 같다는 뜻은 아님."
+}
