@@ -3,10 +3,13 @@ import { Link, Navigate, Outlet } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
+
 import {
   selectHasAuthenticatedSession,
   useAuthStore,
 } from '~/features/auth/authStore';
+import { useStudentContext } from '~/features/section/useStudentContext';
 
 import { oopCourseConfig } from '~/course/config';
 
@@ -14,6 +17,11 @@ import * as styles from './StudentShell.css';
 import { StudentHeaderActions } from './StudentShellPopovers';
 
 export default function StudentShell() {
+  const isDemo = isMockDevelopmentMode(
+    import.meta.env.DEV,
+    import.meta.env.VITE_ENABLE_MSW,
+  );
+  const context = useStudentContext(!isDemo);
   const hasSession = useAuthStore(selectHasAuthenticatedSession);
   const currentUser = useAuthStore(state => state.currentUser);
 
@@ -25,7 +33,10 @@ export default function StudentShell() {
     return <Navigate to={ROUTES.ADMIN} />;
   }
 
-  const section = currentUser.sections[0];
+  const section =
+    isDemo && currentUser.sections.length === 1
+      ? currentUser.sections[0]
+      : context.section;
   const sectionCode = section ? `/${section.code}` : '';
 
   return (

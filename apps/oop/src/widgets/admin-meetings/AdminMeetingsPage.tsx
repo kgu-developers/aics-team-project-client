@@ -12,6 +12,8 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { useAdminSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -19,10 +21,6 @@ import { useAuthStore } from '~/features/auth/authStore';
 import * as styles from './AdminMeetingsPage.css';
 
 const allSectionsValue = 'all';
-
-function formatDate(value: string) {
-  return value.replace('T', ' ');
-}
 
 export default function AdminMeetingsPage() {
   const currentUser = useAuthStore(state => state.currentUser);
@@ -172,7 +170,7 @@ export default function AdminMeetingsPage() {
             <tbody>
               {records.map(record => (
                 <tr key={record.id}>
-                  <td>{formatDate(record.meetingAt)}</td>
+                  <td>{formatSeoulDateTime(record.meetingAt)}</td>
                   <td>{record.sectionName}</td>
                   <td>{record.teamName}</td>
                   <td>

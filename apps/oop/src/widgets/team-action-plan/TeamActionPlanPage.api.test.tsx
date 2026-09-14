@@ -24,7 +24,35 @@ import { meetingApiTeam } from '~/mocks/data/meetingApi';
 import { demoAccessToken, demoStudent } from '~/mocks/data/users';
 import { createMeetingApiHandlers } from '~/mocks/handlers/meetingApi';
 
-const server = setupServer();
+function currentSections() {
+  return (useAuthStore.getState().currentUser?.sections ?? []).map(section => ({
+    classTime: '',
+    capacity: 40,
+    contactVisibleFrom: null,
+    contactVisibleUntil: null,
+    courseId: 1,
+    courseName: 'OOP',
+    year: 2026,
+    semester: 'FALL',
+    status: 'ACTIVE',
+    ...section,
+    id: /^\d+$/.test(section.id) ? Number(section.id) : 1,
+  }));
+}
+const server = setupServer(
+  http.get(`${API_BASE_URL}/api/v1/oop/users/me`, () => {
+    const user = useAuthStore.getState().currentUser!;
+    return HttpResponse.json({
+      ...user,
+      globalRole: 'USER',
+      sections: currentSections(),
+      teamId: user.teamId ?? null,
+    });
+  }),
+  http.get(`${API_BASE_URL}/api/v1/oop/sections`, () =>
+    HttpResponse.json({ contents: currentSections() }),
+  ),
+);
 const clients: QueryClient[] = [];
 beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' });
@@ -41,6 +69,7 @@ beforeAll(() => {
 });
 beforeEach(() => {
   vi.stubEnv('VITE_ENABLE_MSW', 'false');
+  useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setAccessToken(demoAccessToken);
   useAuthStore
     .getState()
@@ -252,14 +281,19 @@ it.each([null, 'invalid'])(
   '팀 ID %s에서는 네트워크 요청 없이 미배정 또는 오류를 안내한다',
   async teamId => {
     const requests = vi.fn();
-    server.events.on('request:start', requests);
+    server.events.on('request:start', ({ request }) => {
+      if (/\/(teams|meeting-records|meeting-actions)\//.test(request.url))
+        requests();
+    });
     useAuthStore
       .getState()
       .setCurrentUser({ ...demoStudent, teamId, currentTeam: null });
     renderPage();
     expect(
       await screen.findByText(
-        teamId ? '다시 시도해 주세요.' : '소속 팀이 없어요.',
+        teamId
+          ? /선택한 분반의 팀 소속을 확인할 수 없어요/
+          : '소속 팀이 없어요.',
       ),
     ).toBeVisible();
     expect(requests).not.toHaveBeenCalled();
@@ -275,9 +309,7 @@ it('팀원 조회 403을 미배정으로 숨기지 않고 재시도로 복구한
     ),
   );
   renderPage();
-  expect(
-    await screen.findByText('팀 액션 플랜 또는 팀원 정보를 불러오지 못했어요.'),
-  ).toBeVisible();
+  expect(await screen.findByText('팀 정보를 불러올 수 없어요.')).toBeVisible();
   server.use(
     http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
       HttpResponse.json(meetingApiTeam),
@@ -371,7 +403,12 @@ it('팀 변경 시 열린 입력과 이전 팀 액션을 제거한다', async ()
       .getState()
       .setCurrentUser({ ...demoStudent, teamId: null, currentTeam: null });
   });
-  expect(screen.getByText('소속 팀이 없어요.')).toBeVisible();
+  await act(async () => {
+    await clients
+      .at(-1)!
+      .refetchQueries({ queryKey: ['student-home', 'user'] });
+  });
+  expect(await screen.findByText('소속 팀이 없어요.')).toBeVisible();
   expect(
     screen.queryByRole('dialog', { name: '액션 플랜 추가' }),
   ).not.toBeInTheDocument();

@@ -5,6 +5,7 @@ import type {
 } from '@aics/core';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
@@ -27,8 +28,8 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => mockNavigate,
 }));
 
-vi.mock('~/features/auth/queries', () => ({
-  useCurrentUserQuery: mockCurrentUserQuery,
+vi.mock('~/features/student-home/queries/useStudentHomeUserQuery', () => ({
+  useStudentHomeUserQuery: mockCurrentUserQuery,
 }));
 
 vi.mock('~/features/section/queries', () => ({
@@ -97,6 +98,7 @@ function queryResult<T>(data?: T, error?: unknown) {
     data,
     error,
     isError: error !== undefined,
+    isSuccess: error === undefined,
     isPending: false,
     refetch: vi.fn(),
   };
@@ -113,6 +115,7 @@ beforeEach(() => {
   mockSurveyQuery.mockReset();
   mockKickoffQuery.mockReset();
   mockProjectionQuery.mockReset();
+  useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setCurrentUser(student);
 
   mockCurrentUserQuery.mockReturnValue(queryResult(student));
@@ -168,7 +171,7 @@ describe('TeamAssignmentFlow live API mode', () => {
       ).toBeNull();
     },
   );
-  it('기존 사용자 정보가 있어도 사용자 재조회 실패를 복구 화면으로 표시한다', () => {
+  it('기존 사용자 정보가 있어도 사용자 재조회 실패 시 세션을 지우고 다시 로그인할 수 있다', async () => {
     mockCurrentUserQuery.mockReturnValue(
       queryResult(student, new Error('session expired')),
     );
@@ -177,23 +180,39 @@ describe('TeamAssignmentFlow live API mode', () => {
     expect(screen.getByText('로그인 정보를 확인해 주세요.')).toBeVisible();
     expect(mockSurveyQuery).toHaveBeenCalledWith(undefined);
     expect(screen.queryByText('설문에 응답해 주셔서 감사합니다.')).toBeNull();
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole('button', { name: '다시 로그인' }));
+
+    expect(useAuthStore.getState()).toMatchObject({
+      isAuthenticated: false,
+      sessionRole: null,
+      accessToken: null,
+      currentUser: null,
+    });
+    expect(mockNavigate).toHaveBeenCalledExactlyOnceWith({ to: '/login' });
   });
   it('다중 분반 선택 전에는 설문을 표시하거나 조회하지 않는다', () => {
+    mockCurrentUserQuery.mockReturnValue(
+      queryResult({
+        ...student,
+        sections: [...student.sections, { ...student.sections[0]!, id: '2' }],
+      }),
+    );
     mockSectionsQuery.mockReturnValue(
       queryResult([section, { ...section, id: 2, name: '02' }]),
     );
     mockSurveyQuery.mockReturnValue(queryResult());
     renderFlow();
-    expect(
-      screen.getByText('설문에 응답할 수강 분반을 선택해 주세요.'),
-    ).toBeVisible();
+    expect(screen.getByText('수강 분반을 선택해 주세요.')).toBeVisible();
     expect(mockSurveyQuery).toHaveBeenCalledWith(undefined);
   });
   it('연결된 분반이 없으면 설문 대신 복구 안내를 표시한다', () => {
     mockSectionsQuery.mockReturnValue(queryResult([]));
     mockSurveyQuery.mockReturnValue(queryResult());
     renderFlow();
-    expect(screen.getByText('연결된 수강 분반이 없어요.')).toBeVisible();
+    expect(screen.getByText('소속 분반이 없어요.')).toBeVisible();
     expect(mockSurveyQuery).toHaveBeenCalledWith(undefined);
   });
   it('다중 분반의 팀 소속을 추측하지 않는다', () => {
@@ -206,7 +225,9 @@ describe('TeamAssignmentFlow live API mode', () => {
     );
     mockSurveyQuery.mockReturnValue(queryResult());
     renderFlow();
-    expect(screen.getByText(/배정된 팀이 어느 수강 분반/)).toBeVisible();
+    expect(
+      screen.getByText(/선택한 분반의 팀 소속을 확인할 수 없어요/),
+    ).toBeVisible();
     expect(mockSurveyQuery).toHaveBeenCalledWith(undefined);
   });
   it('배정된 팀은 kickoff 응답의 이름과 ID로 표시한다', () => {

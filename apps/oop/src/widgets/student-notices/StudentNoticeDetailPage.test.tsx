@@ -22,7 +22,10 @@ import { renderWithRouter } from '~/test/renderWithRouter';
 const mockMySectionsQuery = vi.hoisted(() => vi.fn());
 
 vi.mock('~/features/section/queries', () => ({
-  useMySectionsQuery: (...args: unknown[]) => mockMySectionsQuery(...args),
+  useMySectionsQuery: (...args: unknown[]) => {
+    const query = mockMySectionsQuery(...args);
+    return { ...query, isError: Boolean(query.error) };
+  },
 }));
 
 const activeSection: SectionResponse = {
@@ -277,3 +280,18 @@ describe('StudentNoticeDetailPage', () => {
     expect(backLink.parentElement).toContainElement(breadcrumb);
   });
 });
+
+vi.mock('~/features/student-home/queries/useStudentHomeUserQuery', () => ({
+  useStudentHomeUserQuery: () => ({
+    data: {
+      ...demoStudent,
+      sections: [{ ...activeSection, id: '1', role: 'STUDENT' }],
+      teamId: null,
+    },
+    isSuccess: true,
+    isPending: false,
+    isError: false,
+    isFetching: false,
+    refetch: vi.fn(),
+  }),
+}));

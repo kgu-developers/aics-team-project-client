@@ -155,6 +155,7 @@ export default function AdminRequiredArtifactsManager({
 
   const submitForm = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    event.stopPropagation();
     if (isPending) return;
     setFormError(undefined);
 

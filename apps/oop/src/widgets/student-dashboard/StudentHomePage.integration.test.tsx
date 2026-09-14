@@ -8,7 +8,7 @@ import {
   createRootRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -84,6 +84,26 @@ function midReportFixture(
 }
 
 const server = setupServer(
+  http.get(`${API_BASE_URL}${ENDPOINTS.SECTION.MY_SECTIONS}`, () =>
+    HttpResponse.json({
+      contents: [
+        {
+          id: 2,
+          code: 'OOP-2',
+          name: '테스트 분반',
+          classTime: '',
+          capacity: 40,
+          contactVisibleFrom: null,
+          contactVisibleUntil: null,
+          courseId: 1,
+          courseName: 'OOP',
+          year: 2026,
+          semester: 'FALL',
+          status: 'ACTIVE',
+        },
+      ],
+    }),
+  ),
   http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
     HttpResponse.json(midReportFixture()),
   ),
@@ -1392,4 +1412,38 @@ describe('중간보고서 작성 영역 상태와 팀장 제출', () => {
       screen.queryByRole('button', { name: '제출하기' }),
     ).not.toBeInTheDocument();
   });
+});
+
+it('does not offer topic selection while project lookup is pending or failed, then enables it only for PROJECT_NOT_FOUND', async () => {
+  let release!: () => void;
+  const pending = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, async () => {
+      await pending;
+      return HttpResponse.json({}, { status: 500 });
+    }),
+  );
+  render(<StudentHomePage />, { wrapper: Wrapper });
+  await screen.findByText('프로젝트를 확인하는 중이에요.');
+  expect(
+    screen.queryByRole('button', { name: '후보 추가' }),
+  ).not.toBeInTheDocument();
+  await act(async () => release());
+  await screen.findByRole('button', { name: '프로젝트 다시 시도' });
+  expect(
+    screen.queryByRole('button', { name: '후보 추가' }),
+  ).not.toBeInTheDocument();
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+      HttpResponse.json({ code: 'PROJECT_NOT_FOUND' }, { status: 404 }),
+    ),
+  );
+  await userEvent
+    .setup()
+    .click(screen.getByRole('button', { name: '프로젝트 다시 시도' }));
+  expect(
+    await screen.findByRole('button', { name: '후보 추가' }),
+  ).toBeInTheDocument();
 });

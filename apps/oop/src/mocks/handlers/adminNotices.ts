@@ -10,6 +10,11 @@ import {
 } from '../data/adminNotices';
 import { demoAdmin } from '../data/users';
 
+const removedAttachments = new Set<string>();
+export function resetAdminNoticeAttachments() {
+  removedAttachments.clear();
+}
+
 export const adminNoticeHandlers = [
   http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.NOTICES}`, ({ request }) => {
     if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
@@ -47,7 +52,13 @@ export const adminNoticeHandlers = [
         );
       }
 
-      return HttpResponse.json({ ...detail, notice });
+      return HttpResponse.json({
+        ...detail,
+        attachment: removedAttachments.has(notice.id)
+          ? undefined
+          : detail.attachment,
+        notice,
+      });
     },
   ),
   http.delete(
@@ -72,6 +83,7 @@ export const adminNoticeHandlers = [
         );
       }
 
+      removedAttachments.add(String(params.noticeId));
       return new HttpResponse(null, { status: 204 });
     },
   ),

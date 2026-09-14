@@ -22,6 +22,13 @@ export const adminEvaluationKeys = {
       ] as const,
   },
   presentationEvaluation: {
+    lists: (sectionId: string | number) =>
+      [
+        ...adminEvaluationKeys.all,
+        'presentation-evaluation',
+        'list',
+        sectionId,
+      ] as const,
     detail: (
       sectionId: string | number,
       teamId: number,

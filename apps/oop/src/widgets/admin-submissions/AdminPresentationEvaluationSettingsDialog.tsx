@@ -10,7 +10,7 @@ import {
   VStack,
 } from '@aics/design-system';
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   useAdminTeamEvaluationCriteriaQuery,
@@ -20,6 +20,7 @@ import {
 import { adminPresentationEvaluationKeys } from '~/features/admin-milestone-review/queries/adminPresentationEvaluationKeys';
 
 import * as styles from './AdminPresentationEvaluationSettingsDialog.css';
+import { validatePresentationOrders } from './adminPresentationOrder';
 
 type Props = {
   isOpen: boolean;
@@ -48,25 +49,38 @@ export function AdminPresentationEvaluationSettingsDialog({
   const initialOrders = useMemo(
     () =>
       Object.fromEntries(
-        teams.map((team, index) => [
-          team.teamId,
-          team.presentationOrder ?? index + 1,
-        ]),
+        teams.map(team => [team.teamId, team.presentationOrder]),
       ),
     [teams],
   );
-  const [orders, setOrders] = useState<Record<string, number>>(initialOrders);
+  const [orders, setOrders] =
+    useState<Record<string, number | null>>(initialOrders);
   const [error, setError] = useState<string | null>(null);
   const [criterionTitle, setCriterionTitle] = useState('');
   const [criterionMaxScore, setCriterionMaxScore] = useState('');
   const [criterionError, setCriterionError] = useState<string | null>(null);
+  const initializedContext = useRef<{
+    sectionId: string;
+    milestoneId: string;
+  } | null>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      initializedContext.current = null;
+      return;
+    }
+    // Refetches may replace teams; only a new dialog context resets the draft.
+    if (
+      initializedContext.current?.sectionId === sectionId &&
+      initializedContext.current.milestoneId === milestoneId
+    ) {
+      return;
+    }
+    initializedContext.current = { sectionId, milestoneId };
     setOrders(initialOrders);
     setError(null);
     setCriterionError(null);
-  }, [initialOrders, isOpen]);
+  }, [initialOrders, isOpen, milestoneId, sectionId]);
 
   if (!isOpen) return null;
 
@@ -76,9 +90,10 @@ export function AdminPresentationEvaluationSettingsDialog({
   }));
 
   function handleSave() {
-    const values = teams.map(team => orders[team.teamId]);
-    if (new Set(values).size !== values.length) {
-      setError('발표 순서는 중복될 수 없습니다.');
+    if (saveMutation.isPending) return;
+    const result = validatePresentationOrders(teams, orders);
+    if (!result.ok) {
+      setError(result.error);
       return;
     }
     setError(null);
@@ -86,10 +101,7 @@ export function AdminPresentationEvaluationSettingsDialog({
       {
         milestoneId,
         sectionId,
-        teamOrders: teams.map((team, index) => ({
-          teamId: team.teamId,
-          order: orders[team.teamId] ?? index + 1,
-        })),
+        teamOrders: result.teamOrders,
       },
       {
         onSuccess: async () => {
@@ -104,6 +116,7 @@ export function AdminPresentationEvaluationSettingsDialog({
   }
 
   function handleCreateCriterion() {
+    if (!criteriaQuery.isSuccess || createCriterionMutation.isPending) return;
     const title = criterionTitle.trim();
     const maxScore = Number(criterionMaxScore);
 
@@ -120,7 +133,13 @@ export function AdminPresentationEvaluationSettingsDialog({
     createCriterionMutation.mutate(
       {
         input: {
-          displayOrder: criteriaQuery.data?.contents.length ?? 0,
+          displayOrder:
+            Math.max(
+              -1,
+              ...criteriaQuery.data.contents.map(
+                criterion => criterion.displayOrder,
+              ),
+            ) + 1,
           maxScore,
           title,
         },
@@ -177,7 +196,9 @@ export function AdminPresentationEvaluationSettingsDialog({
                 renderOption={option => (
                   <SelectorOption label={option.label ?? option.value} />
                 )}
-                value={String(orders[team.teamId])}
+                value={
+                  orders[team.teamId] == null ? '' : String(orders[team.teamId])
+                }
                 width={120}
               />
             </HStack>
@@ -243,7 +264,7 @@ export function AdminPresentationEvaluationSettingsDialog({
           <HStack justify='end'>
             <Button
               isDisabled={
-                createCriterionMutation.isPending || criteriaQuery.isPending
+                createCriterionMutation.isPending || !criteriaQuery.isSuccess
               }
               isLoading={createCriterionMutation.isPending}
               label='평가 항목 추가'

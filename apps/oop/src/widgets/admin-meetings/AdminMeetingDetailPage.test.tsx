@@ -1,4 +1,4 @@
-import { setApiAccessToken } from '@aics/api-client';
+import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -8,8 +8,9 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
@@ -121,4 +122,55 @@ describe('AdminMeetingDetailPage', () => {
 
     expect(await screen.findByText('컴퓨터공학과')).toBeInTheDocument();
   });
+});
+
+it('marks only the opened response section and authenticated admin as read, and formats an ISO rollover in Seoul', async () => {
+  localStorage.clear();
+  window.dispatchEvent(new StorageEvent('storage', { key: null }));
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORD_DETAIL('1')}`,
+      () =>
+        HttpResponse.json({
+          id: 1,
+          sectionId: 1,
+          sectionName: 'OOP-01',
+          teamId: 1,
+          teamName: '1팀',
+          title: '시간 확인',
+          content: '',
+          participantIds: [],
+          authorId: '20260001',
+          meetingAt: '2026-09-01T23:30:00Z',
+        }),
+    ),
+  );
+  renderPage();
+  await screen.findByText('2026.09.02 08:30');
+  await waitFor(() =>
+    expect(
+      localStorage.getItem(`aics:admin:read:${demoAdmin.id}:1:meetings`),
+    ).toBe('["1"]'),
+  );
+  expect(
+    localStorage.getItem(`aics:admin:read:${demoAdmin.id}:2:meetings`),
+  ).toBeNull();
+  expect(
+    localStorage.getItem('aics:admin:read:another-admin:1:meetings'),
+  ).toBeNull();
+});
+it('does not mark a failed meeting detail read', async () => {
+  localStorage.clear();
+  window.dispatchEvent(new StorageEvent('storage', { key: null }));
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORD_DETAIL('1')}`,
+      () => HttpResponse.json({}, { status: 500 }),
+    ),
+  );
+  renderPage();
+  await screen.findByText('회의록을 찾을 수 없습니다.');
+  expect(
+    localStorage.getItem(`aics:admin:read:${demoAdmin.id}:1:meetings`),
+  ).toBeNull();
 });

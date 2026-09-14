@@ -31,8 +31,10 @@ const server = setupServer();
 let client: QueryClient;
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  vi.unstubAllEnvs();
   client.clear();
   server.resetHandlers();
+  server.events.removeAllListeners();
   useAuthStore.getState().clearSession();
 });
 afterAll(() => server.close());
@@ -235,4 +237,59 @@ it('상세 조회가 실패해도 조회된 파일과 제출 이력은 표시하
   expect(
     await screen.findByRole('button', { name: '다시 조회' }),
   ).toBeEnabled();
+});
+
+it('blocks final-report reads and approval actions for an unattributed live team, even with a cached submission target', async () => {
+  vi.stubEnv('VITE_ENABLE_MSW', 'false');
+  useAuthStore.getState().markAuthenticated('STUDENT');
+  const first = {
+    id: 1,
+    code: 'OOP-01',
+    name: '01분반',
+    classTime: '',
+    capacity: 40,
+    contactVisibleFrom: null,
+    contactVisibleUntil: null,
+    courseId: 1,
+    courseName: 'OOP',
+    year: 2026,
+    semester: 'FALL',
+    status: 'ACTIVE',
+  };
+  const requests: string[] = [];
+  server.events.on('request:start', ({ request }) =>
+    requests.push(new URL(request.url).pathname),
+  );
+  server.use(
+    http.get(`${API_BASE_URL}/api/v1/oop/users/me`, () =>
+      HttpResponse.json({
+        ...demoPartnerStudent,
+        globalRole: 'USER',
+        teamId: 7,
+        sections: [first, { ...first, id: 2 }],
+      }),
+    ),
+    http.get(`${API_BASE_URL}/api/v1/oop/sections`, () =>
+      HttpResponse.json({ contents: [first] }),
+    ),
+  );
+  setup();
+  await waitFor(() =>
+    expect(
+      client.getQueryData([
+        'student-home',
+        'user',
+        demoPartnerStudent.studentNumber,
+        'STUDENT',
+      ]),
+    ).toBeDefined(),
+  );
+  const action = screen.getByRole('button', { name: '파일 교체' });
+  expect(action).toBeDisabled();
+  await userEvent.click(action);
+  expect(screen.queryByText('파일 제출 폼 열림')).not.toBeInTheDocument();
+  expect(requests.sort()).toEqual([
+    '/api/v1/oop/sections',
+    '/api/v1/oop/users/me',
+  ]);
 });

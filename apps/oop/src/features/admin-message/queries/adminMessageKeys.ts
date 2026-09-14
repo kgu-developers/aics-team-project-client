@@ -1,7 +1,7 @@
 export const adminMessageKeys = {
   all: ['admin-messages'] as const,
-  list: (sectionId?: string) =>
-    [...adminMessageKeys.all, sectionId ?? 'all'] as const,
+  list: (sectionId?: string, page = 0) =>
+    [...adminMessageKeys.all, sectionId ?? 'all', page] as const,
   relatedSubmission: (
     sectionId: string,
     teamId: string,

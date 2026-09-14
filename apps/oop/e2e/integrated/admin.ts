@@ -79,6 +79,10 @@ export async function importStudents(page: Page, run: Run) {
   ).toBeVisible();
   await expect(dialog.getByText('오류 0건', { exact: true })).toBeVisible();
   await dialog.getByRole('button', { name: '반영하기', exact: true }).click();
+  await expect(
+    dialog.getByRole('status', { name: '명단 반영 결과' }),
+  ).toBeVisible();
+  await dialog.getByRole('button', { name: '닫기', exact: true }).click();
   await expect(dialog).toBeHidden();
 }
 
@@ -110,6 +114,10 @@ export async function importTeams(page: Page, run: Run) {
   await expect(dialog.getByText('전체 6건', { exact: true })).toBeVisible();
   await expect(dialog.getByText('오류 0건', { exact: true })).toBeVisible();
   await dialog.getByRole('button', { name: '반영하기', exact: true }).click();
+  await expect(
+    dialog.getByRole('status', { name: '명단 반영 결과' }),
+  ).toBeVisible();
+  await dialog.getByRole('button', { name: '닫기', exact: true }).click();
   await expect(dialog).toBeHidden();
   await page.goto('/admin/student-team');
   await page

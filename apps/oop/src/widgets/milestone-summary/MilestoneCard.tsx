@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 
 import { editorSectionTo } from '~/app/constants/editorSections';
 
+import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { cx } from '~/shared/lib/cx';
 
 import { useAuthStore } from '~/features/auth/authStore';
@@ -13,6 +14,7 @@ import { useTopicApi } from '~/features/project-topic/TopicApiContext';
 import { useTopicCandidateDialog } from '~/features/project-topic/TopicCandidateDialogContext';
 import TopicFinalizePanel from '~/features/project-topic/TopicFinalizePanel';
 import ProposalSubmitAction from '~/features/proposal/ProposalSubmitAction';
+import { useStudentContext } from '~/features/section/useStudentContext';
 import FinalReportSubmissionAction from '~/features/submission/member-confirmations/FinalReportSubmissionAction';
 import { useUpdateSubmissionConfirmationMutation } from '~/features/submission/queries';
 import { useSubmissionDialog } from '~/features/submission/SubmissionDialogContext';
@@ -47,13 +49,23 @@ export default function MilestoneCard({
   const navigate = useNavigate();
   const topicApi = useTopicApi();
   const toast = useToast();
+  const isDemo = isMockDevelopmentMode(
+    import.meta.env.DEV,
+    import.meta.env.VITE_ENABLE_MSW,
+  );
+  const context = useStudentContext(!isDemo);
+  const canAct = isDemo || context.status === 'ready';
   const currentUser = useAuthStore(state => state.currentUser);
   const { setIsOpen: setTopicCandidateDialogOpen } = useTopicCandidateDialog();
   const { openDialog: openSubmissionDialog, submissionTargets } =
     useSubmissionDialog();
   const sectionId =
-    currentUser?.sections.find(section => section.role === 'STUDENT')?.id ?? '';
-  const userId = currentUser?.studentNumber ?? '';
+    isDemo && currentUser?.sections.length === 1
+      ? currentUser.sections[0]!.id
+      : context.status === 'ready'
+        ? String(context.section!.id)
+        : '';
+  const userId = (isDemo ? currentUser : context.user)?.studentNumber ?? '';
   const confirmationMutation = useUpdateSubmissionConfirmationMutation(
     sectionId,
     userId,
@@ -82,6 +94,7 @@ export default function MilestoneCard({
     ) : null;
 
   function handleFinalReportAction() {
+    if (!canAct) return;
     if (submissionTargets[milestone.id] || isTeamLeader) {
       openSubmissionDialog('final-report', milestone.id);
       return;
@@ -136,13 +149,13 @@ export default function MilestoneCard({
                 {row.id === 'proposal-submit' ? (
                   <ProposalSubmitAction
                     className={styles.rowAction}
-                    isDisabled={row.actionDisabled}
+                    isDisabled={!canAct || row.actionDisabled}
                     label={row.actionLabel}
                   />
                 ) : row.id === 'mid-report-submit' ? (
                   <MidReportSubmitAction
                     className={styles.rowAction}
-                    isDisabled={row.actionDisabled}
+                    isDisabled={!canAct || row.actionDisabled}
                     label={row.actionLabel}
                   />
                 ) : row.id === 'proposal-topic-selection' &&
@@ -161,6 +174,7 @@ export default function MilestoneCard({
                   <Button
                     className={styles.rowAction}
                     isDisabled={
+                      !canAct ||
                       row.actionDisabled ||
                       (row.id === 'proposal-topic-selection' && topicApi
                         ? !topicApi.canParticipate ||
@@ -248,7 +262,7 @@ export default function MilestoneCard({
               row.id === 'final-report-submission'
                 ? submissionTargets[milestone.id]
                 : undefined;
-            return target ? (
+            return target && canAct ? (
               <FinalReportSubmissionAction
                 key={row.id}
                 target={target}

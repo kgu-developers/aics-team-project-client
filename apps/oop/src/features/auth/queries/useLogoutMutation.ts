@@ -9,7 +9,7 @@ export function useLogoutMutation() {
 
   return useMutation({
     mutationFn: submitLogout,
-    onSettled: () => {
+    onSuccess: () => {
       clearSession();
       queryClient.clear();
     },

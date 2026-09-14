@@ -9,11 +9,15 @@ import {
 
 import { sectionKeys } from './sectionKeys';
 
-export function useMySectionsQuery(filter: FetchMySectionsFilter = {}) {
+export function useMySectionsQuery(
+  filter: FetchMySectionsFilter = {},
+  enabled = true,
+) {
   const hasAuthenticatedSession = useAuthStore(selectHasAuthenticatedSession);
 
   return useQuery({
-    enabled: hasAuthenticatedSession,
+    enabled: enabled && hasAuthenticatedSession,
+    retry: false,
     queryFn: () => fetchMySections(filter),
     queryKey: sectionKeys.mySections(filter),
   });

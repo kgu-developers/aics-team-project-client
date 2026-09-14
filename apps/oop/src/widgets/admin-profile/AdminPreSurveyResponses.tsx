@@ -12,6 +12,7 @@ import {
 } from '@aics/design-system';
 import { useEffect, useState } from 'react';
 
+import { saveDownload } from '~/shared/lib/saveDownload';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import {
@@ -32,17 +33,6 @@ const roleLabels: Record<string, string> = {
   RESEARCH: '자료 수집',
   TEAM_LEADER: '팀장(프로젝트 매니저)',
 };
-
-function downloadExcel(file: Blob, fileName: string) {
-  const url = URL.createObjectURL(file);
-  const link = document.createElement('a');
-  link.download = fileName;
-  link.href = url;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
 
 function formatPreferredRoles(roles: unknown) {
   if (!Array.isArray(roles)) return '-';
@@ -85,7 +75,7 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
         });
       },
       onSuccess: download => {
-        downloadExcel(download.file, download.fileName);
+        saveDownload(download.file, download.fileName);
         toast({ body: '사전조사 응답 Excel 파일을 다운로드했어요.' });
       },
     });

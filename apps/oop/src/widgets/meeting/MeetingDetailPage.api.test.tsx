@@ -50,11 +50,40 @@ vi.mock('@tanstack/react-router', async importOriginal => ({
   ...(await importOriginal<typeof import('@tanstack/react-router')>()),
   useNavigate: () => navigate,
 }));
-const server = setupServer();
+function currentSections() {
+  return (useAuthStore.getState().currentUser?.sections ?? []).map(section => ({
+    classTime: '',
+    capacity: 40,
+    contactVisibleFrom: null,
+    contactVisibleUntil: null,
+    courseId: 1,
+    courseName: 'OOP',
+    year: 2026,
+    semester: 'FALL',
+    status: 'ACTIVE',
+    ...section,
+    id: /^\d+$/.test(section.id) ? Number(section.id) : 1,
+  }));
+}
+const server = setupServer(
+  http.get(`${API_BASE_URL}/api/v1/oop/users/me`, () => {
+    const user = useAuthStore.getState().currentUser!;
+    return HttpResponse.json({
+      ...user,
+      globalRole: 'USER',
+      sections: currentSections(),
+      teamId: user.teamId ?? null,
+    });
+  }),
+  http.get(`${API_BASE_URL}/api/v1/oop/sections`, () =>
+    HttpResponse.json({ contents: currentSections() }),
+  ),
+);
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   vi.stubEnv('VITE_ENABLE_MSW', 'false');
+  useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setAccessToken(demoAccessToken);
   useAuthStore
     .getState()
@@ -271,7 +300,7 @@ it('팀이 없으면 상세·작성에서 네트워크 요청 없이 별도 상�
     .setCurrentUser({ ...demoStudent, currentTeam: null, teamId: null });
   const request = vi.fn();
   server.use(
-    http.all('*', () => {
+    http.all(/\/(teams|meeting-records|meeting-actions)\//, () => {
       request();
       return new HttpResponse(null, { status: 500 });
     }),
@@ -282,7 +311,7 @@ it('팀이 없으면 상세·작성에서 네트워크 요청 없이 별도 상�
       <MeetingNewPage />
     </>,
   );
-  expect(screen.getAllByText('소속 팀이 없어요.')).toHaveLength(2);
+  expect(await screen.findAllByText('소속 팀이 없어요.')).toHaveLength(2);
   await act(async () => {});
   expect(request).not.toHaveBeenCalled();
 });
@@ -435,4 +464,65 @@ it('액션 등록 409와 삭제 403을 입력·기존 행을 보존하는 오류
     ),
   ).not.toBeNull();
   expect(await fetchMeetingActionEntries('19')).toHaveLength(1);
+});
+
+it('kickoff failure on detail and edit uses a real retry and never reports a deleted record', async () => {
+  server.use(
+    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+      HttpResponse.json({}, { status: 500 }),
+    ),
+  );
+  const requests: string[] = [];
+  server.events.on('request:start', ({ request }) =>
+    requests.push(new URL(request.url).pathname),
+  );
+  renderPage(<MeetingEditPage meetingId='19' />);
+  await screen.findByText('팀 정보를 불러올 수 없어요.');
+  expect(screen.queryByText(/삭제되었거나/)).not.toBeInTheDocument();
+  expect(requests.some(path => path.includes('/meeting-records/'))).toBe(false);
+  server.use(
+    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+      HttpResponse.json(meetingApiTeam),
+    ),
+  );
+  await userEvent
+    .setup()
+    .click(screen.getByRole('button', { name: '다시 시도' }));
+  expect(await screen.findByRole('textbox', { name: /회의 제목/ })).toHaveValue(
+    '진행 점검 회의',
+  );
+});
+
+it('a transient kickoff refetch failure preserves an open edit draft and blocks writes until retry', async () => {
+  const user = userEvent.setup();
+  renderPage(<MeetingEditPage meetingId='19' />);
+  const title = await screen.findByRole('textbox', { name: /회의 제목/ });
+  await user.clear(title);
+  await user.type(title, '유지해야 하는 초안');
+  server.use(
+    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+      HttpResponse.json({}, { status: 500 }),
+    ),
+  );
+  await act(async () => {
+    await clients.at(-1)!.refetchQueries({ queryKey: ['team-kickoff', '7'] });
+  });
+  await waitFor(() =>
+    expect(screen.getByRole('textbox', { name: /회의 제목/ })).toBeDisabled(),
+  );
+  expect(screen.getByRole('textbox', { name: /회의 제목/ })).toHaveValue(
+    '유지해야 하는 초안',
+  );
+  server.use(
+    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+      HttpResponse.json(meetingApiTeam),
+    ),
+  );
+  await user.click(screen.getByRole('button', { name: '팀 정보 다시 시도' }));
+  await waitFor(() =>
+    expect(screen.getByRole('textbox', { name: /회의 제목/ })).toBeEnabled(),
+  );
+  expect(screen.getByRole('textbox', { name: /회의 제목/ })).toHaveValue(
+    '유지해야 하는 초안',
+  );
 });

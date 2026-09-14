@@ -17,8 +17,10 @@ const useSectionSelection = create<{
 /** Only one accessible section can be selected automatically. */
 export function useSelectedSection(
   sections: readonly SectionResponse[] | undefined,
+  identityId?: string,
 ) {
-  const userId = useAuthStore(state => state.currentUser?.id);
+  const sessionUserId = useAuthStore(state => state.currentUser?.id);
+  const userId = identityId ?? sessionUserId;
   const selectedId = useSectionSelection(state =>
     userId ? state.selections[userId] : undefined,
   );

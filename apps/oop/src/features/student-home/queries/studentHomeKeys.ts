@@ -1,7 +1,8 @@
 export const studentHomeKeys = {
   all: ['student-home'] as const,
+  users: () => [...studentHomeKeys.all, 'user'] as const,
   user: (studentNumber: string | undefined, role: string | null) =>
-    [...studentHomeKeys.all, 'user', studentNumber, role] as const,
+    [...studentHomeKeys.users(), studentNumber, role] as const,
   submission: (
     sectionId: string | undefined,
     teamId: string | undefined,
