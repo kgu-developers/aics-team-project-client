@@ -185,6 +185,26 @@ describe('AdminStudentTeamManagement', () => {
     expect(screen.getAllByText('이서연')).toHaveLength(2);
   });
 
+  it('팀장을 새 팀원으로 변경하면 팀 카드에 갱신된 팀장을 표시한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    const [firstTeamLeaderButton] = await screen.findAllByRole('button', {
+      name: '팀장 변경',
+    });
+    if (!firstTeamLeaderButton)
+      throw new Error('팀장 변경 버튼을 찾을 수 없습니다.');
+    await user.click(firstTeamLeaderButton);
+    const dialog = await screen.findByRole('dialog', { name: '팀장 변경' });
+    await user.click(within(dialog).getByRole('radio', { name: /이서연/ }));
+    await user.click(within(dialog).getByRole('button', { name: '팀장 변경' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('팀장: 이서연')).toBeInTheDocument(),
+    );
+  });
+
   it('목록을 기다리는 동안 로딩 상태를 표시한다', async () => {
     server.use(
       http.get(

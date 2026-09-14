@@ -120,6 +120,18 @@ export const memberList = style({
   padding: 0,
 });
 
+export const teamContent = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 10,
+  minWidth: 0,
+});
+
+export const teamLeader = style({
+  alignItems: 'center',
+  flexWrap: 'wrap',
+});
+
 export const member = style({
   alignItems: 'flex-start',
   border: `1px solid ${tokens.color.border.base}`,
@@ -174,6 +186,12 @@ export const withdrawDialogContent = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 16,
+});
+
+export const assistantDialogContent = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['3'],
 });
 
 globalStyle(`${statePanel} p, ${emptyTeamPanel} p`, {

@@ -73,7 +73,7 @@ export const form = style({
 export const sectionSettingsForm = style({
   display: 'flex',
   flexDirection: 'column',
-  gap: tokens.spacing['3'],
+  gap: tokens.spacing['2'],
 });
 
 export const optionalSettings = style({
@@ -81,8 +81,8 @@ export const optionalSettings = style({
   borderRadius: tokens.radius.container,
   display: 'flex',
   flexDirection: 'column',
-  gap: tokens.spacing['2'],
-  padding: tokens.spacing['3'],
+  gap: tokens.spacing['1'],
+  padding: tokens.spacing['2'],
 });
 
 export const optionalSettingsHeader = style({
@@ -98,8 +98,7 @@ export const optionalSettingsStatus = style({
 export const formRow = style({
   display: 'grid',
   gap: tokens.spacing['2'],
-  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  '@media': { '(max-width: 680px)': { gridTemplateColumns: '1fr' } },
+  gridTemplateColumns: '1fr',
 });
 
 export const dialogActions = style({
@@ -135,7 +134,7 @@ export const sectionList = style({
 });
 
 export const sectionItem = style({
-  alignItems: 'center',
+  alignItems: 'start',
   background: tokens.color.background.muted,
   borderRadius: tokens.radius.element,
   display: 'grid',
@@ -151,4 +150,30 @@ export const sectionEditButton = style({
 export const sectionMeta = style({
   color: tokens.color.text.secondary,
   fontSize: 13,
+});
+
+export const assistantRow = style({
+  alignItems: 'center',
+  borderTop: `1px solid ${tokens.color.border.base}`,
+  paddingTop: tokens.spacing['2'],
+});
+
+export const assistantManagement = style({
+  background: tokens.color.background.card,
+  borderRadius: tokens.radius.element,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['2'],
+  gridColumn: '1 / -1',
+  minWidth: 0,
+  padding: tokens.spacing['2'],
+});
+
+export const assistantActions = style({
+  flexShrink: 0,
+});
+
+export const assistantManagementAction = style({
+  display: 'flex',
+  justifyContent: 'flex-end',
 });

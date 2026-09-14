@@ -31,6 +31,12 @@ import {
   useUpdateAdminOopSectionMutation,
   useUpdateAdminOopSectionContactVisibilityMutation,
 } from '~/features/admin-section/queries';
+import {
+  useAdminSectionEnrollmentsQuery,
+  useRemoveAdminAssistantMutation,
+} from '~/features/admin-student-team/queries';
+
+import { AdminAssistantEnrollmentDialog } from '~/widgets/admin-student-team/AdminAssistantEnrollmentDialog';
 
 import {
   useAdminOopCourseQuery,
@@ -84,6 +90,134 @@ function contactVisibilityStatus(visibleFrom: string, visibleUntil: string) {
   if (now < startsAt) return '공개 예정';
   if (now <= endsAt) return '공개 중';
   return '공개 종료';
+}
+
+function SectionAssistantManagement({
+  section,
+}: {
+  section: AdminOopSectionDto;
+}) {
+  const [isEnrollmentDialogOpen, setIsEnrollmentDialogOpen] = useState(false);
+  const enrollmentsQuery = useAdminSectionEnrollmentsQuery(String(section.id));
+  const removeAssistantMutation = useRemoveAdminAssistantMutation();
+  const assistants = (enrollmentsQuery.data?.contents ?? []).filter(
+    enrollment =>
+      enrollment.role === 'ASSISTANT' && enrollment.status === 'ACTIVE',
+  );
+  const [assistantToEdit, setAssistantToEdit] = useState<
+    (typeof assistants)[number] | null
+  >(null);
+  const [assistantToDelete, setAssistantToDelete] = useState<
+    (typeof assistants)[number] | null
+  >(null);
+
+  return (
+    <>
+      <div className={styles.assistantManagement}>
+        <Text className={styles.sectionMeta} type='supporting'>
+          {enrollmentsQuery.isPending
+            ? '조교 정보를 불러오는 중입니다.'
+            : assistants.length > 0
+              ? `조교 ${assistants.length}명`
+              : '등록된 조교가 없습니다.'}
+        </Text>
+        {assistants.map(assistant => (
+          <HStack
+            className={styles.assistantRow}
+            key={assistant.id}
+            justify='between'
+          >
+            <Text type='supporting'>
+              {assistant.name} · {assistant.studentNumber}
+            </Text>
+            <HStack className={styles.assistantActions} gap={1}>
+              <Button
+                label='수정'
+                onClick={() => setAssistantToEdit(assistant)}
+                size='sm'
+                variant='ghost'
+              />
+              <Button
+                isDisabled={removeAssistantMutation.isPending}
+                label='계정 삭제'
+                onClick={() => setAssistantToDelete(assistant)}
+                size='sm'
+                variant='ghost'
+              />
+            </HStack>
+          </HStack>
+        ))}
+        <div className={styles.assistantManagementAction}>
+          <Button
+            label='조교 등록'
+            onClick={() => setIsEnrollmentDialogOpen(true)}
+            size='sm'
+            variant='secondary'
+          />
+        </div>
+      </div>
+      <AdminAssistantEnrollmentDialog
+        assistant={null}
+        isOpen={isEnrollmentDialogOpen}
+        onClose={() => setIsEnrollmentDialogOpen(false)}
+        sectionId={String(section.id)}
+        sectionName={section.code}
+      />
+      <Dialog
+        aria-label='조교 계정 삭제 확인'
+        isOpen={assistantToDelete !== null}
+        onOpenChange={open => {
+          if (!open && !removeAssistantMutation.isPending) {
+            setAssistantToDelete(null);
+            removeAssistantMutation.reset();
+          }
+        }}
+        purpose='required'
+        width={440}
+      >
+        {assistantToDelete ? (
+          <div className={styles.dialogBody}>
+            <Heading level={2}>조교 계정을 삭제할까요?</Heading>
+            <Text>
+              {assistantToDelete.name} 조교의 계정이 삭제됩니다. 다른 분반
+              소속과 로그인 접근도 함께 사라질 수 있습니다.
+            </Text>
+            {removeAssistantMutation.isError ? (
+              <Text className={styles.error} role='alert'>
+                조교 계정을 삭제하지 못했습니다. 다시 시도해 주세요.
+              </Text>
+            ) : null}
+            <HStack className={styles.dialogActions} gap={2} justify='end'>
+              <Button
+                isDisabled={removeAssistantMutation.isPending}
+                label='취소'
+                onClick={() => setAssistantToDelete(null)}
+                variant='secondary'
+              />
+              <Button
+                isDisabled={removeAssistantMutation.isPending}
+                isLoading={removeAssistantMutation.isPending}
+                label='계정 삭제'
+                onClick={() =>
+                  removeAssistantMutation.mutate(
+                    assistantToDelete.studentNumber,
+                    { onSuccess: () => setAssistantToDelete(null) },
+                  )
+                }
+              />
+            </HStack>
+          </div>
+        ) : null}
+      </Dialog>
+      <AdminAssistantEnrollmentDialog
+        assistant={assistantToEdit}
+        isOpen={assistantToEdit !== null}
+        onClose={() => setAssistantToEdit(null)}
+        sectionId={String(section.id)}
+        sectionName={section.code}
+      />
+    </>
+  );
 }
 
 function toInput(course: AdminOopCourseDto): CourseFormInput {
@@ -429,7 +563,7 @@ function SectionSettingsDialog({
         if (!open && !isPending) onClose();
       }}
       purpose='form'
-      width={640}
+      width={600}
     >
       <form className={styles.sectionSettingsForm} onSubmit={handleSubmit}>
         <Heading level={2}>{section?.code ?? '분반'} 분반 정보 수정</Heading>
@@ -745,6 +879,7 @@ function CourseSectionDialog({
                   <span className={styles.sectionMeta}>
                     {section.classTime} · 정원 {section.capacity}명
                   </span>
+                  <SectionAssistantManagement section={section} />
                   <Button
                     className={styles.sectionEditButton}
                     label='분반 정보 수정'

@@ -32,11 +32,16 @@ import {
 } from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminSectionHandlers } from '~/mocks/handlers/adminSections';
+import {
+  adminStudentTeamHandlers,
+  resetAdminStudentTeamMockState,
+} from '~/mocks/handlers/adminStudentTeams';
 import { sectionHandlers } from '~/mocks/handlers/section';
 
 const server = setupServer(
   ...adminCourseHandlers,
   ...adminSectionHandlers,
+  ...adminStudentTeamHandlers,
   ...sectionHandlers,
 );
 const queryClients: QueryClient[] = [];
@@ -45,6 +50,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   resetAdminCoursesMockData();
   resetAdminSectionsMockData();
+  resetAdminStudentTeamMockState();
   mockSessionResponseHeaders(
     issueMockSession(
       demoUserAccounts.find(
@@ -87,6 +93,23 @@ function renderManager() {
 }
 
 describe('AdminCourseManagement', () => {
+  it('분반 관리에서 조교 관리와 조교 목록을 표시한다', async () => {
+    const user = userEvent.setup();
+    renderManager();
+    await screen.findAllByText('객체지향 프로그래밍');
+
+    await user.click(screen.getAllByRole('button', { name: '분반 관리' })[0]!);
+    const sectionDialog = await screen.findByRole('dialog', {
+      name: '객체지향 프로그래밍 분반 관리',
+    });
+    expect(
+      await within(sectionDialog).findByText('등록된 조교가 없습니다.'),
+    ).toBeInTheDocument();
+    expect(
+      within(sectionDialog).getByRole('button', { name: '조교 등록' }),
+    ).toBeInTheDocument();
+  });
+
   it('연도·학기·상태를 표시하고 운영 중 강좌의 삭제를 비활성화한다', async () => {
     renderManager();
 

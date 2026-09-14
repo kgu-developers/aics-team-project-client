@@ -12,6 +12,16 @@ import { demoAdmin } from '../data/users';
 const demoSectionId = 'oop-2026-2-01';
 const adminSectionId = 1;
 const withdrawnStudentNumbers = new Set<string>();
+const teamLeaderStudentNumbers = new Map<string, string>();
+const createdUsers = new Map<
+  string,
+  { email: string; name: string; phone: string; studentNumber: string }
+>();
+const assistantEnrollmentsBySection = new Map<
+  string,
+  { email: string; name: string; phone: string; studentNumber: string }
+>();
+const withdrawnAssistantEnrollmentKeys = new Set<string>();
 const teamImportPreviews = new Map<
   number,
   { fileName: string; sectionId: string }
@@ -110,24 +120,42 @@ function getEnrollmentId(studentId: string) {
 }
 
 function getAdminEnrollmentResponse(sectionId: string) {
+  const assistantEnrollments = [...assistantEnrollmentsBySection.entries()]
+    .filter(([key]) => key.startsWith(`${sectionId}:`))
+    .filter(([key]) => !withdrawnAssistantEnrollmentKeys.has(key))
+    .map(([, enrollment]) => enrollment);
+
   return {
-    contents: adminStudentsFixture
-      .filter(
-        student => student.sectionId === resolveFixtureSectionId(sectionId),
-      )
-      .map(student => ({
-        createdAt: '2026-09-08T15:15:06.644Z',
-        email: `${student.studentNumber}@example.com`,
-        id: getEnrollmentId(student.id),
-        major: student.major,
-        name: student.name,
-        phone: '010-1234-5678',
-        role: 'STUDENT',
-        status: withdrawnStudentNumbers.has(student.studentNumber)
-          ? 'WITHDRAWN'
-          : 'ACTIVE',
-        studentNumber: student.studentNumber,
+    contents: [
+      ...adminStudentsFixture
+        .filter(
+          student => student.sectionId === resolveFixtureSectionId(sectionId),
+        )
+        .map(student => ({
+          createdAt: '2026-09-08T15:15:06.644Z',
+          email: `${student.studentNumber}@example.com`,
+          id: getEnrollmentId(student.id),
+          major: student.major,
+          name: student.name,
+          phone: '010-1234-5678',
+          role: 'STUDENT',
+          status: withdrawnStudentNumbers.has(student.studentNumber)
+            ? 'WITHDRAWN'
+            : 'ACTIVE',
+          studentNumber: student.studentNumber,
+        })),
+      ...assistantEnrollments.map((assistantEnrollment, index) => ({
+        createdAt: '2026-09-14T20:30:00.000Z',
+        email: assistantEnrollment.email,
+        id: 999 + index,
+        major: null,
+        name: assistantEnrollment.name,
+        phone: assistantEnrollment.phone,
+        role: 'ASSISTANT' as const,
+        status: 'ACTIVE' as const,
+        studentNumber: assistantEnrollment.studentNumber,
       })),
+    ],
   };
 }
 
@@ -153,6 +181,12 @@ function getAdminTeamResponse(teamId: string) {
 
   if (!team) return null;
 
+  const leaderStudentNumber =
+    teamLeaderStudentNumbers.get(team.id) ??
+    team.memberIds
+      .map(memberId => studentsById.get(memberId))
+      .find(student => student?.isLeader)?.studentNumber;
+
   return {
     createdAt: '2026-09-08T15:15:06.663Z',
     id: getAdminTeamId(team.id),
@@ -168,7 +202,7 @@ function getAdminTeamResponse(teamId: string) {
       return [
         {
           id: getEnrollmentId(student.id),
-          isLeader: student.isLeader,
+          isLeader: student.studentNumber === leaderStudentNumber,
           major: student.major,
           name: student.name,
           projectRole: null,
@@ -184,6 +218,10 @@ function getAdminTeamResponse(teamId: string) {
 
 export function resetAdminStudentTeamMockState() {
   withdrawnStudentNumbers.clear();
+  teamLeaderStudentNumbers.clear();
+  createdUsers.clear();
+  assistantEnrollmentsBySection.clear();
+  withdrawnAssistantEnrollmentKeys.clear();
   teamImportPreviews.clear();
   enrollmentImportPreviews.clear();
   rosterImportStatusBySection.clear();
@@ -220,6 +258,165 @@ export const adminStudentTeamHandlers = [
           teamRoster: null,
         },
       );
+    },
+  ),
+
+  http.post(`${API_BASE_URL}${ENDPOINTS.ADMIN.USERS}`, async ({ request }) => {
+    const account = getMockAuthenticatedAccount(request);
+
+    if (account?.user.id !== demoAdmin.id) {
+      return HttpResponse.json(
+        { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+        { status: 401 },
+      );
+    }
+
+    const input = (await request.json()) as {
+      email: string;
+      name: string;
+      phone: string;
+      studentNumber: string;
+    };
+    const exists =
+      createdUsers.has(input.studentNumber) ||
+      adminStudentsFixture.some(
+        student => student.studentNumber === input.studentNumber,
+      );
+
+    if (exists) {
+      return HttpResponse.json(
+        { code: 'USER_ALREADY_EXISTS', message: '이미 존재하는 사용자입니다.' },
+        { status: 409 },
+      );
+    }
+
+    createdUsers.set(input.studentNumber, input);
+    return HttpResponse.json(
+      { studentNumber: input.studentNumber },
+      { status: 201 },
+    );
+  }),
+
+  http.post(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ENROLLMENTS(':sectionId')}`,
+    async ({ params, request }) => {
+      const account = getMockAuthenticatedAccount(request);
+      const sectionId = params.sectionId;
+
+      if (account?.user.id !== demoAdmin.id) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+      if (typeof sectionId !== 'string') {
+        return HttpResponse.json(
+          { code: 'SECTION_ID_REQUIRED', message: '분반 정보가 필요합니다.' },
+          { status: 400 },
+        );
+      }
+
+      const input = (await request.json()) as {
+        role: string;
+        studentNumber: string;
+      };
+      const fixtureUser = adminStudentsFixture.find(
+        student => student.studentNumber === input.studentNumber,
+      );
+      const user =
+        createdUsers.get(input.studentNumber) ??
+        (fixtureUser
+          ? {
+              email: `${fixtureUser.studentNumber}@example.com`,
+              name: fixtureUser.name,
+              phone: '010-1234-5678',
+              studentNumber: fixtureUser.studentNumber,
+            }
+          : undefined);
+
+      if (input.role !== 'ASSISTANT' || !user) {
+        return HttpResponse.json(
+          { code: 'USER_NOT_FOUND', message: '사용자를 찾을 수 없습니다.' },
+          { status: 404 },
+        );
+      }
+      const enrollmentKey = `${sectionId}:${input.studentNumber}`;
+      if (assistantEnrollmentsBySection.has(enrollmentKey)) {
+        return HttpResponse.json(
+          {
+            code: 'ENROLLMENT_ALREADY_EXISTS',
+            message: '이미 등록된 사용자입니다.',
+          },
+          { status: 409 },
+        );
+      }
+
+      assistantEnrollmentsBySection.set(enrollmentKey, user);
+      return HttpResponse.json(
+        getAdminEnrollmentResponse(sectionId).contents.find(
+          enrollment => enrollment.studentNumber === input.studentNumber,
+        ),
+        { status: 201 },
+      );
+    },
+  ),
+
+  http.patch(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_MEMBER(
+      ':teamId',
+      ':studentNumber',
+    )}`,
+    async ({ params, request }) => {
+      const account = getMockAuthenticatedAccount(request);
+      const teamId = params.teamId;
+      const studentNumber = params.studentNumber;
+
+      if (account?.user.id !== demoAdmin.id) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+      if (typeof teamId !== 'string' || typeof studentNumber !== 'string') {
+        return HttpResponse.json(
+          { code: 'TEAM_MEMBER_REQUIRED', message: '팀원 정보가 필요합니다.' },
+          { status: 400 },
+        );
+      }
+
+      const team = adminTeamsFixture.find(
+        candidate => getAdminTeamId(candidate.id) === Number(teamId),
+      );
+      const isMember = team?.memberIds.some(memberId => {
+        return studentsById.get(memberId)?.studentNumber === studentNumber;
+      });
+      if (!team || !isMember) {
+        return HttpResponse.json(
+          {
+            code: 'TEAM_MEMBER_NOT_FOUND',
+            message: '팀원을 찾을 수 없습니다.',
+          },
+          { status: 404 },
+        );
+      }
+
+      const input = (await request.json()) as { isLeader?: boolean };
+      if (input.isLeader !== true) {
+        return HttpResponse.json(
+          {
+            code: 'INVALID_TEAM_MEMBER_INPUT',
+            message: '팀장 설정이 필요합니다.',
+          },
+          { status: 400 },
+        );
+      }
+
+      teamLeaderStudentNumbers.set(team.id, studentNumber);
+      const updatedMember = getAdminTeamResponse(teamId)?.members.find(
+        member => member.studentNumber === studentNumber,
+      );
+
+      return HttpResponse.json(updatedMember);
     },
   ),
 
@@ -280,7 +477,11 @@ export const adminStudentTeamHandlers = [
           candidate.studentNumber === studentNumber,
       );
 
-      if (!student) {
+      const assistantEnrollmentKey = `${sectionId}:${studentNumber}`;
+      const assistant = assistantEnrollmentsBySection.get(
+        assistantEnrollmentKey,
+      );
+      if (!student && !assistant) {
         return HttpResponse.json(
           {
             code: 'ENROLLMENT_NOT_FOUND',
@@ -292,8 +493,11 @@ export const adminStudentTeamHandlers = [
 
       const input = (await request.json()) as { status?: string };
 
-      if (input.status === 'WITHDRAWN') {
+      if (input.status === 'WITHDRAWN' && student) {
         withdrawnStudentNumbers.add(student.studentNumber);
+      }
+      if (input.status === 'WITHDRAWN' && assistant) {
+        withdrawnAssistantEnrollmentKeys.add(assistantEnrollmentKey);
       }
 
       return HttpResponse.json(
@@ -301,6 +505,86 @@ export const adminStudentTeamHandlers = [
           enrollment => enrollment.studentNumber === studentNumber,
         ),
       );
+    },
+  ),
+
+  http.put(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.USER(':studentNumber')}`,
+    async ({ params, request }) => {
+      const account = getMockAuthenticatedAccount(request);
+      const studentNumber = params.studentNumber;
+
+      if (account?.user.id !== demoAdmin.id) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+      if (typeof studentNumber !== 'string') {
+        return HttpResponse.json(
+          { code: 'USER_REQUIRED', message: '사용자 정보가 필요합니다.' },
+          { status: 400 },
+        );
+      }
+
+      const input = (await request.json()) as {
+        email?: string;
+        name?: string;
+        phone?: string;
+      };
+      if (
+        typeof input.email !== 'string' ||
+        typeof input.name !== 'string' ||
+        typeof input.phone !== 'string'
+      ) {
+        return HttpResponse.json(
+          {
+            code: 'INVALID_USER_INPUT',
+            message: '사용자 정보를 확인해 주세요.',
+          },
+          { status: 400 },
+        );
+      }
+
+      const createdUser = createdUsers.get(studentNumber);
+      if (!createdUser) {
+        return HttpResponse.json(
+          { code: 'USER_NOT_FOUND', message: '사용자를 찾을 수 없습니다.' },
+          { status: 404 },
+        );
+      }
+      createdUsers.set(studentNumber, { ...createdUser, ...input });
+      return new HttpResponse(null, { status: 204 });
+    },
+  ),
+
+  http.delete(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.USER(':studentNumber')}`,
+    ({ params, request }) => {
+      const account = getMockAuthenticatedAccount(request);
+      const studentNumber = params.studentNumber;
+
+      if (account?.user.id !== demoAdmin.id) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+      if (
+        typeof studentNumber !== 'string' ||
+        !createdUsers.has(studentNumber)
+      ) {
+        return HttpResponse.json(
+          { code: 'USER_NOT_FOUND', message: '사용자를 찾을 수 없습니다.' },
+          { status: 404 },
+        );
+      }
+
+      createdUsers.delete(studentNumber);
+      [...assistantEnrollmentsBySection.keys()]
+        .filter(key => key.endsWith(`:${studentNumber}`))
+        .forEach(key => assistantEnrollmentsBySection.delete(key));
+      return new HttpResponse(null, { status: 204 });
     },
   ),
 
@@ -378,7 +662,12 @@ export const adminStudentTeamHandlers = [
         candidate => candidate.studentNumber === studentNumber,
       );
 
-      if (!student) {
+      const createdUser =
+        typeof studentNumber === 'string'
+          ? createdUsers.get(studentNumber)
+          : undefined;
+
+      if (!student && !createdUser) {
         return HttpResponse.json(
           { code: 'USER_NOT_FOUND', message: '수강생을 찾을 수 없습니다.' },
           { status: 404 },
@@ -387,11 +676,11 @@ export const adminStudentTeamHandlers = [
 
       return HttpResponse.json({
         createdAt: '2026-09-08T15:13:03.631Z',
-        email: `${student.studentNumber}@example.com`,
+        email: createdUser?.email ?? `${student!.studentNumber}@example.com`,
         globalRole: 'USER',
-        name: student.name,
-        phone: '010-1234-5678',
-        studentNumber: student.studentNumber,
+        name: createdUser?.name ?? student!.name,
+        phone: createdUser?.phone ?? '010-1234-5678',
+        studentNumber: createdUser?.studentNumber ?? student!.studentNumber,
         updatedAt: '2026-09-08T15:13:03.631Z',
       });
     },
