@@ -162,32 +162,55 @@ describe('auth mutations', () => {
     },
   );
 
-  it('로그아웃 서버 오류에도 로컬 세션과 QueryClient를 정리한다', async () => {
-    useAuthStore.getState().setAccessToken(demoAccessToken);
-    useAuthStore.getState().setCurrentUser(demoStudent);
-    server.use(
-      http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.LOGOUT}`, () =>
-        HttpResponse.json(
-          {
-            code: 'LOGOUT_UNAVAILABLE',
-            message: '잠시 후 다시 시도해 주세요.',
-          },
-          { status: 503 },
+  it.each([401, 403, 503, 'network'] as const)(
+    '로그아웃 실패(%s)는 세션과 캐시를 유지하고 재시도 성공 후에만 정리한다',
+    async status => {
+      useAuthStore.getState().setAccessToken(demoAccessToken);
+      useAuthStore.getState().setCurrentUser(demoStudent);
+      server.use(
+        http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.LOGOUT}`, () =>
+          status === 'network'
+            ? HttpResponse.error()
+            : HttpResponse.json(
+                {
+                  code: 'LOGOUT_UNAVAILABLE',
+                  message: '잠시 후 다시 시도해 주세요.',
+                },
+                { status },
+              ),
         ),
-      ),
-    );
-    const queryClient = createQueryClient();
-    queryClient.setQueryData(['private-data'], { shouldNotSurvive: true });
-    const { result } = renderHook(() => useLogoutMutation(), {
-      wrapper: createWrapper(queryClient),
-    });
+      );
+      const queryClient = createQueryClient();
+      queryClient.setQueryData(['private-data'], {
+        preservedUntilSuccess: true,
+      });
+      const { result } = renderHook(() => useLogoutMutation(), {
+        wrapper: createWrapper(queryClient),
+      });
 
-    await act(async () => {
-      await expect(result.current.mutateAsync()).rejects.toBeDefined();
-    });
+      await act(async () => {
+        await expect(result.current.mutateAsync()).rejects.toBeDefined();
+      });
 
-    expect(useAuthStore.getState().accessToken).toBeNull();
-    expect(useAuthStore.getState().currentUser).toBeNull();
-    expect(queryClient.getQueryData(['private-data'])).toBeUndefined();
-  });
+      expect(useAuthStore.getState().isAuthenticated).toBe(true);
+      expect(useAuthStore.getState().accessToken).toBe(demoAccessToken);
+      expect(useAuthStore.getState().currentUser).toEqual(demoStudent);
+      expect(queryClient.getQueryData(['private-data'])).toEqual({
+        preservedUntilSuccess: true,
+      });
+      server.use(
+        http.post(
+          `${API_BASE_URL}${ENDPOINTS.AUTH.LOGOUT}`,
+          () => new HttpResponse(null, { status: 204 }),
+        ),
+      );
+      await act(async () => {
+        await result.current.mutateAsync();
+      });
+      expect(useAuthStore.getState().isAuthenticated).toBe(false);
+      expect(useAuthStore.getState().accessToken).toBeNull();
+      expect(useAuthStore.getState().currentUser).toBeNull();
+      expect(queryClient.getQueryData(['private-data'])).toBeUndefined();
+    },
+  );
 });

@@ -8,14 +8,30 @@ import {
   createRootRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import {
+  act,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import type { PropsWithChildren } from 'react';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import { useStudentContext } from '~/features/section/useStudentContext';
 
 import StudentShell from './StudentShell';
 import * as styles from './StudentShellPopovers.css';
@@ -33,6 +49,7 @@ const queryClients: QueryClient[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  vi.unstubAllEnvs();
   server.resetHandlers();
   queryClients.splice(0).forEach(client => client.clear());
   resetDemoPasswordState();
@@ -88,6 +105,57 @@ function renderHeader(
 }
 
 describe('StudentHeaderActions', () => {
+  it('로그아웃 실패 시 프로필과 로그인 상태를 유지하고 명시적으로 재시도한다', async () => {
+    let respond!: (response: Response) => void;
+    let requests = 0;
+    server.use(
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.AUTH.LOGOUT}`,
+        () =>
+          new Promise<Response>(resolve => {
+            requests += 1;
+            respond = resolve;
+          }),
+      ),
+    );
+    const { queryClient, router } = renderHeader();
+    const navigate = vi.spyOn(router, 'navigate');
+    queryClient.setQueryData(['private-data'], 'preserved');
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: '내 프로필 열기' }));
+    await user.click(screen.getByRole('button', { name: '로그아웃' }));
+    await waitFor(() => expect(respond).toBeTypeOf('function'));
+    expect(screen.getByRole('button', { name: '로그아웃' })).toBeDisabled();
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+    respond(HttpResponse.json({}, { status: 503 }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '로그아웃하지 못했습니다. 로그인 상태가 유지됩니다.',
+    );
+    expect(navigate).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().currentUser).toEqual(demoStudent);
+    expect(queryClient.getQueryData(['private-data'])).toBe('preserved');
+    await user.click(
+      screen.getByRole('button', { name: '로그아웃 다시 시도' }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '로그아웃' })).toBeDisabled(),
+    );
+    await waitFor(() => expect(requests).toBe(2));
+    respond(new HttpResponse(null, { status: 204 }));
+    await waitFor(() =>
+      expect(useAuthStore.getState().isAuthenticated).toBe(false),
+    );
+    expect(queryClient.getQueryData(['private-data'])).toBeUndefined();
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith(
+        expect.objectContaining({ to: '/login' }),
+      ),
+    );
+    expect(
+      screen.queryByRole('button', { name: '로그아웃 다시 시도' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('실제 teamId가 있으면 프로필을 열 때 팀과 팀장을 조회하고 내 팀으로 연결한다', async () => {
     let requests = 0;
     server.use(
@@ -436,4 +504,59 @@ describe('StudentHeaderActions', () => {
       ).not.toBeInTheDocument();
     },
   );
+});
+
+it('uses the selected live section in shell and profile, with no unattributed team request', async () => {
+  vi.stubEnv('VITE_ENABLE_MSW', 'false');
+  const sections = [1, 2].map(id => ({
+    id,
+    code: `SELECTED-0${id}`,
+    name: `분반 ${id}`,
+    classTime: '',
+    capacity: 40,
+    contactVisibleFrom: null,
+    contactVisibleUntil: null,
+    courseId: 1,
+    courseName: 'OOP',
+    year: 2026,
+    semester: 'FALL',
+    status: 'ACTIVE',
+  }));
+  let kickoffRequests = 0;
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+      HttpResponse.json({
+        ...demoStudent,
+        studentNumber: 'shell-multiple',
+        globalRole: 'USER',
+        sections,
+        teamId: 7,
+      }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.SECTION.MY_SECTIONS}`, () =>
+      HttpResponse.json({ contents: sections }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF('7')}`, () => {
+      kickoffRequests++;
+      return HttpResponse.json({ id: 7, name: 'unattributed', members: [] });
+    }),
+  );
+  const { wrapper } = renderHeader('/student', {
+    ...demoStudent,
+    studentNumber: 'shell-multiple',
+  });
+  const { result } = renderHook(() => useStudentContext(), { wrapper });
+  await waitFor(() => expect(result.current.status).toBe('selection-required'));
+  expect(screen.queryByText(/SELECTED-01/)).not.toBeInTheDocument();
+  act(() => result.current.selectSection(2));
+  expect(
+    screen.getByRole('link', { name: '객체지향프로그래밍 팀 프로젝트 홈' }),
+  ).toHaveTextContent('/SELECTED-02');
+  await userEvent.click(screen.getByRole('button', { name: '내 프로필 열기' }));
+  expect(await screen.findByText('SELECTED-02')).toBeVisible();
+  expect(screen.getByText('팀 소속 확인 필요')).toBeVisible();
+  act(() => result.current.selectSection(1));
+  expect(screen.getByText('SELECTED-01')).toBeVisible();
+  expect(screen.queryByText('SELECTED-02')).not.toBeInTheDocument();
+  expect(kickoffRequests).toBe(0);
 });

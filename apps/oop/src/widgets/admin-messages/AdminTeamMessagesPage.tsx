@@ -2,6 +2,7 @@ import {
   Badge,
   Button,
   Card,
+  EmptyState,
   Heading,
   IconButton,
   Text,
@@ -14,6 +15,7 @@ import { useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import {
   useAdminRelatedSubmissionQuery,
@@ -41,6 +43,47 @@ export default function AdminTeamMessagesPage() {
   const { teamId } = useParams({ from: '/admin/messages/teams/$teamId' });
   const currentUser = useAuthStore(state => state.currentUser);
   const teamQuery = useAdminTeamDashboardQuery(teamId);
+  if (teamQuery.isPending)
+    return <Text role='status'>팀 정보를 불러오는 중입니다.</Text>;
+  if (teamQuery.isError)
+    return (
+      <EmptyState
+        title='팀 정보를 불러오지 못했습니다.'
+        actions={
+          <Button
+            label='팀 정보 다시 시도'
+            onClick={() => void teamQuery.refetch()}
+          />
+        }
+      />
+    );
+  if (
+    !currentUser?.sections.some(
+      section => section.id === teamQuery.data.sectionId,
+    )
+  ) {
+    return (
+      <EmptyState
+        title='이 팀에 접근할 수 없습니다.'
+        description='담당 분반과 관리자 권한을 확인해 주세요.'
+      />
+    );
+  }
+  return (
+    <TeamMessages
+      key={`${currentUser.id}:${teamQuery.data.id}`}
+      team={teamQuery.data}
+    />
+  );
+}
+
+function TeamMessages({
+  team,
+}: {
+  team: NonNullable<ReturnType<typeof useAdminTeamDashboardQuery>['data']>;
+}) {
+  const teamId = team.id;
+  const currentUser = useAuthStore(state => state.currentUser);
   const messagesQuery = useTeamMessagesQuery(teamId);
   const submitMutation = useSubmitTeamMessageMutation(teamId);
   const importantMutation = useUpdateTeamMessageImportantMutation(teamId);
@@ -51,7 +94,7 @@ export default function AdminTeamMessagesPage() {
   >(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const messages = messagesQuery.data ?? [];
-  const sectionId = teamQuery.data?.sectionId;
+  const sectionId = team.sectionId;
   const feedbackType = relatedType === 'GENERAL' ? undefined : relatedType;
   const relatedSubmissionQuery = useAdminRelatedSubmissionQuery(
     sectionId,
@@ -59,7 +102,7 @@ export default function AdminTeamMessagesPage() {
     feedbackType,
   );
   const relatedSubmission = relatedSubmissionQuery.data;
-  const title = teamQuery.data?.name ?? `${teamId}팀`;
+  const title = team.name;
 
   return (
     <main className={styles.page}>
@@ -75,18 +118,6 @@ export default function AdminTeamMessagesPage() {
           </Link>
         </div>
       </header>
-      {teamQuery.isError ? (
-        <Card>
-          <Text role='alert'>
-            팀 정보를 불러오지 못했습니다. 제안서·중간점검 피드백은 팀 정보를
-            확인한 뒤 작성할 수 있습니다.
-          </Text>
-          <Button
-            label='팀 정보 다시 시도'
-            onClick={() => void teamQuery.refetch()}
-          />
-        </Card>
-      ) : null}
       {mutationError ? <Text role='alert'>{mutationError}</Text> : null}
       <Card className={styles.thread} padding={0}>
         {messagesQuery.isPending ? (
@@ -128,7 +159,7 @@ export default function AdminTeamMessagesPage() {
                         {item.senderName ?? item.senderId}
                       </button>
                     )}{' '}
-                    · {item.createdAt}
+                    · {formatSeoulDateTime(item.createdAt)}
                   </Text>
                   <IconButton
                     icon={
@@ -192,32 +223,24 @@ export default function AdminTeamMessagesPage() {
         </div>
         {relatedType === 'PROPOSAL' ? (
           <Text className={styles.relatedNotice}>
-            {teamQuery.isPending
-              ? '팀 정보를 불러오는 중입니다.'
-              : teamQuery.isError
-                ? '팀 정보를 불러오지 못해 제안서 피드백을 연결할 수 없습니다.'
-                : relatedSubmissionQuery.isPending
-                  ? '제안서 제출물을 불러오는 중입니다.'
-                  : relatedSubmissionQuery.isError
-                    ? '제안서 제출물을 불러오지 못했습니다. 다시 시도해 주세요.'
-                    : relatedSubmission
-                      ? `${relatedSubmission.milestoneTitle} 제출물 #${relatedSubmission.submissionId}에 자동 연결됩니다.`
-                      : '이 팀의 제안서 제출물을 찾지 못했습니다.'}
+            {relatedSubmissionQuery.isPending
+              ? '제안서 제출물을 불러오는 중입니다.'
+              : relatedSubmissionQuery.isError
+                ? '제안서 제출물을 불러오지 못했습니다. 다시 시도해 주세요.'
+                : relatedSubmission
+                  ? `${relatedSubmission.milestoneTitle} 제출물 #${relatedSubmission.submissionId}에 자동 연결됩니다.`
+                  : '이 팀의 제안서 제출물을 찾지 못했습니다.'}
           </Text>
         ) : null}
         {relatedType === 'MID_REPORT' ? (
           <Text className={styles.relatedNotice}>
-            {teamQuery.isPending
-              ? '팀 정보를 불러오는 중입니다.'
-              : teamQuery.isError
-                ? '팀 정보를 불러오지 못해 중간점검 피드백을 연결할 수 없습니다.'
-                : relatedSubmissionQuery.isPending
-                  ? '중간점검 제출물을 불러오는 중입니다.'
-                  : relatedSubmissionQuery.isError
-                    ? '중간점검 제출물을 불러오지 못했습니다. 다시 시도해 주세요.'
-                    : relatedSubmission
-                      ? `${relatedSubmission.milestoneTitle} 제출물 #${relatedSubmission.submissionId}에 자동 연결됩니다.`
-                      : '이 팀의 중간점검 제출물을 찾지 못했습니다.'}
+            {relatedSubmissionQuery.isPending
+              ? '중간점검 제출물을 불러오는 중입니다.'
+              : relatedSubmissionQuery.isError
+                ? '중간점검 제출물을 불러오지 못했습니다. 다시 시도해 주세요.'
+                : relatedSubmission
+                  ? `${relatedSubmission.milestoneTitle} 제출물 #${relatedSubmission.submissionId}에 자동 연결됩니다.`
+                  : '이 팀의 중간점검 제출물을 찾지 못했습니다.'}
           </Text>
         ) : null}
         <TextArea

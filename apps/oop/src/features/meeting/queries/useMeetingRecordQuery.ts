@@ -1,4 +1,8 @@
-import { fetchMeetingRecord } from '@aics/api-client';
+import {
+  fetchMeetingRecord,
+  fetchMeetingRecordDetail,
+  fetchMeetingActionEntries,
+} from '@aics/api-client';
 import { skipToken, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
@@ -6,9 +10,7 @@ import {
   mapStudentMeeting,
   type StudentMeetingRecord,
 } from '../model/studentMeeting';
-import { hasMeetingApiId } from './api/meetingApiKeys';
-import { useMeetingActionEntriesQuery } from './api/useMeetingActionEntriesQuery';
-import { useMeetingRecordDetailQuery } from './api/useMeetingRecordDetailQuery';
+import { hasMeetingApiId, meetingApiKeys } from './api/meetingApiKeys';
 import { meetingKeys } from './meetingKeys';
 import { useMeetingTeamQuery } from './useMeetingTeamQuery';
 
@@ -16,13 +18,23 @@ export function useMeetingRecordQuery(meetingId: string | null | undefined) {
   const context = useMeetingTeamQuery();
   const valid =
     hasMeetingApiId(meetingId ?? undefined) && hasMeetingApiId(context.teamId);
-  const detail = useMeetingRecordDetailQuery(
-    !context.isDemo && valid ? meetingId! : undefined,
-  );
-  const sameTeam = detail.data?.teamId === context.teamId;
-  const actions = useMeetingActionEntriesQuery(
-    !context.isDemo && valid && sameTeam ? meetingId! : undefined,
-  );
+  const recordId =
+    !context.isDemo && hasMeetingApiId(meetingId ?? undefined)
+      ? meetingId!
+      : undefined;
+  const detail = useQuery({
+    queryKey: meetingApiKeys.detail(recordId),
+    queryFn:
+      recordId && valid ? () => fetchMeetingRecordDetail(recordId) : skipToken,
+  });
+  const sameTeam = detail.data?.teamId === context.team?.id;
+  const actions = useQuery({
+    queryKey: meetingApiKeys.recordActions(recordId),
+    queryFn:
+      recordId && valid && sameTeam
+        ? () => fetchMeetingActionEntries(recordId)
+        : skipToken,
+  });
   const demo = useQuery({
     queryKey: meetingId ? meetingKeys.detail(meetingId) : meetingKeys.all,
     queryFn:
@@ -52,6 +64,7 @@ export function useMeetingRecordQuery(meetingId: string | null | undefined) {
         Boolean(detail.data && !sameTeam)));
   return {
     data,
+    context,
     teamId: context.teamId,
     fetchStatus: context.isDemo ? demo.fetchStatus : detail.fetchStatus,
     isError: context.isDemo ? demo.isError : isError,
@@ -61,15 +74,18 @@ export function useMeetingRecordQuery(meetingId: string | null | undefined) {
         ? demo.isPending
         : !isError &&
           (context.isPending || detail.isPending || actions.isPending)),
-    refetch: () =>
-      context.isDemo
-        ? demo.refetch()
-        : Promise.all([
-            context.refetch(),
-            detail.refetch(),
-            ...(sameTeam ? [actions.refetch()] : []),
-          ]),
+    refetch: async () => {
+      if (!context.teamId) return context.refetch();
+      if (context.isDemo) return demo.refetch();
+      if (!valid) return;
+      const result = await detail.refetch();
+      if (result.isSuccess && result.data.teamId === context.teamId && sameTeam)
+        await actions.refetch();
+      return result;
+    },
     reloadForEdit: async () => {
+      if (!context.teamId || !valid || context.isError || context.isPending)
+        throw new Error('현재 팀의 회의록을 확인하지 못했어요.');
       const result = await detail.refetch({ throwOnError: true });
       if (
         !result.data ||

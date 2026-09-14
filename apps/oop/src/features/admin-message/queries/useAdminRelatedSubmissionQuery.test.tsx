@@ -79,16 +79,25 @@ const server = setupServer(
       topicCandidateId: null,
     }),
   ),
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT('1', '7')}`,
+    () => HttpResponse.json({ id: 401, teamId: 7, milestoneId: 102 }),
+  ),
 );
 
+const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  clients.splice(0).forEach(client => client.clear());
+  server.resetHandlers();
+});
 afterAll(() => server.close());
 
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  clients.push(queryClient);
 
   return function Wrapper({ children }: PropsWithChildren) {
     return (
@@ -119,7 +128,38 @@ describe('useAdminRelatedSubmissionQuery', () => {
     rerender({ relatedType: 'MID_REPORT' as const });
     await waitFor(() => expect(result.current.data?.submissionId).toBe(1702));
     expect(result.current.data?.milestoneId).toBe(102);
-    expect(result.current.data?.relatedId).toBe(1702);
+    expect(result.current.data?.relatedId).toBe(401);
+  });
+
+  it('중간보고서 조회 실패를 일반 제출물 ID로 대신하지 않는다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT('1', '7')}`,
+        () =>
+          HttpResponse.json({ code: 'MID_REPORT_NOT_FOUND' }, { status: 404 }),
+      ),
+    );
+    const { result } = renderHook(
+      () => useAdminRelatedSubmissionQuery('1', '7', 'MID_REPORT'),
+      { wrapper: createWrapper() },
+    );
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it('다른 팀의 중간보고서는 피드백 대상으로 사용하지 않는다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT('1', '7')}`,
+        () => HttpResponse.json({ id: 401, teamId: 8, milestoneId: 102 }),
+      ),
+    );
+    const { result } = renderHook(
+      () => useAdminRelatedSubmissionQuery('1', '7', 'MID_REPORT'),
+      { wrapper: createWrapper() },
+    );
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
   });
 
   it('일반 메시지에는 마일스톤·제출물 API를 요청하지 않는다', () => {

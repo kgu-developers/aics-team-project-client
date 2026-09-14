@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 
 import { authKeys } from '~/features/auth/queries/authKeys';
+import { studentHomeKeys } from '~/features/student-home/queries/studentHomeKeys';
 
 import { teamKickoffQueryKey } from './teamAssignmentKeys';
 import { isValidPositiveTeamId } from './useTeamMemberContactsQuery';
@@ -20,6 +21,9 @@ export function useClaimTeamLeaderMutation() {
     await Promise.all([
       queryClient.invalidateQueries({
         queryKey: authKeys.currentUser(),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: studentHomeKeys.users(),
       }),
       queryClient.invalidateQueries({
         queryKey: teamKickoffQueryKey(teamId),

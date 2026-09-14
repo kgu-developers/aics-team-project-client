@@ -21,7 +21,29 @@ import { useLiveStudentHomeQuery } from './useLiveStudentHomeQuery';
 import { liveHomeUser } from '~/mocks/data/studentHomeLive';
 import { studentHomeLiveHandlers } from '~/mocks/handlers/studentHomeLive';
 
-const server = setupServer(...studentHomeLiveHandlers);
+const server = setupServer(
+  http.get(`${API_BASE_URL}${ENDPOINTS.SECTION.MY_SECTIONS}`, () =>
+    HttpResponse.json({
+      contents: [
+        {
+          id: 2,
+          code: 'OOP-2',
+          name: '테스트 분반',
+          classTime: '',
+          capacity: 40,
+          contactVisibleFrom: null,
+          contactVisibleUntil: null,
+          courseId: 1,
+          courseName: 'OOP',
+          year: 2026,
+          semester: 'FALL',
+          status: 'ACTIVE',
+        },
+      ],
+    }),
+  ),
+  ...studentHomeLiveHandlers,
+);
 const clients: QueryClient[] = [];
 const requests: string[] = [];
 beforeAll(() => {

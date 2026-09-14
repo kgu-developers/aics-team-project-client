@@ -6,7 +6,7 @@ import {
   Heading,
   Text,
 } from '@aics/design-system';
-import { Link, useParams, useSearch } from '@tanstack/react-router';
+import { Link, useParams } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
 import { useEffect, useState } from 'react';
 
@@ -86,22 +86,20 @@ function getTeamDashboardErrorContent(
 
 export default function AdminTeamDashboard() {
   const { teamId } = useParams({ from: '/admin/teams/$teamId' });
-  const search = useSearch({ from: '/admin/teams/$teamId' }) as {
-    sectionId?: string;
-  };
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const currentUser = useAuthStore(state => state.currentUser);
   const accessibleSectionIds =
     currentUser?.sections.map(section => section.id) ?? [];
   const teamDashboardQuery = useAdminTeamDashboardQuery(teamId);
-  const team = teamDashboardQuery.data;
-  const dashboardSection = team
-    ? (currentUser?.sections.find(section => section.id === search.sectionId) ??
-      currentUser?.sections.find(section => section.id === team.sectionId) ??
-      (currentUser?.sections.length === 1
-        ? currentUser.sections[0]
-        : undefined))
+  const dashboardSection = teamDashboardQuery.isSuccess
+    ? currentUser?.sections.find(
+        section => section.id === teamDashboardQuery.data.sectionId,
+      )
     : undefined;
+  const team =
+    dashboardSection && teamDashboardQuery.isSuccess
+      ? teamDashboardQuery.data
+      : undefined;
   const sectionMilestonesQuery = useAdminSectionMilestonesQuery(
     team?.sectionId,
   );
@@ -253,9 +251,9 @@ export default function AdminTeamDashboard() {
     return (
       <div className={styles.page}>
         <EmptyState
-          description='팀 식별자를 확인한 뒤 다시 시도해 주세요.'
+          description='담당 분반과 관리자 권한을 확인해 주세요.'
           headingLevel={2}
-          title='팀 정보를 찾을 수 없습니다.'
+          title='이 팀에 접근할 수 없습니다.'
         />
       </div>
     );

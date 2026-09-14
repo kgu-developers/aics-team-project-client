@@ -15,9 +15,12 @@ import {
 } from '@aics/design-system';
 import { useEffect, useRef, useState } from 'react';
 
+import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { PdfPreview } from '~/shared/ui/PdfPreview';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import StudentContextState from '~/features/section/StudentContextState';
+import { useStudentContext } from '~/features/section/useStudentContext';
 import { safeSubmissionUrl } from '~/features/submission/submissionUploadInput';
 
 import { formatEvaluationRemainingTime } from './formatEvaluationRemainingTime';
@@ -574,22 +577,31 @@ function PresentationEvaluationContent({
 }
 
 export default function PresentationEvaluationPage() {
+  const isDemo = isMockDevelopmentMode(
+    import.meta.env.DEV,
+    import.meta.env.VITE_ENABLE_MSW,
+  );
   const currentUser = useAuthStore(state => state.currentUser);
+  const context = useStudentContext(!isDemo);
   const sectionId =
-    currentUser?.sections.find(section => section.role === 'STUDENT')?.id ?? '';
-  const userId = currentUser?.studentNumber ?? '';
+    isDemo && currentUser?.sections.length === 1
+      ? currentUser.sections[0]!.id
+      : context.status === 'ready'
+        ? String(context.section!.id)
+        : '';
+  const userId = (isDemo ? currentUser : context.user)?.studentNumber ?? '';
   const contextQuery = useEvaluationContextQuery(sectionId, userId);
-  const milestoneId = contextQuery.data?.presentationMilestoneId ?? '';
+  const milestoneId =
+    sectionId && contextQuery.isSuccess
+      ? (contextQuery.data.presentationMilestoneId ?? '')
+      : '';
   const rosterQuery = useMilestonePresentationsQuery(milestoneId);
   const evaluationsQuery = useMyTeamEvaluationsQuery(userId, milestoneId);
 
+  if (!isDemo && context.status !== 'ready')
+    return <StudentContextState context={context} />;
   if (!sectionId || !userId)
-    return (
-      <EmptyState
-        description='분반과 학생 정보를 확인한 뒤 다시 시도해 주세요.'
-        title='발표 평가를 열 수 없어요.'
-      />
-    );
+    return <EmptyState title='수강 분반과 학생 계정을 확인해 주세요.' />;
   if (contextQuery.isPending)
     return (
       <p className={styles.status} role='status'>
@@ -656,9 +668,10 @@ export default function PresentationEvaluationPage() {
 
   return (
     <PresentationEvaluationContent
+      key={`${userId}:${sectionId}:${context.teamId}`}
       evaluations={evaluationsQuery.data}
       milestoneId={milestoneId}
-      myTeamId={currentUser?.teamId ?? null}
+      myTeamId={(isDemo ? currentUser?.teamId : context.teamId) ?? null}
       onReloadMaterials={() => {
         void rosterQuery.refetch();
       }}

@@ -133,7 +133,9 @@ export default function AdminMilestoneSetupPage() {
   const isPresentation = isEditing
     ? milestoneQuery.data?.type === 'PRESENTATION'
     : templateId === 'presentation-submit';
-  const isPeerEvaluation = !isEditing && templateId === 'peer-review';
+  const isPeerEvaluation = isEditing
+    ? milestoneQuery.data?.type === 'PEER_EVALUATION'
+    : templateId === 'peer-review';
   const sectionMilestonesQuery =
     useAdminSectionMilestonesQuery(editingSectionId);
   const hydratedMilestoneKey = useRef<string | undefined>(undefined);
@@ -210,6 +212,8 @@ export default function AdminMilestoneSetupPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // The evaluation form has no update endpoint; milestone PUT cannot persist its window.
+    if (isEditing && isPeerEvaluation) return;
     setFormError(undefined);
     setSubmissionResults(undefined);
     setArtifactSubmissionFailures(undefined);
@@ -467,6 +471,22 @@ export default function AdminMilestoneSetupPage() {
         <EmptyState
           description='잠시 후 다시 시도해주세요.'
           title='마일스톤 정보를 불러오지 못했습니다.'
+        />
+      </div>
+    );
+  }
+
+  if (isEditing && isPeerEvaluation) {
+    return (
+      <div className={styles.page}>
+        <EmptyState
+          title='상호 평가 마일스톤은 수정할 수 없습니다.'
+          description='현재 상호 평가 기간을 변경하는 기능이 지원되지 않아 수정을 제한합니다. 담당자에게 문의해 주세요.'
+          actions={
+            <Link className={styles.backLink} to={ROUTES.ADMIN_MILESTONES}>
+              마일스톤 목록으로
+            </Link>
+          }
         />
       </div>
     );

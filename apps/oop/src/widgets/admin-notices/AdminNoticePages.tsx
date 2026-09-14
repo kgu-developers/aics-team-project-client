@@ -13,9 +13,11 @@ import {
 } from '@aics/design-system';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
+
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import {
   useAdminNoticeQuery,
@@ -358,20 +360,22 @@ export function AdminNoticeDetailPage() {
       <Card className={styles.detailCard}>
         <Heading level={2}>{notice.title}</Heading>
         <Text className={styles.meta} color='secondary'>
-          작성일 : {detail.createdAt}
+          작성일 : {formatSeoulDateTime(detail.createdAt)}
         </Text>
         <Text>공개 범위 : {notice.section}</Text>
         <div className={styles.divider} />
         {detail.content.map(content => (
           <Text key={content}>{content}</Text>
         ))}
-        <div className={styles.attachment}>
-          <span>제출 파일</span>
-          <Text color='secondary'>📎 {detail.attachment}</Text>
-          <Text color='secondary' type='supporting'>
-            파일 다운로드 API 연동 후 제공됩니다.
-          </Text>
-        </div>
+        {detail.attachment ? (
+          <div className={styles.attachment}>
+            <span>제출 파일</span>
+            <Text color='secondary'>📎 {detail.attachment}</Text>
+            <Text color='secondary' type='supporting'>
+              파일 다운로드 API 연동 후 제공됩니다.
+            </Text>
+          </div>
+        ) : null}
         <div className={styles.actions}>
           <Button isDisabled label='삭제' variant='secondary' />
           <Button isDisabled label='수정' variant='primary' />
@@ -395,8 +399,7 @@ export function AdminNoticeEditPage() {
   const notice = detail?.notice;
   const [content, setContent] = useState(detail?.content.join('\n\n') ?? '');
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
-  const [isExistingAttachmentRemoved, setIsExistingAttachmentRemoved] =
-    useState(false);
+  const hydratedNoticeId = useRef<string | undefined>(undefined);
   const [sections, setSections] = useState<NoticeSection[]>(
     notice && isNoticeSection(notice.section) ? [notice.section] : [],
   );
@@ -404,14 +407,20 @@ export function AdminNoticeEditPage() {
   const removeAttachmentMutation = useRemoveAdminNoticeAttachmentMutation();
 
   useEffect(() => {
-    if (!notice || !detail) return;
+    if (
+      !noticeQuery.isSuccess ||
+      !notice ||
+      !detail ||
+      hydratedNoticeId.current === noticeId
+    )
+      return;
+    hydratedNoticeId.current = noticeId;
 
     setContent(detail.content.join('\n\n'));
     setAttachmentFile(null);
-    setIsExistingAttachmentRemoved(false);
     if (isNoticeSection(notice.section)) setSections([notice.section]);
     setTitle(notice.title);
-  }, [noticeId, notice, detail]);
+  }, [noticeId, notice, detail, noticeQuery.isSuccess]);
 
   if (noticeQuery.isLoading) {
     return <div className={styles.page}>공지사항을 불러오는 중입니다.</div>;
@@ -446,7 +455,7 @@ export function AdminNoticeEditPage() {
       <Card className={styles.formCard}>
         <Heading level={2}>공지사항 수정</Heading>
         <Text className={styles.meta} color='secondary'>
-          작성일 : {detail.createdAt}
+          작성일 : {formatSeoulDateTime(detail.createdAt)}
         </Text>
         <div className={styles.fields}>
           <TextInput
@@ -475,17 +484,13 @@ export function AdminNoticeEditPage() {
             width='100%'
           />
           <NoticeAttachmentField
-            existingFileName={
-              isExistingAttachmentRemoved ? undefined : detail.attachment
-            }
+            existingFileName={detail.attachment}
             file={attachmentFile}
             isRemoving={removeAttachmentMutation.isPending}
             label='첨부 파일 변경'
             onChange={setAttachmentFile}
             onRemoveExisting={() => {
-              removeAttachmentMutation.mutate(notice.id, {
-                onSuccess: () => setIsExistingAttachmentRemoved(true),
-              });
+              removeAttachmentMutation.mutate(notice.id);
             }}
             removeError={
               removeAttachmentMutation.isError

@@ -572,3 +572,62 @@ describe('KD3-92 학생 평가 화면', () => {
     ).not.toBeInTheDocument();
   });
 });
+
+it('live multi-section membership blocks evaluation reads and writes even after retry', async () => {
+  vi.stubEnv('VITE_ENABLE_MSW', 'false');
+  useAuthStore.getState().markAuthenticated('STUDENT');
+  const writes = vi.fn();
+  const reads = vi.fn();
+  const sections = [1, 2].map(id => ({
+    id,
+    code: `OOP-${id}`,
+    name: `${id}분반`,
+    status: 'ACTIVE',
+  }));
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+      HttpResponse.json({
+        studentNumber: demoStudent.studentNumber,
+        name: '학생',
+        email: '',
+        globalRole: 'USER',
+        sections,
+        teamId: 7,
+      }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.SECTION.MY_SECTIONS}`, () =>
+      HttpResponse.json({ contents: [sections[0]] }),
+    ),
+    http.post('*', () => {
+      writes();
+      return new HttpResponse(null, { status: 500 });
+    }),
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.EVALUATION.CONTEXT(':sectionId')}`,
+      () => {
+        reads();
+        return HttpResponse.json({});
+      },
+    ),
+  );
+  try {
+    renderPage(
+      <>
+        <PeerEvaluationPage />
+        <PresentationEvaluationPage />
+      </>,
+    );
+    expect(
+      await screen.findAllByText(/선택한 분반의 팀 소속을 확인할 수 없어요/),
+    ).toHaveLength(2);
+    await userEvent
+      .setup()
+      .click(
+        screen.getAllByRole('button', { name: '소속 정보 다시 시도' })[0]!,
+      );
+    expect(writes).not.toHaveBeenCalled();
+    expect(reads).not.toHaveBeenCalled();
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});

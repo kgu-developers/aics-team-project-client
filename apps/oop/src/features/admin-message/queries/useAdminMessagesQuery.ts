@@ -3,9 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 
 import { adminMessageKeys } from './adminMessageKeys';
 
-export function useAdminMessagesQuery(sectionId?: string) {
+export function useAdminMessagesQuery(sectionId?: string, page = 0) {
   return useQuery({
-    queryKey: adminMessageKeys.list(sectionId),
-    queryFn: () => fetchAdminMessages({ sectionId, page: 0, size: 100 }),
+    queryKey: adminMessageKeys.list(sectionId, page),
+    queryFn: () => fetchAdminMessages({ sectionId, page, size: 100 }),
   });
 }

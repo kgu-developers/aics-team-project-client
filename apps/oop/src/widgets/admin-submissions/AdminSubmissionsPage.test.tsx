@@ -485,7 +485,7 @@ describe('AdminSubmissionsPage', () => {
                 changeNote: '피드백 반영',
                 description: '보완된 제안서',
                 late: false,
-                submittedAt: '2026-09-07T09:00:00Z',
+                submittedAt: '2026-09-07T23:30:00Z',
                 submittedBy: '20230001',
                 version: 2,
               },
@@ -499,6 +499,9 @@ describe('AdminSubmissionsPage', () => {
     );
 
     expect(await screen.findByText('보완된 제안서')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /2차 · 20230001 · 2026.09.08 08:30/ }),
+    ).toBeVisible();
     expect(
       screen.getByRole('link', { name: 'proposal-v2.pdf' }),
     ).toBeInTheDocument();

@@ -4,6 +4,9 @@ import {
 } from '@aics/api-client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { adminEvaluationKeys } from '~/features/admin-evaluation/queries/adminEvaluationKeys';
+
+import { adminPresentationEvaluationKeys } from './adminPresentationEvaluationKeys';
 import { adminTeamEvaluationCriteriaKeys } from './adminTeamEvaluationCriteriaKeys';
 
 type CreateAdminTeamEvaluationCriterionVariables = {
@@ -21,9 +24,19 @@ export function useCreateAdminTeamEvaluationCriterionMutation() {
     }: CreateAdminTeamEvaluationCriterionVariables) =>
       createAdminTeamEvaluationCriterion(sectionId, input),
     onSuccess: async (_data, variables) => {
-      await queryClient.invalidateQueries({
-        queryKey: adminTeamEvaluationCriteriaKeys.list(variables.sectionId),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: adminTeamEvaluationCriteriaKeys.list(variables.sectionId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: adminPresentationEvaluationKeys.list(variables.sectionId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: adminEvaluationKeys.presentationEvaluation.lists(
+            variables.sectionId,
+          ),
+        }),
+      ]);
     },
   });
 }

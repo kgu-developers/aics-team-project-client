@@ -1,5 +1,6 @@
 import {
   fetchAdminMilestoneSubmissions,
+  fetchAdminMidReport,
   fetchAdminSectionMilestones,
   fetchProjectProposal,
 } from '@aics/api-client';
@@ -12,7 +13,7 @@ export type AdminMessageFeedbackType = 'PROPOSAL' | 'MID_REPORT';
 export type AdminRelatedSubmission = {
   milestoneId: number;
   milestoneTitle: string;
-  /** ID required by the message contract (projectId for PROPOSAL). */
+  /** Document ID required by the message contract, distinct from submissionId. */
   relatedId: number;
   submissionId: number;
 };
@@ -54,10 +55,15 @@ export function useAdminRelatedSubmissionQuery(
       );
       if (!submission) return null;
 
-      const relatedId =
+      const document =
         relatedType === 'PROPOSAL'
-          ? (await fetchProjectProposal(teamId))?.id
-          : submission.id;
+          ? await fetchProjectProposal(teamId)
+          : await fetchAdminMidReport(sectionId, teamId);
+      if (!document) return null;
+      if (String(document.teamId) !== teamId) {
+        throw new Error('현재 팀의 피드백 대상 문서를 확인할 수 없습니다.');
+      }
+      const relatedId = document.id;
       if (!relatedId) return null;
 
       return {

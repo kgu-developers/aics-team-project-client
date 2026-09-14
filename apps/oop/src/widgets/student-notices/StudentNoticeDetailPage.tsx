@@ -9,10 +9,9 @@ import {
 import { Link } from '@tanstack/react-router';
 import { forwardRef, useEffect, type ComponentPropsWithoutRef } from 'react';
 
-import { useAuthStore } from '~/features/auth/authStore';
-import { useMySectionsQuery } from '~/features/section/queries';
 import SectionSelection from '~/features/section/SectionSelection';
-import { useSelectedSection } from '~/features/section/useSelectedSection';
+import StudentContextState from '~/features/section/StudentContextState';
+import { useStudentContext } from '~/features/section/useStudentContext';
 import { useSectionAnnouncementsQuery } from '~/features/student-notices/queries';
 import { useStudentNoticeReadState } from '~/features/student-notices/useStudentNoticeReadState';
 
@@ -56,14 +55,9 @@ export default function StudentNoticeDetailPage({
 }: {
   noticeId: string;
 }) {
-  const currentUser = useAuthStore(state => state.currentUser);
-  const userId = currentUser?.id ?? '';
-  const {
-    data: sections,
-    isPending: isSectionsPending,
-    error: sectionsError,
-  } = useMySectionsQuery({ status: 'ACTIVE' });
-  const { section, selectSection } = useSelectedSection(sections);
+  const context = useStudentContext();
+  const { sections, section, selectSection } = context;
+  const userId = context.user?.id ?? '';
   const {
     data: announcements,
     isPending: isAnnouncementsPending,
@@ -81,7 +75,8 @@ export default function StudentNoticeDetailPage({
     if (announcement) markAsRead(String(announcement.id));
   }, [announcement, markAsRead]);
 
-  if (isSectionsPending || (section && isAnnouncementsPending)) {
+  if (!section) return <StudentContextState context={context} sectionOnly />;
+  if (isAnnouncementsPending) {
     return (
       <div className={styles.page}>
         <Heading level={1}>공지사항</Heading>
@@ -95,7 +90,7 @@ export default function StudentNoticeDetailPage({
     );
   }
 
-  if (sectionsError || announcementsError) {
+  if (announcementsError) {
     return (
       <div className={styles.page}>
         <Heading level={1}>공지사항</Heading>
@@ -112,14 +107,10 @@ export default function StudentNoticeDetailPage({
     );
   }
 
-  if (!section || !announcement) {
+  if (!announcement) {
     return (
       <div className={styles.page}>
-        <Heading level={1}>
-          {!section && sections?.length
-            ? '수강 분반을 선택해 주세요.'
-            : '공지사항을 찾을 수 없어요.'}
-        </Heading>
+        <Heading level={1}>공지사항을 찾을 수 없어요.</Heading>
         <SectionSelection
           sections={sections}
           selectedId={section?.id}

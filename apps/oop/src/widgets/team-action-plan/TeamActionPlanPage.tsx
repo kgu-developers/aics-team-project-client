@@ -20,6 +20,7 @@ import { useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import MeetingActionDeleteDialog from '~/features/meeting/MeetingActionDeleteDialog';
@@ -36,6 +37,7 @@ import {
   useSubmitMeetingActionMutation,
   useUpdateMeetingActionMutation,
 } from '~/features/meeting/queries';
+import StudentContextState from '~/features/section/StudentContextState';
 
 import * as styles from './TeamActionPlanPage.css';
 
@@ -350,6 +352,33 @@ function TeamActionPlanContent({
     [team, toast, updateActionMutation, isPending],
   );
 
+  if (
+    !isMockDevelopmentMode(
+      import.meta.env.DEV,
+      import.meta.env.VITE_ENABLE_MSW,
+    ) &&
+    data.studentContext.status !== 'ready'
+  )
+    return <StudentContextState context={data.studentContext} />;
+  if (!data.teamId && (data.isPending || data.isError))
+    return (
+      <EmptyState
+        title={
+          data.isPending
+            ? '팀 정보를 확인하는 중이에요.'
+            : '팀 정보를 불러올 수 없어요.'
+        }
+        actions={
+          data.isError ? (
+            <Button
+              label='다시 시도'
+              isDisabled={!data.canRetry}
+              onClick={() => void data.refetch()}
+            />
+          ) : undefined
+        }
+      />
+    );
   if (!data.teamId) {
     return (
       <div className={styles.page}>
