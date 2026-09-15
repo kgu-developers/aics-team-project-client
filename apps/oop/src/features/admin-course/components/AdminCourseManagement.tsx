@@ -111,6 +111,12 @@ function SectionAssistantManagement({
     (typeof assistants)[number] | null
   >(null);
 
+  function closeAssistantWithdrawalDialog() {
+    if (withdrawAssistantMutation.isPending) return;
+    setAssistantToDelete(null);
+    withdrawAssistantMutation.reset();
+  }
+
   return (
     <>
       <div className={styles.assistantManagement}>
@@ -167,10 +173,7 @@ function SectionAssistantManagement({
         aria-label='조교 분반 제외 확인'
         isOpen={assistantToDelete !== null}
         onOpenChange={open => {
-          if (!open && !withdrawAssistantMutation.isPending) {
-            setAssistantToDelete(null);
-            withdrawAssistantMutation.reset();
-          }
+          if (!open) closeAssistantWithdrawalDialog();
         }}
         purpose='required'
         width={440}
@@ -191,7 +194,7 @@ function SectionAssistantManagement({
               <Button
                 isDisabled={withdrawAssistantMutation.isPending}
                 label='취소'
-                onClick={() => setAssistantToDelete(null)}
+                onClick={closeAssistantWithdrawalDialog}
                 variant='secondary'
               />
               <Button
@@ -204,7 +207,7 @@ function SectionAssistantManagement({
                       sectionId: String(section.id),
                       studentNumber: assistantToDelete.studentNumber,
                     },
-                    { onSuccess: () => setAssistantToDelete(null) },
+                    { onSuccess: closeAssistantWithdrawalDialog },
                   )
                 }
               />
@@ -560,6 +563,15 @@ function SectionSettingsDialog({
     });
   }
 
+  async function retrySectionListRefresh() {
+    const refreshed = await onDeleted();
+    if (!refreshed) return;
+
+    setSaveError(null);
+    setIsDeleteConfirming(false);
+    onClose();
+  }
+
   return (
     <Dialog
       aria-label='분반 정보 수정'
@@ -703,7 +715,7 @@ function SectionSettingsDialog({
             </Text>
             <Button
               label='분반 목록 새로고침'
-              onClick={() => void onDeleted()}
+              onClick={() => void retrySectionListRefresh()}
               size='sm'
               type='button'
               variant='secondary'

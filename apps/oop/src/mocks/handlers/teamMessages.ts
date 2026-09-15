@@ -34,14 +34,17 @@ function isId(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
 }
 
+function normalizeSectionId(sectionId: string | number) {
+  return String(sectionId) === adminSectionId
+    ? demoSectionId
+    : String(sectionId);
+}
+
 function isAccessibleSection(
   sectionId: string | number,
   teamSectionId: string,
 ) {
-  const normalizedSectionId =
-    String(sectionId) === adminSectionId ? demoSectionId : String(sectionId);
-
-  return normalizedSectionId === teamSectionId;
+  return normalizeSectionId(sectionId) === normalizeSectionId(teamSectionId);
 }
 
 export function createTeamMessageHandlers(
