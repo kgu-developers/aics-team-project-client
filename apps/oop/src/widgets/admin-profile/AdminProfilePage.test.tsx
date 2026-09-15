@@ -47,6 +47,10 @@ import {
 } from '~/mocks/handlers/adminStudentTeams';
 import { authHandlers, resetDemoPasswordState } from '~/mocks/handlers/auth';
 
+const demoSectionStudentCount = adminStudentsFixture.filter(
+  student => student.sectionId === 'oop-2026-2-01',
+).length;
+
 const server = setupServer(
   ...adminCourseHandlers,
   ...adminSectionHandlers,
@@ -304,12 +308,12 @@ describe('AdminProfilePage', () => {
     await user.click(screen.getByRole('button', { name: '미리보기' }));
     expect(
       await screen.findByText(
-        `전체 ${adminStudentsFixture.filter(student => student.sectionId === demoAdmin.sections[0]!.id).length}건`,
+        `전체 ${demoSectionStudentCount}건`,
       ),
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        `중복 ${adminStudentsFixture.filter(student => student.sectionId === demoAdmin.sections[0]!.id).length}건`,
+        `중복 ${demoSectionStudentCount}건`,
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '반영하기' })).toBeEnabled();
@@ -411,7 +415,7 @@ describe('AdminProfilePage', () => {
     await user.click(screen.getByRole('button', { name: '미리보기' }));
     expect(
       await screen.findByText(
-        `전체 ${adminStudentsFixture.filter(student => student.sectionId === demoAdmin.sections[0]!.id).length}건`,
+        `전체 ${demoSectionStudentCount}건`,
       ),
     ).toBeInTheDocument();
 

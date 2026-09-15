@@ -1,26 +1,33 @@
-import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
+import { setApiAccessToken } from '@aics/api-client';
 import { AstryxThemeProvider, ToastViewport } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
-import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 
 import { useDownloadAdminSubmissionArtifactsMutation } from './useDownloadAdminSubmissionArtifactsMutation';
 
-const server = setupServer();
+const { downloadAdminSubmissionArtifactsMock } = vi.hoisted(() => ({
+  downloadAdminSubmissionArtifactsMock: vi.fn(),
+}));
+
+vi.mock('@aics/api-client', async importOriginal => {
+  const actual = await importOriginal<typeof import('@aics/api-client')>();
+
+  return {
+    ...actual,
+    downloadAdminSubmissionArtifacts: downloadAdminSubmissionArtifactsMock,
+  };
+});
+
 const client = new QueryClient({
   defaultOptions: { mutations: { retry: false } },
 });
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
-  server.resetHandlers();
   client.clear();
   setApiAccessToken(null);
   vi.restoreAllMocks();
 });
-afterAll(() => server.close());
 function Download() {
   const download = useDownloadAdminSubmissionArtifactsMutation();
   return (
@@ -32,20 +39,14 @@ function Download() {
 it.each([200, 500])(
   'handles ZIP HTTP %s with connected download or visible error',
   async status => {
-    setApiAccessToken('test-token');
-    server.use(
-      http.get(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_DOWNLOAD('7')}`,
-        () =>
-          new HttpResponse(status === 200 ? 'archive' : null, {
-            status,
-            headers: {
-              'Content-Type': 'application/zip',
-              'Content-Disposition': 'attachment; filename="files.zip"',
-            },
-          }),
-      ),
-    );
+    downloadAdminSubmissionArtifactsMock.mockImplementation(() => {
+      if (status === 500) return Promise.reject(new Error('DOWNLOAD_FAILED'));
+
+      return Promise.resolve({
+        file: new Blob(['archive'], { type: 'application/zip' }),
+        fileName: 'files.zip',
+      });
+    });
     const create = vi
       .spyOn(URL, 'createObjectURL')
       .mockReturnValue('blob:download');
