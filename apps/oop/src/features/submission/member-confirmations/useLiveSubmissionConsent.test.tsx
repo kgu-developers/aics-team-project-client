@@ -146,7 +146,7 @@ it('다른 팀의 제출 응답을 확인하면 member-confirmations를 조회�
   );
   renderPanel({ ...scope, allowContractActions: true });
   await screen.findByRole('alert');
-  expect(requests).toEqual(['GET /submissions/41']);
+  expect(requests).toEqual(['GET /api/v1/submissions/41']);
   expect(screen.getByRole('button', { name: '현재 버전 확인' })).toBeDisabled();
 });
 it('버전 0은 미제출로 표시하고 확인 GET·PUT·DELETE를 차단한다', async () => {
@@ -165,7 +165,7 @@ it('버전 0은 미제출로 표시하고 확인 GET·PUT·DELETE를 차단한�
   ).toBeVisible();
   expect(screen.getByRole('button', { name: '현재 버전 확인' })).toBeDisabled();
   expect(screen.getByRole('button', { name: '내 확인 취소' })).toBeDisabled();
-  expect(requests).toEqual(['GET /submissions/41']);
+  expect(requests).toEqual(['GET /api/v1/submissions/41']);
 });
 it('완료된 제출의 서버 상태를 표시하되 확인 취소를 활성화하지 않는다', async () => {
   server.use(

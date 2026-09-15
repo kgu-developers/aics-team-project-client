@@ -1,4 +1,5 @@
 import { apiClient } from '../client';
+import type { AdminMeetingRecordListResponse } from './fetchAdminMeetingRecordList';
 import { ENDPOINTS } from '../constants/endpoints';
 
 export type AdminMeetingRecordSummaryDto = {
@@ -24,10 +25,19 @@ export type AdminMeetingRecordsFilter = {
 export async function fetchAdminMeetingRecords(
   filter: AdminMeetingRecordsFilter = {},
 ): Promise<AdminMeetingRecordsResponse> {
-  const response = await apiClient.get<AdminMeetingRecordsResponse>(
-    ENDPOINTS.ADMIN.MEETING_RECORDS,
+  const response = await apiClient.get<AdminMeetingRecordListResponse>(
+    ENDPOINTS.ADMIN.MEETING_RECORDS_LIST,
     { params: filter },
   );
-
-  return response.data;
+  return {
+    records: response.data.contents.map(record => ({
+      createdAt: record.meetingAt,
+      id: String(record.id),
+      sectionId: String(record.sectionId),
+      sectionLabel: record.sectionName,
+      teamId: String(record.teamId),
+      teamLabel: record.teamName,
+      title: record.title,
+    })),
+  };
 }

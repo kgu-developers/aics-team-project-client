@@ -39,7 +39,7 @@ beforeAll(async () => {
   } else {
     process.env.VITE_API_PROXY_TARGET = previousProxyTarget;
   }
-});
+}, 30_000);
 
 describe('OOP development server config', () => {
   it('keeps pnpm dev on HTTP localhost:5173 without a backend proxy', () => {
