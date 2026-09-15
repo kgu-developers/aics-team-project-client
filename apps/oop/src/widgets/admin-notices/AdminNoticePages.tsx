@@ -43,6 +43,10 @@ const formatter = new Intl.DateTimeFormat('sv-SE', {
 });
 const requestDate = () => formatter.format(new Date()).replace(' ', 'T');
 
+function formatNoticePublishedDate(value: string) {
+  return value.replace('T', ' ').slice(0, 10);
+}
+
 function BackToList() {
   return (
     <Link className={styles.backLink} to={ROUTES.ADMIN_NOTICES}>
@@ -228,11 +232,18 @@ export function AdminNoticeListPage() {
   return (
     <div className={styles.page}>
       <Heading level={1}>공지사항</Heading>
-      <SectionSelector
-        includeAll
-        onChange={selectSection}
-        selectedId={selectedSectionId}
-      />
+      <div className={styles.listControls}>
+        <SectionSelector
+          includeAll
+          onChange={selectSection}
+          selectedId={selectedSectionId}
+        />
+        <Button
+          label='작성하기'
+          onClick={() => navigate({ to: ROUTES.ADMIN_NOTICE_NEW })}
+          variant='primary'
+        />
+      </div>
       {query.isPending ? <Text>공지사항을 불러오는 중입니다.</Text> : null}
       {query.isError ? (
         <Text role='alert'>공지사항을 불러오지 못했습니다.</Text>
@@ -241,7 +252,7 @@ export function AdminNoticeListPage() {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th scope='col'>게시일시</th>
+              <th scope='col'>작성일</th>
               <th scope='col'>분반</th>
               <th scope='col'>제목</th>
             </tr>
@@ -250,7 +261,7 @@ export function AdminNoticeListPage() {
             {notices.length ? (
               notices.map(notice => (
                 <tr key={notice.id}>
-                  <td>{notice.publishedAt}</td>
+                  <td>{formatNoticePublishedDate(notice.publishedAt)}</td>
                   <td>
                     {sections.find(
                       section =>
@@ -281,13 +292,6 @@ export function AdminNoticeListPage() {
           </tbody>
         </table>
       </Card>
-      <div className={styles.listFooter}>
-        <Button
-          label='작성하기'
-          onClick={() => navigate({ to: ROUTES.ADMIN_NOTICE_NEW })}
-          variant='primary'
-        />
-      </div>
     </div>
   );
 }

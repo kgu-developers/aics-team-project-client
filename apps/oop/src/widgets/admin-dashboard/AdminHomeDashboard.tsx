@@ -36,12 +36,17 @@ function getMeetingContentPreview(content: string) {
 }
 
 type MilestoneColumn = {
+  dueAt: string;
   key: string;
   title: string;
 };
 
 function getMilestoneColumnKey(type: AdminMilestoneType, title: string) {
   return `${type}:${title}`;
+}
+
+function formatNoticePublishedDate(value: string) {
+  return value.replace('T', ' ').slice(0, 10);
 }
 
 function List({
@@ -183,16 +188,23 @@ export default function AdminHomeDashboard() {
     sectionId: section.id,
     sectionLabel: section.code,
   }));
-  const milestoneColumns = [
+  const milestoneColumns: MilestoneColumn[] = [
     ...new Map(
       scheduleSections.flatMap(section =>
         section.milestones.map(milestone => {
           const key = getMilestoneColumnKey(milestone.type, milestone.title);
-          return [key, { key, title: milestone.title }] as const;
+          return [
+            key,
+            {
+              dueAt: milestone.schedule.dueAt ?? '9999-12-31T23:59:59',
+              key,
+              title: milestone.title,
+            },
+          ] as const;
         }),
       ),
     ).values(),
-  ] satisfies MilestoneColumn[];
+  ].sort((left, right) => left.dueAt.localeCompare(right.dueAt));
   const isMilestoneSchedulePending = milestoneQueries.some(
     query => query.isPending,
   );
@@ -221,7 +233,7 @@ export default function AdminHomeDashboard() {
   const noticeItems: DashboardListItem[] = (noticesQuery.data ?? [])
     .slice(0, 3)
     .map(notice => ({
-      date: notice.publishedAt,
+      date: formatNoticePublishedDate(notice.publishedAt),
       id: String(notice.id),
       section: accessibleSections[0]?.code ?? '',
       title: notice.title,
@@ -251,7 +263,7 @@ export default function AdminHomeDashboard() {
       <Heading level={1}>홈</Heading>
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <Heading level={2}>분반별 진행 일정</Heading>
+          <Heading level={2}>분반별 진행 일정 · 제출 마감일</Heading>
           <Button
             label='마일스톤 설정'
             onClick={() => navigate({ to: ROUTES.ADMIN_MILESTONES })}

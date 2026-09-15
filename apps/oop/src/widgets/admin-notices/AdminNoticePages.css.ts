@@ -21,6 +21,18 @@ export const backLink = style({
   textDecoration: 'none',
 });
 export const filters = style({ display: 'flex', gap: 8 });
+export const listControls = style({
+  alignItems: 'flex-end',
+  display: 'flex',
+  gap: 12,
+  justifyContent: 'space-between',
+  '@media': {
+    '(max-width: 480px)': {
+      alignItems: 'stretch',
+      flexDirection: 'column',
+    },
+  },
+});
 const filterBase = {
   background: tokens.color.background.muted,
   border: 0,
@@ -55,11 +67,6 @@ export const emptyCell = style({
   color: tokens.color.text.secondary,
   padding: '42px 16px !important',
   textAlign: 'center',
-});
-export const listFooter = style({
-  alignItems: 'center',
-  display: 'flex',
-  justifyContent: 'space-between',
 });
 export const pagination = style({ display: 'flex', gap: 8, margin: '0 auto' });
 globalStyle(pagination + ' button', {
