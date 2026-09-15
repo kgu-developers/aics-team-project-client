@@ -374,11 +374,11 @@ describe('AdminProfilePage', () => {
     ).toBeInTheDocument();
   });
 
-  it('팀 구성 사전 정보에서 계약된 응답 항목과 이름을 표시한다', async () => {
+  it('사전 정보 내역에서 계약된 응답 항목과 이름을 표시한다', async () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { name: '팀 구성 사전 정보' }),
+      screen.getByRole('heading', { name: '사전 정보 내역' }),
     ).toBeInTheDocument();
     expect(
       screen.queryByText(
@@ -435,7 +435,7 @@ describe('AdminProfilePage', () => {
 
     renderPage();
     await user.click(
-      await screen.findByRole('button', { name: '엑셀 다운로드' }),
+      await screen.findByRole('button', { name: '사전 정보 다운로드' }),
     );
 
     await waitFor(() => expect(anchorClick).toHaveBeenCalledOnce());
@@ -459,7 +459,7 @@ describe('AdminProfilePage', () => {
     renderPage();
 
     await user.click(
-      await screen.findByRole('button', { name: '엑셀 다운로드' }),
+      await screen.findByRole('button', { name: '사전 정보 다운로드' }),
     );
 
     expect(

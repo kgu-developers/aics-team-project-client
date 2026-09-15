@@ -95,17 +95,10 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
     <Card className={styles.section} padding={4}>
       <VStack gap={4}>
         <header className={styles.header}>
-          <Heading level={2}>팀 구성 사전 정보</Heading>
+          <Heading level={2}>사전 정보 내역</Heading>
           <Text color='secondary' type='supporting'>
             학생이 제출한 희망 역할, 주제 의견, 기타 의견을 확인하는 영역입니다.
           </Text>
-          <Button
-            isDisabled={!sectionId || downloadMutation.isPending}
-            isLoading={downloadMutation.isPending}
-            label='엑셀 다운로드'
-            onClick={handleExcelDownload}
-            variant='secondary'
-          />
         </header>
 
         {sections.length === 0 ? (
@@ -114,19 +107,30 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
           </Text>
         ) : (
           <>
-            <Selector
-              label='분반'
-              onChange={setSectionId}
-              options={sections.map(section => ({
-                label: `${section.code} (${section.name})`,
-                value: section.id,
-              }))}
-              renderOption={option => (
-                <SelectorOption label={option.label ?? option.value} />
-              )}
-              value={sectionId}
-              width='100%'
-            />
+            <div className={styles.controls}>
+              <div className={styles.sectionSelector}>
+                <Selector
+                  label='분반'
+                  onChange={setSectionId}
+                  options={sections.map(section => ({
+                    label: `${section.code} (${section.name})`,
+                    value: section.id,
+                  }))}
+                  renderOption={option => (
+                    <SelectorOption label={option.label ?? option.value} />
+                  )}
+                  value={sectionId}
+                  width='100%'
+                />
+              </div>
+              <Button
+                isDisabled={!sectionId || downloadMutation.isPending}
+                isLoading={downloadMutation.isPending}
+                label='사전 정보 다운로드'
+                onClick={handleExcelDownload}
+                variant='secondary'
+              />
+            </div>
 
             {responsesQuery.isPending ? (
               <Text color='secondary' role='status'>
