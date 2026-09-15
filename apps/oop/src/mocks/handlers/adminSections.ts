@@ -13,6 +13,7 @@ import {
   createAdminSection,
   getAdminSections,
   getAdminSectionsByCourseId,
+  removeAdminSectionFixture,
   updateAdminSectionFixture,
 } from '../data/adminSections';
 
@@ -180,6 +181,18 @@ export const adminSectionHandlers = [
       const section = updateAdminSectionFixture(sectionId, input);
       return section
         ? HttpResponse.json(section)
+        : HttpResponse.json({ code: 'SECTION_NOT_FOUND' }, { status: 404 });
+    },
+  ),
+  http.delete(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_SECTION(':sectionId')}`,
+    ({ params, request }) => {
+      const errorResponse = guardAdmin(request);
+      if (errorResponse) return errorResponse;
+      const sectionId = parseSectionId(params.sectionId);
+      if (!sectionId) return invalidRequest();
+      return removeAdminSectionFixture(sectionId)
+        ? new HttpResponse(null, { status: 204 })
         : HttpResponse.json({ code: 'SECTION_NOT_FOUND' }, { status: 404 });
     },
   ),

@@ -8,7 +8,7 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -124,7 +124,7 @@ describe('AdminMeetingDetailPage', () => {
   });
 });
 
-it('marks only the opened response section and authenticated admin as read, and formats an ISO rollover in Seoul', async () => {
+it('formats an ISO rollover in Seoul without creating a local read record', async () => {
   localStorage.clear();
   window.dispatchEvent(new StorageEvent('storage', { key: null }));
   server.use(
@@ -147,13 +147,8 @@ it('marks only the opened response section and authenticated admin as read, and 
   );
   renderPage();
   await screen.findByText('2026.09.02 08:30');
-  await waitFor(() =>
-    expect(
-      localStorage.getItem(`aics:admin:read:${demoAdmin.id}:1:meetings`),
-    ).toBe('["1"]'),
-  );
   expect(
-    localStorage.getItem(`aics:admin:read:${demoAdmin.id}:2:meetings`),
+    localStorage.getItem(`aics:admin:read:${demoAdmin.id}:1:meetings`),
   ).toBeNull();
   expect(
     localStorage.getItem('aics:admin:read:another-admin:1:meetings'),

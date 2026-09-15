@@ -157,7 +157,7 @@ describe('AdminStudentTeamManagement', () => {
     );
   });
 
-  it('수강생 제외를 확인하면 WITHDRAWN 처리 후 목록과 팀 구성에서 제거한다', async () => {
+  it('수강생 제외를 확인하면 팀 접근 제한을 안내하고 목록과 팀 구성에서 제거한다', async () => {
     const user = userEvent.setup();
 
     renderPage();
@@ -175,7 +175,9 @@ describe('AdminStudentTeamManagement', () => {
       name: '수강생 제외 확인',
     });
     expect(
-      within(dialog).getByText(/김민준 학생을 제외하면 수강 상태가 WITHDRAWN/),
+      within(dialog).getByText(
+        /김민준 학생을 이 분반에서 제외하면 팀 소속도 함께 해제되어/,
+      ),
     ).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: '제외 확인' }));
 
@@ -183,6 +185,46 @@ describe('AdminStudentTeamManagement', () => {
       expect(screen.queryByText('김민준')).not.toBeInTheDocument(),
     );
     expect(screen.getAllByText('이서연')).toHaveLength(2);
+  });
+
+  it('팀 배정을 확정하면 확정 버튼을 비활성화한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', { name: '팀 배정 확정' }),
+    );
+    const dialog = await screen.findByRole('alertdialog', {
+      name: '팀 배정 확정 확인',
+    });
+    await user.click(within(dialog).getByRole('button', { name: '확정하기' }));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: '팀 배정 확정됨' }),
+      ).toBeDisabled(),
+    );
+  });
+
+  it('팀장을 새 팀원으로 변경하면 팀 카드에 갱신된 팀장을 표시한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    const [firstTeamLeaderButton] = await screen.findAllByRole('button', {
+      name: '팀장 변경',
+    });
+    if (!firstTeamLeaderButton)
+      throw new Error('팀장 변경 버튼을 찾을 수 없습니다.');
+    await user.click(firstTeamLeaderButton);
+    const dialog = await screen.findByRole('dialog', { name: '팀장 변경' });
+    await user.click(within(dialog).getByRole('radio', { name: /이서연/ }));
+    await user.click(within(dialog).getByRole('button', { name: '팀장 변경' }));
+
+    await waitFor(() =>
+      expect(screen.getByText('팀장: 이서연')).toBeInTheDocument(),
+    );
   });
 
   it('목록을 기다리는 동안 로딩 상태를 표시한다', async () => {

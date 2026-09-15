@@ -10,4 +10,8 @@ export { useApplyAdminEnrollmentImportMutation } from './useApplyAdminEnrollment
 export { useFinalizeAdminSectionTeamsMutation } from './useFinalizeAdminSectionTeamsMutation';
 export { usePreviewAdminEnrollmentImportMutation } from './usePreviewAdminEnrollmentImportMutation';
 export { usePreviewAdminTeamImportMutation } from './usePreviewAdminTeamImportMutation';
+export { useRegisterAdminAssistantMutation } from './useRegisterAdminAssistantMutation';
+export { useRemoveAdminAssistantMutation } from './useRemoveAdminAssistantMutation';
+export { useUpdateAdminTeamLeaderMutation } from './useUpdateAdminTeamLeaderMutation';
+export { useUpdateAdminAssistantMutation } from './useUpdateAdminAssistantMutation';
 export { useWithdrawAdminSectionEnrollmentMutation } from './useUpdateAdminSectionEnrollmentMutation';

@@ -48,8 +48,11 @@ export const ENDPOINTS = {
     SECTION_TEAMS_FINALIZE: (sectionId: string | number) =>
       `/api/v1/admin/oop/sections/${sectionId}/teams/finalize`,
     TEAM: (teamId: string | number) => `/api/v1/admin/oop/teams/${teamId}`,
+    TEAM_MEMBER: (teamId: string | number, studentNumber: string) =>
+      `/api/v1/admin/oop/teams/${teamId}/members/${studentNumber}`,
     TEAM_IMPORT_APPLY: (importId: string | number) =>
       `/api/v1/admin/oop/team-imports/${importId}/apply`,
+    USERS: '/api/v1/admin/oop/users',
     USER: (studentNumber: string) => `/api/v1/admin/oop/users/${studentNumber}`,
     SECTION_ENROLLMENT_IMPORT_PREVIEW: (sectionId: string | number) =>
       `/api/v1/admin/oop/sections/${sectionId}/enrollment-imports/preview`,
@@ -136,6 +139,8 @@ export const ENDPOINTS = {
   },
   ANNOUNCEMENTS: {
     SECTION_LIST: (sectionId: string) => `/sections/${sectionId}/announcements`,
+    DETAIL: (announcementId: string | number) =>
+      `/announcements/${announcementId}`,
   },
   SECTION: {
     MY_SECTIONS: '/api/v1/oop/sections',

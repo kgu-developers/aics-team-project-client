@@ -1,4 +1,5 @@
 export { fetchAdminOopSections } from './fetchAdminOopSections';
+export { removeAdminOopSection } from './removeAdminOopSection';
 export { submitAdminOopSection } from './submitAdminOopSection';
 export { updateAdminOopSection } from './updateAdminOopSection';
 export { updateAdminOopSectionContactVisibility } from './updateAdminOopSectionContactVisibility';

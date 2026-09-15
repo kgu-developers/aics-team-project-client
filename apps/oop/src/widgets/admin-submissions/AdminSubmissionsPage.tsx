@@ -42,11 +42,9 @@ import {
   useAdminSubmissionVersionDetailsQueries,
   useDownloadAdminSubmissionArtifactsMutation,
 } from '~/features/admin-milestone-review/queries';
-import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import { AdminPresentationEvaluationSettingsDialog } from './AdminPresentationEvaluationSettingsDialog';
-import { AdminPresentationEvaluationTeamDetailDialog } from './AdminPresentationEvaluationTeamDetailDialog';
 import * as styles from './AdminSubmissionsPage.css';
 
 const MILESTONE_TABS = [
@@ -217,9 +215,11 @@ export default function AdminSubmissionsPage() {
     useDownloadAdminSubmissionArtifactsMutation();
   const search = useSearch({ from: '/admin/submissions' }) as {
     milestoneId?: string;
-    sectionId?: string;
+    sectionId?: string | number;
   };
-  const { milestoneId, sectionId } = search;
+  const { milestoneId } = search;
+  const sectionId =
+    search.sectionId === undefined ? undefined : String(search.sectionId);
   const activeMilestoneId = isMilestoneTabId(milestoneId)
     ? milestoneId
     : 'proposal';
@@ -274,9 +274,6 @@ export default function AdminSubmissionsPage() {
       versionMetadataQueries[index],
     ]),
   );
-  const readState = useAdminReadState('submissions', {
-    adminId: currentUser?.id,
-  });
   const presentationEvaluationMilestone = findMilestoneForTab(
     sectionMilestonesQuery.data?.content,
     'presentation-evaluate',
@@ -459,11 +456,6 @@ export default function AdminSubmissionsPage() {
                                       ? '발표 순서를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
                                       : undefined
                       }
-                    />
-                    <Button
-                      isDisabled
-                      label='엑셀 다운로드'
-                      tooltip='백엔드 다운로드 API 연동 후 제공 예정입니다.'
                     />
                   </div>
                 </div>
@@ -698,7 +690,6 @@ export default function AdminSubmissionsPage() {
               ) : (
                 <div className={styles.list}>
                   {submissionsQuery.data?.submissions.map(submission => {
-                    const submissionSectionId = effectiveSectionId;
                     const submissionId = submission.submissionId;
                     const isVersionDetailAvailable =
                       versionDetailMilestoneIds.has(activeMilestoneId);
@@ -719,14 +710,6 @@ export default function AdminSubmissionsPage() {
                             회의록 {submission.meetingRecordCount}건
                           </Link>
                         }
-                        isUnread={Boolean(
-                          submissionSectionId &&
-                          submission.submissionId &&
-                          !readState.isRead(
-                            submissionSectionId,
-                            submission.submissionId,
-                          ),
-                        )}
                         action={
                           activeMilestoneId === 'final-report' ||
                           activeMilestoneId === 'presentation-submit' ? (

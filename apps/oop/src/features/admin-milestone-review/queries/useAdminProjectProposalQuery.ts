@@ -12,7 +12,7 @@ export function useAdminProjectProposalQuery(
   const canRead = Boolean(
     user &&
     user.globalRole !== 'STUDENT' &&
-    user.sections.some(section => section.id === sectionId),
+    user.sections.some(section => String(section.id) === String(sectionId)),
   );
   return useQuery({
     queryKey: ['admin-project-proposal', user?.id, sectionId, teamId],

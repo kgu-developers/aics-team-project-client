@@ -74,7 +74,7 @@ vi.mock('~/features/admin-milestone-review/queries', () => ({
 
 vi.mock('~/features/admin-notices/queries', () => ({
   useAdminNoticesQuery: () => ({
-    data: { notices: [] },
+    data: [],
     isError: false,
     isPending: false,
   }),

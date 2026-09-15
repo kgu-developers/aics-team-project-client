@@ -76,6 +76,7 @@ export {
 } from './adminCourse';
 export {
   fetchAdminOopSections,
+  removeAdminOopSection,
   submitAdminOopSection,
   updateAdminOopSection,
   updateAdminOopSectionContactVisibility,
@@ -88,7 +89,15 @@ export {
   type AdminOopSectionsResponse,
   type AdminOopUserDto,
 } from './adminSection';
-export { fetchAdminUser, type AdminUserDto } from './adminUser';
+export {
+  fetchAdminUser,
+  removeAdminUser,
+  submitAdminUser,
+  updateAdminUser,
+  type AdminUserDto,
+  type SubmitAdminUserInput,
+  type UpdateAdminUserInput,
+} from './adminUser';
 export {
   applyAdminEnrollmentImport,
   previewAdminEnrollmentImport,
@@ -99,19 +108,24 @@ export {
 } from './adminEnrollmentImport';
 export {
   fetchAdminSectionEnrollments,
+  submitAdminSectionEnrollment,
   updateAdminSectionEnrollment,
+  type AdminSectionEnrollmentCreatedResponse,
   type AdminSectionEnrollmentDto,
   type AdminSectionEnrollmentsResponse,
+  type SubmitAdminSectionEnrollmentInput,
   type UpdateAdminSectionEnrollmentInput,
 } from './adminEnrollment';
 export {
   fetchAdminSectionTeams,
   fetchAdminTeam,
   finalizeAdminSectionTeams,
+  updateAdminTeamMember,
   type AdminSectionTeamSummaryDto,
   type AdminSectionTeamsResponse,
   type AdminTeamDetailDto,
   type AdminTeamMemberDto,
+  type UpdateAdminTeamMemberInput,
 } from './adminTeam';
 export {
   applyAdminTeamImport,
@@ -172,6 +186,8 @@ export {
   fetchAdminNotice,
   fetchAdminNotices,
   fetchSectionAnnouncements,
+  submitSectionAnnouncement,
+  updateSectionAnnouncement,
   removeAdminNoticeAttachment,
   type AdminNoticeDetailDto,
   type AdminNoticeDto,

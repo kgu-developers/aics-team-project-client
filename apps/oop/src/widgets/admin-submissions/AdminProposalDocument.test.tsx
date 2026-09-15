@@ -83,7 +83,7 @@ it('유효한 문서를 실제 조회하는 동안 로딩을 표시하고 응답
       },
     ),
   );
-  const cleanup = renderDocument('oop-2026-2-01', '19');
+  const cleanup = renderDocument('1', '19');
   try {
     expect(screen.getByRole('status')).toHaveTextContent(
       '제안서를 불러오는 중입니다.',

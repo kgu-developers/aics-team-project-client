@@ -30,8 +30,46 @@ const initialCourses: AdminOopCourseDto[] = [
   },
 ];
 
-let courses = initialCourses.map(course => ({ ...course }));
-let nextCourseId = 4;
+const storageKey = 'aics:msw-admin-courses';
+
+type PersistedCourses = {
+  courses: AdminOopCourseDto[];
+  nextCourseId: number;
+};
+
+function initialCourseState(): PersistedCourses {
+  return {
+    courses: initialCourses.map(course => ({ ...course })),
+    nextCourseId: 4,
+  };
+}
+
+function restoreCourseState(): PersistedCourses {
+  if (typeof localStorage === 'undefined') return initialCourseState();
+
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(storageKey) ?? '');
+    if (
+      !saved ||
+      typeof saved !== 'object' ||
+      !Array.isArray((saved as PersistedCourses).courses) ||
+      !Number.isSafeInteger((saved as PersistedCourses).nextCourseId)
+    )
+      return initialCourseState();
+    return saved as PersistedCourses;
+  } catch {
+    return initialCourseState();
+  }
+}
+
+function persistCourseState() {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(storageKey, JSON.stringify({ courses, nextCourseId }));
+}
+
+const restoredCourseState = restoreCourseState();
+let courses = restoredCourseState.courses;
+let nextCourseId = restoredCourseState.nextCourseId;
 
 export function getAdminCourses() {
   return courses.map(course => ({ ...course }));
@@ -51,6 +89,7 @@ export function createAdminCourse(input: AdminOopCourseInput) {
   };
   nextCourseId += 1;
   courses = [...courses, course];
+  persistCourseState();
   return { ...course };
 }
 
@@ -62,6 +101,7 @@ export function updateAdminCourse(
   if (!course) return null;
 
   Object.assign(course, input, { updated_at: '2026-09-11T09:10:00' });
+  persistCourseState();
   return { ...course };
 }
 
@@ -69,10 +109,13 @@ export function removeAdminCourse(courseId: number) {
   const course = courses.find(candidate => candidate.id === courseId);
   if (!course || course.status !== 'DRAFT') return false;
   courses = courses.filter(candidate => candidate.id !== courseId);
+  persistCourseState();
   return true;
 }
 
 export function resetAdminCoursesMockData() {
-  courses = initialCourses.map(course => ({ ...course }));
-  nextCourseId = 4;
+  const initialState = initialCourseState();
+  courses = initialState.courses;
+  nextCourseId = initialState.nextCourseId;
+  if (typeof localStorage !== 'undefined') localStorage.removeItem(storageKey);
 }

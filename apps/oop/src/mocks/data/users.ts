@@ -71,7 +71,7 @@ export const demoAdmin: CurrentUser = {
   globalRole: 'ASSISTANT',
   sections: [
     {
-      id: demoStudentSection.id,
+      id: '1',
       code: 'OOP-01',
       capacity: 40,
       classTime: '월요일 1-2교시',
@@ -101,6 +101,12 @@ export function addDemoAdminSection(section: CurrentUser['sections'][number]) {
   demoAdminSections = [...demoAdminSections, section];
 }
 
+export function removeDemoAdminSection(sectionId: string | number) {
+  demoAdminSections = demoAdminSections.filter(
+    section => String(section.id) !== String(sectionId),
+  );
+}
+
 export function updateDemoAdminSectionContactVisibility(
   sectionId: string | number,
   contactVisibility: Pick<
@@ -117,6 +123,10 @@ export function updateDemoAdminSectionContactVisibility(
 
 export function resetDemoAdminSections() {
   demoAdminSections = demoAdmin.sections.map(section => ({ ...section }));
+}
+
+export function replaceDemoAdminSections(sections: CurrentUser['sections']) {
+  demoAdminSections = sections.map(section => ({ ...section }));
 }
 
 export const demoAccessToken = 'msw-oop-demo-student-a-access-token';

@@ -1,16 +1,14 @@
 import { Card, EmptyState, Heading, Text } from '@aics/design-system';
 import { Link, useParams } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { useAdminMeetingRecordDetailQuery } from '~/features/admin-meeting/queries';
-import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import AdminStudentDetailDialog from '~/features/admin-student-team/components/AdminStudentDetailDialog';
 import { useAdminSectionEnrollmentsQuery } from '~/features/admin-student-team/queries';
-import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMeetingDetailPage.css';
 
@@ -20,12 +18,6 @@ export default function AdminMeetingDetailPage() {
   >(null);
   const { meetingId } = useParams({ from: '/admin/meetings/$meetingId' });
   const query = useAdminMeetingRecordDetailQuery(meetingId);
-  const adminId = useAuthStore(state => state.currentUser?.id);
-  const { markAsRead } = useAdminReadState('meetings', { adminId });
-  useEffect(() => {
-    if (query.isSuccess)
-      markAsRead(String(query.data.sectionId), String(query.data.id));
-  }, [query.isSuccess, query.data, markAsRead]);
   const enrollmentsQuery = useAdminSectionEnrollmentsQuery(
     query.data ? String(query.data.sectionId) : undefined,
   );

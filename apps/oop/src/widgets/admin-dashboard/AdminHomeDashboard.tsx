@@ -36,12 +36,17 @@ function getMeetingContentPreview(content: string) {
 }
 
 type MilestoneColumn = {
+  dueAt: string;
   key: string;
   title: string;
 };
 
 function getMilestoneColumnKey(type: AdminMilestoneType, title: string) {
   return `${type}:${title}`;
+}
+
+function formatNoticePublishedDate(value: string) {
+  return value.replace('T', ' ').slice(0, 10);
 }
 
 function List({
@@ -177,22 +182,29 @@ export default function AdminHomeDashboard() {
   const meetingRecordsQuery =
     useAdminMeetingRecordListQuery(accessibleSectionIds);
   const messagesQuery = useAdminMessagesQuery();
-  const noticesQuery = useAdminNoticesQuery();
+  const noticesQuery = useAdminNoticesQuery(accessibleSectionIds[0]);
   const scheduleSections = accessibleSections.map((section, index) => ({
     milestones: milestoneQueries[index]?.data?.content ?? [],
     sectionId: section.id,
     sectionLabel: section.code,
   }));
-  const milestoneColumns = [
+  const milestoneColumns: MilestoneColumn[] = [
     ...new Map(
       scheduleSections.flatMap(section =>
         section.milestones.map(milestone => {
           const key = getMilestoneColumnKey(milestone.type, milestone.title);
-          return [key, { key, title: milestone.title }] as const;
+          return [
+            key,
+            {
+              dueAt: milestone.schedule.dueAt ?? '9999-12-31T23:59:59',
+              key,
+              title: milestone.title,
+            },
+          ] as const;
         }),
       ),
     ).values(),
-  ] satisfies MilestoneColumn[];
+  ].sort((left, right) => left.dueAt.localeCompare(right.dueAt));
   const isMilestoneSchedulePending = milestoneQueries.some(
     query => query.isPending,
   );
@@ -218,12 +230,12 @@ export default function AdminHomeDashboard() {
         : meetingRecordsQuery.isError
           ? '회의록을 불러오지 못했습니다.'
           : '등록된 회의록이 없습니다.';
-  const noticeItems: DashboardListItem[] = (noticesQuery.data?.notices ?? [])
+  const noticeItems: DashboardListItem[] = (noticesQuery.data ?? [])
     .slice(0, 3)
     .map(notice => ({
-      date: notice.date,
-      id: notice.id,
-      section: notice.section,
+      date: formatNoticePublishedDate(notice.publishedAt),
+      id: String(notice.id),
+      section: accessibleSections[0]?.code ?? '',
       title: notice.title,
     }));
   const noticeEmptyMessage = noticesQuery.isPending
@@ -251,7 +263,7 @@ export default function AdminHomeDashboard() {
       <Heading level={1}>홈</Heading>
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <Heading level={2}>분반별 진행 일정</Heading>
+          <Heading level={2}>분반별 진행 일정 · 제출 마감일</Heading>
           <Button
             label='마일스톤 설정'
             onClick={() => navigate({ to: ROUTES.ADMIN_MILESTONES })}

@@ -39,6 +39,7 @@ const sectionsByStudentNumber: Readonly<Record<string, SectionResponse[]>> = {
 };
 
 let createdSectionsByStudentNumber: Record<string, SectionResponse[]> = {};
+let removedSectionIdsByStudentNumber: Record<string, number[]> = {};
 let contactVisibilityBySectionId: Record<
   number,
   Pick<SectionResponse, 'contactVisibleFrom' | 'contactVisibleUntil'>
@@ -48,6 +49,10 @@ export function getMockMySections(
   studentNumber: string,
   filter: FetchMySectionsFilter,
 ) {
+  const removedSectionIds = new Set(
+    removedSectionIdsByStudentNumber[studentNumber] ?? [],
+  );
+
   return [
     ...(sectionsByStudentNumber[studentNumber] ?? []),
     ...(createdSectionsByStudentNumber[studentNumber] ?? []),
@@ -56,6 +61,7 @@ export function getMockMySections(
       ...section,
       ...contactVisibilityBySectionId[section.id],
     }))
+    .filter(section => !removedSectionIds.has(section.id))
     .filter(
       section =>
         (!filter.status || section.status === filter.status) &&
@@ -77,6 +83,27 @@ export function addMockMySection(
   };
 }
 
+export function replaceMockMySections(
+  studentNumber: string,
+  sections: SectionResponse[],
+) {
+  const initialSections = sectionsByStudentNumber[studentNumber] ?? [];
+  const sectionIds = new Set(sections.map(section => section.id));
+
+  createdSectionsByStudentNumber = {
+    ...createdSectionsByStudentNumber,
+    [studentNumber]: sections.filter(
+      section => !initialSections.some(initial => initial.id === section.id),
+    ),
+  };
+  removedSectionIdsByStudentNumber = {
+    ...removedSectionIdsByStudentNumber,
+    [studentNumber]: initialSections
+      .filter(section => !sectionIds.has(section.id))
+      .map(section => section.id),
+  };
+}
+
 export function updateMockSectionContactVisibility(
   sectionId: number,
   contactVisibility: Pick<
@@ -92,5 +119,6 @@ export function updateMockSectionContactVisibility(
 
 export function resetMockMySections() {
   createdSectionsByStudentNumber = {};
+  removedSectionIdsByStudentNumber = {};
   contactVisibilityBySectionId = {};
 }
