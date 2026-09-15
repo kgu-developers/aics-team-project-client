@@ -32,11 +32,11 @@ export async function signIn(
   kind: 'leader' | 'member' | 'survey' = 'leader',
 ) {
   const identity = page.waitForResponse(
-    r => r.url().endsWith('/api/v1/oop/users/me') && r.ok(),
+    r => r.url().endsWith('/api/v1/users/me') && r.ok(),
   );
   const response = page.waitForResponse(
     r =>
-      r.url().endsWith('/api/v1/oop/auth/login') &&
+      r.url().endsWith('/api/v1/auth/login') &&
       r.request().method() === 'POST',
   );
   await login(page, account(kind));

@@ -65,25 +65,25 @@ const requestBodies: unknown[] = [];
 const deleteRequest = vi.fn();
 
 const server = setupServer(
-  http.get(`${API_BASE_URL}/teams/:teamId/meeting-records`, ({ request }) => {
+  http.get(`${API_BASE_URL}/api/v1/teams/:teamId/meeting-records`, ({ request }) => {
     expect(new URL(request.url).searchParams.get('phase')).toBe('MID_CHECK');
     return HttpResponse.json({ contents: [meetingRecordSummaryDto] });
   }),
   http.post(
-    `${API_BASE_URL}/teams/:teamId/meeting-records`,
+    `${API_BASE_URL}/api/v1/teams/:teamId/meeting-records`,
     async ({ request }) => {
       requestBodies.push(await request.json());
       return HttpResponse.json(meetingRecordPersistDto, { status: 201 });
     },
   ),
-  http.get(`${API_BASE_URL}/meeting-records/:id`, () =>
+  http.get(`${API_BASE_URL}/api/v1/meeting-records/:id`, () =>
     HttpResponse.json(meetingRecordDetailDto),
   ),
-  http.patch(`${API_BASE_URL}/meeting-records/:id`, async ({ request }) => {
+  http.patch(`${API_BASE_URL}/api/v1/meeting-records/:id`, async ({ request }) => {
     requestBodies.push(await request.json());
     return HttpResponse.json(meetingRecordPersistDto);
   }),
-  http.delete(`${API_BASE_URL}/meeting-records/:id`, () => {
+  http.delete(`${API_BASE_URL}/api/v1/meeting-records/:id`, () => {
     deleteRequest();
     return new HttpResponse(null, { status: 204 });
   }),
@@ -206,7 +206,7 @@ describe('meeting API client contract', () => {
 describe('meeting API contract boundaries', () => {
   it('필터가 없으면 쿼리 파라미터를 생략하고 빈 contents를 빈 목록으로 반환한다', async () => {
     server.use(
-      http.get(`${API_BASE_URL}/teams/10/meeting-records`, ({ request }) => {
+      http.get(`${API_BASE_URL}/api/v1/teams/10/meeting-records`, ({ request }) => {
         expect(new URL(request.url).search).toBe('');
         return HttpResponse.json({ contents: [] });
       }),

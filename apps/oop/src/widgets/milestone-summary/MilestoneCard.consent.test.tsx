@@ -269,7 +269,7 @@ it('blocks final-report reads and approval actions for an unattributed live team
     requests.push(new URL(request.url).pathname),
   );
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/users/me`, () =>
+    http.get(`${API_BASE_URL}/api/v1/users/me`, () =>
       HttpResponse.json({
         ...demoPartnerStudent,
         globalRole: 'USER',
@@ -277,7 +277,7 @@ it('blocks final-report reads and approval actions for an unattributed live team
         sections: [first, { ...first, id: 2 }],
       }),
     ),
-    http.get(`${API_BASE_URL}/api/v1/oop/sections`, () =>
+    http.get(`${API_BASE_URL}/api/v1/sections`, () =>
       HttpResponse.json({ contents: [first] }),
     ),
   );
@@ -297,8 +297,8 @@ it('blocks final-report reads and approval actions for an unattributed live team
   await userEvent.click(action);
   expect(screen.queryByText('파일 제출 폼 열림')).not.toBeInTheDocument();
   expect(requests.sort()).toEqual([
-    '/api/v1/oop/sections',
-    '/api/v1/oop/users/me',
+    '/api/v1/sections',
+    '/api/v1/users/me',
   ]);
 });
 
@@ -324,7 +324,7 @@ it('does not read the current mid-report before live student context attribution
     requests.push(new URL(request.url).pathname),
   );
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/users/me`, () =>
+    http.get(`${API_BASE_URL}/api/v1/users/me`, () =>
       HttpResponse.json({
         ...demoPartnerStudent,
         globalRole: 'USER',
@@ -332,7 +332,7 @@ it('does not read the current mid-report before live student context attribution
         sections: [first, { ...first, id: 2 }],
       }),
     ),
-    http.get(`${API_BASE_URL}/api/v1/oop/sections`, () =>
+    http.get(`${API_BASE_URL}/api/v1/sections`, () =>
       HttpResponse.json({ contents: [first] }),
     ),
   );
@@ -364,7 +364,7 @@ it('does not read the current mid-report before live student context attribution
   );
   expect(screen.getByRole('button', { name: '제출하기' })).toBeDisabled();
   expect(requests.sort()).toEqual([
-    '/api/v1/oop/sections',
-    '/api/v1/oop/users/me',
+    '/api/v1/sections',
+    '/api/v1/users/me',
   ]);
 });

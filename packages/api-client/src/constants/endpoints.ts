@@ -16,72 +16,72 @@ export const ENDPOINTS = {
       `/milestones/${milestoneId}/my-team-submission`,
   },
   AUTH: {
-    LOGIN: '/api/v1/oop/auth/login',
-    REFRESH: '/api/v1/oop/auth/refresh',
-    LOGOUT: '/api/v1/oop/auth/logout',
+    LOGIN: '/api/v1/auth/login',
+    REFRESH: '/api/v1/auth/refresh',
+    LOGOUT: '/api/v1/auth/logout',
   },
   USER: {
-    ME: '/api/v1/oop/users/me',
+    ME: '/api/v1/users/me',
   },
   PROFILE: {
     ME: '/me/profile',
     PASSWORD: (studentNumber: string) =>
-      `/api/v1/oop/users/${studentNumber}/password`,
+      `/api/v1/users/${studentNumber}/password`,
   },
   ADMIN: {
-    OOP_COURSES: '/api/v1/admin/oop/courses',
+    OOP_COURSES: '/api/v1/admin/courses',
     OOP_COURSE: (courseId: string | number) =>
-      `/api/v1/admin/oop/courses/${courseId}`,
-    OOP_SECTIONS: '/api/v1/admin/oop/sections',
+      `/api/v1/admin/courses/${courseId}`,
+    OOP_SECTIONS: '/api/v1/admin/sections',
     OOP_SECTION: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}`,
+      `/api/v1/admin/sections/${sectionId}`,
     OOP_SECTION_CONTACT_VISIBILITY: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/contact-visibility`,
+      `/api/v1/admin/sections/${sectionId}/contact-visibility`,
     SECTION_ENROLLMENTS: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/enrollments`,
+      `/api/v1/admin/sections/${sectionId}/enrollments`,
     SECTION_ENROLLMENT: (sectionId: string | number, studentNumber: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/enrollments/${studentNumber}`,
+      `/api/v1/admin/sections/${sectionId}/enrollments/${studentNumber}`,
     SECTION_TEAMS: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/teams`,
+      `/api/v1/admin/sections/${sectionId}/teams`,
     SECTION_TEAM_IMPORT_PREVIEW: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/team-imports/preview`,
+      `/api/v1/admin/sections/${sectionId}/team-imports/preview`,
     SECTION_TEAMS_FINALIZE: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/teams/finalize`,
+      `/api/v1/admin/sections/${sectionId}/teams/finalize`,
     TEAM: (teamId: string | number) => `/api/v1/admin/oop/teams/${teamId}`,
     TEAM_MEMBER: (teamId: string | number, studentNumber: string) =>
       `/api/v1/admin/oop/teams/${teamId}/members/${studentNumber}`,
     TEAM_IMPORT_APPLY: (importId: string | number) =>
       `/api/v1/admin/oop/team-imports/${importId}/apply`,
-    USERS: '/api/v1/admin/oop/users',
-    USER: (studentNumber: string) => `/api/v1/admin/oop/users/${studentNumber}`,
+    USERS: '/api/v1/admin/users',
+    USER: (studentNumber: string) => `/api/v1/admin/users/${studentNumber}`,
     SECTION_ENROLLMENT_IMPORT_PREVIEW: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/enrollment-imports/preview`,
+      `/api/v1/admin/sections/${sectionId}/enrollment-imports/preview`,
     ENROLLMENT_IMPORT_APPLY: (importId: string | number) =>
       `/api/v1/admin/oop/enrollment-imports/${importId}/apply`,
     SECTION_ROSTER_IMPORT_STATUS: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/roster-import-status`,
+      `/api/v1/admin/sections/${sectionId}/roster-import-status`,
     OOP_PEER_EVALUATION_FORM: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/peer-evaluation-forms`,
+      `/api/v1/admin/sections/${sectionId}/peer-evaluation-forms`,
     OOP_TEAM_EVALUATION_CRITERIA: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/team-evaluation-criteria`,
+      `/api/v1/admin/sections/${sectionId}/team-evaluation-criteria`,
     OOP_PEER_EVALUATIONS: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/peer-evaluations`,
+      `/api/v1/admin/sections/${sectionId}/peer-evaluations`,
     OOP_PEER_EVALUATION_TEAM: (
       sectionId: string | number,
       teamId: string | number,
     ) =>
-      `/api/v1/admin/oop/sections/${sectionId}/peer-evaluations/teams/${teamId}`,
+      `/api/v1/admin/sections/${sectionId}/peer-evaluations/teams/${teamId}`,
     OOP_PRESENTATION_EVALUATIONS: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/presentation-evaluations`,
+      `/api/v1/admin/sections/${sectionId}/presentation-evaluations`,
     OOP_PRESENTATION_EVALUATION_TEAM: (
       sectionId: string | number,
       teamId: string | number,
     ) =>
-      `/api/v1/admin/oop/sections/${sectionId}/presentation-evaluations/teams/${teamId}`,
+      `/api/v1/admin/sections/${sectionId}/presentation-evaluations/teams/${teamId}`,
     OOP_PRE_SURVEY_RESPONSES: (sectionId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/pre-survey-responses`,
+      `/api/v1/admin/sections/${sectionId}/pre-survey-responses`,
     OOP_PRE_SURVEY_RESPONSES_DOWNLOAD: (sectionId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/pre-survey-responses/download`,
+      `/api/v1/admin/sections/${sectionId}/pre-survey-responses/download`,
     MEETING_RECORDS: '/admin/meeting-records',
     MEETING_RECORDS_LIST: '/api/v1/admin/oop/meeting-records',
     MEETING_RECORD_DETAIL: (meetingId: string | number) =>
@@ -90,21 +90,21 @@ export const ENDPOINTS = {
       `/admin/meeting-records/${meetingId}`,
     MILESTONE_SCHEDULE: '/admin/milestone-schedule',
     SECTION_MILESTONES: (sectionId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/milestones`,
+      `/api/v1/admin/sections/${sectionId}/milestones`,
     SECTION_MILESTONE: (sectionId: string, milestoneId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}`,
+      `/api/v1/admin/sections/${sectionId}/milestones/${milestoneId}`,
     SECTION_MILESTONE_STATUS: (sectionId: string, milestoneId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/status`,
+      `/api/v1/admin/sections/${sectionId}/milestones/${milestoneId}/status`,
     REQUIRED_ARTIFACTS: (sectionId: string, milestoneId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/required-artifacts`,
+      `/api/v1/admin/sections/${sectionId}/milestones/${milestoneId}/required-artifacts`,
     REQUIRED_ARTIFACT: (
       sectionId: string,
       milestoneId: string,
       requiredArtifactId: string,
     ) =>
-      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/required-artifacts/${requiredArtifactId}`,
+      `/api/v1/admin/sections/${sectionId}/milestones/${milestoneId}/required-artifacts/${requiredArtifactId}`,
     SECTION_MILESTONE_WEEK_NUMBERS: (sectionId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/milestones/week-numbers`,
+      `/api/v1/admin/sections/${sectionId}/milestones/week-numbers`,
     MILESTONE_SUBMISSIONS: (milestoneId: string) =>
       `/api/v1/admin/oop/milestones/${milestoneId}/submissions`,
     SUBMISSION: (submissionId: string | number) =>
@@ -118,16 +118,16 @@ export const ENDPOINTS = {
     SUBMISSION_VERSIONS: (submissionId: string | number) =>
       `/api/v1/admin/oop/submissions/${submissionId}/versions`,
     SECTION_PRESENTATION_EVALUATIONS: (sectionId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/presentation-evaluations`,
+      `/api/v1/admin/sections/${sectionId}/presentation-evaluations`,
     SECTION_PRESENTATION_EVALUATION_TEAM: (
       sectionId: string | number,
       teamId: string | number,
     ) =>
-      `/api/v1/admin/oop/sections/${sectionId}/presentation-evaluations/teams/${teamId}`,
+      `/api/v1/admin/sections/${sectionId}/presentation-evaluations/teams/${teamId}`,
     SECTION_TEAM_MID_REPORT: (
       sectionId: string | number,
       teamId: string | number,
-    ) => `/api/v1/admin/oop/sections/${sectionId}/teams/${teamId}/mid-report`,
+    ) => `/api/v1/admin/sections/${sectionId}/teams/${teamId}/mid-report`,
     SECTION_PRESENTATION_EVALUATION_SETTINGS: (sectionId: string) =>
       `/admin/sections/${sectionId}/presentation-evaluation-settings`,
     SECTION_STUDENTS: (sectionId: string) =>
@@ -143,7 +143,7 @@ export const ENDPOINTS = {
       `/announcements/${announcementId}`,
   },
   SECTION: {
-    MY_SECTIONS: '/api/v1/oop/sections',
+    MY_SECTIONS: '/api/v1/sections',
     STUDENT_DASHBOARD: (sectionId: string) =>
       `/sections/${sectionId}/dashboard/student`,
   },
@@ -175,9 +175,9 @@ export const ENDPOINTS = {
       `/api/v1/admin/oop/messages/${messageId}/read`,
   },
   MEETING: {
-    RECORDS: (teamId: string) => `/teams/${teamId}/meeting-records`,
+    RECORDS: (teamId: string) => `/api/v1/teams/${teamId}/meeting-records`,
     ACTIONS: (teamId: string) => `/teams/${teamId}/actions`,
-    RECORD: (meetingId: string) => `/meeting-records/${meetingId}`,
+    RECORD: (meetingId: string) => `/api/v1/meeting-records/${meetingId}`,
     RECORD_ACTIONS: (meetingId: string) =>
       `/meeting-records/${meetingId}/actions`,
     ACTION: (actionId: string) => `/meeting-actions/${actionId}`,
@@ -258,8 +258,8 @@ export const ENDPOINTS = {
   },
   TEAM_ASSIGNMENT: {
     SUBMIT_SURVEY_RESPONSE: (sectionId: string) =>
-      `/api/v1/oop/sections/${sectionId}/pre-survey/responses`,
-    MY_SURVEY_RESPONSE: '/api/v1/oop/users/me/pre-survey-response',
+      `/api/v1/sections/${sectionId}/pre-survey/responses`,
+    MY_SURVEY_RESPONSE: '/api/v1/users/me/pre-survey-response',
     ROOT: (sectionId: string) => `/sections/${sectionId}/team-assignment`,
     SURVEY: (sectionId: string) =>
       `/sections/${sectionId}/team-assignment/survey`,

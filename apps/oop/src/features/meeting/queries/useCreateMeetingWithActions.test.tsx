@@ -72,7 +72,7 @@ it('두 번째 액션 실패 후 재시도하면 회의록과 첫 번째 액션�
   const writes: string[] = [];
   let fail = true;
   server.use(
-    http.post(API_BASE_URL + '/teams/7/meeting-records', () => {
+    http.post(API_BASE_URL + '/api/v1/teams/7/meeting-records', () => {
       records++;
       return undefined;
     }),
@@ -133,7 +133,7 @@ it('회의록 응답 유실 뒤에는 새 회의록이나 액션을 재등록하
   const recordPost = vi.fn(() => HttpResponse.error());
   const actionPost = vi.fn(() => HttpResponse.error());
   server.use(
-    http.post(API_BASE_URL + '/teams/7/meeting-records', recordPost),
+    http.post(API_BASE_URL + '/api/v1/teams/7/meeting-records', recordPost),
     http.post(API_BASE_URL + '/meeting-records/:id/actions', actionPost),
   );
   const { result } = setup();
@@ -151,7 +151,7 @@ it('회의록 응답 유실 뒤에는 새 회의록이나 액션을 재등록하
 it('연속 저장 호출은 한 번만 실행한다', async () => {
   let records = 0;
   server.use(
-    http.post(API_BASE_URL + '/teams/7/meeting-records', () => {
+    http.post(API_BASE_URL + '/api/v1/teams/7/meeting-records', () => {
       records++;
       return undefined;
     }),

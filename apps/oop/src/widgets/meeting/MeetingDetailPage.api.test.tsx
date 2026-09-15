@@ -66,7 +66,7 @@ function currentSections() {
   }));
 }
 const server = setupServer(
-  http.get(`${API_BASE_URL}/api/v1/oop/users/me`, () => {
+  http.get(`${API_BASE_URL}/api/v1/users/me`, () => {
     const user = useAuthStore.getState().currentUser!;
     return HttpResponse.json({
       ...user,
@@ -75,7 +75,7 @@ const server = setupServer(
       teamId: user.teamId ?? null,
     });
   }),
-  http.get(`${API_BASE_URL}/api/v1/oop/sections`, () =>
+  http.get(`${API_BASE_URL}/api/v1/sections`, () =>
     HttpResponse.json({ contents: currentSections() }),
   ),
 );
@@ -193,7 +193,7 @@ it('실 API 생성 폼은 액션 입력을 제공하고 액션이 없으면 회�
     }),
   );
   expect(writes).toEqual([
-    { method: 'POST', url: `${API_BASE_URL}/teams/7/meeting-records` },
+    { method: 'POST', url: `${API_BASE_URL}/api/v1/teams/7/meeting-records` },
   ]);
   expect(await fetchMeetingRecordDetail('20')).toMatchObject({
     title: '새 회의록 검증',
@@ -207,7 +207,7 @@ it.each([400, 503])(
   async status => {
     server.use(
       http.post(
-        `${API_BASE_URL}/teams/7/meeting-records`,
+        `${API_BASE_URL}/api/v1/teams/7/meeting-records`,
         () => new HttpResponse(null, { status }),
       ),
     );
@@ -265,7 +265,7 @@ it.each([403, 404, 500])(
   async status => {
     server.use(
       http.get(
-        `${API_BASE_URL}/meeting-records/19`,
+        `${API_BASE_URL}/api/v1/meeting-records/19`,
         () => new HttpResponse(null, { status }),
       ),
     );
@@ -280,7 +280,7 @@ it.each([403, 404, 500])(
 it('다른 팀 회의록이면 액션을 조회하거나 내용을 보여주지 않는다', async () => {
   const actionRequest = vi.fn();
   server.use(
-    http.get(`${API_BASE_URL}/meeting-records/19`, () =>
+    http.get(`${API_BASE_URL}/api/v1/meeting-records/19`, () =>
       HttpResponse.json({ ...meetingApiRecord, teamId: 8 }),
     ),
     http.get(`${API_BASE_URL}/meeting-records/19/actions`, () => {
@@ -370,7 +370,7 @@ it('두 번째 액션 등록 실패 시 저장된 회의록과 첫 행을 보존
   let failSecond = true;
   let recordPosts = 0;
   server.use(
-    http.post(`${API_BASE_URL}/teams/7/meeting-records`, () => {
+    http.post(`${API_BASE_URL}/api/v1/teams/7/meeting-records`, () => {
       recordPosts++;
       return undefined;
     }),
@@ -479,7 +479,7 @@ it('kickoff failure on detail and edit uses a real retry and never reports a del
   renderPage(<MeetingEditPage meetingId='19' />);
   await screen.findByText('팀 정보를 불러올 수 없어요.');
   expect(screen.queryByText(/삭제되었거나/)).not.toBeInTheDocument();
-  expect(requests.some(path => path.includes('/meeting-records/'))).toBe(false);
+  expect(requests.some(path => path.includes('/api/v1/meeting-records/'))).toBe(false);
   server.use(
     http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
       HttpResponse.json(meetingApiTeam),

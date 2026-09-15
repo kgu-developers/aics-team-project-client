@@ -40,7 +40,7 @@ function currentSections() {
   }));
 }
 const server = setupServer(
-  http.get(`${API_BASE_URL}/api/v1/oop/users/me`, () => {
+  http.get(`${API_BASE_URL}/api/v1/users/me`, () => {
     const user = useAuthStore.getState().currentUser!;
     return HttpResponse.json({
       ...user,
@@ -49,7 +49,7 @@ const server = setupServer(
       teamId: user.teamId ?? null,
     });
   }),
-  http.get(`${API_BASE_URL}/api/v1/oop/sections`, () =>
+  http.get(`${API_BASE_URL}/api/v1/sections`, () =>
     HttpResponse.json({ contents: currentSections() }),
   ),
 );
@@ -322,7 +322,7 @@ it('팀원 조회 403을 미배정으로 숨기지 않고 재시도로 복구한
 it('회의록 목록 오류가 나도 액션 목록을 유지하고 추가만 차단한다', async () => {
   server.use(
     http.get(
-      `${API_BASE_URL}/teams/7/meeting-records`,
+      `${API_BASE_URL}/api/v1/teams/7/meeting-records`,
       () => new HttpResponse(null, { status: 500 }),
     ),
   );
