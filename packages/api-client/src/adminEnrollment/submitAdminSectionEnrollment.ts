@@ -1,4 +1,4 @@
-import type { AdminSectionEnrollmentDto } from './types';
+import type { AdminSectionEnrollmentCreatedResponse } from './types';
 import { apiClient } from '../client';
 import { ENDPOINTS } from '../constants/endpoints';
 
@@ -10,8 +10,8 @@ export type SubmitAdminSectionEnrollmentInput = {
 export async function submitAdminSectionEnrollment(
   sectionId: string | number,
   input: SubmitAdminSectionEnrollmentInput,
-): Promise<AdminSectionEnrollmentDto> {
-  const response = await apiClient.post<AdminSectionEnrollmentDto>(
+): Promise<AdminSectionEnrollmentCreatedResponse> {
+  const response = await apiClient.post<AdminSectionEnrollmentCreatedResponse>(
     ENDPOINTS.ADMIN.SECTION_ENROLLMENTS(sectionId),
     input,
   );

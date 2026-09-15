@@ -274,9 +274,23 @@ export const adminStudentTeamHandlers = [
     const input = (await request.json()) as {
       email: string;
       name: string;
+      password: string;
       phone: string;
       studentNumber: string;
     };
+    if (
+      typeof input.password !== 'string' ||
+      input.password.length < 8 ||
+      input.password.length > 64
+    ) {
+      return HttpResponse.json(
+        {
+          code: 'INVALID_PASSWORD',
+          message: '비밀번호는 8자 이상 64자 이하여야 합니다.',
+        },
+        { status: 400 },
+      );
+    }
     const exists =
       createdUsers.has(input.studentNumber) ||
       adminStudentsFixture.some(
@@ -352,12 +366,10 @@ export const adminStudentTeamHandlers = [
       }
 
       assistantEnrollmentsBySection.set(enrollmentKey, user);
-      return HttpResponse.json(
-        getAdminEnrollmentResponse(sectionId).contents.find(
-          enrollment => enrollment.studentNumber === input.studentNumber,
-        ),
-        { status: 201 },
+      const enrollment = getAdminEnrollmentResponse(sectionId).contents.find(
+        item => item.studentNumber === input.studentNumber,
       );
+      return HttpResponse.json({ id: enrollment!.id }, { status: 201 });
     },
   ),
 
@@ -530,6 +542,7 @@ export const adminStudentTeamHandlers = [
       const input = (await request.json()) as {
         email?: string;
         name?: string;
+        password?: string;
         phone?: string;
       };
       if (
@@ -545,15 +558,51 @@ export const adminStudentTeamHandlers = [
           { status: 400 },
         );
       }
+      if (
+        input.password !== undefined &&
+        (typeof input.password !== 'string' ||
+          input.password.length < 8 ||
+          input.password.length > 64)
+      ) {
+        return HttpResponse.json(
+          {
+            code: 'INVALID_PASSWORD',
+            message: '비밀번호는 8자 이상 64자 이하여야 합니다.',
+          },
+          { status: 400 },
+        );
+      }
 
-      const createdUser = createdUsers.get(studentNumber);
-      if (!createdUser) {
+      const fixtureUser = adminStudentsFixture.find(
+        student => student.studentNumber === studentNumber,
+      );
+      const enrolledAssistant = [
+        ...assistantEnrollmentsBySection.values(),
+      ].find(enrollment => enrollment.studentNumber === studentNumber);
+      const existingUser =
+        createdUsers.get(studentNumber) ??
+        enrolledAssistant ??
+        (fixtureUser
+          ? {
+              email: `${fixtureUser.studentNumber}@example.com`,
+              name: fixtureUser.name,
+              phone: '010-1234-5678',
+              studentNumber: fixtureUser.studentNumber,
+            }
+          : undefined);
+      if (!existingUser) {
         return HttpResponse.json(
           { code: 'USER_NOT_FOUND', message: '사용자를 찾을 수 없습니다.' },
           { status: 404 },
         );
       }
-      createdUsers.set(studentNumber, { ...createdUser, ...input });
+      const updatedUser = { ...existingUser, ...input };
+      createdUsers.set(studentNumber, updatedUser);
+      [...assistantEnrollmentsBySection.entries()]
+        .filter(([, enrollment]) => enrollment.studentNumber === studentNumber)
+        .forEach(([key, enrollment]) => {
+          assistantEnrollmentsBySection.set(key, { ...enrollment, ...input });
+        });
       return new HttpResponse(null, { status: 204 });
     },
   ),

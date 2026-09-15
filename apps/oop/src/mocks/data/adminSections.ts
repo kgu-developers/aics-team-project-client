@@ -60,8 +60,52 @@ const initialSections: AdminSectionFixture[] = [
   },
 ];
 
-let sections = initialSections.map(section => ({ ...section }));
-let nextSectionId = 3;
+const storageKey = 'aics:msw-admin-sections';
+
+type PersistedSections = {
+  nextSectionId: number;
+  sections: AdminSectionFixture[];
+};
+
+function initialSectionState(): PersistedSections {
+  return {
+    nextSectionId: 3,
+    sections: initialSections.map(section => ({ ...section })),
+  };
+}
+
+function restoreSectionState(): PersistedSections {
+  if (typeof localStorage === 'undefined') return initialSectionState();
+
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(storageKey) ?? '');
+    if (
+      !saved ||
+      typeof saved !== 'object' ||
+      !Array.isArray((saved as PersistedSections).sections) ||
+      !Number.isSafeInteger((saved as PersistedSections).nextSectionId)
+    )
+      return initialSectionState();
+    return saved as PersistedSections;
+  } catch {
+    return initialSectionState();
+  }
+}
+
+function persistSectionState() {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(storageKey, JSON.stringify({ nextSectionId, sections }));
+}
+
+const restoredSectionState = restoreSectionState();
+let sections = restoredSectionState.sections;
+let nextSectionId = restoredSectionState.nextSectionId;
+
+// Keep `/users/me` aligned with a section deleted in a previous browser load.
+// The other demo profile projections are rebuilt for every test via reset.
+initialSections
+  .filter(initial => !sections.some(section => section.id === initial.id))
+  .forEach(initial => removeDemoAdminSection(initial.id));
 
 export function getAdminSections({
   semester,
@@ -169,6 +213,7 @@ export function createAdminSection(input: AdminOopSectionInput) {
     year: course.year,
   });
   sections = [...sections, section];
+  persistSectionState();
   return {
     capacity: section.capacity,
     classTime: section.classTime,
@@ -193,6 +238,7 @@ export function updateAdminSectionFixture(
     ...input,
   };
   sections = sections.map(item => (item.id === sectionId ? section : item));
+  persistSectionState();
   if ('contactVisibleFrom' in input || 'contactVisibleUntil' in input) {
     const contactVisibility = {
       contactVisibleFrom: section.contactVisibleFrom ?? null,
@@ -213,6 +259,7 @@ export function removeAdminSectionFixture(sectionId: number) {
   if (!section) return false;
 
   sections = sections.filter(item => item.id !== sectionId);
+  persistSectionState();
   removeDemoAdminSection(sectionId);
   return true;
 }
@@ -220,6 +267,8 @@ export function removeAdminSectionFixture(sectionId: number) {
 export function resetAdminSectionsMockData() {
   resetDemoAdminSections();
   resetMockMySections();
-  sections = initialSections.map(section => ({ ...section }));
-  nextSectionId = 3;
+  const initialState = initialSectionState();
+  sections = initialState.sections;
+  nextSectionId = initialState.nextSectionId;
+  if (typeof localStorage !== 'undefined') localStorage.removeItem(storageKey);
 }

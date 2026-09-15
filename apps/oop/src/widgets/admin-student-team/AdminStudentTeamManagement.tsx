@@ -83,7 +83,7 @@ export default function AdminStudentTeamManagement() {
   return (
     <div className={styles.page}>
       <div className={styles.heading}>
-        <Heading level={1}>수강생/팀 관리</Heading>
+        <Heading level={1}>수강생·팀 관리</Heading>
       </div>
 
       <div aria-label='분반 선택' className={styles.sectionTabs} role='group'>

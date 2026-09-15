@@ -72,7 +72,7 @@ function getTeamDashboardErrorContent(
     case 404:
       return {
         title: '팀 정보를 찾을 수 없습니다.',
-        description: '팀이 존재하는지 수강생/팀 관리에서 확인해 주세요.',
+        description: '팀이 존재하는지 수강생·팀 관리에서 확인해 주세요.',
         canRetry: false,
       };
     default:
@@ -237,7 +237,7 @@ export default function AdminTeamDashboard() {
                 />
               ) : null}
               <Link className={styles.backLink} to={ROUTES.ADMIN_STUDENT_TEAM}>
-                수강생/팀 관리로
+                수강생·팀 관리로
               </Link>
             </div>
           }
@@ -278,7 +278,7 @@ export default function AdminTeamDashboard() {
           {sectionCode} - {team.name} 대시보드
         </Heading>
         <Link className={styles.backLink} to={ROUTES.ADMIN_STUDENT_TEAM}>
-          ← 수강생/팀 관리로
+          ← 수강생·팀 관리로
         </Link>
       </div>
 

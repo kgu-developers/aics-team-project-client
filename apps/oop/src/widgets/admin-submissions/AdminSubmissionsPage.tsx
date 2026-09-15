@@ -216,9 +216,11 @@ export default function AdminSubmissionsPage() {
     useDownloadAdminSubmissionArtifactsMutation();
   const search = useSearch({ from: '/admin/submissions' }) as {
     milestoneId?: string;
-    sectionId?: string;
+    sectionId?: string | number;
   };
-  const { milestoneId, sectionId } = search;
+  const { milestoneId } = search;
+  const sectionId =
+    search.sectionId === undefined ? undefined : String(search.sectionId);
   const activeMilestoneId = isMilestoneTabId(milestoneId)
     ? milestoneId
     : 'proposal';
@@ -702,6 +704,14 @@ export default function AdminSubmissionsPage() {
                       );
                     return (
                       <AdminMilestoneSubmissionCard
+                        isUnread={Boolean(
+                          submissionSectionId &&
+                          submission.submissionId &&
+                          !readState.isRead(
+                            submissionSectionId,
+                            submission.submissionId,
+                          ),
+                        )}
                         meetingCountLabel={
                           <Link
                             to={ROUTES.ADMIN_MEETINGS}
@@ -713,14 +723,6 @@ export default function AdminSubmissionsPage() {
                             회의록 {submission.meetingRecordCount}건
                           </Link>
                         }
-                        isUnread={Boolean(
-                          submissionSectionId &&
-                          submission.submissionId &&
-                          !readState.isRead(
-                            submissionSectionId,
-                            submission.submissionId,
-                          ),
-                        )}
                         action={
                           activeMilestoneId === 'final-report' ||
                           activeMilestoneId === 'presentation-submit' ? (

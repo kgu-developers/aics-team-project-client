@@ -110,6 +110,136 @@ describe('AdminCourseManagement', () => {
     ).toBeInTheDocument();
   });
 
+  it('조교를 등록하고 수정한 뒤 현재 분반에서만 제외할 수 있다', async () => {
+    const user = userEvent.setup();
+    renderManager();
+    await screen.findAllByText('객체지향 프로그래밍');
+
+    await user.click(screen.getAllByRole('button', { name: '분반 관리' })[0]!);
+    const sectionDialog = await screen.findByRole('dialog', {
+      name: '객체지향 프로그래밍 분반 관리',
+    });
+    await user.click(
+      within(sectionDialog).getByRole('button', { name: '조교 등록' }),
+    );
+    const enrollmentDialog = await screen.findByRole('dialog', {
+      name: '조교 등록',
+    });
+
+    await user.type(
+      within(enrollmentDialog).getByRole('textbox', { name: '학번' }),
+      '202699999',
+    );
+    await user.type(
+      within(enrollmentDialog).getByRole('textbox', { name: '이름' }),
+      '테스트 조교',
+    );
+    await user.type(
+      within(enrollmentDialog).getByRole('textbox', { name: '이메일' }),
+      'assistant@example.com',
+    );
+    await user.type(
+      within(enrollmentDialog).getByRole('textbox', { name: '전화번호' }),
+      '010-0000-0000',
+    );
+    await user.type(
+      within(enrollmentDialog).getByLabelText('초기 비밀번호'),
+      'password123',
+    );
+    await user.click(
+      within(enrollmentDialog).getByRole('button', { name: '조교 등록' }),
+    );
+
+    expect(
+      await within(sectionDialog).findByText(/테스트 조교/),
+    ).toBeInTheDocument();
+    await user.click(
+      within(sectionDialog).getByRole('button', { name: '수정' }),
+    );
+    const editDialog = await screen.findByRole('dialog', {
+      name: '조교 정보 수정',
+    });
+    expect(
+      within(editDialog).getByRole('textbox', { name: '이름' }),
+    ).toHaveValue('테스트 조교');
+    await user.clear(within(editDialog).getByRole('textbox', { name: '이름' }));
+    await user.type(
+      within(editDialog).getByRole('textbox', { name: '이름' }),
+      '수정된 조교',
+    );
+    await user.click(
+      within(editDialog).getByRole('button', { name: '수정 저장' }),
+    );
+    expect(
+      await within(sectionDialog).findByText(/수정된 조교/),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(sectionDialog).getByRole('button', { name: '분반에서 제외' }),
+    );
+    const deleteDialog = (
+      await screen.findByText('조교를 이 분반에서 제외할까요?')
+    ).closest('dialog');
+    expect(deleteDialog).not.toBeNull();
+    expect(
+      within(deleteDialog!).getByText(/계정과 다른 분반 소속은 유지됩니다/),
+    ).toBeInTheDocument();
+    await user.click(
+      within(deleteDialog!).getByRole('button', { name: '분반에서 제외' }),
+    );
+    await waitFor(() => {
+      expect(
+        within(sectionDialog).queryByText(/테스트 조교/),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it('조교 등록 비밀번호는 조합과 무관하게 8자 이상 64자 이하만 허용한다', async () => {
+    const user = userEvent.setup();
+    renderManager();
+    await screen.findAllByText('객체지향 프로그래밍');
+
+    await user.click(screen.getAllByRole('button', { name: '분반 관리' })[0]!);
+    const sectionDialog = await screen.findByRole('dialog', {
+      name: '객체지향 프로그래밍 분반 관리',
+    });
+    await user.click(
+      within(sectionDialog).getByRole('button', { name: '조교 등록' }),
+    );
+    const dialog = await screen.findByRole('dialog', { name: '조교 등록' });
+
+    await user.type(
+      within(dialog).getByRole('textbox', { name: '학번' }),
+      '202688888',
+    );
+    await user.type(
+      within(dialog).getByRole('textbox', { name: '이름' }),
+      '비밀번호 조교',
+    );
+    await user.type(
+      within(dialog).getByRole('textbox', { name: '이메일' }),
+      'password@example.com',
+    );
+    await user.type(
+      within(dialog).getByRole('textbox', { name: '전화번호' }),
+      '010-0000-0000',
+    );
+    const password = within(dialog).getByLabelText('초기 비밀번호');
+    const submit = within(dialog).getByRole('button', { name: '조교 등록' });
+
+    await user.type(password, '1234567');
+    expect(submit).toBeDisabled();
+    expect(
+      within(dialog).getByText('비밀번호는 8자 이상 64자 이하여야 합니다.'),
+    ).toBeInTheDocument();
+
+    await user.type(password, '8');
+    expect(submit).toBeEnabled();
+
+    await user.type(password, 'a'.repeat(57));
+    expect(submit).toBeDisabled();
+  });
+
   it('연도·학기·상태를 표시하고 운영 중 강좌의 삭제를 비활성화한다', async () => {
     renderManager();
 

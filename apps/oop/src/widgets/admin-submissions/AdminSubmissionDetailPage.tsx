@@ -73,6 +73,10 @@ function getFeedbackRelatedType(milestoneId: string | undefined) {
   return undefined;
 }
 
+function normalizeSearchId(value: string | number | undefined) {
+  return value === undefined ? undefined : String(value).replace(/^"|"$/g, '');
+}
+
 function ArtifactValue({
   artifact,
 }: {
@@ -119,14 +123,16 @@ export default function AdminSubmissionDetailPage() {
     from: '/admin/submissions/$submissionId',
   });
   const search = useSearch({ from: '/admin/submissions/$submissionId' }) as {
-    apiSectionId?: string;
+    apiSectionId?: string | number;
     milestoneId?: string;
-    sectionId?: string;
-    teamId?: string;
+    sectionId?: string | number;
+    teamId?: string | number;
   };
   const accessibleSectionIds =
     currentUser?.sections.map(section => String(section.id)) ?? [];
-  const normalizedSectionId = search.sectionId?.replace(/^"|"$/g, '');
+  const normalizedSectionId = normalizeSearchId(search.sectionId);
+  const normalizedApiSectionId = normalizeSearchId(search.apiSectionId);
+  const normalizedTeamId = normalizeSearchId(search.teamId);
   const isRequestedSectionAccessible = Boolean(
     currentUser &&
     normalizedSectionId &&
@@ -222,25 +228,24 @@ export default function AdminSubmissionDetailPage() {
   useEffect(() => {
     if (
       detail?.submissionId &&
-      search.sectionId &&
+      normalizedSectionId &&
       isRequestedSectionAccessible
     ) {
-      markAsRead(search.sectionId, detail.submissionId);
+      markAsRead(normalizedSectionId, detail.submissionId);
     }
   }, [
     detail?.submissionId,
     isRequestedSectionAccessible,
     markAsRead,
-    search.sectionId,
+    normalizedSectionId,
   ]);
-
   const milestoneLabel = getMilestoneLabel(search.milestoneId);
 
   if (
     isRequestedSectionAccessible &&
     isMidReport &&
-    search.sectionId &&
-    search.teamId
+    normalizedSectionId &&
+    normalizedTeamId
   ) {
     return (
       <div className={styles.page}>
@@ -256,8 +261,8 @@ export default function AdminSubmissionDetailPage() {
           </Link>
         </div>
         <AdminMidReportDetail
-          sectionId={search.apiSectionId ?? search.sectionId}
-          teamId={search.teamId}
+          sectionId={normalizedApiSectionId ?? normalizedSectionId}
+          teamId={normalizedTeamId}
         />
       </div>
     );

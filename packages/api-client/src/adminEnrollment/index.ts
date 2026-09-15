@@ -5,6 +5,7 @@ export {
 } from './submitAdminSectionEnrollment';
 export { updateAdminSectionEnrollment } from './updateAdminSectionEnrollment';
 export type {
+  AdminSectionEnrollmentCreatedResponse,
   AdminSectionEnrollmentDto,
   AdminSectionEnrollmentsResponse,
   UpdateAdminSectionEnrollmentInput,

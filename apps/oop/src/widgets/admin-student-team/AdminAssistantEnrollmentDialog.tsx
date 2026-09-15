@@ -32,6 +32,10 @@ const initialInput: AssistantInput = {
   studentNumber: '',
 };
 
+function isValidPassword(value: string) {
+  return value.length >= 8 && value.length <= 64;
+}
+
 export function AdminAssistantEnrollmentDialog({
   assistant,
   isOpen,
@@ -73,7 +77,9 @@ export function AdminAssistantEnrollmentDialog({
     input.name.trim().length > 0 &&
     input.email.trim().length > 0 &&
     input.phone.trim().length > 0 &&
-    (isEditing || input.password.trim().length > 0);
+    (isEditing
+      ? !input.password || isValidPassword(input.password)
+      : isValidPassword(input.password));
 
   function updateField(field: keyof AssistantInput, value: string) {
     setInput(current => ({ ...current, [field]: value }));
@@ -123,7 +129,7 @@ export function AdminAssistantEnrollmentDialog({
         if (!open && !mutation.isPending) onClose();
       }}
       purpose='form'
-      width={520}
+      width='min(600px, calc(100vw - 32px))'
     >
       <form
         className={styles.assistantDialogContent}
@@ -183,13 +189,20 @@ export function AdminAssistantEnrollmentDialog({
           value={input.password}
           width='100%'
         />
+        {input.password && !isValidPassword(input.password) ? (
+          <Text role='alert'>비밀번호는 8자 이상 64자 이하여야 합니다.</Text>
+        ) : (
+          <Text color='secondary' type='supporting'>
+            비밀번호는 조합 조건 없이 8자 이상 64자 이하로 입력해 주세요.
+          </Text>
+        )}
         {mutation.isError ? (
           <Text role='alert'>
             조교 정보를 저장하지 못했습니다. 입력값과 분반 등록 상태를 확인해
             주세요.
           </Text>
         ) : null}
-        <HStack gap={2} justify='end'>
+        <HStack className={styles.assistantDialogActions} gap={2} justify='end'>
           <Button
             isDisabled={mutation.isPending}
             label='취소'

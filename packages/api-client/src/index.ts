@@ -110,6 +110,7 @@ export {
   fetchAdminSectionEnrollments,
   submitAdminSectionEnrollment,
   updateAdminSectionEnrollment,
+  type AdminSectionEnrollmentCreatedResponse,
   type AdminSectionEnrollmentDto,
   type AdminSectionEnrollmentsResponse,
   type SubmitAdminSectionEnrollmentInput,

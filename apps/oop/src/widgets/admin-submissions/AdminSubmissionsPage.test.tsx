@@ -79,9 +79,7 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderPage(
-  initialEntry = '/admin/submissions?sectionId=oop-2026-2-01',
-) {
+function renderPage(initialEntry = '/admin/submissions?sectionId=1') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
@@ -96,6 +94,8 @@ function renderPage(
     ),
     getParentRoute: () => rootRoute,
     path: '/admin/submissions',
+    validateSearch: search =>
+      search as { milestoneId?: string; sectionId?: string },
   });
   const submissionDetailRoute = createRoute({
     component: () => (
@@ -107,6 +107,8 @@ function renderPage(
     ),
     getParentRoute: () => rootRoute,
     path: '/admin/submissions/$submissionId',
+    validateSearch: search =>
+      search as { milestoneId?: string; sectionId?: string; teamId?: string },
   });
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
@@ -264,11 +266,11 @@ describe('AdminSubmissionsPage', () => {
     expect(screen.getByText('프로젝트 주제: -')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '회의록 1건' })).toHaveAttribute(
       'href',
-      '/admin/meetings?sectionId=oop-2026-2-01&teamId=%221%22',
+      '/admin/meetings?sectionId=%221%22&teamId=%221%22',
     );
     expect(screen.getByRole('link', { name: '회의록 0건' })).toHaveAttribute(
       'href',
-      '/admin/meetings?sectionId=oop-2026-2-01&teamId=%222%22',
+      '/admin/meetings?sectionId=%221%22&teamId=%222%22',
     );
   });
 
@@ -307,8 +309,73 @@ describe('AdminSubmissionsPage', () => {
   it('제안서와 중간 점검 상세에서 현재 제출물에 연결된 피드백을 회의록보다 먼저 표시한다', async () => {
     const user = userEvent.setup();
     const midReportFeedbackRequest = vi.fn();
+    const proposalMessages = [
+      {
+        createdAt: '2026-09-01 09:30',
+        id: 710,
+        important: false,
+        message: '제안서의 문제 정의와 구현 범위를 보완해 주세요.',
+        read: false,
+        relatedId: 1001,
+        relatedType: 'PROPOSAL',
+        senderId: demoAdmin.studentNumber,
+        senderName: demoAdmin.name,
+        threadId: 10,
+      },
+      {
+        createdAt: '2026-09-02 09:30',
+        id: 712,
+        important: false,
+        message: '다른 제안서 제출물에 연결된 피드백입니다.',
+        read: false,
+        relatedId: 9999,
+        relatedType: 'PROPOSAL',
+        senderId: demoAdmin.studentNumber,
+        senderName: demoAdmin.name,
+        threadId: 10,
+      },
+    ];
 
     server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_THREAD.BY_TEAM('1')}`, () =>
+        HttpResponse.json({
+          createdAt: '2026-09-01 09:00',
+          teamId: 1,
+          threadId: 10,
+        }),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('1')}`, () =>
+        HttpResponse.json({
+          contents: proposalMessages,
+          pageable: {
+            isEnd: true,
+            page: 0,
+            size: 100,
+            totalElements: proposalMessages.length,
+            totalPages: 1,
+          },
+        }),
+      ),
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('1')}`,
+        async ({ request }) => {
+          const body = (await request.json()) as { message: string };
+          const message = {
+            createdAt: '2026-09-13 16:00',
+            id: 713,
+            important: false,
+            message: body.message,
+            read: false,
+            relatedId: 1001,
+            relatedType: 'PROPOSAL',
+            senderId: demoAdmin.studentNumber,
+            senderName: demoAdmin.name,
+            threadId: 10,
+          };
+          proposalMessages.push(message);
+          return HttpResponse.json(message, { status: 201 });
+        },
+      ),
       http.get(
         `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('1')}`,
         () => {
@@ -322,7 +389,7 @@ describe('AdminSubmissionsPage', () => {
         },
       ),
       http.post(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT('oop-2026-2-01', '1')}/feedback`,
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT('1', '1')}/feedback`,
         async ({ request }) => {
           midReportFeedbackRequest(await request.json());
           return HttpResponse.json({
@@ -338,9 +405,7 @@ describe('AdminSubmissionsPage', () => {
       ),
     );
 
-    renderPage(
-      '/admin/submissions/1001?milestoneId=proposal&sectionId=oop-2026-2-01',
-    );
+    renderPage('/admin/submissions/1001?milestoneId=proposal&sectionId=1');
 
     expect(
       await screen.findByRole('heading', { name: '제안서 피드백' }),
@@ -432,9 +497,7 @@ describe('AdminSubmissionsPage', () => {
       ),
     );
 
-    renderPage(
-      '/admin/submissions/1001?milestoneId=proposal&sectionId=oop-2026-2-01',
-    );
+    renderPage('/admin/submissions/1001?milestoneId=proposal&sectionId=1');
 
     expect(
       await screen.findByRole('link', { name: '첫 번째 회의록' }),
@@ -453,9 +516,7 @@ describe('AdminSubmissionsPage', () => {
   it('제출 버전과 아티팩트를 서버 계약 기준으로 표시하고 이전 버전을 선택한다', async () => {
     const user = userEvent.setup();
 
-    renderPage(
-      '/admin/submissions/1001?milestoneId=proposal&sectionId=oop-2026-2-01',
-    );
+    renderPage('/admin/submissions/1001?milestoneId=proposal&sectionId=1');
 
     expect(await screen.findByText('보완된 제안서')).toBeInTheDocument();
     expect(screen.getByText('피드백 반영')).toBeInTheDocument();
@@ -505,9 +566,7 @@ describe('AdminSubmissionsPage', () => {
       ),
     );
 
-    renderPage(
-      '/admin/submissions/1001?milestoneId=proposal&sectionId=oop-2026-2-01',
-    );
+    renderPage('/admin/submissions/1001?milestoneId=proposal&sectionId=1');
 
     expect(await screen.findByText('보완된 제안서')).toBeInTheDocument();
     expect(
@@ -517,7 +576,7 @@ describe('AdminSubmissionsPage', () => {
 
   it('중간 점검은 팀 식별자로 전용 조회 API의 블록과 제출 상태를 표시한다', async () => {
     renderPage(
-      '/admin/submissions/1003?milestoneId=midterm&sectionId=oop-2026-2-01&teamId=1',
+      '/admin/submissions/1003?milestoneId=midterm&sectionId=1&teamId=1',
     );
 
     expect(
@@ -533,7 +592,7 @@ describe('AdminSubmissionsPage', () => {
 
   it('중간 점검 2팀을 팀 식별자로 분리해 조회한다', async () => {
     renderPage(
-      '/admin/submissions/1004?milestoneId=midterm&sectionId=oop-2026-2-01&teamId=2',
+      '/admin/submissions/1004?milestoneId=midterm&sectionId=1&teamId=2',
     );
 
     expect(
@@ -644,8 +703,34 @@ describe('AdminSubmissionsPage', () => {
     const createRequest = vi.fn();
 
     server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA('1')}`,
+        () =>
+          HttpResponse.json({
+            contents: [
+              {
+                displayOrder: 0,
+                id: 1,
+                maxScore: 5,
+                title: '프로젝트 완성도',
+              },
+              {
+                displayOrder: 1,
+                id: 2,
+                maxScore: 5,
+                title: '기능 구성과 구현',
+              },
+              {
+                displayOrder: 2,
+                id: 3,
+                maxScore: 5,
+                title: '발표 전달력',
+              },
+            ],
+          }),
+      ),
       http.post(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA('oop-2026-2-01')}`,
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA('1')}`,
         async ({ request }) => {
           createRequest(await request.json());
           return HttpResponse.json({ id: 4 }, { status: 201 });
@@ -687,13 +772,13 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByRole('link', { name: 'OOP-01 - 1팀' }),
     ).toHaveAttribute(
       'href',
-      '/admin/evaluations/presentation/teams/1?milestoneId=103&sectionId=oop-2026-2-01',
+      '/admin/evaluations/presentation/teams/1?milestoneId=103&sectionId=%221%22',
     );
   });
 
   it('발표 자료 제출 fixture의 최신 버전을 조회한다', async () => {
     renderPage(
-      '/admin/submissions/1011?milestoneId=presentation-submit&sectionId=oop-2026-2-01',
+      '/admin/submissions/1011?milestoneId=presentation-submit&sectionId=1',
     );
 
     expect(
@@ -715,7 +800,7 @@ describe('AdminSubmissionsPage', () => {
     });
     expect(teamLink).toHaveAttribute(
       'href',
-      '/admin/evaluations/peer/teams/1?formId=501&sectionId=oop-2026-2-01',
+      '/admin/evaluations/peer/teams/1?formId=501&sectionId=%221%22',
     );
   });
 

@@ -33,7 +33,7 @@ import {
 } from '~/features/admin-section/queries';
 import {
   useAdminSectionEnrollmentsQuery,
-  useRemoveAdminAssistantMutation,
+  useWithdrawAdminSectionEnrollmentMutation,
 } from '~/features/admin-student-team/queries';
 
 import { AdminAssistantEnrollmentDialog } from '~/widgets/admin-student-team/AdminAssistantEnrollmentDialog';
@@ -99,7 +99,7 @@ function SectionAssistantManagement({
 }) {
   const [isEnrollmentDialogOpen, setIsEnrollmentDialogOpen] = useState(false);
   const enrollmentsQuery = useAdminSectionEnrollmentsQuery(String(section.id));
-  const removeAssistantMutation = useRemoveAdminAssistantMutation();
+  const withdrawAssistantMutation = useWithdrawAdminSectionEnrollmentMutation();
   const assistants = (enrollmentsQuery.data?.contents ?? []).filter(
     enrollment =>
       enrollment.role === 'ASSISTANT' && enrollment.status === 'ACTIVE',
@@ -124,7 +124,7 @@ function SectionAssistantManagement({
         {assistants.map(assistant => (
           <HStack
             className={styles.assistantRow}
-            key={assistant.id}
+            key={`${section.id}:${assistant.studentNumber}`}
             justify='between'
           >
             <Text type='supporting'>
@@ -138,8 +138,8 @@ function SectionAssistantManagement({
                 variant='ghost'
               />
               <Button
-                isDisabled={removeAssistantMutation.isPending}
-                label='계정 삭제'
+                isDisabled={withdrawAssistantMutation.isPending}
+                label='분반에서 제외'
                 onClick={() => setAssistantToDelete(assistant)}
                 size='sm'
                 variant='ghost'
@@ -164,12 +164,12 @@ function SectionAssistantManagement({
         sectionName={section.code}
       />
       <Dialog
-        aria-label='조교 계정 삭제 확인'
+        aria-label='조교 분반 제외 확인'
         isOpen={assistantToDelete !== null}
         onOpenChange={open => {
-          if (!open && !removeAssistantMutation.isPending) {
+          if (!open && !withdrawAssistantMutation.isPending) {
             setAssistantToDelete(null);
-            removeAssistantMutation.reset();
+            withdrawAssistantMutation.reset();
           }
         }}
         purpose='required'
@@ -177,30 +177,33 @@ function SectionAssistantManagement({
       >
         {assistantToDelete ? (
           <div className={styles.dialogBody}>
-            <Heading level={2}>조교 계정을 삭제할까요?</Heading>
+            <Heading level={2}>조교를 이 분반에서 제외할까요?</Heading>
             <Text>
-              {assistantToDelete.name} 조교의 계정이 삭제됩니다. 다른 분반
-              소속과 로그인 접근도 함께 사라질 수 있습니다.
+              {assistantToDelete.name} 조교는 이 분반의 조교 목록에서만
+              제외됩니다. 계정과 다른 분반 소속은 유지됩니다.
             </Text>
-            {removeAssistantMutation.isError ? (
+            {withdrawAssistantMutation.isError ? (
               <Text className={styles.error} role='alert'>
-                조교 계정을 삭제하지 못했습니다. 다시 시도해 주세요.
+                조교를 분반에서 제외하지 못했습니다. 다시 시도해 주세요.
               </Text>
             ) : null}
             <HStack className={styles.dialogActions} gap={2} justify='end'>
               <Button
-                isDisabled={removeAssistantMutation.isPending}
+                isDisabled={withdrawAssistantMutation.isPending}
                 label='취소'
                 onClick={() => setAssistantToDelete(null)}
                 variant='secondary'
               />
               <Button
-                isDisabled={removeAssistantMutation.isPending}
-                isLoading={removeAssistantMutation.isPending}
-                label='계정 삭제'
+                isDisabled={withdrawAssistantMutation.isPending}
+                isLoading={withdrawAssistantMutation.isPending}
+                label='분반에서 제외'
                 onClick={() =>
-                  removeAssistantMutation.mutate(
-                    assistantToDelete.studentNumber,
+                  withdrawAssistantMutation.mutate(
+                    {
+                      sectionId: String(section.id),
+                      studentNumber: assistantToDelete.studentNumber,
+                    },
                     { onSuccess: () => setAssistantToDelete(null) },
                   )
                 }
@@ -422,11 +425,13 @@ function CourseFormDialog({
 function SectionSettingsDialog({
   isOpen,
   onClose,
+  onDeleted,
   onSaved,
   section,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  onDeleted: () => Promise<boolean>;
   onSaved: () => Promise<boolean>;
   section: AdminOopSectionDto | null;
 }) {
@@ -544,7 +549,7 @@ function SectionSettingsDialog({
     removeSectionMutation.mutate(section.id, {
       onError: () => setSaveError('delete'),
       onSuccess: async () => {
-        const refreshed = await onSaved();
+        const refreshed = await onDeleted();
         if (!refreshed) {
           setSaveError('deleteRefresh');
           return;
@@ -698,7 +703,7 @@ function SectionSettingsDialog({
             </Text>
             <Button
               label='분반 목록 새로고침'
-              onClick={() => void onSaved()}
+              onClick={() => void onDeleted()}
               size='sm'
               type='button'
               variant='secondary'
@@ -812,6 +817,12 @@ function CourseSectionDialog({
     if (!submitMutation.isPending) onClose();
   }
 
+  async function refreshSectionsAndSession() {
+    const sectionResult = await sectionsQuery.refetch();
+    const sessionRefreshed = await onSectionCreated();
+    return !sectionResult.isError && sessionRefreshed;
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const capacity = Number(input.capacity);
@@ -838,7 +849,7 @@ function CourseSectionDialog({
       onSuccess: async () => {
         setIsCreating(false);
         setInput({ capacity: '40', classTime: '', code: '' });
-        const refreshed = await onSectionCreated();
+        const refreshed = await refreshSectionsAndSession();
         if (!refreshed) {
           setHasRefreshError(true);
           return;
@@ -857,21 +868,22 @@ function CourseSectionDialog({
           if (!open) close();
         }}
         purpose='form'
-        width={560}
+        width='min(680px, calc(100vw - 32px))'
       >
         <div className={styles.dialogBody}>
           <Heading level={2}>{course?.name ?? '강좌'} 분반 관리</Heading>
-          {!professorId ? (
+          {!isCreating && !professorId ? (
             <Text role='alert'>로그인한 관리자 정보를 확인할 수 없습니다.</Text>
-          ) : sectionsQuery.isPending ? (
+          ) : !isCreating && sectionsQuery.isPending ? (
             <Text aria-live='polite' role='status'>
               연결된 분반을 불러오는 중입니다.
             </Text>
-          ) : sectionsQuery.isError ? (
+          ) : !isCreating && sectionsQuery.isError ? (
             <Text role='alert'>연결된 분반을 불러오지 못했습니다.</Text>
-          ) : (sectionsQuery.data?.contents.length ?? 0) === 0 ? (
+          ) : !isCreating &&
+            (sectionsQuery.data?.contents.length ?? 0) === 0 ? (
             <Text color='secondary'>등록된 분반이 없습니다.</Text>
-          ) : (
+          ) : !isCreating ? (
             <ul aria-label='연결된 분반 목록' className={styles.sectionList}>
               {sectionsQuery.data?.contents.map(section => (
                 <li className={styles.sectionItem} key={section.id}>
@@ -891,14 +903,14 @@ function CourseSectionDialog({
                 </li>
               ))}
             </ul>
-          )}
+          ) : null}
           {hasRefreshError ? (
             <HStack gap={2} justify='end'>
               <Text role='alert'>분반 목록을 새로고침하지 못했습니다.</Text>
               <Button
                 label='분반 목록 새로고침'
                 onClick={() =>
-                  void onSectionCreated().then(success =>
+                  void refreshSectionsAndSession().then(success =>
                     setHasRefreshError(!success),
                   )
                 }
@@ -984,7 +996,8 @@ function CourseSectionDialog({
       <SectionSettingsDialog
         isOpen={sectionToEdit !== null}
         onClose={() => setSectionToEdit(null)}
-        onSaved={onSectionCreated}
+        onDeleted={onSectionCreated}
+        onSaved={refreshSectionsAndSession}
         section={sectionToEdit}
       />
     </>

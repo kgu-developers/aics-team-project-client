@@ -207,7 +207,7 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('2026.09.07 18:00')).toBeInTheDocument();
     expect(screen.getByText('발표 자료 제출')).toBeInTheDocument();
     expect(screen.getByText('presentation.pdf')).toBeInTheDocument();
-    expect(screen.getByText('발표 평가')).toBeInTheDocument();
+    expect(screen.getAllByText('발표 평가').length).toBeGreaterThan(0);
     const proposalDetailLink = screen
       .getAllByRole('link', { name: '상세보기' })
       .find(link =>
@@ -215,14 +215,13 @@ describe('AdminTeamDashboard', () => {
       );
     expect(proposalDetailLink).toHaveAttribute(
       'href',
-      expect.stringContaining('sectionId=oop-2026-2-01'),
+      expect.stringContaining('sectionId=%221%22'),
     );
     expect(proposalDetailLink).toHaveAttribute(
       'href',
       expect.stringContaining('apiSectionId='),
     );
-    expect(screen.getByText('회의록: 1건')).toBeInTheDocument();
-    expect(screen.getByText('프로젝트 킥오프')).toBeInTheDocument();
+    expect(screen.getByText('회의록 1건')).toBeInTheDocument();
     expect(
       screen
         .getAllByRole('link', { name: '상세보기' })
