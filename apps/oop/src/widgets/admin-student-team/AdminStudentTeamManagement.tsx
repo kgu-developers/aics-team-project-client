@@ -75,6 +75,13 @@ export default function AdminStudentTeamManagement() {
     (typeof teams)[number] | null
   >(null);
   const [nextLeaderStudentNumber, setNextLeaderStudentNumber] = useState('');
+
+  function closeTeamLeaderDialog() {
+    if (updateTeamLeaderMutation.isPending) return;
+    setTeamToUpdateLeader(null);
+    setNextLeaderStudentNumber('');
+    updateTeamLeaderMutation.reset();
+  }
   const isPending =
     enrollmentsQuery.isPending ||
     teamsQuery.isPending ||
@@ -305,11 +312,7 @@ export default function AdminStudentTeamManagement() {
         aria-label='팀장 변경'
         isOpen={teamToUpdateLeader !== null}
         onOpenChange={open => {
-          if (!open && !updateTeamLeaderMutation.isPending) {
-            setTeamToUpdateLeader(null);
-            setNextLeaderStudentNumber('');
-            updateTeamLeaderMutation.reset();
-          }
+          if (!open) closeTeamLeaderDialog();
         }}
         purpose='form'
         width={440}
@@ -345,7 +348,7 @@ export default function AdminStudentTeamManagement() {
               <Button
                 isDisabled={updateTeamLeaderMutation.isPending}
                 label='취소'
-                onClick={() => setTeamToUpdateLeader(null)}
+                onClick={closeTeamLeaderDialog}
                 variant='secondary'
               />
               <Button
@@ -365,8 +368,7 @@ export default function AdminStudentTeamManagement() {
                     },
                     {
                       onSuccess: () => {
-                        setTeamToUpdateLeader(null);
-                        setNextLeaderStudentNumber('');
+                        closeTeamLeaderDialog();
                       },
                     },
                   );
@@ -388,7 +390,7 @@ export default function AdminStudentTeamManagement() {
         <div className={styles.withdrawDialogContent}>
           <Heading level={2}>팀 배정을 확정할까요?</Heading>
           <Text>
-            확정된 팀의 팀원은 이후 이동하거나 역할을 변경할 수 없습니다.
+            확정된 팀의 팀원은 이후 이동하거나 팀 구성을 변경할 수 없습니다.
           </Text>
           {finalizeMutation.isError ? (
             <Text role='alert'>

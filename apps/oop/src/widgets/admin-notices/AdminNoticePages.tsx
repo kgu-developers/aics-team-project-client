@@ -373,6 +373,7 @@ export function AdminNoticeEditPage() {
                   navigate({
                     to: '/admin/notices/$noticeId',
                     params: { noticeId: String(updated.id) },
+                    search: { sectionId: String(notice.sectionId) },
                   }),
               },
             )

@@ -160,6 +160,33 @@ function getAdminEnrollmentResponse(sectionId: string) {
   };
 }
 
+function getAssistantEnrollmentResponse(
+  sectionId: string,
+  studentNumber: string,
+  status: 'ACTIVE' | 'WITHDRAWN',
+) {
+  const assistantEntries = [...assistantEnrollmentsBySection.entries()].filter(
+    ([key]) => key.startsWith(`${sectionId}:`),
+  );
+  const assistantIndex = assistantEntries.findIndex(
+    ([, enrollment]) => enrollment.studentNumber === studentNumber,
+  );
+  const assistant = assistantEntries[assistantIndex]?.[1];
+  if (!assistant || assistantIndex < 0) return null;
+
+  return {
+    createdAt: '2026-09-14T20:30:00.000Z',
+    email: assistant.email,
+    id: 999 + assistantIndex,
+    major: null,
+    name: assistant.name,
+    phone: assistant.phone,
+    role: 'ASSISTANT' as const,
+    status,
+    studentNumber: assistant.studentNumber,
+  };
+}
+
 function getAdminSectionTeamsResponse(sectionId: string) {
   const fixtureSectionId = resolveFixtureSectionId(sectionId);
 
@@ -518,6 +545,16 @@ export const adminStudentTeamHandlers = [
       }
       if (input.status === 'WITHDRAWN' && assistant) {
         withdrawnAssistantEnrollmentKeys.add(assistantEnrollmentKey);
+      }
+
+      if (assistant) {
+        return HttpResponse.json(
+          getAssistantEnrollmentResponse(
+            sectionId,
+            studentNumber,
+            input.status === 'WITHDRAWN' ? 'WITHDRAWN' : 'ACTIVE',
+          ),
+        );
       }
 
       return HttpResponse.json(

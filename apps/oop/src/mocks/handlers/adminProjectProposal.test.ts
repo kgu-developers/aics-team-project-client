@@ -24,6 +24,13 @@ it('담당 조교는 분반 팀의 제안서를 조회할 수 있다', async () 
   expect(response.status).toBe(200);
   await expect(response.json()).resolves.toMatchObject({
     teamId: 2,
-    teamOperation: { id: 2, name: '2팀' },
+    teamOperation: {
+      id: 2,
+      members: [
+        { name: '박지훈', studentNumber: '20239876' },
+        { name: '최유진', studentNumber: '20234567' },
+      ],
+      name: '2팀',
+    },
   });
 });

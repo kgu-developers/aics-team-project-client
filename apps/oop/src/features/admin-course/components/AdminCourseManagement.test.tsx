@@ -189,7 +189,7 @@ describe('AdminCourseManagement', () => {
     );
     await waitFor(() => {
       expect(
-        within(sectionDialog).queryByText(/테스트 조교/),
+        within(sectionDialog).queryByText(/수정된 조교/),
       ).not.toBeInTheDocument();
     });
   });

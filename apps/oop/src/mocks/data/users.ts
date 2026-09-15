@@ -125,6 +125,10 @@ export function resetDemoAdminSections() {
   demoAdminSections = demoAdmin.sections.map(section => ({ ...section }));
 }
 
+export function replaceDemoAdminSections(sections: CurrentUser['sections']) {
+  demoAdminSections = sections.map(section => ({ ...section }));
+}
+
 export const demoAccessToken = 'msw-oop-demo-student-a-access-token';
 export const demoPartnerAccessToken = 'msw-oop-demo-student-b-access-token';
 export const demoCompletedAccessToken = 'msw-oop-demo-student-c-access-token';

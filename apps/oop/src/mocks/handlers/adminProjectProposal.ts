@@ -2,11 +2,17 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
-import { adminTeamsFixture } from '../data/adminStudentTeams';
+import {
+  adminStudentsFixture,
+  adminTeamsFixture,
+} from '../data/adminStudentTeams';
 import { createProjectProposalFixture } from '../data/projectProposal';
 
 function projectForAdminTeam(teamId: number) {
   const project = createProjectProposalFixture();
+  const team = adminTeamsFixture.find(
+    candidate => Number(candidate.id.split('-').at(-1)) === teamId,
+  );
 
   return {
     ...project,
@@ -15,10 +21,24 @@ function projectForAdminTeam(teamId: number) {
     teamOperation: {
       ...project.teamOperation,
       id: teamId,
-      name:
-        adminTeamsFixture.find(
-          team => Number(team.id.split('-').at(-1)) === teamId,
-        )?.name ?? `${teamId}팀`,
+      members:
+        team?.memberIds.flatMap(memberId => {
+          const member = adminStudentsFixture.find(
+            student => student.id === memberId,
+          );
+          if (!member) return [];
+
+          return [
+            {
+              id: Number(member.id.split('-').at(-1)) || 0,
+              isLeader: member.isLeader,
+              name: member.name,
+              projectRole: member.isLeader ? '팀장' : '팀원',
+              studentNumber: member.studentNumber,
+            },
+          ];
+        }) ?? [],
+      name: team?.name ?? `${teamId}팀`,
     },
   };
 }

@@ -5,16 +5,10 @@ import type {
 
 import { getAdminCourse } from './adminCourses';
 import {
-  addMockMySection,
-  resetMockMySections,
+  replaceMockMySections,
   updateMockSectionContactVisibility,
 } from './sections';
-import {
-  addDemoAdminSection,
-  removeDemoAdminSection,
-  resetDemoAdminSections,
-  updateDemoAdminSectionContactVisibility,
-} from './users';
+import { replaceDemoAdminSections } from './users';
 
 const professor = {
   email: 'admin@kgu.ac.kr',
@@ -101,11 +95,39 @@ const restoredSectionState = restoreSectionState();
 let sections = restoredSectionState.sections;
 let nextSectionId = restoredSectionState.nextSectionId;
 
-// Keep `/users/me` aligned with a section deleted in a previous browser load.
-// The other demo profile projections are rebuilt for every test via reset.
-initialSections
-  .filter(initial => !sections.some(section => section.id === initial.id))
-  .forEach(initial => removeDemoAdminSection(initial.id));
+function syncAdminSectionProjections() {
+  const currentUserSections = sections.flatMap(section => {
+    const course = getAdminCourse(section.courseId);
+    if (!course) return [];
+
+    return [
+      {
+        capacity: section.capacity,
+        classTime: section.classTime,
+        code: section.code,
+        contactVisibleFrom: section.contactVisibleFrom ?? null,
+        contactVisibleUntil: section.contactVisibleUntil ?? null,
+        courseId: course.id,
+        courseName: course.name,
+        id: String(section.id),
+        name: section.name,
+        role: 'ASSISTANT' as const,
+        semester: course.semester,
+        status: course.status,
+        year: course.year,
+      },
+    ];
+  });
+  const mySections = currentUserSections.map(section => ({
+    ...section,
+    id: Number(section.id),
+  }));
+
+  replaceDemoAdminSections(currentUserSections);
+  replaceMockMySections(professor.studentNumber, mySections);
+}
+
+syncAdminSectionProjections();
 
 export function getAdminSections({
   semester,
@@ -183,36 +205,8 @@ export function createAdminSection(input: AdminOopSectionInput) {
     },
   };
   nextSectionId += 1;
-  addDemoAdminSection({
-    capacity: section.capacity,
-    classTime: section.classTime,
-    code: section.code,
-    contactVisibleFrom: section.contactVisibleFrom ?? null,
-    contactVisibleUntil: section.contactVisibleUntil ?? null,
-    courseId: course.id,
-    courseName: course.name,
-    id: String(section.id),
-    name: section.name,
-    role: 'ASSISTANT',
-    semester: course.semester,
-    status: course.status,
-    year: course.year,
-  });
-  addMockMySection(input.professorId, {
-    capacity: section.capacity,
-    classTime: section.classTime,
-    code: section.code,
-    contactVisibleFrom: section.contactVisibleFrom ?? null,
-    contactVisibleUntil: section.contactVisibleUntil ?? null,
-    courseId: course.id,
-    courseName: course.name,
-    id: section.id,
-    name: section.name,
-    semester: course.semester,
-    status: course.status,
-    year: course.year,
-  });
   sections = [...sections, section];
+  syncAdminSectionProjections();
   persistSectionState();
   return {
     capacity: section.capacity,
@@ -240,13 +234,12 @@ export function updateAdminSectionFixture(
   sections = sections.map(item => (item.id === sectionId ? section : item));
   persistSectionState();
   if ('contactVisibleFrom' in input || 'contactVisibleUntil' in input) {
-    const contactVisibility = {
+    updateMockSectionContactVisibility(sectionId, {
       contactVisibleFrom: section.contactVisibleFrom ?? null,
       contactVisibleUntil: section.contactVisibleUntil ?? null,
-    };
-    updateMockSectionContactVisibility(sectionId, contactVisibility);
-    updateDemoAdminSectionContactVisibility(sectionId, contactVisibility);
+    });
   }
+  syncAdminSectionProjections();
   return (
     getAdminSectionsByCourseId(section.courseId).find(
       item => item.id === sectionId,
@@ -260,15 +253,14 @@ export function removeAdminSectionFixture(sectionId: number) {
 
   sections = sections.filter(item => item.id !== sectionId);
   persistSectionState();
-  removeDemoAdminSection(sectionId);
+  syncAdminSectionProjections();
   return true;
 }
 
 export function resetAdminSectionsMockData() {
-  resetDemoAdminSections();
-  resetMockMySections();
   const initialState = initialSectionState();
   sections = initialState.sections;
   nextSectionId = initialState.nextSectionId;
   if (typeof localStorage !== 'undefined') localStorage.removeItem(storageKey);
+  syncAdminSectionProjections();
 }
