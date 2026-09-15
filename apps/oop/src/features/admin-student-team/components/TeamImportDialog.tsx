@@ -35,7 +35,9 @@ export default function TeamImportDialog({
   const previewMutation = usePreviewAdminTeamImportMutation();
   const applyMutation = useApplyAdminTeamImportMutation();
   const preview = previewMutation.data;
-  const cannotApply = !preview || preview.summary.invalid > 0;
+  const result = applyMutation.data;
+  const controlsLocked = applyMutation.isPending || applyMutation.isSuccess;
+  const cannotApply = !preview || preview.summary.invalid > 0 || controlsLocked;
 
   function reset() {
     setFile(null);
@@ -46,11 +48,6 @@ export default function TeamImportDialog({
   function close() {
     if (applyMutation.isPending) return;
 
-    reset();
-    onClose();
-  }
-
-  function closeAfterApply() {
     reset();
     onClose();
   }
@@ -72,8 +69,10 @@ export default function TeamImportDialog({
             파일을 미리보기로 검증한 뒤, 오류가 없을 때만 팀 배정을 반영합니다.
           </Text>
           <Selector
+            isDisabled={controlsLocked}
             label='분반'
             onChange={nextSectionId => {
+              if (controlsLocked) return;
               onSectionChange(nextSectionId);
               reset();
             }}
@@ -88,10 +87,12 @@ export default function TeamImportDialog({
             width='100%'
           />
           <FileInput
+            isDisabled={controlsLocked}
             accept='.xls,.xlsx'
             label='팀 명단 엑셀 파일'
             mode='input'
             onChange={selected => {
+              if (controlsLocked) return;
               const nextFile = Array.isArray(selected) ? selected[0] : selected;
 
               setFile(nextFile ?? null);
@@ -149,6 +150,18 @@ export default function TeamImportDialog({
               ) : null}
             </>
           ) : null}
+          {applyMutation.isSuccess && result ? (
+            <div
+              role='status'
+              aria-label='명단 반영 결과'
+              className={styles.summary}
+            >
+              <Text>명단 반영이 완료되었습니다.</Text>
+              <Text>생성 팀 {result.createdTeams}개</Text>
+              <Text>반영 팀원 {result.appliedMembers}명</Text>
+              <Text>건너뜀 {result.skipped}건</Text>
+            </div>
+          ) : null}
           {applyMutation.isError ? (
             <Text role='alert'>
               팀 배정을 반영하지 못했습니다. 다시 시도해 주세요.
@@ -159,11 +172,11 @@ export default function TeamImportDialog({
           <HStack gap={2} justify='end'>
             <Button
               isDisabled={applyMutation.isPending}
-              label='취소'
+              label={applyMutation.isSuccess ? '닫기' : '취소'}
               onClick={close}
               variant='secondary'
             />
-            {!preview ? (
+            {applyMutation.isSuccess ? null : !preview ? (
               <Button
                 isDisabled={!file || previewMutation.isPending}
                 label={previewMutation.isPending ? '검증 중' : '미리보기'}
@@ -177,9 +190,8 @@ export default function TeamImportDialog({
                 isDisabled={cannotApply || applyMutation.isPending}
                 label={applyMutation.isPending ? '반영 중' : '반영하기'}
                 onClick={() => {
-                  applyMutation.mutate(preview.importId, {
-                    onSuccess: closeAfterApply,
-                  });
+                  if (cannotApply) return;
+                  applyMutation.mutate(preview.importId);
                 }}
               />
             )}

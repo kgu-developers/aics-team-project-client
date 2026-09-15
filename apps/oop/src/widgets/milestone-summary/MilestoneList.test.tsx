@@ -631,3 +631,7 @@ describe('MilestoneDetails', () => {
     expect(screen.getByText('변경 일시')).toBeVisible();
   });
 });
+
+vi.mock('~/features/section/useStudentContext', () => ({
+  useStudentContext: () => ({ status: 'loading' }),
+}));

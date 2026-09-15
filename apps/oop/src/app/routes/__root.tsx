@@ -2,6 +2,7 @@ import { AstryxThemeProvider, ToastViewport } from '@aics/design-system';
 import { Outlet, createRootRoute } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 
+import RouteErrorPage from '~/app/components/RouteErrorPage';
 import RouteNotFoundPage from '~/app/components/RouteNotFoundPage';
 import { ROUTES } from '~/app/constants/routes';
 
@@ -13,6 +14,7 @@ import '../global.css';
 
 export const Route = createRootRoute({
   component: RootRoute,
+  errorComponent: RouteErrorPage,
   notFoundComponent: RootNotFoundRoute,
 });
 

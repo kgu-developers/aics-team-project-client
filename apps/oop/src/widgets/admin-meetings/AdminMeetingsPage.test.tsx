@@ -1,4 +1,4 @@
-import { setApiAccessToken } from '@aics/api-client';
+import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-router';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
@@ -115,4 +116,38 @@ describe('AdminMeetingsPage', () => {
       screen.queryByRole('link', { name: '발표 자료 구성 논의' }),
     ).not.toBeInTheDocument();
   });
+});
+
+it('formats offset-bearing meeting times in Seoul across midnight', async () => {
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS_LIST}`, () =>
+      HttpResponse.json({
+        contents: [
+          {
+            id: 11,
+            title: '자정 넘긴 회의',
+            authorId: '20230001',
+            content: '',
+            location: '',
+            meetingAt: '2026-09-01T23:30:00Z',
+            participantCount: 2,
+            phase: 'KICKOFF',
+            sectionId: 1,
+            sectionName: 'OOP-01',
+            teamId: 1,
+            teamName: '1팀',
+          },
+        ],
+        pageable: {
+          page: 0,
+          size: 20,
+          totalElements: 1,
+          totalPages: 1,
+          isEnd: true,
+        },
+      }),
+    ),
+  );
+  renderPage();
+  expect(await screen.findByText('2026.09.02 08:30')).toBeVisible();
 });

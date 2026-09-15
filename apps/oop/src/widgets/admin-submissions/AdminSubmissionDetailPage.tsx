@@ -12,6 +12,8 @@ import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+
 import { AdminLinkedMeetingsTable } from '~/features/admin-meeting/components';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import type { AdminSubmissionArtifactView } from '~/features/admin-milestone-review/model';
@@ -377,7 +379,7 @@ export default function AdminSubmissionDetailPage() {
                         type='button'
                       >
                         {version.version}차 · {version.submittedBy} ·{' '}
-                        {version.submittedAt}
+                        {formatSeoulDateTime(version.submittedAt)}
                         {version.isLate ? ' · 지각 제출' : ''}
                       </button>
                     ))}
@@ -421,7 +423,7 @@ export default function AdminSubmissionDetailPage() {
                     <div className={styles.field}>
                       <Text className={styles.fieldLabel}>제출 일시</Text>
                       <Text className={styles.fieldValue}>
-                        {versionQuery.data.submittedAt}
+                        {formatSeoulDateTime(versionQuery.data.submittedAt)}
                       </Text>
                     </div>
                   </div>
@@ -477,7 +479,7 @@ export default function AdminSubmissionDetailPage() {
                       >
                         <Text className={styles.fieldLabel}>
                           {message.senderName ?? message.senderId} ·{' '}
-                          {message.createdAt}
+                          {formatSeoulDateTime(message.createdAt)}
                         </Text>
                         <Text className={styles.fieldValue}>
                           {message.message}

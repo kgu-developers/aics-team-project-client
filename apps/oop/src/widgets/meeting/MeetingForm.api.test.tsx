@@ -18,7 +18,7 @@ import {
 import { useAuthStore } from '~/features/auth/authStore';
 import { mapStudentMeeting } from '~/features/meeting/model/studentMeeting';
 
-import { MeetingEditPage, MeetingForm } from './MeetingPages';
+import { MeetingEditPage, MeetingForm, MeetingNewPage } from './MeetingPages';
 
 import { meetingApiRecord, meetingApiTeam } from '~/mocks/data/meetingApi';
 import { demoAccessToken, demoStudent } from '~/mocks/data/users';
@@ -31,11 +31,40 @@ vi.mock('@tanstack/react-router', async importOriginal => ({
   ...(await importOriginal<typeof import('@tanstack/react-router')>()),
   useNavigate: () => navigate,
 }));
-const server = setupServer();
+function currentSections() {
+  return (useAuthStore.getState().currentUser?.sections ?? []).map(section => ({
+    classTime: '',
+    capacity: 40,
+    contactVisibleFrom: null,
+    contactVisibleUntil: null,
+    courseId: 1,
+    courseName: 'OOP',
+    year: 2026,
+    semester: 'FALL',
+    status: 'ACTIVE',
+    ...section,
+    id: /^\d+$/.test(section.id) ? Number(section.id) : 1,
+  }));
+}
+const server = setupServer(
+  http.get(`${API_BASE_URL}/api/v1/oop/users/me`, () => {
+    const user = useAuthStore.getState().currentUser!;
+    return HttpResponse.json({
+      ...user,
+      globalRole: 'USER',
+      sections: currentSections(),
+      teamId: user.teamId ?? null,
+    });
+  }),
+  http.get(`${API_BASE_URL}/api/v1/oop/sections`, () =>
+    HttpResponse.json({ contents: currentSections() }),
+  ),
+);
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   vi.stubEnv('VITE_ENABLE_MSW', 'false');
+  useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setAccessToken(demoAccessToken);
   useAuthStore
     .getState()
@@ -261,4 +290,46 @@ it('원본 단계가 없으면 구체적인 검증 오류를 표시하고 초안
     screen.getByRole('link', { name: '저장된 회의록 확인' }),
   ).toBeVisible();
   expect(writes).not.toHaveBeenCalled();
+});
+
+it('resets a new-meeting draft on an actual raw identity/team change before it can be submitted', async () => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  clients.push(client);
+  let writes = 0;
+  server.use(
+    http.get(`${API_BASE_URL}/api/v1/oop/teams/8/kickoff`, () =>
+      HttpResponse.json({ ...meetingApiTeam, id: 8 }),
+    ),
+    http.post(/meeting-records/, () => {
+      writes++;
+      return HttpResponse.json({}, { status: 500 });
+    }),
+  );
+  renderWithRouter(
+    <QueryClientProvider client={client}>
+      <AstryxThemeProvider>
+        <MeetingNewPage />
+        <ToastViewport />
+      </AstryxThemeProvider>
+    </QueryClientProvider>,
+  );
+  const title = await screen.findByRole('textbox', { name: /회의 제목/ });
+  fireEvent.change(title, { target: { value: '이전 팀의 비공개 초안' } });
+  act(() =>
+    useAuthStore
+      .getState()
+      .setCurrentUser({ ...demoStudent, teamId: '8', currentTeam: null }),
+  );
+  await act(async () => {
+    await client.refetchQueries({ queryKey: ['student-home', 'user'] });
+  });
+  await waitFor(() =>
+    expect(screen.getByRole('textbox', { name: /회의 제목/ })).toHaveValue(''),
+  );
+  expect(
+    screen.queryByDisplayValue('이전 팀의 비공개 초안'),
+  ).not.toBeInTheDocument();
+  expect(writes).toBe(0);
 });

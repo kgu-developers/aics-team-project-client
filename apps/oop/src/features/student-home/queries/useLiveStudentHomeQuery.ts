@@ -2,11 +2,11 @@ import {
   useMeetingRecordSummariesQuery,
   useTeamMeetingActionEntriesQuery,
 } from '~/features/meeting/queries/api';
+import { studentContextMessages } from '~/features/section/StudentContextState';
+import { useStudentContext } from '~/features/section/useStudentContext';
 import { useSectionAnnouncementsQuery } from '~/features/student-notices/queries';
 import { useTeamKickoffQuery } from '~/features/team-assignment/queries';
-import { isValidPositiveTeamId } from '~/features/team-assignment/queries/useTeamMemberContactsQuery';
 
-import { useStudentHomeUserQuery } from './useStudentHomeUserQuery';
 import { useTeamProjectQuery } from './useTeamProjectQuery';
 import { homeQueryState } from '../model/homeQueryState';
 import {
@@ -16,18 +16,9 @@ import {
 } from '../model/studentHomeSummary';
 
 export function useLiveStudentHomeQuery() {
-  const identity = useStudentHomeUserQuery();
-  const user = identity.isSuccess ? identity.data : undefined;
-  const sectionId =
-    user?.sections.length === 1 &&
-    isValidPositiveTeamId(user.sections[0]?.id) &&
-    Number.isSafeInteger(Number(user.sections[0]?.id))
-      ? user.sections[0]!.id
-      : undefined;
-  const teamId =
-    sectionId && isValidPositiveTeamId(user?.teamId ?? undefined)
-      ? (user?.teamId ?? undefined)
-      : undefined;
+  const context = useStudentContext();
+  const { identity, user, teamId } = context;
+  const sectionId = context.section ? String(context.section.id) : undefined;
   const notices = useSectionAnnouncementsQuery(
     sectionId ? Number(sectionId) : undefined,
   );
@@ -36,22 +27,34 @@ export function useLiveStudentHomeQuery() {
   const kickoff = useTeamKickoffQuery(teamId);
   const project = useTeamProjectQuery(teamId);
   const missingSection = !sectionId
-    ? (user?.sections.length ?? 0) > 1
-      ? '여러 분반이 등록되어 있어요. 현재 분반을 확인해야 홈을 조회할 수 있어요.'
-      : '수강 분반 배정이 완료되면 학생 홈을 이용할 수 있어요.'
+    ? studentContextMessages[context.status]
     : undefined;
-  const missingTeam =
-    missingSection ??
-    (!teamId
-      ? '팀 배정이 완료되면 이곳에서 팀 자료를 확인할 수 있어요.'
-      : undefined);
-
-  const identityState = homeQueryState(identity);
+  const missingTeam = !teamId
+    ? studentContextMessages[context.status]
+    : undefined;
+  const contextState = {
+    status:
+      context.status === 'error'
+        ? ('error' as const)
+        : context.status === 'loading'
+          ? ('pending' as const)
+          : ('ready' as const),
+    description: studentContextMessages[context.status],
+    isFetching: context.isFetching,
+    onRetry: () => void context.retry(),
+  };
   const stateFor = (state: ReturnType<typeof homeQueryState>) =>
-    identityState.status === 'ready' ? state : identityState;
-
+    contextState.status === 'ready' ? state : contextState;
+  const kickoffMatches =
+    kickoff.isSuccess && String(kickoff.data.id) === teamId;
+  const projectMismatch =
+    project.isSuccess &&
+    project.data !== null &&
+    project.data !== undefined &&
+    String(project.data.teamId) !== teamId;
   return {
     identity,
+    context,
     sectionId,
     teamId,
     studentNumber: user?.studentNumber,
@@ -65,7 +68,7 @@ export function useLiveStudentHomeQuery() {
       items: homeMeetingRecords(
         meetings.data ?? [],
         actions.isError ? undefined : actions.data,
-        kickoff.data,
+        kickoffMatches ? kickoff.data : undefined,
       ),
       state: stateFor(homeQueryState(meetings, missingTeam)),
       metadataState: stateFor(homeQueryState(kickoff, missingTeam)),
@@ -83,14 +86,23 @@ export function useLiveStudentHomeQuery() {
       ),
     },
     project: {
-      data: project.data,
-      state: stateFor(homeQueryState(project, missingTeam)),
+      data: project.isSuccess && !projectMismatch ? project.data : undefined,
+      state: projectMismatch
+        ? {
+            ...homeQueryState(project),
+            status: 'error' as const,
+            description: '현재 팀의 프로젝트를 확인할 수 없어요.',
+          }
+        : stateFor(homeQueryState(project, missingTeam)),
     },
-    teamName: kickoff.data?.name,
+    teamName: kickoffMatches ? kickoff.data.name : undefined,
     // undefined while the kickoff query is pending or failed: an empty array
     // would classify every message sender incorrectly.
-    teamMemberIds: kickoff.data?.members.map(member => member.studentNumber),
+    teamMemberIds: kickoffMatches
+      ? kickoff.data.members.map(member => member.studentNumber)
+      : undefined,
     isTeamLeader: Boolean(
+      kickoffMatches &&
       user?.studentNumber &&
       kickoff.data?.members.some(
         member =>

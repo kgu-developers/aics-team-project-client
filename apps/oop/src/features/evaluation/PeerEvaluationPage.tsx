@@ -22,11 +22,14 @@ import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { SurveyFlow, SurveyQuestion } from '~/shared/ui/SurveyFlow';
 import { SurveyShell } from '~/shared/ui/SurveyShell';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import StudentContextState from '~/features/section/StudentContextState';
+import { useStudentContext } from '~/features/section/useStudentContext';
 
 import { getEvaluationErrorMessage } from './getEvaluationErrorMessage';
 import * as styles from './PeerEvaluationPage.css';
@@ -580,21 +583,30 @@ function PeerEvaluationForm({
 }
 
 export default function PeerEvaluationPage() {
+  const isDemo = isMockDevelopmentMode(
+    import.meta.env.DEV,
+    import.meta.env.VITE_ENABLE_MSW,
+  );
   const currentUser = useAuthStore(state => state.currentUser);
+  const context = useStudentContext(!isDemo);
   const sectionId =
-    currentUser?.sections.find(section => section.role === 'STUDENT')?.id ?? '';
-  const userId = currentUser?.studentNumber ?? '';
+    isDemo && currentUser?.sections.length === 1
+      ? currentUser.sections[0]!.id
+      : context.status === 'ready'
+        ? String(context.section!.id)
+        : '';
+  const userId = (isDemo ? currentUser : context.user)?.studentNumber ?? '';
   const contextQuery = useEvaluationContextQuery(sectionId, userId);
-  const formId = contextQuery.data?.peerEvaluationFormId ?? '';
+  const formId =
+    sectionId && contextQuery.isSuccess
+      ? (contextQuery.data.peerEvaluationFormId ?? '')
+      : '';
   const query = usePeerEvaluationTargetsQuery(sectionId, userId, formId);
 
+  if (!isDemo && context.status !== 'ready')
+    return <StudentContextState context={context} />;
   if (!sectionId || !userId)
-    return (
-      <EmptyState
-        description='소속 분반과 학생 계정을 확인해 주세요.'
-        title='평가 범위가 없어요.'
-      />
-    );
+    return <EmptyState title='수강 분반과 학생 계정을 확인해 주세요.' />;
   if (contextQuery.isPending)
     return (
       <p className={styles.status} role='status'>
@@ -662,7 +674,7 @@ export default function PeerEvaluationPage() {
       <PeerEvaluationForm
         formId={formId}
         isWindowClosed={query.data.windowState !== 'OPEN'}
-        key={`${sectionId}:${userId}:${formId}`}
+        key={`${sectionId}:${userId}:${context.teamId}:${formId}`}
         response={query.data.myResponse}
         sectionId={sectionId}
         targets={query.data.targets}

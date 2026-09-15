@@ -4,6 +4,8 @@ import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+
 import { useAdminMeetingRecordDetailQuery } from '~/features/admin-meeting/queries';
 import AdminStudentDetailDialog from '~/features/admin-student-team/components/AdminStudentDetailDialog';
 import { useAdminSectionEnrollmentsQuery } from '~/features/admin-student-team/queries';
@@ -74,7 +76,7 @@ export default function AdminMeetingDetailPage() {
             >
               {record.teamName}
             </Link>
-            <Text>{record.meetingAt}</Text>
+            <Text>{formatSeoulDateTime(record.meetingAt)}</Text>
             {record.location ? <Text>{record.location}</Text> : null}
           </div>
         </div>

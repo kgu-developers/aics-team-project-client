@@ -62,7 +62,7 @@ export default function AdminStudentDetailDialog({
             </div>
           </dl>
         ) : null}
-        {user && details ? details : null}
+        {details ?? null}
         <HStack gap={2} justify='end'>
           <Button label='닫기' onClick={onClose} variant='secondary' />
         </HStack>

@@ -4,11 +4,12 @@ import { isAxiosError } from 'axios';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { useAuthStore } from '~/features/auth/authStore';
-import { useCurrentUserQuery } from '~/features/auth/queries';
-import { useMySectionsQuery } from '~/features/section/queries';
-import SectionSelection from '~/features/section/SectionSelection';
-import { useSelectedSection } from '~/features/section/useSelectedSection';
+import {
+  selectHasAuthenticatedSession,
+  useAuthStore,
+} from '~/features/auth/authStore';
+import StudentContextState from '~/features/section/StudentContextState';
+import { useStudentContext } from '~/features/section/useStudentContext';
 
 import AssignedTeamFlow from './AssignedTeamFlow';
 import * as styles from './LiveTeamAssignmentFlow.css';
@@ -22,25 +23,15 @@ export default function LiveTeamAssignmentFlow({
 }: {
   teamOnly?: boolean;
 }) {
-  const storedUser = useAuthStore(state => state.currentUser);
+  const authenticated = useAuthStore(selectHasAuthenticatedSession);
   const clearSession = useAuthStore(state => state.clearSession);
   const navigate = useNavigate();
-  const userQuery = useCurrentUserQuery();
-  const sectionsQuery = useMySectionsQuery({ status: 'ACTIVE' });
-  const { section, selectSection } = useSelectedSection(sectionsQuery.data);
-  const user = userQuery.data ?? storedUser;
-  const teamId = user?.teamId;
+  const context = useStudentContext();
+  const { section, teamId } = context;
   const surveyQuery = useMyTeamAssignmentSurveyQuery(
-    !user ||
-      userQuery.isPending ||
-      userQuery.isError ||
-      sectionsQuery.isPending ||
-      sectionsQuery.isError ||
-      teamId
-      ? undefined
-      : section?.id,
+    authenticated && context.status === 'no-team' ? section?.id : undefined,
   );
-  const recovery = (description: string, retry: () => void) => (
+  const recovery = (description: string, retry?: () => void) => (
     <OnboardingRecovery
       title='팀 온보딩 상태를 확인하지 못했어요'
       description={description}
@@ -52,46 +43,26 @@ export default function LiveTeamAssignmentFlow({
     />
   );
 
-  if (userQuery.isPending && userQuery.isFetching)
-    return <p>로그인 정보를 확인하는 중입니다.</p>;
-  if (userQuery.isError || !user)
+  if (!authenticated || context.identity.isError) {
     return recovery(
       '로그인 정보를 확인해 주세요.',
-      () => void userQuery.refetch(),
+      authenticated ? () => void context.retry() : undefined,
     );
-  if (sectionsQuery.isPending) return <p>수강 분반을 확인하는 중입니다.</p>;
-  if (sectionsQuery.isError)
-    return recovery(
-      '수강 분반을 불러오지 못했어요.',
-      () => void sectionsQuery.refetch(),
-    );
-  if (!sectionsQuery.data?.length)
-    return recovery(
-      '연결된 수강 분반이 없어요.',
-      () => void sectionsQuery.refetch(),
-    );
+  }
+
   if (
-    teamId &&
-    (user.sections.length !== 1 || String(section?.id) !== user.sections[0]?.id)
+    !section ||
+    (context.status !== 'ready' && context.status !== 'no-team')
   ) {
-    return recovery(
-      '배정된 팀이 어느 수강 분반에 속하는지 확인할 수 없어요. 담당 조교에게 문의해 주세요.',
-      () => void userQuery.refetch(),
-    );
+    return <StudentContextState context={context} />;
   }
 
   return (
     <section className={styles.flow}>
-      <SectionSelection
-        sections={sectionsQuery.data}
-        selectedId={section?.id}
-        onSelect={selectSection}
-      />
-      {!section ? (
-        <p>설문에 응답할 수강 분반을 선택해 주세요.</p>
-      ) : teamId ? (
+      <StudentContextState context={context} sectionOnly />
+      {teamId ? (
         <AssignedTeamFlow
-          key={teamId}
+          key={`${section.id}:${teamId}`}
           section={section}
           teamId={teamId}
           teamOnly={teamOnly}

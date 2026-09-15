@@ -182,13 +182,28 @@ describe('AdminTeamDashboard', () => {
         ({ request }) => {
           meetingRequests(new URL(request.url));
           return HttpResponse.json({
-            contents: [],
+            contents: [
+              {
+                id: 1,
+                authorId: '20231234',
+                content: '',
+                location: '강의실',
+                meetingAt: '2026-09-01T00:00:00Z',
+                participantCount: 2,
+                phase: 'KICKOFF',
+                sectionId: 1,
+                sectionName: 'OOP-01',
+                teamId: 1,
+                teamName: '1팀',
+                title: '프로젝트 킥오프',
+              },
+            ],
             pageable: {
               isEnd: true,
               page: 0,
               size: 3,
-              totalElements: 0,
-              totalPages: 0,
+              totalElements: 1,
+              totalPages: 1,
             },
           });
         },
@@ -207,7 +222,9 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('2026.09.07 18:00')).toBeInTheDocument();
     expect(screen.getByText('발표 자료 제출')).toBeInTheDocument();
     expect(screen.getByText('presentation.pdf')).toBeInTheDocument();
-    expect(screen.getAllByText('발표 평가').length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole('heading', { name: '발표 평가' }),
+    ).toBeInTheDocument();
     const proposalDetailLink = screen
       .getAllByRole('link', { name: '상세보기' })
       .find(link =>
@@ -221,7 +238,14 @@ describe('AdminTeamDashboard', () => {
       'href',
       expect.stringContaining('apiSectionId='),
     );
-    expect(screen.getByText('회의록 1건')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('link', { name: /프로젝트 킥오프/ }),
+    ).toHaveAttribute('href', expect.stringContaining('/admin/meetings/1'));
+    expect(
+      screen
+        .getByRole('region', { name: '회의록' })
+        .querySelectorAll('a[href^="/admin/meetings/"]'),
+    ).toHaveLength(1);
     expect(screen.queryByLabelText('읽지 않음')).not.toBeInTheDocument();
     expect(
       screen
@@ -253,20 +277,25 @@ describe('AdminTeamDashboard', () => {
     expect(meetingRequestUrl.searchParams.get('size')).toBe('3');
   });
 
-  it('팀 API의 숫자 분반 ID와 세션 분반 ID가 달라도 상세 링크에는 세션 분반 ID를 사용한다', async () => {
-    renderPage('1', 'oop-2026-2-01');
-
-    const detailLink = (
-      await screen.findAllByRole('link', {
-        name: '상세보기',
-      })
-    ).find(link =>
-      link.getAttribute('href')?.includes('/admin/submissions/1001'),
-    );
-
-    expect(detailLink?.getAttribute('href')).toContain(
-      'sectionId=oop-2026-2-01',
-    );
+  it('팀 분반이 담당 분반과 다르면 종속 요청과 팀 내용을 차단한다', async () => {
+    const requests: string[] = [];
+    const track = ({ request }: { request: Request }) =>
+      requests.push(new URL(request.url).pathname);
+    server.events.on('request:start', track);
+    try {
+      renderPage('1', 'oop-2026-2-01');
+      expect(
+        await screen.findByText('이 팀에 접근할 수 없습니다.'),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: '김민준' }),
+      ).not.toBeInTheDocument();
+      expect(requests).toEqual([
+        new URL(`${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM('1')}`).pathname,
+      ]);
+    } finally {
+      server.events.removeListener('request:start', track);
+    }
   });
 
   it('2팀 대시보드에는 1팀 평가 상세 fixture를 표시하지 않는다', async () => {
@@ -321,4 +350,35 @@ describe('AdminTeamDashboard', () => {
     expect(screen.getByText('010-1234-5678')).toBeInTheDocument();
     expect(screen.getByText('컴퓨터공학과')).toBeInTheDocument();
   });
+});
+
+it('issues no dependent requests while team lookup is pending or fails', async () => {
+  let release!: (response: Response) => void;
+  const requests: string[] = [];
+  const track = ({ request }: { request: Request }) =>
+    requests.push(new URL(request.url).pathname);
+  server.events.on('request:start', track);
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM('1')}`,
+      () =>
+        new Promise<Response>(resolve => {
+          release = resolve;
+        }),
+    ),
+  );
+  try {
+    renderPage('1');
+    await screen.findByText('팀 정보를 불러오는 중입니다.');
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests).toEqual([ENDPOINTS.ADMIN.TEAM('1')]);
+    expect(
+      screen.queryByRole('button', { name: '김민준' }),
+    ).not.toBeInTheDocument();
+    release(HttpResponse.json({}, { status: 403 }));
+    await screen.findByText('이 팀에 접근할 수 없습니다.');
+    expect(requests).toEqual([ENDPOINTS.ADMIN.TEAM('1')]);
+  } finally {
+    server.events.removeListener('request:start', track);
+  }
 });

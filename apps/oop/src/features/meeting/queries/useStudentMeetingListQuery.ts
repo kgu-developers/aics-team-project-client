@@ -1,12 +1,7 @@
-import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
-
-import { useAuthStore } from '~/features/auth/authStore';
-import { useTeamKickoffQuery } from '~/features/team-assignment/queries';
-
-import { meetingTitle } from '../model/studentMeeting';
-import { hasMeetingApiId } from './api/meetingApiKeys';
 import { useMeetingRecordSummariesQuery } from './api/useMeetingRecordSummariesQuery';
 import { useMeetingRecordsQuery } from './useMeetingRecordsQuery';
+import { useMeetingTeamQuery } from './useMeetingTeamQuery';
+import { meetingTitle } from '../model/studentMeeting';
 
 export type StudentMeetingListItem = {
   id: string;
@@ -19,16 +14,8 @@ export type StudentMeetingListItem = {
 };
 
 export function useStudentMeetingListQuery() {
-  const currentUser = useAuthStore(state => state.currentUser);
-  // Keep the existing demo contract at the feature boundary until CRUD migrates.
-  const usesDemoContract = isMockDevelopmentMode(
-    import.meta.env.DEV,
-    import.meta.env.VITE_ENABLE_MSW,
-  );
-  const teamId = usesDemoContract
-    ? currentUser?.currentTeam?.id
-    : (currentUser?.teamId ?? undefined);
-  const kickoff = useTeamKickoffQuery(usesDemoContract ? undefined : teamId);
+  const context = useMeetingTeamQuery();
+  const { isDemo: usesDemoContract, teamId, kickoff } = context;
   const summaries = useMeetingRecordSummariesQuery(
     usesDemoContract ? undefined : teamId,
   );
@@ -52,7 +39,7 @@ export function useStudentMeetingListQuery() {
         actionCount: null,
         location: record.location,
         authorLabel:
-          kickoff.data?.members.find(
+          kickoff?.members.find(
             member => member.studentNumber === record.authorId,
           )?.name || record.authorId,
       }));
@@ -60,19 +47,14 @@ export function useStudentMeetingListQuery() {
   return {
     teamId,
     items,
-    isPending: query.isPending || (!usesDemoContract && kickoff.isPending),
-    isError:
-      query.isError ||
-      (!usesDemoContract && kickoff.isError) ||
-      (!usesDemoContract && teamId != null && !hasMeetingApiId(teamId)),
-    refetch: () =>
-      usesDemoContract
-        ? query.refetch()
-        : Promise.all([query.refetch(), kickoff.refetch()]),
-    canRetry:
-      !query.isFetching &&
-      (usesDemoContract || !kickoff.isFetching) &&
-      (usesDemoContract ? Boolean(teamId) : hasMeetingApiId(teamId)),
+    context,
+    isPending: context.isPending || (Boolean(teamId) && query.isPending),
+    isError: context.isError || query.isError,
+    refetch: async () => {
+      if (!teamId) return context.refetch();
+      return query.refetch();
+    },
+    canRetry: context.canRetry && !query.isFetching,
     headingLabel: '제목',
     authorColumnLabel: '작성자',
     canOpenRecord: true,

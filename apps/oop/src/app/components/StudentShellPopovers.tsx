@@ -17,6 +17,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { cx } from '~/shared/lib/cx';
 
 import { getPasswordChangeErrorMessage } from '~/features/auth/getPasswordChangeErrorMessage';
@@ -28,6 +29,7 @@ import {
   validatePasswordChange,
   type PasswordValidationIssue,
 } from '~/features/auth/validatePasswordChange';
+import { useStudentContext } from '~/features/section/useStudentContext';
 import {
   isValidPositiveTeamId,
   useTeamKickoffQuery,
@@ -199,21 +201,33 @@ function StudentProfilePopover({
   const navigate = useNavigate();
   const logoutMutation = useLogoutMutation();
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
-  const section = currentUser.sections[0];
-  const team = currentUser.currentTeam;
-  const teamId = currentUser.teamId ?? undefined;
+  const isDemo = isMockDevelopmentMode(
+    import.meta.env.DEV,
+    import.meta.env.VITE_ENABLE_MSW,
+  );
+  const context = useStudentContext(!isDemo);
+  const section =
+    isDemo && currentUser.sections.length === 1
+      ? currentUser.sections[0]
+      : context.section;
+  const team = isDemo ? currentUser.currentTeam : undefined;
+  const teamId = isDemo ? (currentUser.teamId ?? undefined) : context.teamId;
   const isInvalidTeamId =
     teamId !== undefined && !isValidPositiveTeamId(teamId);
   const kickoff = useTeamKickoffQuery(
     isOpen && !isInvalidTeamId ? teamId : undefined,
   );
-  const liveLeader = kickoff.data?.members.find(member => member.isLeader);
+  const verifiedKickoff =
+    kickoff.isSuccess && String(kickoff.data.id) === teamId
+      ? kickoff.data
+      : undefined;
+  const liveLeader = verifiedKickoff?.members.find(member => member.isLeader);
   const legacyLeader = team?.members.find(member => member.isLeader);
   const teamName =
     teamId !== undefined
       ? isInvalidTeamId || kickoff.isError
         ? '팀 정보 확인 필요'
-        : (kickoff.data?.name ?? '확인 중…')
+        : (verifiedKickoff?.name ?? '팀 정보 확인 필요')
       : team?.name;
   const leaderName =
     teamId !== undefined
@@ -235,7 +249,7 @@ function StudentProfilePopover({
     if (logoutMutation.isPending) return;
 
     logoutMutation.mutate(undefined, {
-      onSettled: () => {
+      onSuccess: () => {
         onOpenChange(false);
         void navigate({ to: ROUTES.LOGIN });
       },
@@ -292,6 +306,8 @@ function StudentProfilePopover({
               >
                 {teamName}
               </Link>
+            ) : !isDemo && context.status !== 'no-team' ? (
+              '팀 소속 확인 필요'
             ) : (
               '미배정'
             )}
@@ -315,11 +331,17 @@ function StudentProfilePopover({
         <Button
           isDisabled={logoutMutation.isPending}
           isLoading={logoutMutation.isPending}
-          label='로그아웃'
+          label={logoutMutation.isError ? '로그아웃 다시 시도' : '로그아웃'}
           onClick={handleLogout}
           variant='ghost'
           width='100%'
         />
+        {logoutMutation.isError ? (
+          <Text role='alert'>
+            로그아웃하지 못했습니다. 로그인 상태가 유지됩니다. 다시 시도해
+            주세요.
+          </Text>
+        ) : null}
       </div>
     </section>
   );

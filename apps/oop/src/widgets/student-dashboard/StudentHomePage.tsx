@@ -11,6 +11,7 @@ import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog'
 import { TopicCandidateDialogProvider } from '~/features/project-topic/TopicCandidateDialogContext';
 import { useTopicMilestoneEligibility } from '~/features/project-topic/useTopicMilestoneEligibility';
 import { useProposalSectionsQuery } from '~/features/proposal/queries';
+import StudentContextState from '~/features/section/StudentContextState';
 import {
   midReportFeedbackStage,
   proposalFeedbackStage,
@@ -147,17 +148,7 @@ export default function StudentHomePage() {
     );
   }
 
-  if (!sectionId) {
-    return (
-      <div className={styles.root}>
-        <EmptyState
-          description='수강 분반 배정이 완료되면 학생 홈을 이용할 수 있어요.'
-          headingLevel={2}
-          title='소속 분반이 없어요.'
-        />
-      </div>
-    );
-  }
+  if (!sectionId) return <StudentContextState context={home.context} />;
 
   const submissionTargets: Record<string, StudentSubmissionTarget> = {};
   const milestones = query.milestones.map((milestone, index) => {
@@ -187,7 +178,11 @@ export default function StudentHomePage() {
         peerMilestones.length === 1,
       );
     }
-    if (!home.teamId) summary.statusLabel = '팀 배정 대기';
+    if (!home.teamId)
+      summary.statusLabel =
+        home.context.status === 'ambiguous'
+          ? '팀 소속 확인 필요'
+          : '팀 배정 대기';
     else if (submission?.isError) summary.statusLabel = '조회 실패';
     else if (submission?.isPending) summary.statusLabel = '조회 중';
     if (milestone.type === 'MID_REPORT' && home.teamId) {
@@ -435,6 +430,24 @@ export default function StudentHomePage() {
       }
 
       if (project) return summary;
+      if (home.project.state.status !== 'ready' || home.project.data !== null) {
+        summary.isDetailAvailable = false;
+        summary.body = undefined;
+        summary.rows = [
+          {
+            id: 'proposal-project-state',
+            label: '프로젝트',
+            value:
+              home.project.state.status === 'error'
+                ? '프로젝트를 불러오지 못했어요.'
+                : home.project.state.status === 'pending'
+                  ? '프로젝트를 확인하는 중이에요.'
+                  : (home.missingTeam ?? '프로젝트 정보를 확인해 주세요.'),
+            tone: 'muted',
+          },
+        ];
+        return summary;
+      }
 
       summary.interaction = 'collapsible';
       summary.isDetailAvailable = true;
@@ -491,6 +504,19 @@ export default function StudentHomePage() {
 
   return (
     <div className={styles.root}>
+      <StudentContextState context={home.context} />
+      {home.project.state.status === 'error' ? (
+        <EmptyState
+          title='프로젝트를 불러오지 못했어요.'
+          description={home.project.state.description}
+          actions={
+            <Button
+              label='프로젝트 다시 시도'
+              onClick={home.project.state.onRetry}
+            />
+          }
+        />
+      ) : null}
       <StudentHomeHero
         announcements={home.notices.items}
         assignedActions={home.actions.items}

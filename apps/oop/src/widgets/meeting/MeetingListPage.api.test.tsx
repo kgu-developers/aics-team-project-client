@@ -55,12 +55,41 @@ const kickoff = {
     },
   ],
 };
-const server = setupServer();
+function currentSections() {
+  return (useAuthStore.getState().currentUser?.sections ?? []).map(section => ({
+    classTime: '',
+    capacity: 40,
+    contactVisibleFrom: null,
+    contactVisibleUntil: null,
+    courseId: 1,
+    courseName: 'OOP',
+    year: 2026,
+    semester: 'FALL',
+    status: 'ACTIVE',
+    ...section,
+    id: /^\d+$/.test(section.id) ? Number(section.id) : 1,
+  }));
+}
+const server = setupServer(
+  http.get(`${API_BASE_URL}/api/v1/oop/users/me`, () => {
+    const user = useAuthStore.getState().currentUser!;
+    return HttpResponse.json({
+      ...user,
+      globalRole: 'USER',
+      sections: currentSections(),
+      teamId: user.teamId ?? null,
+    });
+  }),
+  http.get(`${API_BASE_URL}/api/v1/oop/sections`, () =>
+    HttpResponse.json({ contents: currentSections() }),
+  ),
+);
 const clients: QueryClient[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   vi.stubEnv('VITE_ENABLE_MSW', 'false');
+  useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setCurrentUser(student);
   server.use(
     http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
@@ -114,7 +143,7 @@ it('currentTeam이 없어도 /me의 teamId로 실제 응답을 읽고 지원하�
   expect(screen.getByRole('button', { name: '새 회의록' })).toBeEnabled();
 });
 
-it('목록 응답이 먼저 와도 팀원 정보를 기다린 뒤 작성자 이름을 표시한다', async () => {
+it('팀원 정보를 확인하기 전에는 목록을 요청하지 않고 확인 후 작성자 이름을 표시한다', async () => {
   let releaseKickoff!: () => void;
   const kickoffReady = new Promise<void>(resolve => {
     releaseKickoff = resolve;
@@ -130,12 +159,13 @@ it('목록 응답이 먼저 와도 팀원 정보를 기다린 뒤 작성자 이�
   );
   const { client } = renderPage();
   try {
-    await waitFor(() =>
-      expect(
-        client.getQueryData(meetingApiKeys.filteredList('7')),
-      ).toBeDefined(),
-    );
-    expect(screen.getByText('잠시만 기다려 주세요.')).toBeVisible();
+    await waitFor(() => expect(releaseKickoff).toBeTypeOf('function'));
+    expect(
+      client.getQueryData(meetingApiKeys.filteredList('7')),
+    ).toBeUndefined();
+    expect(
+      await screen.findByText('팀 정보를 확인하는 중이에요.'),
+    ).toBeVisible();
     expect(screen.queryByText('진행 점검')).not.toBeInTheDocument();
     expect(screen.queryByText(student.studentNumber)).not.toBeInTheDocument();
   } finally {
@@ -162,7 +192,9 @@ it.each([403, 500])(
     );
     const user = userEvent.setup();
     renderPage();
-    expect(await screen.findByText('회의록을 불러올 수 없어요.')).toBeVisible();
+    expect(
+      await screen.findByText('팀 정보를 불러올 수 없어요.'),
+    ).toBeVisible();
     expect(screen.queryByText('진행 점검')).not.toBeInTheDocument();
     expect(screen.queryByText(student.studentNumber)).not.toBeInTheDocument();
     await waitFor(() =>
@@ -177,7 +209,7 @@ it.each([403, 500])(
     await user.click(screen.getByRole('button', { name: '다시 시도' }));
     expect(await screen.findByText('진행 점검')).toBeVisible();
     expect(screen.getByText(student.name)).toBeVisible();
-    expect(summaryRequests).toHaveBeenCalledTimes(2);
+    expect(summaryRequests).toHaveBeenCalledTimes(1);
     expect(kickoffRequests).toHaveBeenCalledTimes(2);
   },
 );
@@ -199,8 +231,12 @@ it('목록 조회가 실패해도 팀원 조회 중에는 재시도를 비활성
   );
   renderPage();
   try {
-    expect(await screen.findByText('회의록을 불러올 수 없어요.')).toBeVisible();
-    expect(screen.getByRole('button', { name: '다시 시도' })).toBeDisabled();
+    expect(
+      await screen.findByText('팀 정보를 확인하는 중이에요.'),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('button', { name: '다시 시도' }),
+    ).not.toBeInTheDocument();
   } finally {
     await act(async () => releaseKickoff());
   }
@@ -223,7 +259,7 @@ it('팀에 속해 있지만 회의록이 없으면 빈 목록을 표시한다', 
 it('실제 teamId가 없으면 오래된 currentTeam이 있어도 목록을 요청하지 않는다', async () => {
   const requests = vi.fn();
   server.use(
-    http.get('*', () => {
+    http.get(/\/(teams|meeting-records|meeting-actions)\//, () => {
       requests();
       return HttpResponse.json({ contents: [] });
     }),
@@ -234,7 +270,7 @@ it('실제 teamId가 없으면 오래된 currentTeam이 있어도 목록을 요�
     currentTeam: { id: '7', sectionId: '12', name: '이전 팀', members: [] },
   });
   renderPage();
-  expect(screen.getByText('소속 팀이 없어요.')).toBeVisible();
+  expect(await screen.findByText('소속 팀이 없어요.')).toBeVisible();
   await act(async () => {});
   expect(requests).not.toHaveBeenCalled();
 });
@@ -242,15 +278,19 @@ it('실제 teamId가 없으면 오래된 currentTeam이 있어도 목록을 요�
 it('유효하지 않은 팀 ID는 요청하지 않고 로딩 대신 오류를 표시한다', async () => {
   const requests = vi.fn();
   server.use(
-    http.get('*', () => {
+    http.get(/\/(teams|meeting-records|meeting-actions)\//, () => {
       requests();
       return HttpResponse.json({ contents: [] });
     }),
   );
   useAuthStore.getState().setCurrentUser({ ...student, teamId: 'invalid' });
   renderPage();
-  expect(screen.getByText('회의록을 불러올 수 없어요.')).toBeVisible();
-  expect(screen.getByRole('button', { name: '다시 시도' })).toBeDisabled();
+  expect(
+    await screen.findByText(/선택한 분반의 팀 소속을 확인할 수 없어요/),
+  ).toBeVisible();
+  await userEvent
+    .setup()
+    .click(screen.getByRole('button', { name: '소속 정보 다시 시도' }));
   await act(async () => {});
   expect(requests).not.toHaveBeenCalled();
 });
@@ -296,11 +336,14 @@ it('팀이 변경되면 새 팀을 조회하고 이전 팀의 회의록을 표�
       }),
     ),
   );
-  renderPage();
+  const { client } = renderPage();
   expect(await screen.findByText('진행 점검')).toBeVisible();
   act(() =>
     useAuthStore.getState().setCurrentUser({ ...student, teamId: '8' }),
   );
+  await act(async () => {
+    await client.refetchQueries({ queryKey: ['student-home', 'user'] });
+  });
   expect(await screen.findByText('최종 회의록')).toBeVisible();
   await waitFor(() =>
     expect(screen.queryByText('진행 점검')).not.toBeInTheDocument(),

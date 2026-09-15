@@ -26,17 +26,18 @@ export function useTeamActionPlanQuery() {
     actions: isDemo
       ? (demoActions.data ?? [])
       : (entries.data?.map(mapActionPlanEntry) ?? []),
-    isPending: context.isPending || actionsQuery.isPending,
+    isPending: context.isPending || (Boolean(teamId) && actionsQuery.isPending),
     isError: context.isError || actionsQuery.isError,
     recordsPending: recordsQuery.isPending,
     recordsError: recordsQuery.isError,
     canRetry:
       context.canRetry && !actionsQuery.isFetching && !recordsQuery.isFetching,
-    refetch: () =>
-      Promise.all([
-        ...(isDemo ? [] : [context.refetch()]),
-        actionsQuery.refetch(),
-        recordsQuery.refetch(),
-      ]),
+    refetch: async () => {
+      if (!teamId) {
+        await context.refetch();
+        return [];
+      }
+      return Promise.all([actionsQuery.refetch(), recordsQuery.refetch()]);
+    },
   };
 }

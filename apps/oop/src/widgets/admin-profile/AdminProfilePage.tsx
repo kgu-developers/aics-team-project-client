@@ -177,13 +177,18 @@ export default function AdminProfilePage() {
           <Button
             isDisabled={logoutMutation.isPending}
             isLoading={logoutMutation.isPending}
-            label='로그아웃'
+            label={logoutMutation.isError ? '로그아웃 다시 시도' : '로그아웃'}
             onClick={() => logoutMutation.mutate()}
             type='button'
             variant='ghost'
           />
         </HStack>
       </HStack>
+      {logoutMutation.isError ? (
+        <Text role='alert'>
+          로그아웃하지 못했습니다. 로그인 상태가 유지됩니다. 다시 시도해 주세요.
+        </Text>
+      ) : null}
 
       <PasswordChangeDialog
         isOpen={isPasswordDialogOpen}

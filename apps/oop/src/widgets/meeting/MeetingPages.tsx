@@ -44,6 +44,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import { useAuthStore } from '~/features/auth/authStore';
@@ -70,6 +71,7 @@ import {
   useMeetingEditLock,
   type MeetingEditLock,
 } from '~/features/meeting/queries';
+import StudentContextState from '~/features/section/StudentContextState';
 
 import * as styles from './MeetingPages.css';
 import MeetingRecordActions from './MeetingRecordActions';
@@ -573,32 +575,10 @@ export function MeetingForm({
     saveError instanceof MeetingEditLockError ||
     creation.isUncertain;
   const fieldsDisabled = isDisabled || Boolean(creation.meetingId);
+  if (!context.isDemo && context.studentContext.status !== 'ready')
+    return <StudentContextState context={context.studentContext} />;
   if ((context.isError || context.isPending) && (!record || !team))
-    return (
-      <div className={styles.page}>
-        <EmptyState
-          title={
-            context.isError
-              ? '팀 정보를 불러올 수 없어요.'
-              : '잠시만 기다려 주세요.'
-          }
-          description={
-            context.isError
-              ? requestErrorMessage
-              : '참석자를 선택할 수 있도록 팀 정보를 불러오는 중이에요.'
-          }
-        />
-        {context.isError ? (
-          <Button
-            label='다시 시도'
-            isDisabled={!context.canRetry}
-            onClick={() => void context.refetch()}
-            size='md'
-            width='fit-content'
-          />
-        ) : null}
-      </div>
-    );
+    return <MeetingContextRecovery context={context} />;
   if (!team)
     return (
       <div className={styles.page}>
@@ -718,6 +698,13 @@ export function MeetingForm({
       </div>
       <Card className={styles.editorCard}>
         <Heading level={1}>{record ? '회의록 수정' : '새 회의록'}</Heading>
+        {context.isError ? (
+          <Button
+            label='팀 정보 다시 시도'
+            isDisabled={!context.canRetry}
+            onClick={() => void context.refetch()}
+          />
+        ) : null}
         {liveEdit && (editLock?.message || recordError || context.isError) ? (
           <div role='alert' className={styles.editNotice}>
             <Text>
@@ -970,6 +957,34 @@ export function MeetingForm({
   );
 }
 
+function MeetingContextRecovery({
+  context,
+}: {
+  context: ReturnType<typeof useMeetingTeamQuery>;
+}) {
+  if (!context.isDemo && context.studentContext.status !== 'ready')
+    return <StudentContextState context={context.studentContext} />;
+  return (
+    <EmptyState
+      title={
+        context.isPending
+          ? '팀 정보를 확인하는 중이에요.'
+          : '팀 정보를 불러올 수 없어요.'
+      }
+      description={context.isPending ? undefined : context.contextMessage}
+      actions={
+        context.isError ? (
+          <Button
+            label='다시 시도'
+            isDisabled={!context.canRetry}
+            onClick={() => void context.refetch()}
+          />
+        ) : undefined
+      }
+    />
+  );
+}
+
 export function MeetingListPage() {
   const navigate = useNavigate();
   const query = useStudentMeetingListQuery();
@@ -1013,6 +1028,16 @@ export function MeetingListPage() {
     }),
     [navigate],
   );
+  if (
+    !isMockDevelopmentMode(
+      import.meta.env.DEV,
+      import.meta.env.VITE_ENABLE_MSW,
+    ) &&
+    (query.context.studentContext.status !== 'ready' ||
+      query.context.isPending ||
+      query.context.isError)
+  )
+    return <MeetingContextRecovery context={query.context} />;
   if (teamId == null)
     return (
       <div className={styles.page}>
@@ -1155,6 +1180,13 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
   const context = useMeetingTeamQuery();
   const teamId = context.teamId;
   const removeMutation = useRemoveMeetingRecordMutation();
+  if (
+    !context.isDemo &&
+    (context.studentContext.status !== 'ready' ||
+      context.isError ||
+      context.isPending)
+  )
+    return <MeetingContextRecovery context={context} />;
   if (!query.teamId)
     return (
       <div className={styles.page}>
@@ -1179,6 +1211,11 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
         <EmptyState
           description='삭제되었거나 접근 권한이 없는 회의록이에요.'
           title='회의록을 찾을 수 없어요.'
+          actions={
+            query.isError ? (
+              <Button label='다시 시도' onClick={() => void query.refetch()} />
+            ) : undefined
+          }
         />
       </div>
     );
@@ -1299,8 +1336,18 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
 }
 export function MeetingNewPage() {
   const currentUser = useAuthStore(state => state.currentUser);
+  const context = useMeetingTeamQuery();
+  const identity = context.isDemo
+    ? undefined
+    : context.studentContext.identity.data;
   return (
-    <MeetingForm key={currentUser?.teamId ?? currentUser?.currentTeam?.id} />
+    <MeetingForm
+      key={
+        context.isDemo
+          ? `${currentUser?.id}:${currentUser?.currentTeam?.id}`
+          : `${identity?.studentNumber}:${identity?.teamId}:${identity?.sections.map(section => section.id).join(',')}`
+      }
+    />
   );
 }
 export function MeetingEditPage({ meetingId }: { meetingId: string }) {
@@ -1309,6 +1356,14 @@ export function MeetingEditPage({ meetingId }: { meetingId: string }) {
   const query = useMeetingRecordQuery(
     context.canEditRecord ? meetingId : undefined,
   );
+  if (
+    !context.isDemo &&
+    (context.studentContext.status !== 'ready' ||
+      context.isError ||
+      context.isPending) &&
+    !query.data
+  )
+    return <MeetingContextRecovery context={context} />;
   if (!context.canEditRecord)
     return (
       <div className={styles.page}>
@@ -1327,7 +1382,7 @@ export function MeetingEditPage({ meetingId }: { meetingId: string }) {
         </Link>
       </div>
     );
-  if (!query.teamId)
+  if (!query.teamId && !query.data)
     return (
       <div className={styles.page}>
         <EmptyState
@@ -1351,6 +1406,11 @@ export function MeetingEditPage({ meetingId }: { meetingId: string }) {
         <EmptyState
           description='수정할 회의록을 찾을 수 없어요.'
           title='회의록을 찾을 수 없어요.'
+          actions={
+            query.isError ? (
+              <Button label='다시 시도' onClick={() => void query.refetch()} />
+            ) : undefined
+          }
         />
       </div>
     );

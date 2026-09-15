@@ -1,3 +1,5 @@
+import { File as NodeFile } from 'node:buffer';
+
 import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
 import { AstryxThemeProvider, ToastViewport } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -30,6 +32,7 @@ import {
 import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
 import { resetAdminProfileMockData } from '~/mocks/data/adminProfile';
 import { resetAdminSectionsMockData } from '~/mocks/data/adminSections';
+import { adminStudentsFixture } from '~/mocks/data/adminStudentTeams';
 import {
   demoAdmin,
   demoAdminAccessToken,
@@ -69,7 +72,13 @@ const originalRevokeObjectUrlDescriptor = Object.getOwnPropertyDescriptor(
   'revokeObjectURL',
 );
 
-beforeAll(() => {
+let NativeFormData: typeof FormData;
+beforeAll(async () => {
+  NativeFormData = (
+    await new Response('', {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    }).formData()
+  ).constructor as typeof FormData;
   server.listen({ onUnhandledRequest: 'error' });
 
   Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
@@ -88,6 +97,9 @@ beforeAll(() => {
 beforeEach(() => {
   resetAdminCoursesMockData();
   resetAdminSectionsMockData();
+  // jsdom File/FormData cannot be serialized by Node's Request used by MSW.
+  vi.stubGlobal('File', NodeFile);
+  vi.stubGlobal('FormData', NativeFormData);
   resetAdminProfileMockData();
   resetAdminStudentTeamMockState();
   resetDemoPasswordState();
@@ -105,6 +117,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   server.resetHandlers();
+  vi.unstubAllGlobals();
   queryClients.splice(0).forEach(client => client.clear());
   resetDemoPasswordState();
   document.cookie = 'XSRF-TOKEN=; Max-Age=0; Path=/';
@@ -230,6 +243,40 @@ describe('AdminProfilePage', () => {
     });
   });
 
+  it('로그아웃 실패를 표시하고 세션과 캐시를 유지하며 재시도 성공 시 정리한다', async () => {
+    let failed = true;
+    server.use(
+      http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.LOGOUT}`, () =>
+        failed
+          ? HttpResponse.json({}, { status: 503 })
+          : new HttpResponse(null, { status: 204 }),
+      ),
+    );
+    const { queryClient } = renderPage();
+    queryClient.setQueryData(['private-data'], 'preserved');
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: '로그아웃' }));
+    expect(
+      await screen.findByText(
+        /로그아웃하지 못했습니다. 로그인 상태가 유지됩니다./,
+      ),
+    ).toHaveAttribute('role', 'alert');
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+    expect(useAuthStore.getState().currentUser).toEqual(demoAdmin);
+    expect(queryClient.getQueryData(['private-data'])).toBe('preserved');
+    failed = false;
+    await user.click(
+      screen.getByRole('button', { name: '로그아웃 다시 시도' }),
+    );
+    await waitFor(() =>
+      expect(useAuthStore.getState().isAuthenticated).toBe(false),
+    );
+    expect(queryClient.getQueryData(['private-data'])).toBeUndefined();
+    expect(
+      screen.queryByText(/로그아웃하지 못했습니다/),
+    ).not.toBeInTheDocument();
+  });
+
   it('이름과 이메일은 읽기 전용으로 표시한다', () => {
     renderPage();
 
@@ -255,8 +302,16 @@ describe('AdminProfilePage', () => {
     });
     await user.upload(fileInput, excelFile);
     await user.click(screen.getByRole('button', { name: '미리보기' }));
-    expect(await screen.findByText('전체 5건')).toBeInTheDocument();
-    expect(screen.getByText('중복 5건')).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        `전체 ${adminStudentsFixture.filter(student => student.sectionId === demoAdmin.sections[0]!.id).length}건`,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        `중복 ${adminStudentsFixture.filter(student => student.sectionId === demoAdmin.sections[0]!.id).length}건`,
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '반영하기' })).toBeEnabled();
   });
 
@@ -276,7 +331,9 @@ describe('AdminProfilePage', () => {
     await user.click(screen.getByRole('button', { name: '미리보기' }));
     await user.click(await screen.findByRole('button', { name: '반영하기' }));
 
-    expect(await screen.findByText(/students-01\.xlsx/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/^students-01\.xlsx · /),
+    ).toBeInTheDocument();
     expect(screen.getAllByText('파일 없음')).toHaveLength(1);
   });
 
@@ -297,7 +354,7 @@ describe('AdminProfilePage', () => {
     await user.click(screen.getByRole('button', { name: '미리보기' }));
     await user.click(await screen.findByRole('button', { name: '반영하기' }));
 
-    expect(await screen.findByText(/teams-01\.xlsx/)).toBeInTheDocument();
+    expect(await screen.findByText(/^teams-01\.xlsx · /)).toBeInTheDocument();
     expect(screen.getAllByText('파일 없음')).toHaveLength(1);
   });
 
@@ -352,14 +409,27 @@ describe('AdminProfilePage', () => {
 
     await user.upload(fileInput, new File(['excel data'], '1151.xlsx'));
     await user.click(screen.getByRole('button', { name: '미리보기' }));
-    expect(await screen.findByText('전체 5건')).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        `전체 ${adminStudentsFixture.filter(student => student.sectionId === demoAdmin.sections[0]!.id).length}건`,
+      ),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '취소' }));
     await user.click(
       screen.getByRole('button', { name: '학생 명단 파일 선택' }),
     );
 
-    expect(screen.queryByText('전체 4건')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^전체 \d+건$/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '반영하기' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '미리보기' })).toBeDisabled();
+    expect(
+      document.querySelector<HTMLInputElement>(
+        'dialog[open] input[type="file"]',
+      )?.files,
+    ).toHaveLength(0);
   });
 
   it('담당 분반이 없으면 데이터 업로드를 막고 이유를 표시한다', () => {

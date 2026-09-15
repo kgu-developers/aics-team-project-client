@@ -1,8 +1,6 @@
-import type { AdminNoticeDetailDto } from '@aics/api-client';
 import {
   Button,
   Card,
-  Dialog,
   EmptyState,
   Heading,
   Selector,
@@ -20,6 +18,8 @@ import {
 import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
+
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import {
   useAdminNoticeQuery,
@@ -52,59 +52,6 @@ function BackToList() {
     <Link className={styles.backLink} to={ROUTES.ADMIN_NOTICES}>
       ← 공지사항 목록으로
     </Link>
-  );
-}
-
-/** Deletion is not exposed by the supplied announcement API contract. */
-export function DeleteNoticeDialog({
-  detail,
-  isOpen,
-  onClose,
-}: {
-  detail: AdminNoticeDetailDto;
-  isOpen: boolean;
-  onClose: () => void;
-}) {
-  return (
-    <Dialog
-      aria-label='공지사항 삭제 확인'
-      isOpen={isOpen}
-      onOpenChange={open => {
-        if (!open) onClose();
-      }}
-      purpose='form'
-      width={480}
-    >
-      <Heading className={styles.deleteTitle} level={2}>
-        이 공지사항을 삭제할까요?
-      </Heading>
-      <Text color='secondary'>삭제한 공지사항은 복구할 수 없습니다.</Text>
-      <Card className={styles.deletePreview}>
-        <Heading level={3}>{detail.notice.title}</Heading>
-        <Text className={styles.meta} color='secondary'>
-          작성일 : {detail.createdAt}
-        </Text>
-        <Text>공개 범위 : {detail.notice.section}</Text>
-        <div className={styles.divider} />
-        {detail.content.map(content => (
-          <Text key={content}>{content}</Text>
-        ))}
-      </Card>
-      <div className={styles.modalActions}>
-        <Button
-          data-autofocus=''
-          label='취소'
-          onClick={onClose}
-          variant='secondary'
-        />
-        <Button
-          className={styles.deleteButton}
-          label='삭제'
-          onClick={onClose}
-          variant='secondary'
-        />
-      </div>
-    </Dialog>
   );
 }
 
@@ -337,7 +284,7 @@ export function AdminNoticeDetailPage() {
       <Card className={styles.detailCard}>
         <Heading level={2}>{notice.title}</Heading>
         <Text className={styles.meta} color='secondary'>
-          게시일시 : {notice.publishedAt}
+          게시일시 : {formatSeoulDateTime(notice.publishedAt)}
         </Text>
         <div className={styles.divider} />
         <Text>{notice.content}</Text>
@@ -409,7 +356,7 @@ export function AdminNoticeEditPage() {
       <Card className={styles.formCard}>
         <Heading level={2}>공지사항 수정</Heading>
         <Text className={styles.meta} color='secondary'>
-          게시일시 : {notice.publishedAt}
+          게시일시 : {formatSeoulDateTime(notice.publishedAt)}
         </Text>
         <NoticeForm
           content={content}
