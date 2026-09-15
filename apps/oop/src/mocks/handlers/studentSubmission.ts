@@ -151,7 +151,7 @@ export const studentSubmissionHandlers = [
       consentResponse(request, String(params.submissionId), 'cancel'),
   ),
   http.patch(
-    `${API_BASE_URL}/submissions/:submissionId/complete`,
+    `${API_BASE_URL}/api/v1/submissions/:submissionId/complete`,
     ({ request, params }) =>
       consentResponse(request, String(params.submissionId), 'complete'),
   ),
@@ -180,7 +180,7 @@ export const studentSubmissionHandlers = [
     },
   ),
   http.post(
-    `${API_BASE_URL}/submissions/:submissionId/versions`,
+    `${API_BASE_URL}/api/v1/submissions/:submissionId/versions`,
     async ({ request, params }) => {
       if (!/^\d+$/.test(String(params.submissionId))) return;
       const submission = ownSubmission(request, String(params.submissionId));
@@ -343,7 +343,7 @@ export const studentSubmissionHandlers = [
     },
   ),
   http.get(
-    `${API_BASE_URL}/submissions/:submissionId/versions/:version`,
+    `${API_BASE_URL}/api/v1/submissions/:submissionId/versions/:version`,
     ({ request, params }) => {
       const submission = ownSubmission(request, String(params.submissionId));
       if (submission instanceof Response) return submission;

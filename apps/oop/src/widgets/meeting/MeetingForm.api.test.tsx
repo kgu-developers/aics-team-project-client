@@ -47,7 +47,7 @@ function currentSections() {
   }));
 }
 const server = setupServer(
-  http.get(`${API_BASE_URL}/api/v1/oop/users/me`, () => {
+  http.get(`${API_BASE_URL}/api/v1/users/me`, () => {
     const user = useAuthStore.getState().currentUser!;
     return HttpResponse.json({
       ...user,
@@ -56,7 +56,7 @@ const server = setupServer(
       teamId: user.teamId ?? null,
     });
   }),
-  http.get(`${API_BASE_URL}/api/v1/oop/sections`, () =>
+  http.get(`${API_BASE_URL}/api/v1/sections`, () =>
     HttpResponse.json({ contents: currentSections() }),
   ),
 );
@@ -121,10 +121,13 @@ function renderForm(record?: typeof original) {
 it('제목만 변경하면 기존 본문·일시·참석자를 보존하고 상세로 돌아간다', async () => {
   const bodies: unknown[] = [];
   server.use(
-    http.patch(`${API_BASE_URL}/meeting-records/19`, async ({ request }) => {
-      bodies.push(await request.clone().json());
-      return undefined;
-    }),
+    http.patch(
+      `${API_BASE_URL}/api/v1/meeting-records/19`,
+      async ({ request }) => {
+        bodies.push(await request.clone().json());
+        return undefined;
+      },
+    ),
   );
   renderForm();
   const title = await screen.findByRole('textbox', { name: /회의 제목/ });
@@ -158,10 +161,13 @@ it('제목만 변경하면 기존 본문·일시·참석자를 보존하고 상�
 it('단계·일시·장소를 변경하면 화면 입력과 같은 PATCH 값을 전송한다', async () => {
   const bodies: unknown[] = [];
   server.use(
-    http.patch(`${API_BASE_URL}/meeting-records/19`, async ({ request }) => {
-      bodies.push(await request.clone().json());
-      return undefined;
-    }),
+    http.patch(
+      `${API_BASE_URL}/api/v1/meeting-records/19`,
+      async ({ request }) => {
+        bodies.push(await request.clone().json());
+        return undefined;
+      },
+    ),
   );
   renderForm();
   await screen.findByRole('textbox', { name: /회의 제목/ });
@@ -187,7 +193,7 @@ it('단계·일시·장소를 변경하면 화면 입력과 같은 PATCH 값을 
 it('400 오류 뒤 초안을 유지하고 입력을 고쳐 재시도할 수 있다', async () => {
   let invalid = true;
   server.use(
-    http.patch(`${API_BASE_URL}/meeting-records/19`, () =>
+    http.patch(`${API_BASE_URL}/api/v1/meeting-records/19`, () =>
       invalid
         ? HttpResponse.json({ code: 'INVALID_INPUT' }, { status: 400 })
         : undefined,
@@ -216,7 +222,7 @@ it.each([403, 409, 'network'] as const)(
   async status => {
     const writes = vi.fn();
     server.use(
-      http.patch(`${API_BASE_URL}/meeting-records/19`, () => {
+      http.patch(`${API_BASE_URL}/api/v1/meeting-records/19`, () => {
         writes();
         return status === 'network'
           ? HttpResponse.error()
@@ -244,7 +250,7 @@ it('저장 중 화면을 떠나면 늦은 응답이 상세로 이동시키지 �
   let respond!: () => void;
   const requestStarted = vi.fn();
   server.use(
-    http.patch(`${API_BASE_URL}/meeting-records/19`, async () => {
+    http.patch(`${API_BASE_URL}/api/v1/meeting-records/19`, async () => {
       requestStarted();
       await new Promise<void>(resolve => {
         respond = resolve;
@@ -269,7 +275,7 @@ it('저장 중 화면을 떠나면 늦은 응답이 상세로 이동시키지 �
 it('원본 단계가 없으면 구체적인 검증 오류를 표시하고 초안을 유지한다', async () => {
   const writes = vi.fn();
   server.use(
-    http.patch(`${API_BASE_URL}/meeting-records/19`, () => {
+    http.patch(`${API_BASE_URL}/api/v1/meeting-records/19`, () => {
       writes();
       return HttpResponse.error();
     }),
@@ -299,10 +305,10 @@ it('resets a new-meeting draft on an actual raw identity/team change before it c
   clients.push(client);
   let writes = 0;
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/8/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/8/kickoff`, () =>
       HttpResponse.json({ ...meetingApiTeam, id: 8 }),
     ),
-    http.post(/meeting-records/, () => {
+    http.post(/\/api\/v1\/meeting-records/, () => {
       writes++;
       return HttpResponse.json({}, { status: 500 });
     }),

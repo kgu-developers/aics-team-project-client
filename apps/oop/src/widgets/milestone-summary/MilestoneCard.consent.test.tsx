@@ -90,7 +90,7 @@ function setup({
       }),
       initialConfirmations: allConfirmed ? { '20260003': version } : {},
     }),
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () =>
       HttpResponse.json({
         id: 7,
         members: [
@@ -103,7 +103,7 @@ function setup({
         ],
       }),
     ),
-    http.get(`${API_BASE_URL}/submissions/41/versions`, () =>
+    http.get(`${API_BASE_URL}/api/v1/submissions/41/versions`, () =>
       HttpResponse.json({
         contents: version
           ? [
@@ -130,7 +130,7 @@ function setup({
   if (detailError)
     server.use(
       http.get(
-        `${API_BASE_URL}/submissions/41`,
+        `${API_BASE_URL}/api/v1/submissions/41`,
         () => new HttpResponse(null, { status: 500 }),
       ),
     );
@@ -196,7 +196,7 @@ it('승인 실패 시 기존 CTA로 재조회하고 다시 승인할 수 있다'
   setup();
   server.use(
     http.put(
-      `${API_BASE_URL}/submissions/41/member-confirmations/me`,
+      `${API_BASE_URL}/api/v1/submissions/41/member-confirmations/me`,
       () => new HttpResponse(null, { status: 403 }),
     ),
   );
@@ -269,7 +269,7 @@ it('blocks final-report reads and approval actions for an unattributed live team
     requests.push(new URL(request.url).pathname),
   );
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/users/me`, () =>
+    http.get(`${API_BASE_URL}/api/v1/users/me`, () =>
       HttpResponse.json({
         ...demoPartnerStudent,
         globalRole: 'USER',
@@ -277,7 +277,7 @@ it('blocks final-report reads and approval actions for an unattributed live team
         sections: [first, { ...first, id: 2 }],
       }),
     ),
-    http.get(`${API_BASE_URL}/api/v1/oop/sections`, () =>
+    http.get(`${API_BASE_URL}/api/v1/sections`, () =>
       HttpResponse.json({ contents: [first] }),
     ),
   );
@@ -296,10 +296,7 @@ it('blocks final-report reads and approval actions for an unattributed live team
   expect(action).toBeDisabled();
   await userEvent.click(action);
   expect(screen.queryByText('파일 제출 폼 열림')).not.toBeInTheDocument();
-  expect(requests.sort()).toEqual([
-    '/api/v1/oop/sections',
-    '/api/v1/oop/users/me',
-  ]);
+  expect(requests.sort()).toEqual(['/api/v1/sections', '/api/v1/users/me']);
 });
 
 it('does not read the current mid-report before live student context attribution succeeds', async () => {
@@ -324,7 +321,7 @@ it('does not read the current mid-report before live student context attribution
     requests.push(new URL(request.url).pathname),
   );
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/users/me`, () =>
+    http.get(`${API_BASE_URL}/api/v1/users/me`, () =>
       HttpResponse.json({
         ...demoPartnerStudent,
         globalRole: 'USER',
@@ -332,7 +329,7 @@ it('does not read the current mid-report before live student context attribution
         sections: [first, { ...first, id: 2 }],
       }),
     ),
-    http.get(`${API_BASE_URL}/api/v1/oop/sections`, () =>
+    http.get(`${API_BASE_URL}/api/v1/sections`, () =>
       HttpResponse.json({ contents: [first] }),
     ),
   );
@@ -363,8 +360,5 @@ it('does not read the current mid-report before live student context attribution
     ).toBeDefined(),
   );
   expect(screen.getByRole('button', { name: '제출하기' })).toBeDisabled();
-  expect(requests.sort()).toEqual([
-    '/api/v1/oop/sections',
-    '/api/v1/oop/users/me',
-  ]);
+  expect(requests.sort()).toEqual(['/api/v1/sections', '/api/v1/users/me']);
 });

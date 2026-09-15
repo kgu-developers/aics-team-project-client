@@ -13,150 +13,154 @@ export const ENDPOINTS = {
   STUDENT_MILESTONE: {
     LIST: (sectionId: string) => `/api/v1/sections/${sectionId}/milestones`,
     MY_TEAM_SUBMISSION: (milestoneId: string) =>
-      `/milestones/${milestoneId}/my-team-submission`,
+      `/api/v1/milestones/${milestoneId}/my-team-submission`,
   },
   AUTH: {
-    LOGIN: '/api/v1/oop/auth/login',
-    REFRESH: '/api/v1/oop/auth/refresh',
-    LOGOUT: '/api/v1/oop/auth/logout',
+    LOGIN: '/api/v1/auth/login',
+    REFRESH: '/api/v1/auth/refresh',
+    LOGOUT: '/api/v1/auth/logout',
   },
   USER: {
-    ME: '/api/v1/oop/users/me',
+    ME: '/api/v1/users/me',
   },
   PROFILE: {
-    ME: '/me/profile',
+    ME: '/api/v1/me/profile',
     PASSWORD: (studentNumber: string) =>
-      `/api/v1/oop/users/${studentNumber}/password`,
+      `/api/v1/users/${studentNumber}/password`,
   },
   ADMIN: {
-    OOP_COURSES: '/api/v1/admin/oop/courses',
+    OOP_COURSES: '/api/v1/admin/courses',
     OOP_COURSE: (courseId: string | number) =>
-      `/api/v1/admin/oop/courses/${courseId}`,
-    OOP_SECTIONS: '/api/v1/admin/oop/sections',
+      `/api/v1/admin/courses/${courseId}`,
+    OOP_SECTIONS: '/api/v1/admin/sections',
     OOP_SECTION: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}`,
+      `/api/v1/admin/sections/${sectionId}`,
     OOP_SECTION_CONTACT_VISIBILITY: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/contact-visibility`,
+      `/api/v1/admin/sections/${sectionId}/contact-visibility`,
     SECTION_ENROLLMENTS: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/enrollments`,
+      `/api/v1/admin/sections/${sectionId}/enrollments`,
     SECTION_ENROLLMENT: (sectionId: string | number, studentNumber: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/enrollments/${studentNumber}`,
+      `/api/v1/admin/sections/${sectionId}/enrollments/${studentNumber}`,
     SECTION_TEAMS: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/teams`,
+      `/api/v1/admin/sections/${sectionId}/teams`,
     SECTION_TEAM_IMPORT_PREVIEW: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/team-imports/preview`,
+      `/api/v1/admin/sections/${sectionId}/team-imports/preview`,
     SECTION_TEAMS_FINALIZE: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/teams/finalize`,
-    TEAM: (teamId: string | number) => `/api/v1/admin/oop/teams/${teamId}`,
+      `/api/v1/admin/sections/${sectionId}/teams/finalize`,
+    TEAM: (teamId: string | number) => `/api/v1/admin/teams/${teamId}`,
     TEAM_MEMBER: (teamId: string | number, studentNumber: string) =>
-      `/api/v1/admin/oop/teams/${teamId}/members/${studentNumber}`,
+      `/api/v1/admin/teams/${teamId}/members/${studentNumber}`,
     TEAM_IMPORT_APPLY: (importId: string | number) =>
-      `/api/v1/admin/oop/team-imports/${importId}/apply`,
-    USERS: '/api/v1/admin/oop/users',
-    USER: (studentNumber: string) => `/api/v1/admin/oop/users/${studentNumber}`,
+      `/api/v1/admin/team-imports/${importId}/apply`,
+    USERS: '/api/v1/admin/users',
+    USER: (studentNumber: string) => `/api/v1/admin/users/${studentNumber}`,
     SECTION_ENROLLMENT_IMPORT_PREVIEW: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/enrollment-imports/preview`,
+      `/api/v1/admin/sections/${sectionId}/enrollment-imports/preview`,
     ENROLLMENT_IMPORT_APPLY: (importId: string | number) =>
-      `/api/v1/admin/oop/enrollment-imports/${importId}/apply`,
+      `/api/v1/admin/enrollment-imports/${importId}/apply`,
     SECTION_ROSTER_IMPORT_STATUS: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/roster-import-status`,
+      `/api/v1/admin/sections/${sectionId}/roster-import-status`,
     OOP_PEER_EVALUATION_FORM: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/peer-evaluation-forms`,
+      `/api/v1/admin/sections/${sectionId}/peer-evaluation-forms`,
     OOP_TEAM_EVALUATION_CRITERIA: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/team-evaluation-criteria`,
+      `/api/v1/admin/sections/${sectionId}/team-evaluation-criteria`,
     OOP_PEER_EVALUATIONS: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/peer-evaluations`,
+      `/api/v1/admin/sections/${sectionId}/peer-evaluations`,
     OOP_PEER_EVALUATION_TEAM: (
       sectionId: string | number,
       teamId: string | number,
-    ) =>
-      `/api/v1/admin/oop/sections/${sectionId}/peer-evaluations/teams/${teamId}`,
+    ) => `/api/v1/admin/sections/${sectionId}/peer-evaluations/teams/${teamId}`,
     OOP_PRESENTATION_EVALUATIONS: (sectionId: string | number) =>
-      `/api/v1/admin/oop/sections/${sectionId}/presentation-evaluations`,
+      `/api/v1/admin/sections/${sectionId}/presentation-evaluations`,
     OOP_PRESENTATION_EVALUATION_TEAM: (
       sectionId: string | number,
       teamId: string | number,
     ) =>
-      `/api/v1/admin/oop/sections/${sectionId}/presentation-evaluations/teams/${teamId}`,
+      `/api/v1/admin/sections/${sectionId}/presentation-evaluations/teams/${teamId}`,
     OOP_PRE_SURVEY_RESPONSES: (sectionId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/pre-survey-responses`,
+      `/api/v1/admin/sections/${sectionId}/pre-survey-responses`,
     OOP_PRE_SURVEY_RESPONSES_DOWNLOAD: (sectionId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/pre-survey-responses/download`,
-    MEETING_RECORDS: '/admin/meeting-records',
-    MEETING_RECORDS_LIST: '/api/v1/admin/oop/meeting-records',
+      `/api/v1/admin/sections/${sectionId}/pre-survey-responses/download`,
+    MEETING_RECORDS: '/api/v1/admin/meeting-records',
+    MEETING_RECORDS_LIST: '/api/v1/admin/meeting-records',
     MEETING_RECORD_DETAIL: (meetingId: string | number) =>
-      `/api/v1/admin/oop/meeting-records/${meetingId}`,
+      `/api/v1/admin/meeting-records/${meetingId}`,
     MEETING_RECORD: (meetingId: string) =>
-      `/admin/meeting-records/${meetingId}`,
-    MILESTONE_SCHEDULE: '/admin/milestone-schedule',
+      `/api/v1/admin/meeting-records/${meetingId}`,
+    MILESTONE_SCHEDULE: '/api/v1/admin/milestone-schedule',
     SECTION_MILESTONES: (sectionId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/milestones`,
+      `/api/v1/admin/sections/${sectionId}/milestones`,
     SECTION_MILESTONE: (sectionId: string, milestoneId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}`,
+      `/api/v1/admin/sections/${sectionId}/milestones/${milestoneId}`,
     SECTION_MILESTONE_STATUS: (sectionId: string, milestoneId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/status`,
+      `/api/v1/admin/sections/${sectionId}/milestones/${milestoneId}/status`,
     REQUIRED_ARTIFACTS: (sectionId: string, milestoneId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/required-artifacts`,
+      `/api/v1/admin/sections/${sectionId}/milestones/${milestoneId}/required-artifacts`,
     REQUIRED_ARTIFACT: (
       sectionId: string,
       milestoneId: string,
       requiredArtifactId: string,
     ) =>
-      `/api/v1/admin/oop/sections/${sectionId}/milestones/${milestoneId}/required-artifacts/${requiredArtifactId}`,
+      `/api/v1/admin/sections/${sectionId}/milestones/${milestoneId}/required-artifacts/${requiredArtifactId}`,
     SECTION_MILESTONE_WEEK_NUMBERS: (sectionId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/milestones/week-numbers`,
+      `/api/v1/admin/sections/${sectionId}/milestones/week-numbers`,
     MILESTONE_SUBMISSIONS: (milestoneId: string) =>
-      `/api/v1/admin/oop/milestones/${milestoneId}/submissions`,
+      `/api/v1/admin/milestones/${milestoneId}/submissions`,
     SUBMISSION: (submissionId: string | number) =>
-      `/api/v1/admin/oop/submissions/${submissionId}`,
+      `/api/v1/admin/submissions/${submissionId}`,
     SUBMISSION_DOWNLOAD: (submissionId: string | number) =>
-      `/api/v1/admin/oop/submissions/${submissionId}/download`,
+      `/api/v1/admin/submissions/${submissionId}/download`,
     SUBMISSION_VERSION: (
       submissionId: string | number,
       version: string | number,
-    ) => `/api/v1/admin/oop/submissions/${submissionId}/versions/${version}`,
+    ) => `/api/v1/admin/submissions/${submissionId}/versions/${version}`,
     SUBMISSION_VERSIONS: (submissionId: string | number) =>
-      `/api/v1/admin/oop/submissions/${submissionId}/versions`,
+      `/api/v1/admin/submissions/${submissionId}/versions`,
     SECTION_PRESENTATION_EVALUATIONS: (sectionId: string) =>
-      `/api/v1/admin/oop/sections/${sectionId}/presentation-evaluations`,
+      `/api/v1/admin/sections/${sectionId}/presentation-evaluations`,
     SECTION_PRESENTATION_EVALUATION_TEAM: (
       sectionId: string | number,
       teamId: string | number,
     ) =>
-      `/api/v1/admin/oop/sections/${sectionId}/presentation-evaluations/teams/${teamId}`,
+      `/api/v1/admin/sections/${sectionId}/presentation-evaluations/teams/${teamId}`,
     SECTION_TEAM_MID_REPORT: (
       sectionId: string | number,
       teamId: string | number,
-    ) => `/api/v1/admin/oop/sections/${sectionId}/teams/${teamId}/mid-report`,
+    ) => `/api/v1/admin/sections/${sectionId}/teams/${teamId}/mid-report`,
     SECTION_PRESENTATION_EVALUATION_SETTINGS: (sectionId: string) =>
-      `/admin/sections/${sectionId}/presentation-evaluation-settings`,
+      `/api/v1/admin/sections/${sectionId}/presentation-evaluation-settings`,
     SECTION_STUDENTS: (sectionId: string) =>
-      `/admin/sections/${sectionId}/students`,
+      `/api/v1/admin/sections/${sectionId}/students`,
     NOTICE_ATTACHMENT: (noticeId: string) =>
-      `/admin/notices/${noticeId}/attachment`,
-    NOTICES: '/admin/notices',
-    NOTICE_DETAIL: (noticeId: string) => `/admin/notices/${noticeId}`,
+      `/api/v1/admin/notices/${noticeId}/attachment`,
+    NOTICES: '/api/v1/admin/notices',
+    NOTICE_DETAIL: (noticeId: string) => `/api/v1/admin/notices/${noticeId}`,
   },
   ANNOUNCEMENTS: {
-    SECTION_LIST: (sectionId: string) => `/sections/${sectionId}/announcements`,
+    SECTION_LIST: (sectionId: string) =>
+      `/api/v1/sections/${sectionId}/announcements`,
     DETAIL: (announcementId: string | number) =>
-      `/announcements/${announcementId}`,
+      `/api/v1/announcements/${announcementId}`,
   },
   SECTION: {
-    MY_SECTIONS: '/api/v1/oop/sections',
+    MY_SECTIONS: '/api/v1/sections',
     STUDENT_DASHBOARD: (sectionId: string) =>
-      `/sections/${sectionId}/dashboard/student`,
+      `/api/v1/sections/${sectionId}/dashboard/student`,
   },
   PROJECT: {
     BY_TEAM: (teamId: string) => `/api/v1/teams/${teamId}/project`,
+    DETAIL: (projectId: string | number) => `/api/v1/projects/${projectId}`,
+    APPROVAL: (projectId: string | number) =>
+      `/api/v1/projects/${projectId}/approval`,
+    APPROVALS: (projectId: string | number) =>
+      `/api/v1/projects/${projectId}/approvals`,
   },
   TEAM: {
-    KICKOFF: (teamId: string) => `/api/v1/oop/teams/${teamId}/kickoff`,
+    KICKOFF: (teamId: string) => `/api/v1/teams/${teamId}/kickoff`,
     MEMBER_CONTACTS: (teamId: string) =>
-      `/api/v1/oop/teams/${teamId}/members/contacts`,
-    LEADER_CLAIM: (teamId: string) =>
-      `/api/v1/oop/teams/${teamId}/leader-claim`,
-    ROOT: '/teams',
+      `/api/v1/teams/${teamId}/members/contacts`,
+    LEADER_CLAIM: (teamId: string) => `/api/v1/teams/${teamId}/leader-claim`,
+    ROOT: '/api/v1/teams',
   },
   TEAM_MESSAGE: {
     BY_TEAM: (teamId: string) => `/api/v1/teams/${teamId}/messages`,
@@ -170,33 +174,34 @@ export const ENDPOINTS = {
     BY_TEAM: (teamId: string) => `/api/v1/teams/${teamId}/thread`,
   },
   ADMIN_MESSAGE: {
-    LIST: '/api/v1/admin/oop/messages',
+    LIST: '/api/v1/admin/messages',
     READ: (messageId: string | number) =>
-      `/api/v1/admin/oop/messages/${messageId}/read`,
+      `/api/v1/admin/messages/${messageId}/read`,
   },
   MEETING: {
-    RECORDS: (teamId: string) => `/teams/${teamId}/meeting-records`,
-    ACTIONS: (teamId: string) => `/teams/${teamId}/actions`,
-    RECORD: (meetingId: string) => `/meeting-records/${meetingId}`,
+    RECORDS: (teamId: string) => `/api/v1/teams/${teamId}/meeting-records`,
+    ACTIONS: (teamId: string) => `/api/v1/teams/${teamId}/actions`,
+    RECORD: (meetingId: string) => `/api/v1/meeting-records/${meetingId}`,
     RECORD_ACTIONS: (meetingId: string) =>
-      `/meeting-records/${meetingId}/actions`,
-    ACTION: (actionId: string) => `/meeting-actions/${actionId}`,
+      `/api/v1/meeting-records/${meetingId}/actions`,
+    ACTION: (actionId: string) => `/api/v1/meeting-actions/${actionId}`,
   },
   EDIT_LOCKS: {
-    ROOT: '/edit-locks',
+    ROOT: '/api/v1/edit-locks',
   },
   EVALUATION: {
-    CONTEXT: (sectionId: string) => `/sections/${sectionId}/evaluation-context`,
+    CONTEXT: (sectionId: string) =>
+      `/api/v1/sections/${sectionId}/evaluation-context`,
     TEAM_CRITERIA: (sectionId: string) =>
-      `/sections/${sectionId}/team-evaluation-criteria`,
+      `/api/v1/sections/${sectionId}/team-evaluation-criteria`,
     TEAM_EVALUATION: (milestoneId: string, teamId: string) =>
-      `/milestones/${milestoneId}/team-evaluations/${teamId}`,
+      `/api/v1/milestones/${milestoneId}/team-evaluations/${teamId}`,
     MY_TEAM_EVALUATIONS: (milestoneId: string) =>
-      `/milestones/${milestoneId}/team-evaluations/me`,
+      `/api/v1/milestones/${milestoneId}/team-evaluations/me`,
     PEER_TARGETS: (formId: string) =>
-      `/peer-evaluation-forms/${formId}/targets`,
+      `/api/v1/peer-evaluation-forms/${formId}/targets`,
     PEER_RESPONSES: (formId: string) =>
-      `/peer-evaluation-forms/${formId}/responses`,
+      `/api/v1/peer-evaluation-forms/${formId}/responses`,
   },
   TOPIC: {
     FINALIZE: (teamId: string) => `/api/v1/teams/${teamId}/topic-finalize`,
@@ -204,74 +209,78 @@ export const ENDPOINTS = {
     CANDIDATE_VOTE: (candidateId: string) =>
       `/api/v1/topic-candidates/${candidateId}/vote`,
     // Legacy demo projection; production uses team/candidate endpoints above.
-    BOARD: (sectionId: string) => `/sections/${sectionId}/project-topic`,
-    VOTE: (sectionId: string) => `/sections/${sectionId}/project-topic/vote`,
+    BOARD: (sectionId: string) => `/api/v1/sections/${sectionId}/project-topic`,
+    VOTE: (sectionId: string) =>
+      `/api/v1/sections/${sectionId}/project-topic/vote`,
   },
   SUBMISSION: {
     MILESTONE_PRESENTATIONS: (milestoneId: string) =>
-      `/milestones/${milestoneId}/presentations`,
+      `/api/v1/milestones/${milestoneId}/presentations`,
     PRESENTATION_ORDER: (milestoneId: string) =>
-      `/milestones/${milestoneId}/presentation-order`,
+      `/api/v1/milestones/${milestoneId}/presentation-order`,
     MY_TEAM_BY_MILESTONE: (milestoneId: string) =>
-      `/milestones/${milestoneId}/my-team-submission`,
-    DETAIL: (submissionId: string) => `/submissions/${submissionId}`,
-    VERSIONS: (submissionId: string) => `/submissions/${submissionId}/versions`,
+      `/api/v1/milestones/${milestoneId}/my-team-submission`,
+    DETAIL: (submissionId: string) => `/api/v1/submissions/${submissionId}`,
+    VERSIONS: (submissionId: string) =>
+      `/api/v1/submissions/${submissionId}/versions`,
     VERSION: (submissionId: string, version: number) =>
-      `/submissions/${submissionId}/versions/${version}`,
+      `/api/v1/submissions/${submissionId}/versions/${version}`,
     CONFIRMATION: (submissionId: string) =>
-      `/submissions/${submissionId}/confirmation`,
+      `/api/v1/submissions/${submissionId}/confirmation`,
     MEMBER_CONFIRMATIONS: (submissionId: string) =>
-      `/submissions/${submissionId}/member-confirmations`,
+      `/api/v1/submissions/${submissionId}/member-confirmations`,
     MY_MEMBER_CONFIRMATION: (submissionId: string) =>
-      `/submissions/${submissionId}/member-confirmations/me`,
+      `/api/v1/submissions/${submissionId}/member-confirmations/me`,
     MID_REPORT_FEEDBACK: (submissionId: string) =>
-      `/submissions/${submissionId}/mid-report-feedback`,
+      `/api/v1/submissions/${submissionId}/mid-report-feedback`,
   },
   REVIEW: {
     REVISION_RESPONSE: (reviewId: string) =>
-      `/reviews/${reviewId}/revision-response`,
+      `/api/v1/reviews/${reviewId}/revision-response`,
   },
   MID_REPORT: {
-    CURRENT: '/mid-reports/current',
+    CURRENT: '/api/v1/mid-reports/current',
     BLOCK: (midReportId: string, blockKey: string) =>
-      `/mid-reports/${midReportId}/blocks/${blockKey}`,
+      `/api/v1/mid-reports/${midReportId}/blocks/${blockKey}`,
     BLOCK_COMPLETION: (midReportId: string, blockKey: string) =>
-      `/mid-reports/${midReportId}/blocks/${blockKey}/completion`,
-    SUBMIT: (midReportId: string) => `/mid-reports/${midReportId}/submit`,
+      `/api/v1/mid-reports/${midReportId}/blocks/${blockKey}/completion`,
+    SUBMIT: (midReportId: string) =>
+      `/api/v1/mid-reports/${midReportId}/submit`,
   },
   PRESENTATION: {
-    CURRENT: '/presentations/current',
+    CURRENT: '/api/v1/presentations/current',
     BLOCK: (presentationId: string, blockKey: string) =>
-      `/presentations/${presentationId}/blocks/${blockKey}`,
+      `/api/v1/presentations/${presentationId}/blocks/${blockKey}`,
     BLOCK_COMPLETION: (presentationId: string, blockKey: string) =>
-      `/presentations/${presentationId}/blocks/${blockKey}/completion`,
+      `/api/v1/presentations/${presentationId}/blocks/${blockKey}/completion`,
     SUBMIT: (presentationId: string) =>
-      `/presentations/${presentationId}/submit`,
+      `/api/v1/presentations/${presentationId}/submit`,
   },
   PROPOSAL: {
-    CURRENT: '/proposals/current',
+    CURRENT: '/api/v1/proposals/current',
     BLOCK: (proposalId: string, blockKey: string) =>
-      `/proposals/${proposalId}/blocks/${blockKey}`,
+      `/api/v1/proposals/${proposalId}/blocks/${blockKey}`,
     BLOCK_COMPLETION: (proposalId: string, blockKey: string) =>
-      `/proposals/${proposalId}/blocks/${blockKey}/completion`,
-    SUBMIT: (proposalId: string) => `/proposals/${proposalId}/submit`,
+      `/api/v1/proposals/${proposalId}/blocks/${blockKey}/completion`,
+    SUBMIT: (proposalId: string) => `/api/v1/proposals/${proposalId}/submit`,
   },
   TEAM_ASSIGNMENT: {
     SUBMIT_SURVEY_RESPONSE: (sectionId: string) =>
-      `/api/v1/oop/sections/${sectionId}/pre-survey/responses`,
-    MY_SURVEY_RESPONSE: '/api/v1/oop/users/me/pre-survey-response',
-    ROOT: (sectionId: string) => `/sections/${sectionId}/team-assignment`,
+      `/api/v1/sections/${sectionId}/pre-survey/responses`,
+    MY_SURVEY_RESPONSE: '/api/v1/users/me/pre-survey-response',
+    ROOT: (sectionId: string) =>
+      `/api/v1/sections/${sectionId}/team-assignment`,
     SURVEY: (sectionId: string) =>
-      `/sections/${sectionId}/team-assignment/survey`,
+      `/api/v1/sections/${sectionId}/team-assignment/survey`,
     LEADER: (sectionId: string, teamId: string) =>
-      `/sections/${sectionId}/team-assignment/teams/${teamId}/leader`,
+      `/api/v1/sections/${sectionId}/team-assignment/teams/${teamId}/leader`,
     PARTNER_CANDIDATES: (sectionId: string) =>
-      `/sections/${sectionId}/team-assignment/partner-candidates`,
+      `/api/v1/sections/${sectionId}/team-assignment/partner-candidates`,
     PARTNER_REQUESTS: (sectionId: string) =>
-      `/sections/${sectionId}/team-assignment/partner-requests`,
+      `/api/v1/sections/${sectionId}/team-assignment/partner-requests`,
     PARTNER_REQUEST_RESPONSE: (sectionId: string, requestId: string) =>
-      `/sections/${sectionId}/team-assignment/partner-requests/${requestId}`,
+      `/api/v1/sections/${sectionId}/team-assignment/partner-requests/${requestId}`,
     PARTNER_REQUEST: (sectionId: string, requestId: string) =>
-      `/sections/${sectionId}/team-assignment/partner-requests/${requestId}`,
+      `/api/v1/sections/${sectionId}/team-assignment/partner-requests/${requestId}`,
   },
 } as const;

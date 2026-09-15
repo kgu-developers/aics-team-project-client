@@ -29,7 +29,7 @@ describe('학생 제출 HTTP 경계', () => {
   );
   it('mock 규약의 currentVersion 객체를 실제 응답으로 수용하지 않는다', async () => {
     server.use(
-      http.get(`${API_BASE_URL}/submissions/11`, () =>
+      http.get(`${API_BASE_URL}/api/v1/submissions/11`, () =>
         HttpResponse.json({
           ...studentSubmission,
           currentVersion: studentSubmissionVersions[1],
@@ -42,7 +42,7 @@ describe('학생 제출 HTTP 경계', () => {
   });
   it('배열을 artifact type 문자열로 강제 변환해 수용하지 않는다', async () => {
     server.use(
-      http.get(`${API_BASE_URL}/submissions/31/versions/2`, () =>
+      http.get(`${API_BASE_URL}/api/v1/submissions/31/versions/2`, () =>
         HttpResponse.json({
           ...studentSubmissionVersions[1],
           artifacts: [{ type: ['FILE'] }],
@@ -127,7 +127,7 @@ it('상세 조회 도중 AbortSignal을 취소하면 HTTP 요청도 취소한다
     release = resolve;
   });
   server.use(
-    http.get(`${API_BASE_URL}/submissions/31`, async () => {
+    http.get(`${API_BASE_URL}/api/v1/submissions/31`, async () => {
       started();
       await response;
       return HttpResponse.json(studentSubmission);

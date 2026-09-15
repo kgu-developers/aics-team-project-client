@@ -11,7 +11,7 @@ export async function updateStudentSubmissionCompletion(
 ): Promise<StudentSubmissionResponse> {
   validateStudentSubmissionId(submissionId);
   const { data } = await apiClient.patch<unknown>(
-    `/submissions/${submissionId}/complete`,
+    `/api/v1/submissions/${submissionId}/complete`,
   );
   validateStudentSubmission(data);
   if (String(data.id) !== submissionId)

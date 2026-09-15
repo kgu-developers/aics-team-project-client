@@ -71,7 +71,7 @@ function currentSections() {
   }));
 }
 const server = setupServer(
-  http.get(`${API_BASE_URL}/api/v1/oop/users/me`, () => {
+  http.get(`${API_BASE_URL}/api/v1/users/me`, () => {
     const user = useAuthStore.getState().currentUser!;
     return HttpResponse.json({
       ...user,
@@ -80,7 +80,7 @@ const server = setupServer(
       teamId: user.teamId ?? null,
     });
   }),
-  http.get(`${API_BASE_URL}/api/v1/oop/sections`, () =>
+  http.get(`${API_BASE_URL}/api/v1/sections`, () =>
     HttpResponse.json({ contents: currentSections() }),
   ),
 );
@@ -92,7 +92,7 @@ beforeEach(() => {
   useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setCurrentUser(student);
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () =>
       HttpResponse.json(kickoff),
     ),
   );
@@ -121,7 +121,7 @@ function renderPage(page = <MeetingListPage />) {
 it('currentTeam이 없어도 /me의 teamId로 실제 응답을 읽고 지원하는 항목만 표시한다', async () => {
   const requests = vi.fn();
   server.use(
-    http.get(`${API_BASE_URL}/teams/7/meeting-records`, () => {
+    http.get(`${API_BASE_URL}/api/v1/teams/7/meeting-records`, () => {
       requests();
       return HttpResponse.json({ contents: [summary] });
     }),
@@ -149,10 +149,10 @@ it('팀원 정보를 확인하기 전에는 목록을 요청하지 않고 확인
     releaseKickoff = resolve;
   });
   server.use(
-    http.get(`${API_BASE_URL}/teams/7/meeting-records`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/7/meeting-records`, () =>
       HttpResponse.json({ contents: [summary] }),
     ),
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, async () => {
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, async () => {
       await kickoffReady;
       return HttpResponse.json(kickoff);
     }),
@@ -181,11 +181,11 @@ it.each([403, 500])(
     const summaryRequests = vi.fn();
     const kickoffRequests = vi.fn();
     server.use(
-      http.get(`${API_BASE_URL}/teams/7/meeting-records`, () => {
+      http.get(`${API_BASE_URL}/api/v1/teams/7/meeting-records`, () => {
         summaryRequests();
         return HttpResponse.json({ contents: [summary] });
       }),
-      http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () => {
+      http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () => {
         kickoffRequests();
         return new HttpResponse(null, { status });
       }),
@@ -201,7 +201,7 @@ it.each([403, 500])(
       expect(screen.getByRole('button', { name: '다시 시도' })).toBeEnabled(),
     );
     server.use(
-      http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () => {
+      http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () => {
         kickoffRequests();
         return HttpResponse.json(kickoff);
       }),
@@ -221,10 +221,10 @@ it('목록 조회가 실패해도 팀원 조회 중에는 재시도를 비활성
   });
   server.use(
     http.get(
-      `${API_BASE_URL}/teams/7/meeting-records`,
+      `${API_BASE_URL}/api/v1/teams/7/meeting-records`,
       () => new HttpResponse(null, { status: 500 }),
     ),
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, async () => {
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, async () => {
       await kickoffReady;
       return HttpResponse.json(kickoff);
     }),
@@ -247,7 +247,7 @@ it('목록 조회가 실패해도 팀원 조회 중에는 재시도를 비활성
 
 it('팀에 속해 있지만 회의록이 없으면 빈 목록을 표시한다', async () => {
   server.use(
-    http.get(`${API_BASE_URL}/teams/7/meeting-records`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/7/meeting-records`, () =>
       HttpResponse.json({ contents: [] }),
     ),
   );
@@ -300,7 +300,7 @@ it.each([403, 500])(
   async status => {
     const requests = vi.fn();
     server.use(
-      http.get(`${API_BASE_URL}/teams/7/meeting-records`, () => {
+      http.get(`${API_BASE_URL}/api/v1/teams/7/meeting-records`, () => {
         requests();
         return new HttpResponse(null, { status });
       }),
@@ -311,7 +311,7 @@ it.each([403, 500])(
     expect(screen.queryByText('소속 팀이 없어요.')).not.toBeInTheDocument();
 
     server.use(
-      http.get(`${API_BASE_URL}/teams/7/meeting-records`, () => {
+      http.get(`${API_BASE_URL}/api/v1/teams/7/meeting-records`, () => {
         requests();
         return HttpResponse.json({ contents: [] });
       }),
@@ -324,13 +324,13 @@ it.each([403, 500])(
 
 it('팀이 변경되면 새 팀을 조회하고 이전 팀의 회의록을 표시하지 않는다', async () => {
   server.use(
-    http.get(`${API_BASE_URL}/teams/7/meeting-records`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/7/meeting-records`, () =>
       HttpResponse.json({ contents: [summary] }),
     ),
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/8/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/8/kickoff`, () =>
       HttpResponse.json({ id: 8, name: '다른 팀', members: [] }),
     ),
-    http.get(`${API_BASE_URL}/teams/8/meeting-records`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/8/meeting-records`, () =>
       HttpResponse.json({
         contents: [{ ...summary, id: 20, title: null, phase: 'FINAL' }],
       }),

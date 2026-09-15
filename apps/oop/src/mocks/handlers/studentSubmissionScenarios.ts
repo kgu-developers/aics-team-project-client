@@ -48,7 +48,7 @@ export function createStudentSubmissionHandlers(
           : forbidden(),
     ),
     http.get(
-      `${API_BASE_URL}/submissions/:submissionId/versions/:version`,
+      `${API_BASE_URL}/api/v1/submissions/:submissionId/versions/:version`,
       ({ params }) => {
         if (String(params.submissionId) !== String(submission.id))
           return forbidden();

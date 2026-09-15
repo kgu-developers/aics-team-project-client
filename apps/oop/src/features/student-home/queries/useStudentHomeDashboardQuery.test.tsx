@@ -20,7 +20,7 @@ import { studentHomeDashboardFixture } from '~/mocks/data/studentHome';
 const dashboardRequest = vi.fn();
 const server = setupServer(
   http.get(
-    'http://localhost:8080/sections/:sectionId/dashboard/student',
+    'http://localhost:8080/api/v1/sections/:sectionId/dashboard/student',
     () => {
       dashboardRequest();
       return HttpResponse.json(studentHomeDashboardFixture);

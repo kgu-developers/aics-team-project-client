@@ -13,19 +13,19 @@ import type { BrowserContext, Route } from '@playwright/test';
 import { student } from './ui';
 
 export const paths = {
-  login: '/api/v1/oop/auth/login',
-  refresh: '/api/v1/oop/auth/refresh',
-  logout: '/api/v1/oop/auth/logout',
-  me: '/api/v1/oop/users/me',
-  sections: '/api/v1/oop/sections',
+  login: '/api/v1/auth/login',
+  refresh: '/api/v1/auth/refresh',
+  logout: '/api/v1/auth/logout',
+  me: '/api/v1/users/me',
+  sections: '/api/v1/sections',
   milestones: '/api/v1/sections/2/milestones',
   project: '/api/v1/teams/7/project',
   proposalSections: '/api/v1/projects/21/proposal/sections',
   proposalComplete: '/api/v1/projects/21/proposal-complete',
   notices: '/sections/2/announcements',
   meetings: '/teams/7/meeting-records',
-  survey: '/api/v1/oop/users/me/pre-survey-response',
-  submitSurvey: '/api/v1/oop/sections/2/pre-survey/responses',
+  survey: '/api/v1/users/me/pre-survey-response',
+  submitSurvey: '/api/v1/sections/2/pre-survey/responses',
   peerTargets: '/peer-evaluation-forms/1/targets',
   peerResponses: '/peer-evaluation-forms/1/responses',
 };
@@ -223,8 +223,8 @@ export class StudentApi {
     if (!s.authenticated) return reply({ code: 'UNAUTHORIZED' }, 401);
     if (path === paths.me) return reply(s.user);
     if (path === paths.sections) return reply({ contents: s.sections });
-    if (path === '/api/v1/oop/teams/7/kickoff') return reply(s.team);
-    if (path === '/api/v1/oop/teams/7/leader-claim' && method === 'POST') {
+    if (path === '/api/v1/teams/7/kickoff') return reply(s.team);
+    if (path === '/api/v1/teams/7/leader-claim' && method === 'POST') {
       s.team.members[0]!.isLeader = true;
       return reply(s.team);
     }

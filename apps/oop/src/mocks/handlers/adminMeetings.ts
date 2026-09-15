@@ -49,53 +49,6 @@ function matchesRequestedSection(
 
 export const adminMeetingHandlers = [
   http.get(
-    `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS}`,
-    ({ request }) => {
-      const accessibleSectionIds = getAccessibleSectionIds(request);
-
-      if (!accessibleSectionIds) {
-        return HttpResponse.json(
-          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
-          { status: 401 },
-        );
-      }
-
-      const searchParams = new URL(request.url).searchParams;
-      const sectionId = searchParams.get('sectionId');
-      const teamId = searchParams.get('teamId');
-      const milestoneId = searchParams.get('milestoneId');
-
-      return HttpResponse.json({
-        records: adminMeetingRecordsFixture
-          .filter(record =>
-            isAccessibleRecordSection(record, accessibleSectionIds),
-          )
-          .filter(
-            record =>
-              !sectionId ||
-              record.sectionId === sectionId ||
-              String(record.apiSectionId) === sectionId,
-          )
-          .filter(record => !teamId || String(record.apiTeamId) === teamId)
-          .filter(
-            record =>
-              !milestoneId || record.milestoneIds.includes(Number(milestoneId)),
-          )
-          .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
-          .map(record => ({
-            authorName: record.createdBy.name,
-            createdAt: record.createdAt,
-            id: record.id,
-            sectionId: record.sectionId,
-            sectionLabel: record.sectionLabel,
-            teamId: record.teamId,
-            teamLabel: record.teamLabel,
-            title: record.title,
-          })),
-      });
-    },
-  ),
-  http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS_LIST}`,
     ({ request }) => {
       const accessibleSectionIds = getAccessibleSectionIds(request);
@@ -162,8 +115,10 @@ export const adminMeetingHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORD_DETAIL(':meetingId')}`,
     ({ params, request }) => {
-      const accessibleSectionIds = getAccessibleSectionIds(request);
       const meetingId = Number(params.meetingId);
+      if (!Number.isSafeInteger(meetingId)) return;
+
+      const accessibleSectionIds = getAccessibleSectionIds(request);
       const record = Number.isSafeInteger(meetingId)
         ? adminMeetingRecordsFixture.find(
             item => getAdminMeetingRecordId(item) === meetingId,

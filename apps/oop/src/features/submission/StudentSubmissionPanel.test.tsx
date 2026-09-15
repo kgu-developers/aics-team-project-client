@@ -59,7 +59,7 @@ beforeEach(() => {
   useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setCurrentUser(demoStudent);
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () =>
       HttpResponse.json({
         id: 7,
         members: [
@@ -67,10 +67,10 @@ beforeEach(() => {
         ],
       }),
     ),
-    http.get(`${API_BASE_URL}/submissions/31`, () =>
+    http.get(`${API_BASE_URL}/api/v1/submissions/31`, () =>
       HttpResponse.json(current),
     ),
-    http.get(`${API_BASE_URL}/submissions/31/versions`, () =>
+    http.get(`${API_BASE_URL}/api/v1/submissions/31/versions`, () =>
       HttpResponse.json({ contents: [] }),
     ),
     http.get(
@@ -89,7 +89,7 @@ beforeEach(() => {
           ],
         }),
     ),
-    http.post(`${API_BASE_URL}/submissions/31/versions`, () => {
+    http.post(`${API_BASE_URL}/api/v1/submissions/31/versions`, () => {
       posts++;
       current = { ...current, currentVersion: current.currentVersion + 1 };
       return HttpResponse.json(current);
@@ -153,7 +153,7 @@ describe('실서버 제출 폼', () => {
   });
   it('응답 유실은 자동 재시도하지 않고 결과 확인 전 재제출을 차단한다', async () => {
     server.use(
-      http.post(`${API_BASE_URL}/submissions/31/versions`, () => {
+      http.post(`${API_BASE_URL}/api/v1/submissions/31/versions`, () => {
         posts++;
         return HttpResponse.error();
       }),
@@ -170,7 +170,7 @@ describe('실서버 제출 폼', () => {
     expect(confirm).toBeDisabled();
     let historyAvailable = false;
     server.use(
-      http.get(`${API_BASE_URL}/submissions/31/versions`, () =>
+      http.get(`${API_BASE_URL}/api/v1/submissions/31/versions`, () =>
         historyAvailable
           ? HttpResponse.json({ contents: [] })
           : new HttpResponse(null, { status: 503 }),
@@ -200,7 +200,7 @@ describe('실서버 제출 폼', () => {
       release = r;
     });
     server.use(
-      http.post(`${API_BASE_URL}/submissions/31/versions`, async () => {
+      http.post(`${API_BASE_URL}/api/v1/submissions/31/versions`, async () => {
         started();
         await gate;
         return HttpResponse.json({ ...current, currentVersion: 1 });
@@ -230,7 +230,7 @@ describe('실서버 제출 폼', () => {
 
 it('팀원은 최종보고서 파일을 제출할 수 없다', async () => {
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () =>
       HttpResponse.json({
         id: 7,
         members: [
@@ -249,7 +249,7 @@ it('팀원은 최종보고서 파일을 제출할 수 없다', async () => {
 it('발표 자료는 팀장 여부 조회 없이 팀원이 실제 파일로 제출한다', async () => {
   let kickoffCalls = 0;
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () => {
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () => {
       kickoffCalls++;
       return new HttpResponse(null, { status: 403 });
     }),

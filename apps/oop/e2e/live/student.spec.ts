@@ -16,7 +16,7 @@ for (const route of [
 
 test('틀린 비밀번호는 로그인에 실패한다', async ({ page }) => {
   const result = page.waitForResponse(r =>
-    r.url().endsWith('/api/v1/oop/auth/login'),
+    r.url().endsWith('/api/v1/auth/login'),
   );
   await login(page, { ...account(), password: 'invalid-e2e-password' });
   expect((await result).status()).toBe(401);
@@ -32,7 +32,7 @@ test('로그인, 실제 쿠키로 새로고침 복원, 로그아웃', async ({
   const cookies = await context.cookies();
   expect(cookies.find(c => c.name === 'refreshToken')?.httpOnly).toBe(true);
   const refresh = page.waitForResponse(r =>
-    r.url().endsWith('/api/v1/oop/auth/refresh'),
+    r.url().endsWith('/api/v1/auth/refresh'),
   );
   await page.reload();
   expect((await refresh).status()).toBe(200);

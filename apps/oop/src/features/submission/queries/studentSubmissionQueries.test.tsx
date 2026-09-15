@@ -125,7 +125,7 @@ describe('학생 제출 조회 쿼리', () => {
   it('권한 오류를 재시도하지 않는다', async () => {
     server.use(
       http.get(
-        `${API_BASE_URL}/submissions/31`,
+        `${API_BASE_URL}/api/v1/submissions/31`,
         () => new HttpResponse(null, { status: 403 }),
       ),
     );

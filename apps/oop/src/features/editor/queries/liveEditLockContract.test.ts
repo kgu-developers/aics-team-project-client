@@ -183,7 +183,7 @@ it.each(['PROJECT_BLOCK', 'PRESENTATION_CONTENT'])(
 );
 
 it('MSW도 필수 영역 키가 빠진 요청을 거절한다', async () => {
-  const response = await fetch(`${API_BASE_URL}/edit-locks`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/edit-locks`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${demoAccessToken}`,
@@ -237,7 +237,9 @@ it.each([{ locked: 'false' }, { locked: true, lockedByName: 42 }])(
   '잘못된 상태 또는 편집자 이름을 정상 응답으로 취급하지 않는다',
   async body => {
     server.use(
-      http.get(`${API_BASE_URL}/edit-locks`, () => HttpResponse.json(body)),
+      http.get(`${API_BASE_URL}/api/v1/edit-locks`, () =>
+        HttpResponse.json(body),
+      ),
     );
     await expect(fetchLiveEditLock(target)).rejects.toThrow();
   },
@@ -245,7 +247,7 @@ it.each([{ locked: 'false' }, { locked: true, lockedByName: 42 }])(
 
 it('편집자 이름이 null이면 계정 식별자와 잠금 상태를 보존한다', async () => {
   server.use(
-    http.get(`${API_BASE_URL}/edit-locks`, () =>
+    http.get(`${API_BASE_URL}/api/v1/edit-locks`, () =>
       HttpResponse.json({
         locked: true,
         lockedBy: demoStudent.studentNumber,
