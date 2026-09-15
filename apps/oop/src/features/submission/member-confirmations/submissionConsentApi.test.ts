@@ -62,7 +62,7 @@ it('본인 mutation에 userId나 version 또는 본문을 추가하지 않는다
   const requests: { method: string; body: string; query: string }[] = [];
   server.use(
     http.all(
-      `${API_BASE_URL}/submissions/41/member-confirmations/me`,
+      `${API_BASE_URL}/api/v1/submissions/41/member-confirmations/me`,
       async ({ request }) => {
         requests.push({
           method: request.method,
@@ -107,7 +107,7 @@ it.each([
   { confirmedCount: 1, totalCount: 2 },
 ])('잘못된 요약 %j를 확인 완료로 수용하지 않는다', async summary => {
   server.use(
-    http.get(`${API_BASE_URL}/submissions/41/member-confirmations`, () =>
+    http.get(`${API_BASE_URL}/api/v1/submissions/41/member-confirmations`, () =>
       HttpResponse.json(summary),
     ),
   );

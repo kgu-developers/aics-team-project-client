@@ -65,10 +65,13 @@ const requestBodies: unknown[] = [];
 const deleteRequest = vi.fn();
 
 const server = setupServer(
-  http.get(`${API_BASE_URL}/api/v1/teams/:teamId/meeting-records`, ({ request }) => {
-    expect(new URL(request.url).searchParams.get('phase')).toBe('MID_CHECK');
-    return HttpResponse.json({ contents: [meetingRecordSummaryDto] });
-  }),
+  http.get(
+    `${API_BASE_URL}/api/v1/teams/:teamId/meeting-records`,
+    ({ request }) => {
+      expect(new URL(request.url).searchParams.get('phase')).toBe('MID_CHECK');
+      return HttpResponse.json({ contents: [meetingRecordSummaryDto] });
+    },
+  ),
   http.post(
     `${API_BASE_URL}/api/v1/teams/:teamId/meeting-records`,
     async ({ request }) => {
@@ -79,29 +82,35 @@ const server = setupServer(
   http.get(`${API_BASE_URL}/api/v1/meeting-records/:id`, () =>
     HttpResponse.json(meetingRecordDetailDto),
   ),
-  http.patch(`${API_BASE_URL}/api/v1/meeting-records/:id`, async ({ request }) => {
-    requestBodies.push(await request.json());
-    return HttpResponse.json(meetingRecordPersistDto);
-  }),
+  http.patch(
+    `${API_BASE_URL}/api/v1/meeting-records/:id`,
+    async ({ request }) => {
+      requestBodies.push(await request.json());
+      return HttpResponse.json(meetingRecordPersistDto);
+    },
+  ),
   http.delete(`${API_BASE_URL}/api/v1/meeting-records/:id`, () => {
     deleteRequest();
     return new HttpResponse(null, { status: 204 });
   }),
-  http.get(`${API_BASE_URL}/meeting-records/:id/actions`, () =>
+  http.get(`${API_BASE_URL}/api/v1/meeting-records/:id/actions`, () =>
     HttpResponse.json({ contents: [meetingActionDto] }),
   ),
   http.post(
-    `${API_BASE_URL}/meeting-records/:id/actions`,
+    `${API_BASE_URL}/api/v1/meeting-records/:id/actions`,
     async ({ request }) => {
       requestBodies.push(await request.json());
       return HttpResponse.json(meetingActionDto, { status: 201 });
     },
   ),
-  http.patch(`${API_BASE_URL}/meeting-actions/:id`, async ({ request }) => {
-    requestBodies.push(await request.json());
-    return HttpResponse.json({ ...meetingActionDto, status: 'DONE' });
-  }),
-  http.get(`${API_BASE_URL}/teams/:teamId/actions`, ({ request }) => {
+  http.patch(
+    `${API_BASE_URL}/api/v1/meeting-actions/:id`,
+    async ({ request }) => {
+      requestBodies.push(await request.json());
+      return HttpResponse.json({ ...meetingActionDto, status: 'DONE' });
+    },
+  ),
+  http.get(`${API_BASE_URL}/api/v1/teams/:teamId/actions`, ({ request }) => {
     expect(new URL(request.url).searchParams.get('status')).toBe('DONE');
     return HttpResponse.json({
       contents: [
@@ -206,15 +215,18 @@ describe('meeting API client contract', () => {
 describe('meeting API contract boundaries', () => {
   it('필터가 없으면 쿼리 파라미터를 생략하고 빈 contents를 빈 목록으로 반환한다', async () => {
     server.use(
-      http.get(`${API_BASE_URL}/api/v1/teams/10/meeting-records`, ({ request }) => {
+      http.get(
+        `${API_BASE_URL}/api/v1/teams/10/meeting-records`,
+        ({ request }) => {
+          expect(new URL(request.url).search).toBe('');
+          return HttpResponse.json({ contents: [] });
+        },
+      ),
+      http.get(`${API_BASE_URL}/api/v1/teams/10/actions`, ({ request }) => {
         expect(new URL(request.url).search).toBe('');
         return HttpResponse.json({ contents: [] });
       }),
-      http.get(`${API_BASE_URL}/teams/10/actions`, ({ request }) => {
-        expect(new URL(request.url).search).toBe('');
-        return HttpResponse.json({ contents: [] });
-      }),
-      http.get(`${API_BASE_URL}/meeting-records/7/actions`, () =>
+      http.get(`${API_BASE_URL}/api/v1/meeting-records/7/actions`, () =>
         HttpResponse.json({ contents: [] }),
       ),
     );
@@ -226,7 +238,7 @@ describe('meeting API contract boundaries', () => {
 
   it('TODO 상태와 담당자 학번·서버 시각 문자열을 손실 없이 전달한다', async () => {
     server.use(
-      http.get(`${API_BASE_URL}/teams/10/actions`, ({ request }) => {
+      http.get(`${API_BASE_URL}/api/v1/teams/10/actions`, ({ request }) => {
         expect(new URL(request.url).searchParams.get('status')).toBe('TODO');
         return HttpResponse.json({
           contents: [

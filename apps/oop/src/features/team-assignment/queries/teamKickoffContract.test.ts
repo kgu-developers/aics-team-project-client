@@ -15,14 +15,14 @@ afterAll(() => server.close());
 
 it('kickoff 멤버 ID와 연락처 학번을 구분하고 contents를 반환한다', async () => {
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/4/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/4/kickoff`, () =>
       HttpResponse.json({
         id: 4,
         name: '7조',
         members: [{ id: 10, studentNumber: '20260001', isLeader: false }],
       }),
     ),
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/4/members/contacts`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/4/members/contacts`, () =>
       HttpResponse.json({
         contents: [
           {
@@ -46,7 +46,7 @@ it('kickoff 멤버 ID와 연락처 학번을 구분하고 contents를 반환한�
 it('안전 정수 최댓값의 kickoff ID는 정확하게 유지한다', async () => {
   const teamId = '9007199254740991';
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/${teamId}/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/${teamId}/kickoff`, () =>
       HttpResponse.json({
         id: Number(teamId),
         name: '7조',
@@ -69,7 +69,7 @@ it.each([
   async (teamId, memberId) => {
     server.use(
       http.get(
-        `${API_BASE_URL}/api/v1/oop/teams/4/kickoff`,
+        `${API_BASE_URL}/api/v1/teams/4/kickoff`,
         () =>
           new HttpResponse(
             `{"id":${teamId},"name":"7조","members":[{"id":${memberId},"studentNumber":"20260001","isLeader":false}]}`,
@@ -86,7 +86,7 @@ it.each([
 it('팀장 선점은 본문 없이 POST하고 204를 처리한다', async () => {
   server.use(
     http.post(
-      `${API_BASE_URL}/api/v1/oop/teams/4/leader-claim`,
+      `${API_BASE_URL}/api/v1/teams/4/leader-claim`,
       async ({ request }) => {
         expect(await request.text()).toBe('');
         return new HttpResponse(null, { status: 204 });
@@ -100,7 +100,7 @@ it.each([401, 403, 409])(
   async status => {
     server.use(
       http.post(
-        `${API_BASE_URL}/api/v1/oop/teams/4/leader-claim`,
+        `${API_BASE_URL}/api/v1/teams/4/leader-claim`,
         () => new HttpResponse(null, { status }),
       ),
     );

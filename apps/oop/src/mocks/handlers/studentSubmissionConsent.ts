@@ -86,7 +86,7 @@ export function createStudentSubmissionConsentHandlers({
   }
   return [
     http.patch(
-      `${API_BASE_URL}/submissions/:submissionId/complete`,
+      `${API_BASE_URL}/api/v1/submissions/:submissionId/complete`,
       ({ request, params }) => {
         const authorized = authorize(request, params.submissionId);
         if (authorized instanceof Response) return authorized;

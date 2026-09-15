@@ -77,7 +77,7 @@ it('두 번째 액션 실패 후 재시도하면 회의록과 첫 번째 액션�
       return undefined;
     }),
     http.post(
-      API_BASE_URL + '/meeting-records/:id/actions',
+      API_BASE_URL + '/api/v1/meeting-records/:id/actions',
       async ({ request }) => {
         const body = (await request.clone().json()) as { content: string };
         writes.push(body.content);
@@ -114,7 +114,9 @@ it('두 번째 액션 실패 후 재시도하면 회의록과 첫 번째 액션�
 
 it('액션 응답 유실 뒤에는 재시도해도 POST를 다시 보내지 않고 회의록 ID를 유지한다', async () => {
   const post = vi.fn(() => HttpResponse.error());
-  server.use(http.post(API_BASE_URL + '/meeting-records/:id/actions', post));
+  server.use(
+    http.post(API_BASE_URL + '/api/v1/meeting-records/:id/actions', post),
+  );
   const { result } = setup();
   await act(async () => {
     await result.current.save(variables);
@@ -134,7 +136,7 @@ it('회의록 응답 유실 뒤에는 새 회의록이나 액션을 재등록하
   const actionPost = vi.fn(() => HttpResponse.error());
   server.use(
     http.post(API_BASE_URL + '/api/v1/teams/7/meeting-records', recordPost),
-    http.post(API_BASE_URL + '/meeting-records/:id/actions', actionPost),
+    http.post(API_BASE_URL + '/api/v1/meeting-records/:id/actions', actionPost),
   );
   const { result } = setup();
   await act(async () => {

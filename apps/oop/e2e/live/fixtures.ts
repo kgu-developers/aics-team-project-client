@@ -36,8 +36,7 @@ export async function signIn(
   );
   const response = page.waitForResponse(
     r =>
-      r.url().endsWith('/api/v1/auth/login') &&
-      r.request().method() === 'POST',
+      r.url().endsWith('/api/v1/auth/login') && r.request().method() === 'POST',
   );
   await login(page, account(kind));
   const result = await response;

@@ -97,7 +97,7 @@ it.each([
 ])('누락·미지원 대상%j은 조회와 수동 mutation을 차단한다', async value => {
   const requests = vi.fn();
   server.use(
-    http.all(`${API_BASE_URL}/edit-locks`, () => {
+    http.all(`${API_BASE_URL}/api/v1/edit-locks`, () => {
       requests();
       return HttpResponse.json({ locked: false });
     }),
@@ -120,7 +120,7 @@ it('대상 전환 후 늦은 획득 응답은 새 대상 상태를 바꾸거나 
   const started = vi.fn();
   const deletes = vi.fn();
   server.use(
-    http.post(`${API_BASE_URL}/edit-locks`, async () => {
+    http.post(`${API_BASE_URL}/api/v1/edit-locks`, async () => {
       started();
       await pending;
       return HttpResponse.json({
@@ -129,7 +129,7 @@ it('대상 전환 후 늦은 획득 응답은 새 대상 상태를 바꾸거나 
         lockedAt: '2026-09-08 10:00',
       });
     }),
-    http.delete(`${API_BASE_URL}/edit-locks`, () => {
+    http.delete(`${API_BASE_URL}/api/v1/edit-locks`, () => {
       deletes();
       return new HttpResponse(null, { status: 204 });
     }),
@@ -154,14 +154,14 @@ it('대상 전환 후 늦은 획득 응답은 새 대상 상태를 바꾸거나 
 it('현재 계정 소유가 아니면 release는 DELETE하지 않는다', async () => {
   const deletes = vi.fn();
   server.use(
-    http.get(`${API_BASE_URL}/edit-locks`, () =>
+    http.get(`${API_BASE_URL}/api/v1/edit-locks`, () =>
       HttpResponse.json({
         locked: true,
         lockedBy: '20260003',
         lockedAt: '2026-09-08 10:00',
       }),
     ),
-    http.delete(`${API_BASE_URL}/edit-locks`, () => {
+    http.delete(`${API_BASE_URL}/api/v1/edit-locks`, () => {
       deletes();
       return new HttpResponse(null, { status: 204 });
     }),
@@ -177,7 +177,7 @@ it('현재 계정 소유가 아니면 release는 DELETE하지 않는다', async 
 it('획득 실패는 편집 권한으로 바꾸지 않고 상태 재조회로 회복한다', async () => {
   server.use(
     http.post(
-      `${API_BASE_URL}/edit-locks`,
+      `${API_BASE_URL}/api/v1/edit-locks`,
       () => new HttpResponse(null, { status: 503 }),
     ),
   );
@@ -202,12 +202,12 @@ it('이탈 후 늦은 응답은 현재 잠금을 자동 해제하지 않는다',
   const started = vi.fn();
   const deletes = vi.fn();
   server.use(
-    http.post(`${API_BASE_URL}/edit-locks`, async () => {
+    http.post(`${API_BASE_URL}/api/v1/edit-locks`, async () => {
       started();
       await pending;
       return HttpResponse.json({ locked: true, lockedBy: '20260001' });
     }),
-    http.delete(`${API_BASE_URL}/edit-locks`, () => {
+    http.delete(`${API_BASE_URL}/api/v1/edit-locks`, () => {
       deletes();
       return new HttpResponse(null, { status: 204 });
     }),
@@ -234,7 +234,7 @@ it('로그아웃 후 보관한 callback으로 획득하거나 해제하지 않�
   const oldAcquire = result.current.acquire;
   const oldRelease = result.current.release;
   server.use(
-    http.all(`${API_BASE_URL}/edit-locks`, () => {
+    http.all(`${API_BASE_URL}/api/v1/edit-locks`, () => {
       requests();
       return HttpResponse.json({ locked: false });
     }),
@@ -255,7 +255,7 @@ it('같은 대상으로 돌아와도 이전 세대의 획득 응답은 현재 �
   });
   const started = vi.fn();
   server.use(
-    http.post(`${API_BASE_URL}/edit-locks`, async () => {
+    http.post(`${API_BASE_URL}/api/v1/edit-locks`, async () => {
       started();
       await pending;
       return HttpResponse.json({ locked: true, lockedBy: '20260001' });
@@ -300,7 +300,7 @@ it('영역 전환 후 이전 영역의 늦은 획득 응답을 무시한다', as
   });
   const started = vi.fn();
   server.use(
-    http.post(`${API_BASE_URL}/edit-locks`, async () => {
+    http.post(`${API_BASE_URL}/api/v1/edit-locks`, async () => {
       started();
       await pending;
       return HttpResponse.json({
@@ -330,10 +330,10 @@ it('획득409의 코드 응답 뒤 상태를 재조회해 다른 편집자를 �
   const { result } = renderLock();
   await waitFor(() => expect(result.current.state).toBe('unlocked'));
   server.use(
-    http.post(`${API_BASE_URL}/edit-locks`, () =>
+    http.post(`${API_BASE_URL}/api/v1/edit-locks`, () =>
       HttpResponse.json({ code: 'EDIT_LOCK_CONFLICT' }, { status: 409 }),
     ),
-    http.get(`${API_BASE_URL}/edit-locks`, () =>
+    http.get(`${API_BASE_URL}/api/v1/edit-locks`, () =>
       HttpResponse.json({
         locked: true,
         lockedBy: '20260003',
@@ -364,7 +364,7 @@ it('같은 계정으로 다시 로그인해도 이전 세션의 callback으로 �
   });
   await waitFor(() => expect(result.current.state).toBe('unlocked'));
   server.use(
-    http.all(`${API_BASE_URL}/edit-locks`, () => {
+    http.all(`${API_BASE_URL}/api/v1/edit-locks`, () => {
       requests();
       return HttpResponse.json({ locked: false });
     }),

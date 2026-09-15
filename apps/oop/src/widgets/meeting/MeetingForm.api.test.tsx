@@ -121,10 +121,13 @@ function renderForm(record?: typeof original) {
 it('제목만 변경하면 기존 본문·일시·참석자를 보존하고 상세로 돌아간다', async () => {
   const bodies: unknown[] = [];
   server.use(
-    http.patch(`${API_BASE_URL}/api/v1/meeting-records/19`, async ({ request }) => {
-      bodies.push(await request.clone().json());
-      return undefined;
-    }),
+    http.patch(
+      `${API_BASE_URL}/api/v1/meeting-records/19`,
+      async ({ request }) => {
+        bodies.push(await request.clone().json());
+        return undefined;
+      },
+    ),
   );
   renderForm();
   const title = await screen.findByRole('textbox', { name: /회의 제목/ });
@@ -158,10 +161,13 @@ it('제목만 변경하면 기존 본문·일시·참석자를 보존하고 상�
 it('단계·일시·장소를 변경하면 화면 입력과 같은 PATCH 값을 전송한다', async () => {
   const bodies: unknown[] = [];
   server.use(
-    http.patch(`${API_BASE_URL}/api/v1/meeting-records/19`, async ({ request }) => {
-      bodies.push(await request.clone().json());
-      return undefined;
-    }),
+    http.patch(
+      `${API_BASE_URL}/api/v1/meeting-records/19`,
+      async ({ request }) => {
+        bodies.push(await request.clone().json());
+        return undefined;
+      },
+    ),
   );
   renderForm();
   await screen.findByRole('textbox', { name: /회의 제목/ });
@@ -299,7 +305,7 @@ it('resets a new-meeting draft on an actual raw identity/team change before it c
   clients.push(client);
   let writes = 0;
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/8/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/8/kickoff`, () =>
       HttpResponse.json({ ...meetingApiTeam, id: 8 }),
     ),
     http.post(/\/api\/v1\/meeting-records/, () => {

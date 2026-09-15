@@ -223,8 +223,8 @@ export class StudentApi {
     if (!s.authenticated) return reply({ code: 'UNAUTHORIZED' }, 401);
     if (path === paths.me) return reply(s.user);
     if (path === paths.sections) return reply({ contents: s.sections });
-    if (path === '/api/v1/oop/teams/7/kickoff') return reply(s.team);
-    if (path === '/api/v1/oop/teams/7/leader-claim' && method === 'POST') {
+    if (path === '/api/v1/teams/7/kickoff') return reply(s.team);
+    if (path === '/api/v1/teams/7/leader-claim' && method === 'POST') {
       s.team.members[0]!.isLeader = true;
       return reply(s.team);
     }

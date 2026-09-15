@@ -128,7 +128,7 @@ it('단계와 상태 필터를 요청에 전달하고 각각 별도 캐시를 �
         ],
       }),
     ),
-    http.get(`${API_BASE_URL}/teams/10/actions`, ({ request }) =>
+    http.get(`${API_BASE_URL}/api/v1/teams/10/actions`, ({ request }) =>
       HttpResponse.json({
         contents: [
           {
@@ -322,14 +322,14 @@ it.each([
     '생성',
     useSubmitMeetingActionApiMutation,
     http.post,
-    '/meeting-records/7/actions',
+    '/api/v1/meeting-records/7/actions',
     201,
   ],
   [
     '수정',
     useUpdateMeetingActionApiMutation,
     http.patch,
-    '/meeting-actions/11',
+    '/api/v1/meeting-actions/11',
     200,
   ],
 ] as const)(

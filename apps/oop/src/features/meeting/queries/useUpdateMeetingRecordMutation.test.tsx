@@ -93,10 +93,13 @@ it('변경한 제목만 PATCH하고 상세·목록·팀 액션의 회의 제목�
     if (request.method !== 'GET') writes.push(request.method);
   });
   server.use(
-    http.patch(`${API_BASE_URL}/api/v1/meeting-records/19`, async ({ request }) => {
-      bodies.push(await request.clone().json());
-      return undefined;
-    }),
+    http.patch(
+      `${API_BASE_URL}/api/v1/meeting-records/19`,
+      async ({ request }) => {
+        bodies.push(await request.clone().json());
+        return undefined;
+      },
+    ),
   );
   const { result, client } = setup();
   const keys = [

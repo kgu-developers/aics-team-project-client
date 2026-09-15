@@ -92,7 +92,7 @@ beforeEach(() => {
   useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setCurrentUser(student);
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () =>
       HttpResponse.json(kickoff),
     ),
   );
@@ -152,7 +152,7 @@ it('팀원 정보를 확인하기 전에는 목록을 요청하지 않고 확인
     http.get(`${API_BASE_URL}/api/v1/teams/7/meeting-records`, () =>
       HttpResponse.json({ contents: [summary] }),
     ),
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, async () => {
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, async () => {
       await kickoffReady;
       return HttpResponse.json(kickoff);
     }),
@@ -185,7 +185,7 @@ it.each([403, 500])(
         summaryRequests();
         return HttpResponse.json({ contents: [summary] });
       }),
-      http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () => {
+      http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () => {
         kickoffRequests();
         return new HttpResponse(null, { status });
       }),
@@ -201,7 +201,7 @@ it.each([403, 500])(
       expect(screen.getByRole('button', { name: '다시 시도' })).toBeEnabled(),
     );
     server.use(
-      http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () => {
+      http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () => {
         kickoffRequests();
         return HttpResponse.json(kickoff);
       }),
@@ -224,7 +224,7 @@ it('목록 조회가 실패해도 팀원 조회 중에는 재시도를 비활성
       `${API_BASE_URL}/api/v1/teams/7/meeting-records`,
       () => new HttpResponse(null, { status: 500 }),
     ),
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, async () => {
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, async () => {
       await kickoffReady;
       return HttpResponse.json(kickoff);
     }),
@@ -327,7 +327,7 @@ it('팀이 변경되면 새 팀을 조회하고 이전 팀의 회의록을 표�
     http.get(`${API_BASE_URL}/api/v1/teams/7/meeting-records`, () =>
       HttpResponse.json({ contents: [summary] }),
     ),
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/8/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/8/kickoff`, () =>
       HttpResponse.json({ id: 8, name: '다른 팀', members: [] }),
     ),
     http.get(`${API_BASE_URL}/api/v1/teams/8/meeting-records`, () =>

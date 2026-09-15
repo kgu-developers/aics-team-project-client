@@ -91,7 +91,7 @@ beforeEach(() => {
   server.use(
     ...createMeetingApiHandlers(),
     ...createLiveEditLockHandlers(),
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () =>
       HttpResponse.json(meetingApiTeam),
     ),
   );
@@ -283,7 +283,7 @@ it('다른 팀 회의록이면 액션을 조회하거나 내용을 보여주지 
     http.get(`${API_BASE_URL}/api/v1/meeting-records/19`, () =>
       HttpResponse.json({ ...meetingApiRecord, teamId: 8 }),
     ),
-    http.get(`${API_BASE_URL}/meeting-records/19/actions`, () => {
+    http.get(`${API_BASE_URL}/api/v1/meeting-records/19/actions`, () => {
       actionRequest();
       return HttpResponse.json({ contents: [] });
     }),
@@ -375,7 +375,7 @@ it('두 번째 액션 등록 실패 시 저장된 회의록과 첫 행을 보존
       return undefined;
     }),
     http.post(
-      `${API_BASE_URL}/meeting-records/:id/actions`,
+      `${API_BASE_URL}/api/v1/meeting-records/:id/actions`,
       async ({ request }) => {
         const input = (await request.clone().json()) as { content: string };
         writes.push(input.content);
@@ -429,10 +429,10 @@ it('두 번째 액션 등록 실패 시 저장된 회의록과 첫 행을 보존
 
 it('액션 등록 409와 삭제 403을 입력·기존 행을 보존하는 오류로 보여준다', async () => {
   server.use(
-    http.post(`${API_BASE_URL}/meeting-records/:id/actions`, () =>
+    http.post(`${API_BASE_URL}/api/v1/meeting-records/:id/actions`, () =>
       HttpResponse.json({ code: 'DATA_CONFLICT' }, { status: 409 }),
     ),
-    http.delete(`${API_BASE_URL}/meeting-actions/:id`, () =>
+    http.delete(`${API_BASE_URL}/api/v1/meeting-actions/:id`, () =>
       HttpResponse.json({ code: 'ACCESS_DENIED' }, { status: 403 }),
     ),
   );
@@ -468,7 +468,7 @@ it('액션 등록 409와 삭제 403을 입력·기존 행을 보존하는 오류
 
 it('kickoff failure on detail and edit uses a real retry and never reports a deleted record', async () => {
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () =>
       HttpResponse.json({}, { status: 500 }),
     ),
   );
@@ -479,9 +479,11 @@ it('kickoff failure on detail and edit uses a real retry and never reports a del
   renderPage(<MeetingEditPage meetingId='19' />);
   await screen.findByText('팀 정보를 불러올 수 없어요.');
   expect(screen.queryByText(/삭제되었거나/)).not.toBeInTheDocument();
-  expect(requests.some(path => path.includes('/api/v1/meeting-records/'))).toBe(false);
+  expect(requests.some(path => path.includes('/api/v1/meeting-records/'))).toBe(
+    false,
+  );
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () =>
       HttpResponse.json(meetingApiTeam),
     ),
   );
@@ -500,7 +502,7 @@ it('a transient kickoff refetch failure preserves an open edit draft and blocks 
   await user.clear(title);
   await user.type(title, '유지해야 하는 초안');
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () =>
       HttpResponse.json({}, { status: 500 }),
     ),
   );
@@ -514,7 +516,7 @@ it('a transient kickoff refetch failure preserves an open edit draft and blocks 
     '유지해야 하는 초안',
   );
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () =>
       HttpResponse.json(meetingApiTeam),
     ),
   );

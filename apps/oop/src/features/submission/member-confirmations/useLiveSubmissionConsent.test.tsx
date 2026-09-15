@@ -185,8 +185,9 @@ it.each([401, 403])(
   '확인 요청의 %s 오류를 빈 현황이나 성공으로 표시하지 않고 재조회할 수 있다',
   async status => {
     server.use(
-      http.put(`${API_BASE_URL}/submissions/41/member-confirmations/me`, () =>
-        HttpResponse.json({ code: 'ACCESS_DENIED' }, { status }),
+      http.put(
+        `${API_BASE_URL}/api/v1/submissions/41/member-confirmations/me`,
+        () => HttpResponse.json({ code: 'ACCESS_DENIED' }, { status }),
       ),
     );
     const actor = userEvent.setup();
@@ -251,14 +252,17 @@ it('버전 없는 확인 응답을 받은 뒤 새 버전을 발견하면 이전 
     }),
   );
   server.use(
-    http.put(`${API_BASE_URL}/submissions/41/member-confirmations/me`, () => {
-      currentVersion = 3;
-      return HttpResponse.json({
-        confirmedCount: 2,
-        totalCount: 2,
-        isConfirmedByMe: true,
-      });
-    }),
+    http.put(
+      `${API_BASE_URL}/api/v1/submissions/41/member-confirmations/me`,
+      () => {
+        currentVersion = 3;
+        return HttpResponse.json({
+          confirmedCount: 2,
+          totalCount: 2,
+          isConfirmedByMe: true,
+        });
+      },
+    ),
   );
   const { result } = renderConsent();
   await waitFor(() => expect(result.current.state).toBe('ready'));
@@ -274,7 +278,7 @@ it('연속 클릭과 과거 콜백은 같은 버전의 mutation을 중복 전송
   let puts = 0;
   server.use(
     http.put(
-      `${API_BASE_URL}/submissions/41/member-confirmations/me`,
+      `${API_BASE_URL}/api/v1/submissions/41/member-confirmations/me`,
       async () => {
         puts++;
         await gate.promise;
@@ -313,7 +317,7 @@ it('버전 A→B→A 전환 후 늦은 mutation 응답이 현재 결과를 덮�
   );
   server.use(
     http.put(
-      `${API_BASE_URL}/submissions/41/member-confirmations/me`,
+      `${API_BASE_URL}/api/v1/submissions/41/member-confirmations/me`,
       async () => {
         started = true;
         await gate.promise;
@@ -358,7 +362,7 @@ it('재조회 503 동안 캐시된 확인 수를 표시하지 않고 재시도�
   await screen.findByText('v2 확인 현황: 1/2명');
   server.use(
     http.get(
-      `${API_BASE_URL}/submissions/41/member-confirmations`,
+      `${API_BASE_URL}/api/v1/submissions/41/member-confirmations`,
       () => new HttpResponse(null, { status: 503 }),
     ),
   );
@@ -380,14 +384,17 @@ it('현황 GET 도중 새 버전이 생기면 버전 없는 응답을 이전 버
     }),
   );
   server.use(
-    http.get(`${API_BASE_URL}/submissions/41/member-confirmations`, () => {
-      currentVersion = 3;
-      return HttpResponse.json({
-        confirmedCount: 2,
-        totalCount: 2,
-        isConfirmedByMe: true,
-      });
-    }),
+    http.get(
+      `${API_BASE_URL}/api/v1/submissions/41/member-confirmations`,
+      () => {
+        currentVersion = 3;
+        return HttpResponse.json({
+          confirmedCount: 2,
+          totalCount: 2,
+          isConfirmedByMe: true,
+        });
+      },
+    ),
   );
   renderPanel({ ...scope, allowContractActions: true });
   expect(await screen.findByRole('alert')).toHaveTextContent('현재 제출은 v3');
@@ -466,7 +473,7 @@ it.each([403, 428])(
     );
     server.use(
       http.patch(
-        `${API_BASE_URL}/submissions/41/complete`,
+        `${API_BASE_URL}/api/v1/submissions/41/complete`,
         () => new HttpResponse(null, { status }),
       ),
     );
