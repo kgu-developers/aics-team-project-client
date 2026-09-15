@@ -22,12 +22,12 @@ export const paths = {
   project: '/api/v1/teams/7/project',
   proposalSections: '/api/v1/projects/21/proposal/sections',
   proposalComplete: '/api/v1/projects/21/proposal-complete',
-  notices: '/sections/2/announcements',
-  meetings: '/teams/7/meeting-records',
+  notices: '/api/v1/sections/2/announcements',
+  meetings: '/api/v1/teams/7/meeting-records',
   survey: '/api/v1/users/me/pre-survey-response',
   submitSurvey: '/api/v1/sections/2/pre-survey/responses',
-  peerTargets: '/peer-evaluation-forms/1/targets',
-  peerResponses: '/peer-evaluation-forms/1/responses',
+  peerTargets: '/api/v1/peer-evaluation-forms/1/targets',
+  peerResponses: '/api/v1/peer-evaluation-forms/1/responses',
 };
 
 export function createState() {
@@ -243,10 +243,10 @@ export class StudentApi {
       return reply(s.survey, 201);
     }
     if (path === paths.milestones) return reply({ contents: s.milestones });
-    if (/^\/milestones\/\d+\/my-team-submission$/.test(path))
+    if (/^\/api\/v1\/milestones\/\d+\/my-team-submission$/.test(path))
       return reply({
         id: 7001,
-        milestoneId: Number(path.split('/')[2]),
+        milestoneId: Number(path.split('/').at(-2)),
         teamId: 7,
         status: 'NOT_SUBMITTED',
         currentVersion: 0,
@@ -293,9 +293,9 @@ export class StudentApi {
       });
     if (path === '/api/v1/teams/7/topic-candidates')
       return reply({ contents: [] });
-    if (path === '/mid-reports/current')
+    if (path === '/api/v1/mid-reports/current')
       return reply({ code: 'NOT_FOUND' }, 404);
-    if (path === '/edit-locks') {
+    if (path === '/api/v1/edit-locks') {
       if (
         method === 'POST' &&
         s.lockOwner &&
@@ -331,9 +331,9 @@ export class StudentApi {
         })),
       });
     }
-    if (/^\/meeting-records\/\d+$/.test(path)) {
+    if (/^\/api\/v1\/meeting-records\/\d+$/.test(path)) {
       const record = s.meetings.find(
-        item => String(item.id) === path.split('/')[2],
+        item => String(item.id) === path.split('/').at(-1),
       );
       if (!record) return reply({ code: 'NOT_FOUND' }, 404);
       if (method === 'PATCH') {
@@ -347,11 +347,11 @@ export class StudentApi {
       return reply(record);
     }
     if (
-      path === '/teams/7/actions' ||
-      /^\/meeting-records\/\d+\/actions$/.test(path)
+      path === '/api/v1/teams/7/actions' ||
+      /^\/api\/v1\/meeting-records\/\d+\/actions$/.test(path)
     )
       return reply({ contents: [] });
-    if (path === '/sections/2/evaluation-context')
+    if (path === '/api/v1/sections/2/evaluation-context')
       return reply({
         presentationMilestoneId: null,
         peerEvaluationFormId: '1',
