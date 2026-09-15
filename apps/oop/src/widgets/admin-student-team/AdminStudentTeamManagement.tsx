@@ -55,6 +55,10 @@ export default function AdminStudentTeamManagement() {
   const teams = teamDetailsQueries.flatMap(query =>
     query.data ? [query.data] : [],
   );
+  const hasTeams = (teamsQuery.data?.contents.length ?? 0) > 0;
+  const isTeamAssignmentFinalized =
+    hasTeams &&
+    teamsQuery.data!.contents.every(team => team.status !== 'FORMING');
   const teamNameByStudentNumber = useMemo(
     () =>
       new Map(
@@ -168,8 +172,15 @@ export default function AdminStudentTeamManagement() {
                 {selectedSection?.code ?? '분반'} 팀 구성
               </Heading>
               <Button
-                isDisabled={!sectionId}
-                label='팀 배정 확정'
+                isDisabled={
+                  !sectionId ||
+                  !hasTeams ||
+                  isTeamAssignmentFinalized ||
+                  finalizeMutation.isPending
+                }
+                label={
+                  isTeamAssignmentFinalized ? '팀 배정 확정됨' : '팀 배정 확정'
+                }
                 onClick={() => setIsFinalizeDialogOpen(true)}
               />
             </HStack>
@@ -248,8 +259,8 @@ export default function AdminStudentTeamManagement() {
           <div className={styles.withdrawDialogContent}>
             <Heading level={2}>수강생을 분반에서 제외할까요?</Heading>
             <Text>
-              {studentToWithdraw.name} 학생을 제외하면 수강 상태가 WITHDRAWN으로
-              변경되고 팀 구성 및 팀 접근 권한에서도 제외됩니다.
+              {studentToWithdraw.name} 학생을 이 분반에서 제외하면 팀 소속도
+              함께 해제되어, 이 분반의 팀 화면에 접근할 수 없게 됩니다.
             </Text>
             {withdrawMutation.isError ? (
               <Text role='alert'>

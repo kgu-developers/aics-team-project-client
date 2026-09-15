@@ -13,6 +13,7 @@ const demoSectionId = 'oop-2026-2-01';
 const adminSectionId = 1;
 const withdrawnStudentNumbers = new Set<string>();
 const teamLeaderStudentNumbers = new Map<string, string>();
+const finalizedSectionIds = new Set<string>();
 const createdUsers = new Map<
   string,
   { email: string; name: string; phone: string; studentNumber: string }
@@ -160,16 +161,20 @@ function getAdminEnrollmentResponse(sectionId: string) {
 }
 
 function getAdminSectionTeamsResponse(sectionId: string) {
+  const fixtureSectionId = resolveFixtureSectionId(sectionId);
+
   return {
     contents: adminTeamsFixture
-      .filter(team => team.sectionId === resolveFixtureSectionId(sectionId))
+      .filter(team => team.sectionId === fixtureSectionId)
       .map(team => ({
         createdAt: '2026-09-08T15:15:06.656Z',
         id: getAdminTeamId(team.id),
         kickoffRule: '매주 화요일 회고',
         meetingSchedule: '매주 목 19:00',
         name: team.name,
-        status: 'FORMING',
+        status: finalizedSectionIds.has(fixtureSectionId)
+          ? 'CONFIRMED'
+          : 'FORMING',
       })),
   };
 }
@@ -212,13 +217,16 @@ function getAdminTeamResponse(teamId: string) {
     }),
     name: team.name,
     sectionId: adminSectionId,
-    status: 'FORMING',
+    status: finalizedSectionIds.has(String(team.sectionId))
+      ? 'CONFIRMED'
+      : 'FORMING',
   };
 }
 
 export function resetAdminStudentTeamMockState() {
   withdrawnStudentNumbers.clear();
   teamLeaderStudentNumbers.clear();
+  finalizedSectionIds.clear();
   createdUsers.clear();
   assistantEnrollmentsBySection.clear();
   withdrawnAssistantEnrollmentKeys.clear();
@@ -1006,6 +1014,7 @@ export const adminStudentTeamHandlers = [
         );
       }
 
+      finalizedSectionIds.add(resolveFixtureSectionId(sectionId));
       return HttpResponse.json(getAdminSectionTeamsResponse(sectionId));
     },
   ),
