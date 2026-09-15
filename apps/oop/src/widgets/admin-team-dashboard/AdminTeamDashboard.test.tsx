@@ -222,6 +222,7 @@ describe('AdminTeamDashboard', () => {
       expect.stringContaining('apiSectionId='),
     );
     expect(screen.getByText('회의록 1건')).toBeInTheDocument();
+    expect(screen.queryByLabelText('읽지 않음')).not.toBeInTheDocument();
     expect(
       screen
         .getAllByRole('link', { name: '상세보기' })

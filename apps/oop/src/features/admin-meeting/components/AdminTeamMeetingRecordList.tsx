@@ -4,10 +4,6 @@ import { Link } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import * as readStateStyles from '~/features/admin-read-state/adminReadState.css';
-import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
-import { useAuthStore } from '~/features/auth/authStore';
-
 import * as styles from './AdminTeamMeetingRecordList.css';
 
 type AdminTeamMeetingRecordListProps = {
@@ -31,9 +27,6 @@ export function AdminTeamMeetingRecordList({
   sectionId,
   teamId,
 }: AdminTeamMeetingRecordListProps) {
-  const adminId = useAuthStore(state => state.currentUser?.id);
-  const readState = useAdminReadState('meetings', { adminId });
-
   return (
     <section aria-labelledby='team-meetings-heading' className={styles.section}>
       <div className={styles.header}>
@@ -76,13 +69,6 @@ export function AdminTeamMeetingRecordList({
               to={ROUTES.ADMIN_MEETING_DETAIL}
             >
               <div className={styles.recordMain}>
-                {!readState.isRead(record.sectionId, record.id) && (
-                  <span
-                    aria-label='읽지 않음'
-                    className={readStateStyles.unreadDot}
-                    role='img'
-                  />
-                )}
                 <Text className={styles.team}>
                   {record.sectionLabel} · {record.teamLabel}
                 </Text>

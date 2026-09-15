@@ -42,7 +42,6 @@ import {
   useAdminSubmissionVersionDetailsQueries,
   useDownloadAdminSubmissionArtifactsMutation,
 } from '~/features/admin-milestone-review/queries';
-import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import { AdminPresentationEvaluationSettingsDialog } from './AdminPresentationEvaluationSettingsDialog';
@@ -275,9 +274,6 @@ export default function AdminSubmissionsPage() {
       versionMetadataQueries[index],
     ]),
   );
-  const readState = useAdminReadState('submissions', {
-    adminId: currentUser?.id,
-  });
   const presentationEvaluationMilestone = findMilestoneForTab(
     sectionMilestonesQuery.data?.content,
     'presentation-evaluate',
@@ -694,7 +690,6 @@ export default function AdminSubmissionsPage() {
               ) : (
                 <div className={styles.list}>
                   {submissionsQuery.data?.submissions.map(submission => {
-                    const submissionSectionId = effectiveSectionId;
                     const submissionId = submission.submissionId;
                     const isVersionDetailAvailable =
                       versionDetailMilestoneIds.has(activeMilestoneId);
@@ -704,14 +699,6 @@ export default function AdminSubmissionsPage() {
                       );
                     return (
                       <AdminMilestoneSubmissionCard
-                        isUnread={Boolean(
-                          submissionSectionId &&
-                          submission.submissionId &&
-                          !readState.isRead(
-                            submissionSectionId,
-                            submission.submissionId,
-                          ),
-                        )}
                         meetingCountLabel={
                           <Link
                             to={ROUTES.ADMIN_MEETINGS}

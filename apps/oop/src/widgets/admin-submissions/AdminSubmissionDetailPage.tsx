@@ -21,7 +21,6 @@ import {
   useAdminSubmissionVersionQuery,
   useAdminSubmissionVersionsQuery,
 } from '~/features/admin-milestone-review/queries';
-import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import { useAuthStore } from '~/features/auth/authStore';
 import {
   useSubmitTeamMessageMutation,
@@ -221,24 +220,6 @@ export default function AdminSubmissionDetailPage() {
     selectedVersion,
     canRequestDetail && versionsQuery.isSuccess,
   );
-  const { markAsRead } = useAdminReadState('submissions', {
-    adminId: currentUser?.id,
-  });
-
-  useEffect(() => {
-    if (
-      detail?.submissionId &&
-      normalizedSectionId &&
-      isRequestedSectionAccessible
-    ) {
-      markAsRead(normalizedSectionId, detail.submissionId);
-    }
-  }, [
-    detail?.submissionId,
-    isRequestedSectionAccessible,
-    markAsRead,
-    normalizedSectionId,
-  ]);
   const milestoneLabel = getMilestoneLabel(search.milestoneId);
 
   if (
