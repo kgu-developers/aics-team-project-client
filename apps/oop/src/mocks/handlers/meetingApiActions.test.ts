@@ -83,7 +83,7 @@ it('없는 회의록/액션과 지원하지 않는 상태를 거절한다', asyn
     updateMeetingActionApi('999', { status: 'DONE' }),
   ).rejects.toMatchObject({ response: { status: 404 } });
   await expect(
-    apiClient.get(`${API_BASE_URL}/teams/7/actions`, {
+    apiClient.get(`${API_BASE_URL}/api/v1/teams/7/actions`, {
       params: { status: 'EXCLUDED' },
     }),
   ).rejects.toMatchObject({ response: { status: 400 } });

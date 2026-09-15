@@ -82,7 +82,7 @@ it.each([401, 403, 404])(
   '삭제 %s 오류를 성공으로 처리하지 않는다',
   async status => {
     server.use(
-      http.delete(API_BASE_URL + '/meeting-actions/:id', () =>
+      http.delete(API_BASE_URL + '/api/v1/meeting-actions/:id', () =>
         HttpResponse.json({ code: 'ACCESS_DENIED' }, { status }),
       ),
     );

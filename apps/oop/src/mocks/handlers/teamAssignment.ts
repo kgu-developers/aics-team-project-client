@@ -380,7 +380,7 @@ export const teamAssignmentHandlers = [
     },
   ),
   http.post(
-    `${API_BASE_URL}/sections/:sectionId/team-assignment/teams/:teamId/leader`,
+    `${API_BASE_URL}/api/v1/sections/:sectionId/team-assignment/teams/:teamId/leader`,
     ({ params, request }) => {
       const preview = applyDevelopmentPreview(request);
       const denied = guard(request, String(params.sectionId));

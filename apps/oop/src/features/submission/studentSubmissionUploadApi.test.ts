@@ -38,7 +38,7 @@ describe('실제 multipart 파일 제출 계약', () => {
     let bodyReceived = false;
     server.use(
       http.post(
-        `${API_BASE_URL}/submissions/31/versions`,
+        `${API_BASE_URL}/api/v1/submissions/31/versions`,
         async ({ request }) => {
           expect(request.headers.get('content-type')).toContain(
             'multipart/form-data; boundary=',
@@ -91,7 +91,7 @@ describe('실제 multipart 파일 제출 계약', () => {
     );
     server.use(
       http.post(
-        `${API_BASE_URL}/submissions/31/versions`,
+        `${API_BASE_URL}/api/v1/submissions/31/versions`,
         () => new HttpResponse(null, { status: 403 }),
       ),
     );

@@ -157,7 +157,7 @@ describe('cookie authentication bootstrap', () => {
       accessToken: null,
     });
     const response = await fetch(
-      `${API_BASE_URL}/sections/oop-2026-2-01/dashboard/student`,
+      `${API_BASE_URL}/api/v1/sections/oop-2026-2-01/dashboard/student`,
     );
     expect(response.status).toBe(200);
   });

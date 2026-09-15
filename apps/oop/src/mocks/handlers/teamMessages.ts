@@ -130,7 +130,7 @@ export function createTeamMessageHandlers(
   }
 
   return [
-    http.get(`${API_BASE_URL}/api/v1/admin/oop/messages`, ({ request }) => {
+    http.get(`${API_BASE_URL}/api/v1/admin/messages`, ({ request }) => {
       const account = getMockAuthenticatedAccount(request);
       if (!account || account.user.globalRole === 'STUDENT') {
         return error(401, 'UNAUTHORIZED');
@@ -187,7 +187,7 @@ export function createTeamMessageHandlers(
       });
     }),
     http.patch(
-      `${API_BASE_URL}/api/v1/admin/oop/messages/:messageId/read`,
+      `${API_BASE_URL}/api/v1/admin/messages/:messageId/read`,
       ({ request, params }) => {
         const guarded = guardMessage(request, String(params.messageId));
         if (!('message' in guarded)) return guarded.response;

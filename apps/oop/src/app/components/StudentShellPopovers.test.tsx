@@ -202,7 +202,7 @@ describe('StudentHeaderActions', () => {
     async teamId => {
       let requests = 0;
       server.use(
-        http.get(`${API_BASE_URL}/api/v1/oop/teams/:teamId/kickoff`, () => {
+        http.get(`${API_BASE_URL}/api/v1/teams/:teamId/kickoff`, () => {
           requests += 1;
           return new HttpResponse(null, { status: 500 });
         }),

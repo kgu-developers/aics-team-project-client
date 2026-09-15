@@ -112,7 +112,7 @@ it('잠금 소유권을 잃으면 저장 요청 없이 초안을 남긴다', asy
   await waitFor(() => expect(input).toBeEnabled());
   const save = vi.fn();
   server.use(
-    http.get(`${API_BASE_URL}/edit-locks`, () =>
+    http.get(`${API_BASE_URL}/api/v1/edit-locks`, () =>
       HttpResponse.json({
         locked: true,
         lockedBy: 'another-student',
@@ -352,7 +352,7 @@ it('로그인 정보가 없으면 중간보고서와 잠금 API를 호출하지 
       request();
       return new HttpResponse(null, { status: 401 });
     }),
-    http.all(`${API_BASE_URL}/edit-locks`, () => {
+    http.all(`${API_BASE_URL}/api/v1/edit-locks`, () => {
       request();
       return new HttpResponse(null, { status: 401 });
     }),

@@ -43,7 +43,8 @@ export function createMeetingApiHandlers() {
   };
   const member = (id: string) =>
     meetingApiTeam.members.find(item => item.studentNumber === id);
-  const recordPath = `${API_BASE_URL}/meeting-records/:id(\\d+)`;
+  const recordPath = `${API_BASE_URL}/api/v1/meeting-records/:id(\\d+)`;
+  const recordActionsPath = `${API_BASE_URL}/api/v1/meeting-records/:id(\\d+)/actions`;
   const now = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
   const validDueAt = (value: string | undefined) =>
     value === undefined || /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(value);
@@ -56,7 +57,7 @@ export function createMeetingApiHandlers() {
   const dueAt = (value: string) => value.replace('T', ' ').slice(0, 16);
   return [
     http.get(
-      `${API_BASE_URL}/teams/:teamId(\\d+)/actions`,
+      `${API_BASE_URL}/api/v1/teams/:teamId(\\d+)/actions`,
       ({ request, params }) => {
         const denied = guard(request, String(params.teamId));
         if (denied) return denied;
@@ -97,7 +98,7 @@ export function createMeetingApiHandlers() {
       },
     ),
     http.get(
-      `${API_BASE_URL}/teams/:teamId(\\d+)/meeting-records`,
+      `${API_BASE_URL}/api/v1/teams/:teamId(\\d+)/meeting-records`,
       ({ request, params }) => {
         const denied = guard(request, String(params.teamId));
         if (denied) return denied;
@@ -113,7 +114,7 @@ export function createMeetingApiHandlers() {
       },
     ),
     http.post(
-      `${API_BASE_URL}/teams/:teamId(\\d+)/meeting-records`,
+      `${API_BASE_URL}/api/v1/teams/:teamId(\\d+)/meeting-records`,
       async ({ request, params }) => {
         const denied = guard(request, String(params.teamId));
         if (denied) return denied;
@@ -205,7 +206,7 @@ export function createMeetingApiHandlers() {
       actions = actions.filter(item => item.meetingRecordId !== id);
       return new HttpResponse(null, { status: 204 });
     }),
-    http.get(`${recordPath}/actions`, ({ request, params }) => {
+    http.get(recordActionsPath, ({ request, params }) => {
       const denied = guard(request);
       if (denied) return denied;
       if (!records.some(item => item.id === Number(params.id)))
@@ -216,7 +217,7 @@ export function createMeetingApiHandlers() {
         ),
       });
     }),
-    http.post(`${recordPath}/actions`, async ({ request, params }) => {
+    http.post(recordActionsPath, async ({ request, params }) => {
       const denied = guard(request);
       if (denied) return denied;
       const recordId = Number(params.id);
@@ -242,7 +243,7 @@ export function createMeetingApiHandlers() {
       return HttpResponse.json(action, { status: 201 });
     }),
     http.delete(
-      `${API_BASE_URL}/meeting-actions/:id(\\d+)`,
+      `${API_BASE_URL}/api/v1/meeting-actions/:id(\\d+)`,
       ({ request, params }) => {
         const denied = guard(request);
         if (denied) return denied;
@@ -257,7 +258,7 @@ export function createMeetingApiHandlers() {
       },
     ),
     http.patch(
-      `${API_BASE_URL}/meeting-actions/:id(\\d+)`,
+      `${API_BASE_URL}/api/v1/meeting-actions/:id(\\d+)`,
       async ({ request, params }) => {
         const denied = guard(request);
         if (denied) return denied;

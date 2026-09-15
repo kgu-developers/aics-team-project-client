@@ -126,10 +126,10 @@ it('409는 획득 성공으로 바꾸지 않고 소유자 조회 캐시만 새�
   const { result } = renderQueries();
   await waitFor(() => expect(result.current.query.isSuccess).toBe(true));
   server.use(
-    http.post(`${API_BASE_URL}/edit-locks`, () =>
+    http.post(`${API_BASE_URL}/api/v1/edit-locks`, () =>
       HttpResponse.json({ code: 'EDIT_LOCK_CONFLICT' }, { status: 409 }),
     ),
-    http.get(`${API_BASE_URL}/edit-locks`, () =>
+    http.get(`${API_BASE_URL}/api/v1/edit-locks`, () =>
       HttpResponse.json({
         locked: true,
         lockedBy: '20260003',
@@ -148,7 +148,7 @@ it('409는 획득 성공으로 바꾸지 않고 소유자 조회 캐시만 새�
 
 it('해제204가 다른 계정 잠금에 대한 no-op이면 unlocked를 만들어 넣지 않는다', async () => {
   server.use(
-    http.get(`${API_BASE_URL}/edit-locks`, () =>
+    http.get(`${API_BASE_URL}/api/v1/edit-locks`, () =>
       HttpResponse.json({ locked: true, lockedBy: '20260003' }),
     ),
   );
@@ -168,7 +168,7 @@ it.each([null, { ...target, targetId: 0 }, { ...target, sectionKey: '' }])(
   async value => {
     const requests = vi.fn();
     server.use(
-      http.all(`${API_BASE_URL}/edit-locks`, () => {
+      http.all(`${API_BASE_URL}/api/v1/edit-locks`, () => {
         requests();
         return HttpResponse.json({ locked: false });
       }),
@@ -194,7 +194,7 @@ it('미인증 상태에서는 유효한 대상이어도 조회와 mutation을 �
   useAuthStore.getState().clearSession();
   const requests = vi.fn();
   server.use(
-    http.all(`${API_BASE_URL}/edit-locks`, () => {
+    http.all(`${API_BASE_URL}/api/v1/edit-locks`, () => {
       requests();
       return HttpResponse.json({ locked: false });
     }),
@@ -216,7 +216,7 @@ it.each([403, 404, 500])(
   async status => {
     const attempts = vi.fn();
     server.use(
-      http.post(`${API_BASE_URL}/edit-locks`, () => {
+      http.post(`${API_BASE_URL}/api/v1/edit-locks`, () => {
         attempts();
         return HttpResponse.json({ code: 'ERROR' }, { status });
       }),
@@ -240,7 +240,7 @@ it('같은 계정의 새 세션으로 바뀌면 이전 획득 응답은 새 조�
   });
   const started = vi.fn();
   server.use(
-    http.post(`${API_BASE_URL}/edit-locks`, async () => {
+    http.post(`${API_BASE_URL}/api/v1/edit-locks`, async () => {
       started();
       await pending;
       return HttpResponse.json({

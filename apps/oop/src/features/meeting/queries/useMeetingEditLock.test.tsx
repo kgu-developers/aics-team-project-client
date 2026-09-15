@@ -73,7 +73,7 @@ function setup(reload = vi.fn(async () => record)) {
 it('StrictMode에서 한 번 획득하고 최신 회의록을 읽은 뒤 편집을 허용한다', async () => {
   const bodies: unknown[] = [];
   server.use(
-    http.post(`${API_BASE_URL}/edit-locks`, async ({ request }) => {
+    http.post(`${API_BASE_URL}/api/v1/edit-locks`, async ({ request }) => {
       bodies.push(await request.clone().json());
       return undefined;
     }),
@@ -89,7 +89,7 @@ it('StrictMode에서 한 번 획득하고 최신 회의록을 읽은 뒤 편집�
 });
 
 it('다른 팀원이 편집 중이면 이름을 보여주고 원본 편집을 시작하지 않는다', async () => {
-  await fetch(`${API_BASE_URL}/edit-locks`, {
+  await fetch(`${API_BASE_URL}/api/v1/edit-locks`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${demoPartnerAccessToken}`,
@@ -103,7 +103,7 @@ it('다른 팀원이 편집 중이면 이름을 보여주고 원본 편집을 �
   expect(result.current.message).toContain('OOP 데모 학생 B');
   expect(reload).not.toHaveBeenCalled();
   await fetch(
-    `${API_BASE_URL}/edit-locks?targetType=MEETING_RECORD&targetId=19&sectionKey=MEETING_RECORD`,
+    `${API_BASE_URL}/api/v1/edit-locks?targetType=MEETING_RECORD&targetId=19&sectionKey=MEETING_RECORD`,
     {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${demoPartnerAccessToken}` },
@@ -117,7 +117,7 @@ it('45초마다 소유 상태를 확인한 후 같은 계정의 잠금을 갱신
   vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
   const writes = vi.fn();
   server.use(
-    http.post(`${API_BASE_URL}/edit-locks`, () => {
+    http.post(`${API_BASE_URL}/api/v1/edit-locks`, () => {
       writes();
       return undefined;
     }),
@@ -136,7 +136,7 @@ it('잠금 상실 시 초안을 유지하고 자동 재획득·해제를 보내�
   await waitFor(() => expect(result.current.canEdit).toBe(true));
   const write = vi.fn();
   server.use(
-    http.get(`${API_BASE_URL}/edit-locks`, () =>
+    http.get(`${API_BASE_URL}/api/v1/edit-locks`, () =>
       HttpResponse.json({
         locked: true,
         lockedBy: '20260003',
@@ -144,11 +144,11 @@ it('잠금 상실 시 초안을 유지하고 자동 재획득·해제를 보내�
         lockedAt: null,
       }),
     ),
-    http.post(`${API_BASE_URL}/edit-locks`, () => {
+    http.post(`${API_BASE_URL}/api/v1/edit-locks`, () => {
       write();
       return HttpResponse.error();
     }),
-    http.delete(`${API_BASE_URL}/edit-locks`, () => {
+    http.delete(`${API_BASE_URL}/api/v1/edit-locks`, () => {
       write();
       return HttpResponse.error();
     }),
@@ -176,7 +176,7 @@ it('잠금 조회 실패 뒤 초안은 남고 저장은 차단된다', async () 
   const { result } = setup();
   await waitFor(() => expect(result.current.canEdit).toBe(true));
   server.use(
-    http.get(`${API_BASE_URL}/edit-locks`, () => HttpResponse.error()),
+    http.get(`${API_BASE_URL}/api/v1/edit-locks`, () => HttpResponse.error()),
   );
   await act(() => result.current.confirmOwnership());
   expect(result.current.lost).toBe(true);
@@ -189,7 +189,7 @@ it('소유 확인 응답을 기다리는 동안 유효 시간이 지나면 다�
   await waitFor(() => expect(result.current.canEdit).toBe(true));
   const renew = vi.fn();
   server.use(
-    http.get(`${API_BASE_URL}/edit-locks`, () => {
+    http.get(`${API_BASE_URL}/api/v1/edit-locks`, () => {
       vi.setSystemTime(Date.now() + 120_000);
       return HttpResponse.json({
         locked: true,
@@ -198,7 +198,7 @@ it('소유 확인 응답을 기다리는 동안 유효 시간이 지나면 다�
         lockedAt: null,
       });
     }),
-    http.post(`${API_BASE_URL}/edit-locks`, () => {
+    http.post(`${API_BASE_URL}/api/v1/edit-locks`, () => {
       renew();
       return HttpResponse.error();
     }),
@@ -213,7 +213,9 @@ it('해제 실패는 편집을 종료하며 다시 저장 가능한 상태로 �
   const { result } = setup();
   await waitFor(() => expect(result.current.canEdit).toBe(true));
   server.use(
-    http.delete(`${API_BASE_URL}/edit-locks`, () => HttpResponse.error()),
+    http.delete(`${API_BASE_URL}/api/v1/edit-locks`, () =>
+      HttpResponse.error(),
+    ),
   );
   await act(async () => expect(await result.current.finish()).toBe(false));
   expect(result.current.canEdit).toBe(false);
@@ -224,7 +226,7 @@ it('이탈 뒤 늦게 도착한 획득 응답으로 원본을 읽거나 계정 �
   const started = vi.fn();
   const release = vi.fn();
   server.use(
-    http.post(`${API_BASE_URL}/edit-locks`, async () => {
+    http.post(`${API_BASE_URL}/api/v1/edit-locks`, async () => {
       started();
       await new Promise<void>(resolve => {
         respond = resolve;
@@ -236,7 +238,7 @@ it('이탈 뒤 늦게 도착한 획득 응답으로 원본을 읽거나 계정 �
         lockedAt: null,
       });
     }),
-    http.delete(`${API_BASE_URL}/edit-locks`, () => {
+    http.delete(`${API_BASE_URL}/api/v1/edit-locks`, () => {
       release();
       return new HttpResponse(null, { status: 204 });
     }),

@@ -40,7 +40,7 @@ function currentSections() {
   }));
 }
 const server = setupServer(
-  http.get(`${API_BASE_URL}/api/v1/oop/users/me`, () => {
+  http.get(`${API_BASE_URL}/api/v1/users/me`, () => {
     const user = useAuthStore.getState().currentUser!;
     return HttpResponse.json({
       ...user,
@@ -49,7 +49,7 @@ const server = setupServer(
       teamId: user.teamId ?? null,
     });
   }),
-  http.get(`${API_BASE_URL}/api/v1/oop/sections`, () =>
+  http.get(`${API_BASE_URL}/api/v1/sections`, () =>
     HttpResponse.json({ contents: currentSections() }),
   ),
 );
@@ -76,7 +76,7 @@ beforeEach(() => {
     .setCurrentUser({ ...demoStudent, teamId: '7', currentTeam: null });
   server.use(
     ...createMeetingApiHandlers(),
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () =>
       HttpResponse.json(meetingApiTeam),
     ),
   );
@@ -154,7 +154,7 @@ it('등록은 학번과 content만 보내고 TODO로 생성한 뒤 목록과 회
   const bodies: unknown[] = [];
   server.use(
     http.post(
-      `${API_BASE_URL}/meeting-records/19/actions`,
+      `${API_BASE_URL}/api/v1/meeting-records/19/actions`,
       async ({ request }) => {
         bodies.push(await request.clone().json());
         return undefined;
@@ -196,10 +196,13 @@ it('내용만 수정하면 기존 담당자와 기한 시각을 덮어쓰지 않
   const user = userEvent.setup();
   const bodies: unknown[] = [];
   server.use(
-    http.patch(`${API_BASE_URL}/meeting-actions/41`, async ({ request }) => {
-      bodies.push(await request.clone().json());
-      return undefined;
-    }),
+    http.patch(
+      `${API_BASE_URL}/api/v1/meeting-actions/41`,
+      async ({ request }) => {
+        bodies.push(await request.clone().json());
+        return undefined;
+      },
+    ),
   );
   renderPage();
   await ready();
@@ -228,10 +231,13 @@ it('담당자와 기한을 비우면 clear 플래그로 서버와 화면에 반�
   const user = userEvent.setup();
   const bodies: unknown[] = [];
   server.use(
-    http.patch(`${API_BASE_URL}/meeting-actions/41`, async ({ request }) => {
-      bodies.push(await request.clone().json());
-      return undefined;
-    }),
+    http.patch(
+      `${API_BASE_URL}/api/v1/meeting-actions/41`,
+      async ({ request }) => {
+        bodies.push(await request.clone().json());
+        return undefined;
+      },
+    ),
   );
   renderPage();
   await ready();
@@ -304,14 +310,14 @@ it('팀원 조회 403을 미배정으로 숨기지 않고 재시도로 복구한
   const user = userEvent.setup();
   server.use(
     http.get(
-      `${API_BASE_URL}/api/v1/oop/teams/7/kickoff`,
+      `${API_BASE_URL}/api/v1/teams/7/kickoff`,
       () => new HttpResponse(null, { status: 403 }),
     ),
   );
   renderPage();
   expect(await screen.findByText('팀 정보를 불러올 수 없어요.')).toBeVisible();
   server.use(
-    http.get(`${API_BASE_URL}/api/v1/oop/teams/7/kickoff`, () =>
+    http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () =>
       HttpResponse.json(meetingApiTeam),
     ),
   );
@@ -322,7 +328,7 @@ it('팀원 조회 403을 미배정으로 숨기지 않고 재시도로 복구한
 it('회의록 목록 오류가 나도 액션 목록을 유지하고 추가만 차단한다', async () => {
   server.use(
     http.get(
-      `${API_BASE_URL}/teams/7/meeting-records`,
+      `${API_BASE_URL}/api/v1/teams/7/meeting-records`,
       () => new HttpResponse(null, { status: 500 }),
     ),
   );
@@ -342,7 +348,7 @@ it('등록 409 오류는 토스트로 표시하고 입력 유지 및 자동 재�
   const user = userEvent.setup();
   const writes = vi.fn();
   server.use(
-    http.post(`${API_BASE_URL}/meeting-records/19/actions`, () => {
+    http.post(`${API_BASE_URL}/api/v1/meeting-records/19/actions`, () => {
       writes();
       return HttpResponse.json({ code: 'DATA_CONFLICT' }, { status: 409 });
     }),
@@ -369,7 +375,7 @@ it('등록 응답 5xx에서 중복 등록을 차단하고 목록 확인 후 해�
   const user = userEvent.setup();
   const writes = vi.fn();
   server.use(
-    http.post(`${API_BASE_URL}/meeting-records/19/actions`, () => {
+    http.post(`${API_BASE_URL}/api/v1/meeting-records/19/actions`, () => {
       writes();
       return new HttpResponse(null, { status: 503 });
     }),
@@ -422,7 +428,7 @@ it.each(['edit', 'status'] as const)(
   async mode => {
     const user = userEvent.setup();
     server.use(
-      http.patch(`${API_BASE_URL}/meeting-actions/41`, () =>
+      http.patch(`${API_BASE_URL}/api/v1/meeting-actions/41`, () =>
         HttpResponse.json({ code: 'DATA_CONFLICT' }, { status: 409 }),
       ),
     );

@@ -79,7 +79,7 @@ it('회의록만 생성하고 학번·현지 시각·본문 서식을 보존한�
   });
   server.use(
     http.post(
-      `${API_BASE_URL}/teams/7/meeting-records`,
+      `${API_BASE_URL}/api/v1/teams/7/meeting-records`,
       async ({ request }) => {
         bodies.push(await request.clone().json());
         return undefined;
@@ -91,7 +91,9 @@ it('회의록만 생성하고 학번·현지 시각·본문 서식을 보존한�
   await act(async () => {
     id = (await result.current.mutateAsync(variables)).id;
   });
-  expect(writes).toEqual([`POST ${API_BASE_URL}/teams/7/meeting-records`]);
+  expect(writes).toEqual([
+    `POST ${API_BASE_URL}/api/v1/teams/7/meeting-records`,
+  ]);
   expect(bodies).toEqual([
     {
       title: '첫 회의',
@@ -143,7 +145,7 @@ it.each([400, 403, 409, 503, 'network'] as const)(
   async status => {
     const request = vi.fn();
     server.use(
-      http.post(`${API_BASE_URL}/teams/7/meeting-records`, () => {
+      http.post(`${API_BASE_URL}/api/v1/teams/7/meeting-records`, () => {
         request();
         return status === 'network'
           ? HttpResponse.error()

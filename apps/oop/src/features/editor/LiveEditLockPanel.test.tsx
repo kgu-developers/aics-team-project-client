@@ -87,7 +87,7 @@ it('검수용 획득·해제 후에도 편집은 비활성 상태로 유지된�
 it('중간보고서는 지원 대기로 안내하며 live 요청을 보내지 않는다', () => {
   const requests = vi.fn();
   server.use(
-    http.all(`${API_BASE_URL}/edit-locks`, () => {
+    http.all(`${API_BASE_URL}/api/v1/edit-locks`, () => {
       requests();
       return HttpResponse.json({ locked: false });
     }),
@@ -113,7 +113,7 @@ it('회의록도 잠금 상태를 조회하고 편집은 비활성 상태로 유
 it('잠금 조회 실패는 오류와 재확인 동작을 제공하고 편집은 계속 차단한다', async () => {
   server.use(
     http.get(
-      `${API_BASE_URL}/edit-locks`,
+      `${API_BASE_URL}/api/v1/edit-locks`,
       () => new HttpResponse(null, { status: 503 }),
     ),
   );
