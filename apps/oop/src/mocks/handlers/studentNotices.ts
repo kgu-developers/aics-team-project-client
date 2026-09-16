@@ -5,20 +5,21 @@ import type {
 } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
+import { noticeId as id } from '~/features/admin-notices/noticeScope';
+
 import {
   getMockAuthenticatedAccount,
   mockCsrfResponseHeaders,
 } from '../authSession';
+import { getMockEnrollments } from '../data/enrollments';
 import { getMockMySections } from '../data/sections';
 import { studentNoticeAnnouncements } from '../data/studentNotices';
 
 let announcements = structuredClone(studentNoticeAnnouncements);
 export function resetSectionAnnouncements() {
   announcements = structuredClone(studentNoticeAnnouncements);
-}
-function id(value: unknown) {
-  const number = Number(value);
-  return Number.isSafeInteger(number) && number > 0 ? number : undefined;
 }
 function access(request: Request, sectionId: number, write = false) {
   const account = getMockAuthenticatedAccount(request);
@@ -28,14 +29,14 @@ function access(request: Request, sectionId: number, write = false) {
   }).find(section => section.id === sectionId);
   const memberships = account.user.sections.filter(
     section =>
-      Number(section.id) === sectionId || section.code === activeSection?.code,
+      id(section.id) === sectionId || section.code === activeSection?.code,
   );
   const professor = Boolean(
     activeSection && memberships.some(section => section.role === 'PROFESSOR'),
   );
-  // Enrollment is a section relationship; the global ASSISTANT role alone is not membership.
-  const enrolled = Boolean(
-    activeSection && memberships.some(section => section.role === 'STUDENT'),
+  const enrolled = getMockEnrollments(account.credentials.studentNumber).some(
+    enrollment =>
+      enrollment.sectionId === sectionId && enrollment.status === 'ACTIVE',
   );
   return (write ? professor : professor || enrolled) ? undefined : 403;
 }
@@ -67,18 +68,10 @@ async function readInput(request: Request) {
     return undefined;
   }
 }
-function publishedTime(value: string) {
-  const normalized = value.replace(' ', 'T');
-  return Date.parse(
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(normalized)
-      ? `${normalized}+09:00`
-      : normalized,
-  );
-}
 function validPublishedAt(value: unknown) {
   return (
     value == null ||
-    (typeof value === 'string' && Number.isFinite(publishedTime(value)))
+    (typeof value === 'string' && Number.isFinite(seoulInstant(value)))
   );
 }
 export const studentNoticeHandlers = [
@@ -95,7 +88,7 @@ export const studentNoticeHandlers = [
           contents: announcements.filter(
             item =>
               item.sectionId === sectionId &&
-              publishedTime(item.publishedAt) <= Date.now(),
+              seoulInstant(item.publishedAt) <= Date.now(),
           ),
         },
         { headers: mockCsrfResponseHeaders() },

@@ -18,6 +18,8 @@ import {
 } from '@tanstack/react-router';
 import { useState } from 'react';
 
+import { ROUTES } from '~/app/constants/routes';
+
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import {
@@ -47,7 +49,7 @@ function BackToList() {
   return (
     <Link
       className={styles.backLink}
-      to='/admin/notices'
+      to={ROUTES.ADMIN_NOTICES}
       search={{ sectionId }}
     >
       ← 공지사항 목록으로
@@ -112,7 +114,7 @@ export function AdminNoticeListPage() {
           includeAll
           value={selectedSectionId}
           onChange={sectionId =>
-            void navigate({ to: '/admin/notices', search: { sectionId } })
+            void navigate({ to: ROUTES.ADMIN_NOTICES, search: { sectionId } })
           }
         />
         <Button
@@ -120,7 +122,7 @@ export function AdminNoticeListPage() {
           variant='primary'
           onClick={() =>
             void navigate({
-              to: '/admin/notices/new',
+              to: ROUTES.ADMIN_NOTICE_NEW,
               search: { sectionId: selectedSectionId },
             })
           }
@@ -253,7 +255,7 @@ export function AdminNoticeDetailPage() {
             isDisabled={!canPublishNotice(user, section)}
             onClick={() =>
               void navigate({
-                to: '/admin/notices/$noticeId/edit',
+                to: ROUTES.ADMIN_NOTICE_EDIT,
                 params: { noticeId: String(notice.id) },
                 search: { sectionId },
               })
@@ -420,7 +422,10 @@ export function AdminNoticeNewPage() {
         <SectionSelect
           value={sectionId}
           onChange={sectionId =>
-            void navigate({ to: '/admin/notices/new', search: { sectionId } })
+            void navigate({
+              to: ROUTES.ADMIN_NOTICE_NEW,
+              search: { sectionId },
+            })
           }
           isDisabled={mutation.isPending}
         />
@@ -449,7 +454,7 @@ export function AdminNoticeNewPage() {
             variant='secondary'
             isDisabled={mutation.isPending}
             onClick={() =>
-              void navigate({ to: '/admin/notices', search: { sectionId } })
+              void navigate({ to: ROUTES.ADMIN_NOTICES, search: { sectionId } })
             }
           />
           <Button
@@ -463,7 +468,7 @@ export function AdminNoticeNewPage() {
                 {
                   onSuccess: () =>
                     void navigate({
-                      to: '/admin/notices',
+                      to: ROUTES.ADMIN_NOTICES,
                       search: { sectionId },
                     }),
                 },

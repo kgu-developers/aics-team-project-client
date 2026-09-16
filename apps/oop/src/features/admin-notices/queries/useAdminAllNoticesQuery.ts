@@ -1,18 +1,14 @@
 import { useQueries } from '@tanstack/react-query';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 import { useAuthStore } from '~/features/auth/authStore';
 
 import { noticeId, noticeSection } from '../noticeScope';
 import { adminNoticeOptions } from './adminNoticeOptions';
 
 function publishedTime(value: string) {
-  // Legacy timestamps without an offset describe the course's Seoul time.
-  const normalized = value.trim().replace(' ', 'T');
-  const timestamp = Date.parse(
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(normalized)
-      ? `${normalized}+09:00`
-      : normalized,
-  );
+  const timestamp = seoulInstant(value);
   return Number.isNaN(timestamp) ? -Infinity : timestamp;
 }
 

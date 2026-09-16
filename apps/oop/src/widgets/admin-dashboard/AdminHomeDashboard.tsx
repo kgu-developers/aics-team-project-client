@@ -11,6 +11,7 @@ import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries
 import { useAdminMessagesQuery } from '~/features/admin-message/queries';
 import { formatAdminMilestoneDate } from '~/features/admin-milestone-review/model';
 import { useAdminAccessibleSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
+import { noticeId } from '~/features/admin-notices/noticeScope';
 import { useAdminAccessibleNoticesQuery } from '~/features/admin-notices/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 import { parseMeetingContent } from '~/features/meeting/model/studentMeeting';
@@ -249,8 +250,8 @@ export default function AdminHomeDashboard() {
       id: String(notice.id),
       section:
         accessibleSections.find(
-          section => Number(section.id) === notice.sectionId,
-        )?.code ?? '',
+          section => noticeId(section.id) === notice.sectionId,
+        )?.code ?? '알 수 없는 분반',
       sectionId: String(notice.sectionId),
       title: notice.title,
     }));

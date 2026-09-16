@@ -133,6 +133,22 @@ async function fill() {
   );
   return user;
 }
+
+it('목록과 상세가 오프셋 없는 게시일을 호스트 TZ와 무관하게 표시한다', async () => {
+  const user = userEvent.setup();
+  renderPage('/admin/notices?sectionId=1');
+  const link = await screen.findByRole('link', {
+    name: '이미지 자료 확인 안내',
+  });
+  expect(
+    within(link.closest('tr')!).getByText('2026.08.27'),
+  ).toBeInTheDocument();
+  await user.click(link);
+  expect(
+    await screen.findByText('게시일시 : 2026.08.27 15:00'),
+  ).toBeInTheDocument();
+});
+
 it('선택한 한 분반에 제목·본문만 게시하고 상세·목록 재조회에 같은 숫자 ID를 사용한다', async () => {
   const requests: unknown[] = [];
   server.events.on('request:start', ({ request }) => {

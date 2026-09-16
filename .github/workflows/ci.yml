@@ -57,3 +57,4 @@ jobs:
 
       - run: pnpm install
       - run: pnpm --filter @aics/oop test
+      - run: pnpm --filter @aics/oop test:harness

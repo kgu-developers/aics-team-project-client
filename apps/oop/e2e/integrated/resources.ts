@@ -1,6 +1,7 @@
 import type { Run } from './data';
 
-type State = 'planned' | 'unknown' | 'created' | 'deleted' | 'residual';
+type State =
+  'planned' | 'unknown' | 'created' | 'updated' | 'deleted' | 'residual';
 export function createResources(run: Run) {
   return {
     runKey: run.key,

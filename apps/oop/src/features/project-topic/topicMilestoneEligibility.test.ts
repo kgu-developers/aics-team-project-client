@@ -16,6 +16,25 @@ const milestone: StudentMilestoneResponse = {
 const start = Date.parse('2026-09-01T00:00:00Z');
 const end = Date.parse('2026-09-10T00:00:00Z');
 describe('주제 선정 마일스톤 기간', () => {
+  it('날짜 전용 시작과 UTC 마감을 같은 서울 기준으로 비교한다', () => {
+    const now = Date.parse('2026-09-01T00:00:00+09:00');
+    const result = topicMilestoneEligibility(
+      [
+        {
+          ...milestone,
+          schedule: { opensAt: '2026-09-01', dueAt: '2026-09-10T00:00:00Z' },
+        },
+      ],
+      '2',
+      now,
+    );
+    expect(result.status).toBe('open');
+    expect(result.window).toEqual({
+      opensAt: now,
+      dueAt: Date.parse('2026-09-10T00:00:00Z'),
+    });
+  });
+
   it.each([
     [start - 1, 'closed'],
     [start, 'open'],

@@ -59,6 +59,40 @@ const announcement = {
   publishedAt: '2026-09-16T09:00:00',
 };
 
+it('PATCH 응답에 없는 목록의 첨부와 다른 항목은 재조회 전에 보존한다', async () => {
+  server.use(
+    http.patch(`${API_BASE_URL}/api/v1/announcements/10`, () =>
+      HttpResponse.json({ ...announcement, content: '수정' }),
+    ),
+  );
+  const { result, client } = renderMutations();
+  const listKey = adminNoticeKeys.list(demoNoticeProfessor.id, 1);
+  const attachments = [
+    {
+      id: 'file-1',
+      fileName: '안내.pdf',
+      contentType: 'application/pdf',
+      sizeBytes: 12,
+      url: '/files/1',
+    },
+  ];
+  const other = { ...announcement, id: 11 };
+  client.setQueryData(listKey, [{ ...announcement, attachments }, other]);
+  // No active list observer/refetch can repair a dropped list-only field here.
+  await act(async () => {
+    await result.current.update.mutateAsync({
+      announcementId: 10,
+      sectionId: 1,
+      content: '수정',
+    });
+  });
+  expect(client.getQueryData(listKey)).toEqual([
+    { ...announcement, content: '수정', attachments },
+    other,
+  ]);
+  expect(client.getQueryState(listKey)?.isInvalidated).toBe(true);
+});
+
 it('PATCH는 변경 필드만 보내고 원래 사용자의 목록·상세와 학생 목록을 갱신한다', async () => {
   let finish!: () => void;
   const pending = new Promise<void>(resolve => {

@@ -51,7 +51,7 @@ export function useUpdateSectionAnnouncementMutation() {
           adminNoticeKeys.list(actorId, sectionId),
           previous =>
             previous?.map(item =>
-              item.id === announcement.id ? announcement : item,
+              item.id === announcement.id ? { ...item, ...announcement } : item,
             ),
         );
       }

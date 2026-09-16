@@ -109,7 +109,7 @@ vi.mock('~/features/admin-notices/queries', () => ({
   }),
 }));
 
-function renderPage() {
+function renderPage(user = demoAdmin) {
   const rootRoute = createRootRoute();
   const homeRoute = createRoute({
     component: () => (
@@ -139,7 +139,7 @@ function renderPage() {
     ]),
   });
 
-  useAuthStore.setState({ currentUser: demoAdmin });
+  useAuthStore.setState({ currentUser: user });
   return render(<RouterProvider router={router} />);
 }
 
@@ -263,6 +263,35 @@ it('공지 게시 시각을 서울 기준 자정 넘김으로 표시한다', asy
     within(link.closest('li')!).getByText('2026.09.15 00:30'),
   ).toBeInTheDocument();
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
+
+it('오프셋 없는 공지 게시 시각을 서울 현지 시각으로 표시한다', async () => {
+  dashboardState.notices[0]!.publishedAt = '2026-08-27T15:00:00';
+  renderPage();
+  const link = await screen.findByRole('link', { name: '계약 공지' });
+  expect(
+    within(link.closest('li')!).getByText('2026.08.27 15:00'),
+  ).toBeInTheDocument();
+});
+
+it.each(['0x1', '1e0', ' 1 ', '2'])(
+  '공지 분반 %s는 잘못 매칭하지 않고 목록과 같은 폴백을 표시한다',
+  async id => {
+    renderPage({
+      ...demoAdmin,
+      sections: demoAdmin.sections.map(section => ({ ...section, id })),
+    });
+    const link = await screen.findByRole('link', { name: '계약 공지' });
+    expect(
+      within(link.closest('li')!).getByText('알 수 없는 분반'),
+    ).toBeInTheDocument();
+  },
+);
+
+it('정상 십진 분반 ID의 공지에는 분반명을 표시한다', async () => {
+  renderPage();
+  const link = await screen.findByRole('link', { name: '계약 공지' });
+  expect(within(link.closest('li')!).getByText('OOP-01')).toBeInTheDocument();
 });
 
 it.each([false, true])(

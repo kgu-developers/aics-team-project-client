@@ -18,6 +18,8 @@ import {
 } from './studentNotices';
 import { resetMockSessionState } from '../authSession';
 import * as authSession from '../authSession';
+import * as enrollments from '../data/enrollments';
+import * as sections from '../data/sections';
 import {
   demoAccessToken,
   demoUserAccounts,
@@ -286,7 +288,21 @@ it('assistant role alone cannot read/write, while an active enrollment independe
   const student = demoUserAccounts[0];
   vi.spyOn(authSession, 'getMockAuthenticatedAccount').mockReturnValue({
     ...student,
-    user: { ...student.user, globalRole: 'ASSISTANT' },
+    user: {
+      ...student.user,
+      globalRole: 'ASSISTANT',
+      sections: student.user.sections.map(section => ({
+        ...section,
+        role: 'ASSISTANT',
+      })),
+    },
+  });
+  expect(
+    enrollments.getMockEnrollments(student.credentials.studentNumber),
+  ).toContainEqual({
+    studentNumber: student.credentials.studentNumber,
+    sectionId: 1,
+    status: 'ACTIVE',
   });
   expect((await fetchNotices(1, demoAccessToken)).status).toBe(200);
   const write = await fetch(`${API_BASE_URL}/api/v1/sections/1/announcements`, {
@@ -298,4 +314,91 @@ it('assistant role alone cannot read/write, while an active enrollment independe
     body: JSON.stringify({ title: '조교 공지', content: '본문' }),
   });
   expect(write.status).toBe(403);
+  const patch = await fetch(`${API_BASE_URL}/api/v1/announcements/10`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${demoAccessToken}` },
+    body: JSON.stringify({ content: '수정' }),
+  });
+  expect(patch.status).toBe(403);
+});
+
+it.each(['INACTIVE', 'DELETED'])(
+  '%s enrollment does not grant read access despite a student section role',
+  async status => {
+    vi.spyOn(enrollments, 'getMockEnrollments').mockReturnValue([
+      { studentNumber: '20260001', sectionId: 1, status },
+    ]);
+    expect((await fetchNotices(1, demoAccessToken)).status).toBe(403);
+  },
+);
+
+it('inactive professor ownership grants neither read nor write without enrollment', async () => {
+  vi.spyOn(sections, 'getMockMySections').mockReturnValue([]);
+  expect((await fetchNotices(1, demoNoticeProfessorAccessToken)).status).toBe(
+    403,
+  );
+  for (const [method, path] of [
+    ['POST', '/api/v1/sections/1/announcements'],
+    ['PATCH', '/api/v1/announcements/10'],
+  ]) {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${demoNoticeProfessorAccessToken}` },
+      body: JSON.stringify({ title: '공지', content: '본문' }),
+    });
+    expect(response.status).toBe(403);
+  }
+});
+
+it.each(['0x1', '1e0', ' 1 ', '01', '0', '-1', '1.0', '9007199254740992'])(
+  'rejects noncanonical decimal ID %s for GET, POST and PATCH',
+  async value => {
+    for (const [method, path] of [
+      ['GET', `/api/v1/sections/${encodeURIComponent(value)}/announcements`],
+      ['POST', `/api/v1/sections/${encodeURIComponent(value)}/announcements`],
+      ['PATCH', `/api/v1/announcements/${encodeURIComponent(value)}`],
+    ]) {
+      const response = await fetch(`${API_BASE_URL}${path}`, {
+        method,
+        headers: { Authorization: `Bearer ${demoNoticeProfessorAccessToken}` },
+        ...(method === 'GET'
+          ? {}
+          : { body: JSON.stringify({ title: '공지', content: '본문' }) }),
+      });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({ code: 'INVALID_INPUT' });
+    }
+  },
+);
+
+it.each([
+  '2026-09-15',
+  '2026-09-15T00:00:00',
+  '2026-09-15 00:00',
+  '2026-09-14T15:00:00Z',
+  '2026-09-15T00:00:00+09:00',
+])('publishes %s at the same Seoul instant', async publishedAt => {
+  const at = Date.parse('2026-09-14T15:00:00Z');
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(at - 1);
+  const created = await fetch(
+    `${API_BASE_URL}/api/v1/sections/1/announcements`,
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${demoNoticeProfessorAccessToken}` },
+      body: JSON.stringify({
+        title: '예약 공지',
+        content: '본문',
+        publishedAt,
+      }),
+    },
+  );
+  expect(created.status).toBe(201);
+  const notice = await created.json();
+  expect(
+    (await (await fetchNotices(1, demoAccessToken)).json()).contents,
+  ).not.toContainEqual(notice);
+  clock.mockReturnValue(at);
+  expect(
+    (await (await fetchNotices(1, demoAccessToken)).json()).contents,
+  ).toContainEqual(notice);
 });

@@ -183,6 +183,8 @@ it('sorts mixed Seoul, UTC and offset timestamps by instant, keeping invalid dat
     notice(3, 2, '2026-09-14T23:30:00+09:00'),
     notice(4, 2, '2026-09-15T00:00:00+10:00'),
     notice(6, 2, ''),
+    notice(7, 2, '2026-09-15'),
+    notice(8, 2, '2026-09-14T16:00:00Z'),
   ];
   server.use(
     http.get(
@@ -195,7 +197,9 @@ it('sorts mixed Seoul, UTC and offset timestamps by instant, keeping invalid dat
   );
   const { result } = renderQuery();
   await waitFor(() => expect(result.current.isPending).toBe(false));
-  expect(result.current.data.map(item => item.id)).toEqual([3, 1, 4, 2, 5, 6]);
+  expect(result.current.data.map(item => item.id)).toEqual([
+    8, 7, 3, 1, 4, 2, 5, 6,
+  ]);
   expect(first.map(item => item.id)).toEqual([1, 2, 5]);
-  expect(second.map(item => item.id)).toEqual([3, 4, 6]);
+  expect(second.map(item => item.id)).toEqual([3, 4, 6, 7, 8]);
 });

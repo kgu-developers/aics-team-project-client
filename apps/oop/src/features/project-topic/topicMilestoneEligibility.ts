@@ -1,5 +1,7 @@
 import type { StudentMilestoneResponse } from '@aics/core';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 import type { TopicParticipationEligibility } from './liveTopicBoard';
 
 /** Topic selection is the first step within the proposal milestone. */
@@ -20,15 +22,8 @@ export function topicMilestoneEligibility(
   }
   const milestone = matches[0]!;
   if (milestone.status !== 'PUBLISHED') return { status: 'closed' };
-  // Server LocalDateTime schedules are in the course's Asia/Seoul timezone.
-  const parse = (value?: string | null) =>
-    value
-      ? Date.parse(
-          /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value) ? value : `${value}+09:00`,
-        )
-      : NaN;
-  const opensAt = parse(milestone.schedule.opensAt);
-  const dueAt = parse(milestone.schedule.dueAt);
+  const opensAt = seoulInstant(milestone.schedule.opensAt);
+  const dueAt = seoulInstant(milestone.schedule.dueAt);
   if (
     !Number.isFinite(opensAt) ||
     !Number.isFinite(dueAt) ||

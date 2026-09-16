@@ -7,6 +7,14 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test';
 
 import { prepareCourse, importStudents, importTeams } from './admin';
 import { createRun, enrollmentFile, teamFile, type Actor } from './data';
+import {
+  consoleResourcePath,
+  unexpectedConsoleErrors,
+  unversionedApiRequests,
+  type ConsoleEvidence,
+  type RequestEvidence,
+  type ResponseEvidence,
+} from './diagnostics';
 import { captureFailurePage, maskedScreenshot } from './evidence';
 import {
   createMeeting,
@@ -83,14 +91,9 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
   const contexts: BrowserContext[] = [];
   const pages = new Map<string, Page>();
   const errors: { stage: string; actor: string; message: string }[] = [];
-  const network: {
-    stage: string;
-    actor: string;
-    method: string;
-    path: string;
-    status: number;
-  }[] = [];
-  const consoleErrors: { stage: string; actor: string; message: string }[] = [];
+  const requests: RequestEvidence[] = [];
+  const network: ResponseEvidence[] = [];
+  const consoleErrors: ConsoleEvidence[] = [];
   const loginRecoveries: { stage: string; actor: string }[] = [];
   let currentStage = 'initialization';
   const safeError = (error: unknown) =>
@@ -177,6 +180,7 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
       await Promise.all([
         json('outcomes.json', outcomes),
         json('network.json', network),
+        json('requests.json', requests),
         json('browser-errors.json', errors),
         json('console-errors.json', consoleErrors),
         json('login-recoveries.json', loginRecoveries),
@@ -216,7 +220,16 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
           stage: currentStage,
           actor: name,
           message: safeError(message.text()),
+          path: consoleResourcePath(message.location().url),
         });
+    });
+    page.on('request', request => {
+      requests.push({
+        stage: currentStage,
+        actor: name,
+        method: request.method(),
+        path: new URL(request.url()).pathname,
+      });
     });
     page.on('response', response => {
       if (['fetch', 'xhr'].includes(response.request().resourceType()))
@@ -506,7 +519,7 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
       resources.notice.editState = 'unknown';
       await saveResources();
       await editNotice(admin, run, ownedNotice(), async () => {
-        resources.notice.editState = 'created';
+        resources.notice.editState = 'updated';
         await saveResources();
       });
       await evidence(admin, 'N03-admin-updated');
@@ -698,9 +711,14 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
       const writes = await Promise.allSettled([
         saveResources(),
         json('network.json', network),
+        json('requests.json', requests),
         json('outcomes.json', runner.outcomes),
         json('browser-errors.json', errors),
         json('console-errors.json', consoleErrors),
+        json(
+          'unexpected-console-errors.json',
+          unexpectedConsoleErrors(consoleErrors, network),
+        ),
         json('login-recoveries.json', loginRecoveries),
         json('evidence-errors.json', runner.evidenceErrors),
       ]);
@@ -712,6 +730,13 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
     }
   }
   expect(errors, '브라우저 JavaScript 오류 (단계·배우 포함)').toEqual([]);
+  expect(unversionedApiRequests(requests), '/api/v1/ 외 API 요청 경로').toEqual(
+    [],
+  );
+  expect(
+    unexpectedConsoleErrors(consoleErrors, network),
+    '예상된 리소스 응답 외 콘솔 오류',
+  ).toEqual([]);
   expect(runner.evidenceErrors, '증거 저장 오류').toEqual([]);
   const unsuccessful = runner.outcomes.filter(
     outcome => outcome.status !== 'passed',

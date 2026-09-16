@@ -10,7 +10,7 @@ const seoulDateTimeFormatter = new Intl.DateTimeFormat('en-CA', {
 
 /** Formats a server timestamp for the course's fixed Asia/Seoul timezone. */
 export function formatSeoulDateTime(value: string) {
-  const date = new Date(value);
+  const date = new Date(seoulInstant(value));
 
   if (Number.isNaN(date.getTime())) return value;
 
@@ -23,3 +23,4 @@ export function formatSeoulDateTime(value: string) {
 
   return `${parts.year}.${parts.month}.${parts.day} ${parts.hour}:${parts.minute}`;
 }
+import { seoulInstant } from './seoulInstant';

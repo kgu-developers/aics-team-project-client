@@ -66,6 +66,17 @@ export function createStageRunner({
     )
       throw new Error(`Invalid dependency for ${id}`);
   }
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  function visit(id: string) {
+    if (visiting.has(id)) throw new Error(`Dependency cycle at ${id}`);
+    if (visited.has(id)) return;
+    visiting.add(id);
+    for (const dependency of graph[id]!) visit(dependency);
+    visiting.delete(id);
+    visited.add(id);
+  }
+  for (const id of Object.keys(graph)) visit(id);
   const outcomes: Outcome[] = [];
   const evidenceErrors: string[] = [];
   async function evidence(action: () => Promise<void>) {

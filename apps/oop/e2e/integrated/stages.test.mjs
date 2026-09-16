@@ -3,6 +3,28 @@ import { test } from 'node:test';
 
 import { createStageRunner } from './stages.ts';
 
+test('rejects two-node and transitive cycles, including disconnected branches', () => {
+  for (const graph of [
+    { one: ['two'], two: ['one'] },
+    { root: [], one: ['two'], two: ['three'], three: ['one'] },
+  ])
+    assert.throws(() => createStageRunner({ graph }), /Dependency cycle/);
+  assert.throws(
+    () => createStageRunner({ graph: { one: ['one'] } }),
+    /Invalid dependency/,
+  );
+  assert.doesNotThrow(() =>
+    createStageRunner({
+      graph: {
+        root: [],
+        left: ['root'],
+        right: ['root'],
+        end: ['left', 'right'],
+      },
+    }),
+  );
+});
+
 async function run(failed, evidenceFails = false) {
   const executed = [];
   const runner = createStageRunner({
