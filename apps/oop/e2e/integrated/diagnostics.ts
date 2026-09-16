@@ -30,14 +30,15 @@ export function unversionedApiRequests(requests: RequestEvidence[]) {
 // Intentional resource failures observed in the integrated workflow's history.
 // A generic 403/404, failed vote, missing submission metadata or React error is
 // not an exemption. Match the browser resource error to its response evidence.
-function expectedResource(response: ResponseEvidence) {
+function expectedResource(
+  response: ResponseEvidence,
+  network: ResponseEvidence[],
+) {
   const { stage, actor, method, path, status } = response;
-  if (
-    method === 'POST' &&
-    path === '/api/v1/oop/auth/refresh' &&
-    status === 403
-  )
-    return true; // Initial anonymous session restoration before login.
+  if (method === 'POST' && path === '/api/v1/auth/refresh' && status === 403)
+    // Each actor starts in a fresh context. Only its initial anonymous
+    // restoration may fail; a refresh after login must remain a failure.
+    return network.find(item => item.actor === actor) === response;
   if (method !== 'GET') return false;
   if (path === '/api/v1/oop/users/me/pre-survey-response')
     return stage === '03' && actor === 'survey' && status === 404;
@@ -62,21 +63,23 @@ export function unexpectedConsoleErrors(
   errors: ConsoleEvidence[],
   network: ResponseEvidence[],
 ) {
+  const matchedResponses = new Set<ResponseEvidence>();
   return errors.filter(error => {
     const match =
       /^Failed to load resource: the server responded with a status of (403|404) \([^)]*\)$/.exec(
         error.message,
       );
-    return (
-      !match ||
-      !network.some(
-        response =>
-          response.actor === error.actor &&
-          response.stage === error.stage &&
-          response.path === error.path &&
-          response.status === Number(match[1]) &&
-          expectedResource(response),
-      )
+    if (!match) return true;
+    const response = network.find(
+      response =>
+        !matchedResponses.has(response) &&
+        response.actor === error.actor &&
+        response.stage === error.stage &&
+        response.path === error.path &&
+        response.status === Number(match[1]),
     );
+    if (!response) return true;
+    matchedResponses.add(response);
+    return !expectedResource(response, network);
   });
 }

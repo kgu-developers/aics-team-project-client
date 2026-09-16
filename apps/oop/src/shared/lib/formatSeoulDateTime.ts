@@ -1,3 +1,5 @@
+import { seoulInstant } from './seoulInstant';
+
 const seoulDateTimeFormatter = new Intl.DateTimeFormat('en-CA', {
   day: '2-digit',
   hour: '2-digit',
@@ -23,4 +25,3 @@ export function formatSeoulDateTime(value: string) {
 
   return `${parts.year}.${parts.month}.${parts.day} ${parts.hour}:${parts.minute}`;
 }
-import { seoulInstant } from './seoulInstant';

@@ -51,7 +51,6 @@ test('rejects every unversioned /api/ request, including requests without a resp
 test('allows only intentional resource errors matched to response method/path/status/stage/actor', () => {
   const network = [
     response,
-    { ...response, method: 'POST', path: '/api/v1/oop/auth/refresh' },
     {
       ...response,
       stage: '03',
@@ -95,6 +94,67 @@ test('allows only intentional resource errors matched to response method/path/st
     ),
     [consoleError()],
   );
+});
+
+test('allows only the exact initial anonymous refresh 403 for each fresh actor', () => {
+  const refresh = {
+    stage: '01',
+    actor: 'admin',
+    method: 'POST',
+    path: '/api/v1/auth/refresh',
+    status: 403,
+  };
+  const login = { ...refresh, path: '/api/v1/auth/login', status: 200 };
+  const studentRefresh = { ...refresh, stage: '03', actor: 'survey' };
+  const network = [refresh, login, studentRefresh];
+  assert.deepEqual(
+    unexpectedConsoleErrors(
+      [consoleError(refresh), consoleError(studentRefresh)],
+      network,
+    ),
+    [],
+  );
+  for (const changed of [
+    { method: 'GET' },
+    { path: '/api/v1/oop/auth/refresh' },
+    { path: '/api/v1/auth/refresh/extra' },
+    { path: '/api/v1/admin/courses' },
+    { status: 401 },
+    { status: 404 },
+    { status: 500 },
+  ]) {
+    const unexpected = { ...refresh, ...changed };
+    const error = consoleError(unexpected);
+    assert.deepEqual(unexpectedConsoleErrors([error], [unexpected]), [error]);
+  }
+  for (const changed of [{ actor: 'survey' }, { stage: '02' }]) {
+    const error = { ...consoleError(refresh), ...changed };
+    assert.deepEqual(unexpectedConsoleErrors([error], [refresh]), [error]);
+  }
+  for (const prior of [login, { ...refresh, status: 200 }]) {
+    const error = consoleError(refresh);
+    assert.deepEqual(unexpectedConsoleErrors([error], [prior, refresh]), [
+      error,
+    ]);
+  }
+  const laterRefresh = { ...refresh, stage: '02' };
+  const laterError = consoleError(laterRefresh);
+  assert.deepEqual(
+    unexpectedConsoleErrors([laterError], [...network, laterRefresh]),
+    [laterError],
+  );
+  const sameStageRefresh = { ...refresh };
+  const sameStageError = consoleError(sameStageRefresh);
+  assert.deepEqual(
+    unexpectedConsoleErrors(
+      [consoleError(refresh), sameStageError],
+      [refresh, login, sameStageRefresh],
+    ),
+    [sameStageError],
+  );
+  assert.deepEqual(unexpectedConsoleErrors([consoleError(refresh)], []), [
+    consoleError(refresh),
+  ]);
 });
 
 test('keeps uncorrelated resources, unexpected 403/404/500 and React/application errors as failures', () => {

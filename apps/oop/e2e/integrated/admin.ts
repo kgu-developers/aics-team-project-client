@@ -4,11 +4,22 @@ import { enrollmentFile, teamFile, type Run } from './data';
 import { choose } from './ui';
 
 export async function prepareCourse(page: Page, run: Run) {
+  // A sidebar transition can leave the dashboard mounted while Vite loads
+  // the cold route. Navigate directly and wait for the destination UI.
+  await page.goto('/admin/sections', {
+    waitUntil: 'domcontentloaded',
+    timeout: 60_000,
+  });
+  await expect(
+    page.getByRole('heading', {
+      name: '강좌·분반 관리',
+      level: 1,
+      exact: true,
+    }),
+  ).toBeVisible({ timeout: 60_000 });
   await page
-    .getByRole('navigation', { name: '관리자 메뉴' })
-    .getByRole('link', { name: '강좌·분반 관리', exact: true })
-    .click();
-  await page.getByRole('button', { name: '강좌 등록', exact: true }).click();
+    .getByRole('button', { name: '강좌 등록', exact: true })
+    .click({ timeout: 60_000 });
   const courseDialog = page.getByRole('dialog', {
     name: '강좌 등록',
     exact: true,
