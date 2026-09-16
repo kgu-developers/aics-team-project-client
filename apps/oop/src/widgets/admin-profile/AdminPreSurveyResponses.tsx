@@ -44,6 +44,26 @@ function formatPreferredRoles(roles: unknown) {
   return labels.length > 0 ? labels.join(', ') : '-';
 }
 
+function formatPreferredPeer(
+  name: string | null | undefined,
+  userId: string | null | undefined,
+) {
+  if (!name && !userId) return '-';
+  if (name && userId) return `${name} (${userId})`;
+  return name ?? userId ?? '-';
+}
+
+function formatPreferredPeerStatus(status: string | null | undefined) {
+  if (!status) return '-';
+  const labels: Record<string, string> = {
+    ACCEPTED: '수락됨',
+    PENDING: '응답 대기',
+    REJECTED: '거절됨',
+    CANCELED: '취소됨',
+  };
+  return labels[status] ?? status;
+}
+
 export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
   const toast = useToast();
   const [sectionId, setSectionId] = useState(sections[0]?.id ?? '');
@@ -159,6 +179,39 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
                         renderCell: response =>
                           formatPreferredRoles(response.preferredRoles),
                         width: proportional(1.1, { minWidth: 180 }),
+                      },
+                      {
+                        align: 'start',
+                        header: '선호 짝',
+                        key: 'preferredPeerName',
+                        renderCell: response =>
+                          formatPreferredPeer(
+                            response.preferredPeerName,
+                            response.preferredPeerUserId,
+                          ),
+                        width: proportional(1.2, { minWidth: 180 }),
+                      },
+                      {
+                        align: 'start',
+                        header: '짝 요청 상태',
+                        key: 'preferredPeerStatus',
+                        renderCell: response =>
+                          formatPreferredPeerStatus(
+                            response.preferredPeerStatus,
+                          ),
+                        width: proportional(0.9, { minWidth: 140 }),
+                      },
+                      {
+                        align: 'start',
+                        header: '상호 선택',
+                        key: 'mutual',
+                        renderCell: response =>
+                          response.mutual == null
+                            ? '-'
+                            : response.mutual
+                              ? '예'
+                              : '아니오',
+                        width: proportional(0.7, { minWidth: 100 }),
                       },
                       {
                         align: 'start',

@@ -5,6 +5,10 @@ export type AdminPreSurveyResponseDto = {
   etcOpinion?: string | null;
   id: number;
   preferredRoles: string[];
+  preferredPeerUserId?: string | null;
+  preferredPeerName?: string | null;
+  preferredPeerStatus?: string | null;
+  mutual?: boolean | null;
   submittedAt: string;
   topicOpinion?: string | null;
   userId: string;

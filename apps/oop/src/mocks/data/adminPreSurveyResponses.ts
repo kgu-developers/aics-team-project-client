@@ -2,6 +2,10 @@ export type AdminPreSurveyResponsePreview = {
   etcOpinion: string | null;
   id: number;
   preferredRoles: string[];
+  preferredPeerUserId?: string | null;
+  preferredPeerName?: string | null;
+  preferredPeerStatus?: string | null;
+  mutual?: boolean | null;
   submittedAt: string;
   topicOpinion: string | null;
   userId: string;
@@ -13,6 +17,10 @@ const oopPreSurveyResponses: AdminPreSurveyResponsePreview[] = [
     etcOpinion: '금요일 오후에는 회의가 어렵습니다.',
     id: 1,
     preferredRoles: ['BACKEND', 'PM'],
+    preferredPeerUserId: '20260003',
+    preferredPeerName: '이프로',
+    preferredPeerStatus: 'ACCEPTED',
+    mutual: true,
     submittedAt: '2026-09-04 14:00',
     topicOpinion: '학사 일정 알림 서비스를 만들고 싶습니다.',
     userId: '20260001',
