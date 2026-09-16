@@ -266,6 +266,20 @@ export const ENDPOINTS = {
     SUBMIT_SURVEY_RESPONSE: (sectionId: string) =>
       `/api/v1/sections/${sectionId}/pre-survey/responses`,
     MY_SURVEY_RESPONSE: '/api/v1/users/me/pre-survey-response',
+    PRE_SURVEY_CLASSMATES: (sectionId: string) =>
+      `/api/v1/sections/${sectionId}/pre-survey/classmates`,
+    RECEIVED_PREFERRED_PEER_REQUESTS: (sectionId: string) =>
+      `/api/v1/sections/${sectionId}/pre-survey/preferred-peer-requests/received`,
+    ACCEPT_PREFERRED_PEER_REQUEST: (
+      sectionId: string,
+      requesterUserId: string,
+    ) =>
+      `/api/v1/sections/${sectionId}/pre-survey/preferred-peer-requests/received/${requesterUserId}/accept`,
+    REJECT_PREFERRED_PEER_REQUEST: (
+      sectionId: string,
+      requesterUserId: string,
+    ) =>
+      `/api/v1/sections/${sectionId}/pre-survey/preferred-peer-requests/received/${requesterUserId}/reject`,
     ROOT: (sectionId: string) =>
       `/api/v1/sections/${sectionId}/team-assignment`,
     SURVEY: (sectionId: string) =>

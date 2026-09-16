@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   resolveContactVisibility,
   resolveLiveTeamAssignmentStage,
+  toTeamResultReleaseAt,
   toTeamAssignmentProjection,
 } from './liveTeamAssignment';
 
@@ -165,4 +166,12 @@ it('연락처는 시작·종료 경계를 포함하고 잘못된 종료값은 �
       end,
     ),
   ).toBe('closed');
+});
+
+it('팀원 공개 시각은 연락처 공개 당일 한국 시간 자정으로 계산한다', () => {
+  expect(toTeamResultReleaseAt('2026-09-10T10:00:00+09:00')).toBe(
+    '2026-09-10T00:00:00+09:00',
+  );
+  expect(toTeamResultReleaseAt(null)).toBeUndefined();
+  expect(toTeamResultReleaseAt('invalid')).toBeUndefined();
 });

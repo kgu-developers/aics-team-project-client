@@ -16,6 +16,13 @@ function timestamp(value: string | null) {
   return Number.isNaN(parsed) ? undefined : parsed;
 }
 
+export function toTeamResultReleaseAt(contactVisibleFrom: string | null) {
+  if (timestamp(contactVisibleFrom) === undefined) return undefined;
+
+  const date = contactVisibleFrom?.match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
+  return date ? `${date}T00:00:00+09:00` : undefined;
+}
+
 export function resolveContactVisibility(
   section: SectionResponse,
   now = Date.now(),

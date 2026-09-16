@@ -150,10 +150,20 @@ export const teamAssignmentHandlers = [
       );
       const existingResponse =
         preSurveyResponsesByStudentAndSection[responseKey];
+      const preferredPeerUserId =
+        submitRequest.preferredPeerUserId ?? undefined;
+      const preferredPeerStatus =
+        existingResponse &&
+        preferredPeerUserId === existingResponse.preferredPeerUserId
+          ? existingResponse.preferredPeerStatus
+          : preferredPeerUserId
+            ? ('PENDING' as const)
+            : undefined;
       const response: PreSurveyResponseDetailResponse = {
         id: existingResponse?.id ?? nextPreSurveyResponseId++,
         sectionId,
         userId: account.user.studentNumber,
+        userName: account.user.name,
         preferredRoles: structuredClone(submitRequest.preferredRoles),
         submittedAt: '2026-09-02 14:00',
         ...(submitRequest.topicOpinion === undefined
@@ -162,6 +172,8 @@ export const teamAssignmentHandlers = [
         ...(submitRequest.etcOpinion === undefined
           ? {}
           : { etcOpinion: submitRequest.etcOpinion }),
+        preferredPeerUserId: preferredPeerUserId ?? null,
+        preferredPeerStatus: preferredPeerStatus ?? null,
       };
       preSurveyResponsesByStudentAndSection[responseKey] = response;
 
@@ -462,17 +474,18 @@ function isPreSurveyResponseSubmitRequest(
 ): value is SubmitPreSurveyResponseRequest {
   if (!value || typeof value !== 'object') return false;
 
-  const { preferredRoles, topicOpinion, etcOpinion } = value as Record<
-    string,
-    unknown
-  >;
+  const { preferredRoles, topicOpinion, etcOpinion, preferredPeerUserId } =
+    value as Record<string, unknown>;
 
   return (
     Array.isArray(preferredRoles) &&
     preferredRoles.length > 0 &&
     preferredRoles.every(role => typeof role === 'string' && role.length > 0) &&
     (topicOpinion === undefined || typeof topicOpinion === 'string') &&
-    (etcOpinion === undefined || typeof etcOpinion === 'string')
+    (etcOpinion === undefined || typeof etcOpinion === 'string') &&
+    (preferredPeerUserId === undefined ||
+      preferredPeerUserId === null ||
+      typeof preferredPeerUserId === 'string')
   );
 }
 
@@ -504,4 +517,99 @@ export const teamAssignmentUserHandlers = [
       return HttpResponse.json(response);
     },
   ),
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.PRE_SURVEY_CLASSMATES(':sectionId')}`,
+    ({ params, request }) => {
+      const rawSectionId = String(params.sectionId);
+      const denied = guardPreSurvey(request, rawSectionId);
+      if (denied) return denied;
+
+      const account = getStudentAccount(request)!;
+      const sectionId = parseSectionId(rawSectionId)!;
+      const keyword =
+        new URL(request.url).searchParams
+          .get('keyword')
+          ?.trim()
+          .toLowerCase() ?? '';
+      const users = [demoStudent, demoPartnerStudent]
+        .filter(user => user.studentNumber !== account.user.studentNumber)
+        .filter(user =>
+          getMockMySections(user.studentNumber, {}).some(
+            section => section.id === sectionId,
+          ),
+        )
+        .filter(user =>
+          `${user.name} ${user.studentNumber}`.toLowerCase().includes(keyword),
+        )
+        .map(user => ({ name: user.name, userId: user.studentNumber }));
+      return HttpResponse.json({ contents: users });
+    },
+  ),
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.RECEIVED_PREFERRED_PEER_REQUESTS(':sectionId')}`,
+    ({ params, request }) => {
+      const rawSectionId = String(params.sectionId);
+      const denied = guardPreSurvey(request, rawSectionId);
+      if (denied) return denied;
+      const account = getStudentAccount(request)!;
+      const sectionId = parseSectionId(rawSectionId)!;
+      const contents = Object.values(preSurveyResponsesByStudentAndSection)
+        .filter(
+          response =>
+            response.sectionId === sectionId &&
+            response.preferredPeerUserId === account.user.studentNumber,
+        )
+        .map(response => ({
+          requesterName: response.userName ?? response.userId,
+          requesterUserId: response.userId,
+          status: response.preferredPeerStatus ?? 'PENDING',
+        }));
+      return HttpResponse.json({ contents });
+    },
+  ),
+  http.post(
+    `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.ACCEPT_PREFERRED_PEER_REQUEST(':sectionId', ':requesterUserId')}`,
+    ({ params, request }) =>
+      decidePreferredPeerMock(request, params, 'ACCEPTED'),
+  ),
+  http.post(
+    `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.REJECT_PREFERRED_PEER_REQUEST(':sectionId', ':requesterUserId')}`,
+    ({ params, request }) =>
+      decidePreferredPeerMock(request, params, 'REJECTED'),
+  ),
 ];
+
+function decidePreferredPeerMock(
+  request: Request,
+  params: Record<string, string | readonly string[] | undefined>,
+  status: 'ACCEPTED' | 'REJECTED',
+) {
+  const rawSectionId = String(params.sectionId);
+  const denied = guardPreSurvey(request, rawSectionId);
+  if (denied) return denied;
+  const account = getStudentAccount(request)!;
+  const sectionId = parseSectionId(rawSectionId)!;
+  const requesterUserId = String(params.requesterUserId);
+  const key = getPreSurveyResponseKey(requesterUserId, sectionId);
+  const response = preSurveyResponsesByStudentAndSection[key];
+  if (
+    !response ||
+    response.preferredPeerUserId !== account.user.studentNumber ||
+    response.preferredPeerStatus !== 'PENDING'
+  ) {
+    return HttpResponse.json({ code: 'REQUEST_NOT_FOUND' }, { status: 404 });
+  }
+  preSurveyResponsesByStudentAndSection[key] = {
+    ...response,
+    preferredPeerStatus: status,
+  };
+  return HttpResponse.json({
+    contents: [
+      {
+        requesterName: response.userName ?? response.userId,
+        requesterUserId,
+        status,
+      },
+    ],
+  });
+}

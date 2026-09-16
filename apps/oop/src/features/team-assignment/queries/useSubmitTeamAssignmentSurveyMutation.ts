@@ -14,9 +14,11 @@ export function useSubmitTeamAssignmentSurveyMutation() {
     mutationFn: (
       input: SubmitTeamAssignmentSurveyInput & {
         projectionSectionId?: string;
+        preferredPeerUserId?: string | null;
       },
     ) =>
       submitTeamAssignmentSurvey({
+        preferredPeerUserId: input.preferredPeerUserId,
         sectionId: input.sectionId,
         survey: input.survey,
       }),

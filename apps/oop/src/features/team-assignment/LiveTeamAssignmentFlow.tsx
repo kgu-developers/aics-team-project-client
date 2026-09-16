@@ -1,6 +1,7 @@
 import { Button } from '@aics/design-system';
 import { useNavigate } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
+import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -12,9 +13,13 @@ import StudentContextState from '~/features/section/StudentContextState';
 import { useStudentContext } from '~/features/section/useStudentContext';
 
 import AssignedTeamFlow from './AssignedTeamFlow';
+import { toTeamResultReleaseAt } from './liveTeamAssignment';
 import * as styles from './LiveTeamAssignmentFlow.css';
 import OnboardingRecovery from './OnboardingRecovery';
-import { useMyTeamAssignmentSurveyQuery } from './queries';
+import {
+  useLivePreSurveyProjectionQuery,
+  useMyTeamAssignmentSurveyQuery,
+} from './queries';
 import ResultWaiting from './ResultWaiting';
 import { SurveyForm } from './survey/SurveyForm';
 
@@ -28,9 +33,30 @@ export default function LiveTeamAssignmentFlow({
   const navigate = useNavigate();
   const context = useStudentContext();
   const { section, teamId } = context;
+  const [editingSectionId, setEditingSectionId] = useState<number>();
   const surveyQuery = useMyTeamAssignmentSurveyQuery(
     authenticated && context.status === 'no-team' ? section?.id : undefined,
   );
+  const surveyNotFound =
+    surveyQuery.isError &&
+    isAxiosError(surveyQuery.error) &&
+    surveyQuery.error.response?.status === 404;
+  const isEditingSurvey = surveyNotFound || editingSectionId === section?.id;
+  const shouldLoadPartnerRequests =
+    authenticated &&
+    context.status === 'no-team' &&
+    (surveyNotFound || Boolean(surveyQuery.data));
+  const projectionQuery = useLivePreSurveyProjectionQuery(
+    authenticated && context.status === 'no-team' ? section?.id : undefined,
+    surveyQuery.data,
+    shouldLoadPartnerRequests,
+  );
+  const shouldShowSurvey =
+    isEditingSurvey || Boolean(projectionQuery.data?.incomingPartnerRequest);
+
+  useEffect(() => {
+    if (surveyNotFound && section) setEditingSectionId(section.id);
+  }, [section, surveyNotFound]);
   const recovery = (description: string, retry?: () => void) => (
     <OnboardingRecovery
       title='팀 온보딩 상태를 확인하지 못했어요'
@@ -69,18 +95,32 @@ export default function LiveTeamAssignmentFlow({
         />
       ) : surveyQuery.isPending ? (
         <p>사전 설문 제출 상태를 확인하는 중입니다.</p>
-      ) : surveyQuery.isError ? (
-        isAxiosError(surveyQuery.error) &&
-        surveyQuery.error.response?.status === 404 ? (
-          <SurveyForm key={section.id} preSurveySectionId={section.id} />
-        ) : (
-          recovery(
-            '사전 설문 제출 상태를 확인하지 못했어요.',
-            () => void surveyQuery.refetch(),
-          )
+      ) : surveyQuery.isError && !surveyNotFound ? (
+        recovery(
+          '사전 설문 제출 상태를 확인하지 못했어요.',
+          () => void surveyQuery.refetch(),
         )
+      ) : projectionQuery.isPending ? (
+        <p>파트너 신청 상태를 확인하는 중입니다.</p>
+      ) : projectionQuery.isError || !projectionQuery.data ? (
+        recovery(
+          '파트너 신청 상태를 확인하지 못했어요.',
+          () => void projectionQuery.refetch(),
+        )
+      ) : shouldShowSurvey ? (
+        <SurveyForm
+          key={section.id}
+          onSubmitted={() => setEditingSectionId(undefined)}
+          partnerRequestMode='live'
+          preferredPeerStatus={surveyQuery.data?.preferredPeerStatus}
+          preferredPeerUserId={surveyQuery.data?.preferredPeerUserId}
+          preSurveySectionId={section.id}
+          projection={projectionQuery.data}
+        />
       ) : (
-        <ResultWaiting />
+        <ResultWaiting
+          resultReleasesAt={toTeamResultReleaseAt(section.contactVisibleFrom)}
+        />
       )}
       {teamOnly && !teamId ? (
         <Button

@@ -1,7 +1,11 @@
 import {
   API_BASE_URL,
+  acceptPreferredPeerRequest,
   ENDPOINTS,
+  fetchReceivedPreferredPeerRequests,
   fetchMyTeamAssignmentSurvey,
+  rejectPreferredPeerRequest,
+  searchPreSurveyClassmates,
   setApiAccessToken,
   submitTeamAssignmentSurvey,
 } from '@aics/api-client';
@@ -20,6 +24,7 @@ import {
 import {
   demoAccessToken,
   demoPartnerAccessToken,
+  demoPartnerStudent,
   demoOtherSectionAccessToken,
 } from '~/mocks/data/users';
 import {
@@ -163,4 +168,74 @@ describe('사전 설문 HTTP 계약', () => {
       response: { status: 404 },
     });
   });
+
+  it('두 계정에서 요청 등록 후 발신자가 null 재제출로 취소한다', async () => {
+    setApiAccessToken(demoAccessToken);
+    const candidates = await searchPreSurveyClassmates(
+      1,
+      demoPartnerStudent.studentNumber,
+    );
+    expect(candidates).toEqual([
+      expect.objectContaining({ userId: demoPartnerStudent.studentNumber }),
+    ]);
+    await submitTeamAssignmentSurvey({
+      sectionId: 1,
+      survey,
+      preferredPeerUserId: demoPartnerStudent.studentNumber,
+    });
+
+    setApiAccessToken(demoPartnerAccessToken);
+    await expect(fetchReceivedPreferredPeerRequests(1)).resolves.toEqual([
+      expect.objectContaining({
+        requesterUserId: '20260001',
+        status: 'PENDING',
+      }),
+    ]);
+
+    setApiAccessToken(demoAccessToken);
+    const cancelled = await submitTeamAssignmentSurvey({
+      sectionId: 1,
+      survey,
+      preferredPeerUserId: null,
+    });
+    expect(cancelled).toMatchObject({
+      preferredPeerStatus: null,
+      preferredPeerUserId: null,
+    });
+    await expect(fetchMyTeamAssignmentSurvey(1)).resolves.toMatchObject({
+      preferredPeerStatus: null,
+      preferredPeerUserId: null,
+    });
+    setApiAccessToken(demoPartnerAccessToken);
+    await expect(fetchReceivedPreferredPeerRequests(1)).resolves.toEqual([]);
+  });
+
+  it.each([
+    ['approve', acceptPreferredPeerRequest, 'ACCEPTED'],
+    ['reject', rejectPreferredPeerRequest, 'REJECTED'],
+  ] as const)(
+    '두 계정에서 요청 등록 후 수신자가 %s한다',
+    async (_decision, respond, expectedStatus) => {
+      setApiAccessToken(demoAccessToken);
+      await submitTeamAssignmentSurvey({
+        sectionId: 1,
+        survey,
+        preferredPeerUserId: demoPartnerStudent.studentNumber,
+      });
+
+      setApiAccessToken(demoPartnerAccessToken);
+      await expect(respond(1, '20260001')).resolves.toEqual([
+        expect.objectContaining({
+          requesterUserId: '20260001',
+          status: expectedStatus,
+        }),
+      ]);
+
+      setApiAccessToken(demoAccessToken);
+      await expect(fetchMyTeamAssignmentSurvey(1)).resolves.toMatchObject({
+        preferredPeerStatus: expectedStatus,
+        preferredPeerUserId: demoPartnerStudent.studentNumber,
+      });
+    },
+  );
 });
