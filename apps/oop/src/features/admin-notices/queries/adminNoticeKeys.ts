@@ -1,6 +1,5 @@
 export const adminNoticeKeys = {
   all: ['admin-notices'] as const,
-  detail: (noticeId: string) =>
-    [...adminNoticeKeys.all, 'detail', noticeId] as const,
-  list: () => [...adminNoticeKeys.all, 'list'] as const,
+  list: (actorId: string | undefined, sectionId: number | undefined) =>
+    [...adminNoticeKeys.all, actorId ?? null, sectionId ?? null] as const,
 };

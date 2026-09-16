@@ -5,7 +5,6 @@ import { adminMidReportHandlers } from './adminMidReports';
 import { adminMilestoneScheduleHandlers } from './adminMilestoneSchedule';
 import { adminMilestoneSubmissionDetailHandlers } from './adminMilestoneSubmissionDetails';
 import { adminMilestoneSubmissionsHandlers } from './adminMilestoneSubmissions';
-import { adminNoticeHandlers } from './adminNotices';
 import { adminPeerEvaluationFormHandlers } from './adminPeerEvaluationForms';
 import { adminPresentationEvaluationHandlers } from './adminPresentationEvaluations';
 import { adminProfileHandlers } from './adminProfile';
@@ -50,7 +49,6 @@ export const handlers = [
   ...adminMilestoneSubmissionsHandlers,
   ...adminMeetingHandlers,
   ...adminMidReportHandlers,
-  ...adminNoticeHandlers,
   ...adminPresentationEvaluationHandlers,
   ...adminPeerEvaluationFormHandlers,
   ...createLiveEditLockHandlers({

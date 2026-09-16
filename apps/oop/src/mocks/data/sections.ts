@@ -33,6 +33,7 @@ const adminOopSection: SectionResponse = {
 const sectionsByStudentNumber: Readonly<Record<string, SectionResponse[]>> = {
   '20260001': [oopSectionOne],
   '20260002': [adminOopSection],
+  '20260099': [adminOopSection],
   '20260003': [oopSectionOne],
   '20260004': [oopSectionOne],
   '20260021': [oopSectionTwo],

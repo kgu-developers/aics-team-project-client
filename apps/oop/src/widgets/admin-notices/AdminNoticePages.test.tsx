@@ -2,256 +2,325 @@ import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
+  Outlet,
+  RouterProvider,
   createMemoryHistory,
   createRootRoute,
   createRoute,
   createRouter,
-  RouterProvider,
 } from '@tanstack/react-router';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { useState } from 'react';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
-import { adminNoticeKeys } from '~/features/admin-notices/queries/adminNoticeKeys';
+import { noticeId } from '~/features/admin-notices/noticeScope';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import {
   AdminNoticeDetailPage,
   AdminNoticeEditPage,
-  DeleteNoticeDialog,
+  AdminNoticeListPage,
+  AdminNoticeNewPage,
 } from './AdminNoticePages';
 
-import { adminNoticeDetails, adminNotices } from '~/mocks/data/adminNotices';
-import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { resetMockSessionState } from '~/mocks/authSession';
 import {
-  adminNoticeHandlers,
-  resetAdminNoticeAttachments,
-} from '~/mocks/handlers/adminNotices';
+  demoNoticeProfessor,
+  demoNoticeProfessorAccessToken,
+} from '~/mocks/data/users';
+import {
+  resetSectionAnnouncements,
+  studentNoticeHandlers,
+} from '~/mocks/handlers/studentNotices';
 
-const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
-  HTMLDialogElement.prototype,
-  'close',
-);
-const originalDialogShowModalDescriptor = Object.getOwnPropertyDescriptor(
-  HTMLDialogElement.prototype,
-  'showModal',
-);
-
-beforeAll(() => {
-  Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
-    configurable: true,
-    value() {
-      this.open = true;
-    },
-  });
-  Object.defineProperty(HTMLDialogElement.prototype, 'close', {
-    configurable: true,
-    value() {
-      this.open = false;
-    },
-  });
-});
-
-afterAll(() => {
-  if (originalDialogShowModalDescriptor) {
-    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
-      ...originalDialogShowModalDescriptor,
-    });
-  } else {
-    Reflect.deleteProperty(HTMLDialogElement.prototype, 'showModal');
-  }
-
-  if (originalDialogCloseDescriptor) {
-    Object.defineProperty(HTMLDialogElement.prototype, 'close', {
-      ...originalDialogCloseDescriptor,
-    });
-  } else {
-    Reflect.deleteProperty(HTMLDialogElement.prototype, 'close');
-  }
-});
-
-function NoticeDialogTestHarness() {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <>
-      <button onClick={() => setIsOpen(true)} type='button'>
-        삭제
-      </button>
-      <DeleteNoticeDialog
-        detail={{ ...adminNoticeDetails['1'], notice: adminNotices[0] }}
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-      />
-    </>
-  );
-}
-
-function renderDialog() {
-  return render(
-    <AstryxThemeProvider>
-      <NoticeDialogTestHarness />
-    </AstryxThemeProvider>,
-  );
-}
-
-describe('AdminNoticeDetailPage 삭제 모달', () => {
-  it('삭제 버튼으로 모달을 열고 공지 내용을 표시한 뒤 취소할 수 있다', async () => {
-    const user = userEvent.setup();
-
-    renderDialog();
-    const deleteButton = screen.getByRole('button', { name: '삭제' });
-    await user.click(deleteButton);
-
-    const dialog = await screen.findByRole('dialog', {
-      name: '공지사항 삭제 확인',
-    });
-    expect(
-      within(dialog).getByRole('heading', {
-        name: '이 공지사항을 삭제할까요?',
-      }),
-    ).toBeInTheDocument();
-    expect(within(dialog).getByText('전체 접수 공지')).toBeInTheDocument();
-    expect(
-      within(dialog).getByText('분반별 제출 일정과 공지사항을 확인해 주세요.'),
-    ).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: '취소' })).toHaveFocus();
-
-    await user.click(within(dialog).getByRole('button', { name: '취소' }));
-
-    await waitFor(() => expect(dialog).not.toBeVisible());
-    expect(deleteButton).toHaveFocus();
-  });
-
-  it('Escape로 삭제 모달을 닫고 원래 삭제 버튼으로 포커스를 돌려준다', async () => {
-    const user = userEvent.setup();
-
-    renderDialog();
-    const deleteButton = screen.getByRole('button', { name: '삭제' });
-    await user.click(deleteButton);
-    const dialog = await screen.findByRole('dialog', {
-      name: '공지사항 삭제 확인',
-    });
-
-    await user.keyboard('{Escape}');
-
-    await waitFor(() => expect(dialog).not.toBeVisible());
-    expect(deleteButton).toHaveFocus();
-  });
-});
-
-const server = setupServer(...adminNoticeHandlers);
+const server = setupServer(...studentNoticeHandlers);
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => {
+  resetMockSessionState();
+  resetSectionAnnouncements();
+  setApiAccessToken(demoNoticeProfessorAccessToken);
+  useAuthStore.setState({
+    currentUser: demoNoticeProfessor,
+    accessToken: demoNoticeProfessorAccessToken,
+  });
+});
 afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
   server.resetHandlers();
-  resetAdminNoticeAttachments();
   setApiAccessToken(null);
-  useAuthStore.getState().clearSession();
+  useAuthStore.setState({ currentUser: null, accessToken: null });
 });
 afterAll(() => server.close());
-function renderEdit() {
-  setApiAccessToken(demoAdminAccessToken);
-  useAuthStore.setState({
-    currentUser: demoAdmin,
-    accessToken: demoAdminAccessToken,
-  });
+function renderPage(path: string) {
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   clients.push(client);
-  client.setQueryData(adminNoticeKeys.list(), { notices: [] });
-  const root = createRootRoute();
-  const notice = createRoute({
+  const root = createRootRoute({
+    component: () => (
+      <AstryxThemeProvider>
+        <QueryClientProvider client={client}>
+          <Outlet />
+        </QueryClientProvider>
+      </AstryxThemeProvider>
+    ),
+  });
+  const notices = createRoute({
     getParentRoute: () => root,
-    path: '/admin/notices/$noticeId',
+    path: '/admin/notices',
+    component: Outlet,
+    validateSearch: (search: Record<string, unknown>) => ({
+      sectionId: noticeId(search.sectionId),
+    }),
   });
   const detail = createRoute({
-    getParentRoute: () => notice,
-    path: '/',
-    component: AdminNoticeDetailPage,
-  });
-  const edit = createRoute({
-    getParentRoute: () => notice,
-    path: '/edit',
-    component: AdminNoticeEditPage,
+    getParentRoute: () => notices,
+    path: '$noticeId',
+    component: Outlet,
   });
   const router = createRouter({
-    routeTree: root.addChildren([notice.addChildren([detail, edit])]),
-    history: createMemoryHistory({ initialEntries: ['/admin/notices/1/edit'] }),
+    history: createMemoryHistory({ initialEntries: [path] }),
+    routeTree: root.addChildren([
+      notices.addChildren([
+        createRoute({
+          getParentRoute: () => notices,
+          path: '/',
+          component: AdminNoticeListPage,
+        }),
+        createRoute({
+          getParentRoute: () => notices,
+          path: 'new',
+          component: AdminNoticeNewPage,
+        }),
+        detail.addChildren([
+          createRoute({
+            getParentRoute: () => detail,
+            path: '/',
+            component: AdminNoticeDetailPage,
+          }),
+          createRoute({
+            getParentRoute: () => detail,
+            path: 'edit',
+            component: AdminNoticeEditPage,
+          }),
+        ]),
+      ]),
+    ]),
   });
-  render(
-    <AstryxThemeProvider>
-      <QueryClientProvider client={client}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    </AstryxThemeProvider>,
-  );
-  return client;
+  render(<RouterProvider router={router} />);
+  return { client, router };
 }
-it('removes attachments through DELETE and refetch, preserves editing drafts, and stays removed on detail navigation', async () => {
+async function fill() {
   const user = userEvent.setup();
-  const client = renderEdit();
-  const title = await screen.findByRole('textbox', { name: '제목' });
-  await user.clear(title);
-  await user.type(title, '유지할 제목 초안');
-  await user.click(screen.getByRole('button', { name: '기존 파일 삭제' }));
-  await waitFor(() =>
-    expect(
-      screen.queryByRole('button', { name: '기존 파일 삭제' }),
-    ).not.toBeInTheDocument(),
+  await user.type(
+    await screen.findByRole('textbox', { name: '제목' }),
+    '새 공지',
   );
-  expect(title).toHaveValue('유지할 제목 초안');
-  expect(client.getQueryState(adminNoticeKeys.list())?.isInvalidated).toBe(
-    true,
+  await user.type(
+    screen.getByRole('textbox', { name: '내용' }),
+    '첫 줄\n둘째 줄',
   );
-  await act(async () => {
-    await client.refetchQueries({ queryKey: adminNoticeKeys.detail('1') });
+  return user;
+}
+it('선택한 한 분반에 제목·본문만 게시하고 상세·목록 재조회에 같은 숫자 ID를 사용한다', async () => {
+  const requests: unknown[] = [];
+  server.events.on('request:start', ({ request }) => {
+    if (request.method === 'POST')
+      void request
+        .clone()
+        .json()
+        .then(body => requests.push(body));
   });
-  expect(title).toHaveValue('유지할 제목 초안');
+  const { router, client } = renderPage('/admin/notices/new?sectionId=1');
+  const user = await fill();
+  expect(screen.queryByLabelText('첨부 파일')).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: '저장' }));
+  await screen.findByRole('heading', { level: 2, name: '새 공지' });
   expect(
-    screen.queryByText(`📎 ${adminNoticeDetails['1']!.attachment}`),
-  ).not.toBeInTheDocument();
-  await user.click(screen.getByRole('button', { name: '취소' }));
-  await screen.findByRole('heading', { name: /공지사항 > / });
-  expect(
-    screen.queryByText(`📎 ${adminNoticeDetails['1']!.attachment}`),
-  ).not.toBeInTheDocument();
+    within(screen.getByRole('region', { name: '공지 내용' })).getByText(
+      '둘째 줄',
+    ),
+  ).toBeInTheDocument();
+  expect(requests).toEqual([{ title: '새 공지', content: '첫 줄\n둘째 줄' }]);
+  expect(router.state.location.href).toBe('/admin/notices/13?sectionId=1');
+  await act(() => client.refetchQueries());
+  expect(screen.getByText('첫 줄')).toBeInTheDocument();
+  await user.click(screen.getByRole('link', { name: '← 공지사항 목록으로' }));
+  expect(await screen.findByRole('link', { name: '새 공지' })).toHaveAttribute(
+    'href',
+    '/admin/notices/13?sectionId=1',
+  );
+  server.events.removeAllListeners();
 });
-it('preserves an attachment when deletion fails', async () => {
+it('편집은 분반을 고정하고 변경된 필드만 PATCH하여 게시일과 ID를 유지한다', async () => {
+  const patch = vi.fn();
   server.use(
-    http.delete(
-      `${API_BASE_URL}${ENDPOINTS.ADMIN.NOTICE_ATTACHMENT('1')}`,
-      () => HttpResponse.json({}, { status: 500 }),
+    http.patch(
+      `${API_BASE_URL}${ENDPOINTS.ANNOUNCEMENTS.DETAIL('10')}`,
+      async ({ request }) => {
+        patch(await request.json());
+        return HttpResponse.json({
+          id: 10,
+          sectionId: 1,
+          title: '수정 제목',
+          content:
+            '공지 본문과 게시일시가 학생 화면에 표시되는지 확인해 주세요.',
+          publishedAt: '2026-08-27 15:00',
+        });
+      },
     ),
   );
-  renderEdit();
-  await userEvent
-    .setup()
-    .click(await screen.findByRole('button', { name: '기존 파일 삭제' }));
-  await screen.findByText('첨부 파일 삭제에 실패했습니다. 다시 시도해 주세요.');
+  const { router } = renderPage('/admin/notices/10/edit?sectionId=1');
+  const user = userEvent.setup();
+  const title = await screen.findByRole('textbox', { name: '제목' });
+  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
   expect(
-    screen.getByText(`📎 ${adminNoticeDetails['1']!.attachment}`),
-  ).toBeInTheDocument();
+    screen.queryByRole('combobox', { name: '분반' }),
+  ).not.toBeInTheDocument();
+  await user.clear(title);
+  await user.type(title, '수정 제목');
+  await user.click(screen.getByRole('button', { name: '저장' }));
+  await waitFor(() =>
+    expect(router.state.location.href).toBe('/admin/notices/10?sectionId=1'),
+  );
+  expect(patch).toHaveBeenCalledExactlyOnceWith({ title: '수정 제목' });
 });
-
-it('formats an offset-bearing notice timestamp consistently in edit and detail', async () => {
+it('실제 계약 핸들러로 수정한 전체 본문을 상세 재조회에 표시한다', async () => {
+  const { client } = renderPage('/admin/notices/10/edit?sectionId=1');
+  const user = userEvent.setup();
+  const body = await screen.findByRole('textbox', { name: '내용' });
+  await user.clear(body);
+  await user.type(body, '<script>escaped</script>\n수정 둘째 줄');
+  await user.click(screen.getByRole('button', { name: '저장' }));
+  await screen.findByText('<script>escaped</script>');
+  await act(() => client.refetchQueries());
+  expect(screen.getByText('수정 둘째 줄')).toBeInTheDocument();
+  expect(
+    screen.getByRole('region', { name: '공지 내용' }).querySelectorAll('p'),
+  ).toHaveLength(2);
+  expect(document.querySelector('script')).toBeNull();
+});
+it.each([
+  '/admin/notices',
+  '/admin/notices/10',
+  '/admin/notices/10?sectionId=2',
+  '/admin/notices/10?sectionId=bad',
+  '/admin/notices/not-numeric?sectionId=1',
+])('누락·부적합 범위 %s는 API 요청 없이 안내한다', async path => {
+  const get = vi.fn(() => HttpResponse.json({ contents: [] }));
+  server.use(http.get(`${API_BASE_URL}/sections/:id/announcements`, get));
+  renderPage(path);
+  await screen.findByText(
+    /담당 분반을 선택해 주세요.|공지사항을 찾을 수 없어요./,
+  );
+  expect(get).not.toHaveBeenCalled();
+});
+it('선택 분반과 다른 응답 공지는 상세에 노출하지 않는다', async () => {
   server.use(
-    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.NOTICE_DETAIL('1')}`, () =>
+    http.get(`${API_BASE_URL}/sections/1/announcements`, () =>
       HttpResponse.json({
-        ...adminNoticeDetails['1'],
-        notice: adminNotices[0],
-        createdAt: '2026-09-01T23:30:00Z',
+        contents: [
+          {
+            id: 10,
+            sectionId: 2,
+            title: '다른 분반 비밀',
+            content: '노출 금지',
+            publishedAt: '2026-08-27 15:00',
+          },
+        ],
       }),
     ),
   );
-  renderEdit();
-  expect(await screen.findByText('작성일 : 2026.09.02 08:30')).toBeVisible();
-  await userEvent.click(screen.getByRole('button', { name: '취소' }));
-  await screen.findByRole('heading', { name: /공지사항 > / });
-  expect(screen.getByText('작성일 : 2026.09.02 08:30')).toBeVisible();
+  renderPage('/admin/notices/10?sectionId=1');
+  await screen.findByRole('heading', { name: '공지사항을 찾을 수 없어요.' });
+  expect(screen.queryByText('노출 금지')).not.toBeInTheDocument();
+});
+it.each([400, 403, 500])(
+  '%s 게시 오류에서 입력을 보존하고 자동 재시도하지 않는다',
+  async status => {
+    const post = vi.fn(() => new HttpResponse(null, { status }));
+    server.use(http.post(`${API_BASE_URL}/sections/1/announcements`, post));
+    renderPage('/admin/notices/new?sectionId=1');
+    const user = await fill();
+    await user.click(screen.getByRole('button', { name: '저장' }));
+    await screen.findByRole('alert');
+    expect(screen.getByRole('textbox', { name: '제목' })).toHaveValue(
+      '새 공지',
+    );
+    expect(screen.getByRole('textbox', { name: '내용' })).toHaveValue(
+      '첫 줄\n둘째 줄',
+    );
+    expect(post).toHaveBeenCalledOnce();
+  },
+);
+it('저장 대기 동안 중복 제출을 막는다', async () => {
+  let finish!: () => void;
+  const pending = new Promise<void>(resolve => {
+    finish = resolve;
+  });
+  const post = vi.fn(async () => {
+    await pending;
+    return new HttpResponse(null, { status: 500 });
+  });
+  server.use(http.post(`${API_BASE_URL}/sections/1/announcements`, post));
+  renderPage('/admin/notices/new?sectionId=1');
+  const user = await fill();
+  await user.click(screen.getByRole('button', { name: '저장' }));
+  await waitFor(() => expect(post).toHaveBeenCalledOnce());
+  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+  expect(screen.getByRole('textbox', { name: '제목' })).toBeDisabled();
+  await user.click(screen.getByRole('button', { name: '저장' }));
+  await act(async () => finish());
+  await screen.findByRole('alert');
+  expect(post).toHaveBeenCalledOnce();
+});
+it('교수 자격·유효한 제목·본문이 없으면 저장을 허용하지 않는다', async () => {
+  renderPage('/admin/notices/new?sectionId=1');
+  await screen.findByRole('textbox', { name: '제목' });
+  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+  const user = await fill();
+  await user.clear(screen.getByRole('textbox', { name: '내용' }));
+  await user.type(screen.getByRole('textbox', { name: '내용' }), '   ');
+  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+  await act(() =>
+    useAuthStore.setState({
+      currentUser: { ...demoNoticeProfessor, globalRole: 'ASSISTANT' },
+    }),
+  );
+  await user.type(screen.getByRole('textbox', { name: '내용' }), '본문');
+  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+});
+
+it('비활성 담당 분반에서는 유효한 제목과 본문이 있어도 게시 요청을 보내지 않는다', async () => {
+  const post = vi.fn(() => new HttpResponse(null, { status: 201 }));
+  server.use(http.post(`${API_BASE_URL}/sections/1/announcements`, post));
+  useAuthStore.setState({
+    currentUser: {
+      ...demoNoticeProfessor,
+      sections: demoNoticeProfessor.sections.map(section => ({
+        ...section,
+        status: 'ARCHIVED',
+      })),
+    },
+  });
+  renderPage('/admin/notices/new?sectionId=1');
+  const user = await fill();
+  expect(
+    screen.getByText('담당 교수의 활성 분반을 선택해 주세요.'),
+  ).toBeInTheDocument();
+  const save = screen.getByRole('button', { name: '저장' });
+  expect(save).toBeDisabled();
+  await user.click(save);
+  expect(post).not.toHaveBeenCalled();
 });

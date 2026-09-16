@@ -1,10 +1,6 @@
-import {
-  API_BASE_URL,
-  ENDPOINTS,
-  type AdminNoticesResponse,
-} from '@aics/api-client';
+import { API_BASE_URL, setApiAccessToken } from '@aics/api-client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 import type { PropsWithChildren } from 'react';
@@ -12,63 +8,79 @@ import {
   afterAll,
   afterEach,
   beforeAll,
-  describe,
+  beforeEach,
   expect,
   it,
   vi,
 } from 'vitest';
 
+import { useAuthStore } from '~/features/auth/authStore';
+
 import { useAdminNoticesQuery } from './useAdminNoticesQuery';
 
-const noticesRequest = vi.fn();
-const noticesResponse: AdminNoticesResponse = {
-  notices: [
-    {
-      date: '2026-08-26',
-      id: 'notice-1',
-      section: 'OOP-01',
-      title: '분반 공지',
-      writer: '관리자',
-    },
-  ],
-  pageSize: 3,
-  sectionFilters: ['전체', 'OOP-01'],
+import { demoNoticeProfessor } from '~/mocks/data/users';
+
+const request = vi.fn();
+const notice = {
+  id: 10,
+  sectionId: 1,
+  title: '공지',
+  content: '내용',
+  publishedAt: '2026-08-27 15:00',
 };
 const server = setupServer(
-  http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.NOTICES}`, () => {
-    noticesRequest();
-    return HttpResponse.json(noticesResponse);
-  }),
+  http.get(
+    `${API_BASE_URL}/sections/:sectionId/announcements`,
+    ({ params }) => {
+      request(params.sectionId);
+      return HttpResponse.json({ contents: [notice] });
+    },
+  ),
 );
-
+const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => useAuthStore.setState({ currentUser: demoNoticeProfessor }));
 afterEach(() => {
-  noticesRequest.mockClear();
+  clients.splice(0).forEach(client => client.clear());
+  request.mockClear();
   server.resetHandlers();
+  setApiAccessToken(null);
+  useAuthStore.setState({ currentUser: null });
 });
 afterAll(() => server.close());
-
-function createWrapper() {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, retryDelay: 0 } },
+function wrapper() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
   });
-
+  clients.push(client);
   return function Wrapper({ children }: PropsWithChildren) {
     return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
     );
   };
 }
-
-describe('useAdminNoticesQuery', () => {
-  it('공지사항 목록과 분반 필터를 API Client 응답으로 전달한다', async () => {
-    const { result } = renderHook(() => useAdminNoticesQuery(), {
-      wrapper: createWrapper(),
-    });
-
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-
-    expect(noticesRequest).toHaveBeenCalledOnce();
-    expect(result.current.data).toEqual(noticesResponse);
+it('정확한 contents 계약으로 분반 목록을 읽고 로그인 사용자별 캐시를 분리한다', async () => {
+  const { result } = renderHook(() => useAdminNoticesQuery(1), {
+    wrapper: wrapper(),
   });
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  expect(result.current.data).toEqual([notice]);
+  expect(request).toHaveBeenCalledExactlyOnceWith('1');
+  await act(() =>
+    useAuthStore.setState({
+      currentUser: { ...demoNoticeProfessor, id: 'another-professor' },
+    }),
+  );
+  await waitFor(() => expect(request).toHaveBeenCalledTimes(2));
 });
+it.each([undefined, 0, -1, NaN, 2])(
+  '유효한 담당 분반 %s가 없으면 요청하지 않는다',
+  async sectionId => {
+    const { result } = renderHook(() => useAdminNoticesQuery(sectionId), {
+      wrapper: wrapper(),
+    });
+    expect(result.current.fetchStatus).toBe('idle');
+    await act(() => result.current.refetch());
+    expect(request).not.toHaveBeenCalled();
+  },
+);

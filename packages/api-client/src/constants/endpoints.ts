@@ -129,12 +129,9 @@ export const ENDPOINTS = {
       `/admin/sections/${sectionId}/presentation-evaluation-settings`,
     SECTION_STUDENTS: (sectionId: string) =>
       `/admin/sections/${sectionId}/students`,
-    NOTICE_ATTACHMENT: (noticeId: string) =>
-      `/admin/notices/${noticeId}/attachment`,
-    NOTICES: '/admin/notices',
-    NOTICE_DETAIL: (noticeId: string) => `/admin/notices/${noticeId}`,
   },
   ANNOUNCEMENTS: {
+    DETAIL: (id: string) => `/announcements/${id}`,
     SECTION_LIST: (sectionId: string) => `/sections/${sectionId}/announcements`,
   },
   SECTION: {

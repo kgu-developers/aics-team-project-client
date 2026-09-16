@@ -58,9 +58,3 @@ export const teamLink = style({
   color: tokens.color.text.primary,
   textDecoration: 'none',
 });
-
-export const content = style({
-  lineHeight: 1.7,
-  margin: '10px 0 0',
-  whiteSpace: 'pre-wrap',
-});

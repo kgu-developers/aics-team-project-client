@@ -2,10 +2,12 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 export async function choose(
   scope: Page | Locator,
-  label: string,
+  label: string | RegExp,
   option: string | RegExp,
 ) {
-  await scope.getByRole('combobox', { name: label, exact: true }).click();
+  await scope
+    .getByRole('combobox', { name: label, exact: typeof label === 'string' })
+    .click();
   const page = 'page' in scope ? scope.page() : scope;
   await page
     .getByRole('option', { name: option, exact: typeof option === 'string' })
@@ -30,8 +32,15 @@ export async function login(
     ).toBeVisible();
 }
 
-export async function fillDate(page: Page, label: string, date: string) {
-  const input = page.getByRole('combobox', { name: label, exact: true });
+export async function fillDate(
+  page: Page | Locator,
+  label: string | RegExp,
+  date: string,
+) {
+  const input = page.getByRole('combobox', {
+    name: label,
+    exact: typeof label === 'string',
+  });
   await input.fill(date);
   await input.press('Tab');
 }

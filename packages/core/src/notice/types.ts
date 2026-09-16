@@ -21,3 +21,12 @@ export type SectionAnnouncementListResponse = {
 export type SectionAnnouncement = SectionAnnouncementResponse & {
   attachments?: SectionAnnouncementAttachment[];
 };
+
+export type SectionAnnouncementCreateRequest = {
+  title: string;
+  content: string;
+  publishedAt?: string;
+};
+
+export type SectionAnnouncementUpdateRequest =
+  Partial<SectionAnnouncementCreateRequest>;

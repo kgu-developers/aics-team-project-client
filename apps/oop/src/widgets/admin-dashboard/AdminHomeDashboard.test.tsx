@@ -6,8 +6,8 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -15,13 +15,41 @@ import AdminHomeDashboard from './AdminHomeDashboard';
 
 import { demoAdmin } from '~/mocks/data/users';
 
+const dashboardState = vi.hoisted(() => ({
+  meetingContent: '',
+  noticeError: false,
+  noticeScopeStatus: 'ready',
+  notices: [] as {
+    id: number;
+    sectionId: number;
+    title: string;
+    content: string;
+    publishedAt: string;
+  }[],
+}));
+beforeEach(() => {
+  dashboardState.meetingContent = '발표 자료의 핵심 흐름과 역할을 확정한다.';
+  dashboardState.noticeError = false;
+  dashboardState.noticeScopeStatus = 'ready';
+  dashboardState.notices = [
+    {
+      id: 10,
+      sectionId: 1,
+      title: '계약 공지',
+      content: '본문',
+      publishedAt: '2026-09-14T15:30:00Z',
+    },
+  ];
+});
+afterEach(() => useAuthStore.setState({ currentUser: null }));
+
 vi.mock('~/features/admin-meeting/queries', () => ({
   useAdminMeetingRecordListQuery: () => ({
     data: {
       contents: [
         {
           authorId: '20260001',
-          content: '발표 자료의 핵심 흐름과 역할을 확정한다.',
+          content: dashboardState.meetingContent,
           id: 2,
           location: '온라인',
           meetingAt: '2026-10-08 00:00',
@@ -73,9 +101,10 @@ vi.mock('~/features/admin-milestone-review/queries', () => ({
 }));
 
 vi.mock('~/features/admin-notices/queries', () => ({
-  useAdminNoticesQuery: () => ({
-    data: { notices: [] },
-    isError: false,
+  useAdminAccessibleNoticesQuery: () => ({
+    data: dashboardState.notices,
+    isError: dashboardState.noticeError,
+    scopeStatus: dashboardState.noticeScopeStatus,
     isPending: false,
   }),
 }));
@@ -143,4 +172,152 @@ describe('AdminHomeDashboard', () => {
       screen.getByRole('link', { name: '제안서 보완 사항을 확인해 주세요.' }),
     ).toHaveAttribute('href', '/admin/messages/teams/7');
   });
+});
+
+it('공지 상세 링크에 응답의 분반 ID를 전달한다', async () => {
+  renderPage();
+  expect(
+    await screen.findByRole('link', { name: '계약 공지' }),
+  ).toHaveAttribute('href', '/admin/notices/10?sectionId=1');
+});
+
+it.each([
+  [
+    JSON.stringify({
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: '안건 정리' }] },
+        {
+          type: 'bulletList',
+          content: [
+            {
+              type: 'listItem',
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [{ type: 'text', text: '담당자 배정' }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }),
+    '안건 정리 담당자 배정',
+  ],
+  [
+    JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: '가'.repeat(60) }],
+        },
+      ],
+    }),
+    `${'가'.repeat(45)}…`,
+  ],
+  [
+    JSON.stringify({ type: 'doc', content: [] }),
+    '작성된 회의 내용이 없습니다.',
+  ],
+])(
+  '회의 JSON %s에서 읽을 수 있는 미리보기를 만든다',
+  async (content, preview) => {
+    dashboardState.meetingContent = content;
+    const { container } = renderPage();
+    expect(
+      await screen.findByRole('link', { name: preview }),
+    ).toBeInTheDocument();
+    expect(container.textContent).not.toContain('"type":"doc"');
+  },
+);
+
+it('성공한 공지 옆에 일부 분반의 조회 실패를 표시한다', async () => {
+  dashboardState.noticeError = true;
+  renderPage();
+  const link = await screen.findByRole('link', { name: '계약 공지' });
+  expect(link).toBeInTheDocument();
+  const panel = link.closest('section')!;
+  expect(within(panel).getByRole('alert')).toHaveTextContent(
+    '일부 분반의 공지사항을 불러오지 못했습니다.',
+  );
+});
+
+it('모든 공지 조회 실패에서는 빈 목록 대신 오류 안내를 표시한다', async () => {
+  dashboardState.notices = [];
+  dashboardState.noticeError = true;
+  renderPage();
+  expect(
+    await screen.findByText('공지사항을 불러오지 못했습니다.'),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText('등록된 공지사항이 없습니다.'),
+  ).not.toBeInTheDocument();
+});
+
+it('공지 게시 시각을 서울 기준 자정 넘김으로 표시한다', async () => {
+  renderPage();
+  const link = await screen.findByRole('link', { name: '계약 공지' });
+  expect(
+    within(link.closest('li')!).getByText('2026.09.15 00:30'),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
+
+it.each([false, true])(
+  '분반 상태 누락을 공지 없음으로 표시하지 않고 안내한다 (조회 결과 있음: %s)',
+  async hasNotices => {
+    dashboardState.noticeScopeStatus = 'unknown-status';
+    if (!hasNotices) dashboardState.notices = [];
+    renderPage();
+    const message = await screen.findByText(
+      '일부 담당 분반의 운영 상태를 확인할 수 없어 해당 분반의 공지사항을 표시할 수 없습니다.',
+    );
+    expect(message).toBeInTheDocument();
+    expect(
+      screen.queryByText('등록된 공지사항이 없습니다.'),
+    ).not.toBeInTheDocument();
+    if (hasNotices) {
+      expect(message).toHaveAttribute('role', 'alert');
+      expect(
+        screen.getByRole('link', { name: '계약 공지' }),
+      ).toBeInTheDocument();
+    }
+  },
+);
+
+it('활성 담당 분반이 없으면 공지 없음 대신 조회 전제조건을 안내한다', async () => {
+  dashboardState.noticeScopeStatus = 'no-active-sections';
+  dashboardState.notices = [];
+  renderPage();
+  expect(
+    await screen.findByText('공지사항을 표시할 활성 담당 분반이 없습니다.'),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText('등록된 공지사항이 없습니다.'),
+  ).not.toBeInTheDocument();
+});
+
+it('활성 분반을 정상 조회한 빈 목록에만 공지 없음을 표시한다', async () => {
+  dashboardState.notices = [];
+  renderPage();
+  expect(
+    await screen.findByText('등록된 공지사항이 없습니다.'),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
+
+it('분반 상태 누락과 다른 활성 분반의 조회 실패를 함께 알린다', async () => {
+  dashboardState.noticeScopeStatus = 'unknown-status';
+  dashboardState.noticeError = true;
+  renderPage();
+  const link = await screen.findByRole('link', { name: '계약 공지' });
+  const alert = within(link.closest('section')!).getByRole('alert');
+  expect(alert).toHaveTextContent(
+    '일부 담당 분반의 운영 상태를 확인할 수 없어 해당 분반의 공지사항을 표시할 수 없습니다.',
+  );
+  expect(alert).toHaveTextContent(
+    '일부 분반의 공지사항을 불러오지 못했습니다.',
+  );
 });

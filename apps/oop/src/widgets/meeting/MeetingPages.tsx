@@ -45,6 +45,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
+import RichTextViewer from '~/shared/ui/RichTextViewer';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import { useAuthStore } from '~/features/auth/authStore';
@@ -171,22 +172,6 @@ function toDraftAction(action: MeetingAction): DraftAction {
     content: action.content,
     dueDate: action.dueDate?.slice(0, 10) ?? '',
   };
-}
-
-function RichTextViewer({ content }: { content: RichTextJson }) {
-  const editor = useEditor({
-    content,
-    editable: false,
-    extensions: [StarterKit],
-  });
-  useEffect(() => {
-    editor?.commands.setContent(content);
-  }, [content, editor]);
-  return (
-    <div className={styles.content}>
-      <EditorContent editor={editor} />
-    </div>
-  );
 }
 
 function MeetingEditor({

@@ -15,6 +15,8 @@ export type {
   SectionAnnouncementAttachment,
   SectionAnnouncementResponse,
   SectionAnnouncementListResponse,
+  SectionAnnouncementCreateRequest,
+  SectionAnnouncementUpdateRequest,
 } from './notice/types';
 export type { Course } from './course/types';
 export type {

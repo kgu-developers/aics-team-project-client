@@ -7,12 +7,35 @@ import { test, expect, type BrowserContext, type Page } from '@playwright/test';
 
 import { prepareCourse, importStudents, importTeams } from './admin';
 import { createRun, enrollmentFile, teamFile, type Actor } from './data';
+import { captureFailurePage, maskedScreenshot } from './evidence';
+import {
+  createMeeting,
+  addMeetingAction,
+  memberMeeting,
+  adminReadMeeting,
+  deniedMeeting,
+  cancelDeleteMeeting,
+  teamActionPlan,
+  readAction,
+  editMeeting,
+  deleteMeeting,
+  studentMeetingDeleted,
+  adminMeetingDeleted,
+} from './meetings';
 import {
   createMilestones,
   openPresentationWindow,
   studentMilestone,
   type MilestoneLinks,
 } from './milestones';
+import {
+  createNotice,
+  readNotice,
+  studentReadsNotice,
+  editNotice,
+  studentUpdatedNotice,
+} from './notices';
+import { createResources } from './resources';
 import {
   downloadSubmission,
   proposalFeedback,
@@ -22,6 +45,7 @@ import {
   submissionDetail,
   submissions,
 } from './review';
+import { createStageRunner } from './stages';
 import {
   createProject,
   submitProposal,
@@ -35,15 +59,15 @@ import { pdfFile } from '../support/files';
 test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플로우', async ({
   browser,
   baseURL,
-}, testInfo) => {
+}) => {
   const run = createRun();
   const directory = resolve('../../.agent-local/e2e/integrated/runs', run.key);
   await mkdir(directory, { recursive: true });
-  await writeFile(
-    resolve(directory, 'dataset.json'),
-    JSON.stringify(run, null, 2),
-    { mode: 0o600 },
-  );
+  const json = (name: string, data: unknown) =>
+    writeFile(resolve(directory, name), JSON.stringify(data, null, 2), {
+      mode: 0o600,
+    });
+  await json('dataset.json', run);
   for (const file of [
     await enrollmentFile(run),
     await teamFile(run),
@@ -53,126 +77,123 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
       mode: 0o600,
     });
   }
-  await writeFile(
-    resolve(directory, 'reset-targets.json'),
-    JSON.stringify(
-      {
-        runKey: run.key,
-        purpose:
-          '서버 담당자의 수동 초기화 범위 확인용. 자동 삭제 스크립트가 아니다.',
-        preserve: ['기존 관리자 계정', '다른 실행 키와 실사용 데이터'],
-        scope: {
-          courseName: run.course,
-          sectionCode: run.section,
-          teamNames: [run.team, run.comparison],
-          studentNumbers: Object.values(run.users).map(
-            user => user.studentNumber,
-          ),
-        },
-        resetBeforeReusingSameAccounts: [
-          '평가 응답·평가 항목·양식',
-          '제출 버전·파일 연결·팀원 확인·최종 완료 상태',
-          '중간 점검 문서·영역 완료·편집 잠금·수정 요청',
-          '제안서 완료 상태·피드백·팀 쪽지',
-          '프로젝트·주제 후보·투표',
-          '팀 배정·팀장 확정·설문 응답',
-          '수강 등록·학생 계정·마일스톤·전용 분반·전용 강좌',
-        ],
-        recreate:
-          '해당 실행 키 범위 초기화 후 학생 XLSX → 설문 → 팀 XLSX → 팀 배정 확정 → 마일스톤과 프로젝트 순으로 재생성한다. 새 계정은 업로드 연락처가 초기 비밀번호다. ID와 날짜는 재생성 시점 기준으로 갱신한다.',
-        alternative:
-          'pnpm test:e2e:integrated 재실행은 새 실행 키와 학번을 생성하므로 기존 데이터 초기화가 필요 없다.',
-      },
-      null,
-      2,
-    ),
-    { mode: 0o600 },
-  );
+  const resources = createResources(run);
+  const saveResources = () => json('reset-targets.json', resources);
+  await saveResources();
   const contexts: BrowserContext[] = [];
-  const errors: string[] = [];
-  const network: { method: string; path: string; status: number }[] = [];
-  const outcomes: {
-    id: string;
-    title: string;
-    status: 'passed' | 'failed' | 'skipped';
-    reason?: string;
+  const pages = new Map<string, Page>();
+  const errors: { stage: string; actor: string; message: string }[] = [];
+  const network: {
+    stage: string;
+    actor: string;
+    method: string;
+    path: string;
+    status: number;
   }[] = [];
-  const failures: Error[] = [];
-  const dependencies: Record<string, string[]> = {
-    '08': ['07'],
-    '10': ['09'],
-    '12': ['11'],
-    '13': ['12'],
-    '15': ['14'],
-    '16': ['14'],
-    '18': ['17'],
-  };
+  const consoleErrors: { stage: string; actor: string; message: string }[] = [];
+  const loginRecoveries: { stage: string; actor: string }[] = [];
+  let currentStage = 'initialization';
+  const safeError = (error: unknown) =>
+    stripVTControlCharacters(
+      error instanceof Error ? error.message : String(error),
+    )
+      .replace(/https?:\/\/\S+/g, '[URL omitted]')
+      .replaceAll(env.OOP_E2E_ADMIN_PASSWORD!, '[credential omitted]')
+      .replaceAll(env.OOP_E2E_ADMIN_NUMBER!, '[admin omitted]');
+  async function screenshot(page: Page, name: string) {
+    const image = await maskedScreenshot(page, run.key);
+    await writeFile(resolve(directory, `${name}.png`), image, { mode: 0o600 });
+  }
   async function capture(id: string) {
-    for (const [i, context] of contexts.entries()) {
-      for (const page of context.pages()) {
-        const name = `${id}-actor-${i}`;
-        const screenshot = await page.screenshot({
-          fullPage: true,
-          mask: [page.locator('pre')],
+    const results = await Promise.allSettled(
+      [...pages].map(async ([actor, page]) => {
+        const path = new URL(page.url()).pathname;
+        await json(`${id}-${actor}-route.json`, { stage: id, actor, path });
+        await captureFailurePage({
+          page,
+          runKey: run.key,
+          name: `${id}-${actor}`,
+          write: async (name, data) => {
+            await writeFile(resolve(directory, name), data, { mode: 0o600 });
+          },
+          describeError: safeError,
         });
-        await writeFile(resolve(directory, `${name}.png`), screenshot, {
-          mode: 0o600,
-        });
-        await testInfo.attach(name, {
-          body: screenshot,
-          contentType: 'image/png',
-        });
-        await writeFile(
-          resolve(directory, `${name}.txt`),
-          (await page.locator('body').innerText()).replace(
-            /https?:\/\/\S+/g,
-            '[URL 생략]',
-          ),
-          { mode: 0o600 },
-        );
-      }
-    }
-  }
-  async function phase(title: string, action: () => Promise<void>) {
-    const id = title.slice(0, 2);
-    const blocked = (dependencies[id] ?? []).filter(
-      dependency =>
-        !outcomes.some(
-          result => result.id === dependency && result.status === 'passed',
-        ),
+      }),
     );
-    if (blocked.length) {
-      outcomes.push({
-        id,
-        title,
-        status: 'skipped',
-        reason: `${blocked.join(', ')} 선행 단계 실패`,
-      });
-      await test.step.skip(title, action);
-      return false;
-    }
+    const rejected = results.find(result => result.status === 'rejected');
+    if (rejected?.status === 'rejected') throw rejected.reason;
+  }
+  const runner = createStageRunner({
+    execute: async (id, title, action) => {
+      currentStage = id;
+      await test.step(
+        `${id} ${title}`,
+        async () => {
+          if (
+            [
+              '02',
+              '04',
+              '05',
+              '08',
+              '10',
+              '12',
+              '13',
+              '16',
+              '17',
+              '18',
+              'M04',
+              'M09',
+              'M12',
+              'N01',
+              'N03',
+            ].includes(id) &&
+            new URL(admin.url()).pathname === '/login'
+          ) {
+            loginRecoveries.push({ stage: id, actor: 'admin' });
+            await login(
+              admin,
+              {
+                studentNumber: env.OOP_E2E_ADMIN_NUMBER!,
+                password: env.OOP_E2E_ADMIN_PASSWORD!,
+              },
+              'admin',
+            );
+          }
+          await action();
+        },
+        {
+          timeout: id.startsWith('M') || id.startsWith('N') ? 90_000 : 180_000,
+        },
+      );
+    },
+    capture,
+    persist: async outcomes => {
+      resources.blockers = outcomes
+        .filter(outcome => outcome.status !== 'passed')
+        .map(outcome => ({
+          stageId: outcome.id,
+          reason: outcome.reason ?? outcome.status,
+        }));
+      await Promise.all([
+        json('outcomes.json', outcomes),
+        json('network.json', network),
+        json('browser-errors.json', errors),
+        json('console-errors.json', consoleErrors),
+        json('login-recoveries.json', loginRecoveries),
+        saveResources(),
+      ]);
+    },
+    describeError: safeError,
+  });
+  const phase = runner.phase;
+  async function evidence(page: Page, name: string) {
     try {
-      await test.step(title, action);
-      outcomes.push({ id, title, status: 'passed' });
-      return true;
+      await screenshot(page, name);
     } catch (error) {
-      const failure = error instanceof Error ? error : new Error(String(error));
-      outcomes.push({
-        id,
-        title,
-        status: 'failed',
-        reason: stripVTControlCharacters(failure.message),
-      });
-      failures.push(failure);
-      await capture(id);
-      return false;
+      runner.evidenceErrors.push(safeError(error));
     }
   }
-  async function setup(title: string, action: () => Promise<void>) {
-    if (!(await phase(title, action)))
-      throw new Error(`${title}: 공통 준비 실패`);
-  }
-  async function actor() {
+  async function actor(name: string) {
     const context = await browser.newContext({
       baseURL,
       locale: 'ko-KR',
@@ -181,35 +202,71 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
     });
     contexts.push(context);
     const page = await context.newPage();
-    page.on('pageerror', error => errors.push(error.message));
+    pages.set(name, page);
+    page.on('pageerror', error =>
+      errors.push({
+        stage: currentStage,
+        actor: name,
+        message: safeError(error),
+      }),
+    );
+    page.on('console', message => {
+      if (message.type() === 'error')
+        consoleErrors.push({
+          stage: currentStage,
+          actor: name,
+          message: safeError(message.text()),
+        });
+    });
     page.on('response', response => {
-      if (['fetch', 'xhr'].includes(response.request().resourceType())) {
+      if (['fetch', 'xhr'].includes(response.request().resourceType()))
         network.push({
+          stage: currentStage,
+          actor: name,
           method: response.request().method(),
           path: new URL(response.url()).pathname,
           status: response.status(),
         });
-      }
     });
     page.setDefaultTimeout(15_000);
     page.setDefaultNavigationTimeout(30_000);
     return page;
   }
-  const admin = await actor();
+  const admin = await actor('admin');
   const students = new Map<Actor, Page>();
+  const loggedIn = new Set<Actor>();
   async function student(role: Actor) {
     let page = students.get(role);
     if (!page) {
-      page = await actor();
-      await login(page, run.users[role]);
+      page = await actor(role);
       students.set(role, page);
+    }
+    if (!loggedIn.has(role) || new URL(page.url()).pathname === '/login') {
+      if (loggedIn.has(role))
+        loginRecoveries.push({ stage: currentStage, actor: role });
+      await login(page, run.users[role]);
+      loggedIn.add(role);
     }
     return page;
   }
-  let milestones: MilestoneLinks;
-  let leader: Page;
+  let milestones: Partial<MilestoneLinks> = {};
+  const milestone = (name: keyof MilestoneLinks) => {
+    const path = milestones[name];
+    if (!path) throw new Error(`${name}: UI milestone link was not captured`);
+    return path;
+  };
+  const ownedMeeting = () => {
+    if (!resources.meeting.studentDetailPath)
+      throw new Error('Owned meeting UI path is missing');
+    return resources.meeting.studentDetailPath;
+  };
+  const ownedNotice = () => {
+    if (!resources.notice.adminPath)
+      throw new Error('Owned notice UI path is missing');
+    return resources.notice.adminPath;
+  };
   try {
-    await setup('01 관리자 로그인과 전용 강좌·분반 생성', async () => {
+    await phase('01', '관리자 로그인과 전용 강좌·분반 생성', async () => {
       await login(
         admin,
         {
@@ -220,42 +277,42 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
       );
       await prepareCourse(admin, run);
     });
-    await setup('02 화면에서 학생 Excel 검증·계정 생성·수강 등록', async () => {
-      await importStudents(admin, run);
-    });
-    await setup('03 학생 사전 설문 제출', async () => {
-      const student = await actor();
-      await login(student, run.users.survey);
-      await student
-        .getByRole('button', { name: '시작하기', exact: true })
-        .click();
-      await student
-        .getByRole('checkbox', { name: '개발', exact: true })
-        .check();
-      await student
+    await phase(
+      '02',
+      '화면에서 학생 Excel 검증·계정 생성·수강 등록',
+      async () => {
+        await importStudents(admin, run);
+      },
+    );
+    await phase('03', '학생 사전 설문 제출', async () => {
+      const page = await student('survey');
+      await page.getByRole('button', { name: '시작하기', exact: true }).click();
+      await page.getByRole('checkbox', { name: '개발', exact: true }).check();
+      await page
         .getByRole('button', { name: '다음 설문', exact: true })
         .click();
-      await student
+      await page
         .getByRole('textbox', { name: /프로젝트 주제 아이디어/ })
         .fill(run.title);
-      await student
+      await page
         .getByRole('button', { name: '설문 제출', exact: true })
         .click();
-      await student
+      await page
         .getByRole('dialog', { name: '설문 제출 확인' })
         .getByRole('button', { name: '제출', exact: true })
         .click();
       await expect(
-        student.getByRole('heading', {
+        page.getByRole('heading', {
           name: '설문에 응답해 주셔서 감사합니다.',
         }),
       ).toBeVisible();
     });
-    await setup('04 관리자 팀 명단 반영과 배정 확정', async () => {
+    await phase('04', '관리자 팀 명단 반영과 배정 확정', async () => {
       await importTeams(admin, run);
     });
-    await setup(
-      '05 관리자 제출 마일스톤 4종 공개와 제출 규칙 설정',
+    await phase(
+      '05',
+      '관리자 제출 마일스톤 4종 공개와 제출 규칙 설정',
       async () => {
         milestones = await createMilestones(admin, run, [
           '제안서',
@@ -263,35 +320,227 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
           '발표',
           '최종 보고서',
         ]);
-        await writeFile(
-          resolve(directory, 'milestones.json'),
-          JSON.stringify(milestones, null, 2),
-        );
+        await json('milestones.json', milestones);
       },
     );
-    await setup('06 팀장 로그인과 주제 후보·프로젝트 확정', async () => {
-      leader = await student('leader');
-      await createProject(leader, run.title, [
+    await phase('06', '팀장 로그인과 주제 후보·프로젝트 확정', async () => {
+      await createProject(await student('leader'), run.title, [
         await student('memberA'),
         await student('memberB'),
         await student('memberC'),
       ]);
     });
-    await phase('07 제안서 전체 영역 작성·이미지 업로드·제출', async () => {
-      await submitProposal(leader, run, milestones['제안서']);
+    await phase('M01', '팀장 회의록 작성과 재조회', async () => {
+      await createMeeting(
+        await student('leader'),
+        run,
+        async () => {
+          resources.meeting.state = 'unknown';
+          await saveResources();
+        },
+        async path => {
+          resources.meeting.studentDetailPath = path;
+          resources.meeting.state = 'created';
+          resources.meeting.lastVerifiedStage = 'M01';
+          await saveResources();
+        },
+      );
     });
-    await phase('08 관리자 제안서 조회·피드백과 학생 답변', async () => {
+    await phase('M02', '담당자·기한이 있는 회의 액션 등록', async () => {
+      resources.action.owningMeetingPath = ownedMeeting();
+      await saveResources();
+      await addMeetingAction(
+        await student('leader'),
+        run,
+        ownedMeeting(),
+        async () => {
+          resources.action.state = 'unknown';
+          await saveResources();
+        },
+        async () => {
+          resources.action.state = 'created';
+          await saveResources();
+        },
+      );
+    });
+    await phase('M03', '같은 팀원 원본 회의·팀 액션 플랜 조회', async () => {
+      const page = await student('memberA');
+      await memberMeeting(page, run, ownedMeeting());
+      await evidence(page, 'M03-member-original');
+    });
+    await phase(
+      'M04',
+      '관리자 분반·팀 필터와 읽기 전용 원본 본문',
+      async () => {
+        await adminReadMeeting(
+          admin,
+          run,
+          ownedMeeting(),
+          false,
+          async (detail, list) => {
+            resources.meeting.adminDetailPath = detail;
+            resources.meeting.adminListPath = list;
+            await saveResources();
+          },
+        );
+        await evidence(admin, 'M04-admin-original');
+      },
+    );
+    await phase('M05', '다른 팀 직접 접근과 실제 서버 거부', async () => {
+      await deniedMeeting(
+        await student('comparisonLeader'),
+        run,
+        ownedMeeting(),
+      );
+    });
+    await phase('M06', '삭제 취소 후 회의·액션 보존', async () => {
+      await cancelDeleteMeeting(await student('leader'), run, ownedMeeting());
+      const page = await student('memberA');
+      await teamActionPlan(page);
+      await readAction(page, run, true, ownedMeeting());
+    });
+    await phase('M07', '실제 편집 잠금으로 제목·본문 수정', async () => {
+      await editMeeting(
+        await student('leader'),
+        run,
+        ownedMeeting(),
+        async () => {
+          resources.meeting.edited = true;
+          resources.meeting.lastVerifiedStage = 'M07';
+          await saveResources();
+        },
+      );
+    });
+    await phase('M08', '같은 팀원 수정 본문·액션 링크 재조회', async () => {
+      const page = await student('memberA');
+      await memberMeeting(page, run, ownedMeeting(), true);
+      await evidence(page, 'M08-member-updated');
+    });
+    await phase('M09', '관리자 수정 본문·목록 재조회', async () => {
+      await adminReadMeeting(
+        admin,
+        run,
+        ownedMeeting(),
+        true,
+        async (detail, list) => {
+          resources.meeting.adminDetailPath = detail;
+          resources.meeting.adminListPath = list;
+          await saveResources();
+        },
+      );
+      await evidence(admin, 'M09-admin-updated');
+    });
+    await phase('M10', '소유 회의록 최종 UI 삭제', async () => {
+      await deleteMeeting(
+        await student('leader'),
+        ownedMeeting(),
+        async () => {
+          resources.meeting.deletionAttempt = 'M10';
+          resources.meeting.deletionResult = 'unknown';
+          await saveResources();
+        },
+        async () => {
+          resources.meeting.state = 'deleted';
+          resources.meeting.deletionResult = 'UI navigated to list';
+          resources.meeting.lastVerifiedStage = 'M10';
+          await saveResources();
+        },
+      );
+    });
+    await phase(
+      'M11',
+      '팀장·팀원 회의 삭제와 액션 연쇄 삭제 확인',
+      async () => {
+        for (const role of ['leader', 'memberA'] as const)
+          await studentMeetingDeleted(await student(role), run, ownedMeeting());
+        resources.action.state = 'deleted';
+        resources.action.cascadeVerified = true;
+        await saveResources();
+      },
+    );
+    await phase(
+      'M12',
+      '관리자 삭제 목록과 기존 상세의 missing 상태',
+      async () => {
+        resources.meeting.adminListPath = await adminMeetingDeleted(
+          admin,
+          run,
+          ownedMeeting(),
+        );
+        resources.meeting.lastVerifiedStage = 'M12';
+        await saveResources();
+      },
+    );
+    await phase('N01', '교수의 생성 분반 텍스트 공지 게시·재조회', async () => {
+      await createNotice(
+        admin,
+        run,
+        async () => {
+          resources.notice.state = 'unknown';
+          await saveResources();
+        },
+        async path => {
+          resources.notice.adminPath = path;
+          resources.notice.state = 'created';
+          await saveResources();
+        },
+      );
+      await admin.goto(ownedNotice());
+      await readNotice(admin, run, false, true);
+      await evidence(admin, 'N01-admin-created');
+    });
+    await phase('N02', '학생 새 글→읽음과 새로고침 지속성', async () => {
+      const page = await student('memberA');
+      await studentReadsNotice(
+        page,
+        run,
+        ownedNotice(),
+        name => evidence(page, `N02-student-${name}`),
+        async path => {
+          resources.notice.studentPath = path;
+          await saveResources();
+        },
+      );
+    });
+    await phase('N03', '같은 공지 제목·본문 수정과 재조회', async () => {
+      resources.notice.editState = 'unknown';
+      await saveResources();
+      await editNotice(admin, run, ownedNotice(), async () => {
+        resources.notice.editState = 'created';
+        await saveResources();
+      });
+      await evidence(admin, 'N03-admin-updated');
+    });
+    await phase('N04', '학생 수정 공지 영속 조회', async () => {
+      const page = await student('memberA');
+      await studentUpdatedNotice(page, run, ownedNotice());
+      resources.notice.state = 'residual';
+      await saveResources();
+      await evidence(page, 'N04-student-updated');
+    });
+    await phase('07', '제안서 전체 영역 작성·이미지 업로드·제출', async () => {
+      await submitProposal(await student('leader'), run, milestone('제안서'));
+    });
+    await phase('08', '관리자 제안서 조회·피드백과 학생 답변', async () => {
       const feedback = await proposalFeedback(admin, run);
-      await leader.goto('/student');
-      await expect(leader.getByText(feedback, { exact: true })).toBeVisible();
-      await leader
+      await (await student('leader')).goto('/student');
+      await expect(
+        (await student('leader')).getByText(feedback, { exact: true }),
+      ).toBeVisible();
+      await (
+        await student('leader')
+      )
         .getByRole('textbox', { name: /^피드백 반영 답변/ })
         .fill(`예외 처리 계획을 추가했습니다. ${run.key}`);
-      await leader
+      await (
+        await student('leader')
+      )
         .getByRole('button', { name: '답변 보내기', exact: true })
         .click();
       await expect(
-        leader.getByText('피드백 반영 답변을 제출했어요.', { exact: true }),
+        (await student('leader')).getByText('피드백 반영 답변을 제출했어요.', {
+          exact: true,
+        }),
       ).toBeVisible();
       await submissionDetail(admin, run, '제안서');
       await expect(
@@ -300,37 +549,42 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
         }),
       ).toBeVisible();
     });
-    await phase('09 중간 점검 작성·자동 저장·제출', async () => {
-      await submitMidReport(leader, milestones['중간 점검']);
+    await phase('09', '중간 점검 작성·자동 저장·제출', async () => {
+      await submitMidReport(await student('leader'), milestone('중간 점검'));
     });
-    await phase('10 관리자 수정 요청과 학생 수정본 재제출', async () => {
+    await phase('10', '관리자 수정 요청과 학생 수정본 재제출', async () => {
       await midReportFeedback(admin, run);
-      await submitMidReport(leader, milestones['중간 점검'], true);
+      await submitMidReport(
+        await student('leader'),
+        milestone('중간 점검'),
+        true,
+      );
       await submissionDetail(admin, run, '중간 점검');
       await expect(
         admin.getByText(/상태: SUBMITTED · 현재 버전:/),
       ).toBeVisible();
       await expect(admin.getByText(/수정본 topic 1/)).toBeVisible();
     });
-    await phase('11 두 팀의 발표 자료 제출·새 버전 업로드', async () => {
-      await uploadPdf(leader, milestones['발표']);
-      await uploadPdf(leader, milestones['발표'], false, 2);
+    await phase('11', '두 팀의 발표 자료 제출·새 버전 업로드', async () => {
+      await uploadPdf(await student('leader'), milestone('발표'));
+      await uploadPdf(await student('leader'), milestone('발표'), false, 2);
       const comparison = await student('comparisonLeader');
       await createProject(comparison, `${run.title} 비교`, [
         await student('comparisonMember'),
       ]);
-      await uploadPdf(comparison, milestones['발표']);
+      await uploadPdf(comparison, milestone('발표'));
     });
     await phase(
-      '12 관리자 발표 버전 조회·순서·평가 항목·기간 설정',
+      '12',
+      '관리자 발표 버전 조회·순서·평가 항목·기간 설정',
       async () => {
         await downloadSubmission(admin, run, '발표 자료 제출', 2);
-        await openPresentationWindow(admin, run, milestones['발표']);
+        await openPresentationWindow(admin, run, milestone('발표'));
         await presentationSettings(admin, run);
       },
     );
-    await phase('13 다른 팀 발표 평가와 관리자 결과 조회', async () => {
-      await evaluatePresentation(leader, run);
+    await phase('13', '다른 팀 발표 평가와 관리자 결과 조회', async () => {
+      await evaluatePresentation(await student('leader'), run);
       await submissions(admin, run, '발표 평가');
       const row = admin.getByRole('row').filter({
         has: admin.getByRole('link', { name: run.comparison, exact: true }),
@@ -339,14 +593,14 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
         row.getByRole('cell', { name: '5', exact: true }).first(),
       ).toBeVisible();
     });
-    await phase('14 최종보고서 PDF 제출', async () => {
-      await uploadPdf(leader, milestones['최종 보고서'], true);
+    await phase('14', '최종보고서 PDF 제출', async () => {
+      await uploadPdf(await student('leader'), milestone('최종 보고서'), true);
     });
-    await phase('15 팀원 3명 승인과 팀장 최종 완료', async () => {
+    await phase('15', '팀원 3명 승인과 팀장 최종 완료', async () => {
       for (const role of ['memberA', 'memberB', 'memberC'] as const) {
         const member = await student(role);
         await member.goto('/student');
-        const card = studentMilestone(member, milestones['최종 보고서']);
+        const card = studentMilestone(member, milestone('최종 보고서'));
         await card
           .getByRole('button', { name: '승인하기', exact: true })
           .click();
@@ -354,34 +608,37 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
           card.getByRole('button', { name: '승인 취소', exact: true }),
         ).toBeEnabled();
       }
-      await leader.goto('/student');
-      const card = studentMilestone(leader, milestones['최종 보고서']);
+      await (await student('leader')).goto('/student');
+      const card = studentMilestone(
+        await student('leader'),
+        milestone('최종 보고서'),
+      );
       await card
         .getByRole('button', { name: '최종 완료', exact: true })
         .click();
       await expect(
         card.getByRole('button', { name: '완료', exact: true }),
       ).toBeDisabled();
-      await leader.reload();
+      await (await student('leader')).reload();
+      await expect(
+        card.getByText('승인 4/4명 · 완료', { exact: true }),
+      ).toBeVisible();
       await expect(
         card.getByRole('button', { name: '완료', exact: true }),
       ).toBeDisabled();
     });
-    await phase('16 관리자 최종보고서 파일 조회', async () => {
+    await phase('16', '관리자 최종보고서 파일 조회', async () => {
       await downloadSubmission(admin, run, '최종 보고서', 1);
     });
-    await phase('17 관리자 상호평가 개설', async () => {
+    await phase('17', '관리자 상호평가 개설', async () => {
       Object.assign(
         milestones,
         await createMilestones(admin, run, ['상호 평가']),
       );
-      await writeFile(
-        resolve(directory, 'milestones.json'),
-        JSON.stringify(milestones, null, 2),
-      );
+      await json('milestones.json', milestones);
     });
-    await phase('18 학생 상호평가 제출과 관리자 결과 조회', async () => {
-      await submitPeerEvaluation(leader);
+    await phase('18', '학생 상호평가 제출과 관리자 결과 조회', async () => {
+      await submitPeerEvaluation(await student('leader'));
       await submissions(admin, run, '상호 평가');
       await admin.getByRole('link', { name: run.team, exact: true }).click();
       await expect(
@@ -397,26 +654,71 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
         admin.getByText('통합 테스트와 구현 검토', { exact: true }),
       ).toBeVisible();
     });
-    expect(errors, '브라우저 JavaScript 오류').toEqual([]);
-    if (failures.length)
-      throw new AggregateError(
-        failures,
-        `${failures.length}개 통합 단계 실패. outcomes.json과 단계별 화면을 확인하세요.`,
-      );
   } finally {
-    await writeFile(
-      resolve(directory, 'network.json'),
-      JSON.stringify(network, null, 2),
-    );
-    await writeFile(
-      resolve(directory, 'outcomes.json'),
-      JSON.stringify(outcomes, null, 2),
-      { mode: 0o600 },
-    );
-    await writeFile(
-      resolve(directory, 'browser-errors.json'),
-      JSON.stringify(errors, null, 2),
-    );
-    await Promise.all(contexts.map(context => context.close()));
+    currentStage = 'cleanup';
+    // One bounded cleanup for a known record whose acceptance failed before M10.
+    // Never repeat an ambiguous delete or search arbitrary records.
+    try {
+      if (
+        resources.meeting.studentDetailPath &&
+        resources.meeting.state !== 'deleted' &&
+        !resources.meeting.deletionAttempt
+      ) {
+        await test.step(
+          '소유 회의록 잔여 정리 (성공 단계로 계산하지 않음)',
+          async () => {
+            await deleteMeeting(
+              await student('leader'),
+              ownedMeeting(),
+              async () => {
+                resources.meeting.deletionAttempt = 'cleanup';
+                resources.meeting.deletionResult = 'unknown';
+                await saveResources();
+              },
+              async () => {
+                resources.meeting.state = 'deleted';
+                resources.meeting.deletionResult =
+                  'cleanup UI navigated to list';
+                await saveResources();
+              },
+            );
+          },
+          { timeout: 60_000 },
+        );
+      }
+      resources.cleanup.result =
+        resources.meeting.state === 'deleted'
+          ? 'meeting deleted; notice and base resources retained'
+          : 'manual handoff';
+    } catch (error) {
+      resources.meeting.state = 'residual';
+      resources.cleanup.result = 'failed';
+      resources.cleanup.reason = safeError(error);
+    } finally {
+      const writes = await Promise.allSettled([
+        saveResources(),
+        json('network.json', network),
+        json('outcomes.json', runner.outcomes),
+        json('browser-errors.json', errors),
+        json('console-errors.json', consoleErrors),
+        json('login-recoveries.json', loginRecoveries),
+        json('evidence-errors.json', runner.evidenceErrors),
+      ]);
+      writes.forEach(result => {
+        if (result.status === 'rejected')
+          runner.evidenceErrors.push(safeError(result.reason));
+      });
+      await Promise.allSettled(contexts.map(context => context.close()));
+    }
   }
+  expect(errors, '브라우저 JavaScript 오류 (단계·배우 포함)').toEqual([]);
+  expect(runner.evidenceErrors, '증거 저장 오류').toEqual([]);
+  const unsuccessful = runner.outcomes.filter(
+    outcome => outcome.status !== 'passed',
+  );
+  expect(runner.outcomes).toHaveLength(34);
+  expect(
+    unsuccessful,
+    '실패·의존성 건너뜀은 성공이 아님. outcomes.json 확인',
+  ).toEqual([]);
 });
