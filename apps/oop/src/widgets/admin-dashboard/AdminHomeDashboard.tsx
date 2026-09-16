@@ -4,12 +4,17 @@ import { Link, useNavigate } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+
+import { getRichTextPlainText } from '~/features/admin-meeting/model/getRichTextPlainText';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { useAdminMessagesQuery } from '~/features/admin-message/queries';
 import { formatAdminMilestoneDate } from '~/features/admin-milestone-review/model';
 import { useAdminAccessibleSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
-import { useAdminNoticesQuery } from '~/features/admin-notices/queries';
+import { noticeId } from '~/features/admin-notices/noticeScope';
+import { useAdminAccessibleNoticesQuery } from '~/features/admin-notices/queries';
 import { useAuthStore } from '~/features/auth/authStore';
+import { parseMeetingContent } from '~/features/meeting/model/studentMeeting';
 
 import * as styles from './AdminHomeDashboard.css';
 
@@ -28,7 +33,9 @@ function formatMeetingCreatedAt(value: string) {
 }
 
 function getMeetingContentPreview(content: string) {
-  const normalized = content.replace(/\s+/g, ' ').trim();
+  const normalized = getRichTextPlainText(parseMeetingContent(content))
+    .replace(/\s+/g, ' ')
+    .trim();
 
   return normalized.length > 45
     ? `${normalized.slice(0, 45)}…`
@@ -43,10 +50,6 @@ type MilestoneColumn = {
 
 function getMilestoneColumnKey(type: AdminMilestoneType, title: string) {
   return `${type}:${title}`;
-}
-
-function formatNoticePublishedDate(value: string) {
-  return value.replace('T', ' ').slice(0, 10);
 }
 
 function List({
@@ -76,6 +79,9 @@ function List({
             <Link
               className={styles.itemTitle}
               params={{ noticeId: item.id }}
+              search={{
+                sectionId: item.sectionId ? Number(item.sectionId) : undefined,
+              }}
               to='/admin/notices/$noticeId'
             >
               {item.title}
@@ -104,6 +110,7 @@ function List({
 
 function Panel({
   emptyMessage,
+  partialErrorMessage,
   isMeetingPanel = false,
   isMessagePanel = false,
   title,
@@ -112,6 +119,7 @@ function Panel({
   isNoticePanel = false,
 }: {
   emptyMessage?: string;
+  partialErrorMessage?: string;
   isMeetingPanel?: boolean;
   isMessagePanel?: boolean;
   title: string;
@@ -144,6 +152,11 @@ function Panel({
         )}
       </div>
       <div className={styles.panel}>
+        {items.length > 0 && partialErrorMessage ? (
+          <p className={styles.panelState} role='alert'>
+            {partialErrorMessage}
+          </p>
+        ) : null}
         {items.length > 0 ? (
           <List
             isMeetingList={isMeetingPanel}
@@ -182,7 +195,7 @@ export default function AdminHomeDashboard() {
   const meetingRecordsQuery =
     useAdminMeetingRecordListQuery(accessibleSectionIds);
   const messagesQuery = useAdminMessagesQuery();
-  const noticesQuery = useAdminNoticesQuery(accessibleSectionIds[0]);
+  const noticesQuery = useAdminAccessibleNoticesQuery();
   const scheduleSections = accessibleSections.map((section, index) => ({
     milestones: milestoneQueries[index]?.data?.content ?? [],
     sectionId: section.id,
@@ -233,16 +246,34 @@ export default function AdminHomeDashboard() {
   const noticeItems: DashboardListItem[] = (noticesQuery.data ?? [])
     .slice(0, 3)
     .map(notice => ({
-      date: formatNoticePublishedDate(notice.publishedAt),
+      date: formatSeoulDateTime(notice.publishedAt),
       id: String(notice.id),
-      section: accessibleSections[0]?.code ?? '',
+      section:
+        accessibleSections.find(
+          section => noticeId(section.id) === notice.sectionId,
+        )?.code ?? '알 수 없는 분반',
+      sectionId: String(notice.sectionId),
       title: notice.title,
     }));
+  const noticeScopeMessage =
+    noticesQuery.scopeStatus === 'unknown-status'
+      ? '일부 담당 분반의 운영 상태를 확인할 수 없어 해당 분반의 공지사항을 표시할 수 없습니다.'
+      : noticesQuery.scopeStatus === 'no-active-sections'
+        ? '공지사항을 표시할 활성 담당 분반이 없습니다.'
+        : undefined;
+  const noticeWarningMessage = [
+    noticeScopeMessage,
+    noticesQuery.isError
+      ? noticeItems.length > 0
+        ? '일부 분반의 공지사항을 불러오지 못했습니다.'
+        : '공지사항을 불러오지 못했습니다.'
+      : undefined,
+  ]
+    .filter(Boolean)
+    .join(' ');
   const noticeEmptyMessage = noticesQuery.isPending
     ? '공지사항을 불러오는 중입니다.'
-    : noticesQuery.isError
-      ? '공지사항을 불러오지 못했습니다.'
-      : '등록된 공지사항이 없습니다.';
+    : noticeWarningMessage || '등록된 공지사항이 없습니다.';
   const messageItems: DashboardListItem[] = (messagesQuery.data?.contents ?? [])
     .slice(0, 3)
     .map(message => ({
@@ -347,6 +378,7 @@ export default function AdminHomeDashboard() {
         <Panel
           action
           emptyMessage={noticeEmptyMessage}
+          partialErrorMessage={noticeWarningMessage}
           isNoticePanel
           items={noticeItems}
           title='공지사항'

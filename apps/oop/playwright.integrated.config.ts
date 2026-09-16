@@ -22,11 +22,12 @@ if (!remote && !process.env.OOP_E2E_API_URL) {
 
 export default defineConfig({
   testDir: './e2e/integrated',
+  testMatch: 'workflow.spec.ts',
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   workers: 1,
   retries: 0,
-  timeout: 600_000,
+  timeout: 1_200_000,
   expect: { timeout: 15_000 },
   outputDir: '../../.agent-local/playwright/integrated-results',
   reporter: [

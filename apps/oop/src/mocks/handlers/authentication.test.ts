@@ -7,7 +7,6 @@ import {
   revokeMockSession,
   rotateMockSession,
 } from '../authSession';
-import { adminNotices } from '../data/adminNotices';
 import {
   demoAccessToken,
   demoAdminAccessToken,
@@ -43,8 +42,6 @@ const adminEndpoints = [
   ENDPOINTS.ADMIN.SUBMISSION_VERSIONS('1001'),
   ENDPOINTS.ADMIN.SUBMISSION_VERSION('1001', 1),
   ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('101'),
-  ENDPOINTS.ADMIN.NOTICES,
-  ENDPOINTS.ADMIN.NOTICE_DETAIL(adminNotices[0].id),
   ENDPOINTS.ADMIN.SECTION_PRESENTATION_EVALUATIONS(sectionId),
   ENDPOINTS.ADMIN.SECTION_STUDENTS(sectionId),
   `${ENDPOINTS.TEAM.ROOT}?sectionId=${sectionId}`,

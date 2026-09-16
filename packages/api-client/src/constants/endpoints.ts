@@ -131,10 +131,6 @@ export const ENDPOINTS = {
       `/api/v1/admin/sections/${sectionId}/presentation-evaluation-settings`,
     SECTION_STUDENTS: (sectionId: string) =>
       `/api/v1/admin/sections/${sectionId}/students`,
-    NOTICE_ATTACHMENT: (noticeId: string) =>
-      `/api/v1/admin/notices/${noticeId}/attachment`,
-    NOTICES: '/api/v1/admin/notices',
-    NOTICE_DETAIL: (noticeId: string) => `/api/v1/admin/notices/${noticeId}`,
   },
   ANNOUNCEMENTS: {
     SECTION_LIST: (sectionId: string) =>

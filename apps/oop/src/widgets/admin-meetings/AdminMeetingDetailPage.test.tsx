@@ -8,7 +8,7 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -168,4 +168,123 @@ it('does not mark a failed meeting detail read', async () => {
   expect(
     localStorage.getItem(`aics:admin:read:${demoAdmin.id}:1:meetings`),
   ).toBeNull();
+});
+
+it.each([
+  [
+    'serialized rich text',
+    JSON.stringify({
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: '읽을 수 있는 회의 본문' }],
+        },
+      ],
+    }),
+    '읽을 수 있는 회의 본문',
+  ],
+  ['plain text', '기존 일반 텍스트', '기존 일반 텍스트'],
+  [
+    'HTML-looking text',
+    '<img src=x onerror=alert(1)>',
+    '<img src=x onerror=alert(1)>',
+  ],
+  [
+    'empty document',
+    '{"type":"doc","content":[]}',
+    '작성된 회의 내용이 없습니다.',
+  ],
+  ['empty string', '', '작성된 회의 내용이 없습니다.'],
+])(
+  'renders %s readably without raw serialized JSON or mutation controls',
+  async (_name, content, expected) => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORD_DETAIL('1')}`,
+        () =>
+          HttpResponse.json({
+            id: 1,
+            sectionId: 1,
+            sectionName: 'OOP-01',
+            teamId: 1,
+            teamName: '1팀',
+            title: '본문 회귀',
+            content,
+            participantIds: [],
+            authorId: '20260001',
+            meetingAt: '2026-09-01T14:30:00+09:00',
+            updatedAt: '2026-09-01T14:30:00+09:00',
+          }),
+      ),
+    );
+    const { container } = renderPage();
+    expect(
+      await screen.findByText(expected, { exact: true }),
+    ).toBeInTheDocument();
+    expect(container.textContent).not.toContain('"type":"doc"');
+    expect(container.textContent).not.toContain('"content"');
+    expect(container.querySelector('[contenteditable="true"], img')).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: /수정|삭제|저장/ }),
+    ).not.toBeInTheDocument();
+  },
+);
+
+it('preserves multiple paragraphs and list items as read-only structure, escaping text', async () => {
+  const paragraph = (text: string) => ({
+    type: 'paragraph',
+    content: [{ type: 'text', text }],
+  });
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORD_DETAIL('1')}`,
+      () =>
+        HttpResponse.json({
+          id: 1,
+          sectionId: 1,
+          sectionName: 'OOP-01',
+          teamId: 1,
+          teamName: '1팀',
+          title: '구조 확인',
+          participantIds: [],
+          authorId: '20260001',
+          meetingAt: '2026-09-01T14:30:00+09:00',
+          content: JSON.stringify({
+            type: 'doc',
+            content: [
+              paragraph('첫 문단: 안건 정리'),
+              paragraph('둘째 문단: 일정 확정'),
+              {
+                type: 'bulletList',
+                content: [
+                  { type: 'listItem', content: [paragraph('김OO 자료 준비')] },
+                  {
+                    type: 'listItem',
+                    content: [paragraph('<script>담당자 확인</script>')],
+                  },
+                ],
+              },
+            ],
+          }),
+        }),
+    ),
+  );
+  const { container } = renderPage();
+  const first = await screen.findByText('첫 문단: 안건 정리');
+  const second = screen.getByText('둘째 문단: 일정 확정');
+  expect(first.tagName).toBe('P');
+  expect(second.tagName).toBe('P');
+  expect(first.nextElementSibling).toBe(second);
+  const list = screen.getByRole('list');
+  expect(list.tagName).toBe('UL');
+  expect(within(list).getAllByRole('listitem')).toHaveLength(2);
+  expect(within(list).getByText('김OO 자료 준비')).toBeInTheDocument();
+  expect(
+    within(list).getByText('<script>담당자 확인</script>'),
+  ).toBeInTheDocument();
+  expect(
+    container.querySelector('script, [contenteditable="true"]'),
+  ).toBeNull();
+  expect(container.textContent).not.toContain('"type":"doc"');
 });

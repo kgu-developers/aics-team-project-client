@@ -1,13 +1,9 @@
-import { adminNotices, type AdminNotice } from './adminNotices';
-
 export type DashboardListItem = {
   date: string;
   id?: string;
   section: string;
   title: string;
 };
-
-const dashboardNoticeIds = new Set<AdminNotice['id']>(['1', '2', '6']);
 
 export const dashboardSchedules = [
   [
@@ -44,10 +40,6 @@ export const dashboardSchedules = [
     '5건',
   ],
 ] as const;
-
-export const dashboardNotices = adminNotices.filter(notice =>
-  dashboardNoticeIds.has(notice.id),
-);
 
 export const dashboardMinutes = [
   {

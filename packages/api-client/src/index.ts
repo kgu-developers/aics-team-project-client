@@ -183,15 +183,9 @@ export {
 export { fetchTeams } from './teams/fetchTeams';
 export { submitTeam } from './teams/submitTeam';
 export {
-  fetchAdminNotice,
-  fetchAdminNotices,
   fetchSectionAnnouncements,
   submitSectionAnnouncement,
   updateSectionAnnouncement,
-  removeAdminNoticeAttachment,
-  type AdminNoticeDetailDto,
-  type AdminNoticeDto,
-  type AdminNoticesResponse,
 } from './notices';
 export { ENDPOINTS } from './constants/endpoints';
 export {

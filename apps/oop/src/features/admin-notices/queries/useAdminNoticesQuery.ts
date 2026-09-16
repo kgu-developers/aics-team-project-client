@@ -1,16 +1,10 @@
-import { fetchSectionAnnouncements } from '@aics/api-client';
 import { useQuery } from '@tanstack/react-query';
 
-import { adminNoticeKeys } from './adminNoticeKeys';
+import { useAuthStore } from '~/features/auth/authStore';
 
-export function useAdminNoticesQuery(sectionId: string | undefined) {
-  return useQuery({
-    enabled: Boolean(sectionId),
-    queryFn: () => {
-      if (!sectionId)
-        throw new Error('공지사항 조회에는 분반 ID가 필요합니다.');
-      return fetchSectionAnnouncements(sectionId);
-    },
-    queryKey: adminNoticeKeys.list(sectionId),
-  });
+import { adminNoticeOptions } from './adminNoticeOptions';
+
+export function useAdminNoticesQuery(sectionId: string | number | undefined) {
+  const user = useAuthStore(state => state.currentUser);
+  return useQuery(adminNoticeOptions(user, sectionId));
 }

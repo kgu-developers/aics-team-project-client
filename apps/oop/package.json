@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:harness": "node --experimental-strip-types --test e2e/integrated/*.test.mjs",
     "test:watch": "vitest",
     "test:e2e": "playwright test --config playwright.live.config.ts",
     "test:e2e:ui": "playwright test --config playwright.live.config.ts --ui",

@@ -21,7 +21,7 @@ export type SectionAnnouncementListResponse = {
 export type CreateSectionAnnouncementInput = {
   title: string;
   content: string;
-  publishedAt: string;
+  publishedAt?: string;
 };
 
 export type UpdateSectionAnnouncementInput =

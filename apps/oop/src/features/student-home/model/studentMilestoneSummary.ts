@@ -6,6 +6,8 @@ import type {
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 const submissionLabels: Record<
   MyTeamMilestoneSubmissionResponse['status'],
   string
@@ -20,10 +22,7 @@ const submissionLabels: Record<
 
 /** The server's LocalDateTime uses the course timezone, independent of the browser. */
 export function milestoneTime(value?: string | null) {
-  if (!value) return NaN;
-  return Date.parse(
-    /(?:Z|[+-]\d{2}:?\d{2})$/i.test(value) ? value : `${value}+09:00`,
-  );
+  return seoulInstant(value);
 }
 
 export function milestoneDate(value?: string | null) {

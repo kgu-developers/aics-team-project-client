@@ -5,10 +5,13 @@ import { useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import RichTextViewer from '~/shared/ui/RichTextViewer';
 
+import { getRichTextPlainText } from '~/features/admin-meeting/model/getRichTextPlainText';
 import { useAdminMeetingRecordDetailQuery } from '~/features/admin-meeting/queries';
 import AdminStudentDetailDialog from '~/features/admin-student-team/components/AdminStudentDetailDialog';
 import { useAdminSectionEnrollmentsQuery } from '~/features/admin-student-team/queries';
+import { parseMeetingContent } from '~/features/meeting/model/studentMeeting';
 
 import * as styles from './AdminMeetingDetailPage.css';
 
@@ -44,6 +47,7 @@ export default function AdminMeetingDetailPage() {
   }
 
   const record = query.data;
+  const content = parseMeetingContent(record.content);
   const participants = record.participantIds.map(participantId => {
     const student = enrollmentsQuery.data?.contents.find(
       candidate => candidate.studentNumber === participantId,
@@ -97,9 +101,11 @@ export default function AdminMeetingDetailPage() {
         </section>
         <section>
           <Heading level={2}>회의 내용</Heading>
-          <Text className={styles.content}>
-            {record.content || '작성된 회의 내용이 없습니다.'}
-          </Text>
+          {getRichTextPlainText(content).trim() ? (
+            <RichTextViewer content={content} />
+          ) : (
+            <Text>작성된 회의 내용이 없습니다.</Text>
+          )}
         </section>
         <Text color='secondary' type='supporting'>
           최초 작성 {record.authorId} · 최종 수정 {record.updatedAt}

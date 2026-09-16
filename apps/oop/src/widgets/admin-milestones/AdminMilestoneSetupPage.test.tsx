@@ -65,6 +65,7 @@ const server = setupServer(
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  vi.restoreAllMocks();
   clients.splice(0).forEach(client => client.clear());
   server.resetHandlers();
   server.events.removeAllListeners();
@@ -127,78 +128,108 @@ function milestoneWrites(writes: string[]) {
 }
 
 describe('artifact submission isolation', () => {
-  it('adding and editing a draft does not submit a valid new milestone; explicit Save does', async () => {
-    const user = userEvent.setup();
-    const writes = trackWrites();
-    renderPage(false);
-    fireEvent.change(await screen.findByLabelText('OOP-01 제출 마감일'), {
-      target: { value: '2026-10-15' },
-    });
-    fireEvent.change(screen.getByLabelText('OOP-01 제출 마감 시간'), {
-      target: { value: '23:59' },
-    });
-    await user.click(screen.getByRole('button', { name: '산출물 추가' }));
-    const dialog = await screen.findByRole('dialog', {
-      name: '산출물 초안 추가',
-    });
-    await user.type(
-      within(dialog).getByRole('textbox', { name: /산출물 이름/ }),
-      '검증 산출물',
-    );
-    await user.click(within(dialog).getByRole('button', { name: '추가' }));
-    await screen.findByText('검증 산출물');
-    expect(writes).toEqual([]);
-    const draft = screen.getByText('검증 산출물').parentElement!.parentElement!;
-    await user.click(within(draft).getByRole('button', { name: '수정' }));
-    await user.click(
-      within(
-        await screen.findByRole('dialog', { name: '산출물 초안 수정' }),
-      ).getByRole('button', { name: '저장' }),
-    );
-    expect(writes).toEqual([]);
-    await user.click(screen.getByRole('button', { name: '저장' }));
-    await waitFor(() => expect(milestoneWrites(writes)).toHaveLength(1));
-    expect(milestoneWrites(writes)[0]).toMatch(/^POST /);
-    await screen.findByText(/미공개 마일스톤으로 생성했습니다/);
-  });
+  it.each(['click', 'Enter'])(
+    'draft dialog %s submission keeps forms separate and only explicit milestone Save creates it',
+    async submission => {
+      const consoleError = vi.spyOn(console, 'error');
+      const user = userEvent.setup();
+      const writes = trackWrites();
+      renderPage(false);
+      fireEvent.change(await screen.findByLabelText('OOP-01 제출 마감일'), {
+        target: { value: '2026-10-15' },
+      });
+      fireEvent.change(screen.getByLabelText('OOP-01 제출 마감 시간'), {
+        target: { value: '23:59' },
+      });
+      await user.click(screen.getByRole('button', { name: '산출물 추가' }));
+      const dialog = await screen.findByRole('dialog', {
+        name: '산출물 초안 추가',
+      });
+      expect(document.querySelector('form form')).toBeNull();
+      expect(dialog.closest('form')).toBeNull();
+      await user.type(
+        within(dialog).getByRole('textbox', { name: /산출물 이름/ }),
+        '검증 산출물',
+      );
+      if (submission === 'Enter') await user.keyboard('{Enter}');
+      else
+        await user.click(within(dialog).getByRole('button', { name: '추가' }));
+      await screen.findByText('검증 산출물');
+      expect(writes).toEqual([]);
+      const draft =
+        screen.getByText('검증 산출물').parentElement!.parentElement!;
+      await user.click(within(draft).getByRole('button', { name: '수정' }));
+      expect(document.querySelector('form form')).toBeNull();
+      await user.click(
+        within(
+          await screen.findByRole('dialog', { name: '산출물 초안 수정' }),
+        ).getByRole('button', { name: '저장' }),
+      );
+      expect(writes).toEqual([]);
+      if (submission === 'Enter') {
+        await user.click(screen.getByRole('textbox', { name: '제목' }));
+        await user.keyboard('{Enter}');
+      } else await user.click(screen.getByRole('button', { name: '저장' }));
+      await waitFor(() => expect(milestoneWrites(writes)).toHaveLength(1));
+      expect(milestoneWrites(writes)[0]).toMatch(/^POST /);
+      await screen.findByText(/미공개 마일스톤으로 생성했습니다/);
+      expect(consoleError).not.toHaveBeenCalled();
+    },
+  );
 
-  it('saving an existing artifact only writes its endpoint; explicit milestone Save still works', async () => {
-    const user = userEvent.setup();
-    const writes = trackWrites();
-    server.use(
-      http.put(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '101')}`,
-        () => new HttpResponse(null, { status: 204 }),
-      ),
-    );
-    renderPage(true);
-    const section = await screen.findByRole('region', {
-      name: '필수 산출물 관리',
-    });
-    await waitFor(() =>
-      expect(
-        within(section).getAllByRole('button', { name: '수정' }).length,
-      ).toBeGreaterThan(0),
-    );
-    await user.click(
-      within(section).getAllByRole('button', { name: '수정' })[0]!,
-    );
-    await user.click(
-      within(
-        await screen.findByRole('dialog', { name: '필수 산출물 수정' }),
-      ).getByRole('button', { name: '저장' }),
-    );
-    await waitFor(() => expect(writes).toHaveLength(1));
-    await waitFor(() =>
-      expect(
-        screen.queryByRole('dialog', { name: '필수 산출물 수정' }),
-      ).not.toBeInTheDocument(),
-    );
-    expect(writes[0]).toMatch(/^PUT .*required-artifacts/);
-    expect(milestoneWrites(writes)).toEqual([]);
-    await user.click(screen.getByRole('button', { name: '저장' }));
-    await waitFor(() => expect(milestoneWrites(writes)).toHaveLength(1));
-  });
+  it.each(['click', 'Enter'])(
+    'existing artifact dialog %s submission keeps forms separate and explicit milestone Save still works',
+    async submission => {
+      const consoleError = vi.spyOn(console, 'error');
+      const user = userEvent.setup();
+      const writes = trackWrites();
+      server.use(
+        http.put(
+          `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '101')}`,
+          () => new HttpResponse(null, { status: 204 }),
+        ),
+      );
+      renderPage(true);
+      const section = await screen.findByRole('region', {
+        name: '필수 산출물 관리',
+      });
+      await waitFor(() =>
+        expect(
+          within(section).getAllByRole('button', { name: '수정' }).length,
+        ).toBeGreaterThan(0),
+      );
+      expect(document.querySelector('form form')).toBeNull();
+      await user.click(
+        within(section).getAllByRole('button', { name: '수정' })[0]!,
+      );
+      const dialog = await screen.findByRole('dialog', {
+        name: '필수 산출물 수정',
+      });
+      expect(document.querySelector('form form')).toBeNull();
+      expect(dialog.closest('form')).toBeNull();
+      if (submission === 'Enter') {
+        await user.click(
+          within(dialog).getByRole('textbox', { name: /산출물 이름/ }),
+        );
+        await user.keyboard('{Enter}');
+      } else
+        await user.click(within(dialog).getByRole('button', { name: '저장' }));
+      await waitFor(() => expect(writes).toHaveLength(1));
+      await waitFor(() =>
+        expect(
+          screen.queryByRole('dialog', { name: '필수 산출물 수정' }),
+        ).not.toBeInTheDocument(),
+      );
+      expect(writes[0]).toMatch(/^PUT .*required-artifacts/);
+      expect(milestoneWrites(writes)).toEqual([]);
+      if (submission === 'Enter') {
+        await user.click(screen.getByRole('textbox', { name: '제목' }));
+        await user.keyboard('{Enter}');
+      } else await user.click(screen.getByRole('button', { name: '저장' }));
+      await waitFor(() => expect(milestoneWrites(writes)).toHaveLength(1));
+      expect(consoleError).not.toHaveBeenCalled();
+    },
+  );
 });
 
 it('blocks peer-evaluation editing before hidden schedule validation or any write', async () => {

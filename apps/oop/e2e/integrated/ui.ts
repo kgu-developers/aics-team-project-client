@@ -2,14 +2,29 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 export async function choose(
   scope: Page | Locator,
-  label: string,
+  label: string | RegExp,
   option: string | RegExp,
 ) {
-  await scope.getByRole('combobox', { name: label, exact: true }).click();
+  const combobox = scope.getByRole('combobox', {
+    name: label,
+    exact: typeof label === 'string',
+  });
+  await combobox.click();
   const page = 'page' in scope ? scope.page() : scope;
-  await page
-    .getByRole('option', { name: option, exact: typeof option === 'string' })
-    .click();
+  const findOption = () =>
+    page.getByRole('option', {
+      name: option,
+      exact: typeof option === 'string',
+    });
+  await expect(async () => {
+    // A detached option can also close the dropdown. Reopen only when needed.
+    let optionLocator = findOption();
+    if (!(await optionLocator.isVisible())) {
+      await combobox.click({ timeout: 2_000 });
+      optionLocator = findOption();
+    }
+    await optionLocator.click({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
 }
 
 export async function login(
@@ -30,8 +45,15 @@ export async function login(
     ).toBeVisible();
 }
 
-export async function fillDate(page: Page, label: string, date: string) {
-  const input = page.getByRole('combobox', { name: label, exact: true });
+export async function fillDate(
+  page: Page | Locator,
+  label: string | RegExp,
+  date: string,
+) {
+  const input = page.getByRole('combobox', {
+    name: label,
+    exact: typeof label === 'string',
+  });
   await input.fill(date);
   await input.press('Tab');
 }

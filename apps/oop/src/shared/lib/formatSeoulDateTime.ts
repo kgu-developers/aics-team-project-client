@@ -1,3 +1,5 @@
+import { seoulInstant } from './seoulInstant';
+
 const seoulDateTimeFormatter = new Intl.DateTimeFormat('en-CA', {
   day: '2-digit',
   hour: '2-digit',
@@ -10,7 +12,7 @@ const seoulDateTimeFormatter = new Intl.DateTimeFormat('en-CA', {
 
 /** Formats a server timestamp for the course's fixed Asia/Seoul timezone. */
 export function formatSeoulDateTime(value: string) {
-  const date = new Date(value);
+  const date = new Date(seoulInstant(value));
 
   if (Number.isNaN(date.getTime())) return value;
 

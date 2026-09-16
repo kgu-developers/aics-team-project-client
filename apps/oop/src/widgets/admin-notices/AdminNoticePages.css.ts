@@ -20,34 +20,6 @@ export const backLink = style({
   fontSize: 13,
   textDecoration: 'none',
 });
-export const filters = style({ display: 'flex', gap: 8 });
-export const listControls = style({
-  alignItems: 'flex-end',
-  display: 'flex',
-  gap: 12,
-  justifyContent: 'space-between',
-  '@media': {
-    '(max-width: 480px)': {
-      alignItems: 'stretch',
-      flexDirection: 'column',
-    },
-  },
-});
-const filterBase = {
-  background: tokens.color.background.muted,
-  border: 0,
-  borderRadius: tokens.radius.full,
-  color: tokens.color.text.primary,
-  cursor: 'pointer',
-  font: 'inherit',
-  padding: '7px 12px',
-};
-export const filter = style(filterBase);
-export const filterActive = style({
-  ...filterBase,
-  background: tokens.color.text.primary,
-  color: tokens.color.background.surface,
-});
 export const tableCard = style({ overflowX: 'auto', padding: 0 });
 export const table = style({
   borderCollapse: 'collapse',
@@ -68,19 +40,17 @@ export const emptyCell = style({
   padding: '42px 16px !important',
   textAlign: 'center',
 });
-export const pagination = style({ display: 'flex', gap: 8, margin: '0 auto' });
-globalStyle(pagination + ' button', {
-  background: 'transparent',
-  border: 0,
-  cursor: 'pointer',
-  font: 'inherit',
-  minWidth: 28,
-  padding: 5,
-});
-export const pageActive = style({
-  background: tokens.color.accent + ' !important',
-  borderRadius: tokens.radius.element,
-  color: tokens.color.background.surface,
+export const listControls = style({
+  alignItems: 'flex-end',
+  display: 'flex',
+  gap: 12,
+  justifyContent: 'space-between',
+  '@media': {
+    '(max-width: 480px)': {
+      alignItems: 'stretch',
+      flexDirection: 'column',
+    },
+  },
 });
 export const detailCard = style({
   display: 'flex',
@@ -101,29 +71,6 @@ export const divider = style({
   height: 1,
   width: '100%',
 });
-export const attachment = style({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 6,
-  marginTop: 8,
-});
-export const deleteTitle = style({ color: tokens.color.text.red });
-export const deletePreview = style({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 12,
-  padding: 20,
-});
-export const modalActions = style({
-  display: 'flex',
-  gap: 8,
-  justifyContent: 'flex-end',
-  marginTop: 8,
-});
-export const deleteButton = style({
-  background: tokens.color.background['error-inverted'],
-  color: tokens.color['on-error'],
-});
 export const actions = style({
   display: 'flex',
   gap: 8,
@@ -134,11 +81,6 @@ export const fields = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 18,
-});
-export const fieldGroup = style({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 8,
 });
 globalStyle(table + ' th', {
   background: tokens.color.background.card,

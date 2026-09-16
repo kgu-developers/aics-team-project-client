@@ -35,6 +35,15 @@ const submission: MyTeamMilestoneSubmissionResponse = {
 };
 const now = Date.parse('2026-09-01T00:00:00+09:00');
 describe('학생 홈 마일스톤 표시', () => {
+  it('날짜 전용 일정은 서울 자정으로 해석한다', () => {
+    expect(milestoneTime('2026-09-01')).toBe(
+      Date.parse('2026-08-31T15:00:00Z'),
+    );
+    expect(milestoneDate('2026-09-01')).toBe(
+      milestoneDate('2026-09-01T00:00:00+09:00'),
+    );
+  });
+
   it('공개된 미제출 단계는 시작 전까지 기간 전으로 표시한다', () => {
     const result = studentMilestoneSummary(milestone, submission, now);
     expect(result.status).toBe('before-period');
