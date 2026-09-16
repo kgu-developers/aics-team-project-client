@@ -281,9 +281,101 @@ test('allows only stage 10 admin version-detail GET 404s with exact positive num
   ]);
 });
 
-test('keeps the stage 06 backend thread 500 and later thread failures unexpected', () => {
+const deletedMeeting = {
+  stage: 'M10',
+  actor: 'leader',
+  method: 'GET',
+  path: '/api/v1/meeting-records/17',
+  status: 404,
+};
+const meetingDelete = { ...deletedMeeting, method: 'DELETE', status: 204 };
+
+test('allows the M10 leader missing detail only after its matching DELETE 204', () => {
+  assert.deepEqual(
+    unexpectedConsoleErrors(
+      [consoleError(deletedMeeting)],
+      [meetingDelete, deletedMeeting],
+    ),
+    [],
+  );
+  for (const network of [
+    [],
+    [meetingDelete],
+    [deletedMeeting],
+    [deletedMeeting, meetingDelete],
+    ...[
+      { stage: 'M09' },
+      { actor: 'memberA' },
+      { method: 'GET' },
+      { status: 200 },
+      { status: 202 },
+      { status: 404 },
+      { status: 500 },
+      { path: '/api/v1/meeting-records/18' },
+      { path: '/api/v1/admin/meeting-records/17' },
+      { path: '/api/v1/meeting-records/17/actions' },
+    ].map(changed => [{ ...meetingDelete, ...changed }, deletedMeeting]),
+  ]) {
+    const error = consoleError(deletedMeeting);
+    assert.deepEqual(unexpectedConsoleErrors([error], network), [error]);
+  }
+});
+
+test('keeps M10 post-delete exceptions scoped to leader GET 404 on exact positive meeting IDs', () => {
+  for (const changed of [
+    ...['M09', 'M01', 'N01', '10', ''].map(stage => ({ stage })),
+    ...['admin', 'memberA', 'comparisonLeader', ''].map(actor => ({ actor })),
+    ...['POST', 'PATCH', 'DELETE', 'HEAD', 'get'].map(method => ({ method })),
+    ...[200, 403, 500].map(status => ({ status })),
+    ...[
+      '/api/v1/admin/meeting-records/17',
+      '/api/v1/oop/meeting-records/17',
+      '/api/v1/meeting-records/17/actions',
+      '/api/v1/meeting-records/17/',
+      '/api/v1/meeting-records/17?extra=1',
+      '/prefix/api/v1/meeting-records/17',
+      ...['0', '-1', '017', '1.5', 'one', ''].map(
+        id => `/api/v1/meeting-records/${id}`,
+      ),
+    ].map(path => ({ path })),
+  ]) {
+    const unexpected = { ...deletedMeeting, ...changed };
+    const priorDelete = { ...unexpected, method: 'DELETE', status: 204 };
+    const error = consoleError(unexpected);
+    assert.deepEqual(
+      unexpectedConsoleErrors([error], [priorDelete, unexpected]),
+      [error],
+      JSON.stringify(changed),
+    );
+  }
+});
+
+test('consumes each M10 missing response once and checks DELETE order for each response', () => {
+  const error = consoleError(deletedMeeting);
+  assert.deepEqual(
+    unexpectedConsoleErrors([error, error], [meetingDelete, deletedMeeting]),
+    [error],
+  );
+  const secondMissing = { ...deletedMeeting };
+  assert.deepEqual(
+    unexpectedConsoleErrors(
+      [error, error],
+      [meetingDelete, deletedMeeting, secondMissing],
+    ),
+    [],
+  );
+  assert.deepEqual(
+    unexpectedConsoleErrors(
+      [error, error],
+      [deletedMeeting, meetingDelete, secondMissing],
+    ),
+    [error],
+  );
+});
+
+test('keeps the stage 06 backend thread 500 and later thread failures unexpected even after successful reads', () => {
   const network = ['06', 'M01'].flatMap(stage =>
-    ['leader', 'memberB', 'memberC'].map(actor => ({
+    ['leader', 'memberA', 'memberB', 'memberC'].map(actor => ({
       stage,
       actor,
       method: 'GET',
@@ -292,7 +384,12 @@ test('keeps the stage 06 backend thread 500 and later thread failures unexpected
     })),
   );
   const errors = network.map(consoleError);
-  assert.deepEqual(unexpectedConsoleErrors(errors, network), errors);
+  const withRecovery = network.flatMap(item => [
+    item,
+    { ...item, status: 200 },
+    { ...item, status: 200 },
+  ]);
+  assert.deepEqual(unexpectedConsoleErrors(errors, withRecovery), errors);
 });
 
 test('allows only the exact initial anonymous refresh 403 for each fresh actor', () => {

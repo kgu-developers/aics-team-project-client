@@ -58,6 +58,18 @@ function expectedResource(
   if (/^\/api\/v1\/meeting-records\/[1-9]\d*$/.test(path)) {
     if (stage === 'M05' && actor === 'comparisonLeader')
       return status === 403 || status === 404;
+    if (stage === 'M10' && actor === 'leader' && status === 404)
+      // The deleted detail can refetch before navigation leaves stage M10.
+      return network
+        .slice(0, network.indexOf(response))
+        .some(
+          item =>
+            item.stage === stage &&
+            item.actor === actor &&
+            item.method === 'DELETE' &&
+            item.path === path &&
+            item.status === 204,
+        );
     return (
       stage === 'M11' && ['leader', 'memberA'].includes(actor) && status === 404
     );

@@ -56,6 +56,17 @@ export async function createNotice(
   ).toBeVisible();
   await page.reload();
   await page.getByRole('button', { name: '작성하기', exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === '/admin/notices/new');
+  await expect(
+    page.getByRole('heading', {
+      level: 1,
+      name: '공지사항 작성',
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('textbox', { name: '제목', exact: true }),
+  ).toBeEditable();
   await choose(page, '분반', run.section);
   await page
     .getByRole('textbox', { name: '제목', exact: true })
