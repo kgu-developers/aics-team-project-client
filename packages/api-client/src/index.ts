@@ -309,13 +309,17 @@ export {
   submitTopicVote,
 } from './topic';
 export {
+  acceptPreferredPeerRequest,
   cancelPartnerRequest,
   confirmTeamLeader,
+  fetchReceivedPreferredPeerRequests,
   fetchTeamAssignmentProjection,
   requestPartner,
+  rejectPreferredPeerRequest,
   respondToPartnerRequest,
   saveTeamAssignmentSurvey,
   searchPartnerCandidates,
+  searchPreSurveyClassmates,
   submitTeamAssignmentSurvey,
 } from './team-assignment';
 

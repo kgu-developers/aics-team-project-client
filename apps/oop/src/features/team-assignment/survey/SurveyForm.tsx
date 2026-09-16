@@ -2,6 +2,7 @@ import type {
   TeamAssignmentProjection,
   TeamAssignmentSurvey,
   TeamRolePreference,
+  PreferredPeerRequestStatus,
 } from '@aics/core';
 import {
   Button,
@@ -21,6 +22,7 @@ import { SurveyFlow, SurveyQuestion } from '~/shared/ui/SurveyFlow';
 
 import { useSubmitTeamAssignmentSurveyMutation } from '../queries';
 import * as styles from '../TeamAssignmentFlow.css';
+import { LivePartnerRequestPanel } from './LivePartnerRequestPanel';
 import { PartnerRequestPanel } from './PartnerRequestPanel';
 
 const roleOptions: Array<{ label: string; value: TeamRolePreference }> = [
@@ -35,11 +37,19 @@ const stepLabels = ['소개', '역할과 팀원', '주제와 의견'];
 type SurveyFormProps = {
   preSurveySectionId: number;
   projection?: TeamAssignmentProjection;
+  preferredPeerUserId?: string | null;
+  preferredPeerStatus?: PreferredPeerRequestStatus | null;
+  partnerRequestMode?: 'mock' | 'live';
+  onSubmitted?: () => void;
 };
 
 export function SurveyForm({
   preSurveySectionId,
   projection,
+  preferredPeerUserId,
+  preferredPeerStatus,
+  partnerRequestMode = 'mock',
+  onSubmitted,
 }: SurveyFormProps) {
   const submitSurvey = useSubmitTeamAssignmentSurveyMutation();
   const [step, setStep] = useState(0);
@@ -86,9 +96,11 @@ export function SurveyForm({
       await submitSurvey.mutateAsync({
         sectionId: preSurveySectionId,
         projectionSectionId: projection?.sectionId,
+        preferredPeerUserId,
         survey,
       });
       setSubmitConfirmOpen(false);
+      onSubmitted?.();
     } catch {
       setSubmitConfirmOpen(false);
       setRequestError(
@@ -145,7 +157,14 @@ export function SurveyForm({
             }
             title='역할과 팀원'
           >
-            {projection ? (
+            {projection && partnerRequestMode === 'live' ? (
+              <LivePartnerRequestPanel
+                preSurveySectionId={preSurveySectionId}
+                preferredPeerStatus={preferredPeerStatus}
+                projection={projection}
+                survey={survey}
+              />
+            ) : projection ? (
               <PartnerRequestPanel projection={projection} />
             ) : null}
             <Field
@@ -218,7 +237,7 @@ export function SurveyForm({
         aria-label='설문 제출 확인'
         isOpen={submitConfirmOpen}
         onOpenChange={setSubmitConfirmOpen}
-        purpose='form'
+        purpose='info'
       >
         <VStack gap={4}>
           <VStack gap={2}>

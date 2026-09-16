@@ -57,6 +57,8 @@ afterEach(() => {
 afterAll(() => server.close());
 const surveyPath = (id: string) =>
   `${ENDPOINTS.TEAM_ASSIGNMENT.MY_SURVEY_RESPONSE}?sectionId=${id}`;
+const receivedPath = (id: string) =>
+  ENDPOINTS.TEAM_ASSIGNMENT.RECEIVED_PREFERRED_PEER_REQUESTS(id);
 function requestPath(url: string) {
   const parsed = new URL(url);
   return parsed.pathname === ENDPOINTS.TEAM_ASSIGNMENT.MY_SURVEY_RESPONSE
@@ -118,6 +120,10 @@ function setup({
     http.get(
       `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.MY_SURVEY_RESPONSE}`,
       () => HttpResponse.json({}, { status: 404 }),
+    ),
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.RECEIVED_PREFERRED_PEER_REQUESTS(':sectionId')}`,
+      () => HttpResponse.json({ contents: [] }),
     ),
   );
   render(
@@ -215,6 +221,7 @@ it('waits for identity and selection, then reads and submits a survey only for t
   await screen.findByRole('button', { name: '시작하기' });
   expect(dependentRequests()).toEqual([
     { method: 'GET', path: surveyPath('2') },
+    { method: 'GET', path: receivedPath('2') },
   ]);
   const writes: string[] = [];
   server.use(
@@ -247,16 +254,21 @@ it('waits for identity and selection, then reads and submits a survey only for t
       { name: '제출' },
     ),
   );
-  await screen.findByRole('heading', {
-    name: '설문에 응답해 주셔서 감사합니다.',
-  });
+  await waitFor(() =>
+    expect(
+      screen.queryByRole('dialog', { name: '설문 제출 확인' }),
+    ).not.toBeInTheDocument(),
+  );
   expect(writes).toEqual(['2']);
   await selectSection('OOP 01분반');
   await screen.findByRole('button', { name: '시작하기' });
   expect(dependentRequests().map(row => row.path)).toEqual([
     surveyPath('2'),
+    receivedPath('2'),
     ENDPOINTS.TEAM_ASSIGNMENT.SUBMIT_SURVEY_RESPONSE('2'),
+    receivedPath('2'),
     surveyPath('1'),
+    receivedPath('1'),
   ]);
 });
 
@@ -345,6 +357,10 @@ it('hides the survey after a prerequisite refetch fails and recovers with the se
       `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.MY_SURVEY_RESPONSE}`,
       () => HttpResponse.json({}, { status: 404 }),
     ),
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.RECEIVED_PREFERRED_PEER_REQUESTS(':sectionId')}`,
+      () => HttpResponse.json({ contents: [] }),
+    ),
   );
   await userEvent.click(screen.getByRole('button', { name: '다시 확인' }));
   await screen.findByRole('button', { name: '시작하기' });
@@ -353,6 +369,7 @@ it('hides the survey after a prerequisite refetch fails and recovers with the se
   ).toHaveTextContent('OOP 02분반');
   expect(dependentRequests()).toEqual([
     { method: 'GET', path: surveyPath('2') },
+    { method: 'GET', path: receivedPath('2') },
   ]);
 });
 

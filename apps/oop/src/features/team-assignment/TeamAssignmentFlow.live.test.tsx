@@ -16,6 +16,7 @@ const mockNavigate = vi.hoisted(() => vi.fn());
 const mockCurrentUserQuery = vi.hoisted(() => vi.fn());
 const mockSectionsQuery = vi.hoisted(() => vi.fn());
 const mockSurveyQuery = vi.hoisted(() => vi.fn());
+const mockLiveProjectionQuery = vi.hoisted(() => vi.fn());
 const mockKickoffQuery = vi.hoisted(() => vi.fn());
 const mockProjectionQuery = vi.hoisted(() => vi.fn());
 
@@ -47,6 +48,7 @@ vi.mock('./queries', () => ({
     mutateAsync: vi.fn(),
   }),
   useMyTeamAssignmentSurveyQuery: mockSurveyQuery,
+  useLivePreSurveyProjectionQuery: mockLiveProjectionQuery,
   useSubmitTeamAssignmentSurveyMutation: () => ({
     isPending: false,
     mutateAsync: vi.fn(),
@@ -92,6 +94,15 @@ const surveyResponse: PreSurveyResponseDetailResponse = {
   preferredRoles: ['DEVELOPMENT'],
   submittedAt: '2099-09-01 10:00',
 };
+const surveyProjection = {
+  sectionId: '1',
+  phase: 'survey' as const,
+  window: {},
+  survey: {
+    rolePreferences: ['DEVELOPMENT' as const],
+    topicIdea: '',
+  },
+};
 
 function queryResult<T>(data?: T, error?: unknown) {
   return {
@@ -113,6 +124,7 @@ beforeEach(() => {
   mockCurrentUserQuery.mockReset();
   mockSectionsQuery.mockReset();
   mockSurveyQuery.mockReset();
+  mockLiveProjectionQuery.mockReset();
   mockKickoffQuery.mockReset();
   mockProjectionQuery.mockReset();
   useAuthStore.getState().markAuthenticated('STUDENT');
@@ -121,6 +133,7 @@ beforeEach(() => {
   mockCurrentUserQuery.mockReturnValue(queryResult(student));
   mockSectionsQuery.mockReturnValue(queryResult([section]));
   mockKickoffQuery.mockReturnValue(queryResult());
+  mockLiveProjectionQuery.mockReturnValue(queryResult(surveyProjection));
 });
 
 afterEach(() => {
@@ -141,10 +154,10 @@ describe('TeamAssignmentFlow live API mode', () => {
     expect(
       screen.getByText('팀프로젝트 팀구성을 위한 설문에 응답해 주세요.'),
     ).toBeVisible();
-    expect(mockProjectionQuery).not.toHaveBeenCalled();
+    expect(mockLiveProjectionQuery).toHaveBeenCalledWith(1, undefined, true);
   });
 
-  it('설문 응답은 있지만 팀이 없으면 팀 배정 대기를 표시한다', () => {
+  it('설문 응답은 있지만 팀이 없으면 재제출 대신 완료 상태를 표시한다', () => {
     mockSurveyQuery.mockReturnValue(queryResult(surveyResponse));
 
     renderFlow();
@@ -154,6 +167,17 @@ describe('TeamAssignmentFlow live API mode', () => {
         name: '설문에 응답해 주셔서 감사합니다.',
       }),
     ).toBeVisible();
+    expect(
+      screen.getByText(
+        /팀 선정 결과는 2099년 9월 10일 (오전|AM) 12:00에 공개됩니다\./,
+      ),
+    ).toBeVisible();
+    expect(screen.queryByRole('button', { name: '시작하기' })).toBeNull();
+    expect(mockLiveProjectionQuery).toHaveBeenCalledWith(
+      1,
+      surveyResponse,
+      true,
+    );
   });
 
   it.each([401, 403, 500])(

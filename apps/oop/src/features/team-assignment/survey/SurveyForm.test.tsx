@@ -56,6 +56,7 @@ function renderSurvey(
   accessToken = demoAccessToken,
   currentUser = demoStudent,
   projection = teamAssignmentFixture,
+  partnerRequestMode: 'mock' | 'live' = 'mock',
 ) {
   useAuthStore.getState().setAccessToken(accessToken);
   useAuthStore.getState().setCurrentUser(currentUser);
@@ -75,6 +76,7 @@ function renderSurvey(
     queryClient,
     ...render(
       <SurveyForm
+        partnerRequestMode={partnerRequestMode}
         preSurveySectionId={demoPreSurveySectionId}
         projection={projection}
       />,
@@ -180,6 +182,36 @@ describe('SurveyForm', () => {
     expect(candidateButton).toBeDisabled();
     await user.click(candidateButton);
     await waitFor(() => expect(requestCount).toBe(1));
+  });
+
+  it('실시간 후보 검색 실패를 안내하고 같은 화면에서 다시 시도한다', async () => {
+    const user = userEvent.setup();
+    let attempts = 0;
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.PRE_SURVEY_CLASSMATES(':sectionId')}`,
+        () => {
+          attempts += 1;
+          return attempts === 1
+            ? HttpResponse.json({ code: 'SERVER_ERROR' }, { status: 500 })
+            : HttpResponse.json({ contents: [] });
+        },
+      ),
+    );
+    renderSurvey(demoAccessToken, demoStudent, teamAssignmentFixture, 'live');
+
+    await user.click(screen.getByRole('button', { name: '시작하기' }));
+    await user.type(
+      screen.getByLabelText('같이 팀을 할 파트너가 있으면 찾아보세요.'),
+      '가',
+    );
+    expect(
+      await screen.findByText('후보를 찾지 못했습니다. 다시 검색해 주세요.'),
+    ).toHaveAttribute('role', 'alert');
+    await user.click(screen.getByRole('button', { name: '다시 검색' }));
+
+    expect(await screen.findByText('일치하는 학생이 없습니다.')).toBeVisible();
+    expect(attempts).toBe(2);
   });
 
   it('제출 전에 확인 Dialog를 열고 이전 설문 단계로 돌아갈 수 있다', async () => {

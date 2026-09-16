@@ -1,7 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -74,8 +74,8 @@ async function fillSurvey() {
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: '시작하기' }));
   expect(
-    screen.queryByLabelText('같이 팀을 할 파트너가 있으면 찾아보세요.'),
-  ).not.toBeInTheDocument();
+    screen.getByLabelText('같이 팀을 할 파트너가 있으면 찾아보세요.'),
+  ).toBeInTheDocument();
   expect(screen.getByRole('button', { name: '다음 설문' })).toBeDisabled();
   await user.click(screen.getByLabelText('개발'));
   await user.click(screen.getByRole('button', { name: '다음 설문' }));
@@ -88,7 +88,7 @@ async function fillSurvey() {
 }
 
 describe('실 API 모드 설문 흐름', () => {
-  it('미제출 조회 후 설문을 제출하면 대기 안내가 표시되고 다시 진입해도 유지한다', async () => {
+  it('미제출 조회 후 제출하면 완료 단계로 이동하고 재진입해도 완료 상태를 유지한다', async () => {
     const view = renderFlow();
     const user = await fillSurvey();
     await user.click(
@@ -103,9 +103,8 @@ describe('실 API 모드 설문 흐름', () => {
       }),
     ).toBeVisible();
     expect(
-      screen.queryByRole('button', { name: '다시 확인' }),
+      screen.queryByRole('region', { name: '팀 구성 설문' }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText('팀원 공개 일정은 추후 안내됩니다.')).toBeVisible();
 
     view.unmount();
     queryClient.clear();
@@ -116,7 +115,155 @@ describe('실 API 모드 설문 흐름', () => {
       }),
     ).toBeVisible();
     expect(
-      screen.queryByText('팀프로젝트 팀구성을 위한 설문에 응답해 주세요.'),
+      screen.queryByRole('button', { name: '시작하기' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('제출 후 받은 신청을 승인하면 다른 대기 신청은 노출하지 않는다', async () => {
+    let accepted = false;
+    let acceptCount = 0;
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.MY_SURVEY_RESPONSE}`,
+        ({ request }) => {
+          const sectionId = Number(
+            new URL(request.url).searchParams.get('sectionId'),
+          );
+          return HttpResponse.json({
+            id: 21,
+            sectionId,
+            userId: demoOtherSectionStudent.studentNumber,
+            preferredRoles: ['DEVELOPMENT'],
+            topicOpinion: '팀 일정 서비스',
+            submittedAt: '2026-09-16T10:00:00Z',
+          });
+        },
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.RECEIVED_PREFERRED_PEER_REQUESTS(':sectionId')}`,
+        () =>
+          HttpResponse.json({
+            contents: accepted
+              ? [
+                  {
+                    requesterUserId: '20260001',
+                    requesterName: '첫 번째 학생',
+                    status: 'ACCEPTED',
+                  },
+                  {
+                    requesterUserId: '20260002',
+                    requesterName: '두 번째 학생',
+                    status: 'PENDING',
+                  },
+                ]
+              : [
+                  {
+                    requesterUserId: '20260001',
+                    requesterName: '첫 번째 학생',
+                    status: 'PENDING',
+                  },
+                ],
+          }),
+      ),
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.ACCEPT_PREFERRED_PEER_REQUEST(':sectionId', ':requesterUserId')}`,
+        () => {
+          accepted = true;
+          acceptCount += 1;
+          return HttpResponse.json({
+            contents: [
+              {
+                requesterUserId: '20260001',
+                requesterName: '첫 번째 학생',
+                status: 'ACCEPTED',
+              },
+            ],
+          });
+        },
+      ),
+    );
+
+    renderFlow();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: '시작하기' }));
+    expect(
+      screen.getByRole('region', { name: '받은 파트너 신청' }),
+    ).toHaveTextContent('첫 번째 학생');
+    await user.click(screen.getByRole('button', { name: '승인' }));
+    await user.click(
+      within(
+        screen.getByRole('dialog', { name: '파트너 확정 확인' }),
+      ).getByRole('button', { name: '파트너 확정' }),
+    );
+
+    await waitFor(() => expect(acceptCount).toBe(1));
+    expect(
+      await screen.findByRole('heading', {
+        name: '설문에 응답해 주셔서 감사합니다.',
+      }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('region', { name: '받은 파트너 신청' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '파트너 확정' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('발신 신청이 수락된 뒤에는 다른 받은 신청을 승인할 수 없다', async () => {
+    const confirmedPeerUserId = '20260009';
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.MY_SURVEY_RESPONSE}`,
+        ({ request }) => {
+          const sectionId = Number(
+            new URL(request.url).searchParams.get('sectionId'),
+          );
+          return HttpResponse.json({
+            id: 22,
+            sectionId,
+            userId: demoOtherSectionStudent.studentNumber,
+            preferredRoles: ['DEVELOPMENT'],
+            preferredPeerUserId: confirmedPeerUserId,
+            preferredPeerStatus: 'ACCEPTED',
+            submittedAt: '2026-09-16T10:00:00Z',
+          });
+        },
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.PRE_SURVEY_CLASSMATES(':sectionId')}`,
+        () =>
+          HttpResponse.json({
+            contents: [{ userId: confirmedPeerUserId, name: '확정된 파트너' }],
+          }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.RECEIVED_PREFERRED_PEER_REQUESTS(':sectionId')}`,
+        () =>
+          HttpResponse.json({
+            contents: [
+              {
+                requesterUserId: '20260010',
+                requesterName: '추가 신청 학생',
+                status: 'PENDING',
+              },
+            ],
+          }),
+      ),
+    );
+
+    renderFlow();
+
+    expect(
+      await screen.findByRole('heading', {
+        name: '설문에 응답해 주셔서 감사합니다.',
+      }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('region', { name: '받은 파트너 신청' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '시작하기' }),
     ).not.toBeInTheDocument();
   });
 

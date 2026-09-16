@@ -17,6 +17,7 @@ export async function submitTeamAssignmentSurvey(
     preferredRoles: input.survey.rolePreferences,
     topicOpinion: input.survey.topicIdea,
     etcOpinion: input.survey.note,
+    preferredPeerUserId: input.preferredPeerUserId ?? null,
   };
 
   const response = await apiClient.post<PreSurveyResponseDetailResponse>(

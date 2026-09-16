@@ -19,6 +19,27 @@ export type PartnerCandidate = {
   program?: string;
 };
 
+export type PreSurveyClassmate = {
+  userId: string;
+  name: string;
+};
+
+export type PreSurveyClassmateListResponse = {
+  contents: PreSurveyClassmate[];
+};
+
+export type PreferredPeerRequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
+
+export type ReceivedPreferredPeerRequest = {
+  requesterUserId: string;
+  requesterName: string;
+  status: PreferredPeerRequestStatus;
+};
+
+export type ReceivedPreferredPeerRequestListResponse = {
+  contents: ReceivedPreferredPeerRequest[];
+};
+
 export type IncomingPartnerRequest = {
   id: string;
   requester: PartnerCandidate;
@@ -73,6 +94,7 @@ export type SubmitPreSurveyResponseRequest = {
   preferredRoles: string[];
   topicOpinion?: string;
   etcOpinion?: string;
+  preferredPeerUserId?: string | null;
 };
 
 export type PreSurveyResponseDetailResponse = {
@@ -81,11 +103,15 @@ export type PreSurveyResponseDetailResponse = {
   userId: string;
   preferredRoles: unknown;
   submittedAt: string;
+  userName?: string;
   topicOpinion?: string;
   etcOpinion?: string;
+  preferredPeerUserId?: string | null;
+  preferredPeerStatus?: PreferredPeerRequestStatus | null;
 };
 
 export type SubmitTeamAssignmentSurveyInput = {
   sectionId: number;
   survey: TeamAssignmentSurvey;
+  preferredPeerUserId?: string | null;
 };
