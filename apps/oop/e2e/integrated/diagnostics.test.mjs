@@ -199,6 +199,88 @@ test('allows only memberC delayed M01 absent-project GET 404 outside existing pr
   }
 });
 
+test('allows only stage 10 admin version-detail GET 404s with exact positive numeric IDs', () => {
+  const detail = {
+    stage: '10',
+    actor: 'admin',
+    method: 'GET',
+    path: '/api/v1/admin/submissions/251/versions/9',
+    status: 404,
+  };
+  const network = [
+    detail,
+    { ...detail, path: '/api/v1/admin/submissions/251/versions/19' },
+  ];
+  assert.deepEqual(
+    unexpectedConsoleErrors(network.map(consoleError), network),
+    [],
+  );
+  for (const changed of [
+    ...[
+      'leader',
+      'memberA',
+      'memberB',
+      'memberC',
+      'survey',
+      'comparisonLeader',
+      '',
+    ].map(actor => ({ actor })),
+    ...['09', '11', '12', 'N01', '010', ''].map(stage => ({ stage })),
+    ...['POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'get'].map(method => ({
+      method,
+    })),
+    ...[200, 400, 401, 403, 500].map(status => ({ status })),
+    ...[
+      '/api/v1/admin/oop/submissions/251/versions/9',
+      '/api/v1/submissions/251/versions/9',
+      '/api/admin/submissions/251/versions/9',
+      '/api/v1/admin/submissions/251/versions',
+      '/api/v1/admin/submissions/251/versions/9/',
+      '/api/v1/admin/submissions/251/versions/9/extra',
+      '/api/v1/admin/submissions/251/versions/9?extra=1',
+      '/prefix/api/v1/admin/submissions/251/versions/9',
+      ...['0', '-1', '01', '1.5', 'one', ''].flatMap(id => [
+        `/api/v1/admin/submissions/${id}/versions/9`,
+        `/api/v1/admin/submissions/251/versions/${id}`,
+      ]),
+    ].map(path => ({ path })),
+  ]) {
+    const unexpected = { ...detail, ...changed };
+    const error = consoleError(unexpected);
+    assert.deepEqual(
+      unexpectedConsoleErrors([error], [unexpected]),
+      [error],
+      JSON.stringify(changed),
+    );
+  }
+  for (const changed of [
+    { actor: 'leader' },
+    { stage: '11' },
+    { path: '/api/v1/admin/submissions/251/versions/19' },
+    { status: 403 },
+  ]) {
+    const error = consoleError({ ...detail, ...changed });
+    assert.deepEqual(unexpectedConsoleErrors([error], [detail]), [error]);
+  }
+  assert.deepEqual(unexpectedConsoleErrors([consoleError(detail)], []), [
+    consoleError(detail),
+  ]);
+  assert.deepEqual(
+    unexpectedConsoleErrors(
+      [consoleError(detail), consoleError(detail)],
+      [detail],
+    ),
+    [consoleError(detail)],
+  );
+  const reactError = {
+    ...consoleError(detail),
+    message: 'In HTML, <form> cannot be a descendant of <form>.',
+  };
+  assert.deepEqual(unexpectedConsoleErrors([reactError], network), [
+    reactError,
+  ]);
+});
+
 test('keeps the stage 06 backend thread 500 and later thread failures unexpected', () => {
   const network = ['06', 'M01'].flatMap(stage =>
     ['leader', 'memberB', 'memberC'].map(actor => ({

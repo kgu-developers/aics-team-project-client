@@ -17,6 +17,7 @@ import {
   TextInput,
 } from '@aics/design-system';
 import { useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 
 import {
   useAdminRequiredArtifactsQuery,
@@ -281,117 +282,121 @@ export default function AdminRequiredArtifactsManager({
         </div>
       )}
 
-      <Dialog
-        aria-label={editingArtifact ? '필수 산출물 수정' : '필수 산출물 추가'}
-        isOpen={isFormOpen}
-        onOpenChange={isOpen => {
-          if (!isOpen) closeForm();
-        }}
-        purpose='form'
-        width={680}
-      >
-        <form className={styles.dialogForm} onSubmit={submitForm}>
-          <Heading level={2}>
-            {editingArtifact ? '필수 산출물 수정' : '필수 산출물 추가'}
-          </Heading>
-          {formError ? (
-            <Text className={styles.error} role='alert'>
-              {formError}
-            </Text>
-          ) : null}
-          <TextInput
-            isDisabled={isPending}
-            isRequired
-            label='산출물 이름'
-            onChange={label => setForm(current => ({ ...current, label }))}
-            value={form.label}
-            width='100%'
-          />
-          <Selector
-            isDisabled={isPending}
-            label='유형'
-            onChange={type =>
-              setForm(current => ({
-                ...current,
-                type: type as RequiredArtifactType,
-              }))
-            }
-            options={(
-              Object.keys(artifactTypeLabels) as RequiredArtifactType[]
-            ).map(type => ({ label: artifactTypeLabels[type], value: type }))}
-            renderOption={option => (
-              <SelectorOption label={option.label ?? option.value} />
-            )}
-            value={form.type}
-            width='100%'
-          />
-          <CheckboxList
-            label='제출 여부'
-            onChange={values =>
-              setForm(current => ({
-                ...current,
-                required: values.includes('required'),
-              }))
-            }
-            value={form.required ? ['required'] : []}
-          >
-            <CheckboxListItem
-              description='학생이 제출을 완료하려면 이 항목이 필요합니다.'
+      {/* Native Dialog keeps its DOM position, so its form must live outside the milestone form. */}
+      {createPortal(
+        <Dialog
+          aria-label={editingArtifact ? '필수 산출물 수정' : '필수 산출물 추가'}
+          isOpen={isFormOpen}
+          onOpenChange={isOpen => {
+            if (!isOpen) closeForm();
+          }}
+          purpose='form'
+          width={680}
+        >
+          <form className={styles.dialogForm} onSubmit={submitForm}>
+            <Heading level={2}>
+              {editingArtifact ? '필수 산출물 수정' : '필수 산출물 추가'}
+            </Heading>
+            {formError ? (
+              <Text className={styles.error} role='alert'>
+                {formError}
+              </Text>
+            ) : null}
+            <TextInput
               isDisabled={isPending}
-              label='필수 제출'
-              value='required'
+              isRequired
+              label='산출물 이름'
+              onChange={label => setForm(current => ({ ...current, label }))}
+              value={form.label}
+              width='100%'
             />
-          </CheckboxList>
-          {form.type === 'FILE' ? (
-            <>
-              <TextInput
-                description='쉼표로 구분해 입력합니다. 예: pdf, zip'
+            <Selector
+              isDisabled={isPending}
+              label='유형'
+              onChange={type =>
+                setForm(current => ({
+                  ...current,
+                  type: type as RequiredArtifactType,
+                }))
+              }
+              options={(
+                Object.keys(artifactTypeLabels) as RequiredArtifactType[]
+              ).map(type => ({ label: artifactTypeLabels[type], value: type }))}
+              renderOption={option => (
+                <SelectorOption label={option.label ?? option.value} />
+              )}
+              value={form.type}
+              width='100%'
+            />
+            <CheckboxList
+              label='제출 여부'
+              onChange={values =>
+                setForm(current => ({
+                  ...current,
+                  required: values.includes('required'),
+                }))
+              }
+              value={form.required ? ['required'] : []}
+            >
+              <CheckboxListItem
+                description='학생이 제출을 완료하려면 이 항목이 필요합니다.'
                 isDisabled={isPending}
-                isOptional
-                label='허용 확장자'
-                onChange={allowedExtensions =>
-                  setForm(current => ({ ...current, allowedExtensions }))
-                }
-                value={form.allowedExtensions}
-                width='100%'
+                label='필수 제출'
+                value='required'
               />
-              <label>
-                <Text weight='medium'>최대 파일 용량(MB)</Text>
-                <input
-                  aria-label='최대 파일 용량(MB)'
-                  className={styles.numberInput}
-                  disabled={isPending}
-                  min='0'
-                  onChange={event =>
-                    setForm(current => ({
-                      ...current,
-                      maxFileSizeMb: event.target.value,
-                    }))
+            </CheckboxList>
+            {form.type === 'FILE' ? (
+              <>
+                <TextInput
+                  description='쉼표로 구분해 입력합니다. 예: pdf, zip'
+                  isDisabled={isPending}
+                  isOptional
+                  label='허용 확장자'
+                  onChange={allowedExtensions =>
+                    setForm(current => ({ ...current, allowedExtensions }))
                   }
-                  step='1'
-                  type='number'
-                  value={form.maxFileSizeMb}
+                  value={form.allowedExtensions}
+                  width='100%'
                 />
-              </label>
-            </>
-          ) : null}
-          <div className={styles.dialogActions}>
-            <Button
-              isDisabled={isPending}
-              label='취소'
-              onClick={closeForm}
-              variant='secondary'
-            />
-            <Button
-              isDisabled={isPending || !form.label.trim()}
-              isLoading={isPending}
-              label={editingArtifact ? '저장' : '추가'}
-              type='submit'
-              variant='primary'
-            />
-          </div>
-        </form>
-      </Dialog>
+                <label>
+                  <Text weight='medium'>최대 파일 용량(MB)</Text>
+                  <input
+                    aria-label='최대 파일 용량(MB)'
+                    className={styles.numberInput}
+                    disabled={isPending}
+                    min='0'
+                    onChange={event =>
+                      setForm(current => ({
+                        ...current,
+                        maxFileSizeMb: event.target.value,
+                      }))
+                    }
+                    step='1'
+                    type='number'
+                    value={form.maxFileSizeMb}
+                  />
+                </label>
+              </>
+            ) : null}
+            <div className={styles.dialogActions}>
+              <Button
+                isDisabled={isPending}
+                label='취소'
+                onClick={closeForm}
+                variant='secondary'
+              />
+              <Button
+                isDisabled={isPending || !form.label.trim()}
+                isLoading={isPending}
+                label={editingArtifact ? '저장' : '추가'}
+                type='submit'
+                variant='primary'
+              />
+            </div>
+          </form>
+        </Dialog>,
+        document.body,
+      )}
 
       <Dialog
         aria-label='필수 산출물 삭제'

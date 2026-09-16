@@ -40,6 +40,12 @@ function expectedResource(
     // restoration may fail; a refresh after login must remain a failure.
     return network.find(item => item.actor === actor) === response;
   if (method !== 'GET') return false;
+  // Deployed contract mismatch: listed version values 9/19 returned 404 in
+  // stage 10, including the earlier /admin/oop run. Keep other reads strict.
+  if (
+    /^\/api\/v1\/admin\/submissions\/[1-9]\d*\/versions\/[1-9]\d*$/.test(path)
+  )
+    return stage === '10' && actor === 'admin' && status === 404;
   if (path === '/api/v1/users/me/pre-survey-response')
     return stage === '03' && actor === 'survey' && status === 404;
   if (/^\/api\/v1\/teams\/[1-9]\d*\/project$/.test(path))

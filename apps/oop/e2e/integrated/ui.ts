@@ -5,15 +5,25 @@ export async function choose(
   label: string | RegExp,
   option: string | RegExp,
 ) {
-  await scope
-    .getByRole('combobox', { name: label, exact: typeof label === 'string' })
-    .click();
+  const combobox = scope.getByRole('combobox', {
+    name: label,
+    exact: typeof label === 'string',
+  });
+  await combobox.click();
   const page = 'page' in scope ? scope.page() : scope;
+  const findOption = () =>
+    page.getByRole('option', {
+      name: option,
+      exact: typeof option === 'string',
+    });
   await expect(async () => {
-    // Re-query after a combobox rerender detaches an option mid-click.
-    await page
-      .getByRole('option', { name: option, exact: typeof option === 'string' })
-      .click({ timeout: 2_000 });
+    // A detached option can also close the dropdown. Reopen only when needed.
+    let optionLocator = findOption();
+    if (!(await optionLocator.isVisible())) {
+      await combobox.click({ timeout: 2_000 });
+      optionLocator = findOption();
+    }
+    await optionLocator.click({ timeout: 2_000 });
   }).toPass({ timeout: 15_000 });
 }
 
