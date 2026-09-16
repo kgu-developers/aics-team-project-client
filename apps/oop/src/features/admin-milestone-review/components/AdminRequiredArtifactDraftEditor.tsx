@@ -223,7 +223,7 @@ export default function AdminRequiredArtifactDraftEditor({
           onOpenChange={isOpen => {
             if (!isOpen) closeForm();
           }}
-          purpose='form'
+          purpose='info'
           width={680}
         >
           {form ? (

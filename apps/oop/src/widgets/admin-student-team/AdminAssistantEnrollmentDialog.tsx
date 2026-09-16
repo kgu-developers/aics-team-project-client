@@ -128,7 +128,7 @@ export function AdminAssistantEnrollmentDialog({
       onOpenChange={open => {
         if (!open && !mutation.isPending) onClose();
       }}
-      purpose='form'
+      purpose='info'
       width='min(600px, calc(100vw - 32px))'
     >
       <form

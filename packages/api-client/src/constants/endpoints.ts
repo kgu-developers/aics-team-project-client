@@ -54,6 +54,8 @@ export const ENDPOINTS = {
       `/api/v1/admin/team-imports/${importId}/apply`,
     USERS: '/api/v1/admin/users',
     USER: (studentNumber: string) => `/api/v1/admin/users/${studentNumber}`,
+    USER_PASSWORD_RESET: (studentNumber: string) =>
+      `/api/v1/admin/users/${studentNumber}/password/reset`,
     SECTION_ENROLLMENT_IMPORT_PREVIEW: (sectionId: string | number) =>
       `/api/v1/admin/sections/${sectionId}/enrollment-imports/preview`,
     ENROLLMENT_IMPORT_APPLY: (importId: string | number) =>

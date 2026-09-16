@@ -3,9 +3,11 @@ import type {
   UpdateProjectProposalInput,
 } from '@aics/core';
 import {
-  AlertDialog,
   Button,
+  Dialog,
   EmptyState,
+  Heading,
+  HStack,
   Text,
   useToast,
 } from '@aics/design-system';
@@ -306,16 +308,32 @@ function ProjectProposalDocument({
           {error}
         </p>
       )}
-      <AlertDialog
+      <Dialog
+        aria-label='저장하지 않은 내용이 있어요.'
         isOpen={blocker.status === 'blocked'}
         onOpenChange={open => open || resetBlocker()}
-        title='저장하지 않은 내용이 있어요.'
-        description='이동하면 변경 내용이 사라집니다.'
-        cancelLabel='계속 작성'
-        actionLabel='변경 버리고 이동'
-        isActionLoading={pending}
-        onAction={proceedBlocker}
-      />
+        purpose='info'
+        role='alertdialog'
+      >
+        <div className={styles.leaveDialog}>
+          <Heading level={2}>저장하지 않은 내용이 있어요.</Heading>
+          <Text>이동하면 변경 내용이 사라집니다.</Text>
+          <HStack gap={2} justify='end'>
+            <Button
+              data-autofocus='true'
+              label='계속 작성'
+              onClick={resetBlocker}
+              variant='secondary'
+            />
+            <Button
+              isLoading={pending}
+              label='변경 버리고 이동'
+              onClick={proceedBlocker}
+              variant='destructive'
+            />
+          </HStack>
+        </div>
+      </Dialog>
     </DocumentEditorLayout>
   );
 }

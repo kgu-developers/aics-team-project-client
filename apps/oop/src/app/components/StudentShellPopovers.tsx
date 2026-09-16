@@ -108,7 +108,7 @@ function PasswordChangeDialog({
       onOpenChange={nextIsOpen => {
         if (!nextIsOpen && !passwordMutation.isPending) close();
       }}
-      purpose='form'
+      purpose='info'
       width={440}
     >
       <form className={styles.passwordForm} onSubmit={handleSubmit}>

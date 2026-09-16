@@ -51,7 +51,7 @@ export default function MeetingActionFormDialog({
       onOpenChange={nextIsOpen => {
         if (!nextIsOpen && !isPending) onClose();
       }}
-      purpose='form'
+      purpose='info'
       width={520}
     >
       <form

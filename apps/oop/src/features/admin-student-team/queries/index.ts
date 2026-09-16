@@ -12,6 +12,7 @@ export { usePreviewAdminEnrollmentImportMutation } from './usePreviewAdminEnroll
 export { usePreviewAdminTeamImportMutation } from './usePreviewAdminTeamImportMutation';
 export { useRegisterAdminAssistantMutation } from './useRegisterAdminAssistantMutation';
 export { useRemoveAdminAssistantMutation } from './useRemoveAdminAssistantMutation';
+export { useResetAdminUserPasswordMutation } from './useResetAdminUserPasswordMutation';
 export { useUpdateAdminTeamLeaderMutation } from './useUpdateAdminTeamLeaderMutation';
 export { useUpdateAdminAssistantMutation } from './useUpdateAdminAssistantMutation';
 export { useWithdrawAdminSectionEnrollmentMutation } from './useUpdateAdminSectionEnrollmentMutation';

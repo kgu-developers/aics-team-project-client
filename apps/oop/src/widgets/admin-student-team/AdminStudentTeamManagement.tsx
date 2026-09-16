@@ -150,7 +150,17 @@ export default function AdminStudentTeamManagement() {
                   <tbody>
                     {students.map(student => (
                       <tr key={student.id}>
-                        <td>{student.name}</td>
+                        <td>
+                          <button
+                            className={styles.memberButton}
+                            onClick={() =>
+                              setSelectedStudentNumber(student.studentNumber)
+                            }
+                            type='button'
+                          >
+                            {student.name}
+                          </button>
+                        </td>
                         <td>{student.studentNumber}</td>
                         <td>{student.major ?? '전공 정보 없음'}</td>
                         <td>
@@ -259,7 +269,8 @@ export default function AdminStudentTeamManagement() {
         onOpenChange={open => {
           if (!open) setStudentToWithdraw(null);
         }}
-        purpose='required'
+        purpose='info'
+        role='alertdialog'
         width={440}
       >
         {studentToWithdraw ? (
@@ -300,6 +311,7 @@ export default function AdminStudentTeamManagement() {
         ) : null}
       </Dialog>
       <AdminStudentDetailDialog
+        allowPasswordReset
         onClose={() => setSelectedStudentNumber(null)}
         major={
           students.find(

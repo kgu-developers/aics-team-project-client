@@ -907,7 +907,7 @@ export function MeetingForm({
         onOpenChange={open => {
           if (!open) blocker.reset?.();
         }}
-        purpose='form'
+        purpose='info'
         width={440}
       >
         <div className={styles.dialogContent}>
@@ -1117,7 +1117,7 @@ export function MeetingDeleteDialog({
       onOpenChange={nextIsOpen => {
         if (!nextIsOpen && !isPending) onClose();
       }}
-      purpose='form'
+      purpose='info'
       width={440}
     >
       <div className={styles.dialogContent}>

@@ -92,6 +92,7 @@ export {
 export {
   fetchAdminUser,
   removeAdminUser,
+  resetAdminUserPassword,
   submitAdminUser,
   updateAdminUser,
   type AdminUserDto,

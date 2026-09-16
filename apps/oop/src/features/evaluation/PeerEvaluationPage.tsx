@@ -505,7 +505,7 @@ function PeerEvaluationForm({
           onOpenChange={open => {
             if (!open) closeTargetDialog();
           }}
-          purpose='form'
+          purpose='info'
         >
           {editingTarget && editingDraft ? (
             <div className={styles.dialogContent}>
