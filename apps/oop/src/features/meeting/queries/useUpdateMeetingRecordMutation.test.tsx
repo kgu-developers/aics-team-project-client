@@ -93,10 +93,13 @@ it('변경한 제목만 PATCH하고 상세·목록·팀 액션의 회의 제목�
     if (request.method !== 'GET') writes.push(request.method);
   });
   server.use(
-    http.patch(`${API_BASE_URL}/meeting-records/19`, async ({ request }) => {
-      bodies.push(await request.clone().json());
-      return undefined;
-    }),
+    http.patch(
+      `${API_BASE_URL}/api/v1/meeting-records/19`,
+      async ({ request }) => {
+        bodies.push(await request.clone().json());
+        return undefined;
+      },
+    ),
   );
   const { result, client } = setup();
   const keys = [
@@ -184,7 +187,7 @@ it.each([400, 401, 403, 404, 409, 503, 'network'] as const)(
   async status => {
     const request = vi.fn();
     server.use(
-      http.patch(`${API_BASE_URL}/meeting-records/19`, () => {
+      http.patch(`${API_BASE_URL}/api/v1/meeting-records/19`, () => {
         request();
         return status === 'network'
           ? HttpResponse.error()
@@ -206,7 +209,7 @@ it.each([400, 401, 403, 404, 409, 503, 'network'] as const)(
 );
 
 it('MSW PATCH는 null·누락 필드를 유지하고 장소·참석자 해제를 반영한다', async () => {
-  await apiClient.patch('/meeting-records/19', {
+  await apiClient.patch('/api/v1/meeting-records/19', {
     title: null,
     content: null,
     location: null,
@@ -235,7 +238,7 @@ it.each([
   { participantIds: '20260001' },
 ])('MSW는 유효하지 않은 수정 요청을 400으로 거절한다: %j', async input => {
   await expect(
-    apiClient.patch('/meeting-records/19', input),
+    apiClient.patch('/api/v1/meeting-records/19', input),
   ).rejects.toMatchObject({ response: { status: 400 } });
   expect((await fetchMeetingRecordDetail('19')).title).toBe(original.title);
 });

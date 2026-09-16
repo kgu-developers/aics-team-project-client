@@ -19,9 +19,7 @@ import {
   type AdminSubmissionVersionDetailView,
 } from '~/features/admin-milestone-review/model';
 import { useDownloadAdminSubmissionArtifactsMutation } from '~/features/admin-milestone-review/queries';
-import { useAdminReadState } from '~/features/admin-read-state/useAdminReadState';
 import type { TeamMilestoneProgress } from '~/features/admin-team-dashboard/model';
-import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminTeamMilestoneProgress.css';
 
@@ -146,8 +144,6 @@ export default function AdminTeamMilestoneProgress({
   milestoneListState,
   sectionId,
 }: AdminTeamMilestoneProgressProps) {
-  const adminId = useAuthStore(state => state.currentUser?.id);
-  const submissionReadState = useAdminReadState('submissions', { adminId });
   const downloadArtifactsMutation =
     useDownloadAdminSubmissionArtifactsMutation();
 
@@ -224,10 +220,6 @@ export default function AdminTeamMilestoneProgress({
                     />
                   )
                 }
-                isUnread={Boolean(
-                  submissionId &&
-                  !submissionReadState.isRead(sectionId, submissionId),
-                )}
                 key={`${milestone.milestone.id}-${milestone.milestone.type}`}
                 label={milestone.milestone.title}
                 meetingCountLabel={

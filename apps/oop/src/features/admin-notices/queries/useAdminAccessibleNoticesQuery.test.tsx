@@ -30,7 +30,7 @@ const notice = (id: number, sectionId: number, publishedAt: string) => ({
 });
 const server = setupServer(
   http.get(
-    `${API_BASE_URL}/sections/:sectionId/announcements`,
+    `${API_BASE_URL}/api/v1/sections/:sectionId/announcements`,
     ({ params }) => {
       request(params.sectionId);
       return HttpResponse.json({
@@ -127,7 +127,7 @@ it('reports missing section status as a prerequisite and waits for confirmed ACT
 
 it('distinguishes a successfully fetched empty ACTIVE section from missing prerequisites', async () => {
   server.use(
-    http.get(`${API_BASE_URL}/sections/1/announcements`, () => {
+    http.get(`${API_BASE_URL}/api/v1/sections/1/announcements`, () => {
       request('1');
       return HttpResponse.json({ contents: [] });
     }),
@@ -147,7 +147,7 @@ it('keeps successful notices and reports a failed active section', async () => {
   setSections([section, { ...section, id: '2' }]);
   server.use(
     http.get(
-      `${API_BASE_URL}/sections/2/announcements`,
+      `${API_BASE_URL}/api/v1/sections/2/announcements`,
       () => new HttpResponse(null, { status: 500 }),
     ),
   );
@@ -162,7 +162,7 @@ it('keeps successful notices and reports a failed active section', async () => {
 it('reports a total failure without inventing successful notices', async () => {
   server.use(
     http.get(
-      `${API_BASE_URL}/sections/1/announcements`,
+      `${API_BASE_URL}/api/v1/sections/1/announcements`,
       () => new HttpResponse(null, { status: 500 }),
     ),
   );
@@ -186,7 +186,7 @@ it('sorts mixed Seoul, UTC and offset timestamps by instant, keeping invalid dat
   ];
   server.use(
     http.get(
-      `${API_BASE_URL}/sections/:sectionId/announcements`,
+      `${API_BASE_URL}/api/v1/sections/:sectionId/announcements`,
       ({ params }) =>
         HttpResponse.json({
           contents: params.sectionId === '1' ? first : second,

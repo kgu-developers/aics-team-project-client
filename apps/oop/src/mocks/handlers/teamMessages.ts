@@ -19,6 +19,8 @@ type TeamMessageHandlerOptions = {
 };
 
 const teamMessageStorageKey = 'aics.oop.msw.team-messages';
+const adminSectionId = '1';
+const demoSectionId = 'oop-2026-2-01';
 
 function error(status: number, code: string) {
   return HttpResponse.json({ code }, { status });
@@ -30,6 +32,19 @@ function isRelatedType(value: unknown): value is TeamMessageRelatedType {
 
 function isId(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+
+function normalizeSectionId(sectionId: string | number) {
+  return String(sectionId) === adminSectionId
+    ? demoSectionId
+    : String(sectionId);
+}
+
+function isAccessibleSection(
+  sectionId: string | number,
+  teamSectionId: string,
+) {
+  return normalizeSectionId(sectionId) === normalizeSectionId(teamSectionId);
 }
 
 export function createTeamMessageHandlers(
@@ -63,7 +78,7 @@ export function createTeamMessageHandlers(
     const isAdmin = Boolean(account && account.user.globalRole !== 'STUDENT');
     const isAdminSectionMember = Boolean(
       account?.user.sections.some(
-        section => String(section.id) === team?.sectionId,
+        section => team && isAccessibleSection(section.id, team.sectionId),
       ),
     );
     if (
@@ -115,21 +130,24 @@ export function createTeamMessageHandlers(
   }
 
   return [
-    http.get(`${API_BASE_URL}/api/v1/admin/oop/messages`, ({ request }) => {
+    http.get(`${API_BASE_URL}/api/v1/admin/messages`, ({ request }) => {
       const account = getMockAuthenticatedAccount(request);
       if (!account || account.user.globalRole === 'STUDENT') {
         return error(401, 'UNAUTHORIZED');
       }
       const query = new URL(request.url).searchParams;
       const sectionId = query.get('sectionId');
-      const accessible = account.user.sections.map(section =>
-        String(section.id),
-      );
-      if (sectionId && !accessible.includes(sectionId)) {
+      const accessibleSections = account.user.sections;
+      if (
+        sectionId &&
+        !accessibleSections.some(section =>
+          isAccessibleSection(section.id, sectionId),
+        )
+      ) {
         return error(403, 'ACCESS_DENIED');
       }
-      const section = account.user.sections.find(
-        item => !sectionId || String(item.id) === sectionId,
+      const section = accessibleSections.find(
+        item => !sectionId || isAccessibleSection(item.id, sectionId),
       );
       if (!section) return error(403, 'ACCESS_DENIED');
       const contents = data.messages.flatMap(message => {
@@ -138,14 +156,19 @@ export function createTeamMessageHandlers(
         );
         const team = data.teams.find(item => item.id === thread?.teamId);
         if (!team) return [];
-        if (!accessible.includes(team.sectionId)) return [];
+        if (
+          !accessibleSections.some(section =>
+            isAccessibleSection(section.id, team.sectionId),
+          )
+        )
+          return [];
 
         return {
           ...message,
           sectionId: team.sectionId,
           sectionName:
-            account.user.sections.find(
-              candidate => String(candidate.id) === team.sectionId,
+            accessibleSections.find(candidate =>
+              isAccessibleSection(candidate.id, team.sectionId),
             )?.name ?? team.sectionId,
           teamId: team.id,
           teamName: team.name,
@@ -164,7 +187,7 @@ export function createTeamMessageHandlers(
       });
     }),
     http.patch(
-      `${API_BASE_URL}/api/v1/admin/oop/messages/:messageId/read`,
+      `${API_BASE_URL}/api/v1/admin/messages/:messageId/read`,
       ({ request, params }) => {
         const guarded = guardMessage(request, String(params.messageId));
         if (!('message' in guarded)) return guarded.response;

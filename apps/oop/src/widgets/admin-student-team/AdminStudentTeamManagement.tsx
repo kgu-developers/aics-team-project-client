@@ -1,4 +1,12 @@
-import { Button, Dialog, Heading, HStack, Text } from '@aics/design-system';
+import {
+  Button,
+  Dialog,
+  Heading,
+  HStack,
+  RadioList,
+  RadioListItem,
+  Text,
+} from '@aics/design-system';
 import { Link } from '@tanstack/react-router';
 import { useMemo, useState } from 'react';
 
@@ -9,6 +17,7 @@ import {
   useAdminSectionTeamsQuery,
   useAdminTeamDetailsQueries,
   useFinalizeAdminSectionTeamsMutation,
+  useUpdateAdminTeamLeaderMutation,
   useWithdrawAdminSectionEnrollmentMutation,
 } from '~/features/admin-student-team/queries';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -38,6 +47,7 @@ export default function AdminStudentTeamManagement() {
   );
   const withdrawMutation = useWithdrawAdminSectionEnrollmentMutation();
   const finalizeMutation = useFinalizeAdminSectionTeamsMutation();
+  const updateTeamLeaderMutation = useUpdateAdminTeamLeaderMutation();
 
   const students = (enrollmentsQuery.data?.contents ?? []).filter(
     student => student.status === 'ACTIVE',
@@ -45,6 +55,10 @@ export default function AdminStudentTeamManagement() {
   const teams = teamDetailsQueries.flatMap(query =>
     query.data ? [query.data] : [],
   );
+  const hasTeams = (teamsQuery.data?.contents.length ?? 0) > 0;
+  const isTeamAssignmentFinalized =
+    hasTeams &&
+    teamsQuery.data!.contents.every(team => team.status !== 'FORMING');
   const teamNameByStudentNumber = useMemo(
     () =>
       new Map(
@@ -57,6 +71,17 @@ export default function AdminStudentTeamManagement() {
   const [studentToWithdraw, setStudentToWithdraw] = useState<
     (typeof students)[number] | null
   >(null);
+  const [teamToUpdateLeader, setTeamToUpdateLeader] = useState<
+    (typeof teams)[number] | null
+  >(null);
+  const [nextLeaderStudentNumber, setNextLeaderStudentNumber] = useState('');
+
+  function closeTeamLeaderDialog() {
+    if (updateTeamLeaderMutation.isPending) return;
+    setTeamToUpdateLeader(null);
+    setNextLeaderStudentNumber('');
+    updateTeamLeaderMutation.reset();
+  }
   const isPending =
     enrollmentsQuery.isPending ||
     teamsQuery.isPending ||
@@ -69,7 +94,7 @@ export default function AdminStudentTeamManagement() {
   return (
     <div className={styles.page}>
       <div className={styles.heading}>
-        <Heading level={1}>수강생/팀 관리</Heading>
+        <Heading level={1}>수강생·팀 관리</Heading>
       </div>
 
       <div aria-label='분반 선택' className={styles.sectionTabs} role='group'>
@@ -154,8 +179,15 @@ export default function AdminStudentTeamManagement() {
                 {selectedSection?.code ?? '분반'} 팀 구성
               </Heading>
               <Button
-                isDisabled={!sectionId}
-                label='팀 배정 확정'
+                isDisabled={
+                  !sectionId ||
+                  !hasTeams ||
+                  isTeamAssignmentFinalized ||
+                  finalizeMutation.isPending
+                }
+                label={
+                  isTeamAssignmentFinalized ? '팀 배정 확정됨' : '팀 배정 확정'
+                }
                 onClick={() => setIsFinalizeDialogOpen(true)}
               />
             </HStack>
@@ -177,22 +209,43 @@ export default function AdminStudentTeamManagement() {
                         {team.name}
                       </Link>
                     </h3>
-                    <ul className={styles.memberList}>
-                      {team.members.map(member => (
-                        <li className={styles.member} key={member.id}>
-                          <button
-                            className={styles.memberButton}
-                            onClick={() =>
-                              setSelectedStudentNumber(member.studentNumber)
-                            }
-                            type='button'
-                          >
-                            {member.name}
-                          </button>
-                          <span>{member.studentNumber}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <div className={styles.teamContent}>
+                      <HStack className={styles.teamLeader} gap={1}>
+                        <Text color='secondary' type='supporting'>
+                          팀장:{' '}
+                          {team.members.find(member => member.isLeader)?.name ??
+                            '미지정'}
+                        </Text>
+                        <Button
+                          label='팀장 변경'
+                          onClick={() => {
+                            setTeamToUpdateLeader(team);
+                            setNextLeaderStudentNumber(
+                              team.members.find(member => member.isLeader)
+                                ?.studentNumber ?? '',
+                            );
+                          }}
+                          size='sm'
+                          variant='secondary'
+                        />
+                      </HStack>
+                      <ul className={styles.memberList}>
+                        {team.members.map(member => (
+                          <li className={styles.member} key={member.id}>
+                            <button
+                              className={styles.memberButton}
+                              onClick={() =>
+                                setSelectedStudentNumber(member.studentNumber)
+                              }
+                              type='button'
+                            >
+                              {member.name}
+                            </button>
+                            <span>{member.studentNumber}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -213,8 +266,8 @@ export default function AdminStudentTeamManagement() {
           <div className={styles.withdrawDialogContent}>
             <Heading level={2}>수강생을 분반에서 제외할까요?</Heading>
             <Text>
-              {studentToWithdraw.name} 학생을 제외하면 수강 상태가 WITHDRAWN으로
-              변경되고 팀 구성 및 팀 접근 권한에서도 제외됩니다.
+              {studentToWithdraw.name} 학생을 이 분반에서 제외하면 팀 소속도
+              함께 해제되어, 이 분반의 팀 화면에 접근할 수 없게 됩니다.
             </Text>
             {withdrawMutation.isError ? (
               <Text role='alert'>
@@ -256,6 +309,76 @@ export default function AdminStudentTeamManagement() {
         studentNumber={selectedStudentNumber}
       />
       <Dialog
+        aria-label='팀장 변경'
+        isOpen={teamToUpdateLeader !== null}
+        onOpenChange={open => {
+          if (!open) closeTeamLeaderDialog();
+        }}
+        purpose='form'
+        width={440}
+      >
+        {teamToUpdateLeader ? (
+          <div className={styles.withdrawDialogContent}>
+            <Heading level={2}>{teamToUpdateLeader.name} 팀장 변경</Heading>
+            <Text color='secondary'>
+              새 팀장을 선택하면 기존 팀장은 자동으로 해제됩니다. 팀장이 수강을
+              포기하기 전에 새 팀장을 먼저 지정해 주세요.
+            </Text>
+            <RadioList
+              isDisabled={updateTeamLeaderMutation.isPending}
+              label='새 팀장'
+              onChange={setNextLeaderStudentNumber}
+              value={nextLeaderStudentNumber}
+            >
+              {teamToUpdateLeader.members.map(member => (
+                <RadioListItem
+                  description={`${member.studentNumber}${member.isLeader ? ' · 현재 팀장' : ''}`}
+                  key={member.id}
+                  label={member.name}
+                  value={member.studentNumber}
+                />
+              ))}
+            </RadioList>
+            {updateTeamLeaderMutation.isError ? (
+              <Text role='alert'>
+                팀장을 변경하지 못했습니다. 잠시 후 다시 시도해 주세요.
+              </Text>
+            ) : null}
+            <HStack gap={2} justify='end'>
+              <Button
+                isDisabled={updateTeamLeaderMutation.isPending}
+                label='취소'
+                onClick={closeTeamLeaderDialog}
+                variant='secondary'
+              />
+              <Button
+                isDisabled={
+                  updateTeamLeaderMutation.isPending ||
+                  !nextLeaderStudentNumber ||
+                  teamToUpdateLeader.members.find(member => member.isLeader)
+                    ?.studentNumber === nextLeaderStudentNumber
+                }
+                isLoading={updateTeamLeaderMutation.isPending}
+                label='팀장 변경'
+                onClick={() => {
+                  updateTeamLeaderMutation.mutate(
+                    {
+                      studentNumber: nextLeaderStudentNumber,
+                      teamId: teamToUpdateLeader.id,
+                    },
+                    {
+                      onSuccess: () => {
+                        closeTeamLeaderDialog();
+                      },
+                    },
+                  );
+                }}
+              />
+            </HStack>
+          </div>
+        ) : null}
+      </Dialog>
+      <Dialog
         aria-label='팀 배정 확정 확인'
         isOpen={isFinalizeDialogOpen}
         onOpenChange={open => {
@@ -267,7 +390,7 @@ export default function AdminStudentTeamManagement() {
         <div className={styles.withdrawDialogContent}>
           <Heading level={2}>팀 배정을 확정할까요?</Heading>
           <Text>
-            확정된 팀의 팀원은 이후 이동하거나 역할을 변경할 수 없습니다.
+            확정된 팀의 팀원은 이후 이동하거나 팀 구성을 변경할 수 없습니다.
           </Text>
           {finalizeMutation.isError ? (
             <Text role='alert'>

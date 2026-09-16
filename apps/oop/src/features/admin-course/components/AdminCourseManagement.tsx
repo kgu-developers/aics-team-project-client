@@ -26,10 +26,17 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   useAdminOopSectionsQuery,
+  useRemoveAdminOopSectionMutation,
   useSubmitAdminOopSectionMutation,
   useUpdateAdminOopSectionMutation,
   useUpdateAdminOopSectionContactVisibilityMutation,
 } from '~/features/admin-section/queries';
+import {
+  useAdminSectionEnrollmentsQuery,
+  useWithdrawAdminSectionEnrollmentMutation,
+} from '~/features/admin-student-team/queries';
+
+import { AdminAssistantEnrollmentDialog } from '~/widgets/admin-student-team/AdminAssistantEnrollmentDialog';
 
 import {
   useAdminOopCourseQuery,
@@ -83,6 +90,140 @@ function contactVisibilityStatus(visibleFrom: string, visibleUntil: string) {
   if (now < startsAt) return '공개 예정';
   if (now <= endsAt) return '공개 중';
   return '공개 종료';
+}
+
+function SectionAssistantManagement({
+  section,
+}: {
+  section: AdminOopSectionDto;
+}) {
+  const [isEnrollmentDialogOpen, setIsEnrollmentDialogOpen] = useState(false);
+  const enrollmentsQuery = useAdminSectionEnrollmentsQuery(String(section.id));
+  const withdrawAssistantMutation = useWithdrawAdminSectionEnrollmentMutation();
+  const assistants = (enrollmentsQuery.data?.contents ?? []).filter(
+    enrollment =>
+      enrollment.role === 'ASSISTANT' && enrollment.status === 'ACTIVE',
+  );
+  const [assistantToEdit, setAssistantToEdit] = useState<
+    (typeof assistants)[number] | null
+  >(null);
+  const [assistantToDelete, setAssistantToDelete] = useState<
+    (typeof assistants)[number] | null
+  >(null);
+
+  function closeAssistantWithdrawalDialog() {
+    if (withdrawAssistantMutation.isPending) return;
+    setAssistantToDelete(null);
+    withdrawAssistantMutation.reset();
+  }
+
+  return (
+    <>
+      <div className={styles.assistantManagement}>
+        <Text className={styles.sectionMeta} type='supporting'>
+          {enrollmentsQuery.isPending
+            ? '조교 정보를 불러오는 중입니다.'
+            : assistants.length > 0
+              ? `조교 ${assistants.length}명`
+              : '등록된 조교가 없습니다.'}
+        </Text>
+        {assistants.map(assistant => (
+          <HStack
+            className={styles.assistantRow}
+            key={`${section.id}:${assistant.studentNumber}`}
+            justify='between'
+          >
+            <Text type='supporting'>
+              {assistant.name} · {assistant.studentNumber}
+            </Text>
+            <HStack className={styles.assistantActions} gap={1}>
+              <Button
+                label='수정'
+                onClick={() => setAssistantToEdit(assistant)}
+                size='sm'
+                variant='ghost'
+              />
+              <Button
+                isDisabled={withdrawAssistantMutation.isPending}
+                label='분반에서 제외'
+                onClick={() => setAssistantToDelete(assistant)}
+                size='sm'
+                variant='ghost'
+              />
+            </HStack>
+          </HStack>
+        ))}
+        <div className={styles.assistantManagementAction}>
+          <Button
+            label='조교 등록'
+            onClick={() => setIsEnrollmentDialogOpen(true)}
+            size='sm'
+            variant='secondary'
+          />
+        </div>
+      </div>
+      <AdminAssistantEnrollmentDialog
+        assistant={null}
+        isOpen={isEnrollmentDialogOpen}
+        onClose={() => setIsEnrollmentDialogOpen(false)}
+        sectionId={String(section.id)}
+        sectionName={section.code}
+      />
+      <Dialog
+        aria-label='조교 분반 제외 확인'
+        isOpen={assistantToDelete !== null}
+        onOpenChange={open => {
+          if (!open) closeAssistantWithdrawalDialog();
+        }}
+        purpose='required'
+        width={440}
+      >
+        {assistantToDelete ? (
+          <div className={styles.dialogBody}>
+            <Heading level={2}>조교를 이 분반에서 제외할까요?</Heading>
+            <Text>
+              {assistantToDelete.name} 조교는 이 분반의 조교 목록에서만
+              제외됩니다. 계정과 다른 분반 소속은 유지됩니다.
+            </Text>
+            {withdrawAssistantMutation.isError ? (
+              <Text className={styles.error} role='alert'>
+                조교를 분반에서 제외하지 못했습니다. 다시 시도해 주세요.
+              </Text>
+            ) : null}
+            <HStack className={styles.dialogActions} gap={2} justify='end'>
+              <Button
+                isDisabled={withdrawAssistantMutation.isPending}
+                label='취소'
+                onClick={closeAssistantWithdrawalDialog}
+                variant='secondary'
+              />
+              <Button
+                isDisabled={withdrawAssistantMutation.isPending}
+                isLoading={withdrawAssistantMutation.isPending}
+                label='분반에서 제외'
+                onClick={() =>
+                  withdrawAssistantMutation.mutate(
+                    {
+                      sectionId: String(section.id),
+                      studentNumber: assistantToDelete.studentNumber,
+                    },
+                    { onSuccess: closeAssistantWithdrawalDialog },
+                  )
+                }
+              />
+            </HStack>
+          </div>
+        ) : null}
+      </Dialog>
+      <AdminAssistantEnrollmentDialog
+        assistant={assistantToEdit}
+        isOpen={assistantToEdit !== null}
+        onClose={() => setAssistantToEdit(null)}
+        sectionId={String(section.id)}
+        sectionName={section.code}
+      />
+    </>
+  );
 }
 
 function toInput(course: AdminOopCourseDto): CourseFormInput {
@@ -287,19 +428,23 @@ function CourseFormDialog({
 function SectionSettingsDialog({
   isOpen,
   onClose,
+  onDeleted,
   onSaved,
   section,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  onDeleted: () => Promise<boolean>;
   onSaved: () => Promise<boolean>;
   section: AdminOopSectionDto | null;
 }) {
   const toast = useToast();
   const updateSectionMutation = useUpdateAdminOopSectionMutation();
+  const removeSectionMutation = useRemoveAdminOopSectionMutation();
   const updateVisibilityMutation =
     useUpdateAdminOopSectionContactVisibilityMutation();
   const resetUpdateSectionMutation = updateSectionMutation.reset;
+  const resetRemoveSectionMutation = removeSectionMutation.reset;
   const resetUpdateVisibilityMutation = updateVisibilityMutation.reset;
   const [capacity, setCapacity] = useState('');
   const [classTime, setClassTime] = useState('');
@@ -307,8 +452,9 @@ function SectionSettingsDialog({
   const [visibleFrom, setVisibleFrom] = useState('');
   const [visibleUntil, setVisibleUntil] = useState('');
   const [saveError, setSaveError] = useState<
-    'basic' | 'visibility' | 'refresh' | null
+    'basic' | 'visibility' | 'refresh' | 'delete' | 'deleteRefresh' | null
   >(null);
+  const [isDeleteConfirming, setIsDeleteConfirming] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !section) return;
@@ -318,17 +464,22 @@ function SectionSettingsDialog({
     setVisibleFrom(section.contactVisibleFrom ?? '');
     setVisibleUntil(section.contactVisibleUntil ?? '');
     resetUpdateSectionMutation();
+    resetRemoveSectionMutation();
     resetUpdateVisibilityMutation();
     setSaveError(null);
+    setIsDeleteConfirming(false);
   }, [
     isOpen,
     resetUpdateSectionMutation,
+    resetRemoveSectionMutation,
     resetUpdateVisibilityMutation,
     section,
   ]);
 
   const isPending =
-    updateSectionMutation.isPending || updateVisibilityMutation.isPending;
+    updateSectionMutation.isPending ||
+    removeSectionMutation.isPending ||
+    updateVisibilityMutation.isPending;
   const isVisibilityRangeValid =
     (!visibleFrom && !visibleUntil) ||
     (Boolean(visibleFrom && visibleUntil) &&
@@ -394,6 +545,33 @@ function SectionSettingsDialog({
     );
   }
 
+  function removeSection() {
+    if (!section || isPending) return;
+
+    setSaveError(null);
+    removeSectionMutation.mutate(section.id, {
+      onError: () => setSaveError('delete'),
+      onSuccess: async () => {
+        const refreshed = await onDeleted();
+        if (!refreshed) {
+          setSaveError('deleteRefresh');
+          return;
+        }
+        toast({ body: '분반을 삭제했어요.' });
+        onClose();
+      },
+    });
+  }
+
+  async function retrySectionListRefresh() {
+    const refreshed = await onDeleted();
+    if (!refreshed) return;
+
+    setSaveError(null);
+    setIsDeleteConfirming(false);
+    onClose();
+  }
+
   return (
     <Dialog
       aria-label='분반 정보 수정'
@@ -402,7 +580,7 @@ function SectionSettingsDialog({
         if (!open && !isPending) onClose();
       }}
       purpose='form'
-      width={480}
+      width={600}
     >
       <form className={styles.sectionSettingsForm} onSubmit={handleSubmit}>
         <Heading level={2}>{section?.code ?? '분반'} 분반 정보 수정</Heading>
@@ -524,7 +702,60 @@ function SectionSettingsDialog({
             />
           </VStack>
         ) : null}
+        {saveError === 'delete' ? (
+          <Text className={styles.error} role='alert'>
+            분반을 삭제하지 못했습니다. 수강생 또는 팀이 연결된 분반은 삭제할 수
+            없을 수 있습니다.
+          </Text>
+        ) : null}
+        {saveError === 'deleteRefresh' ? (
+          <VStack gap={2}>
+            <Text className={styles.error} role='alert'>
+              분반은 삭제됐지만 목록을 새로고침하지 못했습니다.
+            </Text>
+            <Button
+              label='분반 목록 새로고침'
+              onClick={() => void retrySectionListRefresh()}
+              size='sm'
+              type='button'
+              variant='secondary'
+            />
+          </VStack>
+        ) : null}
+        {isDeleteConfirming ? (
+          <Text className={styles.error} role='alert'>
+            삭제한 분반은 복구할 수 없습니다. 수강생 또는 팀이 연결된 분반은
+            삭제되지 않을 수 있습니다.
+          </Text>
+        ) : null}
         <HStack className={styles.dialogActions} gap={2} justify='end'>
+          {isDeleteConfirming ? (
+            <>
+              <Button
+                isDisabled={isPending}
+                label='삭제 취소'
+                onClick={() => setIsDeleteConfirming(false)}
+                type='button'
+                variant='secondary'
+              />
+              <Button
+                isDisabled={isPending}
+                isLoading={removeSectionMutation.isPending}
+                label='분반 삭제 확인'
+                onClick={removeSection}
+                type='button'
+                variant='ghost'
+              />
+            </>
+          ) : (
+            <Button
+              isDisabled={isPending}
+              label='분반 삭제'
+              onClick={() => setIsDeleteConfirming(true)}
+              type='button'
+              variant='ghost'
+            />
+          )}
           <Button
             isDisabled={isPending}
             label='취소'
@@ -598,6 +829,12 @@ function CourseSectionDialog({
     if (!submitMutation.isPending) onClose();
   }
 
+  async function refreshSectionsAndSession() {
+    const sectionResult = await sectionsQuery.refetch();
+    const sessionRefreshed = await onSectionCreated();
+    return !sectionResult.isError && sessionRefreshed;
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const capacity = Number(input.capacity);
@@ -624,7 +861,7 @@ function CourseSectionDialog({
       onSuccess: async () => {
         setIsCreating(false);
         setInput({ capacity: '40', classTime: '', code: '' });
-        const refreshed = await onSectionCreated();
+        const refreshed = await refreshSectionsAndSession();
         if (!refreshed) {
           setHasRefreshError(true);
           return;
@@ -643,21 +880,22 @@ function CourseSectionDialog({
           if (!open) close();
         }}
         purpose='form'
-        width={560}
+        width='min(680px, calc(100vw - 32px))'
       >
         <div className={styles.dialogBody}>
           <Heading level={2}>{course?.name ?? '강좌'} 분반 관리</Heading>
-          {!professorId ? (
+          {!isCreating && !professorId ? (
             <Text role='alert'>로그인한 관리자 정보를 확인할 수 없습니다.</Text>
-          ) : sectionsQuery.isPending ? (
+          ) : !isCreating && sectionsQuery.isPending ? (
             <Text aria-live='polite' role='status'>
               연결된 분반을 불러오는 중입니다.
             </Text>
-          ) : sectionsQuery.isError ? (
+          ) : !isCreating && sectionsQuery.isError ? (
             <Text role='alert'>연결된 분반을 불러오지 못했습니다.</Text>
-          ) : (sectionsQuery.data?.contents.length ?? 0) === 0 ? (
+          ) : !isCreating &&
+            (sectionsQuery.data?.contents.length ?? 0) === 0 ? (
             <Text color='secondary'>등록된 분반이 없습니다.</Text>
-          ) : (
+          ) : !isCreating ? (
             <ul aria-label='연결된 분반 목록' className={styles.sectionList}>
               {sectionsQuery.data?.contents.map(section => (
                 <li className={styles.sectionItem} key={section.id}>
@@ -665,6 +903,7 @@ function CourseSectionDialog({
                   <span className={styles.sectionMeta}>
                     {section.classTime} · 정원 {section.capacity}명
                   </span>
+                  <SectionAssistantManagement section={section} />
                   <Button
                     className={styles.sectionEditButton}
                     label='분반 정보 수정'
@@ -676,14 +915,14 @@ function CourseSectionDialog({
                 </li>
               ))}
             </ul>
-          )}
+          ) : null}
           {hasRefreshError ? (
             <HStack gap={2} justify='end'>
               <Text role='alert'>분반 목록을 새로고침하지 못했습니다.</Text>
               <Button
                 label='분반 목록 새로고침'
                 onClick={() =>
-                  void onSectionCreated().then(success =>
+                  void refreshSectionsAndSession().then(success =>
                     setHasRefreshError(!success),
                   )
                 }
@@ -769,7 +1008,8 @@ function CourseSectionDialog({
       <SectionSettingsDialog
         isOpen={sectionToEdit !== null}
         onClose={() => setSectionToEdit(null)}
-        onSaved={onSectionCreated}
+        onDeleted={onSectionCreated}
+        onSaved={refreshSectionsAndSession}
         section={sectionToEdit}
       />
     </>

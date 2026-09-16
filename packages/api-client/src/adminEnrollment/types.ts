@@ -14,6 +14,10 @@ export type AdminSectionEnrollmentsResponse = {
   contents: AdminSectionEnrollmentDto[];
 };
 
+export type AdminSectionEnrollmentCreatedResponse = {
+  id: number;
+};
+
 export type UpdateAdminSectionEnrollmentInput = Partial<{
   role: 'STUDENT' | 'ASSISTANT';
   status: 'ACTIVE' | 'WITHDRAWN';

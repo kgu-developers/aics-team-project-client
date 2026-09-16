@@ -30,7 +30,7 @@ const notice = {
 };
 const server = setupServer(
   http.get(
-    `${API_BASE_URL}/sections/:sectionId/announcements`,
+    `${API_BASE_URL}/api/v1/sections/:sectionId/announcements`,
     ({ params }) => {
       request(params.sectionId);
       return HttpResponse.json({ contents: [notice] });

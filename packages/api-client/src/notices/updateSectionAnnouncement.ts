@@ -1,18 +1,19 @@
 import type {
-  SectionAnnouncementUpdateRequest,
   SectionAnnouncementResponse,
+  UpdateSectionAnnouncementInput,
 } from '@aics/core';
 
 import { apiClient } from '../client';
 import { ENDPOINTS } from '../constants/endpoints';
 
 export async function updateSectionAnnouncement(
-  id: number,
-  input: SectionAnnouncementUpdateRequest,
-) {
+  announcementId: string | number,
+  input: UpdateSectionAnnouncementInput,
+): Promise<SectionAnnouncementResponse> {
   const response = await apiClient.patch<SectionAnnouncementResponse>(
-    ENDPOINTS.ANNOUNCEMENTS.DETAIL(String(id)),
+    ENDPOINTS.ANNOUNCEMENTS.DETAIL(announcementId),
     input,
   );
+
   return response.data;
 }

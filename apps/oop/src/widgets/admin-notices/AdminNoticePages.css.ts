@@ -40,10 +40,17 @@ export const emptyCell = style({
   padding: '42px 16px !important',
   textAlign: 'center',
 });
-export const listFooter = style({
-  alignItems: 'center',
+export const listControls = style({
+  alignItems: 'flex-end',
   display: 'flex',
+  gap: 12,
   justifyContent: 'space-between',
+  '@media': {
+    '(max-width: 480px)': {
+      alignItems: 'stretch',
+      flexDirection: 'column',
+    },
+  },
 });
 export const detailCard = style({
   display: 'flex',

@@ -5,6 +5,7 @@ import {
   EmptyState,
   Heading,
   Selector,
+  SelectorOption,
   Text,
   TextArea,
   TextInput,
@@ -26,6 +27,7 @@ import {
 } from '~/features/admin-notices/noticeScope';
 import {
   useAdminNoticeQuery,
+  useAdminAllNoticesQuery,
   useAdminNoticesQuery,
   useSubmitSectionAnnouncementMutation,
   useUpdateSectionAnnouncementMutation,
@@ -54,10 +56,12 @@ function BackToList() {
 }
 
 function SectionSelect({
+  includeAll = false,
   value,
   onChange,
   isDisabled = false,
 }: {
+  includeAll?: boolean;
   value: number | undefined;
   onChange: (value: number | undefined) => void;
   isDisabled?: boolean;
@@ -67,83 +71,121 @@ function SectionSelect({
     <Selector
       label='분반'
       placeholder='분반을 선택해 주세요.'
-      options={(user?.sections ?? [])
-        .filter(section => noticeId(section.id) !== undefined)
-        .map(section => ({ label: section.code, value: section.id }))}
-      value={value === undefined ? '' : String(value)}
+      options={[
+        ...(includeAll ? [{ label: '전체 분반', value: 'all' }] : []),
+        ...(user?.sections ?? [])
+          .filter(section => noticeId(section.id) !== undefined)
+          .map(section => ({ label: section.code, value: section.id })),
+      ]}
+      renderOption={option => (
+        <SelectorOption label={option.label ?? option.value} />
+      )}
+      value={value === undefined ? (includeAll ? 'all' : '') : String(value)}
       onChange={value => onChange(noticeId(value))}
       isDisabled={isDisabled}
-      width='100%'
+      width={320}
     />
   );
 }
 
 export function AdminNoticeListPage() {
   const navigate = useNavigate();
-  const { sectionId, section } = useNoticeScope();
-  const query = useAdminNoticesQuery(section?.id ? sectionId : undefined);
+  const { sectionId, section, user } = useNoticeScope();
+  const selectedSectionId = section ? sectionId : undefined;
+  const sectionQuery = useAdminNoticesQuery(selectedSectionId);
+  const allSectionsQuery = useAdminAllNoticesQuery(
+    selectedSectionId === undefined
+      ? (user?.sections.map(section => section.id) ?? [])
+      : [],
+  );
+  const query =
+    selectedSectionId === undefined ? allSectionsQuery : sectionQuery;
+  const notices = query.data ?? [];
+  const hasSections = user?.sections.some(
+    section => noticeId(section.id) !== undefined,
+  );
   return (
     <div className={styles.page}>
       <Heading level={1}>공지사항</Heading>
-      <SectionSelect
-        value={sectionId}
-        onChange={sectionId =>
-          void navigate({ to: '/admin/notices', search: { sectionId } })
-        }
-      />
-      {!section ? (
-        <Text role='status'>공지사항을 확인할 담당 분반을 선택해 주세요.</Text>
-      ) : query.isLoading ? (
-        <Text role='status'>공지사항을 불러오는 중입니다.</Text>
-      ) : query.isError ? (
-        <Text role='alert'>공지사항을 불러오지 못했습니다.</Text>
-      ) : (
-        <Card className={styles.tableCard}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope='col'>게시일</th>
-                <th scope='col'>분반</th>
-                <th scope='col'>제목</th>
-              </tr>
-            </thead>
-            <tbody>
-              {query.data?.length ? (
-                query.data.map(notice => (
-                  <tr key={notice.id}>
-                    <td>{formatSeoulDateTime(notice.publishedAt)}</td>
-                    <td>{section.code}</td>
-                    <td>
-                      <Link
-                        className={styles.titleLink}
-                        to='/admin/notices/$noticeId'
-                        params={{ noticeId: String(notice.id) }}
-                        search={{ sectionId }}
-                      >
-                        {notice.title}
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td className={styles.emptyCell} colSpan={3}>
-                    {section.code}에 등록된 공지사항이 없어요.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </Card>
-      )}
-      <div className={styles.listFooter}>
+      <div className={styles.listControls}>
+        <SectionSelect
+          includeAll
+          value={selectedSectionId}
+          onChange={sectionId =>
+            void navigate({ to: '/admin/notices', search: { sectionId } })
+          }
+        />
         <Button
           label='작성하기'
+          variant='primary'
           onClick={() =>
-            void navigate({ to: '/admin/notices/new', search: { sectionId } })
+            void navigate({
+              to: '/admin/notices/new',
+              search: { sectionId: selectedSectionId },
+            })
           }
         />
       </div>
+      {!hasSections ? (
+        <Text role='alert'>
+          접근 가능한 분반이 없어 공지사항을 관리할 수 없습니다.
+        </Text>
+      ) : null}
+      {query.isPending ? (
+        <Text role='status'>공지사항을 불러오는 중입니다.</Text>
+      ) : null}
+      {query.isError ? (
+        <Text role='alert'>
+          {notices.length
+            ? '일부 분반의 공지사항을 불러오지 못했습니다.'
+            : '공지사항을 불러오지 못했습니다.'}
+        </Text>
+      ) : null}
+      <Card className={styles.tableCard}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th scope='col'>게시일</th>
+              <th scope='col'>분반</th>
+              <th scope='col'>제목</th>
+            </tr>
+          </thead>
+          <tbody>
+            {notices.length ? (
+              notices.map(notice => (
+                <tr key={notice.id}>
+                  <td>
+                    {formatSeoulDateTime(notice.publishedAt).slice(0, 10)}
+                  </td>
+                  <td>
+                    {user?.sections.find(
+                      section => noticeId(section.id) === notice.sectionId,
+                    )?.code ?? '알 수 없는 분반'}
+                  </td>
+                  <td>
+                    <Link
+                      className={styles.titleLink}
+                      to='/admin/notices/$noticeId'
+                      params={{ noticeId: String(notice.id) }}
+                      search={{ sectionId: notice.sectionId }}
+                    >
+                      {notice.title}
+                    </Link>
+                  </td>
+                </tr>
+              ))
+            ) : !query.isPending && !query.isError && hasSections ? (
+              <tr>
+                <td className={styles.emptyCell} colSpan={3}>
+                  {selectedSectionId === undefined
+                    ? '등록된 공지사항이 없어요.'
+                    : '선택한 분반에 등록된 공지사항이 없어요.'}
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </Card>
     </div>
   );
 }
@@ -194,7 +236,7 @@ export function AdminNoticeDetailPage() {
       <Card className={styles.detailCard}>
         <Heading level={2}>{notice.title}</Heading>
         <Text className={styles.meta} color='secondary'>
-          게시일 : {formatSeoulDateTime(notice.publishedAt)}
+          게시일시 : {formatSeoulDateTime(notice.publishedAt)}
         </Text>
         <Text>공개 범위 : {section.code}</Text>
         <div className={styles.divider} />
@@ -243,11 +285,13 @@ function NoticeFields({
         value={title}
         onChange={setTitle}
         description='최대 192자'
+        placeholder='제목을 입력해 주세요.'
         isDisabled={pending}
         width='100%'
       />
       <TextArea
         label='내용'
+        placeholder='공지 내용을 입력해 주세요.'
         value={content}
         onChange={setContent}
         rows={9}
@@ -271,7 +315,7 @@ function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
   const { user, section, sectionId } = useNoticeScope();
   const [title, setTitle] = useState(notice.title);
   const [content, setContent] = useState(notice.content);
-  const mutation = useUpdateSectionAnnouncementMutation(notice);
+  const mutation = useUpdateSectionAnnouncementMutation();
   const input = {
     ...(title.trim() !== notice.title ? { title: title.trim() } : {}),
     ...(content !== notice.content ? { content } : {}),
@@ -289,6 +333,9 @@ function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
   return (
     <Card className={styles.formCard}>
       <Heading level={2}>공지사항 수정</Heading>
+      <Text className={styles.meta} color='secondary'>
+        게시일시 : {formatSeoulDateTime(notice.publishedAt)}
+      </Text>
       <Text>공개 범위 : {section?.code}</Text>
       <div className={styles.fields}>
         <NoticeFields
@@ -316,7 +363,16 @@ function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
           label='저장'
           isDisabled={!canSave || mutation.isPending}
           isLoading={mutation.isPending}
-          onClick={() => mutation.mutate(input, { onSuccess: back })}
+          onClick={() =>
+            mutation.mutate(
+              {
+                ...input,
+                sectionId: notice.sectionId,
+                announcementId: notice.id,
+              },
+              { onSuccess: back },
+            )
+          }
         />
       </div>
     </Card>
@@ -351,7 +407,7 @@ export function AdminNoticeNewPage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const section = noticeSection(user, sectionId);
-  const mutation = useSubmitSectionAnnouncementMutation(sectionId);
+  const mutation = useSubmitSectionAnnouncementMutation();
   const canSave = canPublishNotice(user, section) && validText(title, content);
   return (
     <div className={styles.page}>
@@ -360,6 +416,7 @@ export function AdminNoticeNewPage() {
         <BackToList />
       </div>
       <Card className={styles.formCard}>
+        <Heading level={2}>공지사항 작성</Heading>
         <SectionSelect
           value={sectionId}
           onChange={sectionId =>
@@ -396,22 +453,22 @@ export function AdminNoticeNewPage() {
             }
           />
           <Button
-            label='저장'
+            label='등록'
             isDisabled={!canSave || mutation.isPending}
             isLoading={mutation.isPending}
-            onClick={() =>
+            onClick={() => {
+              if (sectionId === undefined) return;
               mutation.mutate(
-                { title: title.trim(), content },
+                { sectionId, title: title.trim(), content },
                 {
-                  onSuccess: notice =>
+                  onSuccess: () =>
                     void navigate({
-                      to: '/admin/notices/$noticeId',
-                      params: { noticeId: String(notice.id) },
-                      search: { sectionId: notice.sectionId },
+                      to: '/admin/notices',
+                      search: { sectionId },
                     }),
                 },
-              )
-            }
+              );
+            }}
           />
         </div>
       </Card>

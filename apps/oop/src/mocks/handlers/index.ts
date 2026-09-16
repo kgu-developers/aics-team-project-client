@@ -8,6 +8,7 @@ import { adminMilestoneSubmissionsHandlers } from './adminMilestoneSubmissions';
 import { adminPeerEvaluationFormHandlers } from './adminPeerEvaluationForms';
 import { adminPresentationEvaluationHandlers } from './adminPresentationEvaluations';
 import { adminProfileHandlers } from './adminProfile';
+import { adminProjectProposalHandlers } from './adminProjectProposal';
 import { adminRequiredArtifactHandlers } from './adminRequiredArtifacts';
 import { adminSectionMilestoneHandlers } from './adminSectionMilestones';
 import { adminSectionHandlers } from './adminSections';
@@ -51,6 +52,7 @@ export const handlers = [
   ...adminMidReportHandlers,
   ...adminPresentationEvaluationHandlers,
   ...adminPeerEvaluationFormHandlers,
+  ...adminProjectProposalHandlers,
   ...createLiveEditLockHandlers({
     onlyMidReport: true,
     resources: liveEditLockMockResources.map(resource => ({

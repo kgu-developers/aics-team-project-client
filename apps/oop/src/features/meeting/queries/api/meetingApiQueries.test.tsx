@@ -102,7 +102,7 @@ it.each([
 it('팀 ID가 준비되면 비활성 목록 쿼리가 요청을 시작한다', async () => {
   const requests = vi.fn();
   server.use(
-    http.get(`${API_BASE_URL}/teams/10/meeting-records`, () => {
+    http.get(`${API_BASE_URL}/api/v1/teams/10/meeting-records`, () => {
       requests();
       return HttpResponse.json({ contents: [record] });
     }),
@@ -121,14 +121,14 @@ it('팀 ID가 준비되면 비활성 목록 쿼리가 요청을 시작한다', a
 
 it('단계와 상태 필터를 요청에 전달하고 각각 별도 캐시를 유지한다', async () => {
   server.use(
-    http.get(`${API_BASE_URL}/teams/10/meeting-records`, ({ request }) =>
+    http.get(`${API_BASE_URL}/api/v1/teams/10/meeting-records`, ({ request }) =>
       HttpResponse.json({
         contents: [
           { ...record, phase: new URL(request.url).searchParams.get('phase') },
         ],
       }),
     ),
-    http.get(`${API_BASE_URL}/teams/10/actions`, ({ request }) =>
+    http.get(`${API_BASE_URL}/api/v1/teams/10/actions`, ({ request }) =>
       HttpResponse.json({
         contents: [
           {
@@ -235,7 +235,7 @@ function expectInvalidated(
 
 it('생성 후 해당 팀의 모든 단계 목록을 무효화하고 다른 캐시는 유지한다', async () => {
   server.use(
-    http.post(`${API_BASE_URL}/teams/10/meeting-records`, () =>
+    http.post(`${API_BASE_URL}/api/v1/teams/10/meeting-records`, () =>
       HttpResponse.json(record, { status: 201 }),
     ),
   );
@@ -264,7 +264,7 @@ it('생성 후 해당 팀의 모든 단계 목록을 무효화하고 다른 캐�
 
 it('수정 후 상세와 해당 팀의 모든 단계 목록을 무효화한다', async () => {
   server.use(
-    http.patch(`${API_BASE_URL}/meeting-records/7`, () =>
+    http.patch(`${API_BASE_URL}/api/v1/meeting-records/7`, () =>
       HttpResponse.json(record),
     ),
   );
@@ -291,7 +291,7 @@ it('수정 후 상세와 해당 팀의 모든 단계 목록을 무효화한다',
 it('삭제 성공 후 상세와 회의별 액션을 제거하고 해당 팀의 필터 목록을 무효화한다', async () => {
   server.use(
     http.delete(
-      `${API_BASE_URL}/meeting-records/7`,
+      `${API_BASE_URL}/api/v1/meeting-records/7`,
       () => new HttpResponse(null, { status: 204 }),
     ),
   );
@@ -322,14 +322,14 @@ it.each([
     '생성',
     useSubmitMeetingActionApiMutation,
     http.post,
-    '/meeting-records/7/actions',
+    '/api/v1/meeting-records/7/actions',
     201,
   ],
   [
     '수정',
     useUpdateMeetingActionApiMutation,
     http.patch,
-    '/meeting-actions/11',
+    '/api/v1/meeting-actions/11',
     200,
   ],
 ] as const)(

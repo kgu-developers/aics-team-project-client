@@ -4,3 +4,10 @@ import { defaultParseSearch } from '@tanstack/react-router';
 export function routeScope(url: URL) {
   return defaultParseSearch(url.search) as Record<string, unknown>;
 }
+
+export function meetingRecordRequestPath(observedPath: string) {
+  const match = /^\/student\/meetings\/(\d+)$/.exec(observedPath);
+  if (!match)
+    throw new Error('Expected an observed student meeting detail path');
+  return `/api/v1/meeting-records/${match[1]}`;
+}

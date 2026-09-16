@@ -145,7 +145,10 @@ it('선택한 한 분반에 제목·본문만 게시하고 상세·목록 재조
   const { router, client } = renderPage('/admin/notices/new?sectionId=1');
   const user = await fill();
   expect(screen.queryByLabelText('첨부 파일')).not.toBeInTheDocument();
-  await user.click(screen.getByRole('button', { name: '저장' }));
+  await user.click(screen.getByRole('button', { name: '등록' }));
+  const link = await screen.findByRole('link', { name: '새 공지' });
+  expect(router.state.location.href).toBe('/admin/notices?sectionId=1');
+  await user.click(link);
   await screen.findByRole('heading', { level: 2, name: '새 공지' });
   expect(
     within(screen.getByRole('region', { name: '공지 내용' })).getByText(
@@ -212,14 +215,15 @@ it('실제 계약 핸들러로 수정한 전체 본문을 상세 재조회에 �
   expect(document.querySelector('script')).toBeNull();
 });
 it.each([
-  '/admin/notices',
   '/admin/notices/10',
   '/admin/notices/10?sectionId=2',
   '/admin/notices/10?sectionId=bad',
   '/admin/notices/not-numeric?sectionId=1',
 ])('누락·부적합 범위 %s는 API 요청 없이 안내한다', async path => {
   const get = vi.fn(() => HttpResponse.json({ contents: [] }));
-  server.use(http.get(`${API_BASE_URL}/sections/:id/announcements`, get));
+  server.use(
+    http.get(`${API_BASE_URL}/api/v1/sections/:id/announcements`, get),
+  );
   renderPage(path);
   await screen.findByText(
     /담당 분반을 선택해 주세요.|공지사항을 찾을 수 없어요./,
@@ -228,7 +232,7 @@ it.each([
 });
 it('선택 분반과 다른 응답 공지는 상세에 노출하지 않는다', async () => {
   server.use(
-    http.get(`${API_BASE_URL}/sections/1/announcements`, () =>
+    http.get(`${API_BASE_URL}/api/v1/sections/1/announcements`, () =>
       HttpResponse.json({
         contents: [
           {
@@ -250,10 +254,12 @@ it.each([400, 403, 500])(
   '%s 게시 오류에서 입력을 보존하고 자동 재시도하지 않는다',
   async status => {
     const post = vi.fn(() => new HttpResponse(null, { status }));
-    server.use(http.post(`${API_BASE_URL}/sections/1/announcements`, post));
+    server.use(
+      http.post(`${API_BASE_URL}/api/v1/sections/1/announcements`, post),
+    );
     renderPage('/admin/notices/new?sectionId=1');
     const user = await fill();
-    await user.click(screen.getByRole('button', { name: '저장' }));
+    await user.click(screen.getByRole('button', { name: '등록' }));
     await screen.findByRole('alert');
     expect(screen.getByRole('textbox', { name: '제목' })).toHaveValue(
       '새 공지',
@@ -273,14 +279,16 @@ it('저장 대기 동안 중복 제출을 막는다', async () => {
     await pending;
     return new HttpResponse(null, { status: 500 });
   });
-  server.use(http.post(`${API_BASE_URL}/sections/1/announcements`, post));
+  server.use(
+    http.post(`${API_BASE_URL}/api/v1/sections/1/announcements`, post),
+  );
   renderPage('/admin/notices/new?sectionId=1');
   const user = await fill();
-  await user.click(screen.getByRole('button', { name: '저장' }));
+  await user.click(screen.getByRole('button', { name: '등록' }));
   await waitFor(() => expect(post).toHaveBeenCalledOnce());
-  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '등록' })).toBeDisabled();
   expect(screen.getByRole('textbox', { name: '제목' })).toBeDisabled();
-  await user.click(screen.getByRole('button', { name: '저장' }));
+  await user.click(screen.getByRole('button', { name: '등록' }));
   await act(async () => finish());
   await screen.findByRole('alert');
   expect(post).toHaveBeenCalledOnce();
@@ -288,23 +296,25 @@ it('저장 대기 동안 중복 제출을 막는다', async () => {
 it('교수 자격·유효한 제목·본문이 없으면 저장을 허용하지 않는다', async () => {
   renderPage('/admin/notices/new?sectionId=1');
   await screen.findByRole('textbox', { name: '제목' });
-  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '등록' })).toBeDisabled();
   const user = await fill();
   await user.clear(screen.getByRole('textbox', { name: '내용' }));
   await user.type(screen.getByRole('textbox', { name: '내용' }), '   ');
-  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '등록' })).toBeDisabled();
   await act(() =>
     useAuthStore.setState({
       currentUser: { ...demoNoticeProfessor, globalRole: 'ASSISTANT' },
     }),
   );
   await user.type(screen.getByRole('textbox', { name: '내용' }), '본문');
-  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '등록' })).toBeDisabled();
 });
 
 it('비활성 담당 분반에서는 유효한 제목과 본문이 있어도 게시 요청을 보내지 않는다', async () => {
   const post = vi.fn(() => new HttpResponse(null, { status: 201 }));
-  server.use(http.post(`${API_BASE_URL}/sections/1/announcements`, post));
+  server.use(
+    http.post(`${API_BASE_URL}/api/v1/sections/1/announcements`, post),
+  );
   useAuthStore.setState({
     currentUser: {
       ...demoNoticeProfessor,
@@ -319,8 +329,91 @@ it('비활성 담당 분반에서는 유효한 제목과 본문이 있어도 게
   expect(
     screen.getByText('담당 교수의 활성 분반을 선택해 주세요.'),
   ).toBeInTheDocument();
-  const save = screen.getByRole('button', { name: '저장' });
+  const save = screen.getByRole('button', { name: '등록' });
   expect(save).toBeDisabled();
   await user.click(save);
   expect(post).not.toHaveBeenCalled();
+});
+
+it('전체 분반 목록은 기본값이며 비활성 분반도 목록에서 조회하고 필터를 바꿀 수 있다', async () => {
+  useAuthStore.setState({
+    currentUser: {
+      ...demoNoticeProfessor,
+      sections: [
+        ...demoNoticeProfessor.sections,
+        {
+          ...demoNoticeProfessor.sections[0]!,
+          id: '2',
+          code: '보관 분반',
+          status: 'ARCHIVED',
+        },
+      ],
+    },
+  });
+  const get = vi.fn();
+  server.use(
+    http.get(
+      `${API_BASE_URL}/api/v1/sections/:sectionId/announcements`,
+      ({ params }) => {
+        get(params.sectionId);
+        return HttpResponse.json({
+          contents: [
+            {
+              id: Number(params.sectionId),
+              sectionId: Number(params.sectionId),
+              title: `분반 ${params.sectionId} 공지`,
+              content: '내용',
+              publishedAt: '2026-09-16T09:00:00',
+            },
+          ],
+        });
+      },
+    ),
+  );
+  const { router } = renderPage('/admin/notices');
+  const user = userEvent.setup();
+  expect(
+    await screen.findByRole('link', { name: '분반 1 공지' }),
+  ).toHaveAttribute('href', '/admin/notices/1?sectionId=1');
+  expect(
+    await screen.findByRole('link', { name: '분반 2 공지' }),
+  ).toHaveAttribute('href', '/admin/notices/2?sectionId=2');
+  expect(get.mock.calls.map(([id]) => id).sort()).toEqual(['1', '2']);
+  await user.click(screen.getByRole('combobox', { name: '분반' }));
+  await user.click(screen.getByRole('option', { name: '보관 분반' }));
+  await waitFor(() =>
+    expect(router.state.location.href).toBe('/admin/notices?sectionId=2'),
+  );
+  expect(
+    screen.queryByRole('link', { name: '분반 1 공지' }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole('link', { name: '분반 2 공지' })).toBeInTheDocument();
+});
+
+it('전체 분반의 부분 실패는 성공 목록과 오류 안내를 함께 표시한다', async () => {
+  useAuthStore.setState({
+    currentUser: {
+      ...demoNoticeProfessor,
+      sections: [
+        ...demoNoticeProfessor.sections,
+        { ...demoNoticeProfessor.sections[0]!, id: '2', code: '실패 분반' },
+      ],
+    },
+  });
+  server.use(
+    http.get(
+      `${API_BASE_URL}/api/v1/sections/2/announcements`,
+      () => new HttpResponse(null, { status: 500 }),
+    ),
+  );
+  renderPage('/admin/notices');
+  expect(
+    await screen.findByRole('link', { name: '이미지 자료 확인 안내' }),
+  ).toBeInTheDocument();
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    '일부 분반의 공지사항을 불러오지 못했습니다.',
+  );
+  expect(
+    screen.queryByText('등록된 공지사항이 없어요.'),
+  ).not.toBeInTheDocument();
 });

@@ -18,15 +18,15 @@ export type SectionAnnouncementListResponse = {
   contents: SectionAnnouncementResponse[];
 };
 
-export type SectionAnnouncement = SectionAnnouncementResponse & {
-  attachments?: SectionAnnouncementAttachment[];
-};
-
-export type SectionAnnouncementCreateRequest = {
+export type CreateSectionAnnouncementInput = {
   title: string;
   content: string;
   publishedAt?: string;
 };
 
-export type SectionAnnouncementUpdateRequest =
-  Partial<SectionAnnouncementCreateRequest>;
+export type UpdateSectionAnnouncementInput =
+  Partial<CreateSectionAnnouncementInput>;
+
+export type SectionAnnouncement = SectionAnnouncementResponse & {
+  attachments?: SectionAnnouncementAttachment[];
+};

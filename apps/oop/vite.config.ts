@@ -90,12 +90,13 @@ export default defineConfig(({ command, mode }) => {
       include: ['src/**/*.test.{ts,tsx}', 'vite.config.test.ts'],
       env: { VITE_ENABLE_MSW: 'true' },
       environment: 'jsdom',
-      // MSW's Node interceptor and mutable demo fixtures are process-global.
-      // Isolate each test worker in its own Node process so file-level servers
-      // and fixtures cannot replace or reset another file's state.
+      // jsdom, MSW, and mutable demo fixtures make the integration-heavy suite
+      // CPU-bound. Limit parallel workers so interaction tests do not time out
+      // only when the complete suite runs.
       pool: 'forks',
-      maxWorkers: 4,
+      maxWorkers: 2,
       minWorkers: 1,
+      testTimeout: 15_000,
       setupFiles: './src/test/setup.ts',
     },
   };

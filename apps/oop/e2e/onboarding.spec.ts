@@ -46,7 +46,7 @@ test('분반이 없으면 설문이나 팀 API를 호출하지 않는다', async
   api.state.sections = [];
   await login(page);
   await expect(
-    page.getByText('연결된 수강 분반이 없어요.', { exact: true }),
+    page.getByRole('heading', { name: '소속 분반이 없어요.' }),
   ).toBeVisible();
   expect(
     api.requests.some(

@@ -63,10 +63,17 @@ export async function createNotice(
   await page
     .getByRole('textbox', { name: '내용', exact: true })
     .fill(run.noticeBody);
-  const save = page.getByRole('button', { name: '저장', exact: true });
+  const save = page.getByRole('button', { name: '등록', exact: true });
   await expect(save).toBeEnabled();
   await beforeSave();
   await save.click();
+  await expect(page).toHaveURL(/\/admin\/notices(?:\?sectionId=\d+)?$/);
+  const createdLink = page.getByRole('link', {
+    name: run.noticeTitle,
+    exact: true,
+  });
+  await expect(createdLink).toHaveCount(1);
+  await createdLink.click();
   await expect(page).toHaveURL(/\/admin\/notices\/\d+\?sectionId=\d+$/);
   const url = new URL(page.url());
   await created(url.pathname + url.search);

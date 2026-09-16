@@ -53,13 +53,13 @@ API 서버 주소, 프런트엔드 주소, 담당 교수 ID, 실제 OOP course I
 
 관리자 계정으로 로그인한 세션에서 아래 요청을 수행한다. 브라우저 UI로 가능한 항목은 같은 필드로 입력해도 된다. 직접 요청할 경우 로그인 API의 쿠키·access token·CSRF 계약을 따른다.
 
-| 순서 | 요청                                                          | 데이터셋에서 가져올 본문 / 확인                 |
-| ---- | ------------------------------------------------------------- | ----------------------------------------------- |
-| 1    | `POST /api/v1/oop/auth/login`                                 | 관리자 `studentNumber`, `password`              |
-| 2    | `POST /api/v1/admin/oop/sections`                             | `section.createBody`; 담당 교수 자리표시자 치환 |
-| 3    | `POST /api/v1/admin/oop/users` × 7                            | `users[].createBody`; 테스트 비밀번호 치환      |
-| 4    | `POST /api/v1/admin/oop/sections/{sectionId}/enrollments` × 7 | 각 `studentNumber`와 `role: "STUDENT"`          |
-| 5    | `GET /api/v1/admin/oop/sections/{sectionId}/enrollments`      | 7명 모두 ACTIVE STUDENT인지 확인                |
+| 순서 | 요청                                                      | 데이터셋에서 가져올 본문 / 확인                 |
+| ---- | --------------------------------------------------------- | ----------------------------------------------- |
+| 1    | `POST /api/v1/auth/login`                                 | 관리자 `studentNumber`, `password`              |
+| 2    | `POST /api/v1/admin/sections`                             | `section.createBody`; 담당 교수 자리표시자 치환 |
+| 3    | `POST /api/v1/admin/users` × 7                            | `users[].createBody`; 테스트 비밀번호 치환      |
+| 4    | `POST /api/v1/admin/sections/{sectionId}/enrollments` × 7 | 각 `studentNumber`와 `role: "STUDENT"`          |
+| 5    | `GET /api/v1/admin/sections/{sectionId}/enrollments`      | 7명 모두 ACTIVE STUDENT인지 확인                |
 
 이미 존재하는 학번은 이름만 보고 덮어쓰지 않는다. 이 데이터셋의 합성 계정인지 확인한 뒤 기존 계정을 재사용하거나 다른 합성 학번 7개를 배정한다. 탈퇴 후 재활성화(`reactivate`)는 제출 이력 초기화의 대체 수단으로 사용하지 않는다.
 
@@ -78,21 +78,21 @@ API 서버 주소, 프런트엔드 주소, 담당 교수 ID, 실제 OOP course I
 
 학번 셀은 문자열로 유지한다. S(209900207)는 명단에 넣지 않는다. 다른 학번으로 재생성할 때는 XLSX도 수정해야 한다.
 
-1. `POST /api/v1/admin/oop/sections/{sectionId}/team-imports/preview`에 XLSX를 multipart의 `file`로 보낸다.
+1. `POST /api/v1/admin/sections/{sectionId}/team-imports/preview`에 XLSX를 multipart의 `file`로 보낸다.
 2. 미리보기에서 **전체 6행 / 유효 6행 / 오류 0행**과 팀장 두 명을 확인한다.
-3. 반환된 `importId`로 `POST /api/v1/admin/oop/team-imports/{importId}/apply`를 호출한다.
-4. `GET /api/v1/admin/oop/sections/{sectionId}/teams`로 두 팀 ID와 인원을 기록한다.
-5. **새 E2E 전용 분반**의 `PATCH /api/v1/admin/oop/sections/{sectionId}/teams/finalize`를 호출한다.
-6. L/CL로 로그인해 팀장 상태를 확인한다. 팀장 확정이 끝나지 않았다면 각 팀장이 온보딩에서 확정한다. 공개 API는 `POST /api/v1/oop/teams/{teamId}/leader-claim`이다. 이미 확정된 팀에 다시 호출할 필요는 없다.
+3. 반환된 `importId`로 `POST /api/v1/admin/team-imports/{importId}/apply`를 호출한다.
+4. `GET /api/v1/admin/sections/{sectionId}/teams`로 두 팀 ID와 인원을 기록한다.
+5. **새 E2E 전용 분반**의 `PATCH /api/v1/admin/sections/{sectionId}/teams/finalize`를 호출한다.
+6. L/CL로 로그인해 팀장 상태를 확인한다. 팀장 확정이 끝나지 않았다면 각 팀장이 온보딩에서 확정한다. 공개 API는 `POST /api/v1/teams/{teamId}/leader-claim`이다. 이미 확정된 팀에 다시 호출할 필요는 없다.
 
 ### ③ 마일스톤과 평가 폼 생성
 
 관리자 세션에서 다음 순서로 처리한다.
 
-1. JSON의 `milestones` 5개 각각에 대해 `POST /api/v1/admin/oop/sections/{sectionId}/milestones`에 `createBody`를 보낸다.
-2. 반환 ID별로 `PATCH /api/v1/admin/oop/sections/{sectionId}/milestones/{milestoneId}/status`에 `publishBody`(`PUBLISHED`)를 보낸다.
-3. PRESENTATION과 FINAL_REPORT에만 `POST /api/v1/admin/oop/sections/{sectionId}/milestones/{milestoneId}/required-artifacts`로 `requiredArtifacts`의 PDF 항목을 등록한다.
-4. `POST /api/v1/admin/oop/sections/{sectionId}/peer-evaluation-forms`로 `peerEvaluationForm.createBody`를 보낸다. `milestoneId`를 실제 PEER_EVALUATION ID로 치환한다.
+1. JSON의 `milestones` 5개 각각에 대해 `POST /api/v1/admin/sections/{sectionId}/milestones`에 `createBody`를 보낸다.
+2. 반환 ID별로 `PATCH /api/v1/admin/sections/{sectionId}/milestones/{milestoneId}/status`에 `publishBody`(`PUBLISHED`)를 보낸다.
+3. PRESENTATION과 FINAL_REPORT에만 `POST /api/v1/admin/sections/{sectionId}/milestones/{milestoneId}/required-artifacts`로 `requiredArtifacts`의 PDF 항목을 등록한다.
+4. `POST /api/v1/admin/sections/{sectionId}/peer-evaluation-forms`로 `peerEvaluationForm.createBody`를 보낸다. `milestoneId`를 실제 PEER_EVALUATION ID로 치환한다.
 5. 기존 분반을 재사용하는 경우 같은 종류의 마일스톤/열린 상호평가 폼이 중복되지 않도록 확인한다. 테스트는 학생 평가 컨텍스트가 선택한 폼을 사용하며 별도 `OOP_E2E_PEER_FORM_ID` 설정으로 폼을 강제하지 않는다.
 
 ### ④ 각 팀장으로 프로젝트 준비
@@ -133,9 +133,9 @@ OOP_E2E_FINAL_REPORT_ID=<FINAL_REPORT ID>
 
 | 계정 / 조회                                                            | 확인할 상태                                                                              |
 | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| L/A의 `GET /api/v1/oop/users/me`                                       | 정확한 학번, 같은 E2E 분반 1개, 같은 테스트 팀2 ID                                       |
-| S의 `/me`                                                              | E2E 분반, teamId null                                                                    |
-| S의 `GET /api/v1/oop/users/me/pre-survey-response`                     | 미제출에 해당하는 404; 로그인 화면에서 설문 `시작하기` 가능                              |
+| L/A의 `GET /api/v1/users/me`                                           | 정확한 학번, 같은 E2E 분반 1개, 같은 테스트 팀2 ID                                       |
+| S의 `GET /api/v1/users/me`                                             | E2E 분반, teamId null                                                                    |
+| S의 `GET /api/v1/users/me/pre-survey-response`                         | 미제출에 해당하는 404; 로그인 화면에서 설문 `시작하기` 가능                              |
 | L/CL의 프로젝트 조회                                                   | JSON의 원문, `approvalStatus: DRAFT`, `proposalCompletedAt: null`                        |
 | 제안서 영역 조회                                                       | 모든 영역 completed false, 현재 편집 잠금 없음                                           |
 | 중간보고서 최초 조회                                                   | DRAFT, submittedAt null, 완료 블록 없음, 편집 가능                                       |

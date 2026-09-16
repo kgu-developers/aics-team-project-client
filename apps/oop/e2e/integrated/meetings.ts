@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 
 import type { Run } from './data';
-import { routeScope } from './routeScope';
+import { meetingRecordRequestPath, routeScope } from './routeScope';
 import { choose, fillDate } from './ui';
 
 async function fillMeetingBody(page: Page, body: string) {
@@ -283,8 +283,7 @@ export async function deniedMeeting(page: Page, run: Run, path: string) {
   for (const reload of [false, true]) {
     const response = page.waitForResponse(
       response =>
-        new URL(response.url()).pathname ===
-          path.replace('/student/meetings/', '/meeting-records/') &&
+        new URL(response.url()).pathname === meetingRecordRequestPath(path) &&
         response.request().method() === 'GET',
     );
     if (reload) await page.reload();

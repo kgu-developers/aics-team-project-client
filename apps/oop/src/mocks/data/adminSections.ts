@@ -5,15 +5,10 @@ import type {
 
 import { getAdminCourse } from './adminCourses';
 import {
-  addMockMySection,
-  resetMockMySections,
+  replaceMockMySections,
   updateMockSectionContactVisibility,
 } from './sections';
-import {
-  addDemoAdminSection,
-  resetDemoAdminSections,
-  updateDemoAdminSectionContactVisibility,
-} from './users';
+import { replaceDemoAdminSections } from './users';
 
 const professor = {
   email: 'admin@kgu.ac.kr',
@@ -59,8 +54,80 @@ const initialSections: AdminSectionFixture[] = [
   },
 ];
 
-let sections = initialSections.map(section => ({ ...section }));
-let nextSectionId = 3;
+const storageKey = 'aics:msw-admin-sections';
+
+type PersistedSections = {
+  nextSectionId: number;
+  sections: AdminSectionFixture[];
+};
+
+function initialSectionState(): PersistedSections {
+  return {
+    nextSectionId: 3,
+    sections: initialSections.map(section => ({ ...section })),
+  };
+}
+
+function restoreSectionState(): PersistedSections {
+  if (typeof localStorage === 'undefined') return initialSectionState();
+
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(storageKey) ?? '');
+    if (
+      !saved ||
+      typeof saved !== 'object' ||
+      !Array.isArray((saved as PersistedSections).sections) ||
+      !Number.isSafeInteger((saved as PersistedSections).nextSectionId)
+    )
+      return initialSectionState();
+    return saved as PersistedSections;
+  } catch {
+    return initialSectionState();
+  }
+}
+
+function persistSectionState() {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(storageKey, JSON.stringify({ nextSectionId, sections }));
+}
+
+const restoredSectionState = restoreSectionState();
+let sections = restoredSectionState.sections;
+let nextSectionId = restoredSectionState.nextSectionId;
+
+function syncAdminSectionProjections() {
+  const currentUserSections = sections.flatMap(section => {
+    const course = getAdminCourse(section.courseId);
+    if (!course) return [];
+
+    return [
+      {
+        capacity: section.capacity,
+        classTime: section.classTime,
+        code: section.code,
+        contactVisibleFrom: section.contactVisibleFrom ?? null,
+        contactVisibleUntil: section.contactVisibleUntil ?? null,
+        courseId: course.id,
+        courseName: course.name,
+        id: String(section.id),
+        name: section.name,
+        role: 'ASSISTANT' as const,
+        semester: course.semester,
+        status: course.status,
+        year: course.year,
+      },
+    ];
+  });
+  const mySections = currentUserSections.map(section => ({
+    ...section,
+    id: Number(section.id),
+  }));
+
+  replaceDemoAdminSections(currentUserSections);
+  replaceMockMySections(professor.studentNumber, mySections);
+}
+
+syncAdminSectionProjections();
 
 export function getAdminSections({
   semester,
@@ -138,36 +205,9 @@ export function createAdminSection(input: AdminOopSectionInput) {
     },
   };
   nextSectionId += 1;
-  addDemoAdminSection({
-    capacity: section.capacity,
-    classTime: section.classTime,
-    code: section.code,
-    contactVisibleFrom: section.contactVisibleFrom ?? null,
-    contactVisibleUntil: section.contactVisibleUntil ?? null,
-    courseId: course.id,
-    courseName: course.name,
-    id: String(section.id),
-    name: section.name,
-    role: 'ASSISTANT',
-    semester: course.semester,
-    status: course.status,
-    year: course.year,
-  });
-  addMockMySection(input.professorId, {
-    capacity: section.capacity,
-    classTime: section.classTime,
-    code: section.code,
-    contactVisibleFrom: section.contactVisibleFrom ?? null,
-    contactVisibleUntil: section.contactVisibleUntil ?? null,
-    courseId: course.id,
-    courseName: course.name,
-    id: section.id,
-    name: section.name,
-    semester: course.semester,
-    status: course.status,
-    year: course.year,
-  });
   sections = [...sections, section];
+  syncAdminSectionProjections();
+  persistSectionState();
   return {
     capacity: section.capacity,
     classTime: section.classTime,
@@ -192,14 +232,14 @@ export function updateAdminSectionFixture(
     ...input,
   };
   sections = sections.map(item => (item.id === sectionId ? section : item));
+  persistSectionState();
   if ('contactVisibleFrom' in input || 'contactVisibleUntil' in input) {
-    const contactVisibility = {
+    updateMockSectionContactVisibility(sectionId, {
       contactVisibleFrom: section.contactVisibleFrom ?? null,
       contactVisibleUntil: section.contactVisibleUntil ?? null,
-    };
-    updateMockSectionContactVisibility(sectionId, contactVisibility);
-    updateDemoAdminSectionContactVisibility(sectionId, contactVisibility);
+    });
   }
+  syncAdminSectionProjections();
   return (
     getAdminSectionsByCourseId(section.courseId).find(
       item => item.id === sectionId,
@@ -207,9 +247,20 @@ export function updateAdminSectionFixture(
   );
 }
 
+export function removeAdminSectionFixture(sectionId: number) {
+  const section = sections.find(item => item.id === sectionId);
+  if (!section) return false;
+
+  sections = sections.filter(item => item.id !== sectionId);
+  persistSectionState();
+  syncAdminSectionProjections();
+  return true;
+}
+
 export function resetAdminSectionsMockData() {
-  resetDemoAdminSections();
-  resetMockMySections();
-  sections = initialSections.map(section => ({ ...section }));
-  nextSectionId = 3;
+  const initialState = initialSectionState();
+  sections = initialState.sections;
+  nextSectionId = initialState.nextSectionId;
+  if (typeof localStorage !== 'undefined') localStorage.removeItem(storageKey);
+  syncAdminSectionProjections();
 }
