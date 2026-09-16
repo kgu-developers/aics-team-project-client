@@ -55,7 +55,7 @@ test('allows only intentional resource errors matched to response method/path/st
       ...response,
       stage: '03',
       actor: 'survey',
-      path: '/api/v1/oop/users/me/pre-survey-response',
+      path: '/api/v1/users/me/pre-survey-response',
       status: 404,
     },
     {
@@ -70,7 +70,7 @@ test('allows only intentional resource errors matched to response method/path/st
       ...response,
       stage: 'M12',
       actor: 'admin',
-      path: '/api/v1/admin/oop/meeting-records/12',
+      path: '/api/v1/admin/meeting-records/12',
       status: 404,
     },
   ];
@@ -94,6 +94,123 @@ test('allows only intentional resource errors matched to response method/path/st
     ),
     [consoleError()],
   );
+});
+
+for (const { intended, rejected } of [
+  {
+    intended: {
+      stage: '03',
+      actor: 'survey',
+      method: 'GET',
+      path: '/api/v1/users/me/pre-survey-response',
+      status: 404,
+    },
+    rejected: [
+      { stage: '04' },
+      { actor: 'leader' },
+      { path: '/api/v1/oop/users/me/pre-survey-response' },
+      { path: '/api/v1/users/me/pre-survey-response/extra' },
+      { path: '/api/v1/users/me/pre-survey-response/' },
+    ],
+  },
+  {
+    intended: {
+      stage: 'M12',
+      actor: 'admin',
+      method: 'GET',
+      path: '/api/v1/admin/meeting-records/12',
+      status: 404,
+    },
+    rejected: [
+      { stage: 'M11' },
+      { actor: 'leader' },
+      { path: '/api/v1/admin/oop/meeting-records/12' },
+      { path: '/api/v1/meeting-records/12' },
+      { path: '/api/v1/admin/meeting-records/12/actions' },
+      { path: '/api/v1/admin/meeting-records/12/' },
+      { path: '/api/v1/admin/meeting-records/0' },
+      { path: '/api/v1/admin/meeting-records/012' },
+    ],
+  },
+]) {
+  test(`allows only the intended ${intended.stage} ${intended.path} GET 404`, () => {
+    assert.deepEqual(
+      unexpectedConsoleErrors([consoleError(intended)], [intended]),
+      [],
+    );
+    for (const changed of [
+      ...rejected,
+      { method: 'POST' },
+      { status: 403 },
+      { status: 500 },
+    ]) {
+      const unexpected = { ...intended, ...changed };
+      const error = consoleError(unexpected);
+      assert.deepEqual(unexpectedConsoleErrors([error], [unexpected]), [error]);
+    }
+  });
+}
+
+test('allows only memberC delayed M01 absent-project GET 404 outside existing project stages', () => {
+  const delayed = {
+    stage: 'M01',
+    actor: 'memberC',
+    method: 'GET',
+    path: '/api/v1/teams/60/project',
+    status: 404,
+  };
+  const network = [
+    delayed,
+    ...['06', '08', '10', '11'].map(stage => ({
+      ...delayed,
+      stage,
+      actor: 'leader',
+    })),
+  ];
+  assert.deepEqual(
+    unexpectedConsoleErrors(network.map(consoleError), network),
+    [],
+  );
+  for (const changed of [
+    ...[
+      'admin',
+      'leader',
+      'memberA',
+      'memberB',
+      'survey',
+      'comparisonLeader',
+    ].map(actor => ({ actor })),
+    { stage: 'M02' },
+    { stage: 'N01' },
+    { stage: '07' },
+    { method: 'POST' },
+    { status: 403 },
+    { status: 500 },
+    { path: '/api/v1/teams/60/thread' },
+    { path: '/api/v1/oop/teams/60/project' },
+    { path: '/api/v1/teams/60/project/extra' },
+    { path: '/api/v1/teams/60/project/' },
+    { path: '/api/v1/teams/0/project' },
+    { path: '/api/v1/teams/060/project' },
+  ]) {
+    const unexpected = { ...delayed, ...changed };
+    const error = consoleError(unexpected);
+    assert.deepEqual(unexpectedConsoleErrors([error], [unexpected]), [error]);
+  }
+});
+
+test('keeps the stage 06 backend thread 500 and later thread failures unexpected', () => {
+  const network = ['06', 'M01'].flatMap(stage =>
+    ['leader', 'memberB', 'memberC'].map(actor => ({
+      stage,
+      actor,
+      method: 'GET',
+      path: '/api/v1/teams/60/thread',
+      status: 500,
+    })),
+  );
+  const errors = network.map(consoleError);
+  assert.deepEqual(unexpectedConsoleErrors(errors, network), errors);
 });
 
 test('allows only the exact initial anonymous refresh 403 for each fresh actor', () => {

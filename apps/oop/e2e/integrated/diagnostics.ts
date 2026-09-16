@@ -40,10 +40,15 @@ function expectedResource(
     // restoration may fail; a refresh after login must remain a failure.
     return network.find(item => item.actor === actor) === response;
   if (method !== 'GET') return false;
-  if (path === '/api/v1/oop/users/me/pre-survey-response')
+  if (path === '/api/v1/users/me/pre-survey-response')
     return stage === '03' && actor === 'survey' && status === 404;
   if (/^\/api\/v1\/teams\/[1-9]\d*\/project$/.test(path))
-    return ['06', '08', '10', '11'].includes(stage) && status === 404;
+    return (
+      status === 404 &&
+      (['06', '08', '10', '11'].includes(stage) ||
+        // memberC's absent-project read can finish after 06 fails.
+        (stage === 'M01' && actor === 'memberC'))
+    );
   if (/^\/api\/v1\/meeting-records\/[1-9]\d*$/.test(path)) {
     if (stage === 'M05' && actor === 'comparisonLeader')
       return status === 403 || status === 404;
@@ -55,7 +60,7 @@ function expectedResource(
     stage === 'M12' &&
     actor === 'admin' &&
     status === 404 &&
-    /^\/api\/v1\/admin\/oop\/meeting-records\/[1-9]\d*$/.test(path)
+    /^\/api\/v1\/admin\/meeting-records\/[1-9]\d*$/.test(path)
   );
 }
 

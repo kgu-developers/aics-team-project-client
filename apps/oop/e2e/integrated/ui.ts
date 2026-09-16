@@ -9,9 +9,12 @@ export async function choose(
     .getByRole('combobox', { name: label, exact: typeof label === 'string' })
     .click();
   const page = 'page' in scope ? scope.page() : scope;
-  await page
-    .getByRole('option', { name: option, exact: typeof option === 'string' })
-    .click();
+  await expect(async () => {
+    // Re-query after a combobox rerender detaches an option mid-click.
+    await page
+      .getByRole('option', { name: option, exact: typeof option === 'string' })
+      .click({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
 }
 
 export async function login(
