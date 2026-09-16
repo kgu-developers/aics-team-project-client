@@ -38,7 +38,7 @@ export default function SubmissionDialog() {
       onOpenChange={isOpen => {
         if (!isOpen) closeDialog();
       }}
-      purpose='form'
+      purpose='info'
     >
       <div className={styles.content}>
         {target ? (

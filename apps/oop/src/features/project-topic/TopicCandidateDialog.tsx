@@ -45,7 +45,7 @@ export default function TopicCandidateDialog() {
         if (nextIsOpen) setIsOpen(true);
         else closeDialog();
       }}
-      purpose='form'
+      purpose='info'
     >
       <form
         className={styles.form}

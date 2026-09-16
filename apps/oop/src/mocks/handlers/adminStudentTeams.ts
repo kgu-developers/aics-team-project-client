@@ -2,12 +2,15 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import type { Team } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
-import { getMockAuthenticatedAccount } from '../authSession';
+import {
+  getMockAuthenticatedAccount,
+  revokeMockAccountSession,
+} from '../authSession';
 import {
   adminStudentsFixture,
   adminTeamsFixture,
 } from '../data/adminStudentTeams';
-import { demoAdmin } from '../data/users';
+import { demoAdmin, demoUserAccounts } from '../data/users';
 
 const demoSectionId = 'oop-2026-2-01';
 const adminSectionId = 1;
@@ -648,6 +651,43 @@ export const adminStudentTeamHandlers = [
         .forEach(([key, enrollment]) => {
           assistantEnrollmentsBySection.set(key, { ...enrollment, ...input });
         });
+      return new HttpResponse(null, { status: 204 });
+    },
+  ),
+
+  http.patch(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.USER_PASSWORD_RESET(':studentNumber')}`,
+    ({ params, request }) => {
+      const adminAccount = getMockAuthenticatedAccount(request);
+      const studentNumber = params.studentNumber;
+
+      if (adminAccount?.user.id !== demoAdmin.id) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+      if (typeof studentNumber !== 'string') {
+        return HttpResponse.json(
+          { code: 'USER_REQUIRED', message: '사용자 정보가 필요합니다.' },
+          { status: 400 },
+        );
+      }
+
+      const fixtureUser = adminStudentsFixture.some(
+        student => student.studentNumber === studentNumber,
+      );
+      if (!fixtureUser && !createdUsers.has(studentNumber)) {
+        return HttpResponse.json(
+          { code: 'USER_NOT_FOUND', message: '사용자를 찾을 수 없습니다.' },
+          { status: 404 },
+        );
+      }
+
+      const studentAccount = demoUserAccounts.find(
+        candidate => candidate.user.studentNumber === studentNumber,
+      );
+      if (studentAccount) revokeMockAccountSession(studentAccount);
       return new HttpResponse(null, { status: 204 });
     },
   ),

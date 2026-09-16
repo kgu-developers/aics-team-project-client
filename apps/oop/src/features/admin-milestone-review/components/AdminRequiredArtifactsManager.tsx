@@ -290,7 +290,7 @@ export default function AdminRequiredArtifactsManager({
           onOpenChange={isOpen => {
             if (!isOpen) closeForm();
           }}
-          purpose='form'
+          purpose='info'
           width={680}
         >
           <form className={styles.dialogForm} onSubmit={submitForm}>
@@ -404,7 +404,8 @@ export default function AdminRequiredArtifactsManager({
         onOpenChange={isOpen => {
           if (!isOpen) closeDeleteDialog();
         }}
-        purpose='required'
+        purpose='info'
+        role='alertdialog'
         width={440}
       >
         <div className={styles.dialogForm}>

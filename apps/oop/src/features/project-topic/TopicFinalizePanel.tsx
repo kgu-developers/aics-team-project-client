@@ -178,7 +178,7 @@ function TopicFinalization({
       {isOpen ? (
         <Dialog
           aria-label='팀 주제 확정'
-          purpose='form'
+          purpose='info'
           isOpen={isOpen}
           onOpenChange={next => {
             if (!mutation.isPending) setIsOpen(next);

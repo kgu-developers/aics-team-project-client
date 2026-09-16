@@ -157,17 +157,81 @@ describe('AdminStudentTeamManagement', () => {
     );
   });
 
+  it('수강생 목록의 이름을 누르면 학생 상세 모달을 연다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    const studentNameButton = (
+      await screen.findAllByRole('button', { name: '김민준' })
+    ).find(button => button.closest('table'));
+    expect(studentNameButton).toBeDefined();
+    await user.click(studentNameButton!);
+
+    const dialog = await screen.findByRole('dialog', {
+      name: '김민준 수강생 정보',
+    });
+    expect(within(dialog).getByText('20231234')).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('button', { name: '비밀번호 초기화' }),
+    ).toBeInTheDocument();
+  });
+
+  it('취소 가능한 알림만 바깥 클릭으로 닫고 입력·필수 확인은 유지한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    const studentNameButton = (
+      await screen.findAllByRole('button', { name: '김민준' })
+    ).find(button => button.closest('table'));
+    expect(studentNameButton).toBeDefined();
+    const studentRow = studentNameButton!.closest('tr') as HTMLElement;
+
+    await user.click(within(studentRow).getByRole('button', { name: '제외' }));
+    const confirmationDialog = await screen.findByRole('alertdialog', {
+      name: '수강생 제외 확인',
+    });
+    await user.click(confirmationDialog);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('alertdialog', { name: '수강생 제외 확인' }),
+      ).not.toBeInTheDocument(),
+    );
+
+    const [changeLeaderButton] = screen.getAllByRole('button', {
+      name: '팀장 변경',
+    });
+    expect(changeLeaderButton).toBeDefined();
+    await user.click(changeLeaderButton!);
+    const formDialog = await screen.findByRole('dialog', {
+      name: '팀장 변경',
+    });
+    await user.click(formDialog);
+    expect(screen.getByRole('dialog', { name: '팀장 변경' })).toBeVisible();
+    await user.click(within(formDialog).getByRole('button', { name: '취소' }));
+
+    await user.click(screen.getByRole('button', { name: '팀 배정 확정' }));
+    const requiredDialog = await screen.findByRole('alertdialog', {
+      name: '팀 배정 확정 확인',
+    });
+    await user.click(requiredDialog);
+    expect(
+      screen.getByRole('alertdialog', { name: '팀 배정 확정 확인' }),
+    ).toBeVisible();
+  });
+
   it('수강생 제외를 확인하면 팀 접근 제한을 안내하고 목록과 팀 구성에서 제거한다', async () => {
     const user = userEvent.setup();
 
     renderPage();
 
-    const studentCell = (await screen.findAllByText('김민준')).find(
-      element => element.tagName === 'TD',
-    );
-    expect(studentCell).toBeDefined();
+    const studentNameButton = (
+      await screen.findAllByRole('button', { name: '김민준' })
+    ).find(button => button.closest('table'));
+    expect(studentNameButton).toBeDefined();
     const withdrawButton = within(
-      studentCell!.closest('tr') as HTMLElement,
+      studentNameButton!.closest('tr') as HTMLElement,
     ).getByRole('button', { name: '제외' });
     await user.click(withdrawButton);
 

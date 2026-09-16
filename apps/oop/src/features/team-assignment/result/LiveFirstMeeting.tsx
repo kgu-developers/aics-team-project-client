@@ -164,7 +164,7 @@ export default function LiveFirstMeeting({
         onOpenChange={open => {
           if (!confirmTeamLeader.isPending) setConfirming(open);
         }}
-        purpose='form'
+        purpose='info'
       >
         <VStack gap={4}>
           <VStack gap={2}>

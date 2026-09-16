@@ -204,7 +204,7 @@ export default function MidReportGuiScreens({
         onOpenChange={next => {
           if (!next && !upload.isPending) closeDialog();
         }}
-        purpose='form'
+        purpose='info'
         width={520}
       >
         {editing && (

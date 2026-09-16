@@ -91,7 +91,7 @@ export function FirstMeeting({ projection }: FirstMeetingProps) {
         aria-label='팀장 확정 확인'
         isOpen={confirming}
         onOpenChange={setConfirming}
-        purpose='form'
+        purpose='info'
       >
         <VStack gap={4}>
           <VStack gap={2}>

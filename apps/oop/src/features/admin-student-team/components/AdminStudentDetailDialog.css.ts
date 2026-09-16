@@ -5,6 +5,7 @@ export const content = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 16,
+  wordBreak: 'keep-all',
 });
 
 export const detailList = style({

@@ -34,7 +34,7 @@ export function PartnerRequestDialogs({
         aria-label='파트너 신청 취소 확인'
         isOpen={cancelRequestOpen}
         onOpenChange={onCancelOpenChange}
-        purpose='form'
+        purpose='info'
       >
         <VStack gap={4}>
           <VStack gap={2}>
@@ -62,7 +62,7 @@ export function PartnerRequestDialogs({
         aria-label='파트너 확정 확인'
         isOpen={approveRequestOpen}
         onOpenChange={onApproveOpenChange}
-        purpose='form'
+        purpose='info'
       >
         <VStack gap={4}>
           <VStack gap={2}>

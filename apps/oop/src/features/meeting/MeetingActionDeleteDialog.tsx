@@ -25,7 +25,7 @@ export default function MeetingActionDeleteDialog({
       onOpenChange={open => {
         if (!open && !mutation.isPending) onClose();
       }}
-      purpose='form'
+      purpose='info'
       width={440}
     >
       <div className={styles.body}>

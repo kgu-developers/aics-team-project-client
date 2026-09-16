@@ -54,6 +54,11 @@ export const notice = style({
 });
 export const error = style({ color: 'var(--color-text-error)', margin: 0 });
 
+export const leaveDialog = style({
+  display: 'grid',
+  gap: 'var(--spacing-4)',
+});
+
 export const desktopSections = style({
   display: 'grid',
   gap: 'var(--spacing-3)',

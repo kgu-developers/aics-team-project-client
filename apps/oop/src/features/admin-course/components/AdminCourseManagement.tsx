@@ -175,7 +175,8 @@ function SectionAssistantManagement({
         onOpenChange={open => {
           if (!open) closeAssistantWithdrawalDialog();
         }}
-        purpose='required'
+        purpose='info'
+        role='alertdialog'
         width={440}
       >
         {assistantToDelete ? (
@@ -325,7 +326,7 @@ function CourseFormDialog({
       onOpenChange={open => {
         if (!open) close();
       }}
-      purpose='form'
+      purpose='info'
       width={520}
     >
       <div className={styles.dialogBody}>
@@ -579,7 +580,7 @@ function SectionSettingsDialog({
       onOpenChange={open => {
         if (!open && !isPending) onClose();
       }}
-      purpose='form'
+      purpose='info'
       width={600}
     >
       <form className={styles.sectionSettingsForm} onSubmit={handleSubmit}>
@@ -879,7 +880,7 @@ function CourseSectionDialog({
         onOpenChange={open => {
           if (!open) close();
         }}
-        purpose='form'
+        purpose='info'
         width='min(680px, calc(100vw - 32px))'
       >
         <div className={styles.dialogBody}>
@@ -1050,7 +1051,7 @@ function CourseDeleteDialog({
       onOpenChange={open => {
         if (!open) close();
       }}
-      purpose='form'
+      purpose='info'
       width={480}
     >
       <div className={styles.dialogBody}>
