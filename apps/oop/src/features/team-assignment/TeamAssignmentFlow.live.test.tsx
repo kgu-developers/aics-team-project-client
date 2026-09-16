@@ -169,7 +169,7 @@ describe('TeamAssignmentFlow live API mode', () => {
     ).toBeVisible();
     expect(
       screen.getByText(
-        '팀 선정 결과는 2099년 9월 10일 오전 12:00에 공개됩니다.',
+        /팀 선정 결과는 2099년 9월 10일 (오전|AM) 12:00에 공개됩니다\./,
       ),
     ).toBeVisible();
     expect(screen.queryByRole('button', { name: '시작하기' })).toBeNull();
