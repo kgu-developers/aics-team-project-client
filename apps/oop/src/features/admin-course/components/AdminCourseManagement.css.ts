@@ -119,12 +119,6 @@ export const deletePreview = style({
   gap: tokens.spacing['1'],
 });
 
-export const deleteHint = style({
-  color: tokens.color.text.secondary,
-  fontSize: 12,
-  margin: '6px 0 0',
-});
-
 export const sectionList = style({
   display: 'grid',
   gap: tokens.spacing['2'],

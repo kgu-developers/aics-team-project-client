@@ -74,7 +74,10 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderPage(editing: boolean) {
+function renderPage(
+  editing: boolean,
+  sections = [{ ...demoAdmin.sections[0]!, id: '1' }],
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -84,7 +87,7 @@ function renderPage(editing: boolean) {
     accessToken: demoAdminAccessToken,
     currentUser: {
       ...demoAdmin,
-      sections: [{ ...demoAdmin.sections[0]!, id: '1' }],
+      sections,
     },
   });
   const root = createRootRoute();
@@ -239,6 +242,52 @@ describe('artifact submission isolation', () => {
       expect(consoleError).not.toHaveBeenCalled();
     },
   );
+});
+
+it('부분 생성 실패를 재시도해도 이미 생성한 분반의 마일스톤을 다시 만들지 않는다', async () => {
+  const attempts: string[] = [];
+  server.use(
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES(':sectionId')}`,
+      ({ params }) => {
+        const sectionId = String(params.sectionId);
+        attempts.push(sectionId);
+        if (sectionId === '2' && attempts.filter(id => id === '2').length === 1)
+          return new HttpResponse(null, { status: 500 });
+
+        return HttpResponse.json(
+          { id: sectionId === '1' ? 901 : 902 },
+          { status: 201 },
+        );
+      },
+    ),
+  );
+  renderPage(false, [
+    { ...demoAdmin.sections[0]!, id: '1' },
+    { ...demoAdmin.sections[0]!, code: 'OOP-02', id: '2', name: 'OOP-02' },
+  ]);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('combobox', { name: '분반' }));
+  await user.click(screen.getByRole('option', { name: /OOP-02/ }));
+  fireEvent.change(screen.getByLabelText('OOP-01 제출 마감일'), {
+    target: { value: '2026-10-15' },
+  });
+  fireEvent.change(screen.getByLabelText('OOP-01 제출 마감 시간'), {
+    target: { value: '23:59' },
+  });
+  fireEvent.change(screen.getByLabelText('OOP-02 제출 마감일'), {
+    target: { value: '2026-10-15' },
+  });
+  fireEvent.change(screen.getByLabelText('OOP-02 제출 마감 시간'), {
+    target: { value: '23:59' },
+  });
+  await user.click(screen.getByRole('button', { name: '저장' }));
+  await waitFor(() => expect(attempts).toEqual(['1', '2']));
+  await user.click(
+    screen.getByRole('button', { name: '실패한 작업 다시 시도' }),
+  );
+  await waitFor(() => expect(attempts).toEqual(['1', '2', '2']));
+  await screen.findByText('마일스톤 목록');
 });
 
 it('blocks peer-evaluation editing before hidden schedule validation or any write', async () => {

@@ -512,15 +512,22 @@ export function AdminNoticeNewPage() {
             isDisabled={!canSave || mutation.isPending}
             isLoading={mutation.isPending}
             onClick={() => {
-              const sectionIds = selectedSections.map(section =>
-                noticeId(section.id),
-              );
-              if (sectionIds.some(id => id === undefined)) return;
+              const sectionIds: number[] = [];
+              for (const section of selectedSections) {
+                const id = noticeId(section.id);
+                if (id === undefined) return;
+                sectionIds.push(id);
+              }
               mutation.mutate(
                 { sectionIds, title: title.trim(), content },
                 {
                   onSuccess: result => {
-                    if (result.failedSectionIds.length > 0) return;
+                    if (result.failedSectionIds.length > 0) {
+                      setSelectedSectionIds(
+                        result.failedSectionIds.map(String),
+                      );
+                      return;
+                    }
                     void navigate({
                       to: ROUTES.ADMIN_NOTICES,
                       search: { sectionId: selectedSectionId },

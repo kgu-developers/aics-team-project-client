@@ -3,12 +3,15 @@ import { Link, Outlet, useRouterState } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { useAuthStore } from '~/features/auth/authStore';
+
 import * as styles from './AdminShell.css';
 
 const menuItems = [
   { label: '홈', to: ROUTES.ADMIN },
   { label: '강좌·분반 관리', to: ROUTES.ADMIN_SECTIONS },
   { label: '수강생·팀 관리', to: ROUTES.ADMIN_STUDENT_TEAM },
+  { label: '마일스톤 관리', to: ROUTES.ADMIN_MILESTONES },
   { label: '공지사항', to: ROUTES.ADMIN_NOTICES },
   { label: '분반별 제출물', to: ROUTES.ADMIN_SUBMISSIONS },
   { label: '회의록', to: ROUTES.ADMIN_MEETINGS },
@@ -31,6 +34,7 @@ function isMenuItemActive(pathname: string, itemPath: string) {
 
 export default function AdminShell() {
   const pathname = useRouterState({ select: state => state.location.pathname });
+  const currentUser = useAuthStore(state => state.currentUser);
 
   return (
     <div className={styles.shell}>
@@ -56,8 +60,8 @@ export default function AdminShell() {
         </nav>
         <Link className={styles.account} to={ROUTES.ADMIN_PROFILE}>
           <div>
-            <strong>어드민 계정</strong>
-            <span>로그아웃 / 권한 변경</span>
+            <strong>{currentUser?.name ?? '어드민 계정'}</strong>
+            <span>{currentUser?.studentNumber ?? '로그인 정보'} · 프로필</span>
           </div>
         </Link>
       </aside>

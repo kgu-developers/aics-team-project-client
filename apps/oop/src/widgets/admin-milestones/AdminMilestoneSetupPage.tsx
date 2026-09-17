@@ -191,6 +191,19 @@ export default function AdminMilestoneSetupPage() {
   const selectedSections = sections.filter(section =>
     sectionIds.includes(section.id),
   );
+  const hasFailedMilestoneCreation = submissionResults?.some(
+    result => result.status === 'create-failed',
+  );
+  const hasRetryablePeerEvaluationForm = Boolean(
+    peerEvaluationFormFailures?.size,
+  );
+  const hasNonRetryableFollowUpFailure = Boolean(
+    submissionResults &&
+    !hasFailedMilestoneCreation &&
+    !hasRetryablePeerEvaluationForm &&
+    (artifactSubmissionFailures?.size ||
+      submissionResults.some(result => result.status === 'publish-failed')),
+  );
 
   useEffect(() => {
     const milestone = milestoneQuery.data;
@@ -259,9 +272,6 @@ export default function AdminMilestoneSetupPage() {
     // The evaluation form has no update endpoint; milestone PUT cannot persist its window.
     if (isEditing && isPeerEvaluation) return;
     setFormError(undefined);
-    setSubmissionResults(undefined);
-    setArtifactSubmissionFailures(undefined);
-    setPeerEvaluationFormFailures(undefined);
 
     if (!title.trim()) {
       setFormError('마일스톤 제목을 입력해주세요.');
@@ -369,9 +379,15 @@ export default function AdminMilestoneSetupPage() {
       return;
     }
 
+    const previousResultsBySection = new Map(
+      (submissionResults ?? []).map(result => [result.sectionId, result]),
+    );
     const sectionsToSubmit: SubmitAdminSectionMilestonesInput['sections'][number][] =
       [];
     for (const section of selectedSections) {
+      const previousResult = previousResultsBySection.get(section.id);
+      if (previousResult && previousResult.status !== 'create-failed') continue;
+
       try {
         sectionsToSubmit.push({
           input: createAdminMilestoneCreateInput({
@@ -399,14 +415,25 @@ export default function AdminMilestoneSetupPage() {
     }
 
     try {
-      const results = await submitMilestonesMutation.mutateAsync({
-        sections: sectionsToSubmit,
+      const newResults =
+        sectionsToSubmit.length === 0
+          ? []
+          : await submitMilestonesMutation.mutateAsync({
+              sections: sectionsToSubmit,
+            });
+      const resultsBySection = new Map(previousResultsBySection);
+      newResults.forEach(result => {
+        resultsBySection.set(result.sectionId, result);
       });
-      const createdMilestones = results.filter(
+      const results = selectedSections.flatMap(section => {
+        const result = resultsBySection.get(section.id);
+        return result ? [result] : [];
+      });
+      const newlyCreatedMilestones = newResults.filter(
         (
           result,
         ): result is Exclude<
-          (typeof results)[number],
+          (typeof newResults)[number],
           { status: 'create-failed' }
         > => result.status !== 'create-failed',
       );
@@ -414,7 +441,7 @@ export default function AdminMilestoneSetupPage() {
         requiredArtifactDrafts.length === 0
           ? []
           : await submitRequiredArtifactsMutation.mutateAsync({
-              submissions: createdMilestones.map(result => ({
+              submissions: newlyCreatedMilestones.map(result => ({
                 artifacts: requiredArtifactDrafts.map(draft => {
                   const { clientId, ...artifact } = draft;
                   void clientId;
@@ -424,9 +451,24 @@ export default function AdminMilestoneSetupPage() {
                 sectionId: result.sectionId,
               })),
             });
+      const peerEvaluationMilestones = isPeerEvaluation
+        ? results.filter(
+            (
+              result,
+            ): result is Exclude<
+              (typeof results)[number],
+              { status: 'create-failed' }
+            > =>
+              result.status !== 'create-failed' &&
+              (newResults.some(
+                newResult => newResult.sectionId === result.sectionId,
+              ) ||
+                peerEvaluationFormFailures?.has(result.sectionId) === true),
+          )
+        : [];
       const peerEvaluationFormResults = isPeerEvaluation
         ? await Promise.all(
-            createdMilestones.map(async result => {
+            peerEvaluationMilestones.map(async result => {
               // Peer evaluation has its own form window. Milestone evaluation
               // fields describe the period after a presentation submission closes.
               const schedule = sectionSchedules[result.sectionId];
@@ -436,8 +478,10 @@ export default function AdminMilestoneSetupPage() {
               const closesAt = schedule
                 ? toAdminMilestoneDateTime(schedule.evaluationClosesAt)
                 : undefined;
+              const milestoneId = result.milestoneId;
 
-              if (!opensAt || !closesAt) return { sectionId: result.sectionId };
+              if (!opensAt || !closesAt || milestoneId === undefined)
+                return { sectionId: result.sectionId };
 
               try {
                 setIsSubmittingPeerEvaluationForms(true);
@@ -445,7 +489,7 @@ export default function AdminMilestoneSetupPage() {
                   input: {
                     anonymous: peerEvaluationAnonymous,
                     closesAt,
-                    milestoneId: result.milestoneId,
+                    milestoneId,
                     opensAt,
                   },
                   sectionId: result.sectionId,
@@ -457,21 +501,25 @@ export default function AdminMilestoneSetupPage() {
             }),
           )
         : [];
+      const nextArtifactSubmissionFailures = new Set(
+        artifactSubmissionFailures,
+      );
+      artifactResults.forEach(result => {
+        if (result.failedCount > 0)
+          nextArtifactSubmissionFailures.add(result.sectionId);
+        else nextArtifactSubmissionFailures.delete(result.sectionId);
+      });
+      const nextPeerEvaluationFormFailures = new Set(
+        peerEvaluationFormFailures,
+      );
+      peerEvaluationFormResults.forEach(result => {
+        if (result.succeeded)
+          nextPeerEvaluationFormFailures.delete(result.sectionId);
+        else nextPeerEvaluationFormFailures.add(result.sectionId);
+      });
       setSubmissionResults(results);
-      setArtifactSubmissionFailures(
-        new Set(
-          artifactResults
-            .filter(result => result.failedCount > 0)
-            .map(result => result.sectionId),
-        ),
-      );
-      setPeerEvaluationFormFailures(
-        new Set(
-          peerEvaluationFormResults
-            .filter(result => !result.succeeded)
-            .map(result => result.sectionId),
-        ),
-      );
+      setArtifactSubmissionFailures(nextArtifactSubmissionFailures);
+      setPeerEvaluationFormFailures(nextPeerEvaluationFormFailures);
 
       const createdWithoutFollowUpFailure =
         results.length > 0 &&
@@ -480,7 +528,9 @@ export default function AdminMilestoneSetupPage() {
             result.status === 'created' || result.status === 'published',
         ) &&
         artifactResults.every(result => result.failedCount === 0) &&
-        peerEvaluationFormResults.every(result => result.succeeded);
+        nextArtifactSubmissionFailures.size === 0 &&
+        peerEvaluationFormResults.every(result => result.succeeded) &&
+        nextPeerEvaluationFormFailures.size === 0;
 
       if (createdWithoutFollowUpFailure) {
         await navigate({
@@ -1045,7 +1095,9 @@ export default function AdminMilestoneSetupPage() {
             <Text className={styles.actionNote} type='supporting'>
               {isEditing
                 ? '내용과 일정을 저장한 뒤, 변경된 경우에만 주차와 공개 상태 변경 요청을 각각 전송합니다.'
-                : '공개를 선택하면 생성 후 공개 상태 변경 요청을 한 번 더 전송합니다.'}
+                : hasFailedMilestoneCreation || hasRetryablePeerEvaluationForm
+                  ? '다시 저장하면 실패한 마일스톤 생성 또는 상호평가 양식만 재시도합니다.'
+                  : '공개를 선택하면 생성 후 공개 상태 변경 요청을 한 번 더 전송합니다.'}
             </Text>
             {formError ? (
               <Text className={styles.formError} role='alert'>
@@ -1098,7 +1150,8 @@ export default function AdminMilestoneSetupPage() {
                 submitMilestonesMutation.isPending ||
                 submitRequiredArtifactsMutation.isPending ||
                 isSubmittingPeerEvaluationForms ||
-                updateMilestoneMutation.isPending
+                updateMilestoneMutation.isPending ||
+                hasNonRetryableFollowUpFailure
               }
               isLoading={
                 submitMilestonesMutation.isPending ||
@@ -1106,7 +1159,11 @@ export default function AdminMilestoneSetupPage() {
                 isSubmittingPeerEvaluationForms ||
                 updateMilestoneMutation.isPending
               }
-              label='저장'
+              label={
+                hasFailedMilestoneCreation || hasRetryablePeerEvaluationForm
+                  ? '실패한 작업 다시 시도'
+                  : '저장'
+              }
               type='submit'
               variant='primary'
             />

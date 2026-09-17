@@ -103,7 +103,7 @@ export default function AdminMilestonesPage() {
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
-        <Heading level={1}>마일스톤 설정</Heading>
+        <Heading level={1}>마일스톤 관리</Heading>
         <Link className={styles.backLink} to={ROUTES.ADMIN}>
           ← 홈으로
         </Link>

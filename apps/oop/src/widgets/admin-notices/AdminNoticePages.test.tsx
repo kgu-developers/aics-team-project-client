@@ -273,7 +273,7 @@ it.each([400, 403, 500])(
     renderPage('/admin/notices/new?sectionId=1');
     const user = await fill();
     await user.click(screen.getByRole('button', { name: '등록' }));
-    await screen.findByRole('alert');
+    await screen.findByText(/게시하지 못했습니다\. 입력 내용을 유지했으니/);
     expect(screen.getByRole('textbox', { name: '제목' })).toHaveValue(
       '새 공지',
     );
@@ -283,6 +283,43 @@ it.each([400, 403, 500])(
     expect(post).toHaveBeenCalledOnce();
   },
 );
+it('부분 게시 실패 뒤에는 실패한 분반에만 다시 게시한다', async () => {
+  useAuthStore.setState({
+    currentUser: {
+      ...demoNoticeProfessor,
+      sections: [
+        ...demoNoticeProfessor.sections,
+        { ...demoNoticeProfessor.sections[0]!, id: '2', code: '실패 분반' },
+      ],
+    },
+  });
+  const postedSectionIds: string[] = [];
+  server.use(
+    http.post(
+      `${API_BASE_URL}/api/v1/sections/:sectionId/announcements`,
+      ({ params }) => {
+        const sectionId = String(params.sectionId);
+        postedSectionIds.push(sectionId);
+        return sectionId === '2'
+          ? new HttpResponse(null, { status: 500 })
+          : new HttpResponse(null, { status: 201 });
+      },
+    ),
+  );
+  renderPage('/admin/notices/new?sectionId=1');
+  const user = await fill();
+  await user.click(screen.getByRole('combobox', { name: '분반' }));
+  await user.click(screen.getByRole('option', { name: /실패 분반/ }));
+  await user.click(screen.getByRole('button', { name: '등록' }));
+  await screen.findByText(
+    /1개 분반에는 게시했지만 1개 분반에는 게시하지 못했습니다\./,
+  );
+  expect(postedSectionIds.sort()).toEqual(['1', '2']);
+
+  await user.click(screen.getByRole('button', { name: '등록' }));
+  await waitFor(() => expect(postedSectionIds).toEqual(['1', '2', '2']));
+});
+
 it('저장 대기 동안 중복 제출을 막는다', async () => {
   let finish!: () => void;
   const pending = new Promise<void>(resolve => {
@@ -303,7 +340,9 @@ it('저장 대기 동안 중복 제출을 막는다', async () => {
   expect(screen.getByRole('textbox', { name: '제목' })).toBeDisabled();
   await user.click(screen.getByRole('button', { name: '등록' }));
   await act(async () => finish());
-  await screen.findByRole('alert');
+  await screen.findByText(
+    /0개 분반에는 게시했지만 1개 분반에는 게시하지 못했습니다\./,
+  );
   expect(post).toHaveBeenCalledOnce();
 });
 it('교수 자격·유효한 제목·본문이 없으면 저장을 허용하지 않는다', async () => {
@@ -427,9 +466,9 @@ it('전체 분반의 부분 실패는 성공 목록과 오류 안내를 함께 �
       name: /이미지 자료 확인 안내 공지사항 보기/,
     }),
   ).toBeInTheDocument();
-  expect(await screen.findByRole('alert')).toHaveTextContent(
-    '일부 분반의 공지사항을 불러오지 못했습니다.',
-  );
+  expect(
+    await screen.findByText('일부 분반의 공지사항을 불러오지 못했습니다.'),
+  ).toBeInTheDocument();
   expect(
     screen.queryByText('등록된 공지사항이 없어요.'),
   ).not.toBeInTheDocument();

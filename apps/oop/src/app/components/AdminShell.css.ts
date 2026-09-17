@@ -9,12 +9,23 @@ export const shell = style({
   '@media': { '(max-width: 900px)': { gridTemplateColumns: '1fr' } },
 });
 export const sidebar = style({
+  alignSelf: 'start',
   background: tokens.color.text.primary,
   color: tokens.color.background.surface,
   display: 'flex',
   flexDirection: 'column',
-  minHeight: '100%',
+  height: '100dvh',
+  overflowY: 'auto',
   padding: '24px 16px 16px',
+  position: 'sticky',
+  top: 0,
+  '@media': {
+    '(max-width: 900px)': {
+      height: 'auto',
+      minHeight: 'auto',
+      position: 'static',
+    },
+  },
 });
 export const brand = style({
   display: 'flex',

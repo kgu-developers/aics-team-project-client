@@ -107,7 +107,7 @@ export function updateAdminCourse(
 
 export function removeAdminCourse(courseId: number) {
   const course = courses.find(candidate => candidate.id === courseId);
-  if (!course || course.status !== 'DRAFT') return false;
+  if (!course) return false;
   courses = courses.filter(candidate => candidate.id !== courseId);
   persistCourseState();
   return true;
