@@ -41,7 +41,13 @@ export default function LiveTeamAssignmentFlow({
     surveyQuery.isError &&
     isAxiosError(surveyQuery.error) &&
     surveyQuery.error.response?.status === 404;
-  const isEditingSurvey = surveyNotFound || editingSectionId === section?.id;
+  // A preferred-peer request (including acceptance) is not a survey submission.
+  // Only the current student's explicit /me submission timestamp completes it.
+  const hasSubmittedSurvey =
+    typeof surveyQuery.data?.submittedAt === 'string' &&
+    surveyQuery.data.submittedAt.trim().length > 0;
+  const isEditingSurvey =
+    !hasSubmittedSurvey || editingSectionId === section?.id;
   const shouldLoadPartnerRequests =
     authenticated &&
     context.status === 'no-team' &&

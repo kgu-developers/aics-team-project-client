@@ -102,7 +102,7 @@ export type PreSurveyResponseDetailResponse = {
   sectionId: number;
   userId: string;
   preferredRoles: unknown;
-  submittedAt: string;
+  submittedAt: string | null;
   userName?: string;
   topicOpinion?: string;
   etcOpinion?: string;

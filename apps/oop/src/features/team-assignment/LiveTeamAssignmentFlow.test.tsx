@@ -88,6 +88,97 @@ async function fillSurvey() {
 }
 
 describe('실 API 모드 설문 흐름', () => {
+  it.each(['not-found', null, ''])(
+    'A가 B를 지목해도 B의 제출 기록이 %s이면 수락 후에도 설문이 필요하다',
+    async submittedAt => {
+      let accepted = false;
+      let submissions = 0;
+      server.use(
+        http.get(
+          `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.MY_SURVEY_RESPONSE}`,
+          () =>
+            submittedAt === 'not-found'
+              ? new HttpResponse(null, { status: 404 })
+              : HttpResponse.json({
+                  id: 21,
+                  sectionId: 3,
+                  userId: demoOtherSectionStudent.studentNumber,
+                  preferredRoles: [],
+                  submittedAt,
+                }),
+        ),
+        http.get(
+          `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.RECEIVED_PREFERRED_PEER_REQUESTS(':sectionId')}`,
+          () =>
+            HttpResponse.json({
+              contents: [
+                {
+                  requesterUserId: '20260001',
+                  requesterName: '신청한 학생 A',
+                  status: accepted ? 'ACCEPTED' : 'PENDING',
+                },
+              ],
+            }),
+        ),
+        http.post(
+          `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.ACCEPT_PREFERRED_PEER_REQUEST(':sectionId', ':requesterUserId')}`,
+          () => {
+            accepted = true;
+            return HttpResponse.json({
+              contents: [
+                {
+                  requesterUserId: '20260001',
+                  requesterName: '신청한 학생 A',
+                  status: 'ACCEPTED',
+                },
+              ],
+            });
+          },
+        ),
+        http.post(
+          `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.SUBMIT_SURVEY_RESPONSE(':sectionId')}`,
+          () => {
+            submissions += 1;
+            return new HttpResponse(null, { status: 500 });
+          },
+        ),
+      );
+      const view = renderFlow();
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole('button', { name: '시작하기' }));
+      expect(
+        screen.getByRole('region', { name: '받은 파트너 신청' }),
+      ).toHaveTextContent('신청한 학생 A');
+      await user.click(screen.getByRole('button', { name: '승인' }));
+      await user.click(
+        within(
+          screen.getByRole('dialog', { name: '파트너 확정 확인' }),
+        ).getByRole('button', { name: '파트너 확정' }),
+      );
+      expect(
+        await screen.findByRole('region', { name: '확정된 파트너' }),
+      ).toBeVisible();
+      expect(
+        screen.getByRole('region', { name: '팀 구성 설문' }),
+      ).toBeVisible();
+      expect(screen.getByRole('button', { name: '다음 설문' })).toBeDisabled();
+      expect(
+        screen.queryByText('설문에 응답해 주셔서 감사합니다.'),
+      ).not.toBeInTheDocument();
+      expect(submissions).toBe(0);
+
+      view.unmount();
+      queryClient.clear();
+      renderFlow();
+      expect(
+        await screen.findByRole('button', { name: '시작하기' }),
+      ).toBeVisible();
+      expect(
+        screen.queryByText('설문에 응답해 주셔서 감사합니다.'),
+      ).not.toBeInTheDocument();
+    },
+  );
+
   it('미제출 조회 후 제출하면 완료 단계로 이동하고 재진입해도 완료 상태를 유지한다', async () => {
     const view = renderFlow();
     const user = await fillSurvey();

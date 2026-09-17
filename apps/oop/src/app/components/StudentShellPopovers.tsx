@@ -389,6 +389,7 @@ const studentNavigationItems = [
   { label: '액션 플랜', to: ROUTES.STUDENT.TEAM_ACTION_PLANS },
   { label: '공지사항', to: ROUTES.STUDENT.NOTICES },
   { label: '회의록', to: ROUTES.STUDENT.MEETINGS },
+  { label: '쪽지함', to: ROUTES.STUDENT.MESSAGES },
 ] as const;
 
 function isStudentNavigationActive(pathname: string, itemPath: string) {

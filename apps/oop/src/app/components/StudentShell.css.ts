@@ -109,8 +109,12 @@ export const shellFooter = style({
   display: 'flex',
   flexDirection: 'column',
   minHeight: 105,
+  paddingBlockEnd: tokens.spacing['10'],
+  paddingBlockStart: tokens.spacing['4'],
   '@media': {
     '(max-width: 767px)': {
+      paddingBlockEnd: tokens.spacing['8'],
+      paddingBlockStart: tokens.spacing['3'],
       paddingInline: tokens.spacing['4'],
     },
   },
@@ -119,9 +123,17 @@ export const shellFooter = style({
 export const shellFooterBrand = style({
   alignItems: 'center',
   display: 'flex',
-  flex: 1,
   justifyContent: 'center',
+  paddingBlock: tokens.spacing['4'],
   width: '100%',
+});
+
+export const shellFooterMeta = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['1'],
+  justifyContent: 'center',
 });
 
 export const shellUniversityLogo = style({

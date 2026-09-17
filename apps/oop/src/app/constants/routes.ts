@@ -24,6 +24,7 @@ export const ROUTES = {
     TEAM_ACTION_PLANS: '/student/team/action-plans',
     MEETINGS: '/student/meetings',
     MEETING_NEW: '/student/meetings/new',
+    MESSAGES: '/student/messages',
     NOTICES: '/student/notices',
     NOTICE_DETAIL: '/student/notices/$noticeId',
     PEER_REVIEW: '/student/peer-review',

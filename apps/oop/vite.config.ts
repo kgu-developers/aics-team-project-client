@@ -3,7 +3,7 @@ import { resolve } from 'path';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin';
 import react from '@vitejs/plugin-react';
-import { loadEnv, type Plugin } from 'vite';
+import { loadEnv, type Plugin, type ProxyOptions } from 'vite';
 import { defineConfig } from 'vitest/config';
 
 const apiProxyPrefixes = [
@@ -20,6 +20,62 @@ const apiProxyPrefixes = [
   '/submissions',
   '/teams',
 ];
+
+export function rewriteDevelopmentSetCookieHeaders(cookies?: string[]) {
+  if (!cookies) return cookies;
+
+  const issuedCsrfToken = cookies.some(cookie =>
+    /^XSRF-TOKEN=[^;]/i.test(cookie),
+  );
+
+  return cookies
+    .filter(cookie => !issuedCsrfToken || !/^XSRF-TOKEN=;/i.test(cookie))
+    .map(cookie => cookie.replace(/;\s*Domain=kgudevelopers\.monster/gi, ''));
+}
+
+const loopbackProxyHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+export function normalizeApiProxyTarget(proxyTarget: string) {
+  let target: URL;
+  try {
+    target = new URL(proxyTarget);
+  } catch {
+    throw new Error('VITE_API_PROXY_TARGET must be a valid URL');
+  }
+
+  if (target.username || target.password) {
+    throw new Error('VITE_API_PROXY_TARGET must not include credentials');
+  }
+  if (
+    target.protocol !== 'https:' &&
+    !(target.protocol === 'http:' && loopbackProxyHosts.has(target.hostname))
+  ) {
+    throw new Error(
+      'VITE_API_PROXY_TARGET must use HTTPS or an HTTP loopback origin',
+    );
+  }
+  if (target.pathname !== '/' || target.search || target.hash) {
+    throw new Error('VITE_API_PROXY_TARGET must be an origin without a path');
+  }
+
+  return target.origin;
+}
+
+function createApiProxyOptions(proxyTarget: string): ProxyOptions {
+  return {
+    target: normalizeApiProxyTarget(proxyTarget),
+    changeOrigin: true,
+    configure(proxy) {
+      proxy.on('proxyRes', proxyResponse => {
+        const cookies = rewriteDevelopmentSetCookieHeaders(
+          proxyResponse.headers['set-cookie'],
+        );
+        if (cookies) proxyResponse.headers['set-cookie'] = cookies;
+      });
+    },
+    secure: true,
+  };
+}
 
 function rejectProductionRouterDevtools(): Plugin {
   return {
@@ -47,16 +103,14 @@ function rejectProductionRouterDevtools(): Plugin {
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, __dirname, 'VITE_');
   const proxyTarget = env.VITE_API_PROXY_TARGET;
-  const apiProxy = Object.fromEntries(
-    apiProxyPrefixes.map(prefix => [
-      prefix,
-      {
-        target: proxyTarget,
-        changeOrigin: true,
-        secure: true,
-      },
-    ]),
-  );
+  const apiProxy = proxyTarget
+    ? Object.fromEntries(
+        apiProxyPrefixes.map(prefix => [
+          prefix,
+          createApiProxyOptions(proxyTarget),
+        ]),
+      )
+    : {};
 
   return {
     plugins: [
