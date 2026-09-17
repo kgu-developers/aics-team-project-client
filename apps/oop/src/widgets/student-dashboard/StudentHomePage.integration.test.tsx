@@ -903,9 +903,7 @@ describe('학생 홈의 개인 상호평가 연결', () => {
                 title: '개인 상호평가',
                 windowState: 'OPEN',
                 windowMessage: '',
-                targets: [
-                  { userId: '202600003', name: '팀원', role: '개발' },
-                ],
+                targets: [{ userId: '202600003', name: '팀원', role: '개발' }],
                 myResponse: null,
               }),
       ),

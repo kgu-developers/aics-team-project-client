@@ -267,9 +267,7 @@ it('부분 생성 실패를 재시도해도 이미 생성한 분반의 마일스
     { ...demoAdmin.sections[0]!, code: 'OOP-02', id: '2', name: 'OOP-02' },
   ]);
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole('combobox', { name: '대상 분반' }),
-  );
+  await user.click(await screen.findByRole('combobox', { name: '대상 분반' }));
   await user.click(screen.getByRole('option', { name: /OOP-02/ }));
   fireEvent.change(screen.getByLabelText('OOP-01 제출 마감일'), {
     target: { value: '2026-10-15' },
@@ -326,9 +324,7 @@ it('blocks peer-evaluation editing before hidden schedule validation or any writ
     screen.queryByLabelText('OOP-01 상호 평가 시작일'),
   ).not.toBeInTheDocument();
   const user = userEvent.setup();
-  await user.click(
-    screen.getByRole('link', { name: '마일스톤 목록으로' }),
-  );
+  await user.click(screen.getByRole('link', { name: '마일스톤 목록으로' }));
   await waitFor(() =>
     expect(screen.getByText('마일스톤 목록')).toBeInTheDocument(),
   );
