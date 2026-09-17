@@ -129,6 +129,10 @@ export const ENDPOINTS = {
       sectionId: string | number,
       teamId: string | number,
     ) => `/api/v1/admin/sections/${sectionId}/teams/${teamId}/mid-report`,
+    SECTION_TEAM_PROPOSAL: (
+      sectionId: string | number,
+      teamId: string | number,
+    ) => `/api/v1/admin/sections/${sectionId}/teams/${teamId}/proposal`,
     SECTION_PRESENTATION_EVALUATION_SETTINGS: (sectionId: string) =>
       `/api/v1/admin/sections/${sectionId}/presentation-evaluation-settings`,
     SECTION_STUDENTS: (sectionId: string) =>

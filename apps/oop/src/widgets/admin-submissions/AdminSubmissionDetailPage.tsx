@@ -18,16 +18,13 @@ import { AdminLinkedMeetingsTable } from '~/features/admin-meeting/components';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import type { AdminSubmissionArtifactView } from '~/features/admin-milestone-review/model';
 import {
+  useAdminProposalFeedbacksQuery,
   useAdminMilestoneSubmissionDetailQuery,
-  useAdminProjectProposalQuery,
   useAdminSubmissionVersionQuery,
   useAdminSubmissionVersionsQuery,
+  useSubmitAdminProposalFeedbackMutation,
 } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
-import {
-  useSubmitTeamMessageMutation,
-  useTeamMessagesQuery,
-} from '~/features/team-message/queries';
 
 import { AdminMidReportDetail } from './AdminMidReportDetail';
 import AdminProposalDocument from './AdminProposalDocument';
@@ -48,30 +45,12 @@ const versionDetailMilestoneIds = new Set([
   'proposal',
 ]);
 
-const feedbackRelatedTypeByMilestoneId = {
-  midterm: 'MID_REPORT',
-  proposal: 'PROPOSAL',
-} as const;
-
 function getMilestoneLabel(milestoneId: string | undefined) {
   if (milestoneId && Object.hasOwn(milestoneLabels, milestoneId)) {
     return milestoneLabels[milestoneId as keyof typeof milestoneLabels];
   }
 
   return '제출물';
-}
-
-function getFeedbackRelatedType(milestoneId: string | undefined) {
-  if (
-    milestoneId &&
-    Object.hasOwn(feedbackRelatedTypeByMilestoneId, milestoneId)
-  ) {
-    return feedbackRelatedTypeByMilestoneId[
-      milestoneId as keyof typeof feedbackRelatedTypeByMilestoneId
-    ];
-  }
-
-  return undefined;
 }
 
 function normalizeSearchId(value: string | number | undefined) {
@@ -119,6 +98,7 @@ export default function AdminSubmissionDetailPage() {
   const [selectedVersion, setSelectedVersion] = useState<number>();
   const [relatedMeetingsPage, setRelatedMeetingsPage] = useState(0);
   const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [proposalFeedbackPage, setProposalFeedbackPage] = useState(0);
   const currentUser = useAuthStore(state => state.currentUser);
   const { submissionId } = useParams({
     from: '/admin/submissions/$submissionId',
@@ -160,24 +140,20 @@ export default function AdminSubmissionDetailPage() {
     canRequestDetail && submissionQuery.isSuccess && !isProjectProposal,
   );
   const versions = versionsQuery.data ?? [];
-  const proposalQuery = useAdminProjectProposalQuery(
-    normalizedSectionId ?? '',
-    canRequestDetail && isProposal ? detail?.teamId : undefined,
+  const proposalFeedbackSectionId = isProposal
+    ? (normalizedApiSectionId ?? normalizedSectionId)
+    : undefined;
+  const proposalFeedbackTeamId =
+    isProposal && detail?.teamId !== undefined
+      ? String(detail.teamId)
+      : undefined;
+  const proposalFeedbacksQuery = useAdminProposalFeedbacksQuery(
+    proposalFeedbackSectionId,
+    proposalFeedbackTeamId,
+    proposalFeedbackPage,
   );
-  // Proposal feedback belongs to the project, not the generic submission row.
-  const feedbackRelatedId = isProposal ? proposalQuery.data?.id : undefined;
-  const feedbackRelatedType = getFeedbackRelatedType(search.milestoneId);
-  const feedbackMessagesQuery = useTeamMessagesQuery(
-    feedbackRelatedType ? detail?.teamId : undefined,
-    feedbackRelatedType,
-  );
-  const submitFeedbackMutation = useSubmitTeamMessageMutation(
-    feedbackRelatedType ? detail?.teamId : undefined,
-  );
-  const feedbackMessages = (feedbackMessagesQuery.data ?? []).filter(
-    message =>
-      feedbackRelatedId != null && message.relatedId === feedbackRelatedId,
-  );
+  const submitFeedbackMutation = useSubmitAdminProposalFeedbackMutation();
+  const proposalFeedbackPageable = proposalFeedbacksQuery.data?.pageable;
   const relatedMeetingsQuery = useAdminMeetingRecordListQuery(
     accessibleSectionIds,
     {
@@ -200,6 +176,10 @@ export default function AdminSubmissionDetailPage() {
     detail?.teamId,
     search.sectionId,
   ]);
+
+  useEffect(() => {
+    setProposalFeedbackPage(0);
+  }, [proposalFeedbackSectionId, proposalFeedbackTeamId]);
 
   useEffect(() => {
     const isSelectedVersionAvailable = versions.some(
@@ -453,46 +433,65 @@ export default function AdminSubmissionDetailPage() {
             </Card>
           )}
 
-          {feedbackRelatedType ? (
+          {isProposal ? (
             <section className={styles.relatedMeetings}>
               <section className={styles.section}>
                 <Heading level={3}>{milestoneLabel} 피드백</Heading>
-                {feedbackMessagesQuery.isPending ? (
+                {proposalFeedbacksQuery.isPending ? (
                   <Text aria-live='polite' role='status'>
                     피드백을 불러오는 중입니다.
                   </Text>
-                ) : feedbackMessagesQuery.isError ? (
+                ) : proposalFeedbacksQuery.isError ? (
                   <EmptyState
                     description='잠시 후 다시 시도해 주세요.'
                     title='피드백을 불러오지 못했습니다.'
                   />
-                ) : feedbackMessages.length === 0 ? (
+                ) : proposalFeedbacksQuery.data?.contents.length === 0 ? (
                   <Text className={styles.sectionDescription}>
-                    이 제출물에 연결된 피드백이 없습니다.
+                    등록된 피드백이 없습니다.
                   </Text>
                 ) : (
                   <div className={styles.feedbackList}>
-                    {feedbackMessages.map(message => (
+                    {proposalFeedbacksQuery.data?.contents.map(feedback => (
                       <article
                         className={styles.feedbackMessage}
-                        key={message.id}
+                        key={feedback.messageId}
                       >
                         <Text className={styles.fieldLabel}>
-                          {message.senderName ?? message.senderId} ·{' '}
-                          {formatSeoulDateTime(message.createdAt)}
+                          {feedback.senderName ?? feedback.senderId} ·{' '}
+                          {feedback.createdAt ?? '-'}
                         </Text>
                         <Text className={styles.fieldValue}>
-                          {message.message}
+                          {feedback.message}
                         </Text>
                       </article>
                     ))}
                   </div>
                 )}
-                {proposalQuery.isError ||
-                (proposalQuery.isSuccess && !proposalQuery.data) ? (
-                  <Text role='alert'>
-                    프로젝트 정보를 확인할 수 없어 피드백을 보낼 수 없습니다.
-                  </Text>
+                {proposalFeedbackPageable &&
+                proposalFeedbackPageable.totalPages > 1 ? (
+                  <HStack gap={2} justify='end'>
+                    <Button
+                      isDisabled={proposalFeedbackPageable.page === 0}
+                      label='이전 페이지'
+                      onClick={() =>
+                        setProposalFeedbackPage(page => Math.max(0, page - 1))
+                      }
+                      type='button'
+                      variant='secondary'
+                    />
+                    <Text aria-live='polite'>
+                      {proposalFeedbackPageable.page + 1} /{' '}
+                      {proposalFeedbackPageable.totalPages}
+                    </Text>
+                    <Button
+                      isDisabled={proposalFeedbackPageable.isEnd}
+                      label='다음 페이지'
+                      onClick={() => setProposalFeedbackPage(page => page + 1)}
+                      type='button'
+                      variant='secondary'
+                    />
+                  </HStack>
                 ) : null}
                 {submitFeedbackMutation.isError ? (
                   <Text role='alert'>
@@ -512,21 +511,31 @@ export default function AdminSubmissionDetailPage() {
                     <Button
                       isDisabled={
                         !feedbackMessage.trim() ||
-                        !feedbackRelatedId ||
+                        !proposalFeedbackSectionId ||
+                        !proposalFeedbackTeamId ||
                         submitFeedbackMutation.isPending
                       }
                       label='피드백 보내기'
                       onClick={() => {
-                        if (!feedbackMessage.trim() || !feedbackRelatedId)
+                        if (
+                          !feedbackMessage.trim() ||
+                          !proposalFeedbackSectionId ||
+                          !proposalFeedbackTeamId
+                        )
                           return;
 
                         submitFeedbackMutation.mutate(
                           {
-                            message: feedbackMessage,
-                            relatedId: feedbackRelatedId,
-                            relatedType: feedbackRelatedType,
+                            input: { message: feedbackMessage.trim() },
+                            sectionId: proposalFeedbackSectionId,
+                            teamId: proposalFeedbackTeamId,
                           },
-                          { onSuccess: () => setFeedbackMessage('') },
+                          {
+                            onSuccess: () => {
+                              setFeedbackMessage('');
+                              setProposalFeedbackPage(0);
+                            },
+                          },
                         );
                       }}
                     />

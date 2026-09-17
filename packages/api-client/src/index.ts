@@ -18,6 +18,13 @@ export {
 export { updateUserPassword, type UpdateUserPasswordInput } from './profile';
 export { API_BASE_URL, apiClient } from './client';
 export {
+  fetchAdminProposalFeedbacks,
+  submitAdminProposalFeedback,
+  type AdminProposalFeedbackDto,
+  type AdminProposalFeedbacksResponse,
+  type SubmitAdminProposalFeedbackInput,
+} from './adminProposal';
+export {
   fetchAdminMidReport,
   fetchAdminMidReportFeedbacks,
   submitAdminMidReportFeedback,
