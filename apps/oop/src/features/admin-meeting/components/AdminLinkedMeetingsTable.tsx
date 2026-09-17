@@ -1,5 +1,11 @@
-import { Card, proportional, Table } from '@aics/design-system';
-import { Link } from '@tanstack/react-router';
+import {
+  Card,
+  proportional,
+  Table,
+  type TableProps,
+} from '@aics/design-system';
+import { useNavigate } from '@tanstack/react-router';
+import { useMemo } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -13,6 +19,10 @@ type LinkedMeeting = {
   title: string;
 };
 
+type LinkedMeetingTablePlugin = NonNullable<
+  TableProps<LinkedMeeting>['plugins']
+>[string];
+
 export function AdminLinkedMeetingsTable({
   authorLabel = '작성자',
   records,
@@ -20,6 +30,47 @@ export function AdminLinkedMeetingsTable({
   authorLabel?: string;
   records: LinkedMeeting[];
 }) {
+  const navigate = useNavigate();
+  const rowInteractionPlugin = useMemo<LinkedMeetingTablePlugin>(
+    () => ({
+      transformBodyRow: (rowRenderProps, record) => {
+        const openMeeting = () =>
+          void navigate({
+            params: { meetingId: String(record.id) },
+            to: ROUTES.ADMIN_MEETING_DETAIL,
+          });
+        const onClick = rowRenderProps.htmlProps.onClick;
+        const onKeyDown = rowRenderProps.htmlProps.onKeyDown;
+
+        return {
+          ...rowRenderProps,
+          htmlProps: {
+            ...rowRenderProps.htmlProps,
+            'aria-label': `${record.title} 회의록 보기`,
+            style: {
+              ...rowRenderProps.htmlProps.style,
+              cursor: 'pointer',
+            },
+            onClick: event => {
+              onClick?.(event);
+              if (event.defaultPrevented) return;
+              openMeeting();
+            },
+            onKeyDown: event => {
+              onKeyDown?.(event);
+              if (event.defaultPrevented) return;
+              if (event.key !== 'Enter' && event.key !== ' ') return;
+              event.preventDefault();
+              openMeeting();
+            },
+            tabIndex: 0,
+          },
+        };
+      },
+    }),
+    [navigate],
+  );
+
   return (
     <Card>
       <Table
@@ -28,14 +79,6 @@ export function AdminLinkedMeetingsTable({
             align: 'start',
             header: '회의 제목',
             key: 'title',
-            renderCell: record => (
-              <Link
-                params={{ meetingId: String(record.id) }}
-                to={ROUTES.ADMIN_MEETING_DETAIL}
-              >
-                {record.title}
-              </Link>
-            ),
             width: proportional(1.6, { minWidth: 200 }),
           },
           {
@@ -62,6 +105,9 @@ export function AdminLinkedMeetingsTable({
         ]}
         data={records}
         dividers='rows'
+        hasHover
+        idKey='id'
+        plugins={{ rowInteraction: rowInteractionPlugin }}
         verticalAlign='middle'
       />
     </Card>

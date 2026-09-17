@@ -36,14 +36,14 @@ export const summary = style({
 export const previewTableWrap = style({
   border: `1px solid ${tokens.color.border.base}`,
   borderRadius: tokens.radius.element,
-  maxHeight: 240,
+  maxHeight: 'min(50dvh, 420px)',
   overflow: 'auto',
 });
 
 export const previewTable = style({
   borderCollapse: 'collapse',
   fontSize: 13,
-  minWidth: 640,
+  minWidth: 900,
   width: '100%',
 });
 

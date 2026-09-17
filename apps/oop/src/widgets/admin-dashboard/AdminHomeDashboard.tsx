@@ -296,7 +296,7 @@ export default function AdminHomeDashboard() {
         <div className={styles.sectionHeader}>
           <Heading level={2}>분반별 진행 일정 · 제출 마감일</Heading>
           <Button
-            label='마일스톤 설정'
+            label='마일스톤 관리'
             onClick={() => navigate({ to: ROUTES.ADMIN_MILESTONES })}
             variant='primary'
           />

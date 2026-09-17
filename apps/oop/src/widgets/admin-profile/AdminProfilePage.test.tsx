@@ -468,6 +468,15 @@ describe('AdminProfilePage', () => {
       screen.getByRole('columnheader', { name: '희망 역할' }),
     ).toBeInTheDocument();
     expect(
+      screen.getByRole('columnheader', { name: '선호 짝' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '짝 요청 상태' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '상호 선택' }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole('columnheader', { name: '주제 의견' }),
     ).toBeInTheDocument();
     expect(
@@ -479,6 +488,9 @@ describe('AdminProfilePage', () => {
     expect(screen.getByText('20260001')).toBeInTheDocument();
     expect(screen.getByText('김객체')).toBeInTheDocument();
     expect(screen.getByText('이프로')).toBeInTheDocument();
+    expect(screen.getByText('이프로 (20260003)')).toBeInTheDocument();
+    expect(screen.getByText('수락됨')).toBeInTheDocument();
+    expect(screen.getByText('예')).toBeInTheDocument();
   });
 
   it('선택한 분반의 사전조사 응답 Excel 파일을 다운로드한다', async () => {
@@ -560,7 +572,9 @@ describe('AdminProfilePage', () => {
     renderPage();
 
     expect(await screen.findByText('런타임 가드 테스트')).toBeInTheDocument();
-    expect(screen.getByText('-')).toBeInTheDocument();
+    const responseRow = screen.getByText('런타임 가드 테스트').closest('tr');
+    expect(responseRow).not.toBeNull();
+    expect(within(responseRow!).getAllByText('-')).toHaveLength(4);
   });
 
   it('사전 정보 조회가 실패하면 오류를 표시한다', async () => {

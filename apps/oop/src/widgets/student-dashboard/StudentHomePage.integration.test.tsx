@@ -851,9 +851,12 @@ describe('학생 홈의 개인 상호평가 연결', () => {
     render(<StudentHomePage />, { wrapper: Wrapper });
     const user = userEvent.setup();
     const button = await screen.findByRole('button', { name: '상호평가 작성' });
-    expect(screen.getByText('미작성')).toBeInTheDocument();
-    expect(requests).not.toContain(
-      ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION('2313'),
+    const card = button.closest('#student-milestone-2313')! as HTMLElement;
+    expect(within(card).getByText('미작성')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(requests).not.toContain(
+        ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION('2313'),
+      ),
     );
     await user.click(button);
     await waitFor(() =>
@@ -887,10 +890,22 @@ describe('학생 홈의 개인 상호평가 연결', () => {
   );
 
   it('상호평가 조회가 실패해도 다른 마일스톤은 표시하고 실패한 상태를 재조회한다', async () => {
+    let shouldFailPeerTargets = true;
     servePeerEvaluation();
     server.use(
-      http.get(`${API_BASE_URL}${ENDPOINTS.EVALUATION.PEER_TARGETS('1')}`, () =>
-        HttpResponse.json({ code: 'FORBIDDEN' }, { status: 403 }),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.PEER_TARGETS('1')}`,
+        () =>
+          shouldFailPeerTargets
+            ? HttpResponse.json({ code: 'FORBIDDEN' }, { status: 403 })
+            : HttpResponse.json({
+                formId: 1,
+                title: '개인 상호평가',
+                windowState: 'OPEN',
+                windowMessage: '',
+                targets: [{ userId: '202600003', name: '팀원', role: '개발' }],
+                myResponse: null,
+              }),
       ),
     );
     render(<StudentHomePage />, { wrapper: Wrapper });
@@ -899,7 +914,7 @@ describe('학생 홈의 개인 상호평가 연결', () => {
     });
     expect(screen.getByText('조회 실패')).toBeInTheDocument();
     expect(screen.getByText(list[0]!.title)).toBeInTheDocument();
-    servePeerEvaluation();
+    shouldFailPeerTargets = false;
     await userEvent.setup().click(retry);
     expect(
       await screen.findByRole('button', { name: '상호평가 작성' }),

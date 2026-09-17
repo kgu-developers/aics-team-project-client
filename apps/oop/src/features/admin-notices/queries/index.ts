@@ -4,4 +4,5 @@ export { useAdminNoticeQuery } from './useAdminNoticeQuery';
 export { useAdminNoticesQuery } from './useAdminNoticesQuery';
 export { useAdminAccessibleNoticesQuery } from './useAdminAccessibleNoticesQuery';
 export { useSubmitSectionAnnouncementMutation } from './useSubmitSectionAnnouncementMutation';
+export { useSubmitSectionAnnouncementsMutation } from './useSubmitSectionAnnouncementsMutation';
 export { useUpdateSectionAnnouncementMutation } from './useUpdateSectionAnnouncementMutation';

@@ -105,6 +105,39 @@ const records: AdminMeetingFixture[] = [
   {
     actions: [],
     apiSectionId: 1,
+    apiTeamId: 1,
+    content: {
+      content: [
+        {
+          content: [
+            {
+              text: '구현 진행 상황과 남은 작업을 점검했다.',
+              type: 'text',
+            },
+          ],
+          type: 'paragraph',
+        },
+      ],
+      type: 'doc',
+    },
+    createdAt: '2026-10-10T19:00:00+09:00',
+    createdBy: getTeamMember('team-1151-1', 'student-1151-1'),
+    heldAt: '2026-10-10T18:00:00+09:00',
+    id: 'admin-meeting-3',
+    location: '공학관 301호',
+    milestoneIds: [102],
+    phase: 'MID_CHECK',
+    participants: getTeamParticipants('team-1151-1'),
+    sectionId,
+    sectionLabel,
+    teamId: 'team-1151-1',
+    teamLabel: '1팀',
+    title: '중간 점검 회의',
+    updatedAt: '2026-10-10T19:00:00+09:00',
+  },
+  {
+    actions: [],
+    apiSectionId: 1,
     apiTeamId: 2,
     content: {
       content: [

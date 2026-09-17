@@ -1065,8 +1065,7 @@ function CourseDeleteDialog({
         </Card>
         {removeMutation.isError ? (
           <Text className={styles.error} role='alert'>
-            강좌를 삭제하지 못했습니다. 연결된 분반이 있다면 강좌 상태를
-            보관됨으로 변경해 주세요.
+            강좌를 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.
           </Text>
         ) : null}
         <HStack className={styles.dialogActions} gap={2} justify='end'>
@@ -1226,22 +1225,12 @@ export default function AdminCourseManagement({
                           variant='secondary'
                         />
                         <Button
-                          aria-describedby={`course-delete-hint-${course.id}`}
-                          isDisabled={course.status !== 'DRAFT'}
                           label='삭제'
                           onClick={() => setCourseToDelete(course)}
                           size='sm'
                           variant='ghost'
                         />
                       </div>
-                      <p
-                        className={styles.deleteHint}
-                        id={`course-delete-hint-${course.id}`}
-                      >
-                        {course.status === 'DRAFT'
-                          ? '임시 저장 강좌만 삭제할 수 있습니다.'
-                          : '운영을 종료할 때는 상태를 보관됨으로 변경해 주세요.'}
-                      </p>
                     </td>
                   </tr>
                 ))}

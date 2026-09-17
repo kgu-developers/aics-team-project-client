@@ -66,15 +66,15 @@ function renderPage(initialEntry = '/admin/meetings/') {
 }
 
 describe('AdminMeetingsPage', () => {
-  it('관리자 회의록 목록에 제목을 표시한다', async () => {
+  it('관리자 회의록 목록 행은 전체를 눌러 상세를 볼 수 있게 표시한다', async () => {
     renderPage();
 
     expect(
       await screen.findByRole('columnheader', { name: '회의 제목' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: '발표 자료 구성 논의' }),
-    ).toBeInTheDocument();
+      screen.getByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ }),
+    ).toHaveAttribute('tabindex', '0');
     expect(
       screen.queryByRole('columnheader', { name: '회의 내용' }),
     ).not.toBeInTheDocument();
@@ -97,11 +97,11 @@ describe('AdminMeetingsPage', () => {
       await screen.findByRole('option', { name: '3주차 · 제안서' }),
     );
     expect(
-      await screen.findByRole('link', { name: '프로젝트 킥오프' }),
+      await screen.findByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
     ).toBeInTheDocument();
     await waitFor(() =>
       expect(
-        screen.queryByRole('link', { name: '발표 자료 구성 논의' }),
+        screen.queryByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ }),
       ).not.toBeInTheDocument(),
     );
   });
@@ -110,10 +110,10 @@ describe('AdminMeetingsPage', () => {
     renderPage('/admin/meetings/?sectionId=oop-2026-2-01&teamId=1');
 
     expect(
-      await screen.findByRole('link', { name: '프로젝트 킥오프' }),
+      await screen.findByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('link', { name: '발표 자료 구성 논의' }),
+      screen.queryByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ }),
     ).not.toBeInTheDocument();
   });
 });

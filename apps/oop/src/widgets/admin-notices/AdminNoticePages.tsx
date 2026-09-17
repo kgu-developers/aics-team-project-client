@@ -4,6 +4,7 @@ import {
   Card,
   EmptyState,
   Heading,
+  MultiSelector,
   Selector,
   SelectorOption,
   Text,
@@ -16,7 +17,7 @@ import {
   useParams,
   useSearch,
 } from '@tanstack/react-router';
-import { useState } from 'react';
+import { type KeyboardEvent, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -31,7 +32,7 @@ import {
   useAdminNoticeQuery,
   useAdminAllNoticesQuery,
   useAdminNoticesQuery,
-  useSubmitSectionAnnouncementMutation,
+  useSubmitSectionAnnouncementsMutation,
   useUpdateSectionAnnouncementMutation,
 } from '~/features/admin-notices/queries';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -42,6 +43,15 @@ function useNoticeScope() {
   const { sectionId } = useSearch({ from: '/admin/notices' });
   const user = useAuthStore(state => state.currentUser);
   return { sectionId, user, section: noticeSection(user, sectionId) };
+}
+
+function handleRowNavigation(
+  event: KeyboardEvent<HTMLTableRowElement>,
+  open: () => void,
+) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  open();
 }
 
 function BackToList() {
@@ -155,7 +165,30 @@ export function AdminNoticeListPage() {
           <tbody>
             {notices.length ? (
               notices.map(notice => (
-                <tr key={notice.id}>
+                <tr
+                  aria-label={`${notice.title} 공지사항 보기`}
+                  className={styles.clickableRow}
+                  key={notice.id}
+                  onClick={() =>
+                    void navigate({
+                      params: { noticeId: String(notice.id) },
+                      search: { sectionId: notice.sectionId },
+                      to: '/admin/notices/$noticeId',
+                    })
+                  }
+                  onKeyDown={event =>
+                    handleRowNavigation(
+                      event,
+                      () =>
+                        void navigate({
+                          params: { noticeId: String(notice.id) },
+                          search: { sectionId: notice.sectionId },
+                          to: '/admin/notices/$noticeId',
+                        }),
+                    )
+                  }
+                  tabIndex={0}
+                >
                   <td>
                     {formatSeoulDateTime(notice.publishedAt).slice(0, 10)}
                   </td>
@@ -164,16 +197,7 @@ export function AdminNoticeListPage() {
                       section => noticeId(section.id) === notice.sectionId,
                     )?.code ?? '알 수 없는 분반'}
                   </td>
-                  <td>
-                    <Link
-                      className={styles.titleLink}
-                      to='/admin/notices/$noticeId'
-                      params={{ noticeId: String(notice.id) }}
-                      search={{ sectionId: notice.sectionId }}
-                    >
-                      {notice.title}
-                    </Link>
-                  </td>
+                  <td>{notice.title}</td>
                 </tr>
               ))
             ) : !query.isPending && !query.isError && hasSections ? (
@@ -408,9 +432,18 @@ export function AdminNoticeNewPage() {
   const { sectionId, user } = useNoticeScope();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const section = noticeSection(user, sectionId);
-  const mutation = useSubmitSectionAnnouncementMutation();
-  const canSave = canPublishNotice(user, section) && validText(title, content);
+  const [selectedSectionIds, setSelectedSectionIds] = useState<string[]>(
+    sectionId === undefined ? [] : [String(sectionId)],
+  );
+  const mutation = useSubmitSectionAnnouncementsMutation();
+  const publishableSections = (user?.sections ?? []).filter(section =>
+    canPublishNotice(user, section),
+  );
+  const selectedSections = publishableSections.filter(section =>
+    selectedSectionIds.includes(String(section.id)),
+  );
+  const canSave = selectedSections.length > 0 && validText(title, content);
+  const selectedSectionId = noticeId(selectedSectionIds[0]);
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
@@ -419,18 +452,24 @@ export function AdminNoticeNewPage() {
       </div>
       <Card className={styles.formCard}>
         <Heading level={2}>공지사항 작성</Heading>
-        <SectionSelect
-          value={sectionId}
-          onChange={sectionId =>
-            void navigate({
-              to: ROUTES.ADMIN_NOTICE_NEW,
-              search: { sectionId },
-            })
-          }
-          isDisabled={mutation.isPending}
+        <MultiSelector
+          hasClear
+          hasSelectAll
+          isDisabled={mutation.isPending || publishableSections.length === 0}
+          label='분반'
+          onChange={setSelectedSectionIds}
+          options={publishableSections.map(section => ({
+            label: `${section.code} · ${section.name}`,
+            value: String(section.id),
+          }))}
+          placeholder='게시할 분반을 선택해 주세요.'
+          selectAllLabel='전체 선택'
+          triggerDisplay='labels'
+          value={selectedSectionIds}
+          width='100%'
         />
-        <Text color='secondary'>선택한 분반에 바로 게시됩니다.</Text>
-        {!canPublishNotice(user, section) ? (
+        <Text color='secondary'>선택한 모든 분반에 바로 게시됩니다.</Text>
+        {publishableSections.length === 0 ? (
           <Text role='status'>담당 교수의 활성 분반을 선택해 주세요.</Text>
         ) : null}
         <div className={styles.fields}>
@@ -448,13 +487,24 @@ export function AdminNoticeNewPage() {
             확인해 주세요.
           </Text>
         ) : null}
+        {mutation.data?.failedSectionIds.length ? (
+          <Text role='alert'>
+            {mutation.data.succeededSectionIds.length}개 분반에는 게시했지만{' '}
+            {mutation.data.failedSectionIds.length}개 분반에는 게시하지
+            못했습니다. 입력 내용을 유지했으니 실패한 분반을 다시 선택해 시도해
+            주세요.
+          </Text>
+        ) : null}
         <div className={styles.actions}>
           <Button
             label='취소'
             variant='secondary'
             isDisabled={mutation.isPending}
             onClick={() =>
-              void navigate({ to: ROUTES.ADMIN_NOTICES, search: { sectionId } })
+              void navigate({
+                to: ROUTES.ADMIN_NOTICES,
+                search: { sectionId: selectedSectionId },
+              })
             }
           />
           <Button
@@ -462,15 +512,27 @@ export function AdminNoticeNewPage() {
             isDisabled={!canSave || mutation.isPending}
             isLoading={mutation.isPending}
             onClick={() => {
-              if (sectionId === undefined) return;
+              const sectionIds: number[] = [];
+              for (const section of selectedSections) {
+                const id = noticeId(section.id);
+                if (id === undefined) return;
+                sectionIds.push(id);
+              }
               mutation.mutate(
-                { sectionId, title: title.trim(), content },
+                { sectionIds, title: title.trim(), content },
                 {
-                  onSuccess: () =>
+                  onSuccess: result => {
+                    if (result.failedSectionIds.length > 0) {
+                      setSelectedSectionIds(
+                        result.failedSectionIds.map(String),
+                      );
+                      return;
+                    }
                     void navigate({
                       to: ROUTES.ADMIN_NOTICES,
-                      search: { sectionId },
-                    }),
+                      search: { sectionId: selectedSectionId },
+                    });
+                  },
                 },
               );
             }}

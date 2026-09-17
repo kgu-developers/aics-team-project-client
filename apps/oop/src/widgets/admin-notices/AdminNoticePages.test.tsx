@@ -137,13 +137,11 @@ async function fill() {
 it('목록과 상세가 오프셋 없는 게시일을 호스트 TZ와 무관하게 표시한다', async () => {
   const user = userEvent.setup();
   renderPage('/admin/notices?sectionId=1');
-  const link = await screen.findByRole('link', {
-    name: '이미지 자료 확인 안내',
+  const row = await screen.findByRole('row', {
+    name: /이미지 자료 확인 안내 공지사항 보기/,
   });
-  expect(
-    within(link.closest('tr')!).getByText('2026.08.27'),
-  ).toBeInTheDocument();
-  await user.click(link);
+  expect(within(row).getByText('2026.08.27')).toBeInTheDocument();
+  await user.click(row);
   expect(
     await screen.findByText('게시일시 : 2026.08.27 15:00'),
   ).toBeInTheDocument();
@@ -162,9 +160,9 @@ it('선택한 한 분반에 제목·본문만 게시하고 상세·목록 재조
   const user = await fill();
   expect(screen.queryByLabelText('첨부 파일')).not.toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: '등록' }));
-  const link = await screen.findByRole('link', { name: '새 공지' });
+  const row = await screen.findByRole('row', { name: /새 공지 공지사항 보기/ });
   expect(router.state.location.href).toBe('/admin/notices?sectionId=1');
-  await user.click(link);
+  await user.click(row);
   await screen.findByRole('heading', { level: 2, name: '새 공지' });
   expect(
     within(screen.getByRole('region', { name: '공지 내용' })).getByText(
@@ -176,10 +174,9 @@ it('선택한 한 분반에 제목·본문만 게시하고 상세·목록 재조
   await act(() => client.refetchQueries());
   expect(screen.getByText('첫 줄')).toBeInTheDocument();
   await user.click(screen.getByRole('link', { name: '← 공지사항 목록으로' }));
-  expect(await screen.findByRole('link', { name: '새 공지' })).toHaveAttribute(
-    'href',
-    '/admin/notices/13?sectionId=1',
-  );
+  expect(
+    await screen.findByRole('row', { name: /새 공지 공지사항 보기/ }),
+  ).toHaveAttribute('tabindex', '0');
   server.events.removeAllListeners();
 });
 it('편집은 분반을 고정하고 변경된 필드만 PATCH하여 게시일과 ID를 유지한다', async () => {
@@ -276,7 +273,7 @@ it.each([400, 403, 500])(
     renderPage('/admin/notices/new?sectionId=1');
     const user = await fill();
     await user.click(screen.getByRole('button', { name: '등록' }));
-    await screen.findByRole('alert');
+    await screen.findByText(/게시하지 못했습니다\. 입력 내용을 유지했으니/);
     expect(screen.getByRole('textbox', { name: '제목' })).toHaveValue(
       '새 공지',
     );
@@ -286,6 +283,43 @@ it.each([400, 403, 500])(
     expect(post).toHaveBeenCalledOnce();
   },
 );
+it('부분 게시 실패 뒤에는 실패한 분반에만 다시 게시한다', async () => {
+  useAuthStore.setState({
+    currentUser: {
+      ...demoNoticeProfessor,
+      sections: [
+        ...demoNoticeProfessor.sections,
+        { ...demoNoticeProfessor.sections[0]!, id: '2', code: '실패 분반' },
+      ],
+    },
+  });
+  const postedSectionIds: string[] = [];
+  server.use(
+    http.post(
+      `${API_BASE_URL}/api/v1/sections/:sectionId/announcements`,
+      ({ params }) => {
+        const sectionId = String(params.sectionId);
+        postedSectionIds.push(sectionId);
+        return sectionId === '2'
+          ? new HttpResponse(null, { status: 500 })
+          : new HttpResponse(null, { status: 201 });
+      },
+    ),
+  );
+  renderPage('/admin/notices/new?sectionId=1');
+  const user = await fill();
+  await user.click(screen.getByRole('combobox', { name: '분반' }));
+  await user.click(screen.getByRole('option', { name: /실패 분반/ }));
+  await user.click(screen.getByRole('button', { name: '등록' }));
+  await screen.findByText(
+    /1개 분반에는 게시했지만 1개 분반에는 게시하지 못했습니다\./,
+  );
+  expect(postedSectionIds.sort()).toEqual(['1', '2']);
+
+  await user.click(screen.getByRole('button', { name: '등록' }));
+  await waitFor(() => expect(postedSectionIds).toEqual(['1', '2', '2']));
+});
+
 it('저장 대기 동안 중복 제출을 막는다', async () => {
   let finish!: () => void;
   const pending = new Promise<void>(resolve => {
@@ -306,7 +340,9 @@ it('저장 대기 동안 중복 제출을 막는다', async () => {
   expect(screen.getByRole('textbox', { name: '제목' })).toBeDisabled();
   await user.click(screen.getByRole('button', { name: '등록' }));
   await act(async () => finish());
-  await screen.findByRole('alert');
+  await screen.findByText(
+    /0개 분반에는 게시했지만 1개 분반에는 게시하지 못했습니다\./,
+  );
   expect(post).toHaveBeenCalledOnce();
 });
 it('교수 자격·유효한 제목·본문이 없으면 저장을 허용하지 않는다', async () => {
@@ -389,11 +425,11 @@ it('전체 분반 목록은 기본값이며 비활성 분반도 목록에서 조
   const { router } = renderPage('/admin/notices');
   const user = userEvent.setup();
   expect(
-    await screen.findByRole('link', { name: '분반 1 공지' }),
-  ).toHaveAttribute('href', '/admin/notices/1?sectionId=1');
+    await screen.findByRole('row', { name: /분반 1 공지 공지사항 보기/ }),
+  ).toHaveAttribute('tabindex', '0');
   expect(
-    await screen.findByRole('link', { name: '분반 2 공지' }),
-  ).toHaveAttribute('href', '/admin/notices/2?sectionId=2');
+    await screen.findByRole('row', { name: /분반 2 공지 공지사항 보기/ }),
+  ).toHaveAttribute('tabindex', '0');
   expect(get.mock.calls.map(([id]) => id).sort()).toEqual(['1', '2']);
   await user.click(screen.getByRole('combobox', { name: '분반' }));
   await user.click(screen.getByRole('option', { name: '보관 분반' }));
@@ -401,9 +437,11 @@ it('전체 분반 목록은 기본값이며 비활성 분반도 목록에서 조
     expect(router.state.location.href).toBe('/admin/notices?sectionId=2'),
   );
   expect(
-    screen.queryByRole('link', { name: '분반 1 공지' }),
+    screen.queryByRole('row', { name: /분반 1 공지 공지사항 보기/ }),
   ).not.toBeInTheDocument();
-  expect(screen.getByRole('link', { name: '분반 2 공지' })).toBeInTheDocument();
+  expect(
+    screen.getByRole('row', { name: /분반 2 공지 공지사항 보기/ }),
+  ).toBeInTheDocument();
 });
 
 it('전체 분반의 부분 실패는 성공 목록과 오류 안내를 함께 표시한다', async () => {
@@ -424,11 +462,13 @@ it('전체 분반의 부분 실패는 성공 목록과 오류 안내를 함께 �
   );
   renderPage('/admin/notices');
   expect(
-    await screen.findByRole('link', { name: '이미지 자료 확인 안내' }),
+    await screen.findByRole('row', {
+      name: /이미지 자료 확인 안내 공지사항 보기/,
+    }),
   ).toBeInTheDocument();
-  expect(await screen.findByRole('alert')).toHaveTextContent(
-    '일부 분반의 공지사항을 불러오지 못했습니다.',
-  );
+  expect(
+    await screen.findByText('일부 분반의 공지사항을 불러오지 못했습니다.'),
+  ).toBeInTheDocument();
   expect(
     screen.queryByText('등록된 공지사항이 없어요.'),
   ).not.toBeInTheDocument();

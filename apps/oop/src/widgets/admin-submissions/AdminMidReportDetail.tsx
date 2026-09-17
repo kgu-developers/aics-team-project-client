@@ -9,6 +9,8 @@ import {
 } from '@aics/design-system';
 import { useState } from 'react';
 
+import { AdminLinkedMeetingsTable } from '~/features/admin-meeting/components';
+import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import {
   useAdminMidReportFeedbacksQuery,
   useAdminMidReportQuery,
@@ -43,7 +45,20 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
   );
   const submitFeedbackMutation = useSubmitAdminMidReportFeedbackMutation();
   const report = reportQuery.data;
+  const relatedMeetingsQuery = useAdminMeetingRecordListQuery(
+    [sectionId],
+    {
+      page: 0,
+      sectionId,
+      size: 100,
+      teamId,
+    },
+    Boolean(report),
+  );
   const feedbackPageable = feedbacksQuery.data?.pageable;
+  const relatedMeetings = (relatedMeetingsQuery.data?.contents ?? []).filter(
+    record => record.phase === 'MID_CHECK',
+  );
 
   if (reportQuery.isPending) {
     return (
@@ -117,6 +132,31 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
           </section>
         ))}
       </Card>
+      <section className={styles.relatedMeetings}>
+        <Heading level={3}>연결된 회의록 ({relatedMeetings.length}건)</Heading>
+        {relatedMeetingsQuery.isPending ? (
+          <Text aria-live='polite' role='status'>
+            회의록을 불러오는 중입니다.
+          </Text>
+        ) : relatedMeetingsQuery.isError ? (
+          <Text role='alert'>연결된 회의록을 불러오지 못했습니다.</Text>
+        ) : relatedMeetings.length ? (
+          <AdminLinkedMeetingsTable
+            authorLabel='작성자 학번'
+            records={relatedMeetings.map(record => ({
+              authorName: record.authorId,
+              id: record.id,
+              meetingAt: record.meetingAt,
+              participantCount: record.participantCount,
+              title: record.title,
+            }))}
+          />
+        ) : (
+          <Text className={styles.sectionDescription}>
+            연결된 회의록이 없습니다.
+          </Text>
+        )}
+      </section>
       <Card className={styles.relatedMeetings}>
         <Heading level={3}>중간 점검 피드백</Heading>
         {feedbacksQuery.isPending ? (

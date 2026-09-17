@@ -102,15 +102,8 @@ export const adminCourseHandlers = [
       if (courseId === null) {
         return HttpResponse.json({ code: 'COURSE_NOT_FOUND' }, { status: 404 });
       }
-      const course = getAdminCourse(courseId);
-      if (!course) {
+      if (!getAdminCourse(courseId)) {
         return HttpResponse.json({ code: 'COURSE_NOT_FOUND' }, { status: 404 });
-      }
-      if (course.status !== 'DRAFT') {
-        return HttpResponse.json(
-          { code: 'COURSE_DELETE_NOT_ALLOWED' },
-          { status: 409 },
-        );
       }
       return removeAdminCourse(courseId)
         ? new HttpResponse(null, { status: 204 })

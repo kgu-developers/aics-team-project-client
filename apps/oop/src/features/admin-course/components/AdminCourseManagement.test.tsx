@@ -240,7 +240,7 @@ describe('AdminCourseManagement', () => {
     expect(submit).toBeDisabled();
   });
 
-  it('연도·학기·상태를 표시하고 운영 중 강좌의 삭제를 비활성화한다', async () => {
+  it('연도·학기·상태를 표시하고 모든 상태의 강좌 삭제를 허용한다', async () => {
     renderManager();
 
     expect(
@@ -248,12 +248,7 @@ describe('AdminCourseManagement', () => {
     ).toBeGreaterThan(0);
     expect(screen.getAllByText('운영 중').length).toBeGreaterThan(0);
     expect(screen.getAllByText('2학기').length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: '삭제' })[0]).toBeDisabled();
-    expect(
-      screen.getAllByText(
-        '운영을 종료할 때는 상태를 보관됨으로 변경해 주세요.',
-      )[0],
-    ).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: '삭제' })[0]).toBeEnabled();
   });
 
   it('강좌를 등록한다', async () => {
@@ -583,20 +578,23 @@ describe('AdminCourseManagement', () => {
     });
   });
 
-  it('임시 저장 강좌는 삭제 확인 후 목록에서 제거한다', async () => {
+  it('운영 중 강좌도 삭제 확인 후 목록에서 제거한다', async () => {
     const user = userEvent.setup();
     renderManager();
-    const courseName = await screen.findByText('웹 프로그래밍');
-    const row = courseName.closest('tr');
-
-    expect(row).not.toBeNull();
-    await user.click(within(row!).getByRole('button', { name: '삭제' }));
+    const row = await screen.findByRole('row', {
+      name: /객체지향 프로그래밍 2026 2학기 운영 중/,
+    });
+    await user.click(within(row).getByRole('button', { name: '삭제' }));
 
     const dialog = screen.getByRole('dialog', { name: '강좌 삭제 확인' });
     await user.click(within(dialog).getByRole('button', { name: '삭제' }));
 
     await waitFor(() => {
-      expect(screen.queryByText('웹 프로그래밍')).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('row', {
+          name: /객체지향 프로그래밍 2026 2학기 운영 중/,
+        }),
+      ).not.toBeInTheDocument();
     });
   });
 });

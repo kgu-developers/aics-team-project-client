@@ -26,7 +26,7 @@ it('목록의 필터·페이지네이션 후에도 회의록 ID로 같은 상세
   };
 
   expect(listResponse.status).toBe(200);
-  expect(list.contents.map(record => record.id)).toEqual([1]);
+  expect(list.contents.map(record => record.id)).toEqual([3]);
 
   const [firstRecord] = list.contents;
 
@@ -44,5 +44,5 @@ it('목록의 필터·페이지네이션 후에도 회의록 ID로 같은 상세
   };
 
   expect(detailResponse.status).toBe(200);
-  expect(detail).toMatchObject({ id: 1, title: '프로젝트 킥오프' });
+  expect(detail).toMatchObject({ id: 3, title: '중간 점검 회의' });
 });

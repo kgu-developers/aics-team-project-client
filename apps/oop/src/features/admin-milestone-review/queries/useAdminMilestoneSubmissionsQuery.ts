@@ -51,7 +51,9 @@ export function useAdminMilestoneSubmissionsQuery(
               ? ('SUBMITTED' as const)
               : ('NOT_SUBMITTED' as const),
             statusLabel: project?.proposalCompletedAt ? '제출 완료' : '미제출',
-            submissionId: project ? String(response.contents[index]!.id) : null,
+            submissionId: project?.proposalCompletedAt
+              ? String(response.contents[index]!.id)
+              : null,
           };
         }),
       };

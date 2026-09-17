@@ -74,7 +74,10 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderPage(editing: boolean) {
+function renderPage(
+  editing: boolean,
+  sections = [{ ...demoAdmin.sections[0]!, id: '1' }],
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -84,7 +87,7 @@ function renderPage(editing: boolean) {
     accessToken: demoAdminAccessToken,
     currentUser: {
       ...demoAdmin,
-      sections: [{ ...demoAdmin.sections[0]!, id: '1' }],
+      sections,
     },
   });
   const root = createRootRoute();
@@ -97,8 +100,13 @@ function renderPage(editing: boolean) {
     }),
     component: AdminMilestoneSetupPage,
   });
+  const listRoute = createRoute({
+    getParentRoute: () => root,
+    path: '/admin/milestones',
+    component: () => <div>마일스톤 목록</div>,
+  });
   const router = createRouter({
-    routeTree: root.addChildren([route]),
+    routeTree: root.addChildren([route, listRoute]),
     history: createMemoryHistory({
       initialEntries: [
         `/admin/milestones/new?sectionId=1${editing ? '&milestoneId=101' : ''}`,
@@ -112,6 +120,8 @@ function renderPage(editing: boolean) {
       </QueryClientProvider>
     </AstryxThemeProvider>,
   );
+
+  return router;
 }
 
 function trackWrites() {
@@ -129,7 +139,7 @@ function milestoneWrites(writes: string[]) {
 
 describe('artifact submission isolation', () => {
   it.each(['click', 'Enter'])(
-    'draft dialog %s submission keeps forms separate and only explicit milestone Save creates it',
+    'draft dialog %s submission keeps forms separate, supports quick time selection, and returns to the list after Save',
     async submission => {
       const consoleError = vi.spyOn(console, 'error');
       const user = userEvent.setup();
@@ -138,9 +148,11 @@ describe('artifact submission isolation', () => {
       fireEvent.change(await screen.findByLabelText('OOP-01 제출 마감일'), {
         target: { value: '2026-10-15' },
       });
-      fireEvent.change(screen.getByLabelText('OOP-01 제출 마감 시간'), {
-        target: { value: '23:59' },
-      });
+      await user.click(
+        screen.getByRole('button', {
+          name: 'OOP-01 제출 마감 시간 23:59로 설정',
+        }),
+      );
       await user.click(screen.getByRole('button', { name: '산출물 추가' }));
       const dialog = await screen.findByRole('dialog', {
         name: '산출물 초안 추가',
@@ -172,7 +184,7 @@ describe('artifact submission isolation', () => {
       } else await user.click(screen.getByRole('button', { name: '저장' }));
       await waitFor(() => expect(milestoneWrites(writes)).toHaveLength(1));
       expect(milestoneWrites(writes)[0]).toMatch(/^POST /);
-      await screen.findByText(/미공개 마일스톤으로 생성했습니다/);
+      await screen.findByText('마일스톤 목록');
       expect(consoleError).not.toHaveBeenCalled();
     },
   );
@@ -232,6 +244,52 @@ describe('artifact submission isolation', () => {
   );
 });
 
+it('부분 생성 실패를 재시도해도 이미 생성한 분반의 마일스톤을 다시 만들지 않는다', async () => {
+  const attempts: string[] = [];
+  server.use(
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES(':sectionId')}`,
+      ({ params }) => {
+        const sectionId = String(params.sectionId);
+        attempts.push(sectionId);
+        if (sectionId === '2' && attempts.filter(id => id === '2').length === 1)
+          return new HttpResponse(null, { status: 500 });
+
+        return HttpResponse.json(
+          { id: sectionId === '1' ? 901 : 902 },
+          { status: 201 },
+        );
+      },
+    ),
+  );
+  renderPage(false, [
+    { ...demoAdmin.sections[0]!, id: '1' },
+    { ...demoAdmin.sections[0]!, code: 'OOP-02', id: '2', name: 'OOP-02' },
+  ]);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole('combobox', { name: '대상 분반' }));
+  await user.click(screen.getByRole('option', { name: /OOP-02/ }));
+  fireEvent.change(screen.getByLabelText('OOP-01 제출 마감일'), {
+    target: { value: '2026-10-15' },
+  });
+  fireEvent.change(screen.getByLabelText('OOP-01 제출 마감 시간'), {
+    target: { value: '23:59' },
+  });
+  fireEvent.change(screen.getByLabelText('OOP-02 제출 마감일'), {
+    target: { value: '2026-10-15' },
+  });
+  fireEvent.change(screen.getByLabelText('OOP-02 제출 마감 시간'), {
+    target: { value: '23:59' },
+  });
+  await user.click(screen.getByRole('button', { name: '저장' }));
+  await waitFor(() => expect(attempts).toEqual(['1', '2']));
+  await user.click(
+    screen.getByRole('button', { name: '실패한 작업 다시 시도' }),
+  );
+  await waitFor(() => expect(attempts).toEqual(['1', '2', '2']));
+  await screen.findByText('마일스톤 목록');
+});
+
 it('blocks peer-evaluation editing before hidden schedule validation or any write', async () => {
   const writes = trackWrites();
   const milestone = getAdminSectionMilestoneFixture('1', '101')!;
@@ -265,9 +323,10 @@ it('blocks peer-evaluation editing before hidden schedule validation or any writ
   expect(
     screen.queryByLabelText('OOP-01 상호 평가 시작일'),
   ).not.toBeInTheDocument();
-  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  await userEvent.click(
-    screen.getByRole('link', { name: '마일스톤 목록으로' }),
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('link', { name: '마일스톤 목록으로' }));
+  await waitFor(() =>
+    expect(screen.getByText('마일스톤 목록')).toBeInTheDocument(),
   );
   expect(writes).toEqual([]);
 });
