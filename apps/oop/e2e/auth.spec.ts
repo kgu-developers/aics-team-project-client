@@ -6,6 +6,7 @@ for (const route of [
   '/student',
   '/student/team',
   '/student/meetings',
+  '/student/messages',
   '/student/editor/proposal/topic',
 ]) {
   test(`비로그인 사용자는 ${route}에서 로그인으로 이동한다`, async ({

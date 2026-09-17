@@ -105,6 +105,23 @@ function renderHeader(
 }
 
 describe('StudentHeaderActions', () => {
+  it('푸터 최하단에 로고 다음 문의 링크와 카피라이트를 표시한다', () => {
+    renderHeader();
+
+    const logo = screen.getByRole('img', { name: '경기대학교' });
+    const contact = screen.getByRole('link', { name: '문의하기' });
+    const copyright = screen.getByText(
+      '© 2026 KGU Developers CSHOME. All rights reserved.',
+    );
+
+    expect(logo.compareDocumentPosition(contact)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(contact.compareDocumentPosition(copyright)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  });
+
   it('로그아웃 실패 시 프로필과 로그인 상태를 유지하고 명시적으로 재시도한다', async () => {
     let respond!: (response: Response) => void;
     let requests = 0;
@@ -249,13 +266,14 @@ describe('StudentHeaderActions', () => {
     expect(screen.queryByText('미배정')).toBeNull();
   });
 
-  it('헤더는 홈·액션 플랜·공지사항·회의록 텍스트 내비게이션과 현재 경로를 표시한다', () => {
+  it('헤더는 홈·액션 플랜·공지사항·회의록·쪽지함 내비게이션과 현재 경로를 표시한다', () => {
     renderHeader('/student/notices/notice-1');
 
     const homeLink = screen.getByRole('link', { name: '홈' });
     const actionPlansLink = screen.getByRole('link', { name: '액션 플랜' });
     const noticesLink = screen.getByRole('link', { name: '공지사항' });
     const meetingsLink = screen.getByRole('link', { name: '회의록' });
+    const messagesLink = screen.getByRole('link', { name: '쪽지함' });
 
     expect(homeLink).not.toHaveAttribute('aria-current', 'page');
     expect(actionPlansLink).not.toHaveAttribute('aria-current', 'page');
@@ -266,6 +284,8 @@ describe('StudentHeaderActions', () => {
     expect(noticesLink).toHaveAttribute('aria-current', 'page');
     expect(noticesLink).toHaveClass(styles.navLinkActive);
     expect(meetingsLink).not.toHaveAttribute('aria-current', 'page');
+    expect(messagesLink).toHaveAttribute('href', '/student/messages');
+    expect(messagesLink).not.toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('button', { name: '공지사항 열기' })).toBeNull();
     expect(screen.queryByRole('button', { name: '회의록 열기' })).toBeNull();
   });
@@ -308,6 +328,9 @@ describe('StudentHeaderActions', () => {
     ).toBeVisible();
     expect(
       within(navigation).getByRole('link', { name: '회의록' }),
+    ).toBeVisible();
+    expect(
+      within(navigation).getByRole('link', { name: '쪽지함' }),
     ).toBeVisible();
 
     const profileButton = screen.getByRole('button', {

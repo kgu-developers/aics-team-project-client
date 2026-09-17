@@ -11,6 +11,8 @@ import {
 } from '~/features/auth/authStore';
 import { useStudentContext } from '~/features/section/useStudentContext';
 
+import StudentContactLink from '~/widgets/student-contact-link/StudentContactLink';
+
 import { oopCourseConfig } from '~/course/config';
 
 import * as styles from './StudentShell.css';
@@ -91,6 +93,12 @@ export default function StudentShell() {
               className={styles.shellUniversityLogo}
               src='/brand/kyonggi-university.png'
             />
+          </div>
+          <div className={styles.shellFooterMeta}>
+            <StudentContactLink />
+            <Text color='secondary' type='supporting'>
+              © 2026 KGU Developers CSHOME. All rights reserved.
+            </Text>
           </div>
         </footer>
       </div>

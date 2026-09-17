@@ -3,7 +3,7 @@ import { resolve } from 'path';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin';
 import react from '@vitejs/plugin-react';
-import { loadEnv, type Plugin } from 'vite';
+import { loadEnv, type Plugin, type ProxyOptions } from 'vite';
 import { defineConfig } from 'vitest/config';
 
 const apiProxyPrefixes = [
@@ -20,6 +20,34 @@ const apiProxyPrefixes = [
   '/submissions',
   '/teams',
 ];
+
+export function rewriteDevelopmentSetCookieHeaders(cookies?: string[]) {
+  if (!cookies) return cookies;
+
+  const issuedCsrfToken = cookies.some(cookie =>
+    /^XSRF-TOKEN=[^;]/i.test(cookie),
+  );
+
+  return cookies
+    .filter(cookie => !issuedCsrfToken || !/^XSRF-TOKEN=;/i.test(cookie))
+    .map(cookie => cookie.replace(/;\s*Domain=kgudevelopers\.monster/gi, ''));
+}
+
+function createApiProxyOptions(proxyTarget: string): ProxyOptions {
+  return {
+    target: proxyTarget,
+    changeOrigin: true,
+    configure(proxy) {
+      proxy.on('proxyRes', proxyResponse => {
+        const cookies = rewriteDevelopmentSetCookieHeaders(
+          proxyResponse.headers['set-cookie'],
+        );
+        if (cookies) proxyResponse.headers['set-cookie'] = cookies;
+      });
+    },
+    secure: true,
+  };
+}
 
 function rejectProductionRouterDevtools(): Plugin {
   return {
@@ -47,16 +75,14 @@ function rejectProductionRouterDevtools(): Plugin {
 export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, __dirname, 'VITE_');
   const proxyTarget = env.VITE_API_PROXY_TARGET;
-  const apiProxy = Object.fromEntries(
-    apiProxyPrefixes.map(prefix => [
-      prefix,
-      {
-        target: proxyTarget,
-        changeOrigin: true,
-        secure: true,
-      },
-    ]),
-  );
+  const apiProxy = proxyTarget
+    ? Object.fromEntries(
+        apiProxyPrefixes.map(prefix => [
+          prefix,
+          createApiProxyOptions(proxyTarget),
+        ]),
+      )
+    : {};
 
   return {
     plugins: [

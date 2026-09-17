@@ -6,6 +6,8 @@ import type { ResolvedConfig } from 'vite';
 import { resolveConfig } from 'vite';
 import { beforeAll, describe, expect, it } from 'vitest';
 
+import { rewriteDevelopmentSetCookieHeaders } from './vite.config';
+
 const appRoot = fileURLToPath(new URL('.', import.meta.url));
 const configFile = fileURLToPath(new URL('./vite.config.ts', import.meta.url));
 
@@ -85,11 +87,25 @@ describe('OOP development server config', () => {
           {
             target: 'https://team-project-api.kgudevelopers.monster',
             changeOrigin: true,
+            configure: expect.any(Function),
             secure: true,
           },
         ]),
       ),
     );
+  });
+
+  it('rewrites the shared-domain CSRF cookie for localhost without applying the deletion cookie over it', () => {
+    expect(
+      rewriteDevelopmentSetCookieHeaders([
+        'XSRF-TOKEN=issued-token; Domain=kgudevelopers.monster; Path=/; Secure',
+        'XSRF-TOKEN=; Path=/; Max-Age=0; Secure; SameSite=Lax',
+        'refreshToken=refresh-token; Path=/; Secure; HttpOnly',
+      ]),
+    ).toEqual([
+      'XSRF-TOKEN=issued-token; Path=/; Secure',
+      'refreshToken=refresh-token; Path=/; Secure; HttpOnly',
+    ]);
   });
 
   it('does not install development HTTPS or host-guard plugins', () => {

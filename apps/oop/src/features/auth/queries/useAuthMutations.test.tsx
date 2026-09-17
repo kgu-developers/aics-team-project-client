@@ -28,6 +28,7 @@ afterEach(() => {
   queryClients.splice(0).forEach(client => client.clear());
   resetDemoPasswordState();
   useAuthStore.getState().clearSession();
+  document.cookie = 'XSRF-TOKEN=; Max-Age=0; Path=/';
 });
 afterAll(() => server.close());
 
@@ -162,14 +163,16 @@ describe('auth mutations', () => {
     },
   );
 
-  it.each([401, 403, 503, 'network'] as const)(
+  it.each([403, 503, 'network'] as const)(
     '로그아웃 실패(%s)는 세션과 캐시를 유지하고 재시도 성공 후에만 정리한다',
     async status => {
       useAuthStore.getState().setAccessToken(demoAccessToken);
       useAuthStore.getState().setCurrentUser(demoStudent);
+      let failedRequests = 0;
       server.use(
-        http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.LOGOUT}`, () =>
-          status === 'network'
+        http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.LOGOUT}`, () => {
+          failedRequests += 1;
+          return status === 'network'
             ? HttpResponse.error()
             : HttpResponse.json(
                 {
@@ -177,8 +180,8 @@ describe('auth mutations', () => {
                   message: '잠시 후 다시 시도해 주세요.',
                 },
                 { status },
-              ),
-        ),
+              );
+        }),
       );
       const queryClient = createQueryClient();
       queryClient.setQueryData(['private-data'], {
@@ -192,6 +195,7 @@ describe('auth mutations', () => {
         await expect(result.current.mutateAsync()).rejects.toBeDefined();
       });
 
+      expect(failedRequests).toBe(1);
       expect(useAuthStore.getState().isAuthenticated).toBe(true);
       expect(useAuthStore.getState().accessToken).toBe(demoAccessToken);
       expect(useAuthStore.getState().currentUser).toEqual(demoStudent);
@@ -213,4 +217,84 @@ describe('auth mutations', () => {
       expect(queryClient.getQueryData(['private-data'])).toBeUndefined();
     },
   );
+
+  it('CSRF 갱신 뒤 두 번째 로그아웃도 실패하면 세 번째 요청 없이 세션을 유지한다', async () => {
+    useAuthStore.getState().setAccessToken(demoAccessToken);
+    useAuthStore.getState().setCurrentUser(demoStudent);
+    document.cookie = 'XSRF-TOKEN=stale; Path=/';
+    let requests = 0;
+    server.use(
+      http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.LOGOUT}`, () => {
+        requests += 1;
+        if (requests === 1) {
+          document.cookie = 'XSRF-TOKEN=rotated; Path=/';
+        }
+        return HttpResponse.json({ code: 'CSRF' }, { status: 403 });
+      }),
+    );
+    const queryClient = createQueryClient();
+    queryClient.setQueryData(['private-data'], 'existing');
+    const { result } = renderHook(() => useLogoutMutation(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await expect(result.current.mutateAsync()).rejects.toBeDefined();
+    });
+
+    expect(requests).toBe(2);
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+    expect(useAuthStore.getState().currentUser).toEqual(demoStudent);
+    expect(queryClient.getQueryData(['private-data'])).toBe('existing');
+  });
+
+  it('이미 만료된 401 세션은 로그아웃 성공으로 처리하고 로컬 상태를 정리한다', async () => {
+    useAuthStore.getState().setAccessToken(demoAccessToken);
+    useAuthStore.getState().setCurrentUser(demoStudent);
+    server.use(
+      http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.LOGOUT}`, () =>
+        HttpResponse.json({ code: 'UNAUTHORIZED' }, { status: 401 }),
+      ),
+    );
+    const queryClient = createQueryClient();
+    queryClient.setQueryData(['private-data'], 'existing');
+    const { result } = renderHook(() => useLogoutMutation(), {
+      wrapper: createWrapper(queryClient),
+    });
+
+    await act(async () => {
+      await expect(result.current.mutateAsync()).resolves.toBeUndefined();
+    });
+
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(useAuthStore.getState().currentUser).toBeNull();
+    expect(queryClient.getQueryData(['private-data'])).toBeUndefined();
+  });
+
+  it('로그아웃 403 응답이 CSRF 쿠키를 갱신하면 한 번만 재시도한다', async () => {
+    useAuthStore.getState().setAccessToken(demoAccessToken);
+    useAuthStore.getState().setCurrentUser(demoStudent);
+    document.cookie = 'XSRF-TOKEN=stale; Path=/';
+    let requests = 0;
+    server.use(
+      http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.LOGOUT}`, () => {
+        requests += 1;
+        if (requests === 1) {
+          document.cookie = 'XSRF-TOKEN=rotated; Path=/';
+          return HttpResponse.json({ code: 'CSRF' }, { status: 403 });
+        }
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    const { result } = renderHook(() => useLogoutMutation(), {
+      wrapper: createWrapper(createQueryClient()),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync();
+    });
+
+    expect(requests).toBe(2);
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+  });
 });

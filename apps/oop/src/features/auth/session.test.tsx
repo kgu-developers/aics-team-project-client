@@ -37,6 +37,7 @@ afterEach(() => {
   resetDemoPasswordState();
   useAuthStore.getState().clearSession();
   clients.splice(0).forEach(client => client.clear());
+  document.cookie = 'XSRF-TOKEN=; Max-Age=0; Path=/';
   vi.unstubAllEnvs();
 });
 function wrapper() {
@@ -264,6 +265,39 @@ describe('cookie authentication bootstrap', () => {
     });
     await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
     expect(calls).toBe(0);
+  });
+
+  it('refresh 403 응답이 CSRF 쿠키를 갱신하면 한 번 재시도해 세션을 복원한다', async () => {
+    document.cookie = 'XSRF-TOKEN=stale; Path=/';
+    let refreshRequests = 0;
+    server.use(
+      http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.REFRESH}`, () => {
+        refreshRequests += 1;
+        if (refreshRequests === 1) {
+          document.cookie = 'XSRF-TOKEN=rotated; Path=/';
+          return HttpResponse.json({ code: 'CSRF' }, { status: 403 });
+        }
+        return HttpResponse.json({ message: 'ok', role: 'STUDENT' });
+      }),
+      http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+        HttpResponse.json({
+          studentNumber: 'review-user',
+          name: 'Review',
+          email: 'review@example.com',
+          phone: '',
+          globalRole: 'USER',
+        }),
+      ),
+    );
+
+    await restoreSession();
+
+    expect(refreshRequests).toBe(2);
+    expect(useAuthStore.getState()).toMatchObject({
+      isAuthenticated: true,
+      sessionRole: 'STUDENT',
+      currentUser: { studentNumber: 'review-user' },
+    });
   });
 
   it('refresh가 실패하면 이전 세션을 제거한다', async () => {

@@ -4,9 +4,11 @@ import type {
   PeerEvaluationResponseDto,
   ProjectProposalResponse,
   ProposalSectionsResponse,
+  ReceivedPreferredPeerRequest,
   SectionResponse,
   StudentMilestoneResponse,
   TeamKickoffResponse,
+  TeamMessage,
 } from '@aics/core';
 import type { BrowserContext, Route } from '@playwright/test';
 
@@ -25,6 +27,10 @@ export const paths = {
   notices: '/api/v1/sections/2/announcements',
   meetings: '/api/v1/teams/7/meeting-records',
   survey: '/api/v1/users/me/pre-survey-response',
+  receivedPreferredPeerRequests:
+    '/api/v1/sections/2/pre-survey/preferred-peer-requests/received',
+  acceptPreferredPeerRequest: (requesterUserId: string) =>
+    `/api/v1/sections/2/pre-survey/preferred-peer-requests/received/${requesterUserId}/accept`,
   submitSurvey: '/api/v1/sections/2/pre-survey/responses',
   peerTargets: '/api/v1/peer-evaluation-forms/1/targets',
   peerResponses: '/api/v1/peer-evaluation-forms/1/responses',
@@ -137,9 +143,11 @@ export function createState() {
     proposalSections,
     milestones,
     meetings,
+    teamMessages: [] as TeamMessage[],
     authenticated: false,
     lockOwner: null as string | null,
     survey: null as Record<string, unknown> | null,
+    receivedPreferredPeerRequests: [] as ReceivedPreferredPeerRequest[],
     peerResponse: null as PeerEvaluationResponseDto | null,
     peerWindow: 'OPEN',
     notices: [
@@ -159,6 +167,7 @@ type ApiRequest = {
   method: string;
   path: string;
   body: Record<string, unknown> | null;
+  headers: Record<string, string>;
 };
 type Override = { status: number; body: unknown; remaining: number };
 
@@ -195,7 +204,12 @@ export class StudentApi {
     const body = request.postData()
       ? (request.postDataJSON() as Record<string, unknown>)
       : null;
-    this.requests.push({ method, path, body });
+    this.requests.push({
+      method,
+      path,
+      body,
+      headers: request.headers(),
+    });
     const reply = (value: unknown, status = 200) =>
       route.fulfill({ status, json: value });
     const override = this.overrides.get(`${method} ${path}`);
@@ -230,6 +244,16 @@ export class StudentApi {
     }
     if (path === paths.survey)
       return reply(s.survey ?? { code: 'NOT_FOUND' }, s.survey ? 200 : 404);
+    if (path === paths.receivedPreferredPeerRequests)
+      return reply({ contents: s.receivedPreferredPeerRequests });
+    const acceptedPreferredPeerRequest = s.receivedPreferredPeerRequests.find(
+      request =>
+        path === paths.acceptPreferredPeerRequest(request.requesterUserId),
+    );
+    if (acceptedPreferredPeerRequest && method === 'POST') {
+      acceptedPreferredPeerRequest.status = 'ACCEPTED';
+      return reply({ contents: s.receivedPreferredPeerRequests });
+    }
     if (path === paths.submitSurvey && method === 'POST') {
       s.survey = {
         id: 1,
@@ -280,17 +304,43 @@ export class StudentApi {
     }
     if (path === '/api/v1/teams/7/thread')
       return reply({ threadId: 70, teamId: 7, createdAt: '2026-09-01' });
-    if (path === '/api/v1/teams/7/messages')
+    if (path === '/api/v1/teams/7/messages') {
+      if (method === 'POST') {
+        const created: TeamMessage = {
+          id: 701 + s.teamMessages.length,
+          threadId: 70,
+          senderId: student.studentNumber,
+          senderName: student.name,
+          relatedType:
+            (body?.relatedType as TeamMessage['relatedType']) ?? 'GENERAL',
+          relatedId:
+            typeof body?.relatedId === 'number' ? body.relatedId : undefined,
+          message: String(body?.message ?? ''),
+          createdAt: '2026-09-17T09:30:00+09:00',
+          important: false,
+          read: false,
+        };
+        s.teamMessages.push(created);
+        return reply(created, 201);
+      }
       return reply({
-        contents: [],
+        contents: [...s.teamMessages].reverse(),
         pageable: {
           page: 0,
           size: 100,
-          totalElements: 0,
-          totalPages: 0,
+          totalElements: s.teamMessages.length,
+          totalPages: 1,
           isEnd: true,
         },
       });
+    }
+    if (/^\/api\/v1\/messages\/\d+\/read$/.test(path) && method === 'PATCH') {
+      const message = s.teamMessages.find(
+        item => String(item.id) === path.split('/').at(-2),
+      );
+      if (message) message.read = true;
+      return reply({});
+    }
     if (path === '/api/v1/teams/7/topic-candidates')
       return reply({ contents: [] });
     if (path === '/api/v1/mid-reports/current')
