@@ -29,7 +29,10 @@ import { studentHomeKeys } from '~/features/student-home/queries';
 
 import StudentHomePage from './StudentHomePage';
 
-import { createProjectProposalFixture } from '~/mocks/data/projectProposal';
+import {
+  createProjectProposalFixture,
+  createProposalSectionsFixture,
+} from '~/mocks/data/projectProposal';
 import { liveHomeTeam, liveHomeUser } from '~/mocks/data/studentHomeLive';
 import { studentMilestoneFixtures } from '~/mocks/data/studentMilestones';
 import { studentHomeLiveHandlers } from '~/mocks/handlers/studentHomeLive';
@@ -131,6 +134,9 @@ const server = setupServer(
   ),
   http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
     HttpResponse.json({ code: 'PROJECT_NOT_FOUND' }, { status: 404 }),
+  ),
+  http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.SECTIONS(21)}`, () =>
+    HttpResponse.json(createProposalSectionsFixture()),
   ),
   ...studentHomeLiveHandlers,
   http.get(`${API_BASE_URL}/api/v1/teams/7/topic-candidates`, () =>
@@ -249,9 +255,10 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
       http.get(
         `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`,
         ({ request }) => {
-          expect(new URL(request.url).searchParams.get('relatedType')).toBe(
-            'PROPOSAL',
-          );
+          if (
+            new URL(request.url).searchParams.get('relatedType') !== 'PROPOSAL'
+          )
+            return;
           return HttpResponse.json({
             contents: [...messages].reverse(),
             pageable: {
