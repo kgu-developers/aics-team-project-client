@@ -2,7 +2,7 @@ export {
   fetchAdminSubmission,
   type AdminFeedbackEntryDto,
   type AdminMidtermFeedbackDto,
-  type AdminProposalFeedbackDto,
+  type AdminSubmissionProposalFeedbackDto,
   type AdminSubmissionResponse,
   type AdminSubmissionStatusDto,
   type AdminStudentResponseDto,

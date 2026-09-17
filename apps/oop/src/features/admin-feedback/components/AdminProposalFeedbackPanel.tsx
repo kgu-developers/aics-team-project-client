@@ -1,11 +1,11 @@
-import type { AdminProposalFeedbackDto } from '@aics/api-client';
+import type { AdminSubmissionProposalFeedbackDto } from '@aics/api-client';
 import { Button, Card, Heading, Text, TextArea } from '@aics/design-system';
 import { useEffect, useState } from 'react';
 
 import * as styles from './AdminProposalFeedbackPanel.css';
 
 type AdminProposalFeedbackPanelProps = {
-  feedback?: AdminProposalFeedbackDto | null;
+  feedback?: AdminSubmissionProposalFeedbackDto | null;
 };
 
 export function AdminProposalFeedbackPanel({

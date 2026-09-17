@@ -42,12 +42,12 @@ export type AdminStudentResponseDto = {
   responseId: string;
 };
 
-export type AdminProposalFeedbackDto = {
+export type AdminSubmissionProposalFeedbackDto = {
   history: AdminFeedbackEntryDto[];
   latestStudentResponse: AdminStudentResponseDto | null;
 };
 
-export type AdminMidtermFeedbackDto = AdminProposalFeedbackDto;
+export type AdminMidtermFeedbackDto = AdminSubmissionProposalFeedbackDto;
 
 export async function fetchAdminSubmission(
   submissionId: string,
