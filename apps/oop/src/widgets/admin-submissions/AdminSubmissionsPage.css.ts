@@ -1,5 +1,5 @@
 import { tokens } from '@aics/design-system';
-import { style } from '@vanilla-extract/css';
+import { globalStyle, style } from '@vanilla-extract/css';
 
 export const page = style({
   display: 'flex',
@@ -118,6 +118,20 @@ export const meetingLink = style({
     outline: `2px solid ${tokens.color.accent}`,
     outlineOffset: 2,
   },
+});
+
+export const clickableRow = style({
+  cursor: 'pointer',
+  ':focus-visible': {
+    outline: `2px solid ${tokens.color.accent}`,
+    outlineOffset: -2,
+  },
+});
+
+export const clickableTable = style({});
+
+globalStyle(`${clickableTable} tbody tr`, {
+  cursor: 'pointer',
 });
 
 export const backLink = style({

@@ -72,6 +72,25 @@ export const scheduleInputs = style({
   '@media': { '(max-width: 640px)': { gridTemplateColumns: '1fr' } },
 });
 
+export const timeField = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+});
+
+export const quickTimeActions = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 8,
+});
+
+export const quickTimeButtons = style({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 4,
+});
+
 export const timeInput = style({
   appearance: 'none',
   background: tokens.color.background.surface,

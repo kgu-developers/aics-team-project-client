@@ -11,6 +11,7 @@ export {
   useUpdateAdminSectionMilestoneMutation,
   type UpdateAdminSectionMilestoneResult,
 } from './useUpdateAdminSectionMilestoneMutation';
+export { useUpdateAdminSectionMilestoneStatusMutation } from './useUpdateAdminSectionMilestoneStatusMutation';
 export { useAdminMilestoneSubmissionDetailQuery } from './useAdminMilestoneSubmissionDetailQuery';
 export { useAdminSubmissionVersionQuery } from './useAdminSubmissionVersionQuery';
 export { useAdminSubmissionVersionDetailsQueries } from './useAdminSubmissionVersionDetailsQueries';

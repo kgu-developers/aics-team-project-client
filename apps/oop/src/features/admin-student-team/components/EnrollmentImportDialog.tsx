@@ -59,8 +59,9 @@ export default function EnrollmentImportDialog({
       onOpenChange={open => {
         if (!open) close();
       }}
+      maxHeight='calc(100dvh - 32px)'
       purpose='info'
-      width={1040}
+      width='min(1180px, calc(100vw - 32px))'
     >
       <div className={styles.content}>
         <div className={styles.body}>

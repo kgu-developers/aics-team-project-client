@@ -12,6 +12,8 @@ import {
   Text,
   TextArea,
   TextInput,
+  TimeInput,
+  type TimeInputProps,
 } from '@aics/design-system';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -59,6 +61,48 @@ function getTemplate(templateId: MilestoneTemplateId) {
   }
 
   return findMilestoneTemplate(templateId) ?? fallbackTemplate;
+}
+
+const quickTimeOptions = ['09:00', '12:00', '18:00', '23:59'] as const;
+
+type ScheduleTimeInputProps = {
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+};
+
+function ScheduleTimeInput({ label, onChange, value }: ScheduleTimeInputProps) {
+  return (
+    <div className={styles.timeField}>
+      <TimeInput
+        hasClear
+        hourFormat='24h'
+        increment={5}
+        label={label}
+        onChange={nextValue => onChange(nextValue ?? '')}
+        value={value ? (value as TimeInputProps['value']) : undefined}
+        width='100%'
+      />
+      <div className={styles.quickTimeActions}>
+        <Text color='secondary' type='supporting'>
+          빠른 선택
+        </Text>
+        <div className={styles.quickTimeButtons}>
+          {quickTimeOptions.map(time => (
+            <Button
+              aria-label={`${label} ${time}로 설정`}
+              key={time}
+              label={time}
+              onClick={() => onChange(time)}
+              size='sm'
+              type='button'
+              variant='secondary'
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function AdminMilestoneSetupPage() {
@@ -428,6 +472,23 @@ export default function AdminMilestoneSetupPage() {
             .map(result => result.sectionId),
         ),
       );
+
+      const createdWithoutFollowUpFailure =
+        results.length > 0 &&
+        results.every(
+          result =>
+            result.status === 'created' || result.status === 'published',
+        ) &&
+        artifactResults.every(result => result.failedCount === 0) &&
+        peerEvaluationFormResults.every(result => result.succeeded);
+
+      if (createdWithoutFollowUpFailure) {
+        await navigate({
+          search:
+            results.length === 1 ? { sectionId: results[0]!.sectionId } : {},
+          to: ROUTES.ADMIN_MILESTONES,
+        });
+      }
     } catch (error) {
       setFormError(
         error instanceof Error
@@ -647,27 +708,16 @@ export default function AdminMilestoneSetupPage() {
                               }
                               width='100%'
                             />
-                            <label>
-                              <Text type='supporting'>{`${section.code} 공개 시작 시간`}</Text>
-                              <input
-                                aria-label={`${section.code} 공개 시작 시간`}
-                                className={styles.timeInput}
-                                onChange={event =>
-                                  updateSectionSchedule(
-                                    section.id,
-                                    current => ({
-                                      ...current,
-                                      opensAt: {
-                                        ...current.opensAt,
-                                        time: event.target.value,
-                                      },
-                                    }),
-                                  )
-                                }
-                                type='time'
-                                value={schedule.opensAt.time}
-                              />
-                            </label>
+                            <ScheduleTimeInput
+                              label={`${section.code} 공개 시작 시간`}
+                              onChange={time =>
+                                updateSectionSchedule(section.id, current => ({
+                                  ...current,
+                                  opensAt: { ...current.opensAt, time },
+                                }))
+                              }
+                              value={schedule.opensAt.time}
+                            />
                           </div>
                         </div>
                         {!isPeerEvaluation ? (
@@ -697,27 +747,19 @@ export default function AdminMilestoneSetupPage() {
                                 }
                                 width='100%'
                               />
-                              <label>
-                                <Text type='supporting'>{`${section.code} 제출 마감 시간`}</Text>
-                                <input
-                                  aria-label={`${section.code} 제출 마감 시간`}
-                                  className={styles.timeInput}
-                                  onChange={event =>
-                                    updateSectionSchedule(
-                                      section.id,
-                                      current => ({
-                                        ...current,
-                                        dueAt: {
-                                          ...current.dueAt,
-                                          time: event.target.value,
-                                        },
-                                      }),
-                                    )
-                                  }
-                                  type='time'
-                                  value={schedule.dueAt.time}
-                                />
-                              </label>
+                              <ScheduleTimeInput
+                                label={`${section.code} 제출 마감 시간`}
+                                onChange={time =>
+                                  updateSectionSchedule(
+                                    section.id,
+                                    current => ({
+                                      ...current,
+                                      dueAt: { ...current.dueAt, time },
+                                    }),
+                                  )
+                                }
+                                value={schedule.dueAt.time}
+                              />
                             </div>
                           </div>
                         ) : null}
@@ -761,27 +803,22 @@ export default function AdminMilestoneSetupPage() {
                                   }
                                   width='100%'
                                 />
-                                <label>
-                                  <Text type='supporting'>{`${section.code} 평가 시작 시간`}</Text>
-                                  <input
-                                    aria-label={`${section.code} 평가 시작 시간`}
-                                    className={styles.timeInput}
-                                    onChange={event =>
-                                      updateSectionSchedule(
-                                        section.id,
-                                        current => ({
-                                          ...current,
-                                          evaluationOpensAt: {
-                                            ...current.evaluationOpensAt,
-                                            time: event.target.value,
-                                          },
-                                        }),
-                                      )
-                                    }
-                                    type='time'
-                                    value={schedule.evaluationOpensAt.time}
-                                  />
-                                </label>
+                                <ScheduleTimeInput
+                                  label={`${section.code} 평가 시작 시간`}
+                                  onChange={time =>
+                                    updateSectionSchedule(
+                                      section.id,
+                                      current => ({
+                                        ...current,
+                                        evaluationOpensAt: {
+                                          ...current.evaluationOpensAt,
+                                          time,
+                                        },
+                                      }),
+                                    )
+                                  }
+                                  value={schedule.evaluationOpensAt.time}
+                                />
                               </div>
                             </div>
                             <div className={styles.scheduleField}>
@@ -810,27 +847,22 @@ export default function AdminMilestoneSetupPage() {
                                   }
                                   width='100%'
                                 />
-                                <label>
-                                  <Text type='supporting'>{`${section.code} 평가 종료 시간`}</Text>
-                                  <input
-                                    aria-label={`${section.code} 평가 종료 시간`}
-                                    className={styles.timeInput}
-                                    onChange={event =>
-                                      updateSectionSchedule(
-                                        section.id,
-                                        current => ({
-                                          ...current,
-                                          evaluationClosesAt: {
-                                            ...current.evaluationClosesAt,
-                                            time: event.target.value,
-                                          },
-                                        }),
-                                      )
-                                    }
-                                    type='time'
-                                    value={schedule.evaluationClosesAt.time}
-                                  />
-                                </label>
+                                <ScheduleTimeInput
+                                  label={`${section.code} 평가 종료 시간`}
+                                  onChange={time =>
+                                    updateSectionSchedule(
+                                      section.id,
+                                      current => ({
+                                        ...current,
+                                        evaluationClosesAt: {
+                                          ...current.evaluationClosesAt,
+                                          time,
+                                        },
+                                      }),
+                                    )
+                                  }
+                                  value={schedule.evaluationClosesAt.time}
+                                />
                               </div>
                             </div>
                           </div>

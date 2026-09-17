@@ -1,5 +1,14 @@
-import { Button, Card, EmptyState, Heading, Text } from '@aics/design-system';
+import {
+  Button,
+  Card,
+  EmptyState,
+  Heading,
+  Selector,
+  SelectorOption,
+  Text,
+} from '@aics/design-system';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -7,12 +16,20 @@ import {
   formatAdminMilestoneDate,
   getAdminMilestoneStatusLabel,
 } from '~/features/admin-milestone-review/model';
-import { useAdminAccessibleSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
+import {
+  useAdminAccessibleSectionMilestonesQuery,
+  useUpdateAdminSectionMilestoneStatusMutation,
+} from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMilestonesPage.css';
 
 const allSectionsValue = 'all';
+
+type StatusUpdateError = {
+  key: string;
+  message: string;
+};
 
 export default function AdminMilestonesPage() {
   const currentUser = useAuthStore(state => state.currentUser);
@@ -34,6 +51,9 @@ export default function AdminMilestonesPage() {
   const milestoneQueries = useAdminAccessibleSectionMilestonesQuery(
     displayedSections.map(section => section.id),
   );
+  const updateStatusMutation = useUpdateAdminSectionMilestoneStatusMutation();
+  const [statusUpdateError, setStatusUpdateError] =
+    useState<StatusUpdateError>();
   const isLoading = milestoneQueries.some(query => query.isPending);
   const hasSuccessfulQuery = milestoneQueries.some(query => query.isSuccess);
   const failedSectionLabels = displayedSections.flatMap((section, index) =>
@@ -52,6 +72,32 @@ export default function AdminMilestonesPage() {
       search: sectionId === allSectionsValue ? {} : { sectionId },
       to: ROUTES.ADMIN_MILESTONES,
     });
+  }
+
+  function updateStatus(
+    milestone: (typeof milestones)[number],
+    nextStatus: 'DRAFT' | 'PUBLISHED',
+  ) {
+    const key = `${milestone.sectionKey}-${milestone.id}`;
+    setStatusUpdateError(undefined);
+    updateStatusMutation.mutate(
+      {
+        milestoneId: String(milestone.id),
+        sectionId: milestone.sectionKey,
+        status: nextStatus,
+      },
+      {
+        onError: error => {
+          setStatusUpdateError({
+            key,
+            message:
+              error instanceof Error
+                ? error.message
+                : '공개 상태를 변경하지 못했습니다. 다시 시도해 주세요.',
+          });
+        },
+      },
+    );
   }
 
   return (
@@ -156,7 +202,49 @@ export default function AdminMilestonesPage() {
                       <td>
                         {formatAdminMilestoneDate(milestone.schedule.dueAt)}
                       </td>
-                      <td>{getAdminMilestoneStatusLabel(milestone.status)}</td>
+                      <td>
+                        {milestone.status === 'CLOSED' ? (
+                          <Text>
+                            {getAdminMilestoneStatusLabel(milestone.status)}
+                          </Text>
+                        ) : (
+                          <Selector
+                            aria-label={`${milestone.sectionLabel} ${milestone.title} 공개 상태`}
+                            isDisabled={
+                              updateStatusMutation.isPending &&
+                              updateStatusMutation.variables?.sectionId ===
+                                milestone.sectionKey &&
+                              updateStatusMutation.variables?.milestoneId ===
+                                String(milestone.id)
+                            }
+                            isLabelHidden
+                            label='공개 상태'
+                            onChange={nextStatus =>
+                              updateStatus(
+                                milestone,
+                                nextStatus as 'DRAFT' | 'PUBLISHED',
+                              )
+                            }
+                            options={[
+                              { label: '미공개', value: 'DRAFT' },
+                              { label: '공개', value: 'PUBLISHED' },
+                            ]}
+                            renderOption={option => (
+                              <SelectorOption
+                                label={option.label ?? option.value}
+                              />
+                            )}
+                            value={milestone.status}
+                            width={120}
+                          />
+                        )}
+                        {statusUpdateError?.key ===
+                        `${milestone.sectionKey}-${milestone.id}` ? (
+                          <Text role='alert' type='supporting'>
+                            {statusUpdateError.message}
+                          </Text>
+                        ) : null}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
