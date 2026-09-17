@@ -6,7 +6,7 @@ import {
   HStack,
   Text,
 } from '@aics/design-system';
-import { Link } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -20,6 +20,7 @@ import { useAuthStore } from '~/features/auth/authStore';
 import * as styles from './AdminMessagesPage.css';
 
 export default function AdminMessagesPage() {
+  const navigate = useNavigate();
   const currentUser = useAuthStore(state => state.currentUser);
   const sections = currentUser?.sections ?? [];
   const [sectionId, setSectionId] = useState<string>();
@@ -38,6 +39,14 @@ export default function AdminMessagesPage() {
   const selectSection = (nextSectionId?: string) => {
     setSectionId(nextSectionId);
     setPage(0);
+  };
+
+  const openMessageThread = (message: (typeof messages)[number]) => {
+    if (!message.read) readMutation.mutate(message.id);
+    void navigate({
+      params: { teamId: String(message.teamId) },
+      to: ROUTES.ADMIN_MESSAGE_TEAM,
+    });
   };
 
   return (
@@ -95,7 +104,19 @@ export default function AdminMessagesPage() {
               </thead>
               <tbody>
                 {messages.map(row => (
-                  <tr className={styles.messageRow} key={row.id}>
+                  <tr
+                    aria-label={`${row.teamName} 쪽지 상세 보기`}
+                    className={styles.messageRow}
+                    key={row.id}
+                    onClick={() => openMessageThread(row)}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openMessageThread(row);
+                      }
+                    }}
+                    tabIndex={0}
+                  >
                     <td>
                       {row.read ? null : (
                         <span
@@ -105,17 +126,7 @@ export default function AdminMessagesPage() {
                       )}
                       {row.sectionName}
                     </td>
-                    <td>
-                      <Link
-                        onClick={() => {
-                          if (!row.read) readMutation.mutate(row.id);
-                        }}
-                        params={{ teamId: String(row.teamId) }}
-                        to={ROUTES.ADMIN_MESSAGE_TEAM}
-                      >
-                        {row.teamName}
-                      </Link>
-                    </td>
+                    <td>{row.teamName}</td>
                     <td>{row.senderName ?? row.senderId}</td>
                     <td>{row.message}</td>
                   </tr>

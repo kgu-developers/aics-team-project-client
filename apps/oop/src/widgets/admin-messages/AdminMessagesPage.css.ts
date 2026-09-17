@@ -49,9 +49,10 @@ globalStyle(table + ' td', {
 globalStyle(table + ' tbody tr:hover td', {
   background: tokens.color.background.muted,
 });
-export const teamLink = style({ color: 'inherit', textDecoration: 'none' });
-globalStyle(`${teamLink}:hover`, { textDecoration: 'underline' });
 export const messageRow = style({ cursor: 'pointer' });
+globalStyle(`${table} tbody tr:focus-visible td`, {
+  background: tokens.color.background.muted,
+});
 export const unreadDot = style({
   background: tokens.color.text.accent,
   borderRadius: tokens.radius.full,
