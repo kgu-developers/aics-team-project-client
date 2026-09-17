@@ -454,9 +454,7 @@ describe('AdminProfilePage', () => {
       ),
     ).not.toBeInTheDocument();
     expect(
-      await screen.findByText(
-        '응답 수: 2명 · 미응답 학생은 현재 API 응답에 포함되지 않습니다.',
-      ),
+      await screen.findByText('전체 5명 · 제출 2명 · 미제출 3명'),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('columnheader', { name: '학번' }),
@@ -465,16 +463,10 @@ describe('AdminProfilePage', () => {
       screen.getByRole('columnheader', { name: '이름' }),
     ).toBeInTheDocument();
     expect(
+      screen.getByRole('columnheader', { name: '희망 조원' }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole('columnheader', { name: '희망 역할' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('columnheader', { name: '선호 짝' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('columnheader', { name: '짝 요청 상태' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('columnheader', { name: '상호 선택' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('columnheader', { name: '주제 의견' }),
@@ -486,11 +478,12 @@ describe('AdminProfilePage', () => {
       screen.getByRole('columnheader', { name: '제출일' }),
     ).toBeInTheDocument();
     expect(screen.getByText('20260001')).toBeInTheDocument();
-    expect(screen.getByText('김객체')).toBeInTheDocument();
-    expect(screen.getByText('이프로')).toBeInTheDocument();
-    expect(screen.getByText('이프로 (20260003)')).toBeInTheDocument();
-    expect(screen.getByText('수락됨')).toBeInTheDocument();
-    expect(screen.getByText('예')).toBeInTheDocument();
+    expect(screen.getByText('검수 학생')).toBeInTheDocument();
+    expect(screen.getByText('BACKEND, PM')).toBeInTheDocument();
+    expect(
+      screen.getByText('20231234 (김민준) - 상대가 수락'),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('미제출')).toHaveLength(3);
   });
 
   it('선택한 분반의 사전조사 응답 Excel 파일을 다운로드한다', async () => {
@@ -568,13 +561,32 @@ describe('AdminProfilePage', () => {
             ],
           }),
       ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ENROLLMENTS(':sectionId')}`,
+        () =>
+          HttpResponse.json({
+            contents: [
+              {
+                createdAt: '2026-09-07T12:00:00',
+                email: '20260004@example.com',
+                id: 4,
+                major: null,
+                name: '런타임 가드 테스트',
+                phone: '010-0000-0000',
+                role: 'STUDENT',
+                status: 'ACTIVE',
+                studentNumber: '20260004',
+              },
+            ],
+          }),
+      ),
     );
     renderPage();
 
     expect(await screen.findByText('런타임 가드 테스트')).toBeInTheDocument();
     const responseRow = screen.getByText('런타임 가드 테스트').closest('tr');
     expect(responseRow).not.toBeNull();
-    expect(within(responseRow!).getAllByText('-')).toHaveLength(4);
+    expect(within(responseRow!).queryByText('-')).not.toBeInTheDocument();
   });
 
   it('사전 정보 조회가 실패하면 오류를 표시한다', async () => {
@@ -595,6 +607,27 @@ describe('AdminProfilePage', () => {
         '사전 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
       ),
     ).toHaveAttribute('role', 'alert');
+  });
+
+  it('수강생 목록 조회가 실패하면 미제출 여부를 추정하지 않는다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ENROLLMENTS(':sectionId')}`,
+        () =>
+          HttpResponse.json(
+            { code: 'ENROLLMENT_LOOKUP_FAILED' },
+            { status: 500 },
+          ),
+      ),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        '수강생 목록을 불러오지 못해 미제출 여부를 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+      ),
+    ).toHaveAttribute('role', 'alert');
+    expect(screen.queryByText(/^전체 \d+명 · 제출/)).not.toBeInTheDocument();
   });
 
   it('분반 목록이 나중에 들어오면 첫 분반의 사전 정보를 표시한다', async () => {
@@ -625,9 +658,7 @@ describe('AdminProfilePage', () => {
     );
 
     expect(
-      await screen.findByText(
-        '응답 수: 2명 · 미응답 학생은 현재 API 응답에 포함되지 않습니다.',
-      ),
+      await screen.findByText('전체 5명 · 제출 2명 · 미제출 3명'),
     ).toBeInTheDocument();
   });
 });

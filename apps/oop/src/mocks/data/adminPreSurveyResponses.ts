@@ -17,8 +17,8 @@ const oopPreSurveyResponses: AdminPreSurveyResponsePreview[] = [
     etcOpinion: '금요일 오후에는 회의가 어렵습니다.',
     id: 1,
     preferredRoles: ['BACKEND', 'PM'],
-    preferredPeerUserId: '20260003',
-    preferredPeerName: '이프로',
+    preferredPeerUserId: '20231234',
+    preferredPeerName: '김민준',
     preferredPeerStatus: 'ACCEPTED',
     mutual: true,
     submittedAt: '2026-09-04 14:00',
@@ -32,8 +32,8 @@ const oopPreSurveyResponses: AdminPreSurveyResponsePreview[] = [
     preferredRoles: ['DESIGN', 'DOCUMENTATION_PRESENTATION'],
     submittedAt: '2026-09-04 14:12',
     topicOpinion: null,
-    userId: '20260003',
-    userName: '이프로',
+    userId: '20231234',
+    userName: '김민준',
   },
 ];
 
