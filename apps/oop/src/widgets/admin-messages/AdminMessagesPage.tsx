@@ -124,7 +124,7 @@ export default function AdminMessagesPage() {
             </table>
           )}
           {pagination ? (
-            <HStack gap={3}>
+            <HStack gap={2} justify='end'>
               <Button
                 label='이전 페이지'
                 isDisabled={query.isFetching || page === 0}

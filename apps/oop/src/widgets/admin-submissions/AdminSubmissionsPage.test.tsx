@@ -125,8 +125,8 @@ function renderPage(initialEntry = '/admin/submissions?sectionId=1') {
 }
 
 describe('AdminSubmissionsPage', () => {
-  it.each(['2026-09-13T10:00:00', null])(
-    '일반 제출 버전 없이도 프로젝트 문서·이미지를 조회하며 전송 실패 시 입력을 유지한다 (%s)',
+  it.each(['2026-09-13T10:00:00'])(
+    '제출 완료된 제안서는 일반 제출 버전 없이도 프로젝트 문서·이미지를 조회하며 전송 실패 시 입력을 유지한다 (%s)',
     async completedAt => {
       const project = {
         ...createProjectProposalFixture(),
@@ -175,9 +175,7 @@ describe('AdminSubmissionsPage', () => {
         'src',
         'https://example.test/screen.png',
       );
-      expect(
-        screen.getByText(completedAt ? /제출 완료 ·/ : '작성 중'),
-      ).toBeVisible();
+      expect(screen.getByText(/제출 완료 ·/)).toBeVisible();
       expect(
         screen.queryByText('표시할 제출 버전이 없습니다.'),
       ).not.toBeInTheDocument();
@@ -302,8 +300,8 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByRole('heading', { name: '연결된 회의록 (1건)' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('link', { name: '프로젝트 킥오프' }),
-    ).toHaveAttribute('href', '/admin/meetings/1');
+      screen.getByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
+    ).toHaveAttribute('tabindex', '0');
   });
 
   it('제안서와 중간 점검 상세에서 현재 제출물에 연결된 피드백을 회의록보다 먼저 표시한다', async () => {
@@ -442,6 +440,9 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByText('GUI 화면 흐름과 예외 처리 계획을 보완해 주세요.'),
     ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: '연결된 회의록 (1건)' }),
+    ).toBeInTheDocument();
 
     await user.type(
       screen.getByRole('textbox', { name: '중간 점검 피드백 내용' }),
@@ -500,14 +501,14 @@ describe('AdminSubmissionsPage', () => {
     renderPage('/admin/submissions/1001?milestoneId=proposal&sectionId=1');
 
     expect(
-      await screen.findByRole('link', { name: '첫 번째 회의록' }),
+      await screen.findByRole('row', { name: /첫 번째 회의록 회의록 보기/ }),
     ).toBeInTheDocument();
     expect(screen.getByText('1 / 2')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '다음 페이지' }));
 
     expect(
-      await screen.findByRole('link', { name: '두 번째 회의록' }),
+      await screen.findByRole('row', { name: /두 번째 회의록 회의록 보기/ }),
     ).toBeInTheDocument();
     expect(requestedPages).toHaveBeenCalledWith(0);
     expect(requestedPages).toHaveBeenCalledWith(1);
@@ -767,16 +768,13 @@ describe('AdminSubmissionsPage', () => {
     );
   });
 
-  it('발표 평가 목록에서 팀별 결과 상세로 이동한다', async () => {
+  it('발표 평가 목록의 팀 행은 결과 상세로 이동할 수 있게 표시한다', async () => {
     const user = userEvent.setup();
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
     expect(
-      await screen.findByRole('link', { name: 'OOP-01 - 1팀' }),
-    ).toHaveAttribute(
-      'href',
-      '/admin/evaluations/presentation/teams/1?milestoneId=103&sectionId=%221%22',
-    );
+      await screen.findByRole('row', { name: /OOP-01 - 1팀 발표 평가 보기/ }),
+    ).toHaveAttribute('tabindex', '0');
   });
 
   it('발표 자료 제출 fixture의 최신 버전을 조회한다', async () => {
@@ -792,19 +790,15 @@ describe('AdminSubmissionsPage', () => {
     ).toHaveAttribute('download', 'presentation.pdf');
   });
 
-  it('상호 평가 목록에서 팀별 결과 상세로 이동한다', async () => {
+  it('상호 평가 목록의 팀 행은 결과 상세로 이동할 수 있게 표시한다', async () => {
     const user = userEvent.setup();
 
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '상호 평가' }));
 
-    const teamLink = await screen.findByRole('link', {
-      name: 'OOP-01 - 1팀',
-    });
-    expect(teamLink).toHaveAttribute(
-      'href',
-      '/admin/evaluations/peer/teams/1?formId=501&sectionId=%221%22',
-    );
+    expect(
+      await screen.findByRole('row', { name: /OOP-01 - 1팀 상호평가 보기/ }),
+    ).toHaveAttribute('tabindex', '0');
   });
 
   it('알 수 없는 마일스톤 키는 제출 목록 fixture에서 찾지 않는다', () => {

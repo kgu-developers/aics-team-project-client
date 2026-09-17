@@ -26,13 +26,11 @@ export const table = style({
   minWidth: 660,
   width: '100%',
 });
-export const titleLink = style({
-  color: tokens.color.text.primary,
-  textDecoration: 'none',
-  ':hover': {
-    color: tokens.color.text.accent,
-    textDecoration: 'underline',
-    textUnderlineOffset: 3,
+export const clickableRow = style({
+  cursor: 'pointer',
+  ':focus-visible': {
+    outline: `2px solid ${tokens.color.accent}`,
+    outlineOffset: -2,
   },
 });
 export const emptyCell = style({

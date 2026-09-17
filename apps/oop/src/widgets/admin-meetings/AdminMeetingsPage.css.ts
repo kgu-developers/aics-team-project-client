@@ -62,11 +62,10 @@ globalStyle(table + ' tbody tr:hover td', {
   background: tokens.color.background.muted,
 });
 
-export const recordLink = style({
-  color: 'inherit',
-  textDecoration: 'none',
-});
-
-globalStyle(`${recordLink}:hover`, {
-  textDecoration: 'underline',
+export const clickableRow = style({
+  cursor: 'pointer',
+  ':focus-visible': {
+    outline: `2px solid ${tokens.color.accent}`,
+    outlineOffset: -2,
+  },
 });

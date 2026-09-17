@@ -8,7 +8,8 @@ import {
   SelectorOption,
   Text,
 } from '@aics/design-system';
-import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
+import type { KeyboardEvent } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -21,6 +22,15 @@ import { useAuthStore } from '~/features/auth/authStore';
 import * as styles from './AdminMeetingsPage.css';
 
 const allSectionsValue = 'all';
+
+function handleRowNavigation(
+  event: KeyboardEvent<HTMLTableRowElement>,
+  open: () => void,
+) {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  open();
+}
 
 export default function AdminMeetingsPage() {
   const currentUser = useAuthStore(state => state.currentUser);
@@ -169,19 +179,32 @@ export default function AdminMeetingsPage() {
             </thead>
             <tbody>
               {records.map(record => (
-                <tr key={record.id}>
+                <tr
+                  aria-label={`${record.title} 회의록 보기`}
+                  className={styles.clickableRow}
+                  key={record.id}
+                  onClick={() =>
+                    void navigate({
+                      params: { meetingId: String(record.id) },
+                      to: ROUTES.ADMIN_MEETING_DETAIL,
+                    })
+                  }
+                  onKeyDown={event =>
+                    handleRowNavigation(
+                      event,
+                      () =>
+                        void navigate({
+                          params: { meetingId: String(record.id) },
+                          to: ROUTES.ADMIN_MEETING_DETAIL,
+                        }),
+                    )
+                  }
+                  tabIndex={0}
+                >
                   <td>{formatSeoulDateTime(record.meetingAt)}</td>
                   <td>{record.sectionName}</td>
                   <td>{record.teamName}</td>
-                  <td>
-                    <Link
-                      className={styles.recordLink}
-                      params={{ meetingId: String(record.id) }}
-                      to={ROUTES.ADMIN_MEETING_DETAIL}
-                    >
-                      {record.title}
-                    </Link>
-                  </td>
+                  <td>{record.title}</td>
                   <td>{record.authorId}</td>
                   <td>{record.participantCount}명</td>
                 </tr>

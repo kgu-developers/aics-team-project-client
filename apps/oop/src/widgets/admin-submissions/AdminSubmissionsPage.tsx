@@ -11,6 +11,7 @@ import {
   Selector,
   SelectorOption,
   Table,
+  type TableProps,
   Text,
 } from '@aics/design-system';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
@@ -65,6 +66,22 @@ const MILESTONE_TABS = [
 ] as const;
 
 type MilestoneTabId = (typeof MILESTONE_TABS)[number]['id'];
+
+type PresentationEvaluationTeam = NonNullable<
+  ReturnType<typeof useAdminPresentationEvaluationsQuery>['data']
+>['teams'][number];
+
+type PeerEvaluationTeam = NonNullable<
+  ReturnType<typeof useAdminPeerEvaluationsQuery>['data']
+>['teams'][number];
+
+type PresentationEvaluationTablePlugin = NonNullable<
+  TableProps<PresentationEvaluationTeam>['plugins']
+>[string];
+
+type PeerEvaluationTablePlugin = NonNullable<
+  TableProps<PeerEvaluationTeam>['plugins']
+>[string];
 
 const milestoneTypeByTab: Partial<Record<MilestoneTabId, AdminMilestoneType>> =
   {
@@ -317,6 +334,115 @@ export default function AdminSubmissionsPage() {
   }));
   const presentationEvaluationTeams =
     presentationEvaluationsQuery.data?.teams ?? [];
+  const presentationEvaluationRowPlugin =
+    useMemo<PresentationEvaluationTablePlugin>(
+      () => ({
+        transformBodyRow: (rowRenderProps, team) => {
+          const openEvaluation = () =>
+            void navigate({
+              params: {
+                evaluationType: 'presentation',
+                teamId: String(team.teamId),
+              },
+              search: {
+                milestoneId: presentationEvaluationsQuery.data?.milestoneId,
+                sectionId: effectiveSectionId,
+              },
+              to: ROUTES.ADMIN_EVALUATION_DETAIL,
+            });
+          const onClick = rowRenderProps.htmlProps.onClick;
+          const onKeyDown = rowRenderProps.htmlProps.onKeyDown;
+
+          return {
+            ...rowRenderProps,
+            htmlProps: {
+              ...rowRenderProps.htmlProps,
+              'aria-label': `${team.teamName} 발표 평가 보기`,
+              className: cx(
+                rowRenderProps.htmlProps.className,
+                styles.clickableRow,
+              ),
+              style: {
+                ...rowRenderProps.htmlProps.style,
+                cursor: 'pointer',
+              },
+              onClick: event => {
+                onClick?.(event);
+                if (!event.defaultPrevented) openEvaluation();
+              },
+              onKeyDown: event => {
+                onKeyDown?.(event);
+                if (
+                  event.defaultPrevented ||
+                  (event.key !== 'Enter' && event.key !== ' ')
+                )
+                  return;
+                event.preventDefault();
+                openEvaluation();
+              },
+              tabIndex: 0,
+            },
+          };
+        },
+      }),
+      [
+        effectiveSectionId,
+        navigate,
+        presentationEvaluationsQuery.data?.milestoneId,
+      ],
+    );
+  const peerEvaluationRowPlugin = useMemo<PeerEvaluationTablePlugin>(
+    () => ({
+      transformBodyRow: (rowRenderProps, team) => {
+        const openEvaluation = () =>
+          void navigate({
+            params: {
+              evaluationType: 'peer',
+              teamId: String(team.teamId),
+            },
+            search: {
+              formId: peerEvaluationsQuery.data?.formId ?? undefined,
+              sectionId: effectiveSectionId,
+            },
+            to: ROUTES.ADMIN_EVALUATION_DETAIL,
+          });
+        const onClick = rowRenderProps.htmlProps.onClick;
+        const onKeyDown = rowRenderProps.htmlProps.onKeyDown;
+
+        return {
+          ...rowRenderProps,
+          htmlProps: {
+            ...rowRenderProps.htmlProps,
+            'aria-label': `${team.teamName} 상호평가 보기`,
+            className: cx(
+              rowRenderProps.htmlProps.className,
+              styles.clickableRow,
+            ),
+            style: {
+              ...rowRenderProps.htmlProps.style,
+              cursor: 'pointer',
+            },
+            onClick: event => {
+              onClick?.(event);
+              if (!event.defaultPrevented) openEvaluation();
+            },
+            onKeyDown: event => {
+              onKeyDown?.(event);
+              if (
+                event.defaultPrevented ||
+                (event.key !== 'Enter' && event.key !== ' ')
+              )
+                return;
+              event.preventDefault();
+              openEvaluation();
+            },
+            tabIndex: 0,
+          },
+        };
+      },
+    }),
+    [effectiveSectionId, navigate, peerEvaluationsQuery.data?.formId],
+  );
 
   if (!activeTab) return null;
 
@@ -472,28 +598,12 @@ export default function AdminSubmissionsPage() {
                   <>
                     <Card>
                       <Table
+                        className={styles.clickableTable}
                         columns={[
                           {
                             align: 'start',
                             header: '팀',
                             key: 'teamName',
-                            renderCell: team => (
-                              <Link
-                                to={ROUTES.ADMIN_EVALUATION_DETAIL}
-                                params={{
-                                  evaluationType: 'presentation',
-                                  teamId: String(team.teamId),
-                                }}
-                                search={{
-                                  milestoneId:
-                                    presentationEvaluationsQuery.data
-                                      .milestoneId,
-                                  sectionId: effectiveSectionId,
-                                }}
-                              >
-                                {team.teamName}
-                              </Link>
-                            ),
                             width: proportional(1, { minWidth: 128 }),
                           },
                           {
@@ -535,6 +645,11 @@ export default function AdminSubmissionsPage() {
                         ]}
                         data={presentationEvaluationTeams}
                         dividers='rows'
+                        hasHover
+                        idKey='teamId'
+                        plugins={{
+                          rowInteraction: presentationEvaluationRowPlugin,
+                        }}
                         textOverflow='wrap'
                         verticalAlign='middle'
                       />
@@ -587,27 +702,12 @@ export default function AdminSubmissionsPage() {
                 ) : (
                   <Card>
                     <Table
+                      className={styles.clickableTable}
                       columns={[
                         {
                           align: 'start',
                           header: '팀',
                           key: 'teamName',
-                          renderCell: team => (
-                            <Link
-                              to={ROUTES.ADMIN_EVALUATION_DETAIL}
-                              params={{
-                                evaluationType: 'peer',
-                                teamId: String(team.teamId),
-                              }}
-                              search={{
-                                formId:
-                                  peerEvaluationsQuery.data.formId ?? undefined,
-                                sectionId: effectiveSectionId,
-                              }}
-                            >
-                              {team.teamName}
-                            </Link>
-                          ),
                           width: proportional(1.3, { minWidth: 160 }),
                         },
                         {
@@ -638,6 +738,9 @@ export default function AdminSubmissionsPage() {
                       ]}
                       data={peerEvaluationsQuery.data.teams}
                       dividers='rows'
+                      hasHover
+                      idKey='teamId'
+                      plugins={{ rowInteraction: peerEvaluationRowPlugin }}
                       verticalAlign='middle'
                     />
                   </Card>
