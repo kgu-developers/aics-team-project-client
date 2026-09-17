@@ -552,6 +552,8 @@ describe('AdminProfilePage', () => {
               {
                 etcOpinion: '기타 의견',
                 id: 3,
+                preferredPeerName: '김민준',
+                preferredPeerUserId: '20231234',
                 preferredRoles: null,
                 submittedAt: '2026-09-07 12:00',
                 topicOpinion: '주제 의견',
@@ -586,6 +588,9 @@ describe('AdminProfilePage', () => {
     expect(await screen.findByText('런타임 가드 테스트')).toBeInTheDocument();
     const responseRow = screen.getByText('런타임 가드 테스트').closest('tr');
     expect(responseRow).not.toBeNull();
+    expect(
+      within(responseRow!).getByText('20231234 (김민준)'),
+    ).toBeInTheDocument();
     expect(within(responseRow!).queryByText('-')).not.toBeInTheDocument();
   });
 

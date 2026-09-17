@@ -69,7 +69,9 @@ function formatPreferredPeer(
       ? '서로 지목 (상대 응답 대기)'
       : (statusLabels[status ?? ''] ?? status ?? '');
 
-  return `${userId} ${displayName} - ${displayStatus}`;
+  const preferredPeer = `${userId} ${displayName}`;
+
+  return displayStatus ? `${preferredPeer} - ${displayStatus}` : preferredPeer;
 }
 
 export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
