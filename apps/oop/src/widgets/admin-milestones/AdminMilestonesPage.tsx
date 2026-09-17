@@ -8,7 +8,7 @@ import {
   Text,
 } from '@aics/design-system';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { useState } from 'react';
+import { type KeyboardEvent, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -30,6 +30,27 @@ type StatusUpdateError = {
   key: string;
   message: string;
 };
+
+function isRowInteractiveTarget(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    target.closest('a, button, input, select, textarea, [role="combobox"]') !==
+      null
+  );
+}
+
+function handleRowNavigation(
+  event: KeyboardEvent<HTMLTableRowElement>,
+  open: () => void,
+) {
+  if (
+    isRowInteractiveTarget(event.target) ||
+    (event.key !== 'Enter' && event.key !== ' ')
+  )
+    return;
+  event.preventDefault();
+  open();
+}
 
 export default function AdminMilestonesPage() {
   const currentUser = useAuthStore(state => state.currentUser);
@@ -182,71 +203,80 @@ export default function AdminMilestonesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {milestones.map(milestone => (
-                    <tr
-                      key={`${milestone.sectionId}-${milestone.id}-${milestone.sectionLabel}`}
-                    >
-                      <td>{milestone.sectionLabel}</td>
-                      <td>
-                        <Link
-                          className={styles.titleLink}
-                          params={{ milestoneId: String(milestone.id) }}
-                          search={{
-                            sectionId: milestone.sectionKey,
-                          }}
-                          to={ROUTES.ADMIN_MILESTONE_DETAIL}
-                        >
-                          {milestone.title}
-                        </Link>
-                      </td>
-                      <td>
-                        {formatAdminMilestoneDate(milestone.schedule.dueAt)}
-                      </td>
-                      <td>
-                        {milestone.status === 'CLOSED' ? (
-                          <Text>
-                            {getAdminMilestoneStatusLabel(milestone.status)}
-                          </Text>
-                        ) : (
-                          <Selector
-                            aria-label={`${milestone.sectionLabel} ${milestone.title} 공개 상태`}
-                            isDisabled={
-                              updateStatusMutation.isPending &&
-                              updateStatusMutation.variables?.sectionId ===
-                                milestone.sectionKey &&
-                              updateStatusMutation.variables?.milestoneId ===
-                                String(milestone.id)
-                            }
-                            isLabelHidden
-                            label='공개 상태'
-                            onChange={nextStatus =>
-                              updateStatus(
-                                milestone,
-                                nextStatus as 'DRAFT' | 'PUBLISHED',
-                              )
-                            }
-                            options={[
-                              { label: '미공개', value: 'DRAFT' },
-                              { label: '공개', value: 'PUBLISHED' },
-                            ]}
-                            renderOption={option => (
-                              <SelectorOption
-                                label={option.label ?? option.value}
-                              />
-                            )}
-                            value={milestone.status}
-                            width={120}
-                          />
-                        )}
-                        {statusUpdateError?.key ===
-                        `${milestone.sectionKey}-${milestone.id}` ? (
-                          <Text role='alert' type='supporting'>
-                            {statusUpdateError.message}
-                          </Text>
-                        ) : null}
-                      </td>
-                    </tr>
-                  ))}
+                  {milestones.map(milestone => {
+                    const openMilestone = () =>
+                      void navigate({
+                        params: { milestoneId: String(milestone.id) },
+                        search: { sectionId: milestone.sectionKey },
+                        to: ROUTES.ADMIN_MILESTONE_DETAIL,
+                      });
+
+                    return (
+                      <tr
+                        aria-label={`${milestone.title} 마일스톤 보기`}
+                        className={styles.clickableRow}
+                        key={`${milestone.sectionId}-${milestone.id}-${milestone.sectionLabel}`}
+                        onClick={event => {
+                          if (!isRowInteractiveTarget(event.target)) {
+                            openMilestone();
+                          }
+                        }}
+                        onKeyDown={event =>
+                          handleRowNavigation(event, openMilestone)
+                        }
+                        tabIndex={0}
+                      >
+                        <td>{milestone.sectionLabel}</td>
+                        <td>{milestone.title}</td>
+                        <td>
+                          {formatAdminMilestoneDate(milestone.schedule.dueAt)}
+                        </td>
+                        <td>
+                          {milestone.status === 'CLOSED' ? (
+                            <Text>
+                              {getAdminMilestoneStatusLabel(milestone.status)}
+                            </Text>
+                          ) : (
+                            <Selector
+                              aria-label={`${milestone.sectionLabel} ${milestone.title} 공개 상태`}
+                              isDisabled={
+                                updateStatusMutation.isPending &&
+                                updateStatusMutation.variables?.sectionId ===
+                                  milestone.sectionKey &&
+                                updateStatusMutation.variables?.milestoneId ===
+                                  String(milestone.id)
+                              }
+                              isLabelHidden
+                              label='공개 상태'
+                              onChange={nextStatus =>
+                                updateStatus(
+                                  milestone,
+                                  nextStatus as 'DRAFT' | 'PUBLISHED',
+                                )
+                              }
+                              options={[
+                                { label: '미공개', value: 'DRAFT' },
+                                { label: '공개', value: 'PUBLISHED' },
+                              ]}
+                              renderOption={option => (
+                                <SelectorOption
+                                  label={option.label ?? option.value}
+                                />
+                              )}
+                              value={milestone.status}
+                              width={120}
+                            />
+                          )}
+                          {statusUpdateError?.key ===
+                          `${milestone.sectionKey}-${milestone.id}` ? (
+                            <Text role='alert' type='supporting'>
+                              {statusUpdateError.message}
+                            </Text>
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </Card>
