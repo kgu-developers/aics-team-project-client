@@ -1,6 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { appendPersistentMockFeedbackTeamMessage } from './teamMessages';
 import { getMockAuthenticatedAccount } from '../authSession';
 import { demoAdmin } from '../data/users';
 
@@ -256,6 +257,15 @@ export const adminMidReportHandlers = [
       };
       feedbacks = [feedback, ...feedbacks];
       persistFeedbacks();
+      appendPersistentMockFeedbackTeamMessage({
+        createdAt: feedback.createdAt,
+        message: feedback.message,
+        relatedId: feedback.midReportId,
+        relatedType: 'MID_REPORT',
+        senderId: feedback.senderId,
+        senderName: feedback.senderName,
+        teamId: feedback.teamId,
+      });
       return HttpResponse.json(feedback);
     },
   ),
