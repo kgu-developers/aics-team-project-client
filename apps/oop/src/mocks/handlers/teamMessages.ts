@@ -86,8 +86,12 @@ export function createTeamMessageHandlers(
     }
   }
 
-  function guard(request: Request, teamId: string) {
-    refreshPersistedData();
+  function guard(
+    request: Request,
+    teamId: string,
+    shouldRefreshPersistedData = true,
+  ) {
+    if (shouldRefreshPersistedData) refreshPersistedData();
     const userId = authenticatedUserId(request);
     const account = getMockAuthenticatedAccount(request);
     if (!userId) return { response: new HttpResponse(null, { status: 401 }) };
@@ -144,7 +148,7 @@ export function createTeamMessageHandlers(
       thread => thread.threadId === message.threadId,
     );
     if (!thread) return { response: error(404, 'TEAM_THREAD_NOT_FOUND') };
-    const access = guard(request, String(thread.teamId));
+    const access = guard(request, String(thread.teamId), false);
     if ('response' in access) return access;
     return { access, message };
   }
