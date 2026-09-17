@@ -19,49 +19,59 @@ import {
   useAdminPreSurveyResponsesExcelDownloadMutation,
   useAdminPreSurveyResponsesQuery,
 } from '~/features/admin-profile/queries';
+import { useAdminSectionEnrollmentsQuery } from '~/features/admin-student-team/queries';
 
 import * as styles from './AdminPreSurveyResponses.css';
 
 type Section = { code: string; id: string; name: string };
 
-const roleLabels: Record<string, string> = {
-  BACKEND: '백엔드 개발',
-  DESIGN: '디자인',
-  DEVELOPMENT: '개발',
-  DOCUMENTATION_PRESENTATION: '문서 작성 및 발표',
-  PM: '팀장(프로젝트 매니저)',
-  RESEARCH: '자료 수집',
-  TEAM_LEADER: '팀장(프로젝트 매니저)',
+type PreSurveyTableRow = {
+  etcOpinion?: string | null;
+  id: number | string;
+  preferredRoles: unknown;
+  preferredPeerName?: string | null;
+  preferredPeerStatus?: string | null;
+  preferredPeerUserId?: string | null;
+  mutual?: boolean | null;
+  submittedAt: string;
+  topicOpinion?: string | null;
+  userId: string;
+  userName: string;
 };
 
 function formatPreferredRoles(roles: unknown) {
-  if (!Array.isArray(roles)) return '-';
+  if (!Array.isArray(roles)) return '';
 
-  const labels = roles
-    .filter((role): role is string => typeof role === 'string')
-    .map(role => roleLabels[role] ?? role);
+  const values = roles.filter(
+    (role): role is string => typeof role === 'string',
+  );
 
-  return labels.length > 0 ? labels.join(', ') : '-';
+  return values.length > 0 ? values.join(', ') : '';
 }
 
 function formatPreferredPeer(
-  name: string | null | undefined,
   userId: string | null | undefined,
+  name: string | null | undefined,
+  status: string | null | undefined,
+  mutual: boolean | null | undefined,
 ) {
-  if (!name && !userId) return '-';
-  if (name && userId) return `${name} (${userId})`;
-  return name ?? userId ?? '-';
-}
+  if (!userId) return '';
 
-function formatPreferredPeerStatus(status: string | null | undefined) {
-  if (!status) return '-';
-  const labels: Record<string, string> = {
-    ACCEPTED: '수락됨',
-    PENDING: '응답 대기',
-    REJECTED: '거절됨',
-    CANCELED: '취소됨',
+  const displayName =
+    name === '(탈퇴한 사용자)' ? name : `(${name ?? '탈퇴한 사용자'})`;
+  const statusLabels: Record<string, string> = {
+    ACCEPTED: '상대가 수락',
+    PENDING: '지목함 (상대 응답 대기)',
+    REJECTED: '상대가 거절',
   };
-  return labels[status] ?? status;
+  const displayStatus =
+    status === 'PENDING' && mutual
+      ? '서로 지목 (상대 응답 대기)'
+      : (statusLabels[status ?? ''] ?? status ?? '');
+
+  const preferredPeer = `${userId} ${displayName}`;
+
+  return displayStatus ? `${preferredPeer} - ${displayStatus}` : preferredPeer;
 }
 
 export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
@@ -83,7 +93,41 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
   const responsesQuery = useAdminPreSurveyResponsesQuery(
     sectionId || undefined,
   );
+  const enrollmentsQuery = useAdminSectionEnrollmentsQuery(
+    sectionId || undefined,
+  );
   const downloadMutation = useAdminPreSurveyResponsesExcelDownloadMutation();
+  const responsesByUserId = new Map(
+    (responsesQuery.data ?? []).map(response => [response.userId, response]),
+  );
+  const tableRows: PreSurveyTableRow[] = (enrollmentsQuery.data?.contents ?? [])
+    .filter(
+      enrollment =>
+        enrollment.role === 'STUDENT' && enrollment.status === 'ACTIVE',
+    )
+    .map(enrollment => {
+      const response = responsesByUserId.get(enrollment.studentNumber);
+
+      return response
+        ? { ...response, userName: enrollment.name }
+        : {
+            etcOpinion: null,
+            id: `not-submitted-${enrollment.studentNumber}`,
+            mutual: null,
+            preferredPeerName: null,
+            preferredPeerStatus: null,
+            preferredPeerUserId: null,
+            preferredRoles: [],
+            submittedAt: '미제출',
+            topicOpinion: null,
+            userId: enrollment.studentNumber,
+            userName: enrollment.name,
+          };
+    })
+    .sort((left, right) => left.userId.localeCompare(right.userId));
+  const submittedCount = tableRows.filter(
+    row => row.submittedAt !== '미제출',
+  ).length;
 
   function handleExcelDownload() {
     if (!sectionId || downloadMutation.isPending) return;
@@ -142,7 +186,7 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
               />
             </div>
 
-            {responsesQuery.isPending ? (
+            {responsesQuery.isPending || enrollmentsQuery.isPending ? (
               <Text color='secondary' role='status'>
                 사전 정보를 불러오는 중입니다.
               </Text>
@@ -150,11 +194,16 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
               <Text role='alert'>
                 사전 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
               </Text>
+            ) : enrollmentsQuery.isError ? (
+              <Text role='alert'>
+                수강생 목록을 불러오지 못해 미제출 여부를 확인할 수 없습니다.
+                잠시 후 다시 시도해 주세요.
+              </Text>
             ) : (
               <>
                 <Text color='secondary' role='status' type='supporting'>
-                  응답 수: {responsesQuery.data.length}명 · 미응답 학생은 현재
-                  API 응답에 포함되지 않습니다.
+                  전체 {tableRows.length}명 · 제출 {submittedCount}명 · 미제출{' '}
+                  {tableRows.length - submittedCount}명
                 </Text>
 
                 <div className={styles.table}>
@@ -174,6 +223,19 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
                       },
                       {
                         align: 'start',
+                        header: '희망 조원',
+                        key: 'preferredPeerUserId',
+                        renderCell: response =>
+                          formatPreferredPeer(
+                            response.preferredPeerUserId,
+                            response.preferredPeerName,
+                            response.preferredPeerStatus,
+                            response.mutual,
+                          ),
+                        width: proportional(1.5, { minWidth: 260 }),
+                      },
+                      {
+                        align: 'start',
                         header: '희망 역할',
                         key: 'preferredRoles',
                         renderCell: response =>
@@ -182,49 +244,16 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
                       },
                       {
                         align: 'start',
-                        header: '선호 짝',
-                        key: 'preferredPeerName',
-                        renderCell: response =>
-                          formatPreferredPeer(
-                            response.preferredPeerName,
-                            response.preferredPeerUserId,
-                          ),
-                        width: proportional(1.2, { minWidth: 180 }),
-                      },
-                      {
-                        align: 'start',
-                        header: '짝 요청 상태',
-                        key: 'preferredPeerStatus',
-                        renderCell: response =>
-                          formatPreferredPeerStatus(
-                            response.preferredPeerStatus,
-                          ),
-                        width: proportional(0.9, { minWidth: 140 }),
-                      },
-                      {
-                        align: 'start',
-                        header: '상호 선택',
-                        key: 'mutual',
-                        renderCell: response =>
-                          response.mutual == null
-                            ? '-'
-                            : response.mutual
-                              ? '예'
-                              : '아니오',
-                        width: proportional(0.7, { minWidth: 100 }),
-                      },
-                      {
-                        align: 'start',
                         header: '주제 의견',
                         key: 'topicOpinion',
-                        renderCell: response => response.topicOpinion ?? '-',
+                        renderCell: response => response.topicOpinion ?? '',
                         width: proportional(1.4, { minWidth: 220 }),
                       },
                       {
                         align: 'start',
                         header: '기타 의견',
                         key: 'etcOpinion',
-                        renderCell: response => response.etcOpinion ?? '-',
+                        renderCell: response => response.etcOpinion ?? '',
                         width: proportional(1.4, { minWidth: 220 }),
                       },
                       {
@@ -234,10 +263,10 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
                         width: proportional(0.9, { minWidth: 160 }),
                       },
                     ]}
-                    data={responsesQuery.data}
+                    data={tableRows}
                     density='balanced'
                     dividers='rows'
-                    emptyState={<span>제출된 사전 정보가 없습니다.</span>}
+                    emptyState={<span>등록된 수강생이 없습니다.</span>}
                     idKey='id'
                     plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
                     textOverflow='wrap'
