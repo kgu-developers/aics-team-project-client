@@ -16,6 +16,7 @@ import { cx } from '~/shared/lib/cx';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import StudentContextState from '~/features/section/StudentContextState';
 import { useStudentContext } from '~/features/section/useStudentContext';
 import {
   useMilestoneScheduleClock,
@@ -152,6 +153,10 @@ export default function StudentMessagesPage() {
     setReplyError(null);
     if (!message.read) markMessageRead(message.id);
   };
+
+  if (!isDemo && context.status !== 'ready' && context.status !== 'no-team') {
+    return <StudentContextState context={context} />;
+  }
 
   if (!teamId) {
     return (
