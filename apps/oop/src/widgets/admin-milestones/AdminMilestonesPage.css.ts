@@ -90,12 +90,10 @@ globalStyle(table + ' tbody tr:hover td', {
   background: tokens.color.background.muted,
 });
 
-export const titleLink = style({
-  color: tokens.color.text.primary,
-  textDecoration: 'none',
-});
-
-globalStyle(`${titleLink}:hover`, {
-  color: tokens.color.text.accent,
-  textDecoration: 'underline',
+export const clickableRow = style({
+  cursor: 'pointer',
+  ':focus-visible': {
+    outline: `2px solid ${tokens.color.accent}`,
+    outlineOffset: -2,
+  },
 });

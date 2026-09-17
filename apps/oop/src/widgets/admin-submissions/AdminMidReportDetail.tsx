@@ -132,31 +132,6 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
           </section>
         ))}
       </Card>
-      <section className={styles.relatedMeetings}>
-        <Heading level={3}>연결된 회의록 ({relatedMeetings.length}건)</Heading>
-        {relatedMeetingsQuery.isPending ? (
-          <Text aria-live='polite' role='status'>
-            회의록을 불러오는 중입니다.
-          </Text>
-        ) : relatedMeetingsQuery.isError ? (
-          <Text role='alert'>연결된 회의록을 불러오지 못했습니다.</Text>
-        ) : relatedMeetings.length ? (
-          <AdminLinkedMeetingsTable
-            authorLabel='작성자 학번'
-            records={relatedMeetings.map(record => ({
-              authorName: record.authorId,
-              id: record.id,
-              meetingAt: record.meetingAt,
-              participantCount: record.participantCount,
-              title: record.title,
-            }))}
-          />
-        ) : (
-          <Text className={styles.sectionDescription}>
-            연결된 회의록이 없습니다.
-          </Text>
-        )}
-      </section>
       <Card className={styles.relatedMeetings}>
         <Heading level={3}>중간 점검 피드백</Heading>
         {feedbacksQuery.isPending ? (
@@ -243,6 +218,31 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
           ) : null}
         </div>
       </Card>
+      <section className={styles.relatedMeetings}>
+        <Heading level={3}>연결된 회의록 ({relatedMeetings.length}건)</Heading>
+        {relatedMeetingsQuery.isPending ? (
+          <Text aria-live='polite' role='status'>
+            회의록을 불러오는 중입니다.
+          </Text>
+        ) : relatedMeetingsQuery.isError ? (
+          <Text role='alert'>연결된 회의록을 불러오지 못했습니다.</Text>
+        ) : relatedMeetings.length ? (
+          <AdminLinkedMeetingsTable
+            authorLabel='작성자 학번'
+            records={relatedMeetings.map(record => ({
+              authorName: record.authorId,
+              id: record.id,
+              meetingAt: record.meetingAt,
+              participantCount: record.participantCount,
+              title: record.title,
+            }))}
+          />
+        ) : (
+          <Text className={styles.sectionDescription}>
+            연결된 회의록이 없습니다.
+          </Text>
+        )}
+      </section>
     </>
   );
 }

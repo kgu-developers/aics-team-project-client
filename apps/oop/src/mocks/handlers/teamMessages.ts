@@ -2,6 +2,7 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import {
   teamMessageRelatedTypes,
   type SubmitTeamMessageInput,
+  type TeamMessage,
   type TeamMessagePersistResponse,
   type TeamMessageRelatedType,
 } from '@aics/core';
@@ -21,6 +22,18 @@ type TeamMessageHandlerOptions = {
 const teamMessageStorageKey = 'aics.oop.msw.team-messages';
 const adminSectionId = '1';
 const demoSectionId = 'oop-2026-2-01';
+
+type MockTeamMessageData = ReturnType<typeof createTeamMessageData>;
+
+type MockFeedbackTeamMessageInput = {
+  createdAt: string;
+  message: string;
+  relatedId: number;
+  relatedType: Extract<TeamMessageRelatedType, 'MID_REPORT' | 'PROPOSAL'>;
+  senderId: string;
+  senderName?: string | null;
+  teamId: number;
+};
 
 function error(status: number, code: string) {
   return HttpResponse.json({ code }, { status });
@@ -51,12 +64,17 @@ export function createTeamMessageHandlers(
   options: TeamMessageHandlerOptions = {},
 ) {
   const initialData = createTeamMessageData();
-  const data = loadTeamMessageData(initialData, options.persist ?? false);
+  let data = loadTeamMessageData(initialData, options.persist ?? false);
   const authenticatedUserId =
     options.getAuthenticatedUserId ??
     ((request: Request) =>
       getMockAuthenticatedAccount(request)?.user.studentNumber);
   const now = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
+
+  function refreshPersistedData() {
+    if (!options.persist) return;
+    data = loadTeamMessageData(initialData, true);
+  }
 
   function persistData() {
     if (!options.persist || typeof localStorage === 'undefined') return;
@@ -68,7 +86,12 @@ export function createTeamMessageHandlers(
     }
   }
 
-  function guard(request: Request, teamId: string) {
+  function guard(
+    request: Request,
+    teamId: string,
+    shouldRefreshPersistedData = true,
+  ) {
+    if (shouldRefreshPersistedData) refreshPersistedData();
     const userId = authenticatedUserId(request);
     const account = getMockAuthenticatedAccount(request);
     if (!userId) return { response: new HttpResponse(null, { status: 401 }) };
@@ -113,6 +136,7 @@ export function createTeamMessageHandlers(
   }
 
   function guardMessage(request: Request, messageId: string) {
+    refreshPersistedData();
     if (!/^\d+$/.test(messageId) || !isId(Number(messageId))) {
       return { response: error(400, 'INVALID_REQUEST') };
     }
@@ -124,13 +148,14 @@ export function createTeamMessageHandlers(
       thread => thread.threadId === message.threadId,
     );
     if (!thread) return { response: error(404, 'TEAM_THREAD_NOT_FOUND') };
-    const access = guard(request, String(thread.teamId));
+    const access = guard(request, String(thread.teamId), false);
     if ('response' in access) return access;
     return { access, message };
   }
 
   return [
     http.get(`${API_BASE_URL}/api/v1/admin/messages`, ({ request }) => {
+      refreshPersistedData();
       const account = getMockAuthenticatedAccount(request);
       if (!account || account.user.globalRole === 'STUDENT') {
         return error(401, 'UNAUTHORIZED');
@@ -330,7 +355,7 @@ export function createTeamMessageHandlers(
 }
 
 function loadTeamMessageData(
-  initialData: ReturnType<typeof createTeamMessageData>,
+  initialData: MockTeamMessageData,
   shouldPersist: boolean,
 ) {
   if (!shouldPersist || typeof localStorage === 'undefined') return initialData;
@@ -356,4 +381,52 @@ function loadTeamMessageData(
   } catch {
     return initialData;
   }
+}
+
+export function appendPersistentMockFeedbackTeamMessage({
+  createdAt,
+  message,
+  relatedId,
+  relatedType,
+  senderId,
+  senderName,
+  teamId,
+}: MockFeedbackTeamMessageInput) {
+  const data = loadTeamMessageData(createTeamMessageData(), true);
+  const team = data.teams.find(candidate => candidate.id === teamId);
+  if (!team) return null;
+
+  let thread = data.threads.find(candidate => candidate.teamId === teamId);
+  if (!thread) {
+    thread = {
+      createdAt,
+      teamId,
+      threadId: data.nextThreadId++,
+    };
+    data.threads.push(thread);
+  }
+
+  const teamMessage: TeamMessage = {
+    createdAt,
+    id: data.nextMessageId++,
+    important: false,
+    message,
+    read: false,
+    relatedId,
+    relatedType,
+    senderId,
+    senderName: senderName ?? teamMessageSenderNames[senderId],
+    threadId: thread.threadId,
+  };
+  data.messages.push(teamMessage);
+
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem(teamMessageStorageKey, JSON.stringify(data));
+    } catch {
+      // Persistence is only a development convenience for the MSW scenario.
+    }
+  }
+
+  return teamMessage;
 }

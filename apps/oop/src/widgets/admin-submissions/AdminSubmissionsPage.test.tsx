@@ -182,7 +182,7 @@ describe('AdminSubmissionsPage', () => {
       const posted = vi.fn();
       server.use(
         http.post(
-          `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('1')}`,
+          `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_PROPOSAL('1', '1')}/feedback`,
           async ({ request }) => {
             posted(await request.json());
             return HttpResponse.json(
@@ -204,8 +204,6 @@ describe('AdminSubmissionsPage', () => {
         '피드백을 보내지 못했습니다.',
       );
       expect(posted).toHaveBeenCalledExactlyOnceWith({
-        relatedType: 'PROPOSAL',
-        relatedId: 19,
         message: '예외 처리를 보완해 주세요.',
       });
       expect(
@@ -307,71 +305,47 @@ describe('AdminSubmissionsPage', () => {
   it('제안서와 중간 점검 상세에서 현재 제출물에 연결된 피드백을 회의록보다 먼저 표시한다', async () => {
     const user = userEvent.setup();
     const midReportFeedbackRequest = vi.fn();
-    const proposalMessages = [
+    const proposalFeedbacks = [
       {
         createdAt: '2026-09-01 09:30',
-        id: 710,
-        important: false,
         message: '제안서의 문제 정의와 구현 범위를 보완해 주세요.',
-        read: false,
-        relatedId: 1001,
-        relatedType: 'PROPOSAL',
+        messageId: 710,
+        projectId: 1001,
         senderId: demoAdmin.studentNumber,
         senderName: demoAdmin.name,
-        threadId: 10,
-      },
-      {
-        createdAt: '2026-09-02 09:30',
-        id: 712,
-        important: false,
-        message: '다른 제안서 제출물에 연결된 피드백입니다.',
-        read: false,
-        relatedId: 9999,
-        relatedType: 'PROPOSAL',
-        senderId: demoAdmin.studentNumber,
-        senderName: demoAdmin.name,
-        threadId: 10,
       },
     ];
 
     server.use(
-      http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_THREAD.BY_TEAM('1')}`, () =>
-        HttpResponse.json({
-          createdAt: '2026-09-01 09:00',
-          teamId: 1,
-          threadId: 10,
-        }),
-      ),
-      http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('1')}`, () =>
-        HttpResponse.json({
-          contents: proposalMessages,
-          pageable: {
-            isEnd: true,
-            page: 0,
-            size: 100,
-            totalElements: proposalMessages.length,
-            totalPages: 1,
-          },
-        }),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_PROPOSAL('1', '1')}/feedbacks`,
+        () =>
+          HttpResponse.json({
+            contents: proposalFeedbacks,
+            pageable: {
+              isEnd: true,
+              page: 0,
+              size: 100,
+              totalElements: proposalFeedbacks.length,
+              totalPages: 1,
+            },
+          }),
       ),
       http.post(
-        `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('1')}`,
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_PROPOSAL('1', '1')}/feedback`,
         async ({ request }) => {
           const body = (await request.json()) as { message: string };
-          const message = {
+          const feedback = {
             createdAt: '2026-09-13 16:00',
-            id: 713,
-            important: false,
             message: body.message,
-            read: false,
-            relatedId: 1001,
-            relatedType: 'PROPOSAL',
+            messageId: 713,
+            projectId: 1001,
             senderId: demoAdmin.studentNumber,
             senderName: demoAdmin.name,
-            threadId: 10,
+            teamId: 1,
           };
-          proposalMessages.push(message);
-          return HttpResponse.json(message, { status: 201 });
+          proposalFeedbacks.push(feedback);
+          return HttpResponse.json(feedback);
         },
       ),
       http.get(
@@ -412,9 +386,6 @@ describe('AdminSubmissionsPage', () => {
       screen.getByText('제안서의 문제 정의와 구현 범위를 보완해 주세요.'),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText('다른 제안서 제출물에 연결된 피드백입니다.'),
-    ).not.toBeInTheDocument();
-    expect(
       screen.getByRole('heading', { name: '연결된 회의록 (1건)' }),
     ).toBeInTheDocument();
 
@@ -443,6 +414,17 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('heading', { name: '연결된 회의록 (1건)' }),
     ).toBeInTheDocument();
+    const midReportFeedbackHeading = screen.getByRole('heading', {
+      name: '중간 점검 피드백',
+    });
+    const midReportMeetingsHeading = screen.getByRole('heading', {
+      name: '연결된 회의록 (1건)',
+    });
+    expect(
+      midReportFeedbackHeading.compareDocumentPosition(
+        midReportMeetingsHeading,
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 
     await user.type(
       screen.getByRole('textbox', { name: '중간 점검 피드백 내용' }),

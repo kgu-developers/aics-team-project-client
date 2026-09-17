@@ -9,6 +9,7 @@ import { adminPeerEvaluationFormHandlers } from './adminPeerEvaluationForms';
 import { adminPresentationEvaluationHandlers } from './adminPresentationEvaluations';
 import { adminProfileHandlers } from './adminProfile';
 import { adminProjectProposalHandlers } from './adminProjectProposal';
+import { adminProposalFeedbackHandlers } from './adminProposalFeedbacks';
 import { adminRequiredArtifactHandlers } from './adminRequiredArtifacts';
 import { adminSectionMilestoneHandlers } from './adminSectionMilestones';
 import { adminSectionHandlers } from './adminSections';
@@ -50,6 +51,7 @@ export const handlers = [
   ...adminMilestoneSubmissionsHandlers,
   ...adminMeetingHandlers,
   ...adminMidReportHandlers,
+  ...adminProposalFeedbackHandlers,
   ...adminPresentationEvaluationHandlers,
   ...adminPeerEvaluationFormHandlers,
   ...adminProjectProposalHandlers,
