@@ -14,7 +14,6 @@ import {
   Dialog,
   EmptyState,
   Heading,
-  IconButton,
   MultiSelector,
   proportional,
   Selector,
@@ -28,23 +27,13 @@ import {
 } from '@aics/design-system';
 import type { TableColumn } from '@aics/design-system';
 import { Link, useBlocker, useNavigate } from '@tanstack/react-router';
-import { EditorContent, useEditor } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import {
-  Bold,
-  Code2,
-  Heading2,
-  Italic,
-  List,
-  ListOrdered,
-  Quote,
-  Strikethrough,
-} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+import RichTextEditor from '~/shared/ui/RichTextEditor';
 import RichTextViewer from '~/shared/ui/RichTextViewer';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
@@ -93,10 +82,14 @@ const requestErrorMessage =
 function toDateInput(value: string) {
   return value.slice(0, 10);
 }
+const heldAtFormatter = new Intl.DateTimeFormat('ko-KR', {
+  dateStyle: 'long',
+  timeZone: 'Asia/Seoul',
+});
+
 function formatHeldAt(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', {
-    dateStyle: 'long',
-  }).format(new Date(value.replace(' ', 'T')));
+  const instant = seoulInstant(value);
+  return Number.isNaN(instant) ? value : heldAtFormatter.format(instant);
 }
 
 function hasRichTextContent(value: unknown): boolean {
@@ -183,95 +176,14 @@ function MeetingEditor({
   isDisabled: boolean;
   onChange: (value: RichTextJson) => void;
 }) {
-  const editor = useEditor({
-    content,
-    editable: !isDisabled,
-    extensions: [StarterKit],
-    onUpdate: ({ editor: nextEditor }) =>
-      onChange(nextEditor.getJSON() as RichTextJson),
-  });
-  useEffect(() => {
-    editor?.setEditable(!isDisabled);
-  }, [editor, isDisabled]);
-  useEffect(() => {
-    if (!editor || JSON.stringify(editor.getJSON()) === JSON.stringify(content))
-      return;
-    editor.commands.setContent(content, { emitUpdate: false });
-  }, [content, editor]);
   return (
     <div className={styles.fields}>
-      <Text weight='medium'>회의 내용</Text>
-      <div className={styles.toolbar} aria-label='회의 내용 서식'>
-        <IconButton
-          icon={<Bold aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='굵게'
-          onClick={() => editor?.chain().focus().toggleBold().run()}
-          size='sm'
-          variant='ghost'
-        />
-        <IconButton
-          icon={<Italic aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='기울임'
-          onClick={() => editor?.chain().focus().toggleItalic().run()}
-          size='sm'
-          variant='ghost'
-        />
-        <IconButton
-          icon={<Strikethrough aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='취소선'
-          onClick={() => editor?.chain().focus().toggleStrike().run()}
-          size='sm'
-          variant='ghost'
-        />
-        <IconButton
-          icon={<Heading2 aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='소제목'
-          onClick={() =>
-            editor?.chain().focus().toggleHeading({ level: 2 }).run()
-          }
-          size='sm'
-          variant='ghost'
-        />
-        <IconButton
-          icon={<List aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='글머리표 목록'
-          onClick={() => editor?.chain().focus().toggleBulletList().run()}
-          size='sm'
-          variant='ghost'
-        />
-        <IconButton
-          icon={<ListOrdered aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='번호 목록'
-          onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-          size='sm'
-          variant='ghost'
-        />
-        <IconButton
-          icon={<Quote aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='인용문'
-          onClick={() => editor?.chain().focus().toggleBlockquote().run()}
-          size='sm'
-          variant='ghost'
-        />
-        <IconButton
-          icon={<Code2 aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='코드 블록'
-          onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
-          size='sm'
-          variant='ghost'
-        />
-      </div>
-      <div className={styles.editor}>
-        <EditorContent editor={editor} />
-      </div>
+      <RichTextEditor
+        content={content}
+        isDisabled={isDisabled}
+        label='회의 내용'
+        onChange={onChange}
+      />
     </div>
   );
 }

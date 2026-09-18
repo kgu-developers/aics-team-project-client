@@ -1,4 +1,4 @@
-import type { SectionAnnouncementResponse } from '@aics/core';
+import type { RichTextJson, SectionAnnouncementResponse } from '@aics/core';
 import {
   Button,
   Card,
@@ -8,7 +8,6 @@ import {
   Selector,
   SelectorOption,
   Text,
-  TextArea,
   TextInput,
 } from '@aics/design-system';
 import {
@@ -22,6 +21,14 @@ import { type KeyboardEvent, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import {
+  emptyRichText,
+  isRichTextEmpty,
+  parseRichTextContent,
+  serializeRichTextContent,
+} from '~/shared/lib/richTextContent';
+import RichTextEditor from '~/shared/ui/RichTextEditor';
+import RichTextViewer from '~/shared/ui/RichTextViewer';
 
 import {
   canPublishNotice,
@@ -267,11 +274,7 @@ export function AdminNoticeDetailPage() {
         <Text>공개 범위 : {section.code}</Text>
         <div className={styles.divider} />
         <section aria-label='공지 내용'>
-          {notice.content.split(/\r?\n/).map((line, index) => (
-            <Text key={index} as='p' display='block'>
-              {line || '\u00a0'}
-            </Text>
-          ))}
+          <RichTextViewer content={parseRichTextContent(notice.content)} />
         </section>
         <div className={styles.actions}>
           <Button
@@ -299,9 +302,9 @@ function NoticeFields({
   pending,
 }: {
   title: string;
-  content: string;
+  content: RichTextJson;
   setTitle: (value: string) => void;
-  setContent: (value: string) => void;
+  setContent: (value: RichTextJson) => void;
   pending: boolean;
 }) {
   return (
@@ -315,24 +318,21 @@ function NoticeFields({
         isDisabled={pending}
         width='100%'
       />
-      <TextArea
-        label='내용'
-        placeholder='공지 내용을 입력해 주세요.'
-        value={content}
-        onChange={setContent}
-        rows={9}
+      <RichTextEditor
+        content={content}
         isDisabled={pending}
-        width='100%'
+        label='내용'
+        onChange={setContent}
       />
     </>
   );
 }
 
-function validText(title: string, content: string) {
+function validText(title: string, content: RichTextJson) {
   return (
     title.trim().length > 0 &&
     title.trim().length <= 192 &&
-    content.trim().length > 0
+    !isRichTextEmpty(content)
   );
 }
 
@@ -340,11 +340,16 @@ function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
   const navigate = useNavigate();
   const { user, section, sectionId } = useNoticeScope();
   const [title, setTitle] = useState(notice.title);
-  const [content, setContent] = useState(notice.content);
+  const [content, setContent] = useState(() =>
+    parseRichTextContent(notice.content),
+  );
   const mutation = useUpdateSectionAnnouncementMutation();
+  const serializedContent = serializeRichTextContent(content);
   const input = {
     ...(title.trim() !== notice.title ? { title: title.trim() } : {}),
-    ...(content !== notice.content ? { content } : {}),
+    ...(serializedContent !== serializeRichTextContent(parseRichTextContent(notice.content))
+      ? { content: serializedContent }
+      : {}),
   };
   const canSave =
     canPublishNotice(user, section) &&
@@ -431,7 +436,7 @@ export function AdminNoticeNewPage() {
   const navigate = useNavigate();
   const { sectionId, user } = useNoticeScope();
   const [title, setTitle] = useState('');
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState<RichTextJson>(emptyRichText);
   const [selectedSectionIds, setSelectedSectionIds] = useState<string[]>(
     sectionId === undefined ? [] : [String(sectionId)],
   );
@@ -519,7 +524,11 @@ export function AdminNoticeNewPage() {
                 sectionIds.push(id);
               }
               mutation.mutate(
-                { sectionIds, title: title.trim(), content },
+                {
+                  sectionIds,
+                  title: title.trim(),
+                  content: serializeRichTextContent(content),
+                },
                 {
                   onSuccess: result => {
                     if (result.failedSectionIds.length > 0) {

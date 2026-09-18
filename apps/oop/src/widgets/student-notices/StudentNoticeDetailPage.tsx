@@ -10,6 +10,8 @@ import { Link } from '@tanstack/react-router';
 import { forwardRef, useEffect, type ComponentPropsWithoutRef } from 'react';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { parseRichTextContent } from '~/shared/lib/richTextContent';
+import RichTextViewer from '~/shared/ui/RichTextViewer';
 
 import SectionSelection from '~/features/section/SectionSelection';
 import StudentContextState from '~/features/section/StudentContextState';
@@ -155,15 +157,9 @@ export default function StudentNoticeDetailPage({
         <Text>분반 : {section.name}</Text>
         <div className={styles.divider} />
         <section aria-label='공지 내용'>
-          {announcement.content.split(/\r?\n/).map((line, i) => (
-            <Text
-              as='p'
-              display='block'
-              key={`${announcement.id}-line-${i}`}
-            >
-              {line || '\u00a0'}
-            </Text>
-          ))}
+          <RichTextViewer
+            content={parseRichTextContent(announcement.content)}
+          />
         </section>
         {imageAttachments.length ? (
           <section

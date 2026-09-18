@@ -23,6 +23,11 @@ import {
   vi,
 } from 'vitest';
 
+import {
+  plainTextToRichText,
+  serializeRichTextContent,
+} from '~/shared/lib/richTextContent';
+
 import { noticeId } from '~/features/admin-notices/noticeScope';
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -42,6 +47,31 @@ import {
   resetSectionAnnouncements,
   studentNoticeHandlers,
 } from '~/mocks/handlers/studentNotices';
+
+// ProseMirror needs a real layout engine; drive the notice body through a
+// textarea that exchanges the same JSON document the real editor produces.
+vi.mock('~/shared/ui/RichTextEditor', () => ({
+  default: ({
+    content,
+    isDisabled,
+    label,
+    onChange,
+  }: {
+    content: import('@aics/core').RichTextJson;
+    isDisabled?: boolean;
+    label: string;
+    onChange: (value: import('@aics/core').RichTextJson) => void;
+  }) => (
+    <textarea
+      aria-label={label}
+      disabled={isDisabled}
+      onChange={event => onChange(plainTextToRichText(event.target.value))}
+      value={((content.content as { content?: { text?: string }[] }[]) ?? [])
+        .map(paragraph => paragraph.content?.[0]?.text ?? '')
+        .join('\n')}
+    />
+  ),
+}));
 
 const server = setupServer(...studentNoticeHandlers);
 const clients: QueryClient[] = [];
@@ -169,7 +199,12 @@ it('선택한 한 분반에 제목·본문만 게시하고 상세·목록 재조
       '둘째 줄',
     ),
   ).toBeInTheDocument();
-  expect(requests).toEqual([{ title: '새 공지', content: '첫 줄\n둘째 줄' }]);
+  expect(requests).toEqual([
+    {
+      title: '새 공지',
+      content: serializeRichTextContent(plainTextToRichText('첫 줄\n둘째 줄')),
+    },
+  ]);
   expect(router.state.location.href).toBe('/admin/notices/13?sectionId=1');
   await act(() => client.refetchQueries());
   expect(screen.getByText('첫 줄')).toBeInTheDocument();

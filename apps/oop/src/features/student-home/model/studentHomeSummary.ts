@@ -6,6 +6,11 @@ import type {
   TeamKickoffResponse,
 } from '@aics/core';
 
+import {
+  getRichTextPlainText,
+  parseRichTextContent,
+} from '~/shared/lib/richTextContent';
+
 import { meetingTitle } from '~/features/meeting/model/studentMeeting';
 
 export type HomeMeetingRecord = {
@@ -35,7 +40,7 @@ export function homeAnnouncements(
     .map(item => ({
       id: String(item.id),
       title: item.title,
-      content: item.content,
+      content: getRichTextPlainText(parseRichTextContent(item.content)),
       date: item.publishedAt.slice(0, 10),
     }));
 }
