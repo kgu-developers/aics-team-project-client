@@ -2,9 +2,8 @@ import { AstryxThemeProvider, ToastViewport } from '@aics/design-system';
 import { Outlet, createRootRoute } from '@tanstack/react-router';
 import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 
+import HomeNotFoundPage from '~/app/components/HomeNotFoundPage';
 import RouteErrorPage from '~/app/components/RouteErrorPage';
-import RouteNotFoundPage from '~/app/components/RouteNotFoundPage';
-import { ROUTES } from '~/app/constants/routes';
 
 import { QueryProvider } from '../providers/query-provider';
 
@@ -15,7 +14,7 @@ import '../global.css';
 export const Route = createRootRoute({
   component: RootRoute,
   errorComponent: RouteErrorPage,
-  notFoundComponent: RootNotFoundRoute,
+  notFoundComponent: HomeNotFoundPage,
 });
 
 function RootRoute() {
@@ -28,16 +27,5 @@ function RootRoute() {
         </ToastViewport>
       </QueryProvider>
     </AstryxThemeProvider>
-  );
-}
-
-function RootNotFoundRoute() {
-  return (
-    <RouteNotFoundPage
-      actionLabel='학생 홈으로 가기'
-      actionTo={ROUTES.STUDENT.HOME}
-      description='현재 학생 흐름에 없는 주소입니다.'
-      title='페이지를 찾을 수 없어요.'
-    />
   );
 }
