@@ -77,6 +77,12 @@ globalStyle(`${table} td`, {
   padding: '14px 16px',
 });
 
+export const projectRoleCell = style({
+  overflowWrap: 'anywhere',
+  whiteSpace: 'normal',
+  wordBreak: 'break-word',
+});
+
 export const teamGrid = style({
   display: 'flex',
   flexDirection: 'column',
@@ -90,7 +96,7 @@ export const teamCard = style({
   borderRadius: tokens.radius.container,
   display: 'grid',
   gap: 12,
-  gridTemplateColumns: '72px minmax(0, 1fr)',
+  gridTemplateColumns: 'minmax(0, 160px) minmax(0, 1fr)',
   padding: 16,
   '@media': {
     '(max-width: 640px)': {
@@ -107,11 +113,14 @@ export const dragOverTeamCard = style({
 export const teamName = style({
   fontSize: 16,
   margin: 0,
+  minWidth: 0,
   paddingTop: 8,
 });
 
 export const teamDashboardLink = style({
   color: 'inherit',
+  display: 'block',
+  overflowWrap: 'anywhere',
   textDecoration: 'underline',
   textUnderlineOffset: 3,
 });

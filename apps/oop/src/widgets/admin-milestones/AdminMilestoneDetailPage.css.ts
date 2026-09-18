@@ -18,6 +18,15 @@ export const titleRow = style({
   justifyContent: 'space-between',
 });
 
+export const titleContent = style({
+  minWidth: 0,
+});
+
+export const pageTitle = style({
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
+});
+
 export const backLink = style({
   color: tokens.color.text.accent,
   flex: '0 0 auto',

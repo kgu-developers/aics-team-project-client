@@ -113,8 +113,10 @@ export default function AdminMilestoneDetailPage() {
   return (
     <div className={styles.page}>
       <header className={styles.titleRow}>
-        <div>
-          <Heading level={1}>마일스톤 &gt; {milestone.title}</Heading>
+        <div className={styles.titleContent}>
+          <Heading className={styles.pageTitle} level={1}>
+            마일스톤 &gt; {milestone.title}
+          </Heading>
           <Text color='secondary' type='supporting'>
             설정된 내용을 읽기 전용으로 확인합니다.
           </Text>

@@ -156,18 +156,20 @@ export const statusGroups = style({
 });
 
 globalStyle(`${sectionStatusList} li`, {
-  alignItems: 'center',
+  alignItems: 'start',
   background: tokens.color.background.muted,
   borderRadius: tokens.radius.element,
   display: 'grid',
   fontSize: 13,
   gap: 8,
-  gridTemplateColumns: 'minmax(92px, auto) minmax(0, 1fr)',
+  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
   padding: '10px 12px',
 });
 
 export const sectionCode = style({
-  whiteSpace: 'nowrap',
+  minWidth: 0,
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
 });
 
 export const sectionFile = style({

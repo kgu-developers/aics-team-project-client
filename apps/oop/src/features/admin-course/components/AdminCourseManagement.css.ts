@@ -62,6 +62,14 @@ export const dialogBody = style({
   display: 'flex',
   flexDirection: 'column',
   gap: tokens.spacing['3'],
+  maxHeight: 'calc(100dvh - 64px)',
+  minWidth: 0,
+  overflowY: 'auto',
+});
+
+export const dialogTitle = style({
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
 });
 
 export const form = style({
@@ -74,6 +82,9 @@ export const sectionSettingsForm = style({
   display: 'flex',
   flexDirection: 'column',
   gap: tokens.spacing['2'],
+  maxHeight: 'calc(100dvh - 64px)',
+  minWidth: 0,
+  overflowY: 'auto',
 });
 
 export const optionalSettings = style({
@@ -124,6 +135,7 @@ export const sectionList = style({
   gap: tokens.spacing['2'],
   listStyle: 'none',
   margin: 0,
+  minWidth: 0,
   padding: 0,
 });
 
@@ -133,8 +145,14 @@ export const sectionItem = style({
   borderRadius: tokens.radius.element,
   display: 'grid',
   gap: tokens.spacing['1'],
-  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 0.8fr)',
+  minWidth: 0,
   padding: tokens.spacing['3'],
+  '@media': {
+    '(max-width: 480px)': {
+      gridTemplateColumns: '1fr',
+    },
+  },
 });
 
 export const sectionEditButton = style({
@@ -144,6 +162,21 @@ export const sectionEditButton = style({
 export const sectionMeta = style({
   color: tokens.color.text.secondary,
   fontSize: 13,
+  minWidth: 0,
+  overflowWrap: 'anywhere',
+  textAlign: 'right',
+  wordBreak: 'break-word',
+  '@media': {
+    '(max-width: 480px)': {
+      textAlign: 'left',
+    },
+  },
+});
+
+export const sectionCode = style({
+  minWidth: 0,
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
 });
 
 export const assistantRow = style({

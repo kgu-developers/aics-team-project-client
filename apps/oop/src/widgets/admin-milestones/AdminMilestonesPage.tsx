@@ -227,7 +227,9 @@ export default function AdminMilestonesPage() {
                         tabIndex={0}
                       >
                         <td>{milestone.sectionLabel}</td>
-                        <td>{milestone.title}</td>
+                        <td className={styles.milestoneTitle}>
+                          {milestone.title}
+                        </td>
                         <td>
                           {formatAdminMilestoneDate(milestone.schedule.dueAt)}
                         </td>
