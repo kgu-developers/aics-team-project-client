@@ -8,6 +8,8 @@ import {
 } from '@aics/design-system';
 import { type ReactNode, useState } from 'react';
 
+import { useDialogBackdropDragGuard } from '~/shared/ui/dialogBackdropGuard';
+
 import {
   useAdminUserQuery,
   useResetAdminUserPasswordMutation,
@@ -33,6 +35,7 @@ export default function AdminStudentDetailDialog({
   const userQuery = useAdminUserQuery(studentNumber);
   const resetPasswordMutation = useResetAdminUserPasswordMutation();
   const [isResetConfirmationOpen, setIsResetConfirmationOpen] = useState(false);
+  const backdropDragGuard = useDialogBackdropDragGuard<HTMLDialogElement>();
   const user = userQuery.data;
 
   const closeResetConfirmation = () => {
@@ -63,6 +66,7 @@ export default function AdminStudentDetailDialog({
   return (
     <>
       <Dialog
+        {...backdropDragGuard}
         aria-label={user ? `${user.name} 수강생 정보` : '수강생 정보'}
         isOpen={studentNumber !== null}
         onOpenChange={open => {
