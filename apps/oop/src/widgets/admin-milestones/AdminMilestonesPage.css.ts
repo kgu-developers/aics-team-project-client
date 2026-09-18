@@ -61,15 +61,21 @@ export const filterActive = style({
 });
 
 export const tableCard = style({
-  overflow: 'hidden',
+  overflowX: 'auto',
+  overflowY: 'hidden',
   padding: 0,
 });
 
 export const table = style({
   borderCollapse: 'collapse',
+  minWidth: 720,
   tableLayout: 'fixed',
   width: '100%',
 });
+
+export const sectionColumn = style({ width: 132 });
+export const dueAtColumn = style({ width: 156 });
+export const statusColumn = style({ width: 152 });
 
 globalStyle(table + ' th', {
   background: tokens.color.background.card,
