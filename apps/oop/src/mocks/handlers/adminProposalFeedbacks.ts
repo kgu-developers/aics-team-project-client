@@ -1,6 +1,10 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import {
+  reopenAdminProjectProposal,
+  resetAdminProjectProposalScenario,
+} from './adminProjectProposal';
 import { appendPersistentMockFeedbackTeamMessage } from './teamMessages';
 import { getMockAuthenticatedAccount } from '../authSession';
 import { demoAdmin } from '../data/users';
@@ -57,6 +61,7 @@ function hasAccessibleTeam(sectionId: string, teamId: string) {
 
 export function resetAdminProposalFeedbackScenario() {
   feedbacks = structuredClone(initialFeedbacks);
+  resetAdminProjectProposalScenario();
   if (typeof localStorage !== 'undefined')
     localStorage.removeItem(feedbackStorageKey);
 }
@@ -149,6 +154,7 @@ export const adminProposalFeedbackHandlers = [
       };
       feedbacks = [feedback, ...feedbacks];
       persistFeedbacks();
+      reopenAdminProjectProposal(feedback.teamId);
       appendPersistentMockFeedbackTeamMessage({
         createdAt: feedback.createdAt,
         message: feedback.message,

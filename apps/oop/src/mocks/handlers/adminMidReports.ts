@@ -19,7 +19,12 @@ type MidReport = {
   id: number;
   leaderName: string | null;
   milestoneId: number;
-  revision: null;
+  revision: {
+    affectedBlockKeys: string[];
+    changedBlockKeys: string[];
+    requestedAt: string | null;
+    resubmittedAt: string | null;
+  } | null;
   status: string;
   submittedAt: string | null;
   submittedBy: string | null;
@@ -42,6 +47,8 @@ const initialFeedbacks = [
   },
 ];
 const feedbackStorageKey = 'aics.oop.msw.admin-mid-report-feedbacks';
+const reopenedTeamIdsStorageKey =
+  'aics.oop.msw.admin-mid-report-reopened-team-ids';
 
 function loadFeedbacks() {
   if (typeof localStorage === 'undefined') {
@@ -73,11 +80,47 @@ function persistFeedbacks() {
 
 let feedbacks = loadFeedbacks();
 
+function loadReopenedTeamIds() {
+  if (typeof localStorage === 'undefined') return new Set<number>();
+
+  try {
+    const stored = localStorage.getItem(reopenedTeamIdsStorageKey);
+    if (!stored) return new Set<number>();
+
+    const parsed = JSON.parse(stored);
+    return new Set(
+      Array.isArray(parsed)
+        ? parsed.filter((teamId): teamId is number =>
+            Number.isSafeInteger(teamId),
+          )
+        : [],
+    );
+  } catch {
+    return new Set<number>();
+  }
+}
+
+let reopenedTeamIds = loadReopenedTeamIds();
+
+function persistReopenedTeamIds() {
+  if (typeof localStorage === 'undefined') return;
+
+  try {
+    localStorage.setItem(
+      reopenedTeamIdsStorageKey,
+      JSON.stringify([...reopenedTeamIds]),
+    );
+  } catch {
+    // Persistence is only a development convenience for the MSW scenario.
+  }
+}
+
 function getMidReport(teamId: string): MidReport | undefined {
   if (!['1', '2'].includes(teamId)) return undefined;
 
   const normalizedTeamId = Number(teamId);
   const teamName = `OOP-01 - ${normalizedTeamId}팀`;
+  const isRevisionRequested = reopenedTeamIds.has(normalizedTeamId);
 
   return {
     blocks: [
@@ -154,8 +197,15 @@ function getMidReport(teamId: string): MidReport | undefined {
     id: 400 + normalizedTeamId,
     leaderName: normalizedTeamId === 1 ? '테스트학생1' : '테스트학생2',
     milestoneId: 102,
-    revision: null,
-    status: 'SUBMITTED',
+    revision: isRevisionRequested
+      ? {
+          affectedBlockKeys: [],
+          changedBlockKeys: [],
+          requestedAt: '2026-09-13T16:00:00',
+          resubmittedAt: null,
+        }
+      : null,
+    status: isRevisionRequested ? 'REVISION_REQUESTED' : 'SUBMITTED',
     submittedAt: '2026-09-10T11:00:00',
     submittedBy: normalizedTeamId === 1 ? '20230001' : '20230002',
     submittedByName: normalizedTeamId === 1 ? '테스트학생1' : '테스트학생2',
@@ -172,8 +222,10 @@ function isAdmin(request: Request) {
 
 export function resetAdminMidReportScenario() {
   feedbacks = structuredClone(initialFeedbacks);
+  reopenedTeamIds = new Set<number>();
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem(feedbackStorageKey);
+    localStorage.removeItem(reopenedTeamIdsStorageKey);
   }
 }
 
@@ -249,7 +301,7 @@ export const adminMidReportHandlers = [
       const feedback = {
         createdAt: '2026-09-13 16:00',
         message: body.message.trim(),
-        messageId: Math.max(...feedbacks.map(item => item.messageId)) + 1,
+        messageId: Math.max(0, ...feedbacks.map(item => item.messageId)) + 1,
         midReportId: 400 + Number(params.teamId),
         senderId: demoAdmin.id,
         senderName: demoAdmin.name,
@@ -257,6 +309,8 @@ export const adminMidReportHandlers = [
       };
       feedbacks = [feedback, ...feedbacks];
       persistFeedbacks();
+      reopenedTeamIds.add(feedback.teamId);
+      persistReopenedTeamIds();
       appendPersistentMockFeedbackTeamMessage({
         createdAt: feedback.createdAt,
         message: feedback.message,
