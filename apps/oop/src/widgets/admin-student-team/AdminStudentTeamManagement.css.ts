@@ -147,6 +147,7 @@ export const member = style({
   flexDirection: 'column',
   fontSize: 14,
   gap: 4,
+  minWidth: 0,
   padding: '12px 14px',
 });
 
@@ -177,9 +178,13 @@ globalStyle(`${member} span`, {
 });
 
 export const memberRole = style({
+  display: 'block',
+  maxWidth: '100%',
+  minWidth: 0,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
+  width: '100%',
 });
 
 export const actionMenu = style({

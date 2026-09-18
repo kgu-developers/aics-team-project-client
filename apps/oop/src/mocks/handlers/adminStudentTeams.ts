@@ -60,6 +60,13 @@ function getTeamStudents(teamId: string) {
   );
 }
 
+function getBaselineTeamStudents(team: (typeof adminTeamsFixture)[number]) {
+  return team.memberIds.flatMap(memberId => {
+    const student = studentsById.get(memberId);
+    return student ? [student] : [];
+  });
+}
+
 function getProjectRoleKey(sectionId: string, studentNumber: string) {
   return `${sectionId}:${studentNumber}`;
 }
@@ -230,7 +237,8 @@ function getAdminTeamResponse(teamId: string) {
 
   const leaderStudentNumber =
     teamLeaderStudentNumbers.get(team.id) ??
-    getTeamStudents(team.id).find(student => student?.isLeader)?.studentNumber;
+    getBaselineTeamStudents(team).find(student => student.isLeader)
+      ?.studentNumber;
 
   return {
     createdAt: '2026-09-08T15:15:06.663Z',
@@ -470,6 +478,18 @@ export const adminStudentTeamHandlers = [
         projectRole?: string;
         targetTeamId?: number;
       };
+      if (
+        input.projectRole !== undefined &&
+        (typeof input.projectRole !== 'string' || input.projectRole.length > 50)
+      ) {
+        return HttpResponse.json(
+          {
+            code: 'PROJECT_ROLE_TOO_LONG',
+            message: '프로젝트 역할은 50자 이하여야 합니다.',
+          },
+          { status: 400 },
+        );
+      }
       const member = getTeamStudents(team.id).find(
         candidate => candidate.studentNumber === studentNumber,
       );
@@ -574,15 +594,6 @@ export const adminStudentTeamHandlers = [
         }
       }
       if (input.projectRole !== undefined) {
-        if (input.projectRole.length > 50) {
-          return HttpResponse.json(
-            {
-              code: 'PROJECT_ROLE_TOO_LONG',
-              message: '프로젝트 역할은 50자 이하여야 합니다.',
-            },
-            { status: 400 },
-          );
-        }
         projectRoleBySectionStudent.set(
           getProjectRoleKey(team.sectionId, studentNumber),
           input.projectRole,

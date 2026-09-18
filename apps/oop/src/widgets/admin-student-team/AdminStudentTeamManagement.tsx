@@ -629,7 +629,12 @@ export default function AdminStudentTeamManagement() {
             <TextInput
               isDisabled={updateTeamMemberRoleMutation.isPending}
               label='프로젝트 역할'
-              onChange={value => setNextProjectRole(value.slice(0, 50))}
+              onChange={value => {
+                if (updateTeamMemberRoleMutation.isError) {
+                  updateTeamMemberRoleMutation.reset();
+                }
+                setNextProjectRole(value.slice(0, 50));
+              }}
               placeholder='예) 백엔드'
               value={nextProjectRole}
               width='100%'

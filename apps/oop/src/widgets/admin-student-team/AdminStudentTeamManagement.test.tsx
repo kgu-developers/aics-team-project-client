@@ -1,4 +1,9 @@
-import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
+import {
+  API_BASE_URL,
+  ENDPOINTS,
+  fetchAdminTeam,
+  updateAdminTeamMember,
+} from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
@@ -289,6 +294,7 @@ describe('AdminStudentTeamManagement', () => {
     await user.click(
       within(confirmation).getByRole('button', { name: '확정하기' }),
     );
+    await screen.findByRole('button', { name: '팀 배정 확정됨' });
     await user.click(
       await screen.findByRole('button', { name: '이서연 관리' }),
     );
@@ -386,6 +392,41 @@ describe('AdminStudentTeamManagement', () => {
         '팀 배정이 확정되어 역할을 변경할 수 없습니다.',
       ),
     ).toBeInTheDocument();
+
+    await user.type(
+      within(dialog).getByRole('textbox', { name: '프로젝트 역할' }),
+      ' 수정',
+    );
+    expect(
+      within(dialog).queryByText(
+        '팀 배정이 확정되어 역할을 변경할 수 없습니다.',
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it('50자를 초과한 역할과 팀 이동을 함께 요청해도 기존 팀 소속을 유지한다', async () => {
+    renderPage();
+
+    await screen.findByRole('button', { name: '김민준 관리' });
+
+    await expect(
+      updateAdminTeamMember(1, '20231234', {
+        projectRole: '역'.repeat(51),
+        targetTeamId: 2,
+      }),
+    ).rejects.toMatchObject({ response: { status: 400 } });
+
+    const [sourceTeam, targetTeam] = await Promise.all([
+      fetchAdminTeam(1),
+      fetchAdminTeam(2),
+    ]);
+
+    expect(
+      sourceTeam.members.some(member => member.studentNumber === '20231234'),
+    ).toBe(true);
+    expect(
+      targetTeam.members.some(member => member.studentNumber === '20231234'),
+    ).toBe(false);
   });
 
   it('미확정 팀의 팀원을 같은 분반의 다른 팀으로 이동한다', async () => {
@@ -445,8 +486,15 @@ describe('AdminStudentTeamManagement', () => {
       const firstTeam = screen
         .getByRole('heading', { name: '1팀' })
         .closest('article');
+      const secondTeam = screen
+        .getByRole('heading', { name: '2팀' })
+        .closest('article');
       expect(within(firstTeam!).queryByText('김민준')).not.toBeInTheDocument();
       expect(within(firstTeam!).getByText('팀장: 미지정')).toBeInTheDocument();
+      expect(within(secondTeam!).getByText('팀장: 박지훈')).toBeInTheDocument();
+      expect(
+        within(secondTeam!).queryByText('팀장: 김민준'),
+      ).not.toBeInTheDocument();
     });
   });
 
