@@ -267,7 +267,7 @@ export function AdminNoticeDetailPage() {
         <Text>공개 범위 : {section.code}</Text>
         <div className={styles.divider} />
         <section aria-label='공지 내용'>
-          {notice.content.split('\n').map((line, index) => (
+          {notice.content.split(/\r?\n/).map((line, index) => (
             <Text key={index} as='p' display='block'>
               {line || '\u00a0'}
             </Text>
