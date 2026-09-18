@@ -1183,14 +1183,6 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
             {formatHeldAt(record.updatedAt)}
           </Text>
           <div className={`${styles.actions} ${styles.detailActions}`}>
-            {canDelete ? (
-              <Button
-                aria-label='회의록 삭제'
-                label='삭제'
-                onClick={() => setIsDeleteDialogOpen(true)}
-                variant='secondary'
-              />
-            ) : null}
             {context.canEditRecord ? (
               <Button
                 aria-label='회의록 수정'
@@ -1201,6 +1193,14 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
                     params: { meetingId },
                   })
                 }
+                variant='secondary'
+              />
+            ) : null}
+            {canDelete ? (
+              <Button
+                aria-label='회의록 삭제'
+                label='삭제'
+                onClick={() => setIsDeleteDialogOpen(true)}
                 variant='secondary'
               />
             ) : null}
