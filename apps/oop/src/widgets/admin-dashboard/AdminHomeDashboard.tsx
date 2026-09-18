@@ -1,15 +1,23 @@
-import type { AdminMilestoneType } from '@aics/api-client';
+import type {
+  AdminMilestoneType,
+  AdminSectionMilestoneDto,
+} from '@aics/api-client';
 import { Button, Heading } from '@aics/design-system';
 import { Link, useNavigate } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { getSectionDisplayLabel } from '~/shared/lib/getSectionDisplayLabel';
 
 import { getRichTextPlainText } from '~/features/admin-meeting/model/getRichTextPlainText';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { useAdminMessagesQuery } from '~/features/admin-message/queries';
-import { formatAdminMilestoneDate } from '~/features/admin-milestone-review/model';
+import {
+  formatAdminMilestoneDate,
+  isPresentationEvaluationMilestone,
+  isPresentationSubmissionMilestone,
+} from '~/features/admin-milestone-review/model';
 import { useAdminAccessibleSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
 import { noticeId } from '~/features/admin-notices/noticeScope';
 import { useAdminAccessibleNoticesQuery } from '~/features/admin-notices/queries';
@@ -50,6 +58,29 @@ type MilestoneColumn = {
 
 function getMilestoneColumnKey(type: AdminMilestoneType, title: string) {
   return `${type}:${title}`;
+}
+
+function getSubmissionTabId(milestone: AdminSectionMilestoneDto) {
+  switch (milestone.type) {
+    case 'PROPOSAL':
+      return 'proposal';
+    case 'MID_REPORT':
+      return 'midterm';
+    case 'FINAL_REPORT':
+      return 'final-report';
+    case 'PEER_EVALUATION':
+      return 'peer-review';
+    case 'PRESENTATION':
+      if (isPresentationEvaluationMilestone(milestone)) {
+        return 'presentation-evaluate';
+      }
+      if (isPresentationSubmissionMilestone(milestone)) {
+        return 'presentation-submit';
+      }
+      return undefined;
+    case 'GENERAL':
+      return undefined;
+  }
 }
 
 function List({
@@ -231,7 +262,11 @@ export default function AdminHomeDashboard() {
     .map(record => ({
       date: formatMeetingCreatedAt(record.meetingAt),
       meetingId: String(record.id),
-      section: `${record.sectionName} · ${record.teamName}`,
+      section: `${getSectionDisplayLabel(
+        accessibleSections,
+        record.sectionId,
+        record.sectionName,
+      )} · ${record.teamName}`,
       sectionId: String(record.sectionId),
       title: getMeetingContentPreview(record.content),
     }));
@@ -279,7 +314,11 @@ export default function AdminHomeDashboard() {
     .map(message => ({
       id: String(message.id),
       date: formatMeetingCreatedAt(message.createdAt),
-      section: `${message.sectionName} · ${message.teamName}`,
+      section: `${getSectionDisplayLabel(
+        accessibleSections,
+        message.sectionId,
+        message.sectionName,
+      )} · ${message.teamName}`,
       teamId: String(message.teamId),
       title: message.message,
     }));
@@ -330,7 +369,9 @@ export default function AdminHomeDashboard() {
                   <th scope='col'>분반</th>
                   {milestoneColumns.map(milestone => (
                     <th key={milestone.key} scope='col'>
-                      {milestone.title}
+                      <span className={styles.milestoneColumnTitle}>
+                        {milestone.title}
+                      </span>
                     </th>
                   ))}
                 </tr>
@@ -338,21 +379,28 @@ export default function AdminHomeDashboard() {
               <tbody>
                 {scheduleSections.map(section => (
                   <tr key={section.sectionId}>
-                    <td>{section.sectionLabel}</td>
+                    <td>
+                      <span className={styles.sectionLabel}>
+                        {section.sectionLabel}
+                      </span>
+                    </td>
                     {milestoneColumns.map(milestone => {
                       const sectionMilestone = section.milestones.find(
                         item =>
                           getMilestoneColumnKey(item.type, item.title) ===
                           milestone.key,
                       );
+                      const submissionTabId = sectionMilestone
+                        ? getSubmissionTabId(sectionMilestone)
+                        : undefined;
 
                       return (
                         <td key={milestone.key}>
-                          {sectionMilestone ? (
+                          {sectionMilestone && submissionTabId ? (
                             <Link
                               className={styles.milestoneLink}
                               search={{
-                                milestoneId: sectionMilestone.id,
+                                milestoneId: submissionTabId,
                                 sectionId: section.sectionId,
                               }}
                               to={ROUTES.ADMIN_SUBMISSIONS}
@@ -361,6 +409,10 @@ export default function AdminHomeDashboard() {
                                 sectionMilestone.schedule.dueAt,
                               )}
                             </Link>
+                          ) : sectionMilestone ? (
+                            formatAdminMilestoneDate(
+                              sectionMilestone.schedule.dueAt,
+                            )
                           ) : (
                             '-'
                           )}

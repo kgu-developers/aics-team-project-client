@@ -1,3 +1,4 @@
+import type { AdminSectionMilestoneDto } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import {
   RouterProvider,
@@ -17,6 +18,7 @@ import { demoAdmin } from '~/mocks/data/users';
 
 const dashboardState = vi.hoisted(() => ({
   meetingContent: '',
+  milestones: [] as AdminSectionMilestoneDto[],
   noticeError: false,
   noticeScopeStatus: 'ready',
   notices: [] as {
@@ -29,6 +31,7 @@ const dashboardState = vi.hoisted(() => ({
 }));
 beforeEach(() => {
   dashboardState.meetingContent = '발표 자료의 핵심 흐름과 역할을 확정한다.';
+  dashboardState.milestones = [];
   dashboardState.noticeError = false;
   dashboardState.noticeScopeStatus = 'ready';
   dashboardState.notices = [
@@ -83,7 +86,7 @@ vi.mock('~/features/admin-message/queries', () => ({
           id: 1,
           message: '제안서 보완 사항을 확인해 주세요.',
           read: false,
-          sectionId: 'oop-2026-2-01',
+          sectionId: 1,
           sectionName: '객체지향프로그래밍',
           teamId: 7,
           teamName: '1팀',
@@ -97,7 +100,12 @@ vi.mock('~/features/admin-message/queries', () => ({
 }));
 
 vi.mock('~/features/admin-milestone-review/queries', () => ({
-  useAdminAccessibleSectionMilestonesQuery: () => [],
+  useAdminAccessibleSectionMilestonesQuery: (sectionIds: string[]) =>
+    sectionIds.map(() => ({
+      data: { content: dashboardState.milestones },
+      isError: false,
+      isPending: false,
+    })),
 }));
 
 vi.mock('~/features/admin-notices/queries', () => ({
@@ -130,12 +138,18 @@ function renderPage(user = demoAdmin) {
     getParentRoute: () => rootRoute,
     path: '/admin/messages/teams/$teamId',
   });
+  const submissionsRoute = createRoute({
+    component: () => <div>제출물 목록</div>,
+    getParentRoute: () => rootRoute,
+    path: '/admin/submissions/',
+  });
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: ['/admin'] }),
     routeTree: rootRoute.addChildren([
       homeRoute,
       meetingsRoute,
       teamMessagesRoute,
+      submissionsRoute,
     ]),
   });
 
@@ -144,6 +158,53 @@ function renderPage(user = demoAdmin) {
 }
 
 describe('AdminHomeDashboard', () => {
+  it('분반별 일정에서 마일스톤 유형에 맞는 제출물 탭으로 이동한다', async () => {
+    dashboardState.milestones = [
+      {
+        allowResubmissionBeforeDueAt: false,
+        id: 101,
+        schedule: { dueAt: '2026-10-08T23:59:00' },
+        sectionId: 1,
+        status: 'PUBLISHED',
+        title: '제안서',
+        type: 'PROPOSAL',
+        weekNumber: 3,
+      },
+      {
+        allowResubmissionBeforeDueAt: false,
+        id: 102,
+        schedule: { dueAt: '2026-10-29T23:59:00' },
+        sectionId: 1,
+        status: 'PUBLISHED',
+        title: '중간 점검',
+        type: 'MID_REPORT',
+        weekNumber: 6,
+      },
+    ];
+
+    renderPage();
+
+    const submissionLinks = await screen.findAllByRole('link');
+    const [proposalLink, midReportLink] = submissionLinks.filter(link =>
+      link.getAttribute('href')?.startsWith('/admin/submissions'),
+    );
+
+    expect(proposalLink).toBeDefined();
+    expect(midReportLink).toBeDefined();
+    expect(
+      new URL(
+        proposalLink!.getAttribute('href')!,
+        'https://aics.test',
+      ).searchParams.get('milestoneId'),
+    ).toBe('proposal');
+    expect(
+      new URL(
+        midReportLink!.getAttribute('href')!,
+        'https://aics.test',
+      ).searchParams.get('milestoneId'),
+    ).toBe('midterm');
+  });
+
   it('현재 회의록 목록 계약의 contents를 홈 위젯에 표시한다', async () => {
     renderPage();
 
@@ -159,6 +220,27 @@ describe('AdminHomeDashboard', () => {
     ).toHaveAttribute('href', '/admin/meetings');
     expect(
       screen.queryByText('등록된 회의록이 없습니다.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('홈의 회의록·쪽지함 분반 표시는 현재 분반 코드로 갱신한다', async () => {
+    renderPage({
+      ...demoAdmin,
+      sections: [
+        {
+          ...demoAdmin.sections[0]!,
+          code: '변경된 분반명',
+          id: '1',
+          name: '과거 분반명',
+        },
+      ],
+    });
+
+    expect(await screen.findByText('변경된 분반명 · 2팀')).toBeInTheDocument();
+    expect(screen.getByText('변경된 분반명 · 1팀')).toBeInTheDocument();
+    expect(screen.queryByText('OOP-01 · 2팀')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('객체지향프로그래밍 · 1팀'),
     ).not.toBeInTheDocument();
   });
 
@@ -292,6 +374,24 @@ it('정상 십진 분반 ID의 공지에는 분반명을 표시한다', async ()
   renderPage();
   const link = await screen.findByRole('link', { name: '계약 공지' });
   expect(within(link.closest('li')!).getByText('OOP-01')).toBeInTheDocument();
+});
+
+it('공지의 분반 표시는 응답의 이름 대신 현재 분반 코드를 사용한다', async () => {
+  renderPage({
+    ...demoAdmin,
+    sections: demoAdmin.sections.map(section =>
+      section.id === '1'
+        ? { ...section, code: '변경된 분반 코드', name: '이전 분반명' }
+        : section,
+    ),
+  });
+  const link = await screen.findByRole('link', { name: '계약 공지' });
+  expect(
+    within(link.closest('li')!).getByText('변경된 분반 코드'),
+  ).toBeInTheDocument();
+  expect(
+    within(link.closest('li')!).queryByText('이전 분반명'),
+  ).not.toBeInTheDocument();
 });
 
 it.each([false, true])(

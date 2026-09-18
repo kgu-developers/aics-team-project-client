@@ -37,8 +37,18 @@ function setup() {
   useAuthStore.getState().setCurrentUser({
     ...demoAdmin,
     sections: [
-      { ...demoAdmin.sections[0]!, id: '1', name: '분반 하나' },
-      { ...demoAdmin.sections[0]!, id: '2', name: '분반 둘' },
+      {
+        ...demoAdmin.sections[0]!,
+        code: '현재 분반 하나',
+        id: '1',
+        name: '과거 분반 하나',
+      },
+      {
+        ...demoAdmin.sections[0]!,
+        code: '현재 분반 둘',
+        id: '2',
+        name: '과거 분반 둘',
+      },
     ],
   });
   const client = new QueryClient({
@@ -137,7 +147,8 @@ it('reaches item 101, keeps page caches separate, and resets pages on section/al
   );
   await user.click(screen.getByRole('button', { name: '다음 페이지' }));
   await screen.findByText('all 쪽지 101');
-  await user.click(screen.getByRole('button', { name: '분반 하나' }));
+  expect(screen.getAllByText('현재 분반 하나')).not.toHaveLength(0);
+  await user.click(screen.getByRole('button', { name: '현재 분반 하나' }));
   await screen.findByText('1 쪽지 1');
   expect(requests.filter(row => row.section === '1')).toEqual([
     { section: '1', page: 0, size: 100 },
@@ -147,7 +158,7 @@ it('reaches item 101, keeps page caches separate, and resets pages on section/al
   await user.click(screen.getByRole('button', { name: '전체' }));
   await screen.findByText('all 쪽지 1');
   expect(screen.getByRole('button', { name: '이전 페이지' })).toBeDisabled();
-  await user.click(screen.getByRole('button', { name: '분반 둘' }));
+  await user.click(screen.getByRole('button', { name: '현재 분반 둘' }));
   await screen.findByText('쪽지가 없습니다.');
   expect(screen.getByText('0 / 0 페이지')).toBeVisible();
   expect(screen.getByRole('button', { name: '다음 페이지' })).toBeDisabled();
