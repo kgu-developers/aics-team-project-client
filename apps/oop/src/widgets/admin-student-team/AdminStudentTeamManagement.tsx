@@ -331,7 +331,11 @@ export default function AdminStudentTeamManagement() {
                     )}
                     key={team.id}
                     onDragLeave={event => {
-                      if (!event.currentTarget.contains(event.relatedTarget)) {
+                      const relatedTarget = event.relatedTarget;
+                      if (
+                        !(relatedTarget instanceof Node) ||
+                        !event.currentTarget.contains(relatedTarget)
+                      ) {
                         setDragOverTeamId(null);
                       }
                     }}
