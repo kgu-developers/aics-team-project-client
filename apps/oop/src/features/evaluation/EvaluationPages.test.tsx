@@ -553,6 +553,28 @@ describe('KD3-92 학생 평가 화면', () => {
     expect(screen.queryByRole('timer')).not.toBeInTheDocument();
   });
 
+  it('서버가 아직 OPEN이어도 마감이 지난 타이머는 00:00:00으로 남기지 않는다', async () => {
+    const overview = getMyTeamEvaluations(demoStudent.studentNumber);
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.MY_TEAM_EVALUATIONS(':milestoneId')}`,
+        () =>
+          HttpResponse.json({
+            ...overview,
+            evaluationClosesAt: new Date(Date.now() - 1_000).toISOString(),
+            windowState: 'OPEN',
+          }),
+      ),
+    );
+    renderPresentationPage();
+
+    await screen.findByRole('heading', { level: 1, name: '발표 평가' });
+    await waitFor(() =>
+      expect(screen.queryByRole('timer')).not.toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/00:00:00/)).not.toBeInTheDocument();
+  });
+
   it('평가 기간 전에는 자료만 보여 주고 제출을 막는다', async () => {
     const user = userEvent.setup();
     setEvaluationWindowStates('UPCOMING', 'OPEN');

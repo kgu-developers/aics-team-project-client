@@ -21,6 +21,15 @@ describe('formatEvaluationRemainingTime', () => {
     ).toBe('00:00:00');
   });
 
+  it('오프셋 없는 서버 LocalDateTime은 Asia/Seoul로 해석한다', () => {
+    expect(
+      formatEvaluationRemainingTime(
+        '2026-08-26T19:00:00',
+        Date.parse('2026-08-26T09:59:30.000Z'),
+      ),
+    ).toBe('00:00:30');
+  });
+
   it('유효하지 않은 종료 시각은 표시하지 않는다', () => {
     expect(formatEvaluationRemainingTime('not-a-date')).toBeNull();
   });

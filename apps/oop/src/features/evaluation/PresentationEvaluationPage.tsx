@@ -16,6 +16,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
+import { seoulInstant } from '~/shared/lib/seoulInstant';
 import { PdfPreview } from '~/shared/ui/PdfPreview';
 
 import { useAuthStore } from '~/features/auth/authStore';
@@ -60,14 +61,18 @@ function EvaluationTimer({
   }, [targetAt]);
 
   const remainingTime = formatEvaluationRemainingTime(targetAt, now);
+  const isExpired = remainingTime === '00:00:00';
   useEffect(() => {
-    if (remainingTime === '00:00:00' && !hasCompleted.current && onComplete) {
+    if (isExpired && !hasCompleted.current && onComplete) {
       hasCompleted.current = true;
       onComplete();
     }
-  }, [onComplete, remainingTime]);
+  }, [isExpired, onComplete]);
 
-  if (!remainingTime) return null;
+  // Once the client clock passes the deadline the server state is re-read;
+  // until it answers, hiding the timer avoids showing "00:00:00" next to
+  // the still-open copy.
+  if (!remainingTime || isExpired) return null;
 
   return (
     <p className={styles.timer} role='timer'>
@@ -76,19 +81,27 @@ function EvaluationTimer({
   );
 }
 
-function formatEvaluationWindow(opensAt: string, closesAt: string) {
-  const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-  const timeFormatter = new Intl.DateTimeFormat('ko-KR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+const windowDateFormatter = new Intl.DateTimeFormat('ko-KR', {
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  month: 'long',
+  timeZone: 'Asia/Seoul',
+});
+const windowTimeFormatter = new Intl.DateTimeFormat('ko-KR', {
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'Asia/Seoul',
+});
 
-  return `${dateFormatter.format(new Date(opensAt))} ~ ${timeFormatter.format(new Date(closesAt))}`;
+/** Course times are fixed to Asia/Seoul regardless of the viewer's timezone. */
+function formatEvaluationWindow(opensAt: string, closesAt: string) {
+  const opensAtTime = seoulInstant(opensAt);
+  const closesAtTime = seoulInstant(closesAt);
+  if (!Number.isFinite(opensAtTime) || !Number.isFinite(closesAtTime))
+    return `${opensAt} ~ ${closesAt}`;
+
+  return `${windowDateFormatter.format(opensAtTime)} ~ ${windowTimeFormatter.format(closesAtTime)}`;
 }
 
 function findPdfArtifact(team: MilestonePresentation) {
