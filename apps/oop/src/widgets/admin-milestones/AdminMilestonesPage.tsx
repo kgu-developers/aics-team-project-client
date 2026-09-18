@@ -31,11 +31,27 @@ type StatusUpdateError = {
   message: string;
 };
 
+/**
+ * Clicks that start inside a control must not open the row. The design-system
+ * Selector renders its option list as a sibling `popover` of the combobox
+ * trigger, so listbox/option targets are matched explicitly as well.
+ */
+const rowInteractiveSelector = [
+  'a',
+  'button',
+  'input',
+  'select',
+  'textarea',
+  '[role="combobox"]',
+  '[role="listbox"]',
+  '[role="option"]',
+  '[popover]',
+].join(', ');
+
 function isRowInteractiveTarget(target: EventTarget | null) {
   return (
     target instanceof Element &&
-    target.closest('a, button, input, select, textarea, [role="combobox"]') !==
-      null
+    target.closest(rowInteractiveSelector) !== null
   );
 }
 
