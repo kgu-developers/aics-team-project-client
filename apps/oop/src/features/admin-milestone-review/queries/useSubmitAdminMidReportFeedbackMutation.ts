@@ -5,6 +5,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { adminMidReportKeys } from './adminMidReportKeys';
+import { adminMilestoneSubmissionsKeys } from './adminMilestoneSubmissionsKeys';
 
 type Variables = {
   input: SubmitAdminMidReportFeedbackInput;
@@ -28,6 +29,9 @@ export function useSubmitAdminMidReportFeedbackMutation() {
         }),
         queryClient.invalidateQueries({
           queryKey: [...adminMidReportKeys.all, 'feedbacks'],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: adminMilestoneSubmissionsKeys.all,
         }),
       ]);
     },

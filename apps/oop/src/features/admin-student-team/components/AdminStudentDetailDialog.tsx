@@ -140,7 +140,7 @@ export default function AdminStudentDetailDialog({
             <Text id='admin-student-password-reset-description'>
               {user.name}({user.studentNumber}) 학생의 비밀번호는 등록된
               전화번호로 초기화되며, 기존 로그인 세션은 모두 해제됩니다. 학생은
-              초기화 후 30분 안에 새 비밀번호로 변경해야 합니다.
+              초기화 후 새 비밀번호로 변경해야 합니다.
             </Text>
             {resetPasswordMutation.isError ? (
               <Text role='alert'>

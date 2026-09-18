@@ -8,6 +8,55 @@ import {
 } from '../data/adminStudentTeams';
 import { createProjectProposalFixture } from '../data/projectProposal';
 
+const reopenedProposalTeamIdsStorageKey =
+  'aics.oop.msw.admin-reopened-proposal-team-ids';
+
+function loadReopenedProposalTeamIds() {
+  if (typeof localStorage === 'undefined') return new Set<number>();
+
+  try {
+    const stored = localStorage.getItem(reopenedProposalTeamIdsStorageKey);
+    if (!stored) return new Set<number>();
+
+    const parsed = JSON.parse(stored);
+    return new Set(
+      Array.isArray(parsed)
+        ? parsed.filter((teamId): teamId is number =>
+            Number.isSafeInteger(teamId),
+          )
+        : [],
+    );
+  } catch {
+    return new Set<number>();
+  }
+}
+
+let reopenedProposalTeamIds = loadReopenedProposalTeamIds();
+
+function persistReopenedProposalTeamIds() {
+  if (typeof localStorage === 'undefined') return;
+
+  try {
+    localStorage.setItem(
+      reopenedProposalTeamIdsStorageKey,
+      JSON.stringify([...reopenedProposalTeamIds]),
+    );
+  } catch {
+    // Persistence is only a development convenience for the MSW scenario.
+  }
+}
+
+export function reopenAdminProjectProposal(teamId: number) {
+  reopenedProposalTeamIds.add(teamId);
+  persistReopenedProposalTeamIds();
+}
+
+export function resetAdminProjectProposalScenario() {
+  reopenedProposalTeamIds = new Set<number>();
+  if (typeof localStorage !== 'undefined')
+    localStorage.removeItem(reopenedProposalTeamIdsStorageKey);
+}
+
 function projectForAdminTeam(teamId: number) {
   const project = createProjectProposalFixture();
   const team = adminTeamsFixture.find(
@@ -17,6 +66,11 @@ function projectForAdminTeam(teamId: number) {
   return {
     ...project,
     id: 1_000 + teamId,
+    proposalCompletedAt: reopenedProposalTeamIds.has(teamId)
+      ? null
+      : teamId === 1
+        ? '2026-09-12T11:00:00'
+        : project.proposalCompletedAt,
     teamId,
     teamOperation: {
       ...project.teamOperation,

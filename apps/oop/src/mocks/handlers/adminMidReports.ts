@@ -3,6 +3,11 @@ import { http, HttpResponse } from 'msw';
 
 import { appendPersistentMockFeedbackTeamMessage } from './teamMessages';
 import { getMockAuthenticatedAccount } from '../authSession';
+import {
+  isAdminMidReportSubmissionReopened,
+  reopenAdminMidReportSubmission,
+  resetAdminMidReportReopenState,
+} from '../data/adminMidReportReopenState';
 import { demoAdmin } from '../data/users';
 
 type MidReport = {
@@ -19,7 +24,12 @@ type MidReport = {
   id: number;
   leaderName: string | null;
   milestoneId: number;
-  revision: null;
+  revision: {
+    affectedBlockKeys: string[];
+    changedBlockKeys: string[];
+    requestedAt: string | null;
+    resubmittedAt: string | null;
+  } | null;
   status: string;
   submittedAt: string | null;
   submittedBy: string | null;
@@ -78,6 +88,10 @@ function getMidReport(teamId: string): MidReport | undefined {
 
   const normalizedTeamId = Number(teamId);
   const teamName = `OOP-01 - ${normalizedTeamId}팀`;
+  const isRevisionRequested = isAdminMidReportSubmissionReopened(
+    102,
+    normalizedTeamId,
+  );
 
   return {
     blocks: [
@@ -154,8 +168,15 @@ function getMidReport(teamId: string): MidReport | undefined {
     id: 400 + normalizedTeamId,
     leaderName: normalizedTeamId === 1 ? '테스트학생1' : '테스트학생2',
     milestoneId: 102,
-    revision: null,
-    status: 'SUBMITTED',
+    revision: isRevisionRequested
+      ? {
+          affectedBlockKeys: [],
+          changedBlockKeys: [],
+          requestedAt: '2026-09-13T16:00:00',
+          resubmittedAt: null,
+        }
+      : null,
+    status: isRevisionRequested ? 'REVISION_REQUESTED' : 'SUBMITTED',
     submittedAt: '2026-09-10T11:00:00',
     submittedBy: normalizedTeamId === 1 ? '20230001' : '20230002',
     submittedByName: normalizedTeamId === 1 ? '테스트학생1' : '테스트학생2',
@@ -172,6 +193,7 @@ function isAdmin(request: Request) {
 
 export function resetAdminMidReportScenario() {
   feedbacks = structuredClone(initialFeedbacks);
+  resetAdminMidReportReopenState();
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem(feedbackStorageKey);
   }
@@ -249,7 +271,7 @@ export const adminMidReportHandlers = [
       const feedback = {
         createdAt: '2026-09-13 16:00',
         message: body.message.trim(),
-        messageId: Math.max(...feedbacks.map(item => item.messageId)) + 1,
+        messageId: Math.max(0, ...feedbacks.map(item => item.messageId)) + 1,
         midReportId: 400 + Number(params.teamId),
         senderId: demoAdmin.id,
         senderName: demoAdmin.name,
@@ -257,6 +279,7 @@ export const adminMidReportHandlers = [
       };
       feedbacks = [feedback, ...feedbacks];
       persistFeedbacks();
+      reopenAdminMidReportSubmission(102, feedback.teamId);
       appendPersistentMockFeedbackTeamMessage({
         createdAt: feedback.createdAt,
         message: feedback.message,
