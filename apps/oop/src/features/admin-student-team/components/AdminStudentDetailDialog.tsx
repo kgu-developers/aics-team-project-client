@@ -141,11 +141,21 @@ export default function AdminStudentDetailDialog({
         {user ? (
           <div className={styles.content}>
             <Heading level={2}>비밀번호를 초기화할까요?</Heading>
-            <Text id='admin-student-password-reset-description'>
-              {user.name}({user.studentNumber}) 학생의 비밀번호는 등록된
-              전화번호로 초기화되며, 기존 로그인 세션은 모두 해제됩니다. 학생은
-              초기화 후 새 비밀번호로 변경해야 합니다.
-            </Text>
+            <div
+              className={styles.description}
+              id='admin-student-password-reset-description'
+            >
+              <Text as='p' display='block'>
+                {user.name}({user.studentNumber}) 학생의 비밀번호를 등록된
+                전화번호로 초기화합니다.
+              </Text>
+              <Text as='p' display='block'>
+                기존 로그인 세션은 모두 해제됩니다.
+              </Text>
+              <Text as='p' display='block'>
+                학생은 초기화 후 새 비밀번호로 변경해야 합니다.
+              </Text>
+            </div>
             {resetPasswordMutation.isError ? (
               <Text role='alert'>
                 비밀번호를 초기화하지 못했습니다. 잠시 후 다시 시도해 주세요.
