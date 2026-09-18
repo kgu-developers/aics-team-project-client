@@ -163,6 +163,7 @@ export type {
   TeamRolePreference,
 } from './team-assignment/types';
 export type {
+  DocumentFeedbackStage,
   StudentHomeAnnouncement,
   StudentHomeDashboard,
   StudentHomeFeedbackMessage,

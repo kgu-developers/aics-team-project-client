@@ -13,7 +13,10 @@ import { useTopicMilestoneEligibility } from '~/features/project-topic/useTopicM
 import { useProposalSectionsQuery } from '~/features/proposal/queries';
 import StudentContextState from '~/features/section/StudentContextState';
 import {
+  documentFeedbackStageCopy,
+  midReportFeedbackRoomStage,
   midReportFeedbackStage,
+  proposalFeedbackRoomStage,
   proposalFeedbackStage,
 } from '~/features/student-home/model/documentFeedbackStage';
 import { homeQueryState } from '~/features/student-home/model/homeQueryState';
@@ -189,9 +192,21 @@ export default function StudentHomePage() {
       summary.currentStepLabel = '중간보고서 작성';
       summary.interaction = 'collapsible';
       summary.isDetailAvailable = true;
+      const midReportStage = midReportFeedbackStage({
+        submittedAt: midReport.data?.submittedAt,
+        messages: midReportMessages.data,
+        teamMemberIds: home.teamMemberIds,
+        isMessagesReady: midReportMessages.isSuccess,
+      });
       summary.body = {
         kind: 'mid-review-feedback',
         teamId: home.teamId,
+        feedbackStage: midReportFeedbackRoomStage({
+          submittedAt: midReport.data?.submittedAt,
+          messages: midReportMessages.data,
+          teamMemberIds: home.teamMemberIds,
+          isMessagesReady: midReportMessages.isSuccess,
+        }),
         feedback: [],
         canSubmitResponse: false,
         // The feedback room stays as main defines it; only the writing areas
@@ -213,12 +228,6 @@ export default function StudentHomePage() {
       const readyToSubmit =
         midReport.isSuccess &&
         canSubmitMidReportDocument(midReport.data, currentUserName);
-      const midReportStage = midReportFeedbackStage({
-        submittedAt: midReport.data?.submittedAt,
-        messages: midReportMessages.data,
-        teamMemberIds: home.teamMemberIds,
-        isMessagesReady: midReportMessages.isSuccess,
-      });
       if (
         submission?.isSuccess &&
         submission.data?.status === 'NOT_SUBMITTED' &&
@@ -251,9 +260,9 @@ export default function StudentHomePage() {
                   value:
                     midReportStage === 'unknown'
                       ? midReportMessages.isError
-                        ? '제출 완료 · 피드백 상태를 불러오지 못했어요.'
-                        : '제출 완료 · 피드백 상태를 확인하는 중이에요.'
-                      : '제출 완료 · 대면 피드백 기록을 남겨 주세요.',
+                        ? documentFeedbackStageCopy.midReport.checkFailed
+                        : documentFeedbackStageCopy.midReport.checking
+                      : documentFeedbackStageCopy.midReport.awaiting,
                   tone: 'muted',
                 },
           ]
@@ -354,9 +363,21 @@ export default function StudentHomePage() {
         summary.currentStepLabel = '제안서 작성';
         summary.interaction = 'collapsible';
         summary.isDetailAvailable = true;
+        const proposalStage = proposalFeedbackStage({
+          submittedAt: project.proposalCompletedAt,
+          messages: proposalMessages.data,
+          teamMemberIds: home.teamMemberIds,
+          isMessagesReady: proposalMessages.isSuccess,
+        });
         summary.body = {
           kind: 'proposal-feedback',
           teamId: home.teamId,
+          feedbackStage: proposalFeedbackRoomStage({
+            submittedAt: project.proposalCompletedAt,
+            messages: proposalMessages.data,
+            teamMemberIds: home.teamMemberIds,
+            isMessagesReady: proposalMessages.isSuccess,
+          }),
           feedback: [],
           canSubmitResponse: false,
           replyPlaceholder: '피드백을 반영한 내용을 작성해 주세요.',
@@ -376,12 +397,6 @@ export default function StudentHomePage() {
           proposalSections.isSuccess && proposalSections.data.allCompleted;
         if (submission?.isSuccess && project.proposalCompletedAt)
           summary.statusLabel = '제출 완료';
-        const proposalStage = proposalFeedbackStage({
-          submittedAt: project.proposalCompletedAt,
-          messages: proposalMessages.data,
-          teamMemberIds: home.teamMemberIds,
-          isMessagesReady: proposalMessages.isSuccess,
-        });
         summary.rows = project.proposalCompletedAt
           ? [
               proposalStage === 'feedback-arrived'
@@ -401,9 +416,9 @@ export default function StudentHomePage() {
                     value:
                       proposalStage === 'unknown'
                         ? proposalMessages.isError
-                          ? '제출 완료 · 피드백 상태를 불러오지 못했어요.'
-                          : '제출 완료 · 피드백 상태를 확인하는 중이에요.'
-                        : '제출 완료 · 교수 피드백을 기다리는 중이에요.',
+                          ? documentFeedbackStageCopy.proposal.checkFailed
+                          : documentFeedbackStageCopy.proposal.checking
+                        : documentFeedbackStageCopy.proposal.awaiting,
                     tone: 'muted',
                   },
             ]

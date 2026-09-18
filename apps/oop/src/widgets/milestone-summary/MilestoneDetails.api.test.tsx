@@ -2,7 +2,7 @@ import { API_BASE_URL, ENDPOINTS, submitTeamMessage } from '@aics/api-client';
 import type { StudentHomeMilestoneBody } from '@aics/core';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -454,3 +454,109 @@ describe('중간보고서 피드백 메시지', () => {
     expect(input).toHaveValue('보존할 기록');
   });
 });
+
+describe('피드백 단계별 노출', () => {
+  it('제안서는 제출 전에는 피드백 영역을 그리지 않고, 대기 중에는 안내만 보여 준다', async () => {
+    const { unmount } = renderFeedback({ ...body, feedbackStage: 'not-submitted' });
+    expect(screen.queryByText('피드백 대화')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: /피드백 반영 답변/ }),
+    ).not.toBeInTheDocument();
+    unmount();
+
+    renderFeedback({ ...body, feedbackStage: 'awaiting-feedback' });
+    expect(
+      await screen.findByText(/교수\/조교 피드백을 기다리고 있어요/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: /피드백 반영 답변/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('중간보고서는 첫 반영 방향을 모달로 보내고, 보낸 뒤에는 인라인 대화로 이어진다', async () => {
+    const messages: Array<Record<string, unknown>> = [];
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`, () =>
+        HttpResponse.json({
+          contents: [...messages].reverse(),
+          pageable: {
+            page: 0,
+            size: 100,
+            totalElements: messages.length,
+            totalPages: 1,
+            isEnd: true,
+          },
+        }),
+      ),
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`,
+        async ({ request }) => {
+          const input = (await request.json()) as object;
+          const message = {
+            id: 901,
+            threadId: 70,
+            senderId: demoStudent.studentNumber,
+            senderName: '검수 학생',
+            createdAt: '2026-09-10 10:00',
+            ...input,
+          };
+          messages.push({ ...message, important: false, read: false });
+          return HttpResponse.json(message, { status: 201 });
+        },
+      ),
+    );
+    const midBody: StudentHomeMilestoneBody = {
+      kind: 'mid-review-feedback',
+      teamId: '7',
+      feedbackStage: 'awaiting-feedback',
+      feedback: [],
+      canSubmitResponse: false,
+      sections: [],
+      guide: '',
+    };
+    const user = userEvent.setup();
+    const view = renderFeedback(midBody);
+
+    expect(
+      screen.queryByRole('textbox', { name: /대면 피드백 반영 내용/ }),
+    ).not.toBeInTheDocument();
+    const open = await screen.findByRole('button', { name: '반영 방향 보내기' });
+    await waitFor(() =>
+      expect(open).not.toHaveAttribute('aria-disabled', 'true'),
+    );
+    await user.click(open);
+    const dialog = await screen.findByRole('dialog', {
+      name: '대면 피드백 반영 방향 보내기',
+    });
+    await user.type(
+      within(dialog).getByRole('textbox', { name: /대면 피드백 반영 내용/ }),
+      '대면 피드백을 기록했습니다.',
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: '반영 방향 보내기' }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: '대면 피드백 반영 방향 보내기' }),
+      ).not.toBeInTheDocument(),
+    );
+
+    // The home recomputes the stage from messages; simulate that hand-off.
+    view.rerender(
+      <AstryxThemeProvider>
+        <QueryClientProvider client={clients[clients.length - 1]!}>
+          <MilestoneDetails
+            body={{ ...midBody, feedbackStage: 'feedback-arrived' }}
+          />
+        </QueryClientProvider>
+      </AstryxThemeProvider>,
+    );
+    expect(
+      await screen.findByText('대면 피드백을 기록했습니다.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('textbox', { name: /대면 피드백 반영 내용/ }),
+    ).toBeInTheDocument();
+  });
+});
+

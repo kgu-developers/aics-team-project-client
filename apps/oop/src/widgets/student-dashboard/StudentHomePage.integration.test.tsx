@@ -331,7 +331,7 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     ).toHaveValue('');
   });
 
-  it('피드백 조회가 실패해도 작성 단계와 패널을 유지하고 전송만 막는다', async () => {
+  it('피드백 조회가 실패하면 작성 단계는 유지하고 피드백 영역에는 실패 안내만 보여 준다', async () => {
     server.use(
       http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
         HttpResponse.json({
@@ -360,14 +360,13 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     expect(
       screen.queryByRole('button', { name: '후보 추가' }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '답변 보내기' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
+    expect(
+      screen.queryByRole('button', { name: '답변 보내기' }),
+    ).not.toBeInTheDocument();
   });
 
   it.each(['PROPOSAL', 'MID_REPORT'] as const)(
-    '%s 작성 단계는 미제출·빈 대화에서도 패널을 표시한다',
+    '%s 작성 단계는 미제출·빈 대화에서는 피드백 영역을 감춘다',
     async type => {
       const milestone = {
         ...list[0]!,
@@ -402,29 +401,20 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
         ),
       );
       render(<StudentHomePage />, { wrapper: Wrapper });
-      const label =
-        type === 'PROPOSAL' ? /피드백 반영 답변/ : /대면 피드백 반영 내용/;
-      const input = await screen.findByRole('textbox', { name: label });
-      expect(input).toBeVisible();
-      if (type === 'PROPOSAL') {
-        await screen.findAllByText(
-          '교수 피드백이 도착하면 답변을 남길 수 있어요.',
-        );
-        expect(
-          screen.getByRole('button', { name: '답변 보내기' }),
-        ).toHaveAttribute('aria-disabled', 'true');
-      } else {
-        await userEvent.setup().type(input, '대면 피드백을 먼저 기록합니다.');
-        await waitFor(() =>
-          expect(
-            screen.getByRole('button', { name: '반영 기록 남기기' }),
-          ).not.toHaveAttribute('aria-disabled', 'true'),
-        );
-      }
+      // Nothing has been submitted and nobody has written yet: the room stays
+      // hidden so students are not invited to send feedback while drafting.
+      await screen.findAllByText(
+        type === 'PROPOSAL' ? '제안서 작성' : '중간보고서 작성',
+      );
       expect(
-        screen.getAllByText(`${milestone.title} 작성`).length,
-      ).toBeGreaterThan(0);
-      expect(screen.queryByText('피드백 반영')).not.toBeInTheDocument();
+        screen.queryByRole('textbox', { name: /피드백 반영 답변/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: /대면 피드백 반영 내용/ }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: '반영 방향 보내기' }),
+      ).not.toBeInTheDocument();
     },
   );
 
@@ -660,9 +650,14 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
         '[id^=student-milestone-] button[aria-expanded]',
       ),
     ).toHaveLength(2);
+    // The mid-report document itself is still unsubmitted in this fixture,
+    // so the feedback room (inline form or first-message button) stays hidden.
     expect(
-      await screen.findByRole('textbox', { name: /대면 피드백 반영 내용/ }),
-    ).toBeInTheDocument();
+      screen.queryByRole('textbox', { name: /대면 피드백 반영 내용/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '반영 방향 보내기' }),
+    ).not.toBeInTheDocument();
     expect(
       queryClient.getQueryData(
         studentHomeKeys.submission('2', '7', list[1]!.id),
@@ -1065,9 +1060,9 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
     );
     render(<StudentHomePage />, { wrapper: Wrapper });
 
-    const card = (await screen.findByText(/제출 완료 · 교수 피드백/)).closest(
-      'article',
-    );
+    const card = (
+      await screen.findAllByText(/제출 완료 · 교수\/조교 피드백/)
+    )[0]!.closest('article');
     if (!card) throw new Error('제안서 마일스톤 카드를 찾을 수 없습니다.');
     expect(
       within(card).queryByRole('button', { name: '작성하기' }),

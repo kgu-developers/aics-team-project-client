@@ -1,8 +1,10 @@
 import type { TeamMessage } from '@aics/core';
-import { expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
+  midReportFeedbackRoomStage,
   midReportFeedbackStage,
+  proposalFeedbackRoomStage,
   proposalFeedbackStage,
 } from './documentFeedbackStage';
 
@@ -86,4 +88,56 @@ it('제출 시각을 읽을 수 없으면 피드백으로 보지 않는다', () 
       teamMemberIds,
     }),
   ).toBe('awaiting-feedback');
+});
+
+describe('feedback room stage', () => {
+  const teamMemberIds = ['s1', 's2'];
+  const at = '2026-09-10T10:00:00';
+
+  it('제출 전이라도 교수 메시지가 있으면 제안서 피드백 영역을 연다', () => {
+    expect(
+      proposalFeedbackRoomStage({
+        submittedAt: null,
+        messages: [message('prof', at)],
+        teamMemberIds,
+      }),
+    ).toBe('feedback-arrived');
+  });
+
+  it('제출했지만 메시지가 없으면 대기, 제출도 메시지도 없으면 감춘다', () => {
+    expect(
+      proposalFeedbackRoomStage({
+        submittedAt: '2026-09-09T10:00:00',
+        messages: [],
+        teamMemberIds,
+      }),
+    ).toBe('awaiting-feedback');
+    expect(
+      proposalFeedbackRoomStage({ submittedAt: null, messages: [], teamMemberIds }),
+    ).toBe('not-submitted');
+  });
+
+  it('중간보고서는 학생 메시지로 시작하고, 메시지 조회 전에는 unknown이다', () => {
+    expect(
+      midReportFeedbackRoomStage({
+        submittedAt: '2026-09-09T10:00:00',
+        messages: [message('s1', at)],
+        teamMemberIds,
+      }),
+    ).toBe('feedback-arrived');
+    expect(
+      midReportFeedbackRoomStage({
+        submittedAt: '2026-09-09T10:00:00',
+        messages: [message('prof', at)],
+        teamMemberIds,
+      }),
+    ).toBe('awaiting-feedback');
+    expect(
+      midReportFeedbackRoomStage({
+        submittedAt: '2026-09-09T10:00:00',
+        teamMemberIds,
+        isMessagesReady: false,
+      }),
+    ).toBe('unknown');
+  });
 });

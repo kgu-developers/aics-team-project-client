@@ -9,15 +9,18 @@ import type {
 } from '@aics/core';
 import {
   Button,
+  Dialog,
+  Heading,
   HStack,
   StatusDot,
+  Text,
   TextArea,
   useToast,
   type StatusDotVariant,
 } from '@aics/design-system';
 import { Link } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, type ReactNode, useState } from 'react';
 
 import { seoulInstant } from '~/shared/lib/seoulInstant';
 
@@ -29,6 +32,7 @@ import {
   useSubmitMidReportFeedbackMutation,
   useSubmitProposalFeedbackResponseMutation,
 } from '~/features/student-feedback/queries';
+import { documentFeedbackStageCopy } from '~/features/student-home/model/documentFeedbackStage';
 import { safeSubmissionUrl } from '~/features/submission/submissionUploadInput';
 
 import * as styles from './MilestoneDetails.css';
@@ -227,13 +231,32 @@ function ProposalFeedbackResponseForm({
   );
 }
 
+function FeedbackStageCard({
+  action,
+  message,
+}: {
+  action?: ReactNode;
+  message: string;
+}) {
+  return (
+    <div className={styles.feedbackStageCard} role='status'>
+      <p className={styles.feedbackStageText}>{message}</p>
+      {action}
+    </div>
+  );
+}
+
 function MidReportFeedbackForm({
   canSubmit,
   blockedReason,
+  onSuccess,
+  submitLabel = '반영 기록 남기기',
   teamId,
 }: {
   canSubmit: boolean;
   blockedReason?: string;
+  onSuccess?: () => void;
+  submitLabel?: string;
   teamId?: string;
 }) {
   const toast = useToast();
@@ -261,6 +284,7 @@ function MidReportFeedbackForm({
         onSuccess: () => {
           setContent('');
           toast({ body: '대면 피드백 반영 기록을 제출했어요.' });
+          onSuccess?.();
         },
       },
     );
@@ -301,9 +325,7 @@ function MidReportFeedbackForm({
       <HStack justify='end'>
         <Button
           isDisabled={isDisabled}
-          label={
-            mutation.isPending ? '반영 기록 남기는 중...' : '반영 기록 남기기'
-          }
+          label={mutation.isPending ? '보내는 중...' : submitLabel}
           tooltip={!canSubmit ? blockedReason : undefined}
           type='submit'
         />
@@ -485,21 +507,39 @@ function ProposalFeedbackBody({
   body: Extract<StudentHomeMilestoneBody, { kind: 'proposal-feedback' }>;
 }) {
   const body = useProposalFeedbackQuery(sourceBody);
+  // Undefined stage keeps the legacy always-visible room (previews, fixtures).
+  const stage = body.feedbackStage ?? 'feedback-arrived';
   return (
     <div className={styles.root}>
-      <SectionBanner title='피드백 대화' />
-      <FeedbackList feedback={body.feedback} />
-      <SectionBanner title='피드백 반영 답변' />
-      {body.studentResponse ? (
-        <SubmittedProposalResponse response={body.studentResponse} />
+      {stage === 'not-submitted' ? null : stage === 'feedback-arrived' ? (
+        <>
+          <SectionBanner title='피드백 대화' />
+          <FeedbackList feedback={body.feedback} />
+          <SectionBanner title='피드백 반영 답변' />
+          {body.studentResponse ? (
+            <SubmittedProposalResponse response={body.studentResponse} />
+          ) : (
+            <ProposalFeedbackResponseForm
+              key={body.teamId}
+              teamId={body.teamId}
+              blockedReason={body.responseBlockedReason}
+              canSubmit={body.canSubmitResponse}
+              placeholder={body.replyPlaceholder}
+            />
+          )}
+        </>
       ) : (
-        <ProposalFeedbackResponseForm
-          key={body.teamId}
-          teamId={body.teamId}
-          blockedReason={body.responseBlockedReason}
-          canSubmit={body.canSubmitResponse}
-          placeholder={body.replyPlaceholder}
-        />
+        <>
+          <SectionBanner title='피드백' />
+          <FeedbackStageCard
+            message={
+              stage === 'unknown'
+                ? (body.responseBlockedReason ??
+                  documentFeedbackStageCopy.proposal.checking)
+                : documentFeedbackStageCopy.proposal.awaiting
+            }
+          />
+        </>
       )}
       <SectionBanner title='작성 영역별 상태' />
       <SectionStatusList sections={body.sections} />
@@ -514,25 +554,94 @@ function MidReportFeedbackBody({
   body: Extract<StudentHomeMilestoneBody, { kind: 'mid-review-feedback' }>;
 }) {
   const body = useMidReportFeedbackQuery(sourceBody);
+  const stage = body.feedbackStage ?? 'feedback-arrived';
+  const [isFirstMessageOpen, setIsFirstMessageOpen] = useState(false);
   return (
     <div className={styles.root}>
-      <SectionBanner title='대면 피드백 반영 기록' />
-      {body.studentFeedback ? (
-        <SubmittedMidReportFeedback feedback={body.studentFeedback} />
-      ) : (
-        <MidReportFeedbackForm
-          key={body.teamId}
-          teamId={body.teamId}
-          blockedReason={body.responseBlockedReason}
-          canSubmit={body.canSubmitResponse}
-        />
-      )}
-      {body.feedback.length > 0 ? (
+      {stage === 'not-submitted' ? null : stage === 'feedback-arrived' ? (
         <>
-          <SectionBanner title='피드백 대화' />
-          <FeedbackList feedback={body.feedback} />
+          <SectionBanner title='대면 피드백 반영 기록' />
+          {body.studentFeedback ? (
+            <SubmittedMidReportFeedback feedback={body.studentFeedback} />
+          ) : (
+            <MidReportFeedbackForm
+              key={body.teamId}
+              teamId={body.teamId}
+              blockedReason={body.responseBlockedReason}
+              canSubmit={body.canSubmitResponse}
+            />
+          )}
+          {body.feedback.length > 0 ? (
+            <>
+              <SectionBanner title='피드백 대화' />
+              <FeedbackList feedback={body.feedback} />
+            </>
+          ) : null}
         </>
-      ) : null}
+      ) : (
+        <>
+          <SectionBanner title='대면 피드백' />
+          <FeedbackStageCard
+            action={
+              stage === 'awaiting-feedback' ? (
+                <Button
+                  isDisabled={!body.canSubmitResponse}
+                  label='반영 방향 보내기'
+                  onClick={() => setIsFirstMessageOpen(true)}
+                  size='sm'
+                  tooltip={
+                    !body.canSubmitResponse
+                      ? body.responseBlockedReason
+                      : undefined
+                  }
+                />
+              ) : undefined
+            }
+            message={
+              stage === 'unknown'
+                ? (body.responseBlockedReason ??
+                  documentFeedbackStageCopy.midReport.checking)
+                : documentFeedbackStageCopy.midReport.awaiting
+            }
+          />
+          {/* The first message is a deliberate act: it starts the feedback
+              conversation and must not be sent while the report is still
+              being written, so it lives in a dialog instead of an inline box. */}
+          <Dialog
+            aria-label='대면 피드백 반영 방향 보내기'
+            isOpen={isFirstMessageOpen}
+            onOpenChange={open => {
+              if (!open) setIsFirstMessageOpen(false);
+            }}
+            purpose='form'
+            width={560}
+          >
+            <div className={styles.feedbackDialogContent}>
+              <Heading level={2}>대면 피드백 반영 방향 보내기</Heading>
+              <Text color='secondary'>
+                중간보고서를 제출하고 대면 피드백을 받은 뒤에 보내 주세요.
+                보낸 내용은 담당 교수·조교 쪽지함으로 전달되고, 이후 대화는 이
+                화면에서 이어집니다.
+              </Text>
+              <MidReportFeedbackForm
+                key={body.teamId}
+                teamId={body.teamId}
+                blockedReason={body.responseBlockedReason}
+                canSubmit={body.canSubmitResponse}
+                onSuccess={() => setIsFirstMessageOpen(false)}
+                submitLabel='반영 방향 보내기'
+              />
+              <HStack justify='end'>
+                <Button
+                  label='취소'
+                  onClick={() => setIsFirstMessageOpen(false)}
+                  variant='secondary'
+                />
+              </HStack>
+            </div>
+          </Dialog>
+        </>
+      )}
       <SectionBanner title='작성 영역별 상태' />
       <SectionStatusList sections={body.sections} />
       <p className={styles.guide}>{body.guide}</p>
