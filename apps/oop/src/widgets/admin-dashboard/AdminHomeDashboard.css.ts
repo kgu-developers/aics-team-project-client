@@ -123,6 +123,19 @@ export const milestoneLink = style({
   display: 'block',
   whiteSpace: 'pre-line',
 });
+
+export const milestoneColumnTitle = style({
+  display: 'block',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+});
+
+export const sectionLabel = style({
+  display: 'block',
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
+});
 export const grid = style({
   display: 'grid',
   gap: 28,
@@ -162,7 +175,7 @@ export const item = style({
   alignItems: 'center',
   display: 'grid',
   gap: 8,
-  gridTemplateColumns: 'auto minmax(0, 1fr) auto',
+  gridTemplateColumns: 'minmax(0, 160px) minmax(0, 1fr) auto',
   minHeight: 22,
   transition: 'background-color var(--duration-fast) var(--ease-standard)',
 });
@@ -176,8 +189,11 @@ export const label = style({
   background: tokens.color.background.muted,
   borderRadius: 999,
   color: tokens.color.text.secondary,
+  display: 'block',
   fontSize: 11,
+  overflow: 'hidden',
   padding: '3px 7px',
+  textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
 });
 export const itemTitle = style({
@@ -188,6 +204,10 @@ export const itemTitle = style({
 export const date = style({
   color: tokens.color.text.secondary,
   flexShrink: 0,
+  fontSize: 13,
+  fontVariantNumeric: 'tabular-nums',
+  lineHeight: 1.3,
+  textAlign: 'right',
   whiteSpace: 'nowrap',
 });
 export const action = style({

@@ -194,6 +194,12 @@ export default function AdminMilestonesPage() {
           ) : (
             <Card className={styles.tableCard}>
               <table className={styles.table}>
+                <colgroup>
+                  <col className={styles.sectionColumn} />
+                  <col />
+                  <col className={styles.dueAtColumn} />
+                  <col className={styles.statusColumn} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>적용 분반</th>
@@ -227,7 +233,9 @@ export default function AdminMilestonesPage() {
                         tabIndex={0}
                       >
                         <td>{milestone.sectionLabel}</td>
-                        <td>{milestone.title}</td>
+                        <td className={styles.milestoneTitle}>
+                          {milestone.title}
+                        </td>
                         <td>
                           {formatAdminMilestoneDate(milestone.schedule.dueAt)}
                         </td>

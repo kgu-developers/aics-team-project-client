@@ -72,11 +72,21 @@ export default function AdminShell() {
         <footer className={styles.footer}>
           <Divider />
           <div className={styles.footerBrand}>
-            <img
-              alt='경기대학교'
-              className={styles.universityLogo}
-              src='/brand/kyonggi-university.png'
-            />
+            <div className={styles.universityLogoContainer}>
+              <img
+                alt='경기대학교'
+                className={styles.universityLogo}
+                src='/brand/kyonggi-university.png'
+              />
+              <span
+                aria-hidden
+                className={styles.universityLogoLeftTextOverlay}
+              />
+              <span
+                aria-hidden
+                className={styles.universityLogoRightTextOverlay}
+              />
+            </div>
           </div>
         </footer>
       </main>

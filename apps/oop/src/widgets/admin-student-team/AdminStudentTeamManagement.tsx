@@ -316,7 +316,9 @@ export default function AdminStudentTeamManagement() {
                           <td>{student.studentNumber}</td>
                           <td>{student.major ?? '전공 정보 없음'}</td>
                           <td>{sourceTeam?.name ?? '미배정'}</td>
-                          <td>{member?.projectRole || '미지정'}</td>
+                          <td className={styles.projectRoleCell}>
+                            {member?.projectRole || '미지정'}
+                          </td>
                           <td>
                             <Popover
                               alignment='end'

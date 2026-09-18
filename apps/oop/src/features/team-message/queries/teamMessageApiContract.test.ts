@@ -1,6 +1,7 @@
 import {
   API_BASE_URL,
   apiClient,
+  fetchAdminMessages,
   fetchTeamMessages,
   fetchTeamThread,
   setApiAccessToken,
@@ -14,6 +15,7 @@ import { resetMockSessionState } from '../../../mocks/authSession';
 import { teamMessageProfessorId } from '../../../mocks/data/teamMessages';
 import {
   demoAccessToken,
+  demoAdminAccessToken,
   demoOtherSectionAccessToken,
 } from '../../../mocks/data/users';
 import { createTeamMessageHandlers } from '../../../mocks/handlers/teamMessages';
@@ -63,6 +65,18 @@ it('팀 스레드를 확보하고 PROPOSAL 페이지만 페이지 정보와 함�
         relatedType: 'PROPOSAL',
         senderId: '20260001',
       }),
+    ]),
+  );
+});
+
+it('관리자 쪽지함은 현재 분반의 숫자 ID와 분반 라벨을 반환한다', async () => {
+  setApiAccessToken(demoAdminAccessToken);
+
+  const page = await fetchAdminMessages();
+
+  expect(page.contents).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ sectionId: 1, sectionName: 'OOP-01' }),
     ]),
   );
 });

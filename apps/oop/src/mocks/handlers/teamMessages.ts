@@ -9,6 +9,7 @@ import {
 import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
+import { getMockMySections } from '../data/sections';
 import {
   createTeamMessageData,
   teamMessageSenderNames,
@@ -162,7 +163,10 @@ export function createTeamMessageHandlers(
       }
       const query = new URL(request.url).searchParams;
       const sectionId = query.get('sectionId');
-      const accessibleSections = account.user.sections;
+      const accessibleSections = getMockMySections(
+        account.credentials.studentNumber,
+        {},
+      );
       if (
         sectionId &&
         !accessibleSections.some(section =>
@@ -187,14 +191,16 @@ export function createTeamMessageHandlers(
           )
         )
           return [];
+        const matchingSection = accessibleSections.find(section =>
+          isAccessibleSection(section.id, team.sectionId),
+        );
+        const matchingSectionId = Number(matchingSection?.id);
+        if (!isId(matchingSectionId)) return [];
 
         return {
           ...message,
-          sectionId: team.sectionId,
-          sectionName:
-            accessibleSections.find(candidate =>
-              isAccessibleSection(candidate.id, team.sectionId),
-            )?.name ?? team.sectionId,
+          sectionId: matchingSectionId,
+          sectionName: matchingSection?.name ?? team.sectionId,
           teamId: team.id,
           teamName: team.name,
         };

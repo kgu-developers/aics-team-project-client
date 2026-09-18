@@ -62,14 +62,20 @@ export const filterActive = style({
 
 export const tableCard = style({
   overflowX: 'auto',
+  overflowY: 'hidden',
   padding: 0,
 });
 
 export const table = style({
   borderCollapse: 'collapse',
-  minWidth: 620,
+  minWidth: 720,
+  tableLayout: 'fixed',
   width: '100%',
 });
+
+export const sectionColumn = style({ width: 132 });
+export const dueAtColumn = style({ width: 156 });
+export const statusColumn = style({ width: 152 });
 
 globalStyle(table + ' th', {
   background: tokens.color.background.card,
@@ -84,6 +90,11 @@ globalStyle(table + ' td', {
   borderTop: `1px solid ${tokens.color.border.base}`,
   fontSize: 14,
   padding: '14px 16px',
+});
+
+export const milestoneTitle = style({
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
 });
 
 globalStyle(table + ' tbody tr:hover td', {

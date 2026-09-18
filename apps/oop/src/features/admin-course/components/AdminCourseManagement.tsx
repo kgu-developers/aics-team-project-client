@@ -584,7 +584,9 @@ function SectionSettingsDialog({
       width={600}
     >
       <form className={styles.sectionSettingsForm} onSubmit={handleSubmit}>
-        <Heading level={2}>{section?.code ?? '분반'} 분반 정보 수정</Heading>
+        <Heading className={styles.dialogTitle} level={2}>
+          {section?.code ?? '분반'} 분반 정보 수정
+        </Heading>
         <TextInput
           isDisabled={isPending}
           isRequired
@@ -884,7 +886,9 @@ function CourseSectionDialog({
         width='min(680px, calc(100vw - 32px))'
       >
         <div className={styles.dialogBody}>
-          <Heading level={2}>{course?.name ?? '강좌'} 분반 관리</Heading>
+          <Heading className={styles.dialogTitle} level={2}>
+            {course?.name ?? '강좌'} 분반 관리
+          </Heading>
           {!isCreating && !professorId ? (
             <Text role='alert'>로그인한 관리자 정보를 확인할 수 없습니다.</Text>
           ) : !isCreating && sectionsQuery.isPending ? (
@@ -900,7 +904,7 @@ function CourseSectionDialog({
             <ul aria-label='연결된 분반 목록' className={styles.sectionList}>
               {sectionsQuery.data?.contents.map(section => (
                 <li className={styles.sectionItem} key={section.id}>
-                  <strong>{section.code}</strong>
+                  <strong className={styles.sectionCode}>{section.code}</strong>
                   <span className={styles.sectionMeta}>
                     {section.classTime} · 정원 {section.capacity}명
                   </span>

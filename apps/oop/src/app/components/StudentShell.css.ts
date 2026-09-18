@@ -136,8 +136,39 @@ export const shellFooterMeta = style({
   justifyContent: 'center',
 });
 
+const darkLogoTextOverlay = {
+  backgroundImage: "url('/brand/kyonggi-university.png')",
+  backgroundSize: '100% 100%',
+  display: 'none',
+  filter: 'brightness(0) invert(1)',
+  inset: 0,
+  pointerEvents: 'none' as const,
+  position: 'absolute' as const,
+};
+
+export const shellUniversityLogoContainer = style({
+  position: 'relative',
+  width: 209,
+});
+
+export const shellUniversityLogoLeftTextOverlay = style({
+  ...darkLogoTextOverlay,
+  clipPath: 'inset(0 76% 0 0)',
+  '@media': {
+    '(prefers-color-scheme: dark)': { display: 'block' },
+  },
+});
+
+export const shellUniversityLogoRightTextOverlay = style({
+  ...darkLogoTextOverlay,
+  clipPath: 'inset(0 0 0 46.7%)',
+  '@media': {
+    '(prefers-color-scheme: dark)': { display: 'block' },
+  },
+});
+
 export const shellUniversityLogo = style({
   display: 'block',
   height: 'auto',
-  width: 209,
+  width: '100%',
 });

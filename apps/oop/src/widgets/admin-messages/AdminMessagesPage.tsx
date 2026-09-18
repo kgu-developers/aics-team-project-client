@@ -11,6 +11,8 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { getSectionDisplayLabel } from '~/shared/lib/getSectionDisplayLabel';
+
 import {
   useAdminMessagesQuery,
   useUpdateAdminMessageReadMutation,
@@ -76,7 +78,7 @@ export default function AdminMessagesPage() {
               onClick={() => selectSection(value)}
               type='button'
             >
-              {section.name ?? value}
+              {section.code ?? value}
             </button>
           );
         })}
@@ -124,7 +126,11 @@ export default function AdminMessagesPage() {
                           className={styles.unreadDot}
                         />
                       )}
-                      {row.sectionName}
+                      {getSectionDisplayLabel(
+                        sections,
+                        row.sectionId,
+                        row.sectionName,
+                      )}
                     </td>
                     <td>{row.teamName}</td>
                     <td>{row.senderName ?? row.senderId}</td>
