@@ -4,6 +4,7 @@ import type {
 } from '@aics/api-client';
 
 import { countAdminMeetingRecords } from './adminMeetings';
+import { isAdminMidReportSubmissionReopened } from './adminMidReportReopenState';
 
 type SubmissionFixture = Omit<
   AdminMilestoneSubmissionItemDto,
@@ -182,10 +183,34 @@ export function getAdminMilestoneSubmissionsFixture(
     ? {
         contents: fixture.contents.map(submission => ({
           ...submission,
+          canSubmitNow:
+            submission.milestoneId === 102 &&
+            isAdminMidReportSubmissionReopened(
+              submission.milestoneId,
+              submission.teamId,
+            )
+              ? true
+              : submission.canSubmitNow,
+          hasPendingReview:
+            submission.milestoneId === 102 &&
+            isAdminMidReportSubmissionReopened(
+              submission.milestoneId,
+              submission.teamId,
+            )
+              ? false
+              : submission.hasPendingReview,
           meetingRecordCount: countAdminMeetingRecords(
             submission.teamId,
             submission.milestoneId,
           ),
+          status:
+            submission.milestoneId === 102 &&
+            isAdminMidReportSubmissionReopened(
+              submission.milestoneId,
+              submission.teamId,
+            )
+              ? 'REVISION_REQUESTED'
+              : submission.status,
         })),
       }
     : undefined;

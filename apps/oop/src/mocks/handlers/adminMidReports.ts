@@ -3,6 +3,11 @@ import { http, HttpResponse } from 'msw';
 
 import { appendPersistentMockFeedbackTeamMessage } from './teamMessages';
 import { getMockAuthenticatedAccount } from '../authSession';
+import {
+  isAdminMidReportSubmissionReopened,
+  reopenAdminMidReportSubmission,
+  resetAdminMidReportReopenState,
+} from '../data/adminMidReportReopenState';
 import { demoAdmin } from '../data/users';
 
 type MidReport = {
@@ -47,8 +52,6 @@ const initialFeedbacks = [
   },
 ];
 const feedbackStorageKey = 'aics.oop.msw.admin-mid-report-feedbacks';
-const reopenedTeamIdsStorageKey =
-  'aics.oop.msw.admin-mid-report-reopened-team-ids';
 
 function loadFeedbacks() {
   if (typeof localStorage === 'undefined') {
@@ -80,47 +83,15 @@ function persistFeedbacks() {
 
 let feedbacks = loadFeedbacks();
 
-function loadReopenedTeamIds() {
-  if (typeof localStorage === 'undefined') return new Set<number>();
-
-  try {
-    const stored = localStorage.getItem(reopenedTeamIdsStorageKey);
-    if (!stored) return new Set<number>();
-
-    const parsed = JSON.parse(stored);
-    return new Set(
-      Array.isArray(parsed)
-        ? parsed.filter((teamId): teamId is number =>
-            Number.isSafeInteger(teamId),
-          )
-        : [],
-    );
-  } catch {
-    return new Set<number>();
-  }
-}
-
-let reopenedTeamIds = loadReopenedTeamIds();
-
-function persistReopenedTeamIds() {
-  if (typeof localStorage === 'undefined') return;
-
-  try {
-    localStorage.setItem(
-      reopenedTeamIdsStorageKey,
-      JSON.stringify([...reopenedTeamIds]),
-    );
-  } catch {
-    // Persistence is only a development convenience for the MSW scenario.
-  }
-}
-
 function getMidReport(teamId: string): MidReport | undefined {
   if (!['1', '2'].includes(teamId)) return undefined;
 
   const normalizedTeamId = Number(teamId);
   const teamName = `OOP-01 - ${normalizedTeamId}팀`;
-  const isRevisionRequested = reopenedTeamIds.has(normalizedTeamId);
+  const isRevisionRequested = isAdminMidReportSubmissionReopened(
+    102,
+    normalizedTeamId,
+  );
 
   return {
     blocks: [
@@ -222,10 +193,9 @@ function isAdmin(request: Request) {
 
 export function resetAdminMidReportScenario() {
   feedbacks = structuredClone(initialFeedbacks);
-  reopenedTeamIds = new Set<number>();
+  resetAdminMidReportReopenState();
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem(feedbackStorageKey);
-    localStorage.removeItem(reopenedTeamIdsStorageKey);
   }
 }
 
@@ -309,8 +279,7 @@ export const adminMidReportHandlers = [
       };
       feedbacks = [feedback, ...feedbacks];
       persistFeedbacks();
-      reopenedTeamIds.add(feedback.teamId);
-      persistReopenedTeamIds();
+      reopenAdminMidReportSubmission(102, feedback.teamId);
       appendPersistentMockFeedbackTeamMessage({
         createdAt: feedback.createdAt,
         message: feedback.message,
