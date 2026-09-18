@@ -188,7 +188,10 @@ describe('AdminStudentTeamManagement', () => {
     expect(studentNameButton).toBeDefined();
     const studentRow = studentNameButton!.closest('tr') as HTMLElement;
 
-    await user.click(within(studentRow).getByRole('button', { name: '제외' }));
+    await user.click(
+      within(studentRow).getByRole('button', { name: '김민준 관리' }),
+    );
+    await user.click(await screen.findByRole('button', { name: '제외' }));
     const confirmationDialog = await screen.findByRole('alertdialog', {
       name: '수강생 제외 확인',
     });
@@ -230,10 +233,11 @@ describe('AdminStudentTeamManagement', () => {
       await screen.findAllByRole('button', { name: '김민준' })
     ).find(button => button.closest('table'));
     expect(studentNameButton).toBeDefined();
-    const withdrawButton = within(
-      studentNameButton!.closest('tr') as HTMLElement,
-    ).getByRole('button', { name: '제외' });
-    await user.click(withdrawButton);
+    const studentRow = studentNameButton!.closest('tr') as HTMLElement;
+    await user.click(
+      within(studentRow).getByRole('button', { name: '김민준 관리' }),
+    );
+    await user.click(await screen.findByRole('button', { name: '제외' }));
 
     const dialog = await screen.findByRole('alertdialog', {
       name: '수강생 제외 확인',
@@ -271,6 +275,33 @@ describe('AdminStudentTeamManagement', () => {
     );
   });
 
+  it('확정된 팀원 관리 메뉴에서는 역할 변경과 팀 이동을 제공하지 않는다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', { name: '팀 배정 확정' }),
+    );
+    const confirmation = await screen.findByRole('alertdialog', {
+      name: '팀 배정 확정 확인',
+    });
+    await user.click(
+      within(confirmation).getByRole('button', { name: '확정하기' }),
+    );
+    await user.click(
+      await screen.findByRole('button', { name: '이서연 관리' }),
+    );
+
+    expect(
+      screen.queryByRole('button', { name: '역할 변경' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '팀 이동' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '제외' })).toBeInTheDocument();
+  });
+
   it('팀장을 새 팀원으로 변경하면 팀 카드에 갱신된 팀장을 표시한다', async () => {
     const user = userEvent.setup();
 
@@ -291,14 +322,81 @@ describe('AdminStudentTeamManagement', () => {
     );
   });
 
+  it('미확정 팀원의 프로젝트 역할을 표시하고 수정한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', { name: '이서연 관리' }),
+    );
+    await user.click(await screen.findByRole('button', { name: '역할 변경' }));
+
+    const dialog = await screen.findByRole('dialog', {
+      name: '프로젝트 역할 변경',
+    });
+    const roleInput = within(dialog).getByRole('textbox', {
+      name: '프로젝트 역할',
+    });
+    await user.type(roleInput, '백엔드');
+    await user.click(within(dialog).getByRole('button', { name: '저장' }));
+
+    await waitFor(() => {
+      const studentList = screen
+        .getByRole('heading', { name: '수강생 목록' })
+        .closest('section');
+      const studentRow = within(studentList!)
+        .getByRole('button', { name: '이서연' })
+        .closest('tr');
+      const firstTeam = screen
+        .getByRole('heading', { name: '1팀' })
+        .closest('article');
+
+      expect(within(studentRow!).getByText('백엔드')).toBeInTheDocument();
+      expect(within(firstTeam!).getByText('역할: 백엔드')).toBeInTheDocument();
+    });
+  });
+
+  it('역할 저장 중 팀이 확정되면 변경 불가 사유를 안내한다', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.patch(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_MEMBER(':teamId', ':studentNumber')}`,
+        () => HttpResponse.json({ code: 'TEAM_CONFIRMED' }, { status: 409 }),
+      ),
+    );
+
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', { name: '이서연 관리' }),
+    );
+    await user.click(await screen.findByRole('button', { name: '역할 변경' }));
+    const dialog = await screen.findByRole('dialog', {
+      name: '프로젝트 역할 변경',
+    });
+    await user.type(
+      within(dialog).getByRole('textbox', { name: '프로젝트 역할' }),
+      '기획',
+    );
+    await user.click(within(dialog).getByRole('button', { name: '저장' }));
+
+    expect(
+      await within(dialog).findByText(
+        '팀 배정이 확정되어 역할을 변경할 수 없습니다.',
+      ),
+    ).toBeInTheDocument();
+  });
+
   it('미확정 팀의 팀원을 같은 분반의 다른 팀으로 이동한다', async () => {
     const user = userEvent.setup();
 
     renderPage();
 
     await user.click(
-      await screen.findByRole('button', { name: '이서연 팀 이동' }),
+      await screen.findByRole('button', { name: '이서연 관리' }),
     );
+    await user.click(await screen.findByRole('button', { name: '팀 이동' }));
     const dialog = await screen.findByRole('dialog', { name: '팀원 이동' });
     await user.click(within(dialog).getByRole('radio', { name: /2팀/ }));
     await user.click(within(dialog).getByRole('button', { name: '이동하기' }));
@@ -329,8 +427,9 @@ describe('AdminStudentTeamManagement', () => {
     renderPage();
 
     await user.click(
-      await screen.findByRole('button', { name: '김민준 팀 이동' }),
+      await screen.findByRole('button', { name: '김민준 관리' }),
     );
+    await user.click(await screen.findByRole('button', { name: '팀 이동' }));
 
     const dialog = await screen.findByRole('dialog', { name: '팀원 이동' });
     expect(

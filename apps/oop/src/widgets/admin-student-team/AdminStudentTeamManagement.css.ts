@@ -171,9 +171,22 @@ export const memberButton = style({
   textUnderlineOffset: 3,
 });
 
-globalStyle(`${member} span:last-child`, {
+globalStyle(`${member} span`, {
   color: tokens.color.text.secondary,
   fontSize: 13,
+});
+
+export const memberRole = style({
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+});
+
+export const actionMenu = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['1'],
+  padding: tokens.spacing['1'],
 });
 
 export const statePanel = style({

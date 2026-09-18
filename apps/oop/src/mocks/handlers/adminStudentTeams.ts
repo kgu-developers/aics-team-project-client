@@ -17,6 +17,7 @@ const adminSectionId = 1;
 const withdrawnStudentNumbers = new Set<string>();
 const teamLeaderStudentNumbers = new Map<string, string>();
 const teamIdByStudentNumber = new Map<string, string>();
+const projectRoleBySectionStudent = new Map<string, string>();
 const finalizedSectionIds = new Set<string>();
 const createdUsers = new Map<
   string,
@@ -57,6 +58,10 @@ function getTeamStudents(teamId: string) {
   return adminStudentsFixture.filter(
     student => getStudentTeamId(student) === teamId,
   );
+}
+
+function getProjectRoleKey(sectionId: string, studentNumber: string) {
+  return `${sectionId}:${studentNumber}`;
 }
 
 function getTeams(sectionId: string): Team[] {
@@ -243,7 +248,10 @@ function getAdminTeamResponse(teamId: string) {
           isLeader: student.studentNumber === leaderStudentNumber,
           major: student.major,
           name: student.name,
-          projectRole: null,
+          projectRole:
+            projectRoleBySectionStudent.get(
+              getProjectRoleKey(team.sectionId, student.studentNumber),
+            ) ?? null,
           studentNumber: student.studentNumber,
         },
       ];
@@ -260,6 +268,7 @@ export function resetAdminStudentTeamMockState() {
   withdrawnStudentNumbers.clear();
   teamLeaderStudentNumbers.clear();
   teamIdByStudentNumber.clear();
+  projectRoleBySectionStudent.clear();
   finalizedSectionIds.clear();
   createdUsers.clear();
   assistantEnrollmentsBySection.clear();
@@ -458,6 +467,7 @@ export const adminStudentTeamHandlers = [
 
       const input = (await request.json()) as {
         isLeader?: boolean;
+        projectRole?: string;
         targetTeamId?: number;
       };
       const member = getTeamStudents(team.id).find(
@@ -477,6 +487,19 @@ export const adminStudentTeamHandlers = [
       const targetTeamId = input.targetTeamId;
       const isMoving =
         Number.isSafeInteger(targetTeamId) && targetTeamId !== sourceTeamId;
+
+      if (
+        finalizedSectionIds.has(team.sectionId) &&
+        (isMoving || input.projectRole !== undefined)
+      ) {
+        return HttpResponse.json(
+          {
+            code: 'TEAM_CONFIRMED',
+            message: '확정된 팀의 역할과 팀 소속은 변경할 수 없습니다.',
+          },
+          { status: 409 },
+        );
+      }
 
       if (isMoving) {
         const targetTeam = adminTeamsFixture.find(
@@ -549,6 +572,21 @@ export const adminStudentTeamHandlers = [
         if (updatedTeam) {
           teamLeaderStudentNumbers.set(updatedTeam.id, studentNumber);
         }
+      }
+      if (input.projectRole !== undefined) {
+        if (input.projectRole.length > 50) {
+          return HttpResponse.json(
+            {
+              code: 'PROJECT_ROLE_TOO_LONG',
+              message: '프로젝트 역할은 50자 이하여야 합니다.',
+            },
+            { status: 400 },
+          );
+        }
+        projectRoleBySectionStudent.set(
+          getProjectRoleKey(team.sectionId, studentNumber),
+          input.projectRole,
+        );
       }
       const updatedMember = getAdminTeamResponse(
         String(isMoving ? targetTeamId : sourceTeamId),

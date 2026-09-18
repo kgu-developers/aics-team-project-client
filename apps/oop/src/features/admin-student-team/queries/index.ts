@@ -15,5 +15,6 @@ export { useRegisterAdminAssistantMutation } from './useRegisterAdminAssistantMu
 export { useRemoveAdminAssistantMutation } from './useRemoveAdminAssistantMutation';
 export { useResetAdminUserPasswordMutation } from './useResetAdminUserPasswordMutation';
 export { useUpdateAdminTeamLeaderMutation } from './useUpdateAdminTeamLeaderMutation';
+export { useUpdateAdminTeamMemberRoleMutation } from './useUpdateAdminTeamMemberRoleMutation';
 export { useUpdateAdminAssistantMutation } from './useUpdateAdminAssistantMutation';
 export { useWithdrawAdminSectionEnrollmentMutation } from './useUpdateAdminSectionEnrollmentMutation';

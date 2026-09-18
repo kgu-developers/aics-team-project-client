@@ -3,9 +3,11 @@ import {
   Dialog,
   Heading,
   HStack,
+  Popover,
   RadioList,
   RadioListItem,
   Text,
+  TextInput,
 } from '@aics/design-system';
 import { Link } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
@@ -22,6 +24,7 @@ import {
   useFinalizeAdminSectionTeamsMutation,
   useMoveAdminTeamMemberMutation,
   useUpdateAdminTeamLeaderMutation,
+  useUpdateAdminTeamMemberRoleMutation,
   useWithdrawAdminSectionEnrollmentMutation,
 } from '~/features/admin-student-team/queries';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -54,6 +57,26 @@ function getTeamMoveErrorMessage(error: unknown) {
   }
 }
 
+function getTeamMemberRoleErrorMessage(error: unknown) {
+  if (!isAxiosError<{ code?: string; message?: string }>(error)) {
+    return '역할을 변경하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+  }
+
+  const serverMessage = error.response?.data?.message;
+  if (serverMessage) return serverMessage;
+
+  switch (error.response?.status) {
+    case 400:
+      return '프로젝트 역할은 50자 이하여야 합니다.';
+    case 403:
+      return '이 분반 팀원의 역할을 변경할 권한이 없습니다.';
+    case 409:
+      return '팀 배정이 확정되어 역할을 변경할 수 없습니다.';
+    default:
+      return '역할을 변경하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+  }
+}
+
 export default function AdminStudentTeamManagement() {
   const currentUser = useAuthStore(state => state.currentUser);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
@@ -61,6 +84,9 @@ export default function AdminStudentTeamManagement() {
   );
   const [isFinalizeDialogOpen, setIsFinalizeDialogOpen] = useState(false);
   const [selectedStudentNumber, setSelectedStudentNumber] = useState<
+    string | null
+  >(null);
+  const [actionMenuStudentNumber, setActionMenuStudentNumber] = useState<
     string | null
   >(null);
   const sections = currentUser?.sections ?? [];
@@ -78,6 +104,7 @@ export default function AdminStudentTeamManagement() {
   const finalizeMutation = useFinalizeAdminSectionTeamsMutation();
   const moveTeamMemberMutation = useMoveAdminTeamMemberMutation();
   const updateTeamLeaderMutation = useUpdateAdminTeamLeaderMutation();
+  const updateTeamMemberRoleMutation = useUpdateAdminTeamMemberRoleMutation();
 
   const students = (enrollmentsQuery.data?.contents ?? []).filter(
     student => student.status === 'ACTIVE',
@@ -105,6 +132,11 @@ export default function AdminStudentTeamManagement() {
     (typeof teams)[number] | null
   >(null);
   const [nextLeaderStudentNumber, setNextLeaderStudentNumber] = useState('');
+  const [teamMemberToUpdateRole, setTeamMemberToUpdateRole] = useState<{
+    member: (typeof teams)[number]['members'][number];
+    team: (typeof teams)[number];
+  } | null>(null);
+  const [nextProjectRole, setNextProjectRole] = useState('');
   const [teamMemberToMove, setTeamMemberToMove] = useState<{
     member: (typeof teams)[number]['members'][number];
     sourceTeam: (typeof teams)[number];
@@ -137,6 +169,22 @@ export default function AdminStudentTeamManagement() {
     setTeamMemberToMove(null);
     setTargetTeamId('');
     moveTeamMemberMutation.reset();
+  }
+
+  function closeTeamMemberRoleDialog() {
+    if (updateTeamMemberRoleMutation.isPending) return;
+    setTeamMemberToUpdateRole(null);
+    setNextProjectRole('');
+    updateTeamMemberRoleMutation.reset();
+  }
+
+  function openTeamMemberRoleDialog(
+    member: (typeof teams)[number]['members'][number],
+    team: (typeof teams)[number],
+  ) {
+    setTeamMemberToUpdateRole({ member, team });
+    setNextProjectRole(member.projectRole ?? '');
+    updateTeamMemberRoleMutation.reset();
   }
 
   function openTeamMoveDialog(
@@ -232,6 +280,7 @@ export default function AdminStudentTeamManagement() {
                       <th scope='col'>학번</th>
                       <th scope='col'>전공</th>
                       <th scope='col'>팀</th>
+                      <th scope='col'>역할</th>
                       <th scope='col'>관리</th>
                     </tr>
                   </thead>
@@ -243,6 +292,13 @@ export default function AdminStudentTeamManagement() {
                       const canMove = sourceTeam
                         ? canMoveFromTeam(sourceTeam)
                         : false;
+                      const member = sourceTeam?.members.find(
+                        candidate =>
+                          candidate.studentNumber === student.studentNumber,
+                      );
+                      const canUpdateRole =
+                        sourceTeam?.status !== 'CONFIRMED' &&
+                        member !== undefined;
 
                       return (
                         <tr key={student.id}>
@@ -260,30 +316,72 @@ export default function AdminStudentTeamManagement() {
                           <td>{student.studentNumber}</td>
                           <td>{student.major ?? '전공 정보 없음'}</td>
                           <td>{sourceTeam?.name ?? '미배정'}</td>
+                          <td>{member?.projectRole || '미지정'}</td>
                           <td>
-                            {canMove && sourceTeam ? (
-                              <Button
-                                aria-label={`${student.name} 팀 이동`}
-                                label='팀 이동'
-                                onClick={() => {
-                                  const member = sourceTeam.members.find(
-                                    candidate =>
-                                      candidate.studentNumber ===
-                                      student.studentNumber,
-                                  );
-                                  if (member)
-                                    openTeamMoveDialog(member, sourceTeam);
-                                }}
-                                size='sm'
-                                variant='secondary'
-                              />
-                            ) : null}
-                            <Button
-                              label='제외'
-                              onClick={() => setStudentToWithdraw(student)}
-                              size='sm'
-                              variant='ghost'
-                            />
+                            <Popover
+                              alignment='end'
+                              content={
+                                <div className={styles.actionMenu}>
+                                  {canUpdateRole && sourceTeam && member ? (
+                                    <Button
+                                      label='역할 변경'
+                                      onClick={() => {
+                                        setActionMenuStudentNumber(null);
+                                        openTeamMemberRoleDialog(
+                                          member,
+                                          sourceTeam,
+                                        );
+                                      }}
+                                      size='sm'
+                                      variant='secondary'
+                                    />
+                                  ) : null}
+                                  {canMove && sourceTeam && member ? (
+                                    <Button
+                                      label='팀 이동'
+                                      onClick={() => {
+                                        setActionMenuStudentNumber(null);
+                                        openTeamMoveDialog(member, sourceTeam);
+                                      }}
+                                      size='sm'
+                                      variant='secondary'
+                                    />
+                                  ) : null}
+                                  <Button
+                                    label='제외'
+                                    onClick={() => {
+                                      setActionMenuStudentNumber(null);
+                                      setStudentToWithdraw(student);
+                                    }}
+                                    size='sm'
+                                    variant='destructive'
+                                  />
+                                </div>
+                              }
+                              isOpen={
+                                actionMenuStudentNumber ===
+                                student.studentNumber
+                              }
+                              key={student.studentNumber}
+                              label={`${student.name} 관리`}
+                              onOpenChange={open =>
+                                setActionMenuStudentNumber(
+                                  open ? student.studentNumber : null,
+                                )
+                              }
+                              placement='below'
+                              width={132}
+                            >
+                              {triggerProps => (
+                                <Button
+                                  {...triggerProps}
+                                  aria-label={`${student.name} 관리`}
+                                  label='관리'
+                                  size='sm'
+                                  variant='secondary'
+                                />
+                              )}
+                            </Popover>
                           </td>
                         </tr>
                       );
@@ -440,6 +538,9 @@ export default function AdminStudentTeamManagement() {
                               {member.name}
                             </button>
                             <span>{member.studentNumber}</span>
+                            <span className={styles.memberRole}>
+                              역할: {member.projectRole || '미지정'}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -508,6 +609,72 @@ export default function AdminStudentTeamManagement() {
         }
         studentNumber={selectedStudentNumber}
       />
+      <Dialog
+        aria-label='프로젝트 역할 변경'
+        isOpen={teamMemberToUpdateRole !== null}
+        onOpenChange={open => {
+          if (!open) closeTeamMemberRoleDialog();
+        }}
+        purpose='form'
+        width={440}
+      >
+        {teamMemberToUpdateRole ? (
+          <div className={styles.withdrawDialogContent}>
+            <Heading level={2}>
+              {teamMemberToUpdateRole.member.name} 역할 변경
+            </Heading>
+            <Text color='secondary'>
+              비워 저장하면 프로젝트 역할을 미지정으로 변경합니다.
+            </Text>
+            <TextInput
+              isDisabled={updateTeamMemberRoleMutation.isPending}
+              label='프로젝트 역할'
+              onChange={value => setNextProjectRole(value.slice(0, 50))}
+              placeholder='예) 백엔드'
+              value={nextProjectRole}
+              width='100%'
+            />
+            <Text color='secondary' type='supporting'>
+              {nextProjectRole.length}/50자
+            </Text>
+            {updateTeamMemberRoleMutation.isError ? (
+              <Text role='alert'>
+                {getTeamMemberRoleErrorMessage(
+                  updateTeamMemberRoleMutation.error,
+                )}
+              </Text>
+            ) : null}
+            <HStack gap={2} justify='end'>
+              <Button
+                isDisabled={updateTeamMemberRoleMutation.isPending}
+                label='취소'
+                onClick={closeTeamMemberRoleDialog}
+                variant='secondary'
+              />
+              <Button
+                isDisabled={
+                  updateTeamMemberRoleMutation.isPending ||
+                  nextProjectRole ===
+                    (teamMemberToUpdateRole.member.projectRole ?? '')
+                }
+                isLoading={updateTeamMemberRoleMutation.isPending}
+                label='저장'
+                onClick={() => {
+                  updateTeamMemberRoleMutation.mutate(
+                    {
+                      projectRole: nextProjectRole,
+                      studentNumber:
+                        teamMemberToUpdateRole.member.studentNumber,
+                      teamId: teamMemberToUpdateRole.team.id,
+                    },
+                    { onSuccess: closeTeamMemberRoleDialog },
+                  );
+                }}
+              />
+            </HStack>
+          </div>
+        ) : null}
+      </Dialog>
       <Dialog
         aria-label='팀장 변경'
         isOpen={teamToUpdateLeader !== null}
