@@ -43,6 +43,11 @@ export type TeamKickoffMemberResponse = {
   name?: string | null;
   isLeader: boolean;
   projectRole?: string | null;
+  /**
+   * Not in the deployed contract yet (admin DTOs carry `major`); read when
+   * the server adds it so the student roster can show 학과.
+   */
+  major?: string | null;
 };
 
 export type TeamKickoffResponse = {

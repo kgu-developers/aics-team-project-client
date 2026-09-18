@@ -38,6 +38,16 @@ export function TeamMemberTable({ members, variant }: TeamMemberTableProps) {
     phoneNumber: member.phoneNumber ?? null,
     studentNumber: member.studentNumber,
   }));
+  // The student team contract does not carry 학과 yet; a column that reads
+  // "학과 미정" for everyone only looks like missing data, so hide it until
+  // at least one member has a value.
+  const hasDepartment = members.some(member => member.department);
+  const departmentColumn = {
+    align: 'start' as const,
+    header: '학과',
+    key: 'department' as const,
+    width: proportional(1, { minWidth: 0 }),
+  };
 
   async function copyPhoneNumber(phoneNumber: string) {
     try {
@@ -66,12 +76,7 @@ export function TeamMemberTable({ members, variant }: TeamMemberTableProps) {
         columns={
           variant === 'assignment'
             ? [
-                {
-                  align: 'start',
-                  header: '학과',
-                  key: 'department',
-                  width: proportional(1, { minWidth: 0 }),
-                },
+                ...(hasDepartment ? [departmentColumn] : []),
                 {
                   align: 'start',
                   header: '학번',
@@ -86,12 +91,7 @@ export function TeamMemberTable({ members, variant }: TeamMemberTableProps) {
                 },
               ]
             : [
-                {
-                  align: 'start',
-                  header: '학과',
-                  key: 'department',
-                  width: proportional(1, { minWidth: 0 }),
-                },
+                ...(hasDepartment ? [departmentColumn] : []),
                 {
                   align: 'start',
                   header: '이름',

@@ -76,6 +76,7 @@ export function toTeamAssignmentProjection(
         name: member.name ?? member.studentNumber,
         studentNumber: member.studentNumber,
         role: member.projectRole ?? undefined,
+        department: member.major ?? undefined,
       })),
       leaderId: leader ? String(leader.id) : undefined,
     },
