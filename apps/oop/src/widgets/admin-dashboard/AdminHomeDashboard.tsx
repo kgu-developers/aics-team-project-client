@@ -118,7 +118,11 @@ function List({
               {item.title}
             </Link>
           ) : isMeetingList && item.meetingId && item.sectionId ? (
-            <Link className={styles.itemTitle} to={ROUTES.ADMIN_MEETINGS}>
+            <Link
+              className={styles.itemTitle}
+              params={{ meetingId: item.meetingId }}
+              to={ROUTES.ADMIN_MEETING_DETAIL}
+            >
               {item.title}
             </Link>
           ) : isMessageList && item.teamId ? (

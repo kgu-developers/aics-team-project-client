@@ -133,6 +133,11 @@ function renderPage(user = demoAdmin) {
     getParentRoute: () => rootRoute,
     path: '/admin/meetings',
   });
+  const meetingDetailRoute = createRoute({
+    component: () => <div>회의록 상세</div>,
+    getParentRoute: () => rootRoute,
+    path: '/admin/meetings/$meetingId',
+  });
   const teamMessagesRoute = createRoute({
     component: () => <div>팀 대화</div>,
     getParentRoute: () => rootRoute,
@@ -148,6 +153,7 @@ function renderPage(user = demoAdmin) {
     routeTree: rootRoute.addChildren([
       homeRoute,
       meetingsRoute,
+      meetingDetailRoute,
       teamMessagesRoute,
       submissionsRoute,
     ]),
@@ -217,7 +223,12 @@ describe('AdminHomeDashboard', () => {
       screen.getByRole('link', {
         name: '발표 자료의 핵심 흐름과 역할을 확정한다.',
       }),
-    ).toHaveAttribute('href', '/admin/meetings');
+    ).toHaveAttribute('href', '/admin/meetings/2');
+    expect(
+      screen
+        .getAllByRole('link', { name: '전체보기 ›' })
+        .map(link => link.getAttribute('href')),
+    ).toContain('/admin/meetings');
     expect(
       screen.queryByText('등록된 회의록이 없습니다.'),
     ).not.toBeInTheDocument();
