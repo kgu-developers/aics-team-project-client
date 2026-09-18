@@ -29,3 +29,11 @@ export const requestError = style({
   color: tokens.color.error,
   margin: 0,
 });
+export const sessionNotice = style({
+  background: tokens.color.background.muted,
+  borderRadius: 8,
+  color: tokens.color.text.secondary,
+  fontSize: 14,
+  margin: 0,
+  padding: '10px 12px',
+});

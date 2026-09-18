@@ -1,11 +1,19 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { useAuthStore } from '../authStore';
 import LoginForm from './LoginForm';
 
+import { demoAdmin } from '~/mocks/data/users';
+
+const navigate = vi.fn();
+const search: { redirect?: string } = {};
+const mutateAsync = vi.fn();
+
 vi.mock('@tanstack/react-router', () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => navigate,
+  useSearch: () => search,
 }));
 
 vi.mock('../queries/useLoginMutation', () => ({
@@ -13,9 +21,16 @@ vi.mock('../queries/useLoginMutation', () => ({
     error: null,
     isError: false,
     isPending: false,
-    mutateAsync: vi.fn(),
+    mutateAsync,
   }),
 }));
+
+afterEach(() => {
+  navigate.mockReset();
+  mutateAsync.mockReset();
+  delete search.redirect;
+  useAuthStore.setState({ sessionEndReason: null });
+});
 
 describe('LoginForm', () => {
   it('로그인 폼만 노출하고 개발 계정 안내는 표시하지 않는다', () => {
@@ -43,5 +58,32 @@ describe('LoginForm', () => {
         '비밀번호를 입력해 주세요.',
       );
     });
+  });
+
+  it('다른 탭 로그아웃으로 세션이 끝났으면 그 이유를 한 번 안내한다', () => {
+    useAuthStore.getState().clearSession('signed-out-elsewhere');
+    render(<LoginForm />);
+
+    expect(
+      screen.getByText(/다른 탭이나 창에서 로그아웃되었습니다\./),
+    ).toHaveAttribute('role', 'status');
+    expect(useAuthStore.getState().sessionEndReason).toBeNull();
+  });
+
+  it('로그인 뒤 redirect 검색값으로 원래 화면에 돌아간다', async () => {
+    search.redirect = '/admin/milestones/new?sectionId=1';
+    mutateAsync.mockResolvedValue(demoAdmin);
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText(/학번/), demoAdmin.studentNumber);
+    await user.type(screen.getByLabelText(/비밀번호/), 'oop-admin');
+    await user.click(screen.getByRole('button', { name: '로그인' }));
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith({
+        href: '/admin/milestones/new?sectionId=1',
+      }),
+    );
   });
 });

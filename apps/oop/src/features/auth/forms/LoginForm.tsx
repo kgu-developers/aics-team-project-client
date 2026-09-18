@@ -7,15 +7,18 @@ import {
   VStack,
 } from '@aics/design-system';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { resolveStudentLoginDestination } from '~/features/team-assignment/resolveStudentLoginDestination';
 
 import * as styles from './LoginForm.css';
+import { useAuthStore } from '../authStore';
 import { useLoginMutation } from '../queries/useLoginMutation';
+import { sessionEndMessages } from '../sessionSync';
 
 const loginSchema = z.object({
   studentNumber: z.string().trim().min(1, '학번을 입력해 주세요.'),
@@ -42,7 +45,12 @@ function getLoginErrorMessage(error: unknown) {
 
 export default function LoginForm() {
   const navigate = useNavigate();
+  const { redirect } = useSearch({ from: '/login' });
   const loginMutation = useLoginMutation();
+  // Read once on mount so the notice survives re-renders but not a revisit.
+  const [sessionEndReason] = useState(() =>
+    useAuthStore.getState().consumeSessionEndReason(),
+  );
   const {
     formState: { errors },
     handleSubmit,
@@ -60,6 +68,10 @@ export default function LoginForm() {
   const onSubmit = handleSubmit(async values => {
     try {
       const currentUser = await loginMutation.mutateAsync(values);
+      if (redirect) {
+        await navigate({ href: redirect });
+        return;
+      }
       const destination = await resolveStudentLoginDestination(currentUser);
       await navigate({ to: destination });
     } catch {
@@ -124,6 +136,12 @@ export default function LoginForm() {
               value={password}
               width='100%'
             />
+
+            {sessionEndReason && !requestError ? (
+              <p className={styles.sessionNotice} role='status'>
+                {sessionEndMessages[sessionEndReason]}
+              </p>
+            ) : null}
 
             {requestError ? (
               <p className={styles.requestError} role='alert'>

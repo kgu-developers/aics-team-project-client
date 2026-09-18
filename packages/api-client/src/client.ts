@@ -1,6 +1,8 @@
 import axios from 'axios';
 
 import { getApiAccessToken } from './auth/accessToken';
+import { notifyApiUnauthorized } from './auth/unauthorizedListener';
+import { ENDPOINTS } from './constants/endpoints';
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080';
@@ -24,4 +26,21 @@ apiClient.interceptors.request.use(config => {
   }
 
   return config;
+});
+
+const authEndpoints = new Set<string>([
+  ENDPOINTS.AUTH.LOGIN,
+  ENDPOINTS.AUTH.REFRESH,
+  ENDPOINTS.AUTH.LOGOUT,
+]);
+
+apiClient.interceptors.response.use(undefined, (error: unknown) => {
+  if (
+    axios.isAxiosError(error) &&
+    error.response?.status === 401 &&
+    !authEndpoints.has(error.config?.url ?? '')
+  ) {
+    notifyApiUnauthorized(error);
+  }
+  return Promise.reject(error);
 });

@@ -1,5 +1,10 @@
 import { Divider, Text } from '@aics/design-system';
-import { Link, Navigate, Outlet } from '@tanstack/react-router';
+import {
+  Link,
+  Navigate,
+  Outlet,
+  useRouterState,
+} from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -9,6 +14,7 @@ import {
   selectHasAuthenticatedSession,
   useAuthStore,
 } from '~/features/auth/authStore';
+import { safeRedirectPath } from '~/features/auth/safeRedirectPath';
 import { useStudentContext } from '~/features/section/useStudentContext';
 
 import StudentContactLink from '~/widgets/student-contact-link/StudentContactLink';
@@ -26,9 +32,18 @@ export default function StudentShell() {
   const context = useStudentContext(!isDemo);
   const hasSession = useAuthStore(selectHasAuthenticatedSession);
   const currentUser = useAuthStore(state => state.currentUser);
+  // Select a primitive so the subscription never re-renders on identity alone.
+  const currentHref = useRouterState({ select: state => state.location.href });
 
   if (!hasSession || !currentUser) {
-    return <Navigate to={ROUTES.LOGIN} />;
+    // `safeRedirectPath` drops /login itself, so a router that keeps this
+    // shell mounted on /login (tests, misconfigured trees) cannot loop.
+    return (
+      <Navigate
+        search={{ redirect: safeRedirectPath(currentHref) }}
+        to={ROUTES.LOGIN}
+      />
+    );
   }
 
   if (currentUser.globalRole !== 'STUDENT') {

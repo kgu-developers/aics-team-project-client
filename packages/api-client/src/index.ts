@@ -1,6 +1,7 @@
 export {
   fetchCurrentUser,
   mapCurrentUserResponse,
+  onApiUnauthorized,
   setApiAccessToken,
   submitLogin,
   submitLogout,
