@@ -88,11 +88,21 @@ export default function StudentShell() {
         <footer className={styles.shellFooter}>
           <Divider />
           <div className={styles.shellFooterBrand}>
-            <img
-              alt='경기대학교'
-              className={styles.shellUniversityLogo}
-              src='/brand/kyonggi-university.png'
-            />
+            <div className={styles.shellUniversityLogoContainer}>
+              <img
+                alt='경기대학교'
+                className={styles.shellUniversityLogo}
+                src='/brand/kyonggi-university.png'
+              />
+              <span
+                aria-hidden
+                className={styles.shellUniversityLogoLeftTextOverlay}
+              />
+              <span
+                aria-hidden
+                className={styles.shellUniversityLogoRightTextOverlay}
+              />
+            </div>
           </div>
           <div className={styles.shellFooterMeta}>
             <StudentContactLink />
