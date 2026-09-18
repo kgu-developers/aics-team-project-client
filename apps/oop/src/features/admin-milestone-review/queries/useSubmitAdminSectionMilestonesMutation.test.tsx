@@ -72,7 +72,11 @@ describe('useSubmitAdminSectionMilestonesMutation', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([
       { milestoneId: 101, sectionId: '1', status: 'published' },
-      { sectionId: '2', status: 'create-failed' },
+      {
+        error: { message: '생성할 수 없습니다.', status: 409 },
+        sectionId: '2',
+        status: 'create-failed',
+      },
     ]);
   });
 
@@ -98,7 +102,12 @@ describe('useSubmitAdminSectionMilestonesMutation', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([
-      { milestoneId: 101, sectionId: '1', status: 'publish-failed' },
+      {
+        error: { message: '공개할 수 없습니다.', status: 403 },
+        milestoneId: 101,
+        sectionId: '1',
+        status: 'publish-failed',
+      },
     ]);
   });
 });

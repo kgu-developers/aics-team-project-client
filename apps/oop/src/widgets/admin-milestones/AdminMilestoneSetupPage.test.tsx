@@ -290,6 +290,31 @@ it('부분 생성 실패를 재시도해도 이미 생성한 분반의 마일스
   await screen.findByText('마일스톤 목록');
 });
 
+it('생성 실패 시 서버 응답 상태와 코드를 원인과 함께 보여준다', async () => {
+  server.use(
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES(':sectionId')}`,
+      () =>
+        HttpResponse.json({ code: 'MILESTONE_WEEK_CONFLICT' }, { status: 409 }),
+    ),
+  );
+  renderPage(false);
+  const user = userEvent.setup();
+  fireEvent.change(await screen.findByLabelText('OOP-01 제출 마감일'), {
+    target: { value: '2026-10-15' },
+  });
+  fireEvent.change(screen.getByLabelText('OOP-01 제출 마감 시간'), {
+    target: { value: '23:59' },
+  });
+  await user.click(screen.getByRole('button', { name: '저장' }));
+
+  const result = await screen.findByText(/생성에 실패했습니다\./);
+  expect(result).toHaveTextContent(
+    '같은 분반에서 해당 주차를 이미 사용 중입니다. 다른 주차를 입력해주세요. (HTTP 409 · MILESTONE_WEEK_CONFLICT)',
+  );
+  expect(screen.queryByText('마일스톤 목록')).not.toBeInTheDocument();
+});
+
 it('blocks peer-evaluation editing before hidden schedule validation or any write', async () => {
   const writes = trackWrites();
   const milestone = getAdminSectionMilestoneFixture('1', '101')!;
