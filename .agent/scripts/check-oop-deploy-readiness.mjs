@@ -8,6 +8,11 @@ const bundleOnly = process.argv.includes('--bundle-only');
 const errors = [];
 let releaseCommit = '';
 let productionApiBaseUrl = '';
+let productionOpenChatUrl = '';
+const allowedProductionEnvKeys = new Set([
+  'VITE_API_BASE_URL',
+  'VITE_OPEN_CHAT_URL',
+]);
 
 function runGit(args) {
   try {
@@ -94,7 +99,7 @@ if (!existsSync(productionEnvPath)) {
   const keys = parsedAssignments
     .map(assignment => assignment?.[1])
     .filter(Boolean);
-  const unexpectedKeys = keys.filter(key => key !== 'VITE_API_BASE_URL');
+  const unexpectedKeys = keys.filter(key => !allowedProductionEnvKeys.has(key));
 
   if (unexpectedKeys.length > 0) {
     errors.push(
@@ -109,19 +114,28 @@ if (!existsSync(productionEnvPath)) {
     parsedAssignments
       .find(assignment => assignment?.[1] === 'VITE_API_BASE_URL')?.[2]
       ?.trim() ?? '';
+  productionOpenChatUrl =
+    parsedAssignments
+      .find(assignment => assignment?.[1] === 'VITE_OPEN_CHAT_URL')?.[2]
+      ?.trim() ?? '';
 
-  try {
-    const url = new URL(productionApiBaseUrl);
-    if (url.protocol !== 'https:') {
-      errors.push('VITE_API_BASE_URL은 HTTPS 주소여야 합니다.');
+  for (const [key, value] of [
+    ['VITE_API_BASE_URL', productionApiBaseUrl],
+    ['VITE_OPEN_CHAT_URL', productionOpenChatUrl],
+  ]) {
+    try {
+      const url = new URL(value);
+      if (url.protocol !== 'https:') {
+        errors.push(`${key}은 HTTPS 주소여야 합니다.`);
+      }
+      if (url.username || url.password || url.search || url.hash) {
+        errors.push(
+          `${key}에는 자격 증명, 쿼리 문자열, fragment를 넣을 수 없습니다.`,
+        );
+      }
+    } catch {
+      errors.push(`${key}이 없거나 올바른 URL이 아닙니다.`);
     }
-    if (url.username || url.password || url.search || url.hash) {
-      errors.push(
-        'VITE_API_BASE_URL에는 자격 증명, 쿼리 문자열, fragment를 넣을 수 없습니다.',
-      );
-    }
-  } catch {
-    errors.push('VITE_API_BASE_URL이 없거나 올바른 URL이 아닙니다.');
   }
 }
 
@@ -129,7 +143,7 @@ const ambientViteKeys = Object.keys(process.env).filter(key =>
   key.startsWith('VITE_'),
 );
 const unexpectedAmbientViteKeys = ambientViteKeys.filter(
-  key => key !== 'VITE_API_BASE_URL',
+  key => !allowedProductionEnvKeys.has(key),
 );
 
 if (unexpectedAmbientViteKeys.length > 0) {
@@ -138,10 +152,16 @@ if (unexpectedAmbientViteKeys.length > 0) {
   );
 }
 if (
-  process.env.VITE_API_BASE_URL &&
+  Object.hasOwn(process.env, 'VITE_API_BASE_URL') &&
   process.env.VITE_API_BASE_URL !== productionApiBaseUrl
 ) {
   errors.push('셸의 VITE_API_BASE_URL이 apps/oop/.env.production과 다릅니다.');
+}
+if (
+  Object.hasOwn(process.env, 'VITE_OPEN_CHAT_URL') &&
+  process.env.VITE_OPEN_CHAT_URL !== productionOpenChatUrl
+) {
+  errors.push('셸의 VITE_OPEN_CHAT_URL이 apps/oop/.env.production과 다릅니다.');
 }
 
 const oopPackagePath = join(repoRoot, 'apps/oop/package.json');
@@ -183,6 +203,11 @@ const productionApiIsEmbedded =
   bundleFiles.some(path =>
     readFileSync(path, 'utf8').includes(productionApiBaseUrl),
   );
+const productionOpenChatIsEmbedded =
+  productionOpenChatUrl &&
+  bundleFiles.some(path =>
+    readFileSync(path, 'utf8').includes(productionOpenChatUrl),
+  );
 
 if (exposedFiles.length > 0) {
   errors.push(
@@ -192,6 +217,11 @@ if (exposedFiles.length > 0) {
 if (!productionApiIsEmbedded) {
   errors.push(
     '운영 번들에서 apps/oop/.env.production의 API 주소를 찾지 못했습니다.',
+  );
+}
+if (!productionOpenChatIsEmbedded) {
+  errors.push(
+    '운영 번들에서 apps/oop/.env.production의 오픈채팅 주소를 찾지 못했습니다.',
   );
 }
 
