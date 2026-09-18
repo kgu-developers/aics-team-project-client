@@ -99,6 +99,11 @@ export const teamCard = style({
   },
 });
 
+export const dragOverTeamCard = style({
+  borderColor: tokens.color.accent,
+  boxShadow: `0 0 0 2px ${tokens.color.background.blue}`,
+});
+
 export const teamName = style({
   fontSize: 16,
   margin: 0,
@@ -142,7 +147,17 @@ export const member = style({
   flexDirection: 'column',
   fontSize: 14,
   gap: 4,
+  minWidth: 0,
   padding: '12px 14px',
+});
+
+export const draggableMember = style({
+  cursor: 'grab',
+});
+
+export const draggingMember = style({
+  cursor: 'grabbing',
+  opacity: 0.5,
 });
 
 export const memberButton = style({
@@ -157,9 +172,26 @@ export const memberButton = style({
   textUnderlineOffset: 3,
 });
 
-globalStyle(`${member} span:last-child`, {
+globalStyle(`${member} span`, {
   color: tokens.color.text.secondary,
   fontSize: 13,
+});
+
+export const memberRole = style({
+  display: 'block',
+  maxWidth: '100%',
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  width: '100%',
+});
+
+export const actionMenu = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['1'],
+  padding: tokens.spacing['1'],
 });
 
 export const statePanel = style({

@@ -126,6 +126,8 @@ export default function TeamImportDialog({
                       <th scope='col'>팀</th>
                       <th scope='col'>학번</th>
                       <th scope='col'>이름</th>
+                      <th scope='col'>팀장</th>
+                      <th scope='col'>역할</th>
                       <th scope='col'>상태</th>
                       <th scope='col'>안내</th>
                     </tr>
@@ -137,6 +139,8 @@ export default function TeamImportDialog({
                         <td>{row.teamName}</td>
                         <td>{row.studentNumber}</td>
                         <td>{row.name ?? '-'}</td>
+                        <td>{row.leader ? '팀장' : '-'}</td>
+                        <td>{row.projectRole || '미지정'}</td>
                         <td>{row.status}</td>
                         <td>{row.message ?? '-'}</td>
                       </tr>

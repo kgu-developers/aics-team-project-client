@@ -586,7 +586,9 @@ describe('AdminCourseManagement', () => {
     });
     await user.click(within(row).getByRole('button', { name: '삭제' }));
 
-    const dialog = screen.getByRole('dialog', { name: '강좌 삭제 확인' });
+    const dialog = await screen.findByRole('dialog', {
+      name: '강좌 삭제 확인',
+    });
     await user.click(within(dialog).getByRole('button', { name: '삭제' }));
 
     await waitFor(() => {
