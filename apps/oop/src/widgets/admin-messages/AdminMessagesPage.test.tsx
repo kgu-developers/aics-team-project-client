@@ -127,9 +127,15 @@ it('reaches item 101, keeps page caches separate, and resets pages on section/al
   const client = setup();
   const user = userEvent.setup();
   await screen.findByText('all 쪽지 1');
+  expect(
+    screen.getByRole('navigation', { name: '쪽지함 페이지 이동' }),
+  ).toHaveTextContent('1 / 2 페이지');
   expect(screen.getByRole('button', { name: '이전 페이지' })).toBeDisabled();
   await user.click(screen.getByRole('button', { name: '다음 페이지' }));
   await screen.findByText('all 쪽지 101');
+  expect(
+    screen.getByRole('navigation', { name: '쪽지함 페이지 이동' }),
+  ).toHaveTextContent('2 / 2 페이지');
   expect(screen.queryByText('all 쪽지 1')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: '다음 페이지' })).toBeDisabled();
   expect(
@@ -160,9 +166,13 @@ it('reaches item 101, keeps page caches separate, and resets pages on section/al
   expect(screen.getByRole('button', { name: '이전 페이지' })).toBeDisabled();
   await user.click(screen.getByRole('button', { name: '현재 분반 둘' }));
   await screen.findByText('쪽지가 없습니다.');
-  expect(screen.getByText('0 / 0 페이지')).toBeVisible();
-  expect(screen.getByRole('button', { name: '다음 페이지' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: '이전 페이지' })).toBeDisabled();
+  // Empty mailbox: no pages to move between, so the pagination bar is hidden.
+  expect(
+    screen.queryByRole('navigation', { name: '쪽지함 페이지 이동' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: '다음 페이지' }),
+  ).not.toBeInTheDocument();
 });
 
 it.each([0, 1])(
@@ -190,6 +200,12 @@ it.each([0, 1])(
     });
     await screen.findByText(totalAfter ? 'all 쪽지 1' : '쪽지가 없습니다.');
     await waitFor(() => expect(requests).toEqual([0, 1, 1, 0]));
+    if (totalAfter === 0) {
+      expect(
+        screen.queryByRole('navigation', { name: '쪽지함 페이지 이동' }),
+      ).not.toBeInTheDocument();
+      return;
+    }
     expect(screen.getByRole('button', { name: '이전 페이지' })).toBeDisabled();
     expect(screen.getByRole('button', { name: '다음 페이지' })).toBeDisabled();
   },
