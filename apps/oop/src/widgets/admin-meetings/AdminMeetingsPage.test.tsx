@@ -21,10 +21,12 @@ import AdminMeetingsPage from './AdminMeetingsPage';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
+import { adminStudentTeamHandlers } from '~/mocks/handlers/adminStudentTeams';
 
 const server = setupServer(
   ...adminMeetingHandlers,
   ...adminSectionMilestoneHandlers,
+  ...adminStudentTeamHandlers,
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -88,14 +90,37 @@ describe('AdminMeetingsPage', () => {
     renderPage();
 
     expect(screen.queryByLabelText('마일스톤 필터')).not.toBeInTheDocument();
-    await user.click(await screen.findByRole('button', { name: 'OOP-01' }));
+    expect(screen.queryByLabelText('팀 필터')).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('combobox', { name: '분반 필터' }));
+    await user.click(await screen.findByRole('option', { name: 'OOP-01' }));
     const milestoneFilter = await screen.findByLabelText('마일스톤 필터');
+    expect(screen.getByLabelText('팀 필터')).toBeInTheDocument();
     expect(milestoneFilter).toBeInTheDocument();
 
     await user.click(milestoneFilter);
     await user.click(
       await screen.findByRole('option', { name: '3주차 · 제안서' }),
     );
+    expect(
+      await screen.findByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ }),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
+  it('팀 필터 드롭다운으로 팀을 고르면 URL과 목록이 그 팀으로 좁혀진다', async () => {
+    const user = userEvent.setup();
+    renderPage('/admin/meetings/?sectionId=1');
+
+    await screen.findByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ });
+    const teamFilter = await screen.findByRole('combobox', { name: '팀 필터' });
+    await waitFor(() => expect(teamFilter).toBeEnabled());
+    await user.click(teamFilter);
+    await user.click(await screen.findByRole('option', { name: '1팀' }));
+
     expect(
       await screen.findByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
     ).toBeInTheDocument();

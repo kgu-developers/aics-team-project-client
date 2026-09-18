@@ -12,24 +12,10 @@ export const page = style({
 });
 
 export const filters = style({
+  alignItems: 'flex-end',
   display: 'flex',
-  gap: 8,
-});
-
-const filterBase = {
-  background: tokens.color.background.muted,
-  border: 0,
-  borderRadius: tokens.radius.full,
-  color: tokens.color.text.primary,
-  cursor: 'pointer',
-  font: 'inherit',
-  padding: '7px 12px',
-};
-export const filter = style(filterBase);
-export const filterActive = style({
-  ...filterBase,
-  background: tokens.color.text.primary,
-  color: tokens.color.background.surface,
+  flexWrap: 'wrap',
+  gap: 12,
 });
 
 export const tableCard = style({

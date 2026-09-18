@@ -17,6 +17,7 @@ import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { useAdminSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
+import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMeetingsPage.css';
@@ -43,9 +44,12 @@ export default function AdminMeetingsPage() {
   };
   const accessibleSections = currentUser?.sections ?? [];
   const accessibleSectionIds = accessibleSections.map(section => section.id);
+  // Hand-typed URLs arrive as numbers; router links serialize strings.
+  const requestedSectionId =
+    search.sectionId === undefined ? undefined : String(search.sectionId);
   const selectedSectionId =
-    search.sectionId && accessibleSectionIds.includes(search.sectionId)
-      ? search.sectionId
+    requestedSectionId && accessibleSectionIds.includes(requestedSectionId)
+      ? requestedSectionId
       : allSectionsValue;
   const requestedPage = Number(search.page ?? 0);
   const selectedPage =
@@ -55,11 +59,16 @@ export default function AdminMeetingsPage() {
   const milestonesQuery = useAdminSectionMilestonesQuery(
     selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
   );
+  const teamsQuery = useAdminSectionTeamsQuery(
+    selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
+  );
+  // A team id may arrive by URL without a section; keep honoring it.
+  const selectedTeamId = search.teamId ? String(search.teamId) : undefined;
   const query = useAdminMeetingRecordListQuery(accessibleSectionIds, {
     page: selectedPage,
     sectionId:
       selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
-    teamId: search.teamId,
+    teamId: selectedTeamId,
     milestoneId: selectedMilestoneId,
     size: 20,
   });
@@ -72,18 +81,27 @@ export default function AdminMeetingsPage() {
     });
   }
 
-  function selectMilestone(milestoneId: string) {
+  // Filters narrow from section → team → milestone; changing one resets the page.
+  function applyFilters(next: { milestoneId?: string; teamId?: string }) {
     void navigate({
       search: {
         ...(selectedSectionId === allSectionsValue
           ? {}
           : { sectionId: selectedSectionId }),
-        ...(search.teamId ? { teamId: search.teamId } : {}),
-        ...(milestoneId ? { milestoneId } : {}),
+        ...(next.teamId ? { teamId: next.teamId } : {}),
+        ...(next.milestoneId ? { milestoneId: next.milestoneId } : {}),
         page: 0,
       },
       to: ROUTES.ADMIN_MEETINGS,
     });
+  }
+
+  function selectTeam(teamId: string) {
+    applyFilters({ milestoneId: selectedMilestoneId, teamId });
+  }
+
+  function selectMilestone(milestoneId: string) {
+    applyFilters({ milestoneId, teamId: selectedTeamId });
   }
 
   function selectPage(page: number) {
@@ -92,7 +110,7 @@ export default function AdminMeetingsPage() {
         ...(selectedSectionId === allSectionsValue
           ? {}
           : { sectionId: selectedSectionId }),
-        ...(search.teamId ? { teamId: search.teamId } : {}),
+        ...(selectedTeamId ? { teamId: selectedTeamId } : {}),
         ...(selectedMilestoneId ? { milestoneId: selectedMilestoneId } : {}),
         page,
       },
@@ -103,47 +121,61 @@ export default function AdminMeetingsPage() {
   return (
     <div className={styles.page}>
       <Heading level={1}>회의록</Heading>
-      <div className={styles.filters} role='group' aria-label='분반 필터'>
-        {[
-          { label: '전체', value: allSectionsValue },
-          ...accessibleSections.map(section => ({
-            label: section.code,
-            value: section.id,
-          })),
-        ].map(section => (
-          <button
-            aria-pressed={selectedSectionId === section.value}
-            className={
-              selectedSectionId === section.value
-                ? styles.filterActive
-                : styles.filter
-            }
-            key={section.value}
-            onClick={() => selectSection(section.value)}
-            type='button'
-          >
-            {section.label}
-          </button>
-        ))}
-      </div>
-      {selectedSectionId !== allSectionsValue ? (
+      <div aria-label='회의록 필터' className={styles.filters} role='group'>
         <Selector
-          label='마일스톤 필터'
-          onChange={selectMilestone}
+          label='분반 필터'
+          onChange={selectSection}
           options={[
-            { label: '전체 마일스톤', value: '' },
-            ...(milestonesQuery.data?.content ?? []).map(milestone => ({
-              label: `${milestone.weekNumber}주차 · ${milestone.title}`,
-              value: String(milestone.id),
+            { label: '전체 분반', value: allSectionsValue },
+            ...accessibleSections.map(section => ({
+              label: section.code,
+              value: section.id,
             })),
           ]}
           renderOption={option => (
             <SelectorOption label={option.label ?? option.value} />
           )}
-          value={selectedMilestoneId ?? ''}
-          width={320}
+          value={selectedSectionId}
+          width={240}
         />
-      ) : null}
+        {selectedSectionId !== allSectionsValue ? (
+          <>
+            <Selector
+              isDisabled={teamsQuery.isPending}
+              label='팀 필터'
+              onChange={selectTeam}
+              options={[
+                { label: '전체 팀', value: '' },
+                ...(teamsQuery.data?.contents ?? []).map(team => ({
+                  label: team.name,
+                  value: String(team.id),
+                })),
+              ]}
+              renderOption={option => (
+                <SelectorOption label={option.label ?? option.value} />
+              )}
+              value={selectedTeamId ?? ''}
+              width={200}
+            />
+            <Selector
+              label='마일스톤 필터'
+              onChange={selectMilestone}
+              options={[
+                { label: '전체 마일스톤', value: '' },
+                ...(milestonesQuery.data?.content ?? []).map(milestone => ({
+                  label: `${milestone.weekNumber}주차 · ${milestone.title}`,
+                  value: String(milestone.id),
+                })),
+              ]}
+              renderOption={option => (
+                <SelectorOption label={option.label ?? option.value} />
+              )}
+              value={selectedMilestoneId ?? ''}
+              width={320}
+            />
+          </>
+        ) : null}
+      </div>
 
       {accessibleSectionIds.length === 0 ? (
         <EmptyState
