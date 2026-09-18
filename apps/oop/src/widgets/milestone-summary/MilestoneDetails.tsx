@@ -19,6 +19,8 @@ import { Link } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
 import { type FormEvent, useState } from 'react';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 import { useMilestonePresentationsQuery } from '~/features/evaluation/queries';
 import ProjectTopicBoard from '~/features/project-topic/ProjectTopicBoard';
 import {
@@ -83,15 +85,15 @@ function FeedbackList({
   );
 }
 
+const submittedAtFormatter = new Intl.DateTimeFormat('ko-KR', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'Asia/Seoul',
+});
+
 function formatSubmittedAt(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat('ko-KR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date);
+  const instant = seoulInstant(value);
+  return Number.isNaN(instant) ? value : submittedAtFormatter.format(instant);
 }
 
 function getFeedbackSubmitErrorMessage(error: unknown, fallback: string) {

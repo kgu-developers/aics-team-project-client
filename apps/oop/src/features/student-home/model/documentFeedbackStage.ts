@@ -1,5 +1,7 @@
 import type { TeamMessage } from '@aics/core';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 export type DocumentFeedbackStage =
   'not-submitted' | 'unknown' | 'awaiting-feedback' | 'feedback-arrived';
 
@@ -13,8 +15,8 @@ type Input = {
 };
 // Both timestamps must parse; an unreadable value must not open the stage.
 const after = (message: TeamMessage, submittedAt: string) => {
-  const sent = Date.parse(message.createdAt);
-  const submitted = Date.parse(submittedAt);
+  const sent = seoulInstant(message.createdAt);
+  const submitted = seoulInstant(submittedAt);
   return (
     Number.isFinite(sent) && Number.isFinite(submitted) && sent >= submitted
   );

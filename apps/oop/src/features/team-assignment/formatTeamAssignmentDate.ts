@@ -1,9 +1,11 @@
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 export function formatTeamAssignmentDate(isoDate?: string) {
   if (!isoDate) {
     return '안내 예정';
   }
 
-  const date = new Date(isoDate);
+  const date = new Date(seoulInstant(isoDate));
 
   if (Number.isNaN(date.getTime())) {
     return '안내 예정';

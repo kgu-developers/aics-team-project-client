@@ -4,6 +4,8 @@ import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 
 import { EDITOR_DOCS, editorSectionTo } from '~/app/constants/editorSections';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 import { useAuthStore } from '~/features/auth/authStore';
 
 import DocumentAccessNotice from './DocumentAccessNotice';
@@ -170,7 +172,8 @@ export default function DocumentEditorPage<
   };
   const savedAtLabel = new Intl.DateTimeFormat('ko-KR', {
     timeStyle: 'short',
-  }).format(new Date(block.lastSavedAt));
+    timeZone: 'Asia/Seoul',
+  }).format(seoulInstant(block.lastSavedAt));
   const saveStateLabel = saveState.saving
     ? '자동 저장 중…'
     : saveState.error

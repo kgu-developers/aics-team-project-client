@@ -9,6 +9,8 @@ import {
   Text,
 } from '@aics/design-system';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 import * as styles from './SubmissionMaterials.css';
 
 type SubmissionMaterialsProps = {
@@ -17,15 +19,15 @@ type SubmissionMaterialsProps = {
   showMetadataTitle?: boolean;
 };
 
+const submittedAtFormatter = new Intl.DateTimeFormat('ko-KR', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'Asia/Seoul',
+});
+
 function formatSubmittedAt(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat('ko-KR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(date);
+  const instant = seoulInstant(value);
+  return Number.isNaN(instant) ? value : submittedAtFormatter.format(instant);
 }
 
 export default function SubmissionMaterials({

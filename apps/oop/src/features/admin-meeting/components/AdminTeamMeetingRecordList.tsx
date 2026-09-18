@@ -4,6 +4,8 @@ import { Link } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 import * as styles from './AdminTeamMeetingRecordList.css';
 
 type AdminTeamMeetingRecordListProps = {
@@ -14,10 +16,14 @@ type AdminTeamMeetingRecordListProps = {
   teamId: string;
 };
 
+const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
+  dateStyle: 'medium',
+  timeZone: 'Asia/Seoul',
+});
+
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(
-    new Date(value),
-  );
+  const instant = seoulInstant(value);
+  return Number.isNaN(instant) ? value : dateFormatter.format(instant);
 }
 
 export function AdminTeamMeetingRecordList({

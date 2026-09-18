@@ -10,6 +10,8 @@ import {
 } from '@aics/design-system';
 import { useEffect, useState } from 'react';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 import { useAuthStore } from '~/features/auth/authStore';
 
 import { getSubmissionErrorMessage } from './getSubmissionErrorMessage';
@@ -41,11 +43,15 @@ type SubmissionFilePanelProps = {
 const READ_ONLY_MESSAGE =
   '읽기 전용 상태에서는 파일을 선택하거나 교체할 수 없어요.';
 
+const submittedAtFormatter = new Intl.DateTimeFormat('ko-KR', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'Asia/Seoul',
+});
+
 function formatSubmittedAt(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
+  const instant = seoulInstant(value);
+  return Number.isNaN(instant) ? value : submittedAtFormatter.format(instant);
 }
 
 function SubmittedFileSummary({ submission }: { submission: Submission }) {
