@@ -1,7 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
@@ -288,6 +288,102 @@ describe('AdminStudentTeamManagement', () => {
 
     await waitFor(() =>
       expect(screen.getByText('팀장: 이서연')).toBeInTheDocument(),
+    );
+  });
+
+  it('미확정 팀의 팀원을 같은 분반의 다른 팀으로 이동한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', { name: '이서연 팀 이동' }),
+    );
+    const dialog = await screen.findByRole('dialog', { name: '팀원 이동' });
+    await user.click(within(dialog).getByRole('radio', { name: /2팀/ }));
+    await user.click(within(dialog).getByRole('button', { name: '이동하기' }));
+
+    await waitFor(() => {
+      const studentList = screen
+        .getByRole('heading', { name: '수강생 목록' })
+        .closest('section');
+      const firstTeam = screen
+        .getByRole('heading', { name: '1팀' })
+        .closest('article');
+      const secondTeam = screen
+        .getByRole('heading', { name: '2팀' })
+        .closest('article');
+      const movedStudentRow = within(studentList!)
+        .getByRole('button', { name: '이서연' })
+        .closest('tr');
+
+      expect(within(firstTeam!).queryByText('이서연')).not.toBeInTheDocument();
+      expect(within(secondTeam!).getByText('이서연')).toBeInTheDocument();
+      expect(within(movedStudentRow!).getByText('2팀')).toBeInTheDocument();
+    });
+  });
+
+  it('팀장을 이동하면 역할 해제 안내를 표시하고 대상 팀으로 옮긴다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', { name: '김민준 팀 이동' }),
+    );
+
+    const dialog = await screen.findByRole('dialog', { name: '팀원 이동' });
+    expect(
+      within(dialog).getByText(
+        '현재 팀에서 팀장으로 설정되어 있다면 팀장 역할을 해제하고 이동합니다.',
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('radio', { name: /2팀/ }));
+    await user.click(within(dialog).getByRole('button', { name: '이동하기' }));
+
+    await waitFor(() => {
+      const firstTeam = screen
+        .getByRole('heading', { name: '1팀' })
+        .closest('article');
+      expect(within(firstTeam!).queryByText('김민준')).not.toBeInTheDocument();
+      expect(within(firstTeam!).getByText('팀장: 미지정')).toBeInTheDocument();
+    });
+  });
+
+  it('팀 구성 카드에서 다른 미확정 팀으로 끌어 놓으면 이동 확인 창을 연다', async () => {
+    const user = userEvent.setup();
+    const dataTransfer = {
+      dropEffect: '',
+      effectAllowed: '',
+      setData: () => undefined,
+    };
+
+    renderPage();
+
+    const firstTeam = (
+      await screen.findByRole('heading', {
+        name: '1팀',
+      })
+    ).closest('article');
+    const secondTeam = screen
+      .getByRole('heading', { name: '2팀' })
+      .closest('article');
+    const memberCard = within(firstTeam!)
+      .getByRole('button', { name: '이서연' })
+      .closest('li');
+
+    fireEvent.dragStart(memberCard!, { dataTransfer });
+    fireEvent.dragOver(secondTeam!, { dataTransfer });
+    fireEvent.drop(secondTeam!, { dataTransfer });
+
+    const dialog = await screen.findByRole('dialog', { name: '팀원 이동' });
+    expect(within(dialog).getByRole('radio', { name: /2팀/ })).toBeChecked();
+
+    await user.click(within(dialog).getByRole('button', { name: '이동하기' }));
+
+    await waitFor(() =>
+      expect(within(secondTeam!).getByText('이서연')).toBeInTheDocument(),
     );
   });
 

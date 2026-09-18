@@ -16,6 +16,7 @@ const demoSectionId = 'oop-2026-2-01';
 const adminSectionId = 1;
 const withdrawnStudentNumbers = new Set<string>();
 const teamLeaderStudentNumbers = new Map<string, string>();
+const teamIdByStudentNumber = new Map<string, string>();
 const finalizedSectionIds = new Set<string>();
 const createdUsers = new Map<
   string,
@@ -48,6 +49,16 @@ const studentsById = new Map(
   adminStudentsFixture.map(student => [student.id, student]),
 );
 
+function getStudentTeamId(student: (typeof adminStudentsFixture)[number]) {
+  return teamIdByStudentNumber.get(student.studentNumber) ?? student.teamId;
+}
+
+function getTeamStudents(teamId: string) {
+  return adminStudentsFixture.filter(
+    student => getStudentTeamId(student) === teamId,
+  );
+}
+
 function getTeams(sectionId: string): Team[] {
   return adminTeamsFixture
     .filter(team => team.sectionId === sectionId)
@@ -55,19 +66,16 @@ function getTeams(sectionId: string): Team[] {
       id: team.id,
       sectionId: team.sectionId,
       name: team.name,
-      members: team.memberIds.map(memberId => {
-        const student = studentsById.get(memberId);
-
-        if (!student) {
-          throw new Error(`팀원 fixture를 찾을 수 없습니다: ${memberId}`);
-        }
-
-        return {
-          id: student.id,
-          name: student.name,
-          isLeader: student.isLeader,
-        };
-      }),
+      members: getTeamStudents(team.id).map(student => ({
+        id: student.id,
+        name: student.name,
+        isLeader:
+          student.studentNumber ===
+          (teamLeaderStudentNumbers.get(team.id) ??
+            team.memberIds
+              .map(memberId => studentsById.get(memberId))
+              .find(candidate => candidate?.isLeader)?.studentNumber),
+      })),
     }));
 }
 
@@ -77,14 +85,13 @@ function getStudents(sectionId: string) {
   return adminStudentsFixture
     .filter(student => student.sectionId === normalizedSectionId)
     .map(student => {
-      const team = student.teamId
-        ? adminTeamsFixture.find(candidate => candidate.id === student.teamId)
+      const teamId = getStudentTeamId(student);
+      const team = teamId
+        ? adminTeamsFixture.find(candidate => candidate.id === teamId)
         : null;
 
-      if (student.teamId && !team) {
-        throw new Error(
-          `수강생의 팀 fixture를 찾을 수 없습니다: ${student.teamId}`,
-        );
+      if (teamId && !team) {
+        throw new Error(`수강생의 팀 fixture를 찾을 수 없습니다: ${teamId}`);
       }
 
       return {
@@ -218,18 +225,14 @@ function getAdminTeamResponse(teamId: string) {
 
   const leaderStudentNumber =
     teamLeaderStudentNumbers.get(team.id) ??
-    team.memberIds
-      .map(memberId => studentsById.get(memberId))
-      .find(student => student?.isLeader)?.studentNumber;
+    getTeamStudents(team.id).find(student => student?.isLeader)?.studentNumber;
 
   return {
     createdAt: '2026-09-08T15:15:06.663Z',
     id: getAdminTeamId(team.id),
     kickoffRule: '매주 화요일 회고',
     meetingSchedule: '매주 목 19:00',
-    members: team.memberIds.flatMap(memberId => {
-      const student = studentsById.get(memberId);
-
+    members: getTeamStudents(team.id).flatMap(student => {
       if (!student || withdrawnStudentNumbers.has(student.studentNumber)) {
         return [];
       }
@@ -256,6 +259,7 @@ function getAdminTeamResponse(teamId: string) {
 export function resetAdminStudentTeamMockState() {
   withdrawnStudentNumbers.clear();
   teamLeaderStudentNumbers.clear();
+  teamIdByStudentNumber.clear();
   finalizedSectionIds.clear();
   createdUsers.clear();
   assistantEnrollmentsBySection.clear();
@@ -437,9 +441,11 @@ export const adminStudentTeamHandlers = [
       const team = adminTeamsFixture.find(
         candidate => getAdminTeamId(candidate.id) === Number(teamId),
       );
-      const isMember = team?.memberIds.some(memberId => {
-        return studentsById.get(memberId)?.studentNumber === studentNumber;
-      });
+      const isMember = team?.id
+        ? getTeamStudents(team.id).some(
+            member => member.studentNumber === studentNumber,
+          )
+        : false;
       if (!team || !isMember) {
         return HttpResponse.json(
           {
@@ -450,21 +456,103 @@ export const adminStudentTeamHandlers = [
         );
       }
 
-      const input = (await request.json()) as { isLeader?: boolean };
-      if (input.isLeader !== true) {
+      const input = (await request.json()) as {
+        isLeader?: boolean;
+        targetTeamId?: number;
+      };
+      const member = getTeamStudents(team.id).find(
+        candidate => candidate.studentNumber === studentNumber,
+      );
+      if (!member) {
         return HttpResponse.json(
           {
-            code: 'INVALID_TEAM_MEMBER_INPUT',
-            message: '팀장 설정이 필요합니다.',
+            code: 'TEAM_MEMBER_NOT_FOUND',
+            message: '팀원을 찾을 수 없습니다.',
           },
-          { status: 400 },
+          { status: 404 },
         );
       }
 
-      teamLeaderStudentNumbers.set(team.id, studentNumber);
-      const updatedMember = getAdminTeamResponse(teamId)?.members.find(
-        member => member.studentNumber === studentNumber,
-      );
+      const sourceTeamId = getAdminTeamId(team.id);
+      const targetTeamId = input.targetTeamId;
+      const isMoving =
+        Number.isSafeInteger(targetTeamId) && targetTeamId !== sourceTeamId;
+
+      if (isMoving) {
+        const targetTeam = adminTeamsFixture.find(
+          candidate => getAdminTeamId(candidate.id) === targetTeamId,
+        );
+        const sourceLeader =
+          teamLeaderStudentNumbers.get(team.id) ??
+          team.memberIds
+            .map(memberId => studentsById.get(memberId))
+            .find(candidate => candidate?.isLeader)?.studentNumber;
+
+        if (!targetTeam || targetTeam.sectionId !== team.sectionId) {
+          return HttpResponse.json(
+            {
+              code: 'TEAM_MEMBER_SECTION_MISMATCH',
+              message: '같은 분반의 팀으로만 이동할 수 있습니다.',
+            },
+            { status: 400 },
+          );
+        }
+        if (
+          finalizedSectionIds.has(team.sectionId) ||
+          finalizedSectionIds.has(targetTeam.sectionId)
+        ) {
+          return HttpResponse.json(
+            {
+              code: 'TEAM_CONFIRMED',
+              message: '확정된 팀의 팀원은 이동할 수 없습니다.',
+            },
+            { status: 409 },
+          );
+        }
+        if (
+          member.studentNumber === sourceLeader &&
+          input.isLeader === undefined
+        ) {
+          return HttpResponse.json(
+            {
+              code: 'LEADER_MOVE_REQUIRES_EXPLICIT_ROLE',
+              message: '팀장 이동 시 팀장 여부를 명시해야 합니다.',
+            },
+            { status: 400 },
+          );
+        }
+        if (
+          getTeamStudents(targetTeam.id).some(
+            candidate => candidate.studentNumber === studentNumber,
+          )
+        ) {
+          return HttpResponse.json(
+            {
+              code: 'TEAM_MEMBER_ALREADY_EXISTS',
+              message: '대상 팀에 이미 속한 학생입니다.',
+            },
+            { status: 409 },
+          );
+        }
+
+        teamIdByStudentNumber.set(studentNumber, targetTeam.id);
+        if (member.studentNumber === sourceLeader && input.isLeader === false) {
+          teamLeaderStudentNumbers.set(team.id, '');
+        }
+      }
+
+      if (input.isLeader === true) {
+        const updatedTeamId = isMoving ? targetTeamId : sourceTeamId;
+        const updatedTeam = adminTeamsFixture.find(
+          candidate => getAdminTeamId(candidate.id) === updatedTeamId,
+        );
+        if (updatedTeam) {
+          teamLeaderStudentNumbers.set(updatedTeam.id, studentNumber);
+        }
+      }
+      const updatedMember = getAdminTeamResponse(
+        String(isMoving ? targetTeamId : sourceTeamId),
+      )?.members.find(member => member.studentNumber === studentNumber);
 
       return HttpResponse.json(updatedMember);
     },

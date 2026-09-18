@@ -8,6 +8,7 @@ export { useAdminUserQuery } from './useAdminUserQuery';
 export { useAdminRosterImportStatusQueries } from './useAdminRosterImportStatusQueries';
 export { useApplyAdminEnrollmentImportMutation } from './useApplyAdminEnrollmentImportMutation';
 export { useFinalizeAdminSectionTeamsMutation } from './useFinalizeAdminSectionTeamsMutation';
+export { useMoveAdminTeamMemberMutation } from './useMoveAdminTeamMemberMutation';
 export { usePreviewAdminEnrollmentImportMutation } from './usePreviewAdminEnrollmentImportMutation';
 export { usePreviewAdminTeamImportMutation } from './usePreviewAdminTeamImportMutation';
 export { useRegisterAdminAssistantMutation } from './useRegisterAdminAssistantMutation';

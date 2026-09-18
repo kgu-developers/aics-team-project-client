@@ -99,6 +99,11 @@ export const teamCard = style({
   },
 });
 
+export const dragOverTeamCard = style({
+  borderColor: tokens.color.accent,
+  boxShadow: `0 0 0 2px ${tokens.color.background.blue}`,
+});
+
 export const teamName = style({
   fontSize: 16,
   margin: 0,
@@ -143,6 +148,15 @@ export const member = style({
   fontSize: 14,
   gap: 4,
   padding: '12px 14px',
+});
+
+export const draggableMember = style({
+  cursor: 'grab',
+});
+
+export const draggingMember = style({
+  cursor: 'grabbing',
+  opacity: 0.5,
 });
 
 export const memberButton = style({
