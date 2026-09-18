@@ -128,7 +128,10 @@ it('waits for confirmation, calls the password reset endpoint, and reports succe
       /등록된 전화번호로 초기화되며, 기존 로그인 세션은 모두 해제됩니다/,
     ),
   ).toBeVisible();
-  expect(within(confirmation).getByText(/초기화 후 30분 안에/)).toBeVisible();
+  expect(
+    within(confirmation).getByText(/초기화 후 새 비밀번호로 변경해야 합니다/),
+  ).toBeVisible();
+  expect(within(confirmation).queryByText(/30분 안에/)).toBeNull();
 
   await user.click(
     within(confirmation).getByRole('button', { name: '초기화 확인' }),
