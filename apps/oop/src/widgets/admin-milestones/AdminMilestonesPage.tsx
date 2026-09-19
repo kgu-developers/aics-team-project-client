@@ -20,6 +20,7 @@ import {
   useAdminAccessibleSectionMilestonesQuery,
   useUpdateAdminSectionMilestoneStatusMutation,
 } from '~/features/admin-milestone-review/queries';
+import AdminSectionTeamFilter from '~/features/admin-section/components/AdminSectionTeamFilter';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMilestonesPage.css';
@@ -157,29 +158,10 @@ export default function AdminMilestonesPage() {
       </Text>
 
       <div className={styles.filterRow}>
-        <div className={styles.filters} role='group' aria-label='분반 필터'>
-          {[
-            { label: '전체', value: allSectionsValue },
-            ...accessibleSections.map(section => ({
-              label: section.code,
-              value: section.id,
-            })),
-          ].map(section => (
-            <button
-              aria-pressed={selectedSectionId === section.value}
-              className={
-                selectedSectionId === section.value
-                  ? styles.filterActive
-                  : styles.filter
-              }
-              key={section.value}
-              onClick={() => selectSection(section.value)}
-              type='button'
-            >
-              {section.label}
-            </button>
-          ))}
-        </div>
+        <AdminSectionTeamFilter
+          onSectionChange={selectSection}
+          sectionId={selectedSectionId}
+        />
         <Button
           label='마일스톤 추가'
           onClick={() => navigate({ to: ROUTES.ADMIN_MILESTONE_NEW })}

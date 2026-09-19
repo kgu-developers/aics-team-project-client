@@ -11,22 +11,6 @@ export const page = style({
   width: '100%',
 });
 export const tableCard = style({ overflowX: 'auto', padding: 0 });
-export const filters = style({ display: 'flex', flexWrap: 'wrap', gap: 8 });
-const filterBase = {
-  background: tokens.color.background.muted,
-  border: 0,
-  borderRadius: tokens.radius.full,
-  color: tokens.color.text.primary,
-  cursor: 'pointer',
-  font: 'inherit',
-  padding: '7px 12px',
-};
-export const filter = style(filterBase);
-export const filterActive = style({
-  ...filterBase,
-  background: tokens.color.text.primary,
-  color: tokens.color.background.surface,
-});
 export const table = style({
   borderCollapse: 'collapse',
   minWidth: 760,

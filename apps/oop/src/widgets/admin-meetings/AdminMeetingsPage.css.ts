@@ -11,13 +11,6 @@ export const page = style({
   width: '100%',
 });
 
-export const filters = style({
-  alignItems: 'flex-end',
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 12,
-});
-
 export const tableCard = style({
   overflowX: 'auto',
   padding: 0,

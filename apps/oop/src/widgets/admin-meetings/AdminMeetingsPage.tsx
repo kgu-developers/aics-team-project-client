@@ -17,7 +17,7 @@ import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { useAdminSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
-import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
+import AdminSectionTeamFilter from '~/features/admin-section/components/AdminSectionTeamFilter';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMeetingsPage.css';
@@ -57,9 +57,6 @@ export default function AdminMeetingsPage() {
   const selectedMilestoneId =
     selectedSectionId === allSectionsValue ? undefined : search.milestoneId;
   const milestonesQuery = useAdminSectionMilestonesQuery(
-    selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
-  );
-  const teamsQuery = useAdminSectionTeamsQuery(
     selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
   );
   // A team id may arrive by URL without a section; keep honoring it.
@@ -121,61 +118,32 @@ export default function AdminMeetingsPage() {
   return (
     <div className={styles.page}>
       <Heading level={1}>회의록</Heading>
-      <div aria-label='회의록 필터' className={styles.filters} role='group'>
-        <Selector
-          label='분반 필터'
-          onChange={selectSection}
-          options={[
-            { label: '전체 분반', value: allSectionsValue },
-            ...accessibleSections.map(section => ({
-              label: section.code,
-              value: section.id,
-            })),
-          ]}
-          renderOption={option => (
-            <SelectorOption label={option.label ?? option.value} />
-          )}
-          value={selectedSectionId}
-          width={240}
-        />
+      <AdminSectionTeamFilter
+        label='회의록 필터'
+        onSectionChange={selectSection}
+        onTeamChange={selectTeam}
+        sectionId={selectedSectionId}
+        teamId={selectedTeamId}
+      >
         {selectedSectionId !== allSectionsValue ? (
-          <>
-            <Selector
-              isDisabled={teamsQuery.isPending}
-              label='팀 필터'
-              onChange={selectTeam}
-              options={[
-                { label: '전체 팀', value: '' },
-                ...(teamsQuery.data?.contents ?? []).map(team => ({
-                  label: team.name,
-                  value: String(team.id),
-                })),
-              ]}
-              renderOption={option => (
-                <SelectorOption label={option.label ?? option.value} />
-              )}
-              value={selectedTeamId ?? ''}
-              width={200}
-            />
-            <Selector
-              label='마일스톤 필터'
-              onChange={selectMilestone}
-              options={[
-                { label: '전체 마일스톤', value: '' },
-                ...(milestonesQuery.data?.content ?? []).map(milestone => ({
-                  label: `${milestone.weekNumber}주차 · ${milestone.title}`,
-                  value: String(milestone.id),
-                })),
-              ]}
-              renderOption={option => (
-                <SelectorOption label={option.label ?? option.value} />
-              )}
-              value={selectedMilestoneId ?? ''}
-              width={320}
-            />
-          </>
+          <Selector
+            label='마일스톤 필터'
+            onChange={selectMilestone}
+            options={[
+              { label: '전체 마일스톤', value: '' },
+              ...(milestonesQuery.data?.content ?? []).map(milestone => ({
+                label: `${milestone.weekNumber}주차 · ${milestone.title}`,
+                value: String(milestone.id),
+              })),
+            ]}
+            renderOption={option => (
+              <SelectorOption label={option.label ?? option.value} />
+            )}
+            value={selectedMilestoneId ?? ''}
+            width={320}
+          />
         ) : null}
-      </div>
+      </AdminSectionTeamFilter>
 
       {accessibleSectionIds.length === 0 ? (
         <EmptyState

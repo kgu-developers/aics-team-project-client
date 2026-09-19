@@ -21,7 +21,23 @@ import AdminMessagesPage from './AdminMessagesPage';
 
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 
-const server = setupServer();
+// Section teams feed the dependent team filter; the list itself is enough here.
+const server = setupServer(
+  http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS(':sectionId')}`, () =>
+    HttpResponse.json({
+      contents: [
+        {
+          createdAt: '2026-09-08T15:15:06.656Z',
+          id: 7,
+          kickoffRule: null,
+          meetingSchedule: null,
+          name: '7팀',
+          status: 'CONFIRMED',
+        },
+      ],
+    }),
+  ),
+);
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
@@ -154,17 +170,20 @@ it('reaches item 101, keeps page caches separate, and resets pages on section/al
   await user.click(screen.getByRole('button', { name: '다음 페이지' }));
   await screen.findByText('all 쪽지 101');
   expect(screen.getAllByText('현재 분반 하나')).not.toHaveLength(0);
-  await user.click(screen.getByRole('button', { name: '현재 분반 하나' }));
+  await user.click(screen.getByRole('combobox', { name: '분반' }));
+  await user.click(await screen.findByRole('option', { name: '현재 분반 하나' }));
   await screen.findByText('1 쪽지 1');
   expect(requests.filter(row => row.section === '1')).toEqual([
     { section: '1', page: 0, size: 100 },
   ]);
   await user.click(screen.getByRole('button', { name: '다음 페이지' }));
   await screen.findByText('1 쪽지 101');
-  await user.click(screen.getByRole('button', { name: '전체' }));
+  await user.click(screen.getByRole('combobox', { name: '분반' }));
+  await user.click(await screen.findByRole('option', { name: '전체 분반' }));
   await screen.findByText('all 쪽지 1');
   expect(screen.getByRole('button', { name: '이전 페이지' })).toBeDisabled();
-  await user.click(screen.getByRole('button', { name: '현재 분반 둘' }));
+  await user.click(screen.getByRole('combobox', { name: '분반' }));
+  await user.click(await screen.findByRole('option', { name: '현재 분반 둘' }));
   await screen.findByText('쪽지가 없습니다.');
   // Empty mailbox: no pages to move between, so the pagination bar is hidden.
   expect(

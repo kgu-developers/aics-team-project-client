@@ -90,11 +90,11 @@ describe('AdminMeetingsPage', () => {
     renderPage();
 
     expect(screen.queryByLabelText('마일스톤 필터')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('팀 필터')).not.toBeInTheDocument();
-    await user.click(await screen.findByRole('combobox', { name: '분반 필터' }));
+    expect(screen.queryByLabelText('팀')).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('combobox', { name: '분반' }));
     await user.click(await screen.findByRole('option', { name: 'OOP-01' }));
     const milestoneFilter = await screen.findByLabelText('마일스톤 필터');
-    expect(screen.getByLabelText('팀 필터')).toBeInTheDocument();
+    expect(screen.getByLabelText('팀')).toBeInTheDocument();
     expect(milestoneFilter).toBeInTheDocument();
 
     await user.click(milestoneFilter);
@@ -116,7 +116,7 @@ describe('AdminMeetingsPage', () => {
     renderPage('/admin/meetings/?sectionId=1');
 
     await screen.findByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ });
-    const teamFilter = await screen.findByRole('combobox', { name: '팀 필터' });
+    const teamFilter = await screen.findByRole('combobox', { name: '팀' });
     await waitFor(() => expect(teamFilter).toBeEnabled());
     await user.click(teamFilter);
     await user.click(await screen.findByRole('option', { name: '1팀' }));

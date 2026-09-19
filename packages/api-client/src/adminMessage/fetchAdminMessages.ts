@@ -5,6 +5,7 @@ import { ENDPOINTS } from '../constants/endpoints';
 
 export type AdminMessagesParams = TeamMessagesParams & {
   sectionId?: string | number;
+  teamId?: string | number;
 };
 
 export async function fetchAdminMessages(

@@ -17,6 +17,10 @@ import {
   useAdminMessagesQuery,
   useUpdateAdminMessageReadMutation,
 } from '~/features/admin-message/queries';
+import AdminSectionTeamFilter, {
+  ALL_SECTIONS,
+  ALL_TEAMS,
+} from '~/features/admin-section/components/AdminSectionTeamFilter';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMessagesPage.css';
@@ -26,8 +30,9 @@ export default function AdminMessagesPage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const sections = currentUser?.sections ?? [];
   const [sectionId, setSectionId] = useState<string>();
+  const [teamId, setTeamId] = useState<string>();
   const [page, setPage] = useState(0);
-  const query = useAdminMessagesQuery(sectionId, page);
+  const query = useAdminMessagesQuery(sectionId, page, teamId);
   const readMutation = useUpdateAdminMessageReadMutation();
   const messages = useMemo(() => query.data?.contents ?? [], [query.data]);
   const pagination = query.data?.pageable;
@@ -40,6 +45,12 @@ export default function AdminMessagesPage() {
 
   const selectSection = (nextSectionId?: string) => {
     setSectionId(nextSectionId);
+    setTeamId(undefined);
+    setPage(0);
+  };
+
+  const selectTeam = (nextTeamId?: string) => {
+    setTeamId(nextTeamId);
     setPage(0);
   };
 
@@ -58,31 +69,14 @@ export default function AdminMessagesPage() {
         <Text>담당 분반의 팀 메시지를 확인하고 관리합니다.</Text>
         {query.data ? <Text>미확인 {query.data.unreadCount}건</Text> : null}
       </div>
-      <div aria-label='분반 필터' className={styles.filters} role='group'>
-        <button
-          aria-pressed={!sectionId}
-          className={!sectionId ? styles.filterActive : styles.filter}
-          onClick={() => selectSection(undefined)}
-          type='button'
-        >
-          전체
-        </button>
-        {sections.map(section => {
-          const value = String(section.id);
-          const active = sectionId === value;
-          return (
-            <button
-              aria-pressed={active}
-              className={active ? styles.filterActive : styles.filter}
-              key={value}
-              onClick={() => selectSection(value)}
-              type='button'
-            >
-              {section.code ?? value}
-            </button>
-          );
-        })}
-      </div>
+      <AdminSectionTeamFilter
+        onSectionChange={next =>
+          selectSection(next === ALL_SECTIONS ? undefined : next)
+        }
+        onTeamChange={next => selectTeam(next === ALL_TEAMS ? undefined : next)}
+        sectionId={sectionId ?? ALL_SECTIONS}
+        teamId={teamId}
+      />
       {query.isLoading || page !== boundedPage ? (
         <Text>불러오는 중...</Text>
       ) : query.isError ? (

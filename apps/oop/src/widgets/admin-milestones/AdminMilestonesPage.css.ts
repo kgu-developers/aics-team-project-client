@@ -28,36 +28,12 @@ export const description = style({
   marginTop: -12,
 });
 
-export const filters = style({
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 8,
-});
-
 export const filterRow = style({
-  alignItems: 'center',
+  alignItems: 'flex-end',
   display: 'flex',
   flexWrap: 'wrap',
   gap: 16,
   justifyContent: 'space-between',
-});
-
-const filterBase = {
-  background: tokens.color.background.muted,
-  border: 0,
-  borderRadius: tokens.radius.full,
-  color: tokens.color.text.primary,
-  cursor: 'pointer',
-  font: 'inherit',
-  padding: '7px 12px',
-};
-
-export const filter = style(filterBase);
-
-export const filterActive = style({
-  ...filterBase,
-  background: tokens.color.text.primary,
-  color: tokens.color.background.surface,
 });
 
 export const tableCard = style({

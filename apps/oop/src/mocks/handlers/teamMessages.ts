@@ -163,6 +163,7 @@ export function createTeamMessageHandlers(
       }
       const query = new URL(request.url).searchParams;
       const sectionId = query.get('sectionId');
+      const teamId = query.get('teamId');
       const accessibleSections = getMockMySections(
         account.credentials.studentNumber,
         {},
@@ -185,6 +186,7 @@ export function createTeamMessageHandlers(
         );
         const team = data.teams.find(item => item.id === thread?.teamId);
         if (!team) return [];
+        if (teamId && String(team.id) !== teamId) return [];
         if (
           !accessibleSections.some(section =>
             isAccessibleSection(section.id, team.sectionId),
