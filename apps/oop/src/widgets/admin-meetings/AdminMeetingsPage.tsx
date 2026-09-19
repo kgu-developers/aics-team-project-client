@@ -58,7 +58,8 @@ export default function AdminMeetingsPage() {
     Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 0;
   const selectedMilestoneId =
     selectedSectionId === allSectionsValue ? undefined : requestedMilestoneId;
-  const selectedTeamId = requestedTeamId;
+  const selectedTeamId =
+    selectedSectionId === allSectionsValue ? undefined : requestedTeamId;
   const milestonesQuery = useAdminSectionMilestonesQuery(
     selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
   );
