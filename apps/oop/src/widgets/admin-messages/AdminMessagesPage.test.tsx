@@ -8,7 +8,7 @@ import {
   createRouter,
   RouterContextProvider,
 } from '@tanstack/react-router';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -123,7 +123,11 @@ function messagePage(
   };
 }
 
-it('reaches item 101, keeps page caches separate, and resets pages on section/all filters', async () => {
+function paginationButtons() {
+  return within(screen.getByRole('navigation')).getAllByRole('button');
+}
+
+it('reaches item 11, keeps page caches separate, and resets pages on section/all filters', async () => {
   const requests: Array<{ section: string; page: number; size: number }> = [];
   server.use(
     http.get(
@@ -143,17 +147,11 @@ it('reaches item 101, keeps page caches separate, and resets pages on section/al
   const client = setup();
   const user = userEvent.setup();
   await screen.findByText('all 쪽지 1');
-  expect(
-    screen.getByRole('navigation', { name: '쪽지함 페이지 이동' }),
-  ).toHaveTextContent('1 / 2 페이지');
-  expect(screen.getByRole('button', { name: '이전 페이지' })).toBeDisabled();
-  await user.click(screen.getByRole('button', { name: '다음 페이지' }));
+  expect(paginationButtons()[0]).toBeDisabled();
+  await user.click(paginationButtons()[1]!);
   await screen.findByText('all 쪽지 11');
-  expect(
-    screen.getByRole('navigation', { name: '쪽지함 페이지 이동' }),
-  ).toHaveTextContent('2 / 2 페이지');
   expect(screen.queryByText('all 쪽지 1')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: '다음 페이지' })).toBeDisabled();
+  expect(paginationButtons()[1]).toBeDisabled();
   expect(
     client.getQueryData<AdminMessagePage>(adminMessageKeys.list(undefined, 0))
       ?.contents[0]?.id,
@@ -162,12 +160,10 @@ it('reaches item 101, keeps page caches separate, and resets pages on section/al
     client.getQueryData<AdminMessagePage>(adminMessageKeys.list(undefined, 1))
       ?.contents[0]?.id,
   ).toBe(11);
-  await user.click(screen.getByRole('button', { name: '이전 페이지' }));
+  await user.click(paginationButtons()[0]!);
   await screen.findByText('all 쪽지 1');
-  await waitFor(() =>
-    expect(screen.getByRole('button', { name: '다음 페이지' })).toBeEnabled(),
-  );
-  await user.click(screen.getByRole('button', { name: '다음 페이지' }));
+  await waitFor(() => expect(paginationButtons()[1]).toBeEnabled());
+  await user.click(paginationButtons()[1]!);
   await screen.findByText('all 쪽지 11');
   expect(screen.getAllByText('현재 분반 하나')).not.toHaveLength(0);
   await user.click(screen.getByRole('combobox', { name: '분반' }));
@@ -176,22 +172,17 @@ it('reaches item 101, keeps page caches separate, and resets pages on section/al
   expect(requests.filter(row => row.section === '1')).toEqual([
     { section: '1', page: 0, size: 10 },
   ]);
-  await user.click(screen.getByRole('button', { name: '다음 페이지' }));
+  await user.click(paginationButtons()[1]!);
   await screen.findByText('1 쪽지 11');
   await user.click(screen.getByRole('combobox', { name: '분반' }));
   await user.click(await screen.findByRole('option', { name: '전체 분반' }));
   await screen.findByText('all 쪽지 1');
-  expect(screen.getByRole('button', { name: '이전 페이지' })).toBeDisabled();
+  expect(paginationButtons()[0]).toBeDisabled();
   await user.click(screen.getByRole('combobox', { name: '분반' }));
   await user.click(await screen.findByRole('option', { name: '현재 분반 둘' }));
   await screen.findByText('쪽지가 없습니다.');
   // Empty mailbox: no pages to move between, so the pagination bar is hidden.
-  expect(
-    screen.queryByRole('navigation', { name: '쪽지함 페이지 이동' }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole('button', { name: '다음 페이지' }),
-  ).not.toBeInTheDocument();
+  expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
 });
 
 it.each([0, 1])(
@@ -211,7 +202,7 @@ it.each([0, 1])(
     );
     const client = setup();
     await screen.findByText('all 쪽지 1');
-    await userEvent.click(screen.getByRole('button', { name: '다음 페이지' }));
+    await userEvent.click(paginationButtons()[1]!);
     await screen.findByText('all 쪽지 11');
     total = totalAfter;
     await act(async () => {
@@ -220,9 +211,7 @@ it.each([0, 1])(
     await screen.findByText(totalAfter ? 'all 쪽지 1' : '쪽지가 없습니다.');
     await waitFor(() => expect(requests).toEqual([0, 1, 1, 0]));
     // 0 or 1 items fit on one page, so the pagination bar is hidden.
-    expect(
-      screen.queryByRole('navigation', { name: '쪽지함 페이지 이동' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
   },
 );
 
@@ -241,7 +230,7 @@ it('shows a retryable page error and resumes on the same page', async () => {
   );
   setup();
   await screen.findByText('all 쪽지 1');
-  await userEvent.click(screen.getByRole('button', { name: '다음 페이지' }));
+  await userEvent.click(paginationButtons()[1]!);
   await screen.findByText('쪽지함을 불러오지 못했습니다.');
   expect(screen.queryByText('all 쪽지 1')).not.toBeInTheDocument();
   failed = false;

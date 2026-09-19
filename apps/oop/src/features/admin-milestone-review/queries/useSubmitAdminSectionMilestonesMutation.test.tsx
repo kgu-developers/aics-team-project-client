@@ -74,6 +74,7 @@ describe('useSubmitAdminSectionMilestonesMutation', () => {
       { milestoneId: 101, sectionId: '1', status: 'published' },
       {
         error: { message: '생성할 수 없습니다.', status: 409 },
+        failureMessage: '같은 분반에 해당 주차의 마일스톤이 이미 있습니다.',
         sectionId: '2',
         status: 'create-failed',
       },

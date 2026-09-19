@@ -11,7 +11,7 @@ test('adminMeetingFilter targets the meetings page accessible group', () => {
   const page = {
     getByRole(role, options) {
       assert.equal(role, 'group');
-      assert.deepEqual(options, { name: '회의록 필터', exact: true });
+      assert.deepEqual(options, { name: '분반 필터', exact: true });
       return locator;
     },
   };

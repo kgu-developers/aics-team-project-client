@@ -21,12 +21,20 @@ import AdminMeetingsPage from './AdminMeetingsPage';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
-import { adminStudentTeamHandlers } from '~/mocks/handlers/adminStudentTeams';
 
 const server = setupServer(
   ...adminMeetingHandlers,
   ...adminSectionMilestoneHandlers,
-  ...adminStudentTeamHandlers,
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS(':sectionId')}`,
+    () =>
+      HttpResponse.json({
+        contents: [
+          { id: 1, name: '1팀' },
+          { id: 2, name: '2팀' },
+        ],
+      }),
+  ),
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -89,15 +97,9 @@ describe('AdminMeetingsPage', () => {
     const user = userEvent.setup();
     renderPage();
 
-    expect(
-      await screen.findByRole('group', { name: '회의록 필터' }),
-    ).toContainElement(await screen.findByRole('combobox', { name: '분반' }));
     expect(screen.queryByLabelText('마일스톤 필터')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('팀')).not.toBeInTheDocument();
-    await user.click(await screen.findByRole('combobox', { name: '분반' }));
-    await user.click(await screen.findByRole('option', { name: 'OOP-01' }));
+    await user.click(await screen.findByRole('button', { name: 'OOP-01' }));
     const milestoneFilter = await screen.findByLabelText('마일스톤 필터');
-    expect(screen.getByLabelText('팀')).toBeInTheDocument();
     expect(milestoneFilter).toBeInTheDocument();
 
     await user.click(milestoneFilter);
@@ -114,28 +116,8 @@ describe('AdminMeetingsPage', () => {
     );
   });
 
-  it('팀 필터 드롭다운으로 팀을 고르면 URL과 목록이 그 팀으로 좁혀진다', async () => {
-    const user = userEvent.setup();
-    renderPage('/admin/meetings/?sectionId=1');
-
-    await screen.findByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ });
-    const teamFilter = await screen.findByRole('combobox', { name: '팀' });
-    await waitFor(() => expect(teamFilter).toBeEnabled());
-    await user.click(teamFilter);
-    await user.click(await screen.findByRole('option', { name: '1팀' }));
-
-    expect(
-      await screen.findByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
-    ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(
-        screen.queryByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ }),
-      ).not.toBeInTheDocument(),
-    );
-  });
-
   it('분반과 팀 필터가 있는 URL은 해당 팀의 회의록만 표시한다', async () => {
-    renderPage('/admin/meetings/?sectionId=oop-2026-2-01&teamId=1');
+    renderPage('/admin/meetings/?sectionId=1&teamId=1');
 
     expect(
       await screen.findByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
@@ -143,6 +125,39 @@ describe('AdminMeetingsPage', () => {
     expect(
       screen.queryByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it('전체 분반 URL에 남은 teamId는 회의록 목록 필터에 사용하지 않는다', async () => {
+    renderPage('/admin/meetings/?teamId=1');
+
+    expect(
+      await screen.findByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('row', {
+        name: /발표 자료 구성 논의 회의록 보기/,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('선택한 분반의 팀 드롭다운으로 회의록을 필터링한다', async () => {
+    const user = userEvent.setup();
+    renderPage('/admin/meetings/?sectionId=1');
+
+    const teamFilter = await screen.findByLabelText('팀 필터');
+    await user.click(teamFilter);
+    await user.click(await screen.findByRole('option', { name: '2팀' }));
+
+    expect(
+      await screen.findByRole('row', {
+        name: /발표 자료 구성 논의 회의록 보기/,
+      }),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
+      ).not.toBeInTheDocument(),
+    );
   });
 });
 

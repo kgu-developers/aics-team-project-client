@@ -46,16 +46,17 @@ export type {
   MetadataListLabelConfig,
   MetadataListProps,
 } from '@astryxdesign/core/MetadataList';
-export { Pagination } from '@astryxdesign/core/Pagination';
-export type {
-  PaginationProps,
-  PaginationVariant,
-} from '@astryxdesign/core/Pagination';
 export { Popover } from '@astryxdesign/core/Popover';
 export type {
   PopoverProps,
   PopoverTriggerRenderProps,
 } from '@astryxdesign/core/Popover';
+export { Pagination } from '@astryxdesign/core/Pagination';
+export type {
+  PaginationProps,
+  PaginationSize,
+  PaginationVariant,
+} from '@astryxdesign/core/Pagination';
 export { Text, Heading } from '@astryxdesign/core/Text';
 export { Tab, TabList } from '@astryxdesign/core/TabList';
 export type { TabListProps, TabProps } from '@astryxdesign/core/TabList';

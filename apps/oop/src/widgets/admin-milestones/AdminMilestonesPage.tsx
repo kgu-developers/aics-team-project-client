@@ -257,35 +257,40 @@ export default function AdminMilestonesPage() {
                               {getAdminMilestoneStatusLabel(milestone.status)}
                             </Text>
                           ) : (
-                            <Selector
-                              aria-label={`${milestone.sectionLabel} ${milestone.title} 공개 상태`}
-                              isDisabled={
-                                updateStatusMutation.isPending &&
-                                updateStatusMutation.variables?.sectionId ===
-                                  milestone.sectionKey &&
-                                updateStatusMutation.variables?.milestoneId ===
-                                  String(milestone.id)
-                              }
-                              isLabelHidden
-                              label='공개 상태'
-                              onChange={nextStatus =>
-                                updateStatus(
-                                  milestone,
-                                  nextStatus as 'DRAFT' | 'PUBLISHED',
-                                )
-                              }
-                              options={[
-                                { label: '미공개', value: 'DRAFT' },
-                                { label: '공개', value: 'PUBLISHED' },
-                              ]}
-                              renderOption={option => (
-                                <SelectorOption
-                                  label={option.label ?? option.value}
-                                />
-                              )}
-                              value={milestone.status}
-                              width={120}
-                            />
+                            <div
+                              onClick={event => event.stopPropagation()}
+                              onKeyDown={event => event.stopPropagation()}
+                            >
+                              <Selector
+                                aria-label={`${milestone.sectionLabel} ${milestone.title} 공개 상태`}
+                                isDisabled={
+                                  updateStatusMutation.isPending &&
+                                  updateStatusMutation.variables?.sectionId ===
+                                    milestone.sectionKey &&
+                                  updateStatusMutation.variables
+                                    ?.milestoneId === String(milestone.id)
+                                }
+                                isLabelHidden
+                                label='공개 상태'
+                                onChange={nextStatus =>
+                                  updateStatus(
+                                    milestone,
+                                    nextStatus as 'DRAFT' | 'PUBLISHED',
+                                  )
+                                }
+                                options={[
+                                  { label: '미공개', value: 'DRAFT' },
+                                  { label: '공개', value: 'PUBLISHED' },
+                                ]}
+                                renderOption={option => (
+                                  <SelectorOption
+                                    label={option.label ?? option.value}
+                                  />
+                                )}
+                                value={milestone.status}
+                                width={120}
+                              />
+                            </div>
                           )}
                           {statusUpdateError?.key ===
                           `${milestone.sectionKey}-${milestone.id}` ? (

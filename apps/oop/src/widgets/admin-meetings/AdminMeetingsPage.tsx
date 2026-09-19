@@ -2,6 +2,7 @@ import {
   Card,
   EmptyState,
   Heading,
+  Pagination,
   Selector,
   SelectorOption,
   Text,
@@ -12,12 +13,10 @@ import type { KeyboardEvent } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
-import { LIST_PAGE_SIZE } from '~/shared/lib/pagination';
-import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { useAdminSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
-import AdminSectionTeamFilter from '~/features/admin-section/components/AdminSectionTeamFilter';
+import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMeetingsPage.css';
@@ -38,15 +37,18 @@ export default function AdminMeetingsPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: '/admin/meetings/' }) as {
     page?: number;
-    sectionId?: string;
-    teamId?: string;
-    milestoneId?: string;
+    sectionId?: number | string;
+    teamId?: number | string;
+    milestoneId?: number | string;
   };
   const accessibleSections = currentUser?.sections ?? [];
   const accessibleSectionIds = accessibleSections.map(section => section.id);
-  // Hand-typed URLs arrive as numbers; router links serialize strings.
   const requestedSectionId =
     search.sectionId === undefined ? undefined : String(search.sectionId);
+  const requestedTeamId =
+    search.teamId === undefined ? undefined : String(search.teamId);
+  const requestedMilestoneId =
+    search.milestoneId === undefined ? undefined : String(search.milestoneId);
   const selectedSectionId =
     requestedSectionId && accessibleSectionIds.includes(requestedSectionId)
       ? requestedSectionId
@@ -55,19 +57,22 @@ export default function AdminMeetingsPage() {
   const selectedPage =
     Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 0;
   const selectedMilestoneId =
-    selectedSectionId === allSectionsValue ? undefined : search.milestoneId;
+    selectedSectionId === allSectionsValue ? undefined : requestedMilestoneId;
+  const selectedTeamId =
+    selectedSectionId === allSectionsValue ? undefined : requestedTeamId;
   const milestonesQuery = useAdminSectionMilestonesQuery(
     selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
   );
-  // A team id may arrive by URL without a section; keep honoring it.
-  const selectedTeamId = search.teamId ? String(search.teamId) : undefined;
+  const teamsQuery = useAdminSectionTeamsQuery(
+    selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
+  );
   const query = useAdminMeetingRecordListQuery(accessibleSectionIds, {
     page: selectedPage,
     sectionId:
       selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
     teamId: selectedTeamId,
     milestoneId: selectedMilestoneId,
-    size: LIST_PAGE_SIZE,
+    size: 20,
   });
   const records = query.data?.contents ?? [];
 
@@ -78,15 +83,14 @@ export default function AdminMeetingsPage() {
     });
   }
 
-  // Filters narrow from section → team → milestone; changing one resets the page.
-  function applyFilters(next: { milestoneId?: string; teamId?: string }) {
+  function selectMilestone(milestoneId: string) {
     void navigate({
       search: {
         ...(selectedSectionId === allSectionsValue
           ? {}
           : { sectionId: selectedSectionId }),
-        ...(next.teamId ? { teamId: next.teamId } : {}),
-        ...(next.milestoneId ? { milestoneId: next.milestoneId } : {}),
+        ...(selectedTeamId ? { teamId: selectedTeamId } : {}),
+        ...(milestoneId ? { milestoneId } : {}),
         page: 0,
       },
       to: ROUTES.ADMIN_MEETINGS,
@@ -94,11 +98,15 @@ export default function AdminMeetingsPage() {
   }
 
   function selectTeam(teamId: string) {
-    applyFilters({ milestoneId: selectedMilestoneId, teamId });
-  }
-
-  function selectMilestone(milestoneId: string) {
-    applyFilters({ milestoneId, teamId: selectedTeamId });
+    void navigate({
+      search: {
+        sectionId: selectedSectionId,
+        ...(teamId ? { teamId } : {}),
+        ...(selectedMilestoneId ? { milestoneId: selectedMilestoneId } : {}),
+        page: 0,
+      },
+      to: ROUTES.ADMIN_MEETINGS,
+    });
   }
 
   function selectPage(page: number) {
@@ -118,14 +126,47 @@ export default function AdminMeetingsPage() {
   return (
     <div className={styles.page}>
       <Heading level={1}>회의록</Heading>
-      <AdminSectionTeamFilter
-        label='회의록 필터'
-        onSectionChange={selectSection}
-        onTeamChange={selectTeam}
-        sectionId={selectedSectionId}
-        teamId={selectedTeamId}
-      >
-        {selectedSectionId !== allSectionsValue ? (
+      <div className={styles.filters} role='group' aria-label='분반 필터'>
+        {[
+          { label: '전체', value: allSectionsValue },
+          ...accessibleSections.map(section => ({
+            label: section.code,
+            value: section.id,
+          })),
+        ].map(section => (
+          <button
+            aria-pressed={selectedSectionId === section.value}
+            className={
+              selectedSectionId === section.value
+                ? styles.filterActive
+                : styles.filter
+            }
+            key={section.value}
+            onClick={() => selectSection(section.value)}
+            type='button'
+          >
+            {section.label}
+          </button>
+        ))}
+      </div>
+      {selectedSectionId !== allSectionsValue ? (
+        <div className={styles.filterSelectors}>
+          <Selector
+            label='팀 필터'
+            onChange={selectTeam}
+            options={[
+              { label: '전체 팀', value: '' },
+              ...(teamsQuery.data?.contents ?? []).map(team => ({
+                label: team.name,
+                value: String(team.id),
+              })),
+            ]}
+            renderOption={option => (
+              <SelectorOption label={option.label ?? option.value} />
+            )}
+            value={selectedTeamId ?? ''}
+            width={320}
+          />
           <Selector
             label='마일스톤 필터'
             onChange={selectMilestone}
@@ -142,8 +183,8 @@ export default function AdminMeetingsPage() {
             value={selectedMilestoneId ?? ''}
             width={320}
           />
-        ) : null}
-      </AdminSectionTeamFilter>
+        </div>
+      ) : null}
 
       {accessibleSectionIds.length === 0 ? (
         <EmptyState
@@ -213,13 +254,15 @@ export default function AdminMeetingsPage() {
           </table>
         </Card>
       )}
-      {query.data ? (
-        <ListPagination
+      {query.data && query.data.pageable.totalPages > 1 ? (
+        <Pagination
+          className={styles.pagination}
           isDisabled={query.isFetching}
-          label='회의록 페이지 이동'
-          onPageChange={selectPage}
-          page={selectedPage}
-          pageCount={query.data.pageable.totalPages}
+          onChange={page => selectPage(page - 1)}
+          page={selectedPage + 1}
+          pageSize={query.data.pageable.size}
+          totalPages={query.data.pageable.totalPages}
+          variant='compact'
         />
       ) : null}
     </div>

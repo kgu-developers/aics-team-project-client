@@ -230,10 +230,12 @@ export async function adminSectionMeetings(
 ) {
   await gotoAdminPath(page, '/admin/meetings', recover);
   const filter = adminMeetingFilter(page);
-  await choose(filter, '분반', run.section);
-  await expect(filter.getByRole('combobox', { name: '분반' })).toContainText(
-    run.section,
-  );
+  const sectionButton = filter.getByRole('button', {
+    name: run.section,
+    exact: true,
+  });
+  await sectionButton.click();
+  await expect(sectionButton).toHaveAttribute('aria-pressed', 'true');
   return routeScope(new URL(page.url())).sectionId;
 }
 export async function adminTeamMeetings(
@@ -262,8 +264,11 @@ export async function adminTeamMeetings(
   expect(sectionId).toMatch(/^\d+$/);
   await link.click();
   await expect(
-    adminMeetingFilter(page).getByRole('combobox', { name: '분반' }),
-  ).toContainText(run.section);
+    adminMeetingFilter(page).getByRole('button', {
+      name: run.section,
+      exact: true,
+    }),
+  ).toHaveAttribute('aria-pressed', 'true');
   return listUrl.pathname + listUrl.search;
 }
 export async function adminReadMeeting(

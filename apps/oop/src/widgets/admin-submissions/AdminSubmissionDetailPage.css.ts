@@ -185,6 +185,10 @@ export const feedbackSubmitAction = style({
   justifyContent: 'flex-end',
 });
 
+export const feedbackPagination = style({
+  alignSelf: 'flex-end',
+});
+
 export const table = style({
   border: `1px solid ${tokens.color.border.base}`,
   borderCollapse: 'separate',
