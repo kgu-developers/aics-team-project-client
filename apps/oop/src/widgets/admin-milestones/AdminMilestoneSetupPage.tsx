@@ -111,9 +111,20 @@ function ScheduleTimeInput({ label, onChange, value }: ScheduleTimeInputProps) {
 export default function AdminMilestoneSetupPage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const navigate = useNavigate();
-  const search = useSearch({ from: '/admin/milestones/new' }) as {
-    milestoneId?: string;
-    sectionId?: string;
+  const rawSearch = useSearch({ from: '/admin/milestones/new' }) as {
+    milestoneId?: string | number;
+    sectionId?: string | number;
+  };
+  // Hand-typed URLs arrive as numbers; router links serialize strings.
+  const search = {
+    milestoneId:
+      rawSearch.milestoneId === undefined
+        ? undefined
+        : String(rawSearch.milestoneId),
+    sectionId:
+      rawSearch.sectionId === undefined
+        ? undefined
+        : String(rawSearch.sectionId),
   };
   const sections = currentUser?.sections ?? [];
   const editingMilestoneId =

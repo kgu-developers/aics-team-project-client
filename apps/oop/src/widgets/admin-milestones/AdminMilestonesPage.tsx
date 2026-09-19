@@ -71,8 +71,15 @@ function handleRowNavigation(
 export default function AdminMilestonesPage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const navigate = useNavigate();
-  const search = useSearch({ from: '/admin/milestones/' }) as {
-    sectionId?: string;
+  const rawSearch = useSearch({ from: '/admin/milestones/' }) as {
+    sectionId?: string | number;
+  };
+  // Hand-typed URLs arrive as numbers; router links serialize strings.
+  const search = {
+    sectionId:
+      rawSearch.sectionId === undefined
+        ? undefined
+        : String(rawSearch.sectionId),
   };
   const accessibleSections = currentUser?.sections ?? [];
   const accessibleSectionIds = accessibleSections.map(section => section.id);

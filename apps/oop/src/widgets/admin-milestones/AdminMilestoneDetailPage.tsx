@@ -50,9 +50,16 @@ export default function AdminMilestoneDetailPage() {
   const { milestoneId } = useParams({
     from: '/admin/milestones/$milestoneId',
   });
-  const search = useSearch({
+  const rawSearch = useSearch({
     from: '/admin/milestones/$milestoneId',
-  }) as { sectionId?: string };
+  }) as { sectionId?: string | number };
+  // Hand-typed URLs arrive as numbers; router links serialize strings.
+  const search = {
+    sectionId:
+      rawSearch.sectionId === undefined
+        ? undefined
+        : String(rawSearch.sectionId),
+  };
   const [isEvaluationWindowOpen, setIsEvaluationWindowOpen] = useState(false);
   const accessibleSections = currentUser?.sections ?? [];
   const accessibleSectionIds = accessibleSections.map(section => section.id);
