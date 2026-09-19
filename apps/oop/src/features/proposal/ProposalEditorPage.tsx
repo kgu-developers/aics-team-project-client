@@ -1,7 +1,8 @@
+import type { EditorReturnContext } from '~/features/editor/editorReturnContext';
+
 import ProjectProposalEditorPage from './ProjectProposalEditorPage';
 import ProposalPreviewPage from './ProposalPreviewPage';
 import { useProposalEditorSource } from './queries';
-import type { EditorReturnContext } from '~/features/editor/editorReturnContext';
 export {
   canSubmitProposalDocument,
   getProposalSubmitDisabledReason,

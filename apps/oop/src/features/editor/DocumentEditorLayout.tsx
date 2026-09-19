@@ -14,11 +14,11 @@ import {
 
 import { cx } from '~/shared/lib/cx';
 
+import * as styles from './DocumentEditorLayout.css';
 import {
   editorReturnLabel,
   type EditorReturnContext,
 } from './editorReturnContext';
-import * as styles from './DocumentEditorLayout.css';
 
 export type DocumentEditorSection = {
   slug: string;

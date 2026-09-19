@@ -24,8 +24,8 @@ import {
 import DocumentAccessNotice from '~/features/editor/DocumentAccessNotice';
 import DocumentActionBar from '~/features/editor/DocumentActionBar';
 import DocumentEditorLayout from '~/features/editor/DocumentEditorLayout';
-import type { EditorReturnContext } from '~/features/editor/editorReturnContext';
 import { documentRequestErrorMessage } from '~/features/editor/documentRequestErrorMessage';
+import type { EditorReturnContext } from '~/features/editor/editorReturnContext';
 import { useDocumentSectionLock } from '~/features/editor/queries';
 
 import {
