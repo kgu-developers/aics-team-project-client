@@ -395,9 +395,9 @@ export default function AdminStudentTeamManagement() {
           </section>
 
           <section className={styles.section}>
-            <HStack justify='between'>
-              <div>
-                <Heading level={2}>
+            <div className={styles.teamSectionHeader}>
+              <div className={styles.teamSectionHeading}>
+                <Heading className={styles.teamSectionTitle} level={2}>
                   {selectedSection?.code ?? '분반'} 팀 구성
                 </Heading>
                 <Text color='secondary' type='supporting'>
@@ -416,7 +416,7 @@ export default function AdminStudentTeamManagement() {
                 }
                 onClick={() => setIsFinalizeDialogOpen(true)}
               />
-            </HStack>
+            </div>
             {teams.length === 0 ? (
               <div className={styles.emptyTeamPanel}>
                 <p>등록된 팀이 없습니다.</p>
@@ -466,11 +466,13 @@ export default function AdminStudentTeamManagement() {
                         return;
                       }
 
-                      openTeamMoveDialog(
-                        draggedMember.member,
-                        draggedMember.sourceTeam,
-                        team.id,
-                      );
+                      requestAnimationFrame(() => {
+                        openTeamMoveDialog(
+                          draggedMember.member,
+                          draggedMember.sourceTeam,
+                          team.id,
+                        );
+                      });
                     }}
                   >
                     <h3 className={styles.teamName}>

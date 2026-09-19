@@ -408,6 +408,9 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'OOP-01 - 1팀 중간보고서' }),
     ).toBeInTheDocument();
+    const proposalFeedbackHeading = screen.getByRole('heading', {
+      name: '이전 단계 제안서 피드백',
+    });
     expect(
       screen.getByText('GUI 화면 흐름과 예외 처리 계획을 보완해 주세요.'),
     ).toBeInTheDocument();
@@ -417,6 +420,11 @@ describe('AdminSubmissionsPage', () => {
     const midReportFeedbackHeading = screen.getByRole('heading', {
       name: '중간 점검 피드백',
     });
+    expect(
+      proposalFeedbackHeading.compareDocumentPosition(
+        midReportFeedbackHeading,
+      ) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     const midReportMeetingsHeading = screen.getByRole('heading', {
       name: '연결된 회의록 (1건)',
     });

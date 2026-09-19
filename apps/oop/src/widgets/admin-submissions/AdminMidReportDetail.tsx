@@ -3,17 +3,20 @@ import {
   Card,
   EmptyState,
   Heading,
-  HStack,
+  Pagination,
   Text,
   TextArea,
 } from '@aics/design-system';
 import { useState } from 'react';
+
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { AdminLinkedMeetingsTable } from '~/features/admin-meeting/components';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import {
   useAdminMidReportFeedbacksQuery,
   useAdminMidReportQuery,
+  useAdminProposalFeedbacksQuery,
   useSubmitAdminMidReportFeedbackMutation,
 } from '~/features/admin-milestone-review/queries';
 
@@ -37,11 +40,17 @@ type Props = {
 export function AdminMidReportDetail({ sectionId, teamId }: Props) {
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [feedbackPage, setFeedbackPage] = useState(0);
+  const [proposalFeedbackPage, setProposalFeedbackPage] = useState(0);
   const reportQuery = useAdminMidReportQuery(sectionId, teamId);
   const feedbacksQuery = useAdminMidReportFeedbacksQuery(
     sectionId,
     teamId,
     feedbackPage,
+  );
+  const proposalFeedbacksQuery = useAdminProposalFeedbacksQuery(
+    sectionId,
+    teamId,
+    proposalFeedbackPage,
   );
   const submitFeedbackMutation = useSubmitAdminMidReportFeedbackMutation();
   const report = reportQuery.data;
@@ -56,6 +65,7 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
     Boolean(report),
   );
   const feedbackPageable = feedbacksQuery.data?.pageable;
+  const proposalFeedbackPageable = proposalFeedbacksQuery.data?.pageable;
   const relatedMeetings = (relatedMeetingsQuery.data?.contents ?? []).filter(
     record => record.phase === 'MID_CHECK',
   );
@@ -133,6 +143,48 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
         ))}
       </Card>
       <Card className={styles.relatedMeetings}>
+        <Heading level={3}>이전 단계 제안서 피드백</Heading>
+        {proposalFeedbacksQuery.isPending ? (
+          <Text aria-live='polite' role='status'>
+            이전 단계 피드백을 불러오는 중입니다.
+          </Text>
+        ) : proposalFeedbacksQuery.isError ? (
+          <Text role='alert'>이전 단계 피드백을 불러오지 못했습니다.</Text>
+        ) : proposalFeedbacksQuery.data?.contents.length ? (
+          <div className={styles.feedbackList}>
+            {proposalFeedbacksQuery.data.contents.map(feedback => (
+              <article
+                className={styles.feedbackMessage}
+                key={feedback.messageId}
+              >
+                <Text className={styles.fieldLabel}>
+                  {feedback.senderName ?? feedback.senderId} ·{' '}
+                  {feedback.createdAt
+                    ? formatSeoulDateTime(feedback.createdAt)
+                    : '-'}
+                </Text>
+                <Text className={styles.fieldValue}>{feedback.message}</Text>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <Text className={styles.sectionDescription}>
+            제안서 단계에 등록된 피드백이 없습니다.
+          </Text>
+        )}
+        {proposalFeedbackPageable && proposalFeedbackPageable.totalPages > 1 ? (
+          <Pagination
+            className={styles.feedbackPagination}
+            isDisabled={proposalFeedbacksQuery.isFetching}
+            onChange={page => setProposalFeedbackPage(page - 1)}
+            page={proposalFeedbackPageable.page + 1}
+            pageSize={proposalFeedbackPageable.size}
+            totalPages={proposalFeedbackPageable.totalPages}
+            variant='compact'
+          />
+        ) : null}
+      </Card>
+      <Card className={styles.relatedMeetings}>
         <Heading level={3}>중간 점검 피드백</Heading>
         {feedbacksQuery.isPending ? (
           <Text aria-live='polite' role='status'>
@@ -149,7 +201,9 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
               >
                 <Text className={styles.fieldLabel}>
                   {feedback.senderName ?? feedback.senderId} ·{' '}
-                  {feedback.createdAt ?? '-'}
+                  {feedback.createdAt
+                    ? formatSeoulDateTime(feedback.createdAt)
+                    : '-'}
                 </Text>
                 <Text className={styles.fieldValue}>{feedback.message}</Text>
               </article>
@@ -161,25 +215,15 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
           </Text>
         )}
         {feedbackPageable && feedbackPageable.totalPages > 1 ? (
-          <HStack gap={2} justify='end'>
-            <Button
-              isDisabled={feedbackPageable.page === 0}
-              label='이전 페이지'
-              onClick={() => setFeedbackPage(page => Math.max(0, page - 1))}
-              type='button'
-              variant='secondary'
-            />
-            <Text>
-              {feedbackPageable.page + 1} / {feedbackPageable.totalPages}
-            </Text>
-            <Button
-              isDisabled={feedbackPageable.isEnd}
-              label='다음 페이지'
-              onClick={() => setFeedbackPage(page => page + 1)}
-              type='button'
-              variant='secondary'
-            />
-          </HStack>
+          <Pagination
+            className={styles.feedbackPagination}
+            isDisabled={feedbacksQuery.isFetching}
+            onChange={page => setFeedbackPage(page - 1)}
+            page={feedbackPageable.page + 1}
+            pageSize={feedbackPageable.size}
+            totalPages={feedbackPageable.totalPages}
+            variant='compact'
+          />
         ) : null}
         <div className={styles.feedbackComposer}>
           <TextArea

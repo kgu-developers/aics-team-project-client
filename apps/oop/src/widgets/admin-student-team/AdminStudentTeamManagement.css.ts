@@ -48,6 +48,25 @@ export const section = style({
   minWidth: 0,
 });
 
+export const teamSectionHeader = style({
+  alignItems: 'flex-start',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 12,
+  justifyContent: 'space-between',
+  minWidth: 0,
+});
+
+export const teamSectionHeading = style({
+  flex: '1 1 320px',
+  minWidth: 0,
+});
+
+export const teamSectionTitle = style({
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
+});
+
 export const tableWrap = style({
   background: tokens.color.background.surface,
   border: `1px solid ${tokens.color.border.base}`,

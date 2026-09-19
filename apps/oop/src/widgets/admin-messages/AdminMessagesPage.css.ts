@@ -11,6 +11,7 @@ export const page = style({
   width: '100%',
 });
 export const tableCard = style({ overflowX: 'auto', padding: 0 });
+export const pagination = style({ alignSelf: 'flex-end' });
 export const filters = style({ display: 'flex', flexWrap: 'wrap', gap: 8 });
 const filterBase = {
   background: tokens.color.background.muted,

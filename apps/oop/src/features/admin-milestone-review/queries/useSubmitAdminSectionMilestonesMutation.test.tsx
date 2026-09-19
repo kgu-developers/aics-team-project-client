@@ -72,7 +72,11 @@ describe('useSubmitAdminSectionMilestonesMutation', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([
       { milestoneId: 101, sectionId: '1', status: 'published' },
-      { sectionId: '2', status: 'create-failed' },
+      {
+        failureMessage: '같은 분반에 해당 주차의 마일스톤이 이미 있습니다.',
+        sectionId: '2',
+        status: 'create-failed',
+      },
     ]);
   });
 

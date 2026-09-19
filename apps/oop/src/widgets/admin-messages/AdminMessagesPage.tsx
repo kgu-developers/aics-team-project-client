@@ -3,7 +3,7 @@ import {
   Card,
   EmptyState,
   Heading,
-  HStack,
+  Pagination,
   Text,
 } from '@aics/design-system';
 import { useNavigate } from '@tanstack/react-router';
@@ -140,32 +140,19 @@ export default function AdminMessagesPage() {
               </tbody>
             </table>
           )}
-          {pagination ? (
-            <HStack gap={2} justify='end'>
-              <Button
-                label='이전 페이지'
-                isDisabled={query.isFetching || page === 0}
-                onClick={() => setPage(current => Math.max(0, current - 1))}
-                variant='secondary'
-              />
-              <Text aria-live='polite'>
-                {pagination.totalPages === 0 ? 0 : page + 1} /{' '}
-                {pagination.totalPages} 페이지
-              </Text>
-              <Button
-                label='다음 페이지'
-                isDisabled={
-                  query.isFetching ||
-                  pagination.isEnd ||
-                  page + 1 >= pagination.totalPages
-                }
-                onClick={() => setPage(current => current + 1)}
-                variant='secondary'
-              />
-            </HStack>
-          ) : null}
         </Card>
       )}
+      {pagination && pagination.totalPages > 1 ? (
+        <Pagination
+          className={styles.pagination}
+          isDisabled={query.isFetching}
+          onChange={nextPage => setPage(nextPage - 1)}
+          page={boundedPage + 1}
+          pageSize={pagination.size}
+          totalPages={pagination.totalPages}
+          variant='compact'
+        />
+      ) : null}
     </div>
   );
 }

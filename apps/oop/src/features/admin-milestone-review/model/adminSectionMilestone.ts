@@ -4,6 +4,8 @@ import type {
   AdminSectionMilestoneDto,
 } from '@aics/api-client';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 const milestoneTypeLabels: Record<AdminMilestoneType, string> = {
   FINAL_REPORT: '최종 보고서',
   GENERAL: '일반',
@@ -16,7 +18,8 @@ const milestoneTypeLabels: Record<AdminMilestoneType, string> = {
 };
 
 export function formatAdminMilestoneDate(value: string | null | undefined) {
-  if (!value || Number.isNaN(new Date(value).getTime())) {
+  const instant = seoulInstant(value);
+  if (Number.isNaN(instant)) {
     return '-';
   }
 
@@ -25,8 +28,9 @@ export function formatAdminMilestoneDate(value: string | null | undefined) {
     hour: '2-digit',
     minute: '2-digit',
     month: '2-digit',
+    timeZone: 'Asia/Seoul',
     year: 'numeric',
-  }).format(new Date(value));
+  }).format(new Date(instant));
 }
 
 export function getAdminMilestoneTypeLabel(type: AdminMilestoneType) {

@@ -60,8 +60,8 @@ export const formCard = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 16,
-  maxWidth: 760,
   padding: 28,
+  width: '100%',
 });
 export const meta = style({ fontSize: 13 });
 export const divider = style({

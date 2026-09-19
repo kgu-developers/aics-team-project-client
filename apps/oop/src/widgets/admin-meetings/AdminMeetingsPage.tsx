@@ -1,9 +1,8 @@
 import {
-  Button,
   Card,
   EmptyState,
   Heading,
-  HStack,
+  Pagination,
   Selector,
   SelectorOption,
   Text,
@@ -17,6 +16,7 @@ import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { useAdminSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
+import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMeetingsPage.css';
@@ -37,29 +37,40 @@ export default function AdminMeetingsPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: '/admin/meetings/' }) as {
     page?: number;
-    sectionId?: string;
-    teamId?: string;
-    milestoneId?: string;
+    sectionId?: number | string;
+    teamId?: number | string;
+    milestoneId?: number | string;
   };
   const accessibleSections = currentUser?.sections ?? [];
   const accessibleSectionIds = accessibleSections.map(section => section.id);
+  const requestedSectionId =
+    search.sectionId === undefined ? undefined : String(search.sectionId);
+  const requestedTeamId =
+    search.teamId === undefined ? undefined : String(search.teamId);
+  const requestedMilestoneId =
+    search.milestoneId === undefined ? undefined : String(search.milestoneId);
   const selectedSectionId =
-    search.sectionId && accessibleSectionIds.includes(search.sectionId)
-      ? search.sectionId
+    requestedSectionId && accessibleSectionIds.includes(requestedSectionId)
+      ? requestedSectionId
       : allSectionsValue;
   const requestedPage = Number(search.page ?? 0);
   const selectedPage =
     Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 0;
   const selectedMilestoneId =
-    selectedSectionId === allSectionsValue ? undefined : search.milestoneId;
+    selectedSectionId === allSectionsValue ? undefined : requestedMilestoneId;
+  const selectedTeamId =
+    selectedSectionId === allSectionsValue ? undefined : requestedTeamId;
   const milestonesQuery = useAdminSectionMilestonesQuery(
+    selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
+  );
+  const teamsQuery = useAdminSectionTeamsQuery(
     selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
   );
   const query = useAdminMeetingRecordListQuery(accessibleSectionIds, {
     page: selectedPage,
     sectionId:
       selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
-    teamId: search.teamId,
+    teamId: selectedTeamId,
     milestoneId: selectedMilestoneId,
     size: 20,
   });
@@ -78,8 +89,20 @@ export default function AdminMeetingsPage() {
         ...(selectedSectionId === allSectionsValue
           ? {}
           : { sectionId: selectedSectionId }),
-        ...(search.teamId ? { teamId: search.teamId } : {}),
+        ...(selectedTeamId ? { teamId: selectedTeamId } : {}),
         ...(milestoneId ? { milestoneId } : {}),
+        page: 0,
+      },
+      to: ROUTES.ADMIN_MEETINGS,
+    });
+  }
+
+  function selectTeam(teamId: string) {
+    void navigate({
+      search: {
+        sectionId: selectedSectionId,
+        ...(teamId ? { teamId } : {}),
+        ...(selectedMilestoneId ? { milestoneId: selectedMilestoneId } : {}),
         page: 0,
       },
       to: ROUTES.ADMIN_MEETINGS,
@@ -92,7 +115,7 @@ export default function AdminMeetingsPage() {
         ...(selectedSectionId === allSectionsValue
           ? {}
           : { sectionId: selectedSectionId }),
-        ...(search.teamId ? { teamId: search.teamId } : {}),
+        ...(selectedTeamId ? { teamId: selectedTeamId } : {}),
         ...(selectedMilestoneId ? { milestoneId: selectedMilestoneId } : {}),
         page,
       },
@@ -127,22 +150,40 @@ export default function AdminMeetingsPage() {
         ))}
       </div>
       {selectedSectionId !== allSectionsValue ? (
-        <Selector
-          label='마일스톤 필터'
-          onChange={selectMilestone}
-          options={[
-            { label: '전체 마일스톤', value: '' },
-            ...(milestonesQuery.data?.content ?? []).map(milestone => ({
-              label: `${milestone.weekNumber}주차 · ${milestone.title}`,
-              value: String(milestone.id),
-            })),
-          ]}
-          renderOption={option => (
-            <SelectorOption label={option.label ?? option.value} />
-          )}
-          value={selectedMilestoneId ?? ''}
-          width={320}
-        />
+        <div className={styles.filterSelectors}>
+          <Selector
+            label='팀 필터'
+            onChange={selectTeam}
+            options={[
+              { label: '전체 팀', value: '' },
+              ...(teamsQuery.data?.contents ?? []).map(team => ({
+                label: team.name,
+                value: String(team.id),
+              })),
+            ]}
+            renderOption={option => (
+              <SelectorOption label={option.label ?? option.value} />
+            )}
+            value={selectedTeamId ?? ''}
+            width={320}
+          />
+          <Selector
+            label='마일스톤 필터'
+            onChange={selectMilestone}
+            options={[
+              { label: '전체 마일스톤', value: '' },
+              ...(milestonesQuery.data?.content ?? []).map(milestone => ({
+                label: `${milestone.weekNumber}주차 · ${milestone.title}`,
+                value: String(milestone.id),
+              })),
+            ]}
+            renderOption={option => (
+              <SelectorOption label={option.label ?? option.value} />
+            )}
+            value={selectedMilestoneId ?? ''}
+            width={320}
+          />
+        </div>
       ) : null}
 
       {accessibleSectionIds.length === 0 ? (
@@ -214,25 +255,15 @@ export default function AdminMeetingsPage() {
         </Card>
       )}
       {query.data && query.data.pageable.totalPages > 1 ? (
-        <HStack justify='end' gap={2}>
-          <Button
-            isDisabled={selectedPage === 0}
-            label='이전 페이지'
-            onClick={() => selectPage(selectedPage - 1)}
-            type='button'
-            variant='secondary'
-          />
-          <Text aria-live='polite'>
-            {selectedPage + 1} / {query.data.pageable.totalPages}
-          </Text>
-          <Button
-            isDisabled={query.data.pageable.isEnd}
-            label='다음 페이지'
-            onClick={() => selectPage(selectedPage + 1)}
-            type='button'
-            variant='secondary'
-          />
-        </HStack>
+        <Pagination
+          className={styles.pagination}
+          isDisabled={query.isFetching}
+          onChange={page => selectPage(page - 1)}
+          page={selectedPage + 1}
+          pageSize={query.data.pageable.size}
+          totalPages={query.data.pageable.totalPages}
+          variant='compact'
+        />
       ) : null}
     </div>
   );

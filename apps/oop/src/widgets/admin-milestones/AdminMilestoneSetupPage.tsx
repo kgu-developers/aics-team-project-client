@@ -1115,7 +1115,7 @@ export default function AdminMilestoneSetupPage() {
                         ? '미공개 마일스톤으로 생성했습니다.'
                         : result.status === 'publish-failed'
                           ? '생성했지만 공개 상태 변경에 실패했습니다. 목록에서 다시 공개할 수 있습니다.'
-                          : '생성에 실패했습니다.'}
+                          : (result.failureMessage ?? '생성에 실패했습니다.')}
                     {artifactSubmissionFailures?.has(result.sectionId)
                       ? ' 산출물 일부 등록에 실패했습니다. 마일스톤 수정 화면에서 다시 추가해주세요.'
                       : ''}
