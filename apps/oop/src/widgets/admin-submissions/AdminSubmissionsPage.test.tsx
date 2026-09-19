@@ -304,7 +304,7 @@ describe('AdminSubmissionsPage', () => {
     ).toHaveAttribute('tabindex', '0');
   });
 
-  it('제안서와 중간 점검 상세에서 현재 제출물에 연결된 피드백을 회의록보다 먼저 표시한다', async () => {
+  it('제안서와 중간 점검 상세에는 해당 단계의 피드백만 표시한다', async () => {
     const user = userEvent.setup();
     const midReportFeedbackRequest = vi.fn();
     const proposalFeedbacks = [
@@ -410,23 +410,21 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'OOP-01 - 1팀 중간보고서' }),
     ).toBeInTheDocument();
-    const proposalFeedbackHeading = screen.getByRole('heading', {
-      name: '이전 단계 제안서 피드백',
-    });
     expect(
       screen.getByText('GUI 화면 흐름과 예외 처리 계획을 보완해 주세요.'),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: '이전 단계 제안서 피드백' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('제안서의 문제 정의와 구현 범위를 보완해 주세요.'),
+    ).not.toBeInTheDocument();
     expect(
       await screen.findByRole('heading', { name: '연결된 회의록 (1건)' }),
     ).toBeInTheDocument();
     const midReportFeedbackHeading = screen.getByRole('heading', {
       name: '중간 점검 피드백',
     });
-    expect(
-      proposalFeedbackHeading.compareDocumentPosition(
-        midReportFeedbackHeading,
-      ) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     const midReportMeetingsHeading = screen.getByRole('heading', {
       name: '연결된 회의록 (1건)',
     });
@@ -589,6 +587,23 @@ describe('AdminSubmissionsPage', () => {
   });
 
   it('중간 점검 2팀을 팀 식별자로 분리해 조회한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_PROPOSAL('1', '2')}/feedbacks`,
+        () =>
+          HttpResponse.json({
+            contents: [],
+            pageable: {
+              isEnd: true,
+              page: 0,
+              size: 20,
+              totalElements: 0,
+              totalPages: 0,
+            },
+          }),
+      ),
+    );
+
     renderPage(
       '/admin/submissions/1004?milestoneId=midterm&sectionId=1&teamId=2',
     );
@@ -597,12 +612,28 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByRole('heading', { name: 'OOP-01 - 2팀 중간보고서' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        (_, element) =>
-          element?.tagName === 'PRE' &&
-          element.textContent?.includes('캠퍼스 학습 일정 관리 서비스'),
-      ),
+      screen.getByText('프로젝트 주제'),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText('캠퍼스 학습 일정 관리 서비스'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/"value":/)).not.toBeInTheDocument();
+    expect(screen.getByRole('img', { name: '홈 화면' })).toHaveAttribute(
+      'src',
+      'https://example.com/home.png',
+    );
+    expect(
+      screen.getByText('팀 현황과 마일스톤을 확인합니다.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '번호' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '기대 출력값' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('제출물을 작성해 제출합니다.')).toBeInTheDocument();
+    expect(screen.getByText('title=중간보고서')).toBeInTheDocument();
+    expect(screen.getByText('제출 완료')).toBeInTheDocument();
   });
 
   it('담당하지 않은 분반의 상세 URL은 서버 요청을 보내지 않는다', async () => {
