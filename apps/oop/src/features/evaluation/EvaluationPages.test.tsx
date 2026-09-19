@@ -190,6 +190,7 @@ describe('KD3-92 학생 평가 화면', () => {
 
   it('최종 제출 충돌 시 성공 처리하지 않고 작성 내용을 유지한다', async () => {
     const user = userEvent.setup();
+    const submit = vi.fn();
     const answer = {
       kind: 'TEAMMATE_CONTRIBUTION',
       targetUserId: '20260003',
@@ -222,6 +223,7 @@ describe('KD3-92 학생 평가 화면', () => {
       http.post(
         `${API_BASE_URL}${ENDPOINTS.EVALUATION.PEER_RESPONSES(':formId')}`,
         async ({ request }) => {
+          submit();
           expect(await request.json()).toMatchObject({
             submit: true,
             selfContribution: '테스트 역할',
@@ -251,6 +253,16 @@ describe('KD3-92 학생 평가 화면', () => {
     expect(
       screen.queryByText('상호평가를 제출했어요.'),
     ).not.toBeInTheDocument();
+    expect(submit).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: '제출하기' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: '제출하기' }));
+    const retryConfirmation = screen.getByRole('alertdialog', {
+      name: '상호평가 최종 제출 확인',
+    });
+    await user.click(
+      within(retryConfirmation).getByRole('button', { name: '계속 수정' }),
+    );
+    expect(submit).toHaveBeenCalledOnce();
     await user.click(screen.getByRole('button', { name: '수정' }));
     expect(screen.getByRole('textbox', { name: /기여도/ })).toHaveValue('100');
     expect(screen.getByRole('textbox', { name: /기여 내용/ })).toHaveValue(
