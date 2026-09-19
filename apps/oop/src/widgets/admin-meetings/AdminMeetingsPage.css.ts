@@ -13,7 +13,14 @@ export const page = style({
 
 export const filters = style({
   display: 'flex',
+  flexWrap: 'wrap',
   gap: 8,
+});
+
+export const filterSelectors = style({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 12,
 });
 
 const filterBase = {
@@ -31,6 +38,7 @@ export const filterActive = style({
   background: tokens.color.text.primary,
   color: tokens.color.background.surface,
 });
+export const pagination = style({ alignSelf: 'flex-end' });
 
 export const tableCard = style({
   overflowX: 'auto',
