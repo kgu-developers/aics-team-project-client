@@ -7,10 +7,14 @@ import type {
 import {
   Button,
   Card,
+  Dialog,
   Divider,
   EmptyState,
+  Heading,
+  HStack,
   RadioList,
   RadioListItem,
+  Text,
   useToast,
 } from '@aics/design-system';
 import { useEffect, useRef, useState } from 'react';
@@ -352,6 +356,8 @@ function EvaluationForm({
     (evaluation?.scores ?? []).map(score => [score.criterionId, score.score]),
   );
   const [scores, setScores] = useState<Record<number, number>>(submitted);
+  const [isResubmitConfirmationOpen, setIsResubmitConfirmationOpen] =
+    useState(false);
   const scoreKey = JSON.stringify(submitted);
   const lastKey = useRef(scoreKey);
   if (lastKey.current !== scoreKey) {
@@ -412,7 +418,13 @@ function EvaluationForm({
             isDisabled={isSubmitting || missing.length > 0}
             isLoading={isSubmitting}
             label={evaluation?.submittedAt ? '평가 다시 제출' : '평가 제출'}
-            onClick={() => onSubmit(scores)}
+            onClick={() => {
+              if (evaluation?.submittedAt) {
+                setIsResubmitConfirmationOpen(true);
+                return;
+              }
+              onSubmit(scores);
+            }}
             tooltip={
               missing.length
                 ? `${missing.map(criterion => criterion.title).join(', ')} 항목을 입력해 주세요.`
@@ -420,6 +432,37 @@ function EvaluationForm({
             }
           />
         ) : null}
+        <Dialog
+          aria-label='발표 평가 다시 제출 확인'
+          isOpen={isResubmitConfirmationOpen}
+          onOpenChange={setIsResubmitConfirmationOpen}
+          purpose='info'
+          role='alertdialog'
+        >
+          <div className={styles.confirmationDialog}>
+            <Heading level={2}>평가를 다시 제출할까요?</Heading>
+            <Text>기존에 제출한 점수가 현재 입력한 점수로 바뀝니다.</Text>
+            <HStack gap={2} justify='end'>
+              <Button
+                data-autofocus='true'
+                label='계속 수정'
+                onClick={() => setIsResubmitConfirmationOpen(false)}
+                variant='secondary'
+              />
+              <Button
+                isDisabled={isSubmitting}
+                isLoading={isSubmitting}
+                label='다시 제출'
+                onClick={() => {
+                  if (isSubmitting) return;
+                  setIsResubmitConfirmationOpen(false);
+                  onSubmit(scores);
+                }}
+                variant='primary'
+              />
+            </HStack>
+          </div>
+        </Dialog>
       </section>
     </Card>
   );

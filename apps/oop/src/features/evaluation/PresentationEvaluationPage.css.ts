@@ -239,6 +239,11 @@ export const helper = style({
   fontSize: 14,
   margin: 0,
 });
+export const confirmationDialog = style({
+  display: 'grid',
+  gap: tokens.spacing['4'],
+  padding: tokens.spacing['5'],
+});
 export const previewTitle = style({
   color: tokens.color.text.secondary,
   fontSize: 14,
