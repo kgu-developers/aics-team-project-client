@@ -136,7 +136,9 @@ describe('AdminMeetingsPage', () => {
     await user.click(await screen.findByRole('option', { name: '2팀' }));
 
     expect(
-      await screen.findByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ }),
+      await screen.findByRole('row', {
+        name: /발표 자료 구성 논의 회의록 보기/,
+      }),
     ).toBeInTheDocument();
     await waitFor(() =>
       expect(

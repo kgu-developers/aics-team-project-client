@@ -146,9 +146,7 @@ it('reaches item 101, keeps page caches separate, and resets pages on section/al
   ).toBe(101);
   await user.click(paginationButtons()[0]!);
   await screen.findByText('all 쪽지 1');
-  await waitFor(() =>
-    expect(paginationButtons()[1]).toBeEnabled(),
-  );
+  await waitFor(() => expect(paginationButtons()[1]).toBeEnabled());
   await user.click(paginationButtons()[1]!);
   await screen.findByText('all 쪽지 101');
   expect(screen.getAllByText('현재 분반 하나')).not.toHaveLength(0);

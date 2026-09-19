@@ -255,8 +255,8 @@ export default function AdminMilestonesPage() {
                                   updateStatusMutation.isPending &&
                                   updateStatusMutation.variables?.sectionId ===
                                     milestone.sectionKey &&
-                                  updateStatusMutation.variables?.milestoneId ===
-                                    String(milestone.id)
+                                  updateStatusMutation.variables
+                                    ?.milestoneId === String(milestone.id)
                                 }
                                 isLabelHidden
                                 label='공개 상태'

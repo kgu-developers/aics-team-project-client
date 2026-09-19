@@ -5,6 +5,7 @@ import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 import RouteErrorPage from '~/app/components/RouteErrorPage';
 import RouteNotFoundPage from '~/app/components/RouteNotFoundPage';
 import { ROUTES } from '~/app/constants/routes';
+
 import { useAuthStore } from '~/features/auth/authStore';
 
 import { QueryProvider } from '../providers/query-provider';
