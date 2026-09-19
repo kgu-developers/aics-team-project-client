@@ -186,10 +186,8 @@ function getDownloadSummary(
         <>
           {artifacts && artifacts.length > 0 ? (
             <ul className={styles.submissionArtifactList}>
-              {artifacts.map((artifact, index) => (
-                <li
-                  key={`${artifact.type}-${artifact.fileName ?? artifact.url ?? index}`}
-                >
+              {artifacts.map(artifact => (
+                <li key={artifact.identityKey}>
                   {artifact.type === 'FILE' &&
                   artifact.downloadUrl &&
                   artifact.fileName ? (

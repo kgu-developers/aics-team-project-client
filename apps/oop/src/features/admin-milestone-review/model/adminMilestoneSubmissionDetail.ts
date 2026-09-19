@@ -52,6 +52,7 @@ export type AdminSubmissionArtifactView = {
   content: string | null;
   downloadUrl: string | null;
   fileName: string | null;
+  identityKey: string;
   label: string;
   type: AdminSubmissionArtifactTypeDto;
   url: string | null;
@@ -80,11 +81,19 @@ function toSubmissionVersionSummaryView(
 
 function toArtifactView(
   artifact: AdminSubmissionArtifactDto,
+  index: number,
 ): AdminSubmissionArtifactView {
   return {
     content: artifact.content ?? null,
     downloadUrl: artifact.downloadUrl ?? null,
     fileName: artifact.fileName ?? null,
+    identityKey: [
+      artifact.type,
+      artifact.requiredArtifactId ?? 'no-rule',
+      artifact.fileId ?? 'no-file',
+      artifact.fileName ?? artifact.url ?? artifact.content ?? 'empty',
+      index,
+    ].join(':'),
     label: artifactTypeLabels[artifact.type],
     type: artifact.type,
     url: artifact.url ?? null,

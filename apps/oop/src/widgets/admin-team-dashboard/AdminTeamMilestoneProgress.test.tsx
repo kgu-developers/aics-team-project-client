@@ -47,6 +47,7 @@ const submittedMilestone: TeamMilestoneProgress = {
         content: null,
         downloadUrl: 'https://files.example.com/proposal.pdf',
         fileName: 'proposal.pdf',
+        identityKey: 'FILE:no-rule:no-file:proposal.pdf:0',
         label: '파일',
         type: 'FILE',
         url: null,
@@ -55,6 +56,8 @@ const submittedMilestone: TeamMilestoneProgress = {
         content: null,
         downloadUrl: null,
         fileName: null,
+        identityKey:
+          'LINK:no-rule:no-file:https://github.com/kgu-developers/example:1',
         label: '링크',
         type: 'LINK',
         url: 'https://github.com/kgu-developers/example',
