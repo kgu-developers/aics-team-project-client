@@ -8,5 +8,6 @@ export const Route = createLazyFileRoute('/student/editor/proposal/$section')({
 
 function ProposalEditorSectionRoute() {
   const { section } = Route.useParams();
-  return <ProposalEditorPage section={section} />;
+  const { returnTo } = Route.useSearch();
+  return <ProposalEditorPage returnTo={returnTo} section={section} />;
 }

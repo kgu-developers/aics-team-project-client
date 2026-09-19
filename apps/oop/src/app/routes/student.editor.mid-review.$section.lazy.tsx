@@ -10,5 +10,6 @@ export const Route = createLazyFileRoute('/student/editor/mid-review/$section')(
 
 function MidReviewEditorSectionRoute() {
   const { section } = Route.useParams();
-  return <MidReportEditorPage section={section} />;
+  const { returnTo } = Route.useSearch();
+  return <MidReportEditorPage returnTo={returnTo} section={section} />;
 }

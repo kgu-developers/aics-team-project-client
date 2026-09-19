@@ -105,6 +105,60 @@ function editor(
 
 describe('DocumentEditorPage 자동 저장', () => {
   it.each([
+    {
+      docId: 'proposal' as const,
+      returnTo: 'proposal' as const,
+      section: 'team-info',
+      label: '제안서 단계로 돌아가기',
+    },
+    {
+      docId: 'mid-review' as const,
+      returnTo: 'mid-review' as const,
+      section: 'topic',
+      label: '중간보고서 단계로 돌아가기',
+    },
+  ])('$docId 마일스톤에서 연 에디터는 해당 카드로 돌아간다', input => {
+    useAuthStore.getState().setCurrentUser(demoStudent);
+    renderWithRouter(
+      <DocumentEditorPage
+        copy={copy}
+        docId={input.docId}
+        documentQuery={query(createDocument())}
+        editLockTargetType={null}
+        returnTo={input.returnTo}
+        saveBlock={vi.fn(async () => createDocument())}
+        saveState={{ error: null, saving: false }}
+        section={input.section}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: input.label })).toHaveAttribute(
+      'href',
+      `/student#student-milestone-${input.returnTo}`,
+    );
+  });
+
+  it('직접 URL로 연 에디터는 학생 홈으로 돌아간다', () => {
+    useAuthStore.getState().setCurrentUser(demoStudent);
+    renderWithRouter(
+      <DocumentEditorPage
+        copy={copy}
+        docId='proposal'
+        documentQuery={query(createDocument())}
+        editLockTargetType={null}
+        saveBlock={vi.fn(async () => createDocument())}
+        saveState={{ error: null, saving: false }}
+        section='team-info'
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: '학생 홈으로' })).toHaveAttribute(
+      'href',
+      '/student',
+    );
+  });
+
+  it.each([
     { id: 'invalid', version: 1 },
     { ...createDocument(), id: undefined },
     { ...createDocument(), version: 1.5 },

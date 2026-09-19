@@ -64,6 +64,7 @@ export default function DocumentEditorPage<
   editLockTargetType,
   renderBlockAside,
   renderFields,
+  returnTo,
   saveBlock,
   saveState,
   section,
@@ -277,6 +278,7 @@ export default function DocumentEditorPage<
       docId={docId}
       heading={block.title}
       meta={<span className={styles.saveState}>{saveStateLabel}</span>}
+      returnTo={returnTo}
       sections={document.sections.map(item => ({
         ...item,
         status: getSectionStatus(item.slug),

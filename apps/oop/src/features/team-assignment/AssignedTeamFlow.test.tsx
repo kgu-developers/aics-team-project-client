@@ -205,8 +205,19 @@ it('내 팀에서 서버가 확정한 팀장의 이름과 학번을 확인할 �
   team.members[1]!.isLeader = true;
   renderFlow(true);
   expect(await screen.findByText('팀장: 윤새봄 (20260003)')).toBeVisible();
-  expect(screen.queryByText('이동: /student')).toBeNull();
+  await userEvent
+    .setup()
+    .click(screen.getByRole('button', { name: '학생 홈으로 돌아가기' }));
+  expect(navigate).toHaveBeenCalledWith({ to: '/student' });
   expect(contactRequests).not.toHaveBeenCalled();
+});
+
+it('온보딩 결과 안의 팀 요약에는 중복 홈 이동을 표시하지 않는다', async () => {
+  renderFlow();
+  await viewTeam();
+  expect(
+    screen.queryByRole('button', { name: '학생 홈으로 돌아가기' }),
+  ).not.toBeInTheDocument();
 });
 
 it.each(['2099-01-01T00:00:00+09:00', null])(

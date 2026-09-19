@@ -6,6 +6,7 @@ import { useAuthStore } from '~/features/auth/authStore';
 import DocumentEditorPage, {
   getSaveErrorMessage,
 } from '~/features/editor/DocumentEditorPage';
+import type { EditorReturnContext } from '~/features/editor/editorReturnContext';
 
 import MidReportEngineFields from './MidReportEngineFields';
 import MidReportGuiScreens from './MidReportGuiScreens';
@@ -17,7 +18,10 @@ import {
   useUpdateMidReportBlockMutation,
 } from './queries';
 
-type MidReportEditorPageProps = { section: string };
+type MidReportEditorPageProps = {
+  returnTo?: EditorReturnContext;
+  section: string;
+};
 
 export function canSubmitMidReportDocument(
   report: MidReport,
@@ -65,6 +69,7 @@ const COPY = {
 } as const;
 
 export default function MidReportEditorPage({
+  returnTo,
   section,
 }: MidReportEditorPageProps) {
   const toast = useToast();
@@ -196,6 +201,7 @@ export default function MidReportEditorPage({
           ? getSaveErrorMessage(mutation.error, COPY.saveFailed)
           : null,
       }}
+      returnTo={returnTo}
       section={section}
     />
   );

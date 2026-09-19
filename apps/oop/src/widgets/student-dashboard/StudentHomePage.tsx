@@ -1,5 +1,6 @@
 import { Button, EmptyState } from '@aics/design-system';
 import { isAxiosError } from 'axios';
+import { useEffect } from 'react';
 
 import { editorSectionTo } from '~/app/constants/editorSections';
 
@@ -122,6 +123,19 @@ export default function StudentHomePage() {
   );
   const { isFetching, refetch } = query;
   const error = home.identity.error;
+
+  useEffect(() => {
+    const milestoneId = window.location.hash.replace(
+      /^#student-milestone-/,
+      '',
+    );
+    if (
+      query.list.isSuccess &&
+      (milestoneId === 'proposal' || milestoneId === 'mid-review')
+    ) {
+      focusStudentMilestone(milestoneId);
+    }
+  }, [query.list.isSuccess]);
 
   if (home.identity.isPending) {
     return (

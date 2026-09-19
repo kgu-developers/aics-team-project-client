@@ -14,6 +14,10 @@ import {
 
 import { cx } from '~/shared/lib/cx';
 
+import {
+  editorReturnLabel,
+  type EditorReturnContext,
+} from './editorReturnContext';
 import * as styles from './DocumentEditorLayout.css';
 
 export type DocumentEditorSection = {
@@ -28,6 +32,7 @@ type Props = {
   docId: EditorDocId;
   heading: string;
   meta?: ReactNode;
+  returnTo?: EditorReturnContext;
   sections: DocumentEditorSection[];
   title: string;
 };
@@ -38,6 +43,7 @@ export default function DocumentEditorLayout({
   docId,
   heading,
   meta,
+  returnTo,
   sections,
   title,
 }: Props) {
@@ -52,7 +58,10 @@ export default function DocumentEditorLayout({
           <Selector
             label={`${title} 작성 영역 선택`}
             onChange={value =>
-              void navigate({ to: editorSectionTo(docId, value) })
+              void navigate({
+                search: returnTo ? { returnTo } : {},
+                to: editorSectionTo(docId, value),
+              })
             }
             options={sections.map(item => ({
               value: item.slug,
@@ -89,6 +98,7 @@ export default function DocumentEditorLayout({
                 item.slug === activeSlug ? styles.activeSectionLink : '',
               )}
               key={item.slug}
+              search={returnTo ? { returnTo } : {}}
               to={editorSectionTo(docId, item.slug)}
             >
               <span>{item.label}</span>
@@ -101,8 +111,12 @@ export default function DocumentEditorLayout({
             </Link>
           ))}
         </div>
-        <Link className={styles.homeLink} to='/student'>
-          학생 홈으로
+        <Link
+          className={styles.homeLink}
+          hash={returnTo ? `student-milestone-${returnTo}` : ''}
+          to='/student'
+        >
+          {editorReturnLabel(returnTo)}
         </Link>
       </nav>
       <section className={styles.document}>

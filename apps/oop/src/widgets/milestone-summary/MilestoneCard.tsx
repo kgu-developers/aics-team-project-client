@@ -3,7 +3,7 @@ import { Button, Collapsible, StatusDot, useToast } from '@aics/design-system';
 import { useNavigate } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 
-import { editorSectionTo } from '~/app/constants/editorSections';
+import { EDITOR_DOCS, editorSectionTo } from '~/app/constants/editorSections';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { cx } from '~/shared/lib/cx';
@@ -80,6 +80,38 @@ export default function MilestoneCard({
   const isCollapsible =
     milestone.isDetailAvailable && milestone.interaction === 'collapsible';
   const statusVariant = STATUS_VARIANT[milestone.status];
+  const editorReturnTo =
+    milestone.id === 'proposal' || milestone.id === 'mid-review'
+      ? milestone.id
+      : undefined;
+
+  function navigateToAction(actionTo: string) {
+    if (editorReturnTo === 'proposal') {
+      const section = EDITOR_DOCS.proposal.sections.find(
+        item => actionTo === editorSectionTo('proposal', item.slug),
+      )?.slug;
+      if (section) {
+        return navigate({
+          params: { section },
+          search: { returnTo: 'proposal' },
+          to: '/student/editor/proposal/$section',
+        });
+      }
+    }
+    if (editorReturnTo === 'mid-review') {
+      const section = EDITOR_DOCS['mid-review'].sections.find(
+        item => actionTo === editorSectionTo('mid-review', item.slug),
+      )?.slug;
+      if (section) {
+        return navigate({
+          params: { section },
+          search: { returnTo: 'mid-review' },
+          to: '/student/editor/mid-review/$section',
+        });
+      }
+    }
+    return navigate({ to: actionTo });
+  }
 
   const headerTrigger = (
     <>
@@ -166,6 +198,7 @@ export default function MilestoneCard({
                     className={styles.rowAction}
                     onFinalized={() => {
                       void navigate({
+                        search: { returnTo: 'proposal' },
                         to: editorSectionTo('proposal', 'team-info'),
                       });
                     }}
@@ -204,7 +237,7 @@ export default function MilestoneCard({
                                   milestone.id,
                                 )
                             : row.actionTo
-                              ? () => navigate({ to: row.actionTo })
+                              ? () => navigateToAction(row.actionTo!)
                               : undefined
                     }
                     size='md'
