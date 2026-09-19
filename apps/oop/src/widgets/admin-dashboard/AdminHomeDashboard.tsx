@@ -262,7 +262,7 @@ export default function AdminHomeDashboard() {
   const meetingItems: DashboardListItem[] = (
     meetingRecordsQuery.data?.contents ?? []
   )
-    .slice(0, 4)
+    .slice(0, 3)
     .map(record => ({
       date: formatMeetingCreatedAt(record.meetingAt),
       meetingId: String(record.id),
