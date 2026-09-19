@@ -67,7 +67,11 @@ export async function createNotice(
   await expect(
     page.getByRole('textbox', { name: '제목', exact: true }),
   ).toBeEditable();
-  await choose(page, '분반', run.section);
+  await choose(
+    page,
+    '분반',
+    new RegExp(`^${run.section.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`),
+  );
   await page
     .getByRole('textbox', { name: '제목', exact: true })
     .fill(run.noticeTitle);
@@ -79,12 +83,12 @@ export async function createNotice(
   await beforeSave();
   await save.click();
   await expect(page).toHaveURL(/\/admin\/notices(?:\?sectionId=\d+)?$/);
-  const createdLink = page.getByRole('link', {
-    name: run.noticeTitle,
+  const createdRow = page.getByRole('row', {
+    name: `${run.noticeTitle} 공지사항 보기`,
     exact: true,
   });
-  await expect(createdLink).toHaveCount(1);
-  await createdLink.click();
+  await expect(createdRow).toHaveCount(1);
+  await createdRow.click();
   await expect(page).toHaveURL(/\/admin\/notices\/\d+\?sectionId=\d+$/);
   const url = new URL(page.url());
   await created(url.pathname + url.search);
@@ -95,8 +99,11 @@ export async function createNotice(
     .getByRole('link', { name: '← 공지사항 목록으로', exact: true })
     .click();
   await expect(
-    page.getByRole('link', { name: run.noticeTitle, exact: true }),
-  ).toHaveAttribute('href', url.pathname + url.search);
+    page.getByRole('row', {
+      name: `${run.noticeTitle} 공지사항 보기`,
+      exact: true,
+    }),
+  ).toHaveCount(1);
 }
 export async function studentReadsNotice(
   page: Page,

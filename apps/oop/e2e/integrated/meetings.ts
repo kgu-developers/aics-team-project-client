@@ -1,5 +1,10 @@
 import { expect, type Page } from '@playwright/test';
 
+import {
+  adminMeetingFilter,
+  adminMeetingRow,
+} from './adminMeetingFilter';
+import { gotoAdminPath } from './adminNavigation';
 import type { Run } from './data';
 import { meetingRecordRequestPath, routeScope } from './routeScope';
 import { choose, fillDate } from './ui';
@@ -218,21 +223,30 @@ export async function memberMeeting(
   await expect(page).toHaveURL(new RegExp(`${path}$`));
   await readMeeting(page, run, edited);
 }
-export async function adminSectionMeetings(page: Page, run: Run) {
-  await page.goto('/admin/meetings');
-  const button = page
-    .getByRole('group', { name: '분반 필터' })
-    .getByRole('button', { name: run.section, exact: true });
-  await button.click();
-  await expect(button).toHaveAttribute('aria-pressed', 'true');
+export async function adminSectionMeetings(
+  page: Page,
+  run: Run,
+  recover: () => Promise<void>,
+) {
+  await gotoAdminPath(page, '/admin/meetings', recover);
+  const filter = adminMeetingFilter(page);
+  await choose(filter, '분반', run.section);
+  await expect(filter.getByRole('combobox', { name: '분반' })).toContainText(
+    run.section,
+  );
   return routeScope(new URL(page.url())).sectionId;
 }
-export async function adminTeamMeetings(page: Page, run: Run) {
-  await page.goto('/admin/student-team');
-  await page
-    .getByRole('group', { name: '분반 선택' })
-    .getByRole('button', { name: run.section, exact: true })
-    .click();
+export async function adminTeamMeetings(
+  page: Page,
+  run: Run,
+  recover: () => Promise<void>,
+) {
+  await gotoAdminPath(page, '/admin/student-team', recover);
+  await choose(
+    page.getByRole('group', { name: '분반 선택' }),
+    '분반',
+    run.section,
+  );
   await page.getByRole('link', { name: run.team, exact: true }).click();
   const dashboardUrl = new URL(page.url());
   const teamId = dashboardUrl.pathname.split('/').pop();
@@ -248,10 +262,8 @@ export async function adminTeamMeetings(page: Page, run: Run) {
   expect(sectionId).toMatch(/^\d+$/);
   await link.click();
   await expect(
-    page
-      .getByRole('group', { name: '분반 필터' })
-      .getByRole('button', { name: run.section, exact: true }),
-  ).toHaveAttribute('aria-pressed', 'true');
+    adminMeetingFilter(page).getByRole('combobox', { name: '분반' }),
+  ).toContainText(run.section);
   return listUrl.pathname + listUrl.search;
 }
 export async function adminReadMeeting(
@@ -260,21 +272,20 @@ export async function adminReadMeeting(
   studentPath: string,
   edited: boolean,
   observed: (detail: string, list: string) => Promise<void>,
+  recover: () => Promise<void>,
 ) {
   const title = edited ? run.meetingEditedTitle : run.meetingTitle;
-  const sectionId = await adminSectionMeetings(page, run);
-  await expect(
-    page.getByRole('link', { name: title, exact: true }),
-  ).toBeVisible();
-  const listPath = await adminTeamMeetings(page, run);
+  const sectionId = await adminSectionMeetings(page, run, recover);
+  await expect(adminMeetingRow(page, title)).toBeVisible();
+  const listPath = await adminTeamMeetings(page, run, recover);
   expect(routeScope(new URL(listPath, page.url())).sectionId).toBe(sectionId);
-  const link = page.getByRole('link', { name: title, exact: true });
-  const href = await link.getAttribute('href');
-  expect(href).toBeTruthy();
-  const detail = new URL(href!, page.url()).pathname;
+  const row = adminMeetingRow(page, title);
+  await expect(row).toBeVisible();
+  await row.click();
+  await expect(page).toHaveURL(/\/admin\/meetings\/[1-9]\d*$/);
+  const detail = new URL(page.url()).pathname;
   expect(detail.split('/').pop()).toBe(studentPath.split('/').pop());
   await observed(detail, listPath);
-  await link.click();
   await readMeeting(page, run, edited, true);
   await page.reload();
   await readMeeting(page, run, edited, true);
@@ -423,12 +434,13 @@ export async function adminMeetingDeleted(
   page: Page,
   run: Run,
   studentPath: string,
+  recover: () => Promise<void>,
 ) {
-  await adminSectionMeetings(page, run);
+  await adminSectionMeetings(page, run, recover);
   await expect(
     page.getByText('등록된 회의록이 없습니다.', { exact: true }),
   ).toBeVisible();
-  const list = await adminTeamMeetings(page, run);
+  const list = await adminTeamMeetings(page, run, recover);
   await page.reload();
   await expect(
     page.getByText('등록된 회의록이 없습니다.', { exact: true }),

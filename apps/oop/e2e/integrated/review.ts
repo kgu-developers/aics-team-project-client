@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { expect, type Page } from '@playwright/test';
 
 import type { Run } from './data';
+import { presentationSettingsAccessibleName } from './reviewRoute';
 import { choose } from './ui';
 
 export async function submissions(page: Page, run: Run, tab: string) {
@@ -24,6 +25,11 @@ export async function downloadSubmission(
   ).toBeVisible();
   await expect(
     card.getByRole('link', { name: 'e2e-submission.pdf', exact: true }),
+  ).toHaveCount(2);
+  await expect(
+    card
+      .getByRole('link', { name: 'e2e-submission.pdf', exact: true })
+      .first(),
   ).toBeVisible();
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 60_000 }),
@@ -89,11 +95,14 @@ export async function midReportFeedback(page: Page, run: Run) {
 
 export async function presentationSettings(page: Page, run: Run) {
   await submissions(page, run, '발표 평가');
-  await page
-    .getByRole('button', { name: '순서 배정 및 평가', exact: true })
-    .click();
+  const openSettings = page.getByRole('button', {
+    name: presentationSettingsAccessibleName,
+    exact: true,
+  });
+  await expect(openSettings).toBeEnabled();
+  await openSettings.click();
   const dialog = page.getByRole('dialog', {
-    name: '발표 평가 설정',
+    name: presentationSettingsAccessibleName,
     exact: true,
   });
   await dialog
@@ -110,9 +119,8 @@ export async function presentationSettings(page: Page, run: Run) {
   await dialog.getByRole('button', { name: '저장', exact: true }).click();
   await expect(dialog).toBeHidden();
   await page.reload();
-  await page
-    .getByRole('button', { name: '순서 배정 및 평가', exact: true })
-    .click();
+  await expect(openSettings).toBeEnabled();
+  await openSettings.click();
   await expect(dialog.getByText(/설계 완성도 · 5점$/)).toBeVisible();
   await expect(
     dialog.getByRole('combobox', {

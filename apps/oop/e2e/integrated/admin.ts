@@ -131,10 +131,11 @@ export async function importTeams(page: Page, run: Run) {
   await dialog.getByRole('button', { name: '닫기', exact: true }).click();
   await expect(dialog).toBeHidden();
   await page.goto('/admin/student-team');
-  await page
-    .getByRole('group', { name: '분반 선택' })
-    .getByRole('button', { name: run.section, exact: true })
-    .click();
+  await choose(
+    page.getByRole('group', { name: '분반 선택' }),
+    '분반',
+    run.section,
+  );
   await expect(
     page.getByRole('heading', { name: `${run.section} 팀 구성`, exact: true }),
   ).toBeVisible();

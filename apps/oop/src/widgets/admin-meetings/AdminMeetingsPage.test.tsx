@@ -89,6 +89,9 @@ describe('AdminMeetingsPage', () => {
     const user = userEvent.setup();
     renderPage();
 
+    expect(
+      await screen.findByRole('group', { name: '회의록 필터' }),
+    ).toContainElement(await screen.findByRole('combobox', { name: '분반' }));
     expect(screen.queryByLabelText('마일스톤 필터')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('팀')).not.toBeInTheDocument();
     await user.click(await screen.findByRole('combobox', { name: '분반' }));
