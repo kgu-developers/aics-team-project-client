@@ -113,6 +113,7 @@ it('팀장에게 전원 투표 뒤 기존 CTA 한 개만 확정으로 전환하�
   await user.click(screen.getByRole('button', { name: '이 주제로 확정' }));
   await waitFor(() =>
     expect(navigate).toHaveBeenCalledWith({
+      search: { returnTo: 'proposal' },
       to: '/student/editor/proposal/team-info',
     }),
   );
