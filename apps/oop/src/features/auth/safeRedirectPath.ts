@@ -7,6 +7,6 @@ export function safeRedirectPath(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   if (!value.startsWith('/') || value.startsWith('//') || value.includes('\\'))
     return undefined;
-  if (value === '/login' || value.startsWith('/login?')) return undefined;
+  if (/^\/login(?:[/?#]|$)/.test(value)) return undefined;
   return value;
 }

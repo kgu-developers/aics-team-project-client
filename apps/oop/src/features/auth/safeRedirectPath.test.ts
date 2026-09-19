@@ -14,6 +14,8 @@ describe('safeRedirectPath', () => {
     'https://evil.example',
     'javascript:alert(1)',
     '/login',
+    '/login/',
+    '/login#expired',
     '/login?redirect=/admin',
     'admin',
     '/a\\b',
