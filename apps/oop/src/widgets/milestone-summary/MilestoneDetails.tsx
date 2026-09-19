@@ -571,12 +571,6 @@ function MidReportFeedbackBody({
               canSubmit={body.canSubmitResponse}
             />
           )}
-          {body.feedback.length > 0 ? (
-            <>
-              <SectionBanner title='피드백 대화' />
-              <FeedbackList feedback={body.feedback} />
-            </>
-          ) : null}
         </>
       ) : (
         <>
@@ -619,8 +613,8 @@ function MidReportFeedbackBody({
             <div className={styles.feedbackDialogContent}>
               <Heading level={2}>대면 피드백 반영 방향 보내기</Heading>
               <Text color='secondary'>
-                중간보고서를 제출하고 대면 피드백을 받은 뒤에 보내 주세요.
-                보낸 내용은 담당 교수·조교 쪽지함으로 전달되고, 이후 대화는 이
+                중간보고서를 제출하고 대면 피드백을 받은 뒤에 보내 주세요. 보낸
+                내용은 담당 교수·조교 쪽지함으로 전달되고, 이후 대화는 이
                 화면에서 이어집니다.
               </Text>
               <MidReportFeedbackForm
@@ -642,6 +636,12 @@ function MidReportFeedbackBody({
           </Dialog>
         </>
       )}
+      {body.feedback.length > 0 ? (
+        <>
+          <SectionBanner title='피드백 대화' />
+          <FeedbackList feedback={body.feedback} />
+        </>
+      ) : null}
       <SectionBanner title='작성 영역별 상태' />
       <SectionStatusList sections={body.sections} />
       <p className={styles.guide}>{body.guide}</p>

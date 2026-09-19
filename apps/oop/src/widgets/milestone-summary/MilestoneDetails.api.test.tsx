@@ -457,7 +457,10 @@ describe('중간보고서 피드백 메시지', () => {
 
 describe('피드백 단계별 노출', () => {
   it('제안서는 제출 전에는 피드백 영역을 그리지 않고, 대기 중에는 안내만 보여 준다', async () => {
-    const { unmount } = renderFeedback({ ...body, feedbackStage: 'not-submitted' });
+    const { unmount } = renderFeedback({
+      ...body,
+      feedbackStage: 'not-submitted',
+    });
     expect(screen.queryByText('피드백 대화')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('textbox', { name: /피드백 반영 답변/ }),
@@ -471,6 +474,52 @@ describe('피드백 단계별 노출', () => {
     expect(
       screen.queryByRole('textbox', { name: /피드백 반영 답변/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it('교수·조교가 먼저 보낸 중간보고서 메시지를 반영 방향 대기 중에도 표시한다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`, () =>
+        HttpResponse.json({
+          contents: [
+            {
+              id: 990,
+              threadId: 70,
+              senderId: teamMessageProfessorId,
+              senderName: '검수 교수',
+              relatedType: 'MID_REPORT',
+              message: '대면 피드백 일정을 먼저 안내합니다.',
+              important: false,
+              read: false,
+              createdAt: '2026-09-10 09:00',
+            },
+          ],
+          pageable: {
+            page: 0,
+            size: 100,
+            totalElements: 1,
+            totalPages: 1,
+            isEnd: true,
+          },
+        }),
+      ),
+    );
+    renderFeedback({
+      kind: 'mid-review-feedback',
+      teamId: '7',
+      feedbackStage: 'awaiting-feedback',
+      feedback: [],
+      canSubmitResponse: false,
+      sections: [],
+      guide: '',
+    });
+
+    expect(
+      await screen.findByText('대면 피드백 일정을 먼저 안내합니다.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('피드백 대화')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '반영 방향 보내기' }),
+    ).toBeInTheDocument();
   });
 
   it('중간보고서는 첫 반영 방향을 모달로 보내고, 보낸 뒤에는 인라인 대화로 이어진다', async () => {
@@ -520,7 +569,9 @@ describe('피드백 단계별 노출', () => {
     expect(
       screen.queryByRole('textbox', { name: /대면 피드백 반영 내용/ }),
     ).not.toBeInTheDocument();
-    const open = await screen.findByRole('button', { name: '반영 방향 보내기' });
+    const open = await screen.findByRole('button', {
+      name: '반영 방향 보내기',
+    });
     await waitFor(() =>
       expect(open).not.toHaveAttribute('aria-disabled', 'true'),
     );
@@ -559,4 +610,3 @@ describe('피드백 단계별 노출', () => {
     ).toBeInTheDocument();
   });
 });
-
