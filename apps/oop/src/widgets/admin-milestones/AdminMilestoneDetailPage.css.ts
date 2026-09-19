@@ -107,3 +107,11 @@ globalStyle(`${detailCard} > section + section`, {
   borderTop: `1px solid ${tokens.color.border.base}`,
   paddingTop: 28,
 });
+
+export const evaluationWindow = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 12,
+  justifyContent: 'space-between',
+});

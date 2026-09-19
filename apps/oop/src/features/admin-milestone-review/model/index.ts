@@ -21,6 +21,7 @@ export {
   type AdminMilestoneScheduleView,
 } from './adminMilestoneSchedule';
 export {
+  assertAdminMilestoneScheduleOrder,
   createAdminMilestoneSectionScheduleDraft,
   syncAdminMilestoneSectionScheduleDrafts,
   toAdminMilestoneDateTime,

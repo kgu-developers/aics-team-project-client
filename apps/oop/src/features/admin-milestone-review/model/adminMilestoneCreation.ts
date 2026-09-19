@@ -68,21 +68,28 @@ export function createAdminMilestoneCreateInput({
     throw new Error('지각 제출 마감 일시를 입력해주세요.');
   }
 
-  assertAdminMilestoneScheduleOrder({
-    dueAt,
-    evaluationClosesAt,
-    evaluationOpensAt,
-    lateSubmissionUntil,
-    opensAt,
-  });
-
   if (isPeerEvaluation) {
+    // The peer-evaluation window belongs to its own form; the milestone only
+    // carries the closing time as dueAt, so the submission-order rules do
+    // not apply.
     if (!evaluationOpensAt) {
       throw new Error('상호 평가 시작 일시를 입력해주세요.');
     }
     if (!evaluationClosesAt) {
       throw new Error('상호 평가 종료 일시를 입력해주세요.');
     }
+    if (evaluationOpensAt >= evaluationClosesAt) {
+      throw new Error('평가 종료 일시는 평가 시작 일시보다 늦어야 합니다.');
+    }
+    assertAdminMilestoneScheduleOrder({ dueAt, lateSubmissionUntil, opensAt });
+  } else {
+    assertAdminMilestoneScheduleOrder({
+      dueAt,
+      evaluationClosesAt,
+      evaluationOpensAt,
+      lateSubmissionUntil,
+      opensAt,
+    });
   }
 
   return {

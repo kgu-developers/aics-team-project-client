@@ -16,6 +16,7 @@ import {
   type TimeInputProps,
 } from '@aics/design-system';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { isAxiosError } from 'axios';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -37,6 +38,7 @@ import {
   milestoneTemplates,
   syncAdminMilestoneSectionScheduleDrafts,
   toAdminMilestoneDateTime,
+  toAdminMilestoneRequestError,
   type AdminMilestoneSectionScheduleDraft,
   type AdminRequiredArtifactDraft,
   type MilestoneTemplateId,
@@ -362,9 +364,13 @@ export default function AdminMilestoneSetupPage() {
         }
       } catch (error) {
         setFormError(
-          error instanceof Error
-            ? error.message
-            : '마일스톤을 수정하지 못했습니다.',
+          isAxiosError(error)
+            ? `마일스톤을 수정하지 못했습니다. ${formatAdminMilestoneRequestError(
+                toAdminMilestoneRequestError(error),
+              )}`
+            : error instanceof Error
+              ? error.message
+              : '마일스톤을 수정하지 못했습니다.',
         );
       }
       return;
@@ -824,7 +830,7 @@ export default function AdminMilestoneSetupPage() {
                           </Text>
                           <Text color='secondary' type='supporting'>
                             {isPresentation
-                              ? '학생이 다른 팀의 발표를 평가할 수 있는 기간입니다. 팀별 발표 순서는 제출물 관리 화면에서 설정합니다.'
+                              ? '학생이 다른 팀의 발표를 평가할 수 있는 기간입니다. 자료 제출 마감 이후로 설정해야 하며, 비워 두면 발표 평가 탭과 학생 발표 평가가 열리지 않습니다. 팀별 발표 순서와 평가 항목은 제출물 관리 화면에서 설정합니다.'
                               : '학생이 팀원을 평가할 수 있는 기간입니다.'}
                           </Text>
                           <div className={styles.scheduleGrid}>

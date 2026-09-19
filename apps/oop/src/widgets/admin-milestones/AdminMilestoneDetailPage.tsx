@@ -6,6 +6,7 @@ import {
   useParams,
   useSearch,
 } from '@tanstack/react-router';
+import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -21,6 +22,7 @@ import {
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMilestoneDetailPage.css';
+import AdminMilestoneEvaluationWindowDialog from './AdminMilestoneEvaluationWindowDialog';
 
 function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
@@ -51,6 +53,7 @@ export default function AdminMilestoneDetailPage() {
   const search = useSearch({
     from: '/admin/milestones/$milestoneId',
   }) as { sectionId?: string };
+  const [isEvaluationWindowOpen, setIsEvaluationWindowOpen] = useState(false);
   const accessibleSections = currentUser?.sections ?? [];
   const accessibleSectionIds = accessibleSections.map(section => section.id);
   const isAccessibleSection = Boolean(
@@ -186,6 +189,30 @@ export default function AdminMilestoneDetailPage() {
                 />
               ) : null}
             </div>
+            {milestone.type === 'PRESENTATION' ? (
+              <div className={styles.evaluationWindow}>
+                <Text color='secondary' type='supporting'>
+                  {milestone.schedule.evaluationOpensAt &&
+                  milestone.schedule.evaluationClosesAt
+                    ? '발표 평가 기간이 설정되어 있어 제출물 관리의 발표 평가 탭과 학생 발표 평가를 사용할 수 있습니다.'
+                    : '발표 평가 기간이 없으면 제출물 관리의 발표 평가 탭과 학생 발표 평가가 열리지 않습니다.'}
+                </Text>
+                <Button
+                  label='발표 평가 기간 설정'
+                  onClick={() => setIsEvaluationWindowOpen(true)}
+                  size='sm'
+                  variant='secondary'
+                />
+                {isEvaluationWindowOpen && search.sectionId ? (
+                  <AdminMilestoneEvaluationWindowDialog
+                    isOpen
+                    milestone={milestone}
+                    onClose={() => setIsEvaluationWindowOpen(false)}
+                    sectionId={search.sectionId}
+                  />
+                ) : null}
+              </div>
+            ) : null}
             <div>
               <Text className={styles.policyTitle} weight='medium'>
                 제출 정책

@@ -12,6 +12,7 @@ import {
   getAdminSectionMilestoneFixture,
   getAdminSectionMilestonesFixture,
   updateAdminSectionMilestoneFixture,
+  updateAdminSectionMilestoneFixtureEvaluationWindow,
   updateAdminSectionMilestoneFixtureStatus,
   updateAdminSectionMilestoneFixtureWeekNumbers,
 } from '../data/adminSectionMilestones';
@@ -150,6 +151,35 @@ export const adminSectionMilestoneHandlers = [
             },
             { status: 404 },
           );
+    },
+  ),
+  http.patch(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_EVALUATION_WINDOW(':sectionId', ':milestoneId')}`,
+    async ({ params, request }) => {
+      if (!isAdminRequest(request)) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+
+      const result = updateAdminSectionMilestoneFixtureEvaluationWindow(
+        String(params.sectionId),
+        String(params.milestoneId),
+        (await request.json()) as {
+          clearEvaluationWindow?: boolean;
+          evaluationClosesAt?: string;
+          evaluationOpensAt?: string;
+        },
+      );
+      if ('error' in result) {
+        // Like the deployed server, the body carries only a code.
+        return HttpResponse.json(
+          { code: result.error },
+          { status: result.error === 'MILESTONE_NOT_FOUND' ? 404 : 400 },
+        );
+      }
+      return new HttpResponse(null, { status: 204 });
     },
   ),
   http.patch(

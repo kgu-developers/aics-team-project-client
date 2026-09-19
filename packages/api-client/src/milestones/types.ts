@@ -60,6 +60,15 @@ export type AdminMilestoneUpdateInput = {
   type: AdminMilestoneType;
 };
 
+/** PATCH .../evaluation-window: 기간을 주거나 clearEvaluationWindow로 해제한다. */
+export type AdminMilestoneEvaluationWindowInput =
+  | {
+      evaluationOpensAt: string;
+      evaluationClosesAt: string;
+      clearEvaluationWindow?: false;
+    }
+  | { clearEvaluationWindow: true };
+
 export type AdminMilestoneWeekNumberChange = {
   milestoneId: number;
   weekNumber: number;
