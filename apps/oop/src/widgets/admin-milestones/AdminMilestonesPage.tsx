@@ -12,6 +12,9 @@ import { type KeyboardEvent, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { paginate } from '~/shared/lib/pagination';
+import ListPagination from '~/shared/ui/ListPagination/ListPagination';
+
 import {
   formatAdminMilestoneDate,
   getAdminMilestoneStatusLabel,
@@ -104,15 +107,19 @@ export default function AdminMilestonesPage() {
   const failedSectionLabels = displayedSections.flatMap((section, index) =>
     milestoneQueries[index]?.isError ? [section.code] : [],
   );
-  const milestones = displayedSections.flatMap((section, index) => {
+  const allMilestones = displayedSections.flatMap((section, index) => {
     return (milestoneQueries[index]?.data?.content ?? []).map(milestone => ({
       ...milestone,
       sectionKey: section.id,
       sectionLabel: section.code,
     }));
   });
+  const [page, setPage] = useState(0);
+  const paged = paginate(allMilestones, page);
+  const milestones = paged.items;
 
   function selectSection(sectionId: string) {
+    setPage(0);
     void navigate({
       search: sectionId === allSectionsValue ? {} : { sectionId },
       to: ROUTES.ADMIN_MILESTONES,
@@ -294,6 +301,12 @@ export default function AdminMilestonesPage() {
               </table>
             </Card>
           )}
+          <ListPagination
+            label='마일스톤 페이지 이동'
+            onPageChange={setPage}
+            page={paged.page}
+            pageCount={paged.pageCount}
+          />
         </>
       )}
     </div>

@@ -1,9 +1,7 @@
 import {
-  Button,
   Card,
   EmptyState,
   Heading,
-  HStack,
   Selector,
   SelectorOption,
   Text,
@@ -14,6 +12,8 @@ import type { KeyboardEvent } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { LIST_PAGE_SIZE } from '~/shared/lib/pagination';
+import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { useAdminSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
@@ -67,7 +67,7 @@ export default function AdminMeetingsPage() {
       selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
     teamId: selectedTeamId,
     milestoneId: selectedMilestoneId,
-    size: 20,
+    size: LIST_PAGE_SIZE,
   });
   const records = query.data?.contents ?? [];
 
@@ -213,26 +213,14 @@ export default function AdminMeetingsPage() {
           </table>
         </Card>
       )}
-      {query.data && query.data.pageable.totalPages > 1 ? (
-        <HStack justify='end' gap={2}>
-          <Button
-            isDisabled={selectedPage === 0}
-            label='이전 페이지'
-            onClick={() => selectPage(selectedPage - 1)}
-            type='button'
-            variant='secondary'
-          />
-          <Text aria-live='polite'>
-            {selectedPage + 1} / {query.data.pageable.totalPages}
-          </Text>
-          <Button
-            isDisabled={query.data.pageable.isEnd}
-            label='다음 페이지'
-            onClick={() => selectPage(selectedPage + 1)}
-            type='button'
-            variant='secondary'
-          />
-        </HStack>
+      {query.data ? (
+        <ListPagination
+          isDisabled={query.isFetching}
+          label='회의록 페이지 이동'
+          onPageChange={selectPage}
+          page={selectedPage}
+          pageCount={query.data.pageable.totalPages}
+        />
       ) : null}
     </div>
   );

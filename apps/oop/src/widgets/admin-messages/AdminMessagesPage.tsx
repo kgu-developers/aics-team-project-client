@@ -3,7 +3,6 @@ import {
   Card,
   EmptyState,
   Heading,
-  Pagination,
   Text,
 } from '@aics/design-system';
 import { useNavigate } from '@tanstack/react-router';
@@ -12,6 +11,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { getSectionDisplayLabel } from '~/shared/lib/getSectionDisplayLabel';
+import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
 import {
   useAdminMessagesQuery,
@@ -134,17 +134,14 @@ export default function AdminMessagesPage() {
               </tbody>
             </table>
           )}
-          {pagination && pagination.totalPages > 0 ? (
-            <div className={styles.pagination}>
-              <Pagination
-                isDisabled={query.isFetching}
-                label='쪽지함 페이지 이동'
-                onChange={nextPage => setPage(nextPage - 1)}
-                page={page + 1}
-                totalPages={pagination.totalPages}
-                variant='compact'
-              />
-            </div>
+          {pagination ? (
+            <ListPagination
+              isDisabled={query.isFetching}
+              label='쪽지함 페이지 이동'
+              onPageChange={setPage}
+              page={page}
+              pageCount={pagination.totalPages}
+            />
           ) : null}
         </Card>
       )}

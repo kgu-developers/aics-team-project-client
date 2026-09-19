@@ -21,6 +21,8 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { paginate } from '~/shared/lib/pagination';
+import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
 import {
   useAdminPeerEvaluationsQuery,
@@ -264,6 +266,18 @@ export default function AdminSubmissionsPage() {
     isAccessibleSection && selectedMilestone !== undefined,
     undefined,
     activeMilestoneId === 'proposal',
+  );
+  const [submissionPage, setSubmissionPage] = useState(0);
+  const submissionListKey = `${effectiveSectionId ?? ''}:${activeMilestoneId}`;
+  const [pagedListKey, setPagedListKey] = useState(submissionListKey);
+  if (pagedListKey !== submissionListKey) {
+    // Reset paging when the tab or section changes (render-time state sync).
+    setPagedListKey(submissionListKey);
+    setSubmissionPage(0);
+  }
+  const pagedSubmissions = paginate(
+    submissionsQuery.data?.submissions ?? [],
+    submissionPage,
   );
   const versionMetadataTargets = useMemo(
     () =>
@@ -645,7 +659,8 @@ export default function AdminSubmissionsPage() {
                     {presentationEvaluationsQuery.data.criteria.length < 2 ? (
                       <Card className={styles.criteriaNotice} variant='muted'>
                         <Text role='status'>
-                          {presentationEvaluationsQuery.data.criteria.length === 0
+                          {presentationEvaluationsQuery.data.criteria.length ===
+                          0
                             ? '이 분반에는 발표 평가 항목이 없습니다. 학생 발표 평가 화면에 평가할 항목이 나타나지 않으니, 평가 시작 전에 항목을 등록해 주세요.'
                             : '이 분반의 발표 평가 항목이 1개뿐입니다. 학생에게는 이 항목만 보이니, 의도한 구성인지 확인해 주세요.'}{' '}
                           평가 항목은 분반별로 관리자가 등록하며, 위 '발표
@@ -848,81 +863,89 @@ export default function AdminSubmissionsPage() {
                   title='표시할 제출물이 없습니다.'
                 />
               ) : (
-                <div className={styles.list}>
-                  {submissionsQuery.data?.submissions.map(submission => {
-                    const submissionId = submission.submissionId;
-                    const isVersionDetailAvailable =
-                      versionDetailMilestoneIds.has(activeMilestoneId);
-                    const versionMetadataQuery =
-                      versionMetadataQueriesBySubmissionId.get(
-                        submission.submissionId ?? '',
+                <>
+                  <div className={styles.list}>
+                    {pagedSubmissions.items.map(submission => {
+                      const submissionId = submission.submissionId;
+                      const isVersionDetailAvailable =
+                        versionDetailMilestoneIds.has(activeMilestoneId);
+                      const versionMetadataQuery =
+                        versionMetadataQueriesBySubmissionId.get(
+                          submission.submissionId ?? '',
+                        );
+                      return (
+                        <AdminMilestoneSubmissionCard
+                          meetingCountLabel={
+                            <Link
+                              to={ROUTES.ADMIN_MEETINGS}
+                              search={{
+                                sectionId: effectiveSectionId,
+                                teamId: String(submission.teamId),
+                              }}
+                            >
+                              회의록 {submission.meetingRecordCount}건
+                            </Link>
+                          }
+                          action={
+                            activeMilestoneId === 'final-report' ||
+                            activeMilestoneId === 'presentation-submit' ? (
+                              <AdminMilestoneSubmissionBulkDownloadAction
+                                isLoading={downloadArtifactsMutation.isPending}
+                                onClick={
+                                  submissionId
+                                    ? () => {
+                                        downloadArtifactsMutation.mutate(
+                                          submissionId,
+                                        );
+                                      }
+                                    : undefined
+                                }
+                              />
+                            ) : (
+                              <AdminMilestoneSubmissionDetailAction
+                                milestoneId={activeTab.id}
+                                sectionId={effectiveSectionId}
+                                submissionId={submissionId}
+                                teamId={submission.teamId}
+                                unavailableReason={
+                                  isVersionDetailAvailable
+                                    ? undefined
+                                    : '이 마일스톤의 전용 상세 조회 API 확인 후 제공 예정입니다.'
+                                }
+                              />
+                            )
+                          }
+                          key={submission.teamId}
+                          label={submission.teamName}
+                          secondaryLabel={submission.statusLabel}
+                          submissionMetadata={getSubmissionMetadata(
+                            submission,
+                            versionMetadataQuery?.data,
+                          )}
+                          summary={
+                            activeMilestoneId === 'proposal'
+                              ? getProposalSummary(submission)
+                              : activeMilestoneId === 'final-report' ||
+                                  activeMilestoneId === 'presentation-submit'
+                                ? getDownloadSummary(
+                                    submission,
+                                    versionMetadataQuery?.data,
+                                    Boolean(versionMetadataQuery?.isError),
+                                    Boolean(versionMetadataQuery?.isPending),
+                                  )
+                                : getReviewSummary(submission)
+                          }
+                        />
                       );
-                    return (
-                      <AdminMilestoneSubmissionCard
-                        meetingCountLabel={
-                          <Link
-                            to={ROUTES.ADMIN_MEETINGS}
-                            search={{
-                              sectionId: effectiveSectionId,
-                              teamId: String(submission.teamId),
-                            }}
-                          >
-                            회의록 {submission.meetingRecordCount}건
-                          </Link>
-                        }
-                        action={
-                          activeMilestoneId === 'final-report' ||
-                          activeMilestoneId === 'presentation-submit' ? (
-                            <AdminMilestoneSubmissionBulkDownloadAction
-                              isLoading={downloadArtifactsMutation.isPending}
-                              onClick={
-                                submissionId
-                                  ? () => {
-                                      downloadArtifactsMutation.mutate(
-                                        submissionId,
-                                      );
-                                    }
-                                  : undefined
-                              }
-                            />
-                          ) : (
-                            <AdminMilestoneSubmissionDetailAction
-                              milestoneId={activeTab.id}
-                              sectionId={effectiveSectionId}
-                              submissionId={submissionId}
-                              teamId={submission.teamId}
-                              unavailableReason={
-                                isVersionDetailAvailable
-                                  ? undefined
-                                  : '이 마일스톤의 전용 상세 조회 API 확인 후 제공 예정입니다.'
-                              }
-                            />
-                          )
-                        }
-                        key={submission.teamId}
-                        label={submission.teamName}
-                        secondaryLabel={submission.statusLabel}
-                        submissionMetadata={getSubmissionMetadata(
-                          submission,
-                          versionMetadataQuery?.data,
-                        )}
-                        summary={
-                          activeMilestoneId === 'proposal'
-                            ? getProposalSummary(submission)
-                            : activeMilestoneId === 'final-report' ||
-                                activeMilestoneId === 'presentation-submit'
-                              ? getDownloadSummary(
-                                  submission,
-                                  versionMetadataQuery?.data,
-                                  Boolean(versionMetadataQuery?.isError),
-                                  Boolean(versionMetadataQuery?.isPending),
-                                )
-                              : getReviewSummary(submission)
-                        }
-                      />
-                    );
-                  })}
-                </div>
+                    })}
+                  </div>
+                  <ListPagination
+                    label='제출물 페이지 이동'
+                    onPageChange={setSubmissionPage}
+                    page={pagedSubmissions.page}
+                    pageCount={pagedSubmissions.pageCount}
+                  />
+                </>
               )}
             </>
           ) : (

@@ -1,6 +1,8 @@
 import { fetchAdminMessages } from '@aics/api-client';
 import { useQuery } from '@tanstack/react-query';
 
+import { LIST_PAGE_SIZE } from '~/shared/lib/pagination';
+
 import { adminMessageKeys } from './adminMessageKeys';
 
 export function useAdminMessagesQuery(
@@ -11,6 +13,6 @@ export function useAdminMessagesQuery(
   return useQuery({
     queryKey: adminMessageKeys.list(sectionId, page, teamId),
     queryFn: () =>
-      fetchAdminMessages({ page, sectionId, size: 100, teamId }),
+      fetchAdminMessages({ page, sectionId, size: LIST_PAGE_SIZE, teamId }),
   });
 }

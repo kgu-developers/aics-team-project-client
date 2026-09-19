@@ -46,8 +46,3 @@ export const unreadDot = style({
   verticalAlign: 'middle',
   width: 7,
 });
-export const pagination = style({
-  display: 'flex',
-  justifyContent: 'flex-end',
-  paddingTop: 12,
-});

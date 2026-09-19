@@ -135,7 +135,7 @@ it('reaches item 101, keeps page caches separate, and resets pages on section/al
         const size = Number(params.get('size'));
         requests.push({ section, page, size });
         return HttpResponse.json(
-          messagePage(page, size, section === '2' ? 0 : 101, section),
+          messagePage(page, size, section === '2' ? 0 : 11, section),
         );
       },
     ),
@@ -148,7 +148,7 @@ it('reaches item 101, keeps page caches separate, and resets pages on section/al
   ).toHaveTextContent('1 / 2 페이지');
   expect(screen.getByRole('button', { name: '이전 페이지' })).toBeDisabled();
   await user.click(screen.getByRole('button', { name: '다음 페이지' }));
-  await screen.findByText('all 쪽지 101');
+  await screen.findByText('all 쪽지 11');
   expect(
     screen.getByRole('navigation', { name: '쪽지함 페이지 이동' }),
   ).toHaveTextContent('2 / 2 페이지');
@@ -161,23 +161,23 @@ it('reaches item 101, keeps page caches separate, and resets pages on section/al
   expect(
     client.getQueryData<AdminMessagePage>(adminMessageKeys.list(undefined, 1))
       ?.contents[0]?.id,
-  ).toBe(101);
+  ).toBe(11);
   await user.click(screen.getByRole('button', { name: '이전 페이지' }));
   await screen.findByText('all 쪽지 1');
   await waitFor(() =>
     expect(screen.getByRole('button', { name: '다음 페이지' })).toBeEnabled(),
   );
   await user.click(screen.getByRole('button', { name: '다음 페이지' }));
-  await screen.findByText('all 쪽지 101');
+  await screen.findByText('all 쪽지 11');
   expect(screen.getAllByText('현재 분반 하나')).not.toHaveLength(0);
   await user.click(screen.getByRole('combobox', { name: '분반' }));
   await user.click(await screen.findByRole('option', { name: '현재 분반 하나' }));
   await screen.findByText('1 쪽지 1');
   expect(requests.filter(row => row.section === '1')).toEqual([
-    { section: '1', page: 0, size: 100 },
+    { section: '1', page: 0, size: 10 },
   ]);
   await user.click(screen.getByRole('button', { name: '다음 페이지' }));
-  await screen.findByText('1 쪽지 101');
+  await screen.findByText('1 쪽지 11');
   await user.click(screen.getByRole('combobox', { name: '분반' }));
   await user.click(await screen.findByRole('option', { name: '전체 분반' }));
   await screen.findByText('all 쪽지 1');
@@ -197,7 +197,7 @@ it('reaches item 101, keeps page caches separate, and resets pages on section/al
 it.each([0, 1])(
   'clamps the current page after the response shrinks to %i items',
   async totalAfter => {
-    let total = 101;
+    let total = 11;
     const requests: number[] = [];
     server.use(
       http.get(
@@ -205,28 +205,24 @@ it.each([0, 1])(
         ({ request }) => {
           const page = Number(new URL(request.url).searchParams.get('page'));
           requests.push(page);
-          return HttpResponse.json(messagePage(page, 100, total));
+          return HttpResponse.json(messagePage(page, 10, total));
         },
       ),
     );
     const client = setup();
     await screen.findByText('all 쪽지 1');
     await userEvent.click(screen.getByRole('button', { name: '다음 페이지' }));
-    await screen.findByText('all 쪽지 101');
+    await screen.findByText('all 쪽지 11');
     total = totalAfter;
     await act(async () => {
       await client.invalidateQueries({ queryKey: adminMessageKeys.all });
     });
     await screen.findByText(totalAfter ? 'all 쪽지 1' : '쪽지가 없습니다.');
     await waitFor(() => expect(requests).toEqual([0, 1, 1, 0]));
-    if (totalAfter === 0) {
-      expect(
-        screen.queryByRole('navigation', { name: '쪽지함 페이지 이동' }),
-      ).not.toBeInTheDocument();
-      return;
-    }
-    expect(screen.getByRole('button', { name: '이전 페이지' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '다음 페이지' })).toBeDisabled();
+    // 0 or 1 items fit on one page, so the pagination bar is hidden.
+    expect(
+      screen.queryByRole('navigation', { name: '쪽지함 페이지 이동' }),
+    ).not.toBeInTheDocument();
   },
 );
 
@@ -239,7 +235,7 @@ it('shows a retryable page error and resumes on the same page', async () => {
         const page = Number(new URL(request.url).searchParams.get('page'));
         return page === 1 && failed
           ? HttpResponse.json({}, { status: 500 })
-          : HttpResponse.json(messagePage(page, 100, 101));
+          : HttpResponse.json(messagePage(page, 10, 11));
       },
     ),
   );
@@ -250,5 +246,5 @@ it('shows a retryable page error and resumes on the same page', async () => {
   expect(screen.queryByText('all 쪽지 1')).not.toBeInTheDocument();
   failed = false;
   await userEvent.click(screen.getByRole('button', { name: '다시 시도' }));
-  await screen.findByText('all 쪽지 101');
+  await screen.findByText('all 쪽지 11');
 });

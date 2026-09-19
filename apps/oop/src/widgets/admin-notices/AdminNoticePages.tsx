@@ -21,12 +21,14 @@ import { type KeyboardEvent, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { paginate } from '~/shared/lib/pagination';
 import {
   emptyRichText,
   isRichTextEmpty,
   parseRichTextContent,
   serializeRichTextContent,
 } from '~/shared/lib/richTextContent';
+import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 import RichTextEditor from '~/shared/ui/RichTextEditor';
 import RichTextViewer from '~/shared/ui/RichTextViewer';
 
@@ -119,7 +121,9 @@ export function AdminNoticeListPage() {
   );
   const query =
     selectedSectionId === undefined ? allSectionsQuery : sectionQuery;
-  const notices = query.data ?? [];
+  const [page, setPage] = useState(0);
+  const paged = paginate(query.data ?? [], page);
+  const notices = paged.items;
   const hasSections = user?.sections.some(
     section => noticeId(section.id) !== undefined,
   );
@@ -130,9 +134,10 @@ export function AdminNoticeListPage() {
         <SectionSelect
           includeAll
           value={selectedSectionId}
-          onChange={sectionId =>
-            void navigate({ to: ROUTES.ADMIN_NOTICES, search: { sectionId } })
-          }
+          onChange={sectionId => {
+            setPage(0);
+            void navigate({ to: ROUTES.ADMIN_NOTICES, search: { sectionId } });
+          }}
         />
         <Button
           label='작성하기'
@@ -219,6 +224,12 @@ export function AdminNoticeListPage() {
           </tbody>
         </table>
       </Card>
+      <ListPagination
+        label='공지사항 페이지 이동'
+        onPageChange={setPage}
+        page={paged.page}
+        pageCount={paged.pageCount}
+      />
     </div>
   );
 }
