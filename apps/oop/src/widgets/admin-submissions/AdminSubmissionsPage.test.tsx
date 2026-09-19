@@ -29,11 +29,13 @@ import AdminSubmissionDetailPage from './AdminSubmissionDetailPage';
 import AdminSubmissionsPage from './AdminSubmissionsPage';
 
 import { resetMockSessionState } from '~/mocks/authSession';
+import { adminPresentationEvaluationListFixture } from '~/mocks/data/adminEvaluationResults';
 import {
   getAdminMilestoneSubmissionsFixture,
   resetAdminMilestoneSubmissionsFixture,
   updatePresentationOrderFixture,
 } from '~/mocks/data/adminMilestoneSubmissions';
+import { getAdminSectionMilestonesFixture } from '~/mocks/data/adminSectionMilestones';
 import { createProjectProposalFixture } from '~/mocks/data/projectProposal';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminEvaluationResultHandlers } from '~/mocks/handlers/adminEvaluationResults';
@@ -217,7 +219,7 @@ describe('AdminSubmissionsPage', () => {
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
     const open = await screen.findByRole('button', {
-      name: '순서 배정 및 평가',
+      name: '발표 순서·평가 항목 설정',
     });
     await waitFor(() => expect(open).toBeEnabled());
     await user.click(open);
@@ -674,14 +676,59 @@ describe('AdminSubmissionsPage', () => {
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
 
     const settingsButton = await screen.findByRole('button', {
-      name: '순서 배정 및 평가',
+      name: '발표 순서·평가 항목 설정',
     });
     await waitFor(() => expect(settingsButton).toBeEnabled());
 
-    await user.click(screen.getByRole('button', { name: '순서 배정 및 평가' }));
+    await user.click(screen.getByRole('button', { name: '발표 순서·평가 항목 설정' }));
     expect(
-      await screen.findByRole('heading', { name: '발표 순서 설정' }),
+      await screen.findByRole('heading', { name: '발표 순서·평가 항목 설정' }),
     ).toBeInTheDocument();
+  });
+
+  it('발표 평가 항목이 1개뿐이면 학생에게 그 항목만 보인다고 안내한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRESENTATION_EVALUATIONS('1')}`,
+        () =>
+          HttpResponse.json({
+            ...adminPresentationEvaluationListFixture,
+            criteria: adminPresentationEvaluationListFixture.criteria.slice(0, 1),
+          }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    expect(
+      await screen.findByText(/발표 평가 항목이 1개뿐입니다/),
+    ).toBeInTheDocument();
+  });
+
+  it('발표 평가 기간이 없으면 발표 마일스톤 상세로 안내한다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`, () =>
+        HttpResponse.json({
+          content: getAdminSectionMilestonesFixture('1')!.content.filter(
+            milestone => milestone.id !== 103,
+          ),
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    expect(
+      await screen.findByText('발표 평가 기간이 설정되지 않았습니다.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '발표 마일스톤에서 평가 기간 설정' }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: '발표 순서·평가 항목 설정' }),
+    ).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('발표 평가 설정에서 분반별 평가 항목을 조회하고 생성한다', async () => {
@@ -727,7 +774,7 @@ describe('AdminSubmissionsPage', () => {
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
     await user.click(
-      await screen.findByRole('button', { name: '순서 배정 및 평가' }),
+      await screen.findByRole('button', { name: '발표 순서·평가 항목 설정' }),
     );
 
     expect(
