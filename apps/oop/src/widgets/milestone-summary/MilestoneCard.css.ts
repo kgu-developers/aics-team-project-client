@@ -8,8 +8,10 @@ export const milestone = style({
   scrollMarginTop: 96,
   '@media': {
     'screen and (max-width: 767px)': {
-      borderRadius: 0,
+      border: `1px solid ${tokens.color.border.base}`,
+      borderRadius: 8,
       flexDirection: 'column',
+      overflow: 'hidden',
     },
   },
 });
@@ -51,7 +53,8 @@ export const milestoneStatus = style({
   '@media': {
     'screen and (max-width: 767px)': {
       alignItems: 'flex-start',
-      borderInline: 0,
+      border: 0,
+      borderBottom: `1px solid ${tokens.color.border.base}`,
       borderRadius: 0,
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -113,7 +116,7 @@ export const milestoneContent = style({
   minWidth: 0,
   '@media': {
     'screen and (max-width: 767px)': {
-      borderInline: 0,
+      border: 0,
       borderRadius: 0,
     },
   },

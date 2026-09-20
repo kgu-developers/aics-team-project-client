@@ -135,6 +135,46 @@ async function inputFile(container: HTMLElement) {
   });
 }
 describe('실서버 제출 폼', () => {
+  it('필수 입력이 없으면 모달 안에서 바로 수정할 수 있는 오류를 표시한다', async () => {
+    const { container } = setup({
+      ...target,
+      type: 'PRESENTATION',
+      title: '발표 자료 제출',
+    });
+    await screen.findByLabelText('제출 설명', { exact: false });
+    fireEvent.submit(container.querySelector('form')!);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '제출 설명을 입력해 주세요.',
+    );
+    expect(posts).toBe(0);
+  });
+
+  it('서버가 제출을 거절하면 원인과 재확인 동작을 표시한다', async () => {
+    server.use(
+      http.post(`${API_BASE_URL}/api/v1/submissions/31/versions`, () =>
+        HttpResponse.json(
+          { message: '제출 기간과 파일 형식을 확인해 주세요.' },
+          { status: 400 },
+        ),
+      ),
+    );
+    const { container } = setup({
+      ...target,
+      type: 'PRESENTATION',
+      title: '발표 자료 제출',
+    });
+    await inputFile(container);
+    fireEvent.submit(container.querySelector('form')!);
+
+    expect(
+      await screen.findByText('제출 기간과 파일 형식을 확인해 주세요.'),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: '제출 내역 새로고침' }),
+    ).toBeEnabled();
+  });
+
   it('최초 파일을 제출하면 새 버전과 성공 메시지를 표시한다', async () => {
     const { container } = setup();
     await inputFile(container);

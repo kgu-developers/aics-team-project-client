@@ -83,7 +83,11 @@ export type StudentHomeSubmissionMetadata = {
 
 /** Feedback flow stage shared by the home summary and the milestone detail. */
 export type DocumentFeedbackStage =
-  'not-submitted' | 'unknown' | 'awaiting-feedback' | 'feedback-arrived';
+  | 'not-submitted'
+  | 'unknown'
+  | 'awaiting-feedback'
+  | 'feedback-arrived'
+  | 'completed';
 
 export type StudentHomeMilestoneBody =
   | {

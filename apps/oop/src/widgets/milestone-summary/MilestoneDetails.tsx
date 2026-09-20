@@ -493,13 +493,14 @@ function ProposalFeedbackBody({
   const stage = body.feedbackStage ?? 'feedback-arrived';
   return (
     <div className={styles.root}>
-      {stage === 'not-submitted' ? null : stage === 'feedback-arrived' ? (
+      {stage === 'not-submitted' ? null : stage === 'feedback-arrived' ||
+        stage === 'completed' ? (
         <>
           <SectionBanner title='피드백 대화' />
           <FeedbackList feedback={body.feedback} />
           {body.studentResponse ? (
             <SubmittedProposalResponse response={body.studentResponse} />
-          ) : (
+          ) : stage === 'feedback-arrived' ? (
             <ProposalFeedbackResponseForm
               key={body.teamId}
               teamId={body.teamId}
@@ -507,7 +508,7 @@ function ProposalFeedbackBody({
               canSubmit={body.canSubmitResponse}
               placeholder={body.replyPlaceholder}
             />
-          )}
+          ) : null}
         </>
       ) : (
         <>
@@ -537,7 +538,9 @@ function MidReportFeedbackBody({
   const [isFirstMessageOpen, setIsFirstMessageOpen] = useState(false);
   return (
     <div className={styles.root}>
-      {stage === 'not-submitted' || stage === 'feedback-arrived' ? null : (
+      {stage === 'not-submitted' ||
+      stage === 'feedback-arrived' ||
+      stage === 'completed' ? null : (
         <>
           <FeedbackStageCard
             action={

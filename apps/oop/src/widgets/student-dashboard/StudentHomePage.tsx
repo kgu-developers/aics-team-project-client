@@ -26,6 +26,10 @@ import { peerEvaluationHomeSummary } from '~/features/student-home/model/peerEva
 import { proposalSectionStatuses } from '~/features/student-home/model/proposalSectionStatuses';
 import { selectActiveMilestone } from '~/features/student-home/model/selectActiveMilestone';
 import {
+  lockStudentHomeMilestone,
+  resolveStudentMilestoneProgression,
+} from '~/features/student-home/model/studentMilestoneProgression';
+import {
   isPresentationEvaluation,
   studentMilestoneSummary,
 } from '~/features/student-home/model/studentMilestoneSummary';
@@ -168,7 +172,7 @@ export default function StudentHomePage() {
   if (!sectionId) return <StudentContextState context={home.context} />;
 
   const submissionTargets: Record<string, StudentSubmissionTarget> = {};
-  const milestones = query.milestones.map((milestone, index) => {
+  const summarizedMilestones = query.milestones.map((milestone, index) => {
     const submission = query.submissions[index];
     const summary = studentMilestoneSummary(
       milestone,
@@ -212,15 +216,23 @@ export default function StudentHomePage() {
         teamMemberIds: home.teamMemberIds,
         isMessagesReady: midReportMessages.isSuccess,
       });
+      const isFeedbackCycleCompleted =
+        submission?.isSuccess && submission.data.status === 'COMPLETED';
+      if (isFeedbackCycleCompleted) {
+        summary.status = 'completed';
+        summary.statusLabel = '단계 완료';
+      }
       summary.body = {
         kind: 'mid-review-feedback',
         teamId: home.teamId,
-        feedbackStage: midReportFeedbackRoomStage({
-          submittedAt: midReport.data?.submittedAt,
-          messages: midReportMessages.data,
-          teamMemberIds: home.teamMemberIds,
-          isMessagesReady: midReportMessages.isSuccess,
-        }),
+        feedbackStage: isFeedbackCycleCompleted
+          ? 'completed'
+          : midReportFeedbackRoomStage({
+              submittedAt: midReport.data?.submittedAt,
+              messages: midReportMessages.data,
+              teamMemberIds: home.teamMemberIds,
+              isMessagesReady: midReportMessages.isSuccess,
+            }),
         feedback: [],
         canSubmitResponse: false,
         // The feedback room stays as main defines it; only the writing areas
@@ -255,49 +267,58 @@ export default function StudentHomePage() {
               ? '수정 요청'
               : '작성 중';
       }
-      summary.rows = submittedReport
+      summary.rows = isFeedbackCycleCompleted
         ? [
-            midReportStage === 'feedback-arrived'
-              ? {
-                  id: 'mid-report-revision',
-                  label: '중간보고서 재제출',
-                  value: '대면 피드백 기록을 남겼어요.',
-                  tone: 'primary',
-                  actionLabel: '재제출',
-                  actionDisabled: true,
-                  actionNotice:
-                    '재제출은 담당 교수·조교가 중간보고서를 다시 열어 준 뒤에 할 수 있어요.',
-                }
-              : {
-                  id: 'mid-report-submitted',
-                  label: '중간보고서',
-                  value:
-                    midReportStage === 'unknown'
-                      ? midReportMessages.isError
-                        ? documentFeedbackStageCopy.midReport.checkFailed
-                        : documentFeedbackStageCopy.midReport.checking
-                      : documentFeedbackStageCopy.midReport.awaiting,
-                  tone: 'muted',
-                },
+            {
+              id: 'mid-report-completed',
+              label: '중간보고서',
+              value: '피드백 반영 및 재제출 완료',
+              tone: 'muted',
+            },
           ]
-        : [
-            readyToSubmit
-              ? {
-                  id: 'mid-report-submit',
-                  label: '중간보고서 제출',
-                  value: '모든 작성 영역 완료',
-                  tone: 'primary',
-                  actionLabel: '제출하기',
-                }
-              : {
-                  id: 'mid-report-writing',
-                  label: '중간보고서 작성',
-                  value: '작성 영역을 차례로 완료해 주세요.',
-                  tone: 'primary',
-                  actionLabel: '작성하기',
-                  actionTo: editorSectionTo('mid-review', 'topic'),
-                },
-          ];
+        : submittedReport
+          ? [
+              midReportStage === 'feedback-arrived'
+                ? {
+                    id: 'mid-report-revision',
+                    label: '중간보고서 재제출',
+                    value: '대면 피드백 기록을 남겼어요.',
+                    tone: 'primary',
+                    actionLabel: '재제출',
+                    actionDisabled: true,
+                    actionNotice:
+                      '재제출은 담당 교수·조교가 중간보고서를 다시 열어 준 뒤에 할 수 있어요.',
+                  }
+                : {
+                    id: 'mid-report-submitted',
+                    label: '중간보고서',
+                    value:
+                      midReportStage === 'unknown'
+                        ? midReportMessages.isError
+                          ? documentFeedbackStageCopy.midReport.checkFailed
+                          : documentFeedbackStageCopy.midReport.checking
+                        : documentFeedbackStageCopy.midReport.awaiting,
+                    tone: 'muted',
+                  },
+            ]
+          : [
+              readyToSubmit
+                ? {
+                    id: 'mid-report-submit',
+                    label: '중간보고서 제출',
+                    value: '모든 작성 영역 완료',
+                    tone: 'primary',
+                    actionLabel: '제출하기',
+                  }
+                : {
+                    id: 'mid-report-writing',
+                    label: '중간보고서 작성',
+                    value: '작성 영역을 차례로 완료해 주세요.',
+                    tone: 'primary',
+                    actionLabel: '작성하기',
+                    actionTo: editorSectionTo('mid-review', 'topic'),
+                  },
+            ];
       return summary;
     }
     if (
@@ -383,15 +404,23 @@ export default function StudentHomePage() {
           teamMemberIds: home.teamMemberIds,
           isMessagesReady: proposalMessages.isSuccess,
         });
+        const isFeedbackCycleCompleted =
+          submission?.isSuccess && submission.data.status === 'COMPLETED';
+        if (isFeedbackCycleCompleted) {
+          summary.status = 'completed';
+          summary.statusLabel = '단계 완료';
+        }
         summary.body = {
           kind: 'proposal-feedback',
           teamId: home.teamId,
-          feedbackStage: proposalFeedbackRoomStage({
-            submittedAt: project.proposalCompletedAt,
-            messages: proposalMessages.data,
-            teamMemberIds: home.teamMemberIds,
-            isMessagesReady: proposalMessages.isSuccess,
-          }),
+          feedbackStage: isFeedbackCycleCompleted
+            ? 'completed'
+            : proposalFeedbackRoomStage({
+                submittedAt: project.proposalCompletedAt,
+                messages: proposalMessages.data,
+                teamMemberIds: home.teamMemberIds,
+                isMessagesReady: proposalMessages.isSuccess,
+              }),
           feedback: [],
           canSubmitResponse: false,
           replyPlaceholder: '피드백을 반영한 내용을 작성해 주세요.',
@@ -409,53 +438,67 @@ export default function StudentHomePage() {
         // writing. A submitted proposal is read only, so it offers no action.
         const readyToSubmit =
           proposalSections.isSuccess && proposalSections.data.allCompleted;
-        if (submission?.isSuccess && project.proposalCompletedAt)
+        if (
+          !isFeedbackCycleCompleted &&
+          submission?.isSuccess &&
+          project.proposalCompletedAt
+        ) {
           summary.statusLabel = '제출 완료';
-        summary.rows = project.proposalCompletedAt
+        }
+        summary.rows = isFeedbackCycleCompleted
           ? [
-              proposalStage === 'feedback-arrived'
-                ? {
-                    id: 'proposal-revision',
-                    label: '제안서 재제출',
-                    value: '교수 피드백이 도착했어요.',
-                    tone: 'primary',
-                    actionLabel: '재제출',
-                    actionDisabled: true,
-                    actionNotice:
-                      '재제출은 담당 교수·조교가 제안서를 다시 열어 준 뒤에 할 수 있어요.',
-                  }
-                : {
-                    id: 'proposal-submitted',
-                    label: '제안서',
-                    value:
-                      proposalStage === 'unknown'
-                        ? proposalMessages.isError
-                          ? documentFeedbackStageCopy.proposal.checkFailed
-                          : documentFeedbackStageCopy.proposal.checking
-                        : documentFeedbackStageCopy.proposal.awaiting,
-                    tone: 'muted',
-                  },
+              {
+                id: 'proposal-completed',
+                label: '제안서',
+                value: '피드백 반영 및 재제출 완료',
+                tone: 'muted',
+              },
             ]
-          : [
-              readyToSubmit && home.isTeamLeader
-                ? {
-                    id: 'proposal-submit',
-                    label: '제안서 제출',
-                    value: '모든 작성 영역 완료',
-                    tone: 'primary',
-                    actionLabel: '제출하기',
-                  }
-                : {
-                    id: 'proposal-writing',
-                    label: '제안서 작성',
-                    value: readyToSubmit
-                      ? '팀장이 제출할 수 있어요.'
-                      : project.title?.trim() || '프로젝트 내용 확인',
-                    tone: 'primary',
-                    actionLabel: '작성하기',
-                    actionTo: editorSectionTo('proposal', 'team-info'),
-                  },
-            ];
+          : project.proposalCompletedAt
+            ? [
+                proposalStage === 'feedback-arrived'
+                  ? {
+                      id: 'proposal-revision',
+                      label: '제안서 재제출',
+                      value: '교수 피드백이 도착했어요.',
+                      tone: 'primary',
+                      actionLabel: '재제출',
+                      actionDisabled: true,
+                      actionNotice:
+                        '재제출은 담당 교수·조교가 제안서를 다시 열어 준 뒤에 할 수 있어요.',
+                    }
+                  : {
+                      id: 'proposal-submitted',
+                      label: '제안서',
+                      value:
+                        proposalStage === 'unknown'
+                          ? proposalMessages.isError
+                            ? documentFeedbackStageCopy.proposal.checkFailed
+                            : documentFeedbackStageCopy.proposal.checking
+                          : documentFeedbackStageCopy.proposal.awaiting,
+                      tone: 'muted',
+                    },
+              ]
+            : [
+                readyToSubmit && home.isTeamLeader
+                  ? {
+                      id: 'proposal-submit',
+                      label: '제안서 제출',
+                      value: '모든 작성 영역 완료',
+                      tone: 'primary',
+                      actionLabel: '제출하기',
+                    }
+                  : {
+                      id: 'proposal-writing',
+                      label: '제안서 작성',
+                      value: readyToSubmit
+                        ? '팀장이 제출할 수 있어요.'
+                        : project.title?.trim() || '프로젝트 내용 확인',
+                      tone: 'primary',
+                      actionLabel: '작성하기',
+                      actionTo: editorSectionTo('proposal', 'team-info'),
+                    },
+              ];
       }
 
       if (project) return summary;
@@ -503,6 +546,21 @@ export default function StudentHomePage() {
     }
     return summary;
   });
+  const progression = resolveStudentMilestoneProgression(
+    query.milestones.map((milestone, index) => ({
+      milestone,
+      submission: query.submissions[index]?.isSuccess
+        ? query.submissions[index].data
+        : undefined,
+      summary: summarizedMilestones[index]!,
+    })),
+    now,
+  );
+  const milestones = summarizedMilestones.map(milestone =>
+    progression.unlockedIds.has(milestone.id)
+      ? milestone
+      : lockStudentHomeMilestone(milestone),
+  );
   const activeMilestone = selectActiveMilestone(
     milestones,
     new Set(
@@ -580,6 +638,7 @@ export default function StudentHomePage() {
             ) : (
               <MilestoneList
                 milestones={milestones}
+                defaultOpenId={progression.defaultOpenId ?? null}
                 description='단계별 일정과 내 팀 제출 상태를 확인해 주세요.'
                 persistenceKey={`${home.studentNumber ?? 'anonymous'}:${sectionId}:${home.teamId ?? 'unassigned'}`}
               />

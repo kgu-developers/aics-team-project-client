@@ -21,11 +21,25 @@ export const screenActions = style({
   gap: 'var(--spacing-2)',
 });
 export const dialogForm = style({
+  boxSizing: 'border-box',
+  maxHeight: 'calc(100dvh - 32px)',
+  overflowY: 'auto',
+  overscrollBehavior: 'contain',
+  padding: 'var(--spacing-4)',
   width: '100%',
+});
+export const dialogActions = style({
+  background: 'var(--color-background-card)',
+  bottom: 0,
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 'var(--spacing-2)',
+  paddingBlock: 'var(--spacing-2)',
+  position: 'sticky',
 });
 export const image = style({
   maxWidth: '100%',
-  maxHeight: '240px',
+  maxHeight: 'min(240px, 32dvh)',
   objectFit: 'contain',
 });
 export const screenBoard = style({
