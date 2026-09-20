@@ -9,7 +9,7 @@ import type {
 import {
   Button,
   Card,
-  DateTimeInput,
+  DateInput,
   Dialog,
   EmptyState,
   Heading,
@@ -18,9 +18,10 @@ import {
   SelectorOption,
   Text,
   TextInput,
+  TimeInput,
   useToast,
   VStack,
-  type ISODateTimeString,
+  type TimeInputProps,
 } from '@aics/design-system';
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -92,6 +93,23 @@ function contactVisibilityStatus(visibleFrom: string, visibleUntil: string) {
   if (now < startsAt) return '공개 예정';
   if (now <= endsAt) return '공개 중';
   return '공개 종료';
+}
+
+type DateTimeDraft = { date: string; time: string };
+type DateValue =
+  `${number}${number}${number}${number}-${number}${number}-${number}${number}`;
+
+function toDateTimeDraft(value: string): DateTimeDraft {
+  const date = /^(\d{4}-\d{2}-\d{2})/.exec(value)?.[1] ?? '';
+  const time = /T(\d{2}:\d{2})/.exec(value)?.[1] ?? '';
+  return { date, time };
+}
+
+function toDateTimeValue(draft: DateTimeDraft) {
+  if (draft.date && draft.time) return `${draft.date}T${draft.time}:00`;
+  if (draft.date) return `${draft.date}T`;
+  if (draft.time) return `T${draft.time}`;
+  return '';
 }
 
 function SectionAssistantManagement({
@@ -634,25 +652,42 @@ function SectionSettingsDialog({
               {visibilityStatus}
             </Text>
           </HStack>
-          <div className={styles.formRow}>
-            <DateTimeInput
-              isDisabled={isPending}
-              label='공개 시작'
-              onChange={value => setVisibleFrom(value ?? '')}
-              value={
-                visibleFrom ? (visibleFrom as ISODateTimeString) : undefined
-              }
-              width='100%'
-            />
-            <DateTimeInput
-              isDisabled={isPending}
-              label='공개 종료'
-              onChange={value => setVisibleUntil(value ?? '')}
-              value={
-                visibleUntil ? (visibleUntil as ISODateTimeString) : undefined
-              }
-              width='100%'
-            />
+          <div className={styles.visibilityFields}>
+            {(
+              [
+                ['공개 시작', visibleFrom, setVisibleFrom],
+                ['공개 종료', visibleUntil, setVisibleUntil],
+              ] as const
+            ).map(([label, value, setValue]) => {
+              const draft = toDateTimeDraft(value);
+              const updateDraft = (next: Partial<DateTimeDraft>) =>
+                setValue(toDateTimeValue({ ...draft, ...next }));
+
+              return (
+                <div className={styles.dateTimeFields} key={label}>
+                  <DateInput
+                    isDisabled={isPending}
+                    label={`${label} 날짜`}
+                    onChange={date => updateDraft({ date: date ?? '' })}
+                    placeholder='날짜 선택'
+                    value={draft.date ? (draft.date as DateValue) : undefined}
+                    width='100%'
+                  />
+                  <TimeInput
+                    hourFormat='24h'
+                    isDisabled={isPending}
+                    label={`${label} 시간`}
+                    onChange={time => updateDraft({ time: time ?? '' })}
+                    value={
+                      draft.time
+                        ? (draft.time as TimeInputProps['value'])
+                        : undefined
+                    }
+                    width='100%'
+                  />
+                </div>
+              );
+            })}
           </div>
           {!isVisibilityRangeValid && (visibleFrom || visibleUntil) ? (
             <Text className={styles.error} role='alert'>

@@ -262,7 +262,6 @@ export const screenCard = style({
   padding: 12,
 });
 
-
 export const evaluatorButton = style({
   background: 'none',
   border: 0,

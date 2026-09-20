@@ -76,7 +76,9 @@ export default function AdminStudentDetailDialog({
         width={480}
       >
         <div className={styles.content}>
-          <Heading level={2}>{user?.name ?? '수강생'} 정보</Heading>
+          <Heading className={styles.title} level={2}>
+            {user?.name ?? '수강생'} 정보
+          </Heading>
           <div className={styles.body}>
             {userQuery.isPending ? (
               <Text>수강생 정보를 불러오는 중입니다.</Text>

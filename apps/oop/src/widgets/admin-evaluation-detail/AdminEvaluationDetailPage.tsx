@@ -57,9 +57,7 @@ function EvaluationTitle({
         to={ROUTES.ADMIN_SUBMISSIONS}
       >
         ←{' '}
-        {evaluationType === 'peer'
-          ? '상호평가 목록으로'
-          : '발표 평가 목록으로'}
+        {evaluationType === 'peer' ? '상호평가 목록으로' : '발표 평가 목록으로'}
       </Link>
     </div>
   );

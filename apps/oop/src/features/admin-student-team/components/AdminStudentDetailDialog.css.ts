@@ -10,6 +10,11 @@ export const content = style({
   wordBreak: 'keep-all',
 });
 
+export const title = style({
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
+});
+
 export const description = style({
   display: 'flex',
   flexDirection: 'column',

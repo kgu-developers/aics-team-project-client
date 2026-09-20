@@ -99,7 +99,8 @@ function parseGuiScreens(value: string): GuiScreen[] | null {
             typeof screen.description === 'string' ? screen.description : '',
           id: typeof screen.id === 'string' ? screen.id : String(index),
           imageUrl:
-            typeof imageUrl === 'string' && /^(https?:\/\/|\/(?!\/))/.test(imageUrl)
+            typeof imageUrl === 'string' &&
+            /^(https?:\/\/|\/(?!\/))/.test(imageUrl)
               ? imageUrl
               : null,
           name:
@@ -258,7 +259,9 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
               <Text className={styles.metadata}>
                 상태: {block.status} · 마지막 편집:{' '}
                 {block.lastEditedByName ?? block.lastEditedBy ?? '-'} ·{' '}
-                {block.lastSavedAt ? formatSeoulDateTime(block.lastSavedAt) : '-'}
+                {block.lastSavedAt
+                  ? formatSeoulDateTime(block.lastSavedAt)
+                  : '-'}
               </Text>
               {fields ? (
                 <div className={styles.fieldGrid}>
@@ -280,16 +283,11 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
                         )}
                         key={field.key}
                       >
-                        <Text className={styles.fieldLabel}>
-                          {field.label}
-                        </Text>
+                        <Text className={styles.fieldLabel}>{field.label}</Text>
                         {guiScreens ? (
                           <ul className={styles.screenList}>
                             {guiScreens.map(screen => (
-                              <li
-                                className={styles.screenCard}
-                                key={screen.id}
-                              >
+                              <li className={styles.screenCard} key={screen.id}>
                                 {screen.imageUrl ? (
                                   <img
                                     alt={screen.name}
