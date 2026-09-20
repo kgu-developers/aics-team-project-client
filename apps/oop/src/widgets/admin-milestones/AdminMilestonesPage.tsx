@@ -12,6 +12,9 @@ import { type KeyboardEvent, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { paginate } from '~/shared/lib/pagination';
+import ListPagination from '~/shared/ui/ListPagination/ListPagination';
+
 import {
   formatAdminMilestoneDate,
   getAdminMilestoneStatusLabel,
@@ -20,6 +23,7 @@ import {
   useAdminAccessibleSectionMilestonesQuery,
   useUpdateAdminSectionMilestoneStatusMutation,
 } from '~/features/admin-milestone-review/queries';
+import AdminSectionTeamFilter from '~/features/admin-section/components/AdminSectionTeamFilter';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMilestonesPage.css';
@@ -31,11 +35,26 @@ type StatusUpdateError = {
   message: string;
 };
 
+/**
+ * Clicks that start inside a control must not open the row. The design-system
+ * Selector renders its option list as a sibling `popover` of the combobox
+ * trigger, so listbox/option targets are matched explicitly as well.
+ */
+const rowInteractiveSelector = [
+  'a',
+  'button',
+  'input',
+  'select',
+  'textarea',
+  '[role="combobox"]',
+  '[role="listbox"]',
+  '[role="option"]',
+  '[popover]',
+].join(', ');
+
 function isRowInteractiveTarget(target: EventTarget | null) {
   return (
-    target instanceof Element &&
-    target.closest('a, button, input, select, textarea, [role="combobox"]') !==
-      null
+    target instanceof Element && target.closest(rowInteractiveSelector) !== null
   );
 }
 
@@ -55,8 +74,15 @@ function handleRowNavigation(
 export default function AdminMilestonesPage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const navigate = useNavigate();
-  const search = useSearch({ from: '/admin/milestones/' }) as {
-    sectionId?: string;
+  const rawSearch = useSearch({ from: '/admin/milestones/' }) as {
+    sectionId?: string | number;
+  };
+  // Hand-typed URLs arrive as numbers; router links serialize strings.
+  const search = {
+    sectionId:
+      rawSearch.sectionId === undefined
+        ? undefined
+        : String(rawSearch.sectionId),
   };
   const accessibleSections = currentUser?.sections ?? [];
   const accessibleSectionIds = accessibleSections.map(section => section.id);
@@ -80,15 +106,19 @@ export default function AdminMilestonesPage() {
   const failedSectionLabels = displayedSections.flatMap((section, index) =>
     milestoneQueries[index]?.isError ? [section.code] : [],
   );
-  const milestones = displayedSections.flatMap((section, index) => {
+  const allMilestones = displayedSections.flatMap((section, index) => {
     return (milestoneQueries[index]?.data?.content ?? []).map(milestone => ({
       ...milestone,
       sectionKey: section.id,
       sectionLabel: section.code,
     }));
   });
+  const [page, setPage] = useState(0);
+  const paged = paginate(allMilestones, page);
+  const milestones = paged.items;
 
   function selectSection(sectionId: string) {
+    setPage(0);
     void navigate({
       search: sectionId === allSectionsValue ? {} : { sectionId },
       to: ROUTES.ADMIN_MILESTONES,
@@ -134,29 +164,10 @@ export default function AdminMilestonesPage() {
       </Text>
 
       <div className={styles.filterRow}>
-        <div className={styles.filters} role='group' aria-label='분반 필터'>
-          {[
-            { label: '전체', value: allSectionsValue },
-            ...accessibleSections.map(section => ({
-              label: section.code,
-              value: section.id,
-            })),
-          ].map(section => (
-            <button
-              aria-pressed={selectedSectionId === section.value}
-              className={
-                selectedSectionId === section.value
-                  ? styles.filterActive
-                  : styles.filter
-              }
-              key={section.value}
-              onClick={() => selectSection(section.value)}
-              type='button'
-            >
-              {section.label}
-            </button>
-          ))}
-        </div>
+        <AdminSectionTeamFilter
+          onSectionChange={selectSection}
+          sectionId={selectedSectionId}
+        />
         <Button
           label='마일스톤 추가'
           onClick={() => navigate({ to: ROUTES.ADMIN_MILESTONE_NEW })}
@@ -294,6 +305,12 @@ export default function AdminMilestonesPage() {
               </table>
             </Card>
           )}
+          <ListPagination
+            label='마일스톤 페이지 이동'
+            onPageChange={setPage}
+            page={paged.page}
+            pageCount={paged.pageCount}
+          />
         </>
       )}
     </div>

@@ -21,6 +21,8 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { paginate } from '~/shared/lib/pagination';
+import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
 import {
   useAdminPeerEvaluationsQuery,
@@ -184,10 +186,8 @@ function getDownloadSummary(
         <>
           {artifacts && artifacts.length > 0 ? (
             <ul className={styles.submissionArtifactList}>
-              {artifacts.map((artifact, index) => (
-                <li
-                  key={`${artifact.type}-${artifact.fileName ?? artifact.url ?? index}`}
-                >
+              {artifacts.map(artifact => (
+                <li key={artifact.identityKey}>
                   {artifact.type === 'FILE' &&
                   artifact.downloadUrl &&
                   artifact.fileName ? (
@@ -265,6 +265,18 @@ export default function AdminSubmissionsPage() {
     undefined,
     activeMilestoneId === 'proposal',
   );
+  const [submissionPage, setSubmissionPage] = useState(0);
+  const submissionListKey = `${effectiveSectionId ?? ''}:${activeMilestoneId}`;
+  const [pagedListKey, setPagedListKey] = useState(submissionListKey);
+  if (pagedListKey !== submissionListKey) {
+    // Reset paging when the tab or section changes (render-time state sync).
+    setPagedListKey(submissionListKey);
+    setSubmissionPage(0);
+  }
+  const pagedSubmissions = paginate(
+    submissionsQuery.data?.submissions ?? [],
+    submissionPage,
+  );
   const versionMetadataTargets = useMemo(
     () =>
       versionMetadataMilestoneIds.has(activeMilestoneId)
@@ -294,6 +306,10 @@ export default function AdminSubmissionsPage() {
   const presentationEvaluationMilestone = findMilestoneForTab(
     sectionMilestonesQuery.data?.content,
     'presentation-evaluate',
+  );
+  const presentationSubmissionMilestone = findMilestoneForTab(
+    sectionMilestonesQuery.data?.content,
+    'presentation-submit',
   );
   const presentationEvaluationsQuery = useAdminPresentationEvaluationsQuery(
     activeMilestoneId === 'presentation-evaluate' && isAccessibleSection
@@ -563,7 +579,7 @@ export default function AdminSubmissionsPage() {
                         presentationOrdersQuery.isError ||
                         !presentationOrdersQuery.data
                       }
-                      label='순서 배정 및 평가'
+                      label='발표 순서·평가 항목 설정'
                       onClick={() => setIsEvaluationSettingsOpen(true)}
                       tooltip={
                         isPresentationMilestoneLoading
@@ -571,7 +587,7 @@ export default function AdminSubmissionsPage() {
                           : isPresentationMilestoneError
                             ? '발표 평가 마일스톤을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
                             : isPresentationMilestoneMissing
-                              ? '발표 평가 마일스톤을 먼저 설정해 주세요.'
+                              ? '발표 마일스톤에 발표 평가 기간을 먼저 설정해 주세요.'
                               : presentationEvaluationsQuery.isPending
                                 ? '발표 평가 결과를 불러오는 중입니다.'
                                 : presentationEvaluationsQuery.isError
@@ -585,7 +601,49 @@ export default function AdminSubmissionsPage() {
                     />
                   </div>
                 </div>
-                {presentationEvaluationsQuery.isPending ? (
+                {isPresentationMilestoneMissing ? (
+                  <EmptyState
+                    actions={
+                      presentationSubmissionMilestone && effectiveSectionId ? (
+                        <Button
+                          label='발표 마일스톤에서 평가 기간 설정'
+                          onClick={() =>
+                            void navigate({
+                              params: {
+                                milestoneId: String(
+                                  presentationSubmissionMilestone.id,
+                                ),
+                              },
+                              search: { sectionId: effectiveSectionId },
+                              to: ROUTES.ADMIN_MILESTONE_DETAIL,
+                            })
+                          }
+                          variant='secondary'
+                        />
+                      ) : (
+                        <Button
+                          label='발표 마일스톤 추가'
+                          onClick={() =>
+                            void navigate({
+                              search: {
+                                milestoneId: 'presentation-submit',
+                                sectionId: effectiveSectionId,
+                              },
+                              to: ROUTES.ADMIN_MILESTONE_NEW,
+                            })
+                          }
+                          variant='secondary'
+                        />
+                      )
+                    }
+                    description={
+                      presentationSubmissionMilestone
+                        ? '발표 평가는 별도 마일스톤이 아니라 발표 마일스톤의 평가 기간으로 동작합니다. 발표 마일스톤 상세에서 발표 평가 기간을 설정해 주세요.'
+                        : '발표 마일스톤을 만들고 발표 평가 기간까지 설정하면 이 탭이 열립니다.'
+                    }
+                    title='발표 평가 기간이 설정되지 않았습니다.'
+                  />
+                ) : presentationEvaluationsQuery.isPending ? (
                   <Text aria-live='polite' role='status'>
                     발표 평가 목록을 불러오는 중입니다.
                   </Text>
@@ -596,6 +654,18 @@ export default function AdminSubmissionsPage() {
                   />
                 ) : presentationEvaluationsQuery.data ? (
                   <>
+                    {presentationEvaluationsQuery.data.criteria.length < 2 ? (
+                      <Card className={styles.criteriaNotice} variant='muted'>
+                        <Text role='status'>
+                          {presentationEvaluationsQuery.data.criteria.length ===
+                          0
+                            ? '이 분반에는 발표 평가 항목이 없습니다. 학생 발표 평가 화면에 평가할 항목이 나타나지 않으니, 평가 시작 전에 항목을 등록해 주세요.'
+                            : '이 분반의 발표 평가 항목이 1개뿐입니다. 학생에게는 이 항목만 보이니, 의도한 구성인지 확인해 주세요.'}{' '}
+                          평가 항목은 분반별로 관리자가 등록하며, 위 '발표
+                          순서·평가 항목 설정'에서 추가할 수 있습니다.
+                        </Text>
+                      </Card>
+                    ) : null}
                     <Card>
                       <Table
                         className={styles.clickableTable}
@@ -791,81 +861,89 @@ export default function AdminSubmissionsPage() {
                   title='표시할 제출물이 없습니다.'
                 />
               ) : (
-                <div className={styles.list}>
-                  {submissionsQuery.data?.submissions.map(submission => {
-                    const submissionId = submission.submissionId;
-                    const isVersionDetailAvailable =
-                      versionDetailMilestoneIds.has(activeMilestoneId);
-                    const versionMetadataQuery =
-                      versionMetadataQueriesBySubmissionId.get(
-                        submission.submissionId ?? '',
+                <>
+                  <div className={styles.list}>
+                    {pagedSubmissions.items.map(submission => {
+                      const submissionId = submission.submissionId;
+                      const isVersionDetailAvailable =
+                        versionDetailMilestoneIds.has(activeMilestoneId);
+                      const versionMetadataQuery =
+                        versionMetadataQueriesBySubmissionId.get(
+                          submission.submissionId ?? '',
+                        );
+                      return (
+                        <AdminMilestoneSubmissionCard
+                          meetingCountLabel={
+                            <Link
+                              to={ROUTES.ADMIN_MEETINGS}
+                              search={{
+                                sectionId: effectiveSectionId,
+                                teamId: String(submission.teamId),
+                              }}
+                            >
+                              회의록 {submission.meetingRecordCount}건
+                            </Link>
+                          }
+                          action={
+                            activeMilestoneId === 'final-report' ||
+                            activeMilestoneId === 'presentation-submit' ? (
+                              <AdminMilestoneSubmissionBulkDownloadAction
+                                isLoading={downloadArtifactsMutation.isPending}
+                                onClick={
+                                  submissionId
+                                    ? () => {
+                                        downloadArtifactsMutation.mutate(
+                                          submissionId,
+                                        );
+                                      }
+                                    : undefined
+                                }
+                              />
+                            ) : (
+                              <AdminMilestoneSubmissionDetailAction
+                                milestoneId={activeTab.id}
+                                sectionId={effectiveSectionId}
+                                submissionId={submissionId}
+                                teamId={submission.teamId}
+                                unavailableReason={
+                                  isVersionDetailAvailable
+                                    ? undefined
+                                    : '이 마일스톤의 전용 상세 조회 API 확인 후 제공 예정입니다.'
+                                }
+                              />
+                            )
+                          }
+                          key={submission.teamId}
+                          label={submission.teamName}
+                          secondaryLabel={submission.statusLabel}
+                          submissionMetadata={getSubmissionMetadata(
+                            submission,
+                            versionMetadataQuery?.data,
+                          )}
+                          summary={
+                            activeMilestoneId === 'proposal'
+                              ? getProposalSummary(submission)
+                              : activeMilestoneId === 'final-report' ||
+                                  activeMilestoneId === 'presentation-submit'
+                                ? getDownloadSummary(
+                                    submission,
+                                    versionMetadataQuery?.data,
+                                    Boolean(versionMetadataQuery?.isError),
+                                    Boolean(versionMetadataQuery?.isPending),
+                                  )
+                                : getReviewSummary(submission)
+                          }
+                        />
                       );
-                    return (
-                      <AdminMilestoneSubmissionCard
-                        meetingCountLabel={
-                          <Link
-                            to={ROUTES.ADMIN_MEETINGS}
-                            search={{
-                              sectionId: effectiveSectionId,
-                              teamId: String(submission.teamId),
-                            }}
-                          >
-                            회의록 {submission.meetingRecordCount}건
-                          </Link>
-                        }
-                        action={
-                          activeMilestoneId === 'final-report' ||
-                          activeMilestoneId === 'presentation-submit' ? (
-                            <AdminMilestoneSubmissionBulkDownloadAction
-                              isLoading={downloadArtifactsMutation.isPending}
-                              onClick={
-                                submissionId
-                                  ? () => {
-                                      downloadArtifactsMutation.mutate(
-                                        submissionId,
-                                      );
-                                    }
-                                  : undefined
-                              }
-                            />
-                          ) : (
-                            <AdminMilestoneSubmissionDetailAction
-                              milestoneId={activeTab.id}
-                              sectionId={effectiveSectionId}
-                              submissionId={submissionId}
-                              teamId={submission.teamId}
-                              unavailableReason={
-                                isVersionDetailAvailable
-                                  ? undefined
-                                  : '이 마일스톤의 전용 상세 조회 API 확인 후 제공 예정입니다.'
-                              }
-                            />
-                          )
-                        }
-                        key={submission.teamId}
-                        label={submission.teamName}
-                        secondaryLabel={submission.statusLabel}
-                        submissionMetadata={getSubmissionMetadata(
-                          submission,
-                          versionMetadataQuery?.data,
-                        )}
-                        summary={
-                          activeMilestoneId === 'proposal'
-                            ? getProposalSummary(submission)
-                            : activeMilestoneId === 'final-report' ||
-                                activeMilestoneId === 'presentation-submit'
-                              ? getDownloadSummary(
-                                  submission,
-                                  versionMetadataQuery?.data,
-                                  Boolean(versionMetadataQuery?.isError),
-                                  Boolean(versionMetadataQuery?.isPending),
-                                )
-                              : getReviewSummary(submission)
-                        }
-                      />
-                    );
-                  })}
-                </div>
+                    })}
+                  </div>
+                  <ListPagination
+                    label='제출물 페이지 이동'
+                    onPageChange={setSubmissionPage}
+                    page={pagedSubmissions.page}
+                    pageCount={pagedSubmissions.pageCount}
+                  />
+                </>
               )}
             </>
           ) : (

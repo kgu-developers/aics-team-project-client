@@ -24,6 +24,8 @@ import {
 } from '@aics/design-system';
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 import {
   useAdminOopSectionsQuery,
   useRemoveAdminOopSectionMutation,
@@ -80,8 +82,8 @@ function statusLabel(value: AdminOopCourseStatus) {
 function contactVisibilityStatus(visibleFrom: string, visibleUntil: string) {
   if (!visibleFrom && !visibleUntil) return '미설정';
 
-  const startsAt = Date.parse(visibleFrom);
-  const endsAt = Date.parse(visibleUntil);
+  const startsAt = seoulInstant(visibleFrom);
+  const endsAt = seoulInstant(visibleUntil);
   if (Number.isNaN(startsAt) || Number.isNaN(endsAt) || startsAt >= endsAt) {
     return '입력 확인 필요';
   }
@@ -484,7 +486,7 @@ function SectionSettingsDialog({
   const isVisibilityRangeValid =
     (!visibleFrom && !visibleUntil) ||
     (Boolean(visibleFrom && visibleUntil) &&
-      Date.parse(visibleFrom) < Date.parse(visibleUntil));
+      seoulInstant(visibleFrom) < seoulInstant(visibleUntil));
   const visibilityStatus = contactVisibilityStatus(visibleFrom, visibleUntil);
 
   function visibilityInput() {

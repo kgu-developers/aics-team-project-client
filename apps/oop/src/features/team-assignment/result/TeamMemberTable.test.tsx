@@ -50,6 +50,49 @@ describe('TeamMemberTable', () => {
     });
   });
 
+  it('학과 정보가 한 명도 없으면 학과 열을 표시하지 않는다', () => {
+    render(
+      <AstryxThemeProvider>
+        <TeamMemberTable
+          members={[
+            { id: 'student-1', name: '한가온', studentNumber: '20261001' },
+            { id: 'student-2', name: '김경기', studentNumber: '20261002' },
+          ]}
+          variant='assignment'
+        />
+      </AstryxThemeProvider>,
+    );
+
+    expect(
+      screen.queryByRole('columnheader', { name: '학과' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('학과 미정')).not.toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: '학번' })).toBeVisible();
+  });
+
+  it('학과 정보가 일부라도 있으면 열을 표시하고 빈 값은 미정으로 보여 준다', () => {
+    render(
+      <AstryxThemeProvider>
+        <TeamMemberTable
+          members={[
+            {
+              department: '컴퓨터공학부',
+              id: 'student-1',
+              name: '한가온',
+              studentNumber: '20261001',
+            },
+            { id: 'student-2', name: '김경기', studentNumber: '20261002' },
+          ]}
+          variant='assignment'
+        />
+      </AstryxThemeProvider>,
+    );
+
+    expect(screen.getByRole('columnheader', { name: '학과' })).toBeVisible();
+    expect(screen.getByText('컴퓨터공학부')).toBeVisible();
+    expect(screen.getByText('학과 미정')).toBeVisible();
+  });
+
   it('휴대폰 번호가 없으면 복사 버튼 대신 미등록 상태를 표시한다', () => {
     render(
       <AstryxThemeProvider>

@@ -38,6 +38,7 @@ export function createAdminMilestoneSectionScheduleDraftFromDto(
     isPublished: status === 'PUBLISHED',
     lateSubmissionUntil: toDateTimeDraft(schedule.lateSubmissionUntil),
     opensAt: toDateTimeDraft(schedule.opensAt),
+    revisionUntil: schedule.revisionUntil ?? null,
   };
 }
 
@@ -72,12 +73,14 @@ export function createAdminMilestoneUpdateInput({
     throw new Error('제출 마감 일시를 입력해주세요.');
   }
 
+  const revisionUntil = schedule.revisionUntil ?? undefined;
   assertAdminMilestoneScheduleOrder({
     dueAt,
     evaluationClosesAt,
     evaluationOpensAt,
     lateSubmissionUntil,
     opensAt,
+    revisionUntil,
   });
 
   return {
@@ -89,6 +92,7 @@ export function createAdminMilestoneUpdateInput({
       ...(evaluationOpensAt ? { evaluationOpensAt } : {}),
       ...(opensAt ? { opensAt } : {}),
       ...(lateSubmissionUntil ? { lateSubmissionUntil } : {}),
+      ...(revisionUntil ? { revisionUntil } : {}),
     },
     title: title.trim(),
     type,

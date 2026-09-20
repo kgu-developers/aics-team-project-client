@@ -9,6 +9,10 @@ import {
 import { Link } from '@tanstack/react-router';
 import { forwardRef, useEffect, type ComponentPropsWithoutRef } from 'react';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { parseRichTextContent } from '~/shared/lib/richTextContent';
+import RichTextViewer from '~/shared/ui/RichTextViewer';
+
 import SectionSelection from '~/features/section/SectionSelection';
 import StudentContextState from '~/features/section/StudentContextState';
 import { useStudentContext } from '~/features/section/useStudentContext';
@@ -148,13 +152,15 @@ export default function StudentNoticeDetailPage({
       <Card className={styles.detailCard}>
         <Heading level={1}>{announcement.title}</Heading>
         <Text className={styles.meta} color='secondary'>
-          게시일 : {announcement.publishedAt}
+          게시일 : {formatSeoulDateTime(announcement.publishedAt)}
         </Text>
         <Text>분반 : {section.name}</Text>
         <div className={styles.divider} />
-        {announcement.content.split('\n').map((line, i) => (
-          <Text key={`${announcement.id}-line-${i}`}>{line}</Text>
-        ))}
+        <section aria-label='공지 내용'>
+          <RichTextViewer
+            content={parseRichTextContent(announcement.content)}
+          />
+        </section>
         {imageAttachments.length ? (
           <section
             aria-label='첨부 이미지 미리보기'

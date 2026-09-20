@@ -5,6 +5,8 @@ import type {
   TeamKickoffResponse,
 } from '@aics/core';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 export type ContactVisibility = 'unscheduled' | 'upcoming' | 'open' | 'closed';
 export type LiveTeamAssignmentStage =
   'result' | 'firstMeeting' | 'completed' | 'contactClosed';
@@ -12,7 +14,7 @@ export type LiveTeamAssignmentStage =
 function timestamp(value: string | null) {
   if (!value) return undefined;
 
-  const parsed = Date.parse(value);
+  const parsed = seoulInstant(value);
   return Number.isNaN(parsed) ? undefined : parsed;
 }
 
@@ -74,6 +76,7 @@ export function toTeamAssignmentProjection(
         name: member.name ?? member.studentNumber,
         studentNumber: member.studentNumber,
         role: member.projectRole ?? undefined,
+        department: member.major ?? undefined,
       })),
       leaderId: leader ? String(leader.id) : undefined,
     },

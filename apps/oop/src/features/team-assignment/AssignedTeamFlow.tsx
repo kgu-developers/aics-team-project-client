@@ -55,7 +55,8 @@ export default function AssignedTeamFlow({
     stage === 'contactClosed' ? 'firstMeeting' : stage,
     now,
   );
-  if (teamOnly) return <TeamSummary projection={projection} />;
+  if (teamOnly)
+    return <TeamSummary projection={projection} showBackNavigation />;
   if (stage === 'completed')
     return <Navigate replace to={ROUTES.STUDENT.HOME} />;
   const canContinue = stage !== 'result';

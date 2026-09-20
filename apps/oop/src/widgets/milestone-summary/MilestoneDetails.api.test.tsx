@@ -2,7 +2,7 @@ import { API_BASE_URL, ENDPOINTS, submitTeamMessage } from '@aics/api-client';
 import type { StudentHomeMilestoneBody } from '@aics/core';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -102,13 +102,13 @@ describe('existing proposal feedback form with team messages', () => {
     });
     renderFeedback();
     expect(
-      await screen.findByText('검수 학생 (2026-09-01 10:10)'),
+      await screen.findByText('검수 학생 (2026-09-01/19:10)'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('검수 교수 (2026-09-01 10:00)'),
+      screen.getByText('검수 교수 (2026-09-01/19:00)'),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(`${demoStudent.studentNumber} (2026-09-01 10:10)`),
+      screen.queryByText(`${demoStudent.studentNumber} (2026-09-01/19:10)`),
     ).not.toBeInTheDocument();
     expect(screen.getByText('피드백 대화')).toBeInTheDocument();
     expect(screen.queryByText('교수 피드백')).not.toBeInTheDocument();
@@ -142,7 +142,7 @@ describe('existing proposal feedback form with team messages', () => {
       renderFeedback();
       expect(
         await screen.findByText(
-          `${demoStudent.studentNumber} (2026-09-01 10:10)`,
+          `${demoStudent.studentNumber} (2026-09-01/19:10)`,
         ),
       ).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '답변 보내기' })).toBeEnabled();
@@ -374,24 +374,27 @@ describe('중간보고서 피드백 메시지', () => {
     );
     const view = renderFeedback(midBody);
     const button = await screen.findByRole('button', {
-      name: '반영 기록 남기기',
+      name: '반영 방향 보내기',
     });
     await waitFor(() =>
       expect(button).not.toHaveAttribute('aria-disabled', 'true'),
     );
+    await userEvent.setup().click(button);
     await userEvent
       .setup()
       .type(
         screen.getByRole('textbox', { name: /대면 피드백 반영 내용/ }),
         '대면 피드백을 기록했습니다.',
       );
-    await userEvent.setup().click(button);
+    await userEvent
+      .setup()
+      .click(screen.getAllByRole('button', { name: '반영 방향 보내기' })[1]!);
     expect(
       await screen.findByText('대면 피드백을 기록했습니다.'),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('textbox', { name: /대면 피드백 반영 내용/ }),
-    ).toHaveValue('');
+      screen.queryByRole('textbox', { name: /대면 피드백 반영 내용/ }),
+    ).not.toBeInTheDocument();
     messages.push({
       id: 902,
       threadId: 70,
@@ -412,7 +415,7 @@ describe('중간보고서 피드백 메시지', () => {
     expect(screen.getByText('피드백 대화')).toBeInTheDocument();
     expect(screen.queryByText('교수 추가 답변')).not.toBeInTheDocument();
     expect(
-      screen.getByText('검수 교수 (2026-09-10 10:10)'),
+      screen.getByText('검수 교수 (2026-09-10/19:10)'),
     ).toBeInTheDocument();
     expect(
       requests.some(
@@ -441,16 +444,175 @@ describe('중간보고서 피드백 메시지', () => {
     expect(
       screen.queryByText('기능별 역할 분담도 함께 정리해 주세요.'),
     ).not.toBeInTheDocument();
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: '반영 방향 보내기' }));
     const input = screen.getByRole('textbox', {
       name: /대면 피드백 반영 내용/,
     });
     await userEvent.setup().type(input, '보존할 기록');
     await userEvent
       .setup()
-      .click(screen.getByRole('button', { name: '반영 기록 남기기' }));
+      .click(screen.getAllByRole('button', { name: '반영 방향 보내기' })[1]!);
     expect(
       await screen.findByText('현재 팀의 피드백만 작성할 수 있어요.'),
     ).toBeInTheDocument();
     expect(input).toHaveValue('보존할 기록');
+  });
+});
+
+describe('피드백 단계별 노출', () => {
+  it('제안서는 제출 전에는 피드백 영역을 그리지 않고, 대기 중에는 안내만 보여 준다', async () => {
+    const { unmount } = renderFeedback({
+      ...body,
+      feedbackStage: 'not-submitted',
+    });
+    expect(screen.queryByText('피드백 대화')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: /피드백 반영 답변/ }),
+    ).not.toBeInTheDocument();
+    unmount();
+
+    renderFeedback({ ...body, feedbackStage: 'awaiting-feedback' });
+    expect(
+      await screen.findByText(/제출 완료 · 피드백 대기 중/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: /피드백 반영 답변/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('교수·조교가 먼저 보낸 중간보고서 메시지를 반영 방향 대기 중에도 표시한다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`, () =>
+        HttpResponse.json({
+          contents: [
+            {
+              id: 990,
+              threadId: 70,
+              senderId: teamMessageProfessorId,
+              senderName: '검수 교수',
+              relatedType: 'MID_REPORT',
+              message: '대면 피드백 일정을 먼저 안내합니다.',
+              important: false,
+              read: false,
+              createdAt: '2026-09-10 09:00',
+            },
+          ],
+          pageable: {
+            page: 0,
+            size: 100,
+            totalElements: 1,
+            totalPages: 1,
+            isEnd: true,
+          },
+        }),
+      ),
+    );
+    renderFeedback({
+      kind: 'mid-review-feedback',
+      teamId: '7',
+      feedbackStage: 'awaiting-feedback',
+      feedback: [],
+      canSubmitResponse: false,
+      sections: [],
+      guide: '',
+    });
+
+    expect(
+      await screen.findByText('대면 피드백 일정을 먼저 안내합니다.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('피드백 대화')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '반영 방향 보내기' }),
+    ).toBeInTheDocument();
+  });
+
+  it('중간보고서는 첫 반영 방향만 모달로 보내고, 보낸 뒤에는 입력 없이 대화만 보인다', async () => {
+    const messages: Array<Record<string, unknown>> = [];
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`, () =>
+        HttpResponse.json({
+          contents: [...messages].reverse(),
+          pageable: {
+            page: 0,
+            size: 100,
+            totalElements: messages.length,
+            totalPages: 1,
+            isEnd: true,
+          },
+        }),
+      ),
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`,
+        async ({ request }) => {
+          const input = (await request.json()) as object;
+          const message = {
+            id: 901,
+            threadId: 70,
+            senderId: demoStudent.studentNumber,
+            senderName: '검수 학생',
+            createdAt: '2026-09-10 10:00',
+            ...input,
+          };
+          messages.push({ ...message, important: false, read: false });
+          return HttpResponse.json(message, { status: 201 });
+        },
+      ),
+    );
+    const midBody: StudentHomeMilestoneBody = {
+      kind: 'mid-review-feedback',
+      teamId: '7',
+      feedbackStage: 'awaiting-feedback',
+      feedback: [],
+      canSubmitResponse: false,
+      sections: [],
+      guide: '',
+    };
+    const user = userEvent.setup();
+    const view = renderFeedback(midBody);
+
+    expect(
+      screen.queryByRole('textbox', { name: /대면 피드백 반영 내용/ }),
+    ).not.toBeInTheDocument();
+    const open = await screen.findByRole('button', {
+      name: '반영 방향 보내기',
+    });
+    await waitFor(() =>
+      expect(open).not.toHaveAttribute('aria-disabled', 'true'),
+    );
+    await user.click(open);
+    const dialog = await screen.findByRole('dialog', {
+      name: '대면 피드백 반영 방향 보내기',
+    });
+    await user.type(
+      within(dialog).getByRole('textbox', { name: /대면 피드백 반영 내용/ }),
+      '대면 피드백을 기록했습니다.',
+    );
+    await user.click(
+      within(dialog).getByRole('button', { name: '반영 방향 보내기' }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: '대면 피드백 반영 방향 보내기' }),
+      ).not.toBeInTheDocument(),
+    );
+
+    // The home recomputes the stage from messages; simulate that hand-off.
+    view.rerender(
+      <AstryxThemeProvider>
+        <QueryClientProvider client={clients[clients.length - 1]!}>
+          <MilestoneDetails
+            body={{ ...midBody, feedbackStage: 'feedback-arrived' }}
+          />
+        </QueryClientProvider>
+      </AstryxThemeProvider>,
+    );
+    expect(
+      await screen.findByText('대면 피드백을 기록했습니다.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: /대면 피드백 반영 내용/ }),
+    ).not.toBeInTheDocument();
   });
 });

@@ -7,6 +7,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { isAxiosError } from 'axios';
 
 import { adminSectionMilestoneKeys } from './adminSectionMilestoneKeys';
+import {
+  toAdminMilestoneRequestError,
+  type AdminMilestoneRequestError,
+} from '../model/adminMilestoneRequestError';
 
 export type SubmitAdminSectionMilestonesInput = {
   sections: readonly {
@@ -17,6 +21,8 @@ export type SubmitAdminSectionMilestonesInput = {
 };
 
 export type SubmitAdminSectionMilestonesResult = {
+  /** Present for `create-failed` and `publish-failed`, describing the server response. */
+  error?: AdminMilestoneRequestError;
   failureMessage?: string;
   milestoneId?: number;
   sectionId: string;
@@ -60,8 +66,9 @@ export function useSubmitAdminSectionMilestonesMutation() {
                 sectionId,
                 status: 'published',
               } as const;
-            } catch {
+            } catch (error) {
               return {
+                error: toAdminMilestoneRequestError(error),
                 milestoneId: id,
                 sectionId,
                 status: 'publish-failed',
@@ -69,6 +76,7 @@ export function useSubmitAdminSectionMilestonesMutation() {
             }
           } catch (error) {
             return {
+              error: toAdminMilestoneRequestError(error),
               failureMessage: getCreationFailureMessage(error),
               sectionId,
               status: 'create-failed',

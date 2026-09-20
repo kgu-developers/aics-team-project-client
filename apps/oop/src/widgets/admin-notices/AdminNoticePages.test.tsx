@@ -23,6 +23,11 @@ import {
   vi,
 } from 'vitest';
 
+import {
+  plainTextToRichText,
+  serializeRichTextContent,
+} from '~/shared/lib/richTextContent';
+
 import { noticeId } from '~/features/admin-notices/noticeScope';
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -42,6 +47,31 @@ import {
   resetSectionAnnouncements,
   studentNoticeHandlers,
 } from '~/mocks/handlers/studentNotices';
+
+// ProseMirror needs a real layout engine; drive the notice body through a
+// textarea that exchanges the same JSON document the real editor produces.
+vi.mock('~/shared/ui/RichTextEditor', () => ({
+  default: ({
+    content,
+    isDisabled,
+    label,
+    onChange,
+  }: {
+    content: import('@aics/core').RichTextJson;
+    isDisabled?: boolean;
+    label: string;
+    onChange: (value: import('@aics/core').RichTextJson) => void;
+  }) => (
+    <textarea
+      aria-label={label}
+      disabled={isDisabled}
+      onChange={event => onChange(plainTextToRichText(event.target.value))}
+      value={((content.content as { content?: { text?: string }[] }[]) ?? [])
+        .map(paragraph => paragraph.content?.[0]?.text ?? '')
+        .join('\n')}
+    />
+  ),
+}));
 
 const server = setupServer(...studentNoticeHandlers);
 const clients: QueryClient[] = [];
@@ -140,10 +170,10 @@ it('목록과 상세가 오프셋 없는 게시일을 호스트 TZ와 무관하�
   const row = await screen.findByRole('row', {
     name: /이미지 자료 확인 안내 공지사항 보기/,
   });
-  expect(within(row).getByText('2026.08.27')).toBeInTheDocument();
+  expect(within(row).getByText('2026-08-28/00:00')).toBeInTheDocument();
   await user.click(row);
   expect(
-    await screen.findByText('게시일시 : 2026.08.27 15:00'),
+    await screen.findByText('게시일시 : 2026-08-28/00:00'),
   ).toBeInTheDocument();
 });
 
@@ -169,7 +199,12 @@ it('선택한 한 분반에 제목·본문만 게시하고 상세·목록 재조
       '둘째 줄',
     ),
   ).toBeInTheDocument();
-  expect(requests).toEqual([{ title: '새 공지', content: '첫 줄\n둘째 줄' }]);
+  expect(requests).toEqual([
+    {
+      title: '새 공지',
+      content: serializeRichTextContent(plainTextToRichText('첫 줄\n둘째 줄')),
+    },
+  ]);
   expect(router.state.location.href).toBe('/admin/notices/13?sectionId=1');
   await act(() => client.refetchQueries());
   expect(screen.getByText('첫 줄')).toBeInTheDocument();
@@ -211,6 +246,50 @@ it('편집은 분반을 고정하고 변경된 필드만 PATCH하여 게시일�
     expect(router.state.location.href).toBe('/admin/notices/10?sectionId=1'),
   );
   expect(patch).toHaveBeenCalledExactlyOnceWith({ title: '수정 제목' });
+});
+it('새 공지 초안에서 취소한 이동은 입력을 보존하고 확인 후에만 목록으로 이동한다', async () => {
+  const { router } = renderPage('/admin/notices/new?sectionId=1');
+  const user = await fill();
+
+  await user.click(screen.getByRole('button', { name: '취소' }));
+  const dialog = await screen.findByRole('alertdialog', {
+    name: '저장하지 않은 내용이 있어요.',
+  });
+  await user.click(within(dialog).getByRole('button', { name: '계속 작성' }));
+
+  expect(router.state.location.href).toBe('/admin/notices/new?sectionId=1');
+  expect(screen.getByRole('textbox', { name: '제목' })).toHaveValue('새 공지');
+  expect(screen.getByRole('textbox', { name: '내용' })).toHaveValue(
+    '첫 줄\n둘째 줄',
+  );
+
+  await user.click(screen.getByRole('button', { name: '취소' }));
+  await user.click(
+    within(
+      await screen.findByRole('alertdialog', {
+        name: '저장하지 않은 내용이 있어요.',
+      }),
+    ).getByRole('button', { name: '변경 버리고 이동' }),
+  );
+  await waitFor(() =>
+    expect(router.state.location.href).toBe('/admin/notices?sectionId=1'),
+  );
+});
+it('기존 공지 수정 초안은 목록 링크 이동을 막고 취소하면 입력을 유지한다', async () => {
+  const { router } = renderPage('/admin/notices/10/edit?sectionId=1');
+  const user = userEvent.setup();
+  const title = await screen.findByRole('textbox', { name: '제목' });
+  await user.clear(title);
+  await user.type(title, '이동 전 수정 제목');
+
+  await user.click(screen.getByRole('link', { name: '← 공지사항 목록으로' }));
+  const dialog = await screen.findByRole('alertdialog', {
+    name: '저장하지 않은 내용이 있어요.',
+  });
+  await user.click(within(dialog).getByRole('button', { name: '계속 작성' }));
+
+  expect(router.state.location.href).toBe('/admin/notices/10/edit?sectionId=1');
+  expect(title).toHaveValue('이동 전 수정 제목');
 });
 it('실제 계약 핸들러로 수정한 전체 본문을 상세 재조회에 표시한다', async () => {
   const { client } = renderPage('/admin/notices/10/edit?sectionId=1');

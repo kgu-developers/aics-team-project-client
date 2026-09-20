@@ -1,8 +1,19 @@
-import { Button, EmptyState, TextArea, TextInput } from '@aics/design-system';
-import { Navigate } from '@tanstack/react-router';
+import {
+  Button,
+  Dialog,
+  EmptyState,
+  Heading,
+  HStack,
+  Text,
+  TextArea,
+  TextInput,
+} from '@aics/design-system';
+import { Navigate, useBlocker } from '@tanstack/react-router';
 import { useCallback, useLayoutEffect, useMemo, useRef } from 'react';
 
 import { EDITOR_DOCS, editorSectionTo } from '~/app/constants/editorSections';
+
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -36,7 +47,7 @@ export function getSaveErrorMessage(error: unknown, fallback: string) {
 /**
  * 제안서·중간보고서·발표가 공유하는 반응형 문서 에디터 셸.
  * 사이드바 내비게이션, 문서 메타데이터, 잠금 안내, 필드 그리드와
- * 디바운스 자동 저장(700ms) 흐름을 담당한다.
+ * 자동 또는 수동 저장 흐름을 담당한다.
  * 문서 데이터·API 계약은 각 도메인 페이지가 주입하며 여기서 모른다.
  */
 export default function DocumentEditorPage<
@@ -62,7 +73,9 @@ export default function DocumentEditorPage<
   editLockTargetType,
   renderBlockAside,
   renderFields,
+  returnTo,
   saveBlock,
+  saveMode = 'auto',
   saveState,
   section,
 }: DocumentEditorPageProps<D>) {
@@ -116,6 +129,7 @@ export default function DocumentEditorPage<
     return isDocumentEditorDocument(refreshed.data) ? refreshed.data : null;
   }, [refetchDocument]);
   const editor = useDocumentEditorAutosave({
+    autosave: saveMode === 'auto',
     block,
     canSave: Boolean(currentUser && block && !isLocked),
     document: data,
@@ -127,6 +141,11 @@ export default function DocumentEditorPage<
     editorReleaseRef.current = editor.flushBeforeRelease;
   }, [editor.flushBeforeRelease]);
   const fields = editor.fields;
+  const blocker = useBlocker({
+    enableBeforeUnload: saveMode === 'manual' && editor.isDirty,
+    shouldBlockFn: () => saveMode === 'manual' && editor.isDirty,
+    withResolver: true,
+  });
 
   if (!validSection) {
     return (
@@ -168,16 +187,23 @@ export default function DocumentEditorPage<
       variant: completed ? 'success' : 'accent',
     } as const;
   };
-  const savedAtLabel = new Intl.DateTimeFormat('ko-KR', {
-    timeStyle: 'short',
-  }).format(new Date(block.lastSavedAt));
-  const saveStateLabel = saveState.saving
-    ? '자동 저장 중…'
-    : saveState.error
-      ? saveState.error
-      : editor.isDirty
-        ? '자동 저장 대기 중…'
-        : `자동 저장됨 · ${savedAtLabel}`;
+  const savedAtLabel = formatSeoulDateTime(block.lastSavedAt);
+  const saveStateLabel =
+    saveMode === 'manual'
+      ? saveState.saving
+        ? '저장 중…'
+        : saveState.error
+          ? saveState.error
+          : editor.isDirty
+            ? '저장되지 않은 변경 사항'
+            : `저장됨 · ${savedAtLabel}`
+      : saveState.saving
+        ? '자동 저장 중…'
+        : saveState.error
+          ? saveState.error
+          : editor.isDirty
+            ? '자동 저장 대기 중…'
+            : `자동 저장됨 · ${savedAtLabel}`;
   const onFieldsChange = editor.onFieldsChange;
   const onChange = (key: string, value: string) => {
     const next = fields.map(field =>
@@ -274,6 +300,7 @@ export default function DocumentEditorPage<
       docId={docId}
       heading={block.title}
       meta={<span className={styles.saveState}>{saveStateLabel}</span>}
+      returnTo={returnTo}
       sections={document.sections.map(item => ({
         ...item,
         status: getSectionStatus(item.slug),
@@ -339,9 +366,20 @@ export default function DocumentEditorPage<
         <DocumentActionBar
           error={completion.completeError ?? completion.submit?.submitError}
         >
+          {saveMode === 'manual' ? (
+            <Button
+              isDisabled={isLocked || saveState.saving || !editor.isDirty}
+              isLoading={saveState.saving}
+              label='저장'
+              onClick={() => {
+                void editor.flushBlock(block.key).catch(() => undefined);
+              }}
+            />
+          ) : null}
           <Button
             isDisabled={
               isLocked ||
+              (saveMode === 'manual' && editor.isDirty) ||
               completion.isBlockCompleted(block) ||
               completion.completing
             }
@@ -353,7 +391,9 @@ export default function DocumentEditorPage<
             tooltip={
               isLocked
                 ? '읽기 전용 상태에서는 완료 처리할 수 없어요.'
-                : '내용을 확인한 뒤 이 작성 영역을 완료 처리해요.'
+                : saveMode === 'manual' && editor.isDirty
+                  ? '변경 내용을 저장한 뒤 완료 처리할 수 있어요.'
+                  : '내용을 확인한 뒤 이 작성 영역을 완료 처리해요.'
             }
             variant='secondary'
           />
@@ -377,7 +417,9 @@ export default function DocumentEditorPage<
                     : isLocked
                       ? '읽기 전용 상태에서는 문서를 제출할 수 없어요.'
                       : editor.hasDirtyDrafts
-                        ? '변경 내용을 자동 저장한 뒤 제출할 수 있어요.'
+                        ? saveMode === 'manual'
+                          ? '변경 내용을 저장한 뒤 제출할 수 있어요.'
+                          : '변경 내용을 자동 저장한 뒤 제출할 수 있어요.'
                         : completion.submit.submitDisabledReason(data!)
               }
               variant='primary'
@@ -386,6 +428,31 @@ export default function DocumentEditorPage<
         </DocumentActionBar>
       ) : null}
       {renderBlockAside?.(block, isLocked) ?? null}
+      <Dialog
+        aria-label='저장하지 않은 내용이 있어요.'
+        isOpen={blocker.status === 'blocked'}
+        onOpenChange={open => open || blocker.reset?.()}
+        purpose='info'
+        role='alertdialog'
+      >
+        <div className={styles.leaveDialog}>
+          <Heading level={2}>저장하지 않은 내용이 있어요.</Heading>
+          <Text>이동하면 변경 내용이 사라집니다.</Text>
+          <HStack gap={2} justify='end'>
+            <Button
+              data-autofocus='true'
+              label='계속 작성'
+              onClick={() => blocker.reset?.()}
+              variant='secondary'
+            />
+            <Button
+              label='변경 버리고 이동'
+              onClick={() => blocker.proceed?.()}
+              variant='destructive'
+            />
+          </HStack>
+        </div>
+      </Dialog>
     </DocumentEditorLayout>
   );
 }

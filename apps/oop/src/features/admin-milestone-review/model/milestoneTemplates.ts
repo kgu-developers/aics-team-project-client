@@ -31,10 +31,10 @@ export const milestoneTemplates: readonly MilestoneTemplate[] = [
   },
   {
     id: 'presentation-submit',
-    label: '발표',
+    label: '발표 (자료 제출 + 평가)',
     title: '발표',
     description:
-      '발표 자료 제출과 발표 평가 기간을 함께 설정하는 기본 양식입니다.',
+      '발표 자료 제출 마감과 발표 평가 기간을 한 마일스톤에서 설정합니다. 별도의 발표 평가 마일스톤은 없으며, 평가 기간을 비워 두면 발표 평가 탭이 열리지 않습니다.',
     fields: [
       '프로젝트 개요',
       '프레젠테이션 자료',

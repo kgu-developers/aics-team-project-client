@@ -16,6 +16,7 @@ import {
   type TimeInputProps,
 } from '@aics/design-system';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { isAxiosError } from 'axios';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -30,12 +31,14 @@ import {
   createAdminRequiredArtifactDrafts,
   createAdminMilestoneUpdateInput,
   findMilestoneTemplate,
+  formatAdminMilestoneRequestError,
   getAdminMilestoneTypeLabel,
   isMilestoneTemplateId,
   isSupportedMilestoneCreationTemplate,
   milestoneTemplates,
   syncAdminMilestoneSectionScheduleDrafts,
   toAdminMilestoneDateTime,
+  toAdminMilestoneRequestError,
   type AdminMilestoneSectionScheduleDraft,
   type AdminRequiredArtifactDraft,
   type MilestoneTemplateId,
@@ -108,9 +111,20 @@ function ScheduleTimeInput({ label, onChange, value }: ScheduleTimeInputProps) {
 export default function AdminMilestoneSetupPage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const navigate = useNavigate();
-  const search = useSearch({ from: '/admin/milestones/new' }) as {
-    milestoneId?: string;
-    sectionId?: string;
+  const rawSearch = useSearch({ from: '/admin/milestones/new' }) as {
+    milestoneId?: string | number;
+    sectionId?: string | number;
+  };
+  // Hand-typed URLs arrive as numbers; router links serialize strings.
+  const search = {
+    milestoneId:
+      rawSearch.milestoneId === undefined
+        ? undefined
+        : String(rawSearch.milestoneId),
+    sectionId:
+      rawSearch.sectionId === undefined
+        ? undefined
+        : String(rawSearch.sectionId),
   };
   const sections = currentUser?.sections ?? [];
   const editingMilestoneId =
@@ -361,9 +375,13 @@ export default function AdminMilestoneSetupPage() {
         }
       } catch (error) {
         setFormError(
-          error instanceof Error
-            ? error.message
-            : '마일스톤을 수정하지 못했습니다.',
+          isAxiosError(error)
+            ? `마일스톤을 수정하지 못했습니다. ${formatAdminMilestoneRequestError(
+                toAdminMilestoneRequestError(error),
+              )}`
+            : error instanceof Error
+              ? error.message
+              : '마일스톤을 수정하지 못했습니다.',
         );
       }
       return;
@@ -823,7 +841,7 @@ export default function AdminMilestoneSetupPage() {
                           </Text>
                           <Text color='secondary' type='supporting'>
                             {isPresentation
-                              ? '학생이 다른 팀의 발표를 평가할 수 있는 기간입니다. 팀별 발표 순서는 제출물 관리 화면에서 설정합니다.'
+                              ? '학생이 다른 팀의 발표를 평가할 수 있는 기간입니다. 자료 제출 마감 이후로 설정해야 하며, 비워 두면 발표 평가 탭과 학생 발표 평가가 열리지 않습니다. 팀별 발표 순서와 평가 항목은 제출물 관리 화면에서 설정합니다.'
                               : '학생이 팀원을 평가할 수 있는 기간입니다.'}
                           </Text>
                           <div className={styles.scheduleGrid}>
@@ -1114,8 +1132,20 @@ export default function AdminMilestoneSetupPage() {
                       : result.status === 'created'
                         ? '미공개 마일스톤으로 생성했습니다.'
                         : result.status === 'publish-failed'
-                          ? '생성했지만 공개 상태 변경에 실패했습니다. 목록에서 다시 공개할 수 있습니다.'
-                          : (result.failureMessage ?? '생성에 실패했습니다.')}
+                          ? `생성했지만 공개 상태 변경에 실패했습니다. 목록에서 다시 공개할 수 있습니다.${
+                              result.error
+                                ? ` (${formatAdminMilestoneRequestError(result.error)})`
+                                : ''
+                            }`
+                          : `생성에 실패했습니다.${
+                              result.failureMessage
+                                ? ` ${result.failureMessage}`
+                                : ''
+                            }${
+                              result.error
+                                ? ` ${formatAdminMilestoneRequestError(result.error)}`
+                                : ''
+                            }`}
                     {artifactSubmissionFailures?.has(result.sectionId)
                       ? ' 산출물 일부 등록에 실패했습니다. 마일스톤 수정 화면에서 다시 추가해주세요.'
                       : ''}

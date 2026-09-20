@@ -4,6 +4,8 @@ import { Link } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+
 import * as styles from './AdminTeamMeetingRecordList.css';
 
 type AdminTeamMeetingRecordListProps = {
@@ -13,12 +15,6 @@ type AdminTeamMeetingRecordListProps = {
   sectionId: string;
   teamId: string;
 };
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium' }).format(
-    new Date(value),
-  );
-}
 
 export function AdminTeamMeetingRecordList({
   isError,
@@ -75,7 +71,7 @@ export function AdminTeamMeetingRecordList({
                 <Text className={styles.title}>{record.title}</Text>
               </div>
               <Text className={styles.date}>
-                {formatDate(record.createdAt)}
+                {formatSeoulDateTime(record.createdAt)}
               </Text>
             </Link>
           ))}

@@ -130,7 +130,7 @@ it('currentTeam이 없어도 /me의 teamId로 실제 응답을 읽고 지원하�
 
   expect(await screen.findByText('진행 점검')).toBeVisible();
   expect(requests).toHaveBeenCalledTimes(1);
-  expect(screen.getByText('2026-09-06')).toBeVisible();
+  expect(screen.getByText('2026-09-06/23:00')).toBeVisible();
   expect(screen.getByText('참석 2명 · 301호')).toBeVisible();
   expect(screen.getByRole('columnheader', { name: '작성자' })).toBeVisible();
   expect(await screen.findByText(student.name)).toBeVisible();

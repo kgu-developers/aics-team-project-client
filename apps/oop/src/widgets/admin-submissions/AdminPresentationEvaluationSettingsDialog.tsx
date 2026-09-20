@@ -160,7 +160,7 @@ export function AdminPresentationEvaluationSettingsDialog({
 
   return (
     <Dialog
-      aria-label='발표 평가 설정'
+      aria-label='발표 순서·평가 항목 설정'
       isOpen={isOpen}
       onOpenChange={nextIsOpen => {
         if (!nextIsOpen) onClose();
@@ -169,10 +169,10 @@ export function AdminPresentationEvaluationSettingsDialog({
       width={560}
     >
       <VStack className={styles.content} gap={4}>
-        <Heading level={2}>발표 순서 설정</Heading>
+        <Heading level={2}>발표 순서·평가 항목 설정</Heading>
         <Text color='secondary' type='supporting'>
-          팀별 발표 순서를 설정해 주세요. 평가 기간은 마일스톤 설정에서
-          수정합니다.
+          팀별 발표 순서와 학생이 채점할 평가 항목을 여기에서 관리합니다. 평가
+          기간은 발표 마일스톤 상세에서 수정합니다.
         </Text>
         <VStack gap={3}>
           {teams.map(team => (

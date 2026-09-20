@@ -1,7 +1,25 @@
-import type { TeamMessage } from '@aics/core';
+import type { DocumentFeedbackStage, TeamMessage } from '@aics/core';
 
-export type DocumentFeedbackStage =
-  'not-submitted' | 'unknown' | 'awaiting-feedback' | 'feedback-arrived';
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
+export type { DocumentFeedbackStage };
+
+/**
+ * Copy shared by the home summary rows and the milestone detail so both
+ * screens describe the same stage with the same words.
+ */
+export const documentFeedbackStageCopy = {
+  proposal: {
+    awaiting: '제출 완료 · 피드백 대기 중',
+    checking: '제출 완료 · 상태 확인 중',
+    checkFailed: '제출 완료 · 상태 확인 실패',
+  },
+  midReport: {
+    awaiting: '제출 완료 · 반영 방향을 보내 주세요.',
+    checking: '제출 완료 · 상태 확인 중',
+    checkFailed: '제출 완료 · 상태 확인 실패',
+  },
+} as const;
 
 type Input = {
   submittedAt?: string | null;
@@ -13,8 +31,8 @@ type Input = {
 };
 // Both timestamps must parse; an unreadable value must not open the stage.
 const after = (message: TeamMessage, submittedAt: string) => {
-  const sent = Date.parse(message.createdAt);
-  const submitted = Date.parse(submittedAt);
+  const sent = seoulInstant(message.createdAt);
+  const submitted = seoulInstant(submittedAt);
   return (
     Number.isFinite(sent) && Number.isFinite(submitted) && sent >= submitted
   );
@@ -54,4 +72,32 @@ export function midReportFeedbackStage({
       teamMemberIds.includes(message.senderId) && after(message, submittedAt),
   );
   return studentMessage ? 'feedback-arrived' : 'awaiting-feedback';
+}
+
+/**
+ * Stage for the feedback room inside the milestone detail. Unlike the
+ * summary rows, an existing conversation is shown even before the server
+ * records a submission, and a message query that is not ready reads as
+ * 'unknown' so the room shows a checking state instead of vanishing.
+ */
+function feedbackRoomStage(
+  { submittedAt, messages, teamMemberIds, isMessagesReady = true }: Input,
+  startedBy: 'staff' | 'student',
+): DocumentFeedbackStage {
+  if (!teamMemberIds || !isMessagesReady) return 'unknown';
+  const started = (messages ?? []).some(message =>
+    startedBy === 'staff'
+      ? !teamMemberIds.includes(message.senderId)
+      : teamMemberIds.includes(message.senderId),
+  );
+  if (started) return 'feedback-arrived';
+  return submittedAt ? 'awaiting-feedback' : 'not-submitted';
+}
+
+export function proposalFeedbackRoomStage(input: Input) {
+  return feedbackRoomStage(input, 'staff');
+}
+
+export function midReportFeedbackRoomStage(input: Input) {
+  return feedbackRoomStage(input, 'student');
 }

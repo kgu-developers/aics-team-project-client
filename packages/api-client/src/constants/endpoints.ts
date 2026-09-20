@@ -96,6 +96,11 @@ export const ENDPOINTS = {
       `/api/v1/admin/sections/${sectionId}/milestones/${milestoneId}`,
     SECTION_MILESTONE_STATUS: (sectionId: string, milestoneId: string) =>
       `/api/v1/admin/sections/${sectionId}/milestones/${milestoneId}/status`,
+    SECTION_MILESTONE_EVALUATION_WINDOW: (
+      sectionId: string,
+      milestoneId: string,
+    ) =>
+      `/api/v1/admin/sections/${sectionId}/milestones/${milestoneId}/evaluation-window`,
     REQUIRED_ARTIFACTS: (sectionId: string, milestoneId: string) =>
       `/api/v1/admin/sections/${sectionId}/milestones/${milestoneId}/required-artifacts`,
     REQUIRED_ARTIFACT: (

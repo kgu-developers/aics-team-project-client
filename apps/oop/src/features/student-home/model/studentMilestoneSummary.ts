@@ -6,6 +6,7 @@ import type {
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { seoulInstant } from '~/shared/lib/seoulInstant';
 
 const submissionLabels: Record<
@@ -27,17 +28,10 @@ export function milestoneTime(value?: string | null) {
 
 export function milestoneDate(value?: string | null) {
   if (!value) return '일정 미정';
-  const date = new Date(milestoneTime(value));
-  if (Number.isNaN(date.getTime())) return '일정 확인 필요';
-  return new Intl.DateTimeFormat('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(date);
+  const formatted = formatSeoulDateTime(value);
+  return formatted === value && Number.isNaN(milestoneTime(value))
+    ? '일정 확인 필요'
+    : formatted;
 }
 
 export function isPresentationEvaluation(milestone: StudentMilestoneResponse) {

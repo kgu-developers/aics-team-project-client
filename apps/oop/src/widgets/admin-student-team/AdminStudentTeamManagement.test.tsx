@@ -121,14 +121,13 @@ describe('AdminStudentTeamManagement', () => {
       ],
     });
 
-    expect(
-      await screen.findByRole('button', { name: 'OOP-01' }),
-    ).toBeInTheDocument();
-    const secondSectionButton = screen.getByRole('button', {
-      name: 'OOP-02',
+    const sectionSelect = await screen.findByRole('combobox', {
+      name: '분반',
     });
+    expect(sectionSelect).toHaveTextContent('OOP-01');
 
-    await user.click(secondSectionButton);
+    await user.click(sectionSelect);
+    await user.click(await screen.findByRole('option', { name: 'OOP-02' }));
 
     expect(
       await screen.findByRole('heading', { name: 'OOP-02 팀 구성' }),
@@ -139,11 +138,9 @@ describe('AdminStudentTeamManagement', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('button', { name: 'OOP-01' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: '1151 (월6)' }),
-    ).not.toBeInTheDocument();
+      await screen.findByRole('combobox', { name: '분반' }),
+    ).toHaveTextContent('OOP-01');
+    expect(screen.queryByText('1151 (월6)')).not.toBeInTheDocument();
   });
 
   it('수강생과 팀 구성을 Swagger 응답의 학번과 전공 기준으로 표시한다', async () => {

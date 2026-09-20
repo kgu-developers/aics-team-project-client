@@ -16,31 +16,6 @@ export const heading = style({
   flexDirection: 'column',
 });
 
-export const sectionTabs = style({
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 8,
-});
-
-const tabBase = {
-  background: tokens.color.background.muted,
-  border: 0,
-  borderRadius: tokens.radius.full,
-  color: tokens.color.text.primary,
-  cursor: 'pointer',
-  font: 'inherit',
-  padding: '7px 12px',
-  whiteSpace: 'nowrap' as const,
-};
-
-export const tab = style(tabBase);
-
-export const activeTab = style({
-  ...tabBase,
-  background: tokens.color.text.primary,
-  color: tokens.color.background.surface,
-});
-
 export const section = style({
   display: 'flex',
   flexDirection: 'column',

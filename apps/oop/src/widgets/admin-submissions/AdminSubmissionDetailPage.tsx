@@ -317,7 +317,7 @@ export default function AdminSubmissionDetailPage() {
                     <div className={styles.field}>
                       <Text className={styles.fieldLabel}>완료 일시</Text>
                       <Text className={styles.fieldValue}>
-                        {detail.completedAt}
+                        {formatSeoulDateTime(detail.completedAt)}
                       </Text>
                     </div>
                   ) : null}
@@ -459,7 +459,9 @@ export default function AdminSubmissionDetailPage() {
                       >
                         <Text className={styles.fieldLabel}>
                           {feedback.senderName ?? feedback.senderId} ·{' '}
-                          {feedback.createdAt ?? '-'}
+                          {feedback.createdAt
+                            ? formatSeoulDateTime(feedback.createdAt)
+                            : '-'}
                         </Text>
                         <Text className={styles.fieldValue}>
                           {feedback.message}

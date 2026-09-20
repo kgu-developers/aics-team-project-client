@@ -14,7 +14,6 @@ import {
   Dialog,
   EmptyState,
   Heading,
-  IconButton,
   MultiSelector,
   proportional,
   Selector,
@@ -28,23 +27,13 @@ import {
 } from '@aics/design-system';
 import type { TableColumn } from '@aics/design-system';
 import { Link, useBlocker, useNavigate } from '@tanstack/react-router';
-import { EditorContent, useEditor } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
-import {
-  Bold,
-  Code2,
-  Heading2,
-  Italic,
-  List,
-  ListOrdered,
-  Quote,
-  Strikethrough,
-} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import RichTextEditor from '~/shared/ui/RichTextEditor';
 import RichTextViewer from '~/shared/ui/RichTextViewer';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
@@ -93,12 +82,6 @@ const requestErrorMessage =
 function toDateInput(value: string) {
   return value.slice(0, 10);
 }
-function formatHeldAt(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', {
-    dateStyle: 'long',
-  }).format(new Date(value.replace(' ', 'T')));
-}
-
 function hasRichTextContent(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
 
@@ -122,7 +105,7 @@ function createMeetingListColumns({
       key: 'heldAt',
       header: '날짜',
       width: proportional(1, { minWidth: 80 }),
-      renderCell: record => <>{record.heldAt.slice(0, 10)}</>,
+      renderCell: record => <>{formatSeoulDateTime(record.heldAt)}</>,
     },
     {
       key: 'heading',
@@ -183,95 +166,14 @@ function MeetingEditor({
   isDisabled: boolean;
   onChange: (value: RichTextJson) => void;
 }) {
-  const editor = useEditor({
-    content,
-    editable: !isDisabled,
-    extensions: [StarterKit],
-    onUpdate: ({ editor: nextEditor }) =>
-      onChange(nextEditor.getJSON() as RichTextJson),
-  });
-  useEffect(() => {
-    editor?.setEditable(!isDisabled);
-  }, [editor, isDisabled]);
-  useEffect(() => {
-    if (!editor || JSON.stringify(editor.getJSON()) === JSON.stringify(content))
-      return;
-    editor.commands.setContent(content, { emitUpdate: false });
-  }, [content, editor]);
   return (
     <div className={styles.fields}>
-      <Text weight='medium'>회의 내용</Text>
-      <div className={styles.toolbar} aria-label='회의 내용 서식'>
-        <IconButton
-          icon={<Bold aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='굵게'
-          onClick={() => editor?.chain().focus().toggleBold().run()}
-          size='sm'
-          variant='ghost'
-        />
-        <IconButton
-          icon={<Italic aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='기울임'
-          onClick={() => editor?.chain().focus().toggleItalic().run()}
-          size='sm'
-          variant='ghost'
-        />
-        <IconButton
-          icon={<Strikethrough aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='취소선'
-          onClick={() => editor?.chain().focus().toggleStrike().run()}
-          size='sm'
-          variant='ghost'
-        />
-        <IconButton
-          icon={<Heading2 aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='소제목'
-          onClick={() =>
-            editor?.chain().focus().toggleHeading({ level: 2 }).run()
-          }
-          size='sm'
-          variant='ghost'
-        />
-        <IconButton
-          icon={<List aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='글머리표 목록'
-          onClick={() => editor?.chain().focus().toggleBulletList().run()}
-          size='sm'
-          variant='ghost'
-        />
-        <IconButton
-          icon={<ListOrdered aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='번호 목록'
-          onClick={() => editor?.chain().focus().toggleOrderedList().run()}
-          size='sm'
-          variant='ghost'
-        />
-        <IconButton
-          icon={<Quote aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='인용문'
-          onClick={() => editor?.chain().focus().toggleBlockquote().run()}
-          size='sm'
-          variant='ghost'
-        />
-        <IconButton
-          icon={<Code2 aria-hidden='true' size={18} />}
-          isDisabled={isDisabled}
-          label='코드 블록'
-          onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
-          size='sm'
-          variant='ghost'
-        />
-      </div>
-      <div className={styles.editor}>
-        <EditorContent editor={editor} />
-      </div>
+      <RichTextEditor
+        content={content}
+        isDisabled={isDisabled}
+        label='회의 내용'
+        onChange={onChange}
+      />
     </div>
   );
 }
@@ -1128,7 +1030,7 @@ export function MeetingDeleteDialog({
         <Card className={styles.deletePreview} variant='muted'>
           <Text weight='medium'>{record.title}</Text>
           <Text color='secondary' type='supporting'>
-            {formatHeldAt(record.heldAt)} · 작성 {record.createdBy.name}
+            {formatSeoulDateTime(record.heldAt)} · 작성 {record.createdBy.name}
           </Text>
         </Card>
         {isError ? (
@@ -1231,10 +1133,8 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
         <div>
           <Heading level={1}>{record.title}</Heading>
           <p className={styles.meta}>
-            {formatHeldAt(record.heldAt)}
-            {record.phase
-              ? ` ${record.heldAt.slice(11, 16)} · ${meetingPhaseLabels[record.phase]}`
-              : ''}
+            {formatSeoulDateTime(record.heldAt)}
+            {record.phase ? ` · ${meetingPhaseLabels[record.phase]}` : ''}
             {record.location ? ` · ${record.location}` : ''}
           </p>
         </div>
@@ -1268,17 +1168,9 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
         <footer className={styles.detailFooter}>
           <Text color='secondary' type='supporting'>
             최초 작성 {record.createdBy.name} · 최종 수정{' '}
-            {formatHeldAt(record.updatedAt)}
+            {formatSeoulDateTime(record.updatedAt)}
           </Text>
           <div className={`${styles.actions} ${styles.detailActions}`}>
-            {canDelete ? (
-              <Button
-                aria-label='회의록 삭제'
-                label='삭제'
-                onClick={() => setIsDeleteDialogOpen(true)}
-                variant='secondary'
-              />
-            ) : null}
             {context.canEditRecord ? (
               <Button
                 aria-label='회의록 수정'
@@ -1289,6 +1181,14 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
                     params: { meetingId },
                   })
                 }
+                variant='secondary'
+              />
+            ) : null}
+            {canDelete ? (
+              <Button
+                aria-label='회의록 삭제'
+                label='삭제'
+                onClick={() => setIsDeleteDialogOpen(true)}
                 variant='secondary'
               />
             ) : null}

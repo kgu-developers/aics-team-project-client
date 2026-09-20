@@ -82,7 +82,9 @@ test('모든 영역 완료 후 팀장 제출하면 문서는 읽기 전용이 �
   });
   await loginToHome(page);
   await page.getByRole('button', { name: '제출하기', exact: true }).click();
-  await expect(page.getByText(/제출 완료 · 교수 피드백/)).toBeVisible();
+  await expect(
+    page.getByText(/제출 완료 · 피드백 대기 중/).first(),
+  ).toBeVisible();
   await page.goto('/student/editor/proposal/topic');
   await expect(
     page.getByRole('textbox', { name: /^프로젝트 제목/ }),

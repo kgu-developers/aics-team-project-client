@@ -8,6 +8,12 @@ export const content = style({
   wordBreak: 'keep-all',
 });
 
+export const description = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 6,
+});
+
 export const detailList = style({
   display: 'grid',
   gap: 0,

@@ -278,3 +278,28 @@ export const fileName = style({
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
 });
+
+export const feedbackStageCard = style({
+  alignItems: 'center',
+  background: tokens.color.background.muted,
+  borderRadius: tokens.radius.element,
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: tokens.spacing[3],
+  justifyContent: 'space-between',
+  padding: tokens.spacing[4],
+});
+
+export const feedbackStageText = style({
+  color: tokens.color.text.secondary,
+  fontSize: 'var(--font-size-sm)',
+  lineHeight: 1.5,
+  margin: 0,
+});
+
+export const feedbackDialogContent = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing[4],
+  padding: tokens.spacing[5],
+});

@@ -2,6 +2,8 @@ import { fetchMeetingRecords } from '@aics/api-client';
 import type { MeetingAction, MeetingRecord } from '@aics/core';
 import { skipToken, useQuery } from '@tanstack/react-query';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 import { meetingKeys } from './meetingKeys';
 
 const HOME_LIST_LIMIT = 3;
@@ -16,7 +18,7 @@ function selectMeetingHomeSummary(
   currentUserId: string | null | undefined,
 ): MeetingHomeSummary {
   const recordsByRecentMeeting = [...records].sort(
-    (left, right) => Date.parse(right.heldAt) - Date.parse(left.heldAt),
+    (left, right) => seoulInstant(right.heldAt) - seoulInstant(left.heldAt),
   );
 
   return {

@@ -123,10 +123,12 @@ it('waits for confirmation, calls the password reset endpoint, and reports succe
       within(confirmation).getByRole('button', { name: '취소' }),
     ).toHaveFocus(),
   );
+  // Each consequence sits on its own line so the alert stays scannable.
   expect(
-    within(confirmation).getByText(
-      /등록된 전화번호로 초기화되며, 기존 로그인 세션은 모두 해제됩니다/,
-    ),
+    within(confirmation).getByText(/등록된 전화번호로 초기화합니다/),
+  ).toBeVisible();
+  expect(
+    within(confirmation).getByText('기존 로그인 세션은 모두 해제됩니다.'),
   ).toBeVisible();
   expect(
     within(confirmation).getByText(/초기화 후 새 비밀번호로 변경해야 합니다/),
@@ -204,4 +206,29 @@ it('keeps a failed reset open and allows the administrator to retry', async () =
       }),
     ).not.toBeInTheDocument(),
   );
+});
+
+it('내용에서 시작한 드래그가 바깥에서 끝나도 수강생 정보 모달을 닫지 않는다', async () => {
+  useStudentLookupHandler();
+  const { onClose } = renderDialog();
+  const dialog = await screen.findByRole('dialog', {
+    name: '김학생 수강생 정보',
+  });
+  const content = await within(dialog).findByText('김학생 정보');
+
+  // Browsers dispatch the click on the common ancestor (the <dialog>) when the
+  // pointer goes down on content and up on the backdrop.
+  await userEvent.pointer([
+    { keys: '[MouseLeft>]', target: content },
+    { target: dialog },
+    { keys: '[/MouseLeft]', target: dialog },
+  ]);
+  expect(onClose).not.toHaveBeenCalled();
+
+  // A click that both starts and ends on the backdrop still closes it.
+  await userEvent.pointer([
+    { keys: '[MouseLeft>]', target: dialog },
+    { keys: '[/MouseLeft]', target: dialog },
+  ]);
+  expect(onClose).toHaveBeenCalledTimes(1);
 });

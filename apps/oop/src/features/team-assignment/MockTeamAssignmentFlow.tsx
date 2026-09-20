@@ -66,7 +66,7 @@ export default function MockTeamAssignmentFlow({
   if (teamOnly)
     return (
       <div className={styles.studentTeamPage}>
-        <TeamSummary projection={query.data} />
+        <TeamSummary projection={query.data} showBackNavigation />
       </div>
     );
 

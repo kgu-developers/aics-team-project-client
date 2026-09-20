@@ -15,6 +15,7 @@ type TeamSummaryProps = {
   isContinueDisabled?: boolean;
   onContinue?: () => void;
   projection: TeamAssignmentProjection;
+  showBackNavigation?: boolean;
 };
 
 const mockDevelopmentMode = isMockDevelopmentMode(
@@ -27,6 +28,7 @@ export function TeamSummary({
   isContinueDisabled = false,
   onContinue,
   projection,
+  showBackNavigation = false,
 }: TeamSummaryProps) {
   const navigate = useNavigate();
   const team = projection.assignedTeam;
@@ -60,6 +62,16 @@ export function TeamSummary({
           </p>
         ) : null}
         <TeamMemberTable members={team.members} variant='assignment' />
+        {showBackNavigation ? (
+          <HStack justify='center'>
+            <Button
+              label='학생 홈으로 돌아가기'
+              onClick={() => void navigate({ to: ROUTES.STUDENT.HOME })}
+              size='md'
+              variant='secondary'
+            />
+          </HStack>
+        ) : null}
         {isResult ? (
           <>
             <HStack justify='center'>

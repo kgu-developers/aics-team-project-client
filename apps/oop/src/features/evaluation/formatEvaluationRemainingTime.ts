@@ -1,8 +1,14 @@
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
+/**
+ * The server sends `LocalDateTime` strings without an offset; they mean
+ * Asia/Seoul, so they must not go through `Date.parse` (browser-local).
+ */
 export function formatEvaluationRemainingTime(
   closesAt: string,
   now = Date.now(),
 ) {
-  const closesAtTime = Date.parse(closesAt);
+  const closesAtTime = seoulInstant(closesAt);
   if (!Number.isFinite(closesAtTime)) return null;
 
   const remainingSeconds = Math.max(0, Math.ceil((closesAtTime - now) / 1000));

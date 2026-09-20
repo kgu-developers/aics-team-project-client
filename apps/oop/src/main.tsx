@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 
 import { routeTree } from './app/routeTree.gen';
 import { restoreSession } from './features/auth/restoreSession';
+import { startSessionSync } from './features/auth/sessionSync';
 import { isMockDevelopmentMode } from './shared/config/developmentMode';
 
 const router = createRouter({ routeTree });
@@ -74,6 +75,7 @@ async function bootstrap() {
   await enableMocking();
   await enableDevelopmentMilestonePreview();
   await restoreSession();
+  startSessionSync();
 
   const rootElement = document.getElementById('root')!;
   if (!rootElement.innerHTML) {

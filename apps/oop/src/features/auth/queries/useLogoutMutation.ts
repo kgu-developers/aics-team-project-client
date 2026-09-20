@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 
 import { useAuthStore } from '../authStore';
+import { broadcastLogout } from '../sessionSync';
 
 export function useLogoutMutation() {
   const queryClient = useQueryClient();
@@ -21,6 +22,7 @@ export function useLogoutMutation() {
     onSuccess: () => {
       clearSession();
       queryClient.clear();
+      broadcastLogout();
     },
   });
 }

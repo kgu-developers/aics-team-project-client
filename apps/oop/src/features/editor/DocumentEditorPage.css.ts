@@ -120,3 +120,9 @@ export const saveState = style({
   color: 'var(--color-text-secondary)',
   fontSize: 'var(--font-size-sm)',
 });
+
+export const leaveDialog = style({
+  display: 'grid',
+  gap: 'var(--spacing-4)',
+  minWidth: 0,
+});

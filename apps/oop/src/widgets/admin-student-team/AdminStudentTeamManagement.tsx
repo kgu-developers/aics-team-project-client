@@ -17,6 +17,7 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 
+import AdminSectionTeamFilter from '~/features/admin-section/components/AdminSectionTeamFilter';
 import {
   useAdminSectionEnrollmentsQuery,
   useAdminSectionTeamsQuery,
@@ -233,23 +234,12 @@ export default function AdminStudentTeamManagement() {
         <Heading level={1}>수강생·팀 관리</Heading>
       </div>
 
-      <div aria-label='분반 선택' className={styles.sectionTabs} role='group'>
-        {sections.map(section => {
-          const isSelected = section.id === sectionId;
-
-          return (
-            <button
-              aria-pressed={isSelected}
-              className={isSelected ? styles.activeTab : styles.tab}
-              key={section.id}
-              onClick={() => setSelectedSectionId(section.id)}
-              type='button'
-            >
-              {section.code}
-            </button>
-          );
-        })}
-      </div>
+      <AdminSectionTeamFilter
+        allowAllSections={false}
+        label='분반 선택'
+        onSectionChange={setSelectedSectionId}
+        sectionId={sectionId}
+      />
 
       {!sectionId ? (
         <section className={styles.statePanel}>

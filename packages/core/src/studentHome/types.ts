@@ -81,6 +81,10 @@ export type StudentHomeSubmissionMetadata = {
   updatedAt: string;
 };
 
+/** Feedback flow stage shared by the home summary and the milestone detail. */
+export type DocumentFeedbackStage =
+  'not-submitted' | 'unknown' | 'awaiting-feedback' | 'feedback-arrived';
+
 export type StudentHomeMilestoneBody =
   | {
       kind: 'topic';
@@ -100,6 +104,11 @@ export type StudentHomeMilestoneBody =
       kind: 'proposal-feedback';
       /** Team resolved by the consuming page's current server identity. */
       teamId?: string;
+      /**
+       * Where the document is in the feedback flow. Undefined keeps the
+       * legacy always-visible feedback room (previews, fixtures).
+       */
+      feedbackStage?: DocumentFeedbackStage;
       /** Legacy preview metadata; the team-message contract has no review ID. */
       reviewId?: string;
       feedback: StudentHomeFeedbackMessage[];
@@ -118,6 +127,7 @@ export type StudentHomeMilestoneBody =
   | {
       kind: 'mid-review-feedback';
       teamId?: string;
+      feedbackStage?: DocumentFeedbackStage;
       /** Legacy preview metadata; feedback messages are scoped to the team. */
       submissionId?: string;
       feedback: StudentHomeFeedbackMessage[];

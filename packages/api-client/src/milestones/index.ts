@@ -8,10 +8,12 @@ export { fetchAdminSectionMilestone } from './fetchAdminSectionMilestone';
 export { fetchAdminSectionMilestones } from './fetchAdminSectionMilestones';
 export { submitAdminSectionMilestone } from './submitAdminSectionMilestone';
 export { updateAdminSectionMilestone } from './updateAdminSectionMilestone';
+export { updateAdminSectionMilestoneEvaluationWindow } from './updateAdminSectionMilestoneEvaluationWindow';
 export { updateAdminSectionMilestoneStatus } from './updateAdminSectionMilestoneStatus';
 export { updateAdminSectionMilestoneWeekNumbers } from './updateAdminSectionMilestoneWeekNumbers';
 export type {
   AdminMilestoneCreateInput,
+  AdminMilestoneEvaluationWindowInput,
   AdminMilestonePersistResponse,
   AdminMilestoneScheduleRequest,
   AdminMilestoneScheduleDto,

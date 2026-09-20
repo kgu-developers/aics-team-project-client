@@ -3,6 +3,8 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import type { EditorDocId } from '~/app/constants/editorSections';
 
+import type { EditorReturnContext } from './editorReturnContext';
+
 export function isDocumentVersionConflict(error: unknown) {
   return Boolean(
     typeof error === 'object' &&
@@ -87,10 +89,13 @@ export type DocumentEditorPageProps<D extends DocumentEditorDocument> = {
   documentQuery: UseQueryResult<D>;
   saveBlock: DocumentEditorSaveBlocker<D>;
   saveState: DocumentEditorSaveState;
+  /** 자동 저장이 기본이며, manual은 명시적인 저장 버튼과 이탈 확인을 사용한다. */
+  saveMode?: 'auto' | 'manual';
   completion?: DocumentEditorCompletion<D>;
   /** 문서별 서버 잠금/기간 정책. 기존 lease 흐름과 동시에 사용하지 않는다. */
   access?: { canEdit: boolean; notice?: string; controls?: React.ReactNode };
   retryVersionConflict?: boolean;
+  returnTo?: EditorReturnContext;
   /** 공통 셸이 문서 id와 section으로 잠금 대상을 조립할 때 사용한다. */
   editLockTargetType: EditLockTargetType | null;
   renderFields?: (input: {

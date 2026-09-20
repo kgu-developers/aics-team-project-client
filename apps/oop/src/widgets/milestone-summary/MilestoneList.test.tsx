@@ -401,17 +401,21 @@ describe('MilestoneDetails', () => {
       <MilestoneDetails
         body={{
           ...body,
+          feedbackStage: 'awaiting-feedback',
           canSubmitResponse: true,
           responseBlockedReason: undefined,
         }}
       />,
     );
 
+    await user.click(screen.getByRole('button', { name: '반영 방향 보내기' }));
     await user.type(
       screen.getByRole('textbox', { name: /대면 피드백 반영 내용/ }),
       '예외 처리와 시연 흐름을 보완하라는 피드백을 받아 오류 화면과 재시도 동선을 추가했습니다.',
     );
-    await user.click(screen.getByRole('button', { name: '반영 기록 남기기' }));
+    await user.click(
+      screen.getAllByRole('button', { name: '반영 방향 보내기' })[1]!,
+    );
 
     expect(submitMidReportFeedback).toHaveBeenCalledWith(
       {
@@ -424,8 +428,8 @@ describe('MilestoneDetails', () => {
       body: '대면 피드백 반영 기록을 제출했어요.',
     });
     expect(
-      screen.getAllByRole('textbox', { name: /대면 피드백 반영 내용/ }),
-    ).toHaveLength(1);
+      screen.queryByRole('textbox', { name: /대면 피드백 반영 내용/ }),
+    ).not.toBeInTheDocument();
   });
 
   it('중간보고서 반영 기록이 비어 있으면 단일 입력에 오류를 표시한다', async () => {
@@ -442,13 +446,17 @@ describe('MilestoneDetails', () => {
       <MilestoneDetails
         body={{
           ...body,
+          feedbackStage: 'awaiting-feedback',
           canSubmitResponse: true,
           responseBlockedReason: undefined,
         }}
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: '반영 기록 남기기' }));
+    await user.click(screen.getByRole('button', { name: '반영 방향 보내기' }));
+    await user.click(
+      screen.getAllByRole('button', { name: '반영 방향 보내기' })[1]!,
+    );
 
     expect(
       screen.getByRole('textbox', { name: /대면 피드백 반영 내용/ }),
@@ -469,10 +477,12 @@ describe('MilestoneDetails', () => {
     }
     const readyBody = {
       ...body,
+      feedbackStage: 'awaiting-feedback' as const,
       canSubmitResponse: true,
       responseBlockedReason: undefined,
     };
     const view = renderWithRouter(<MilestoneDetails body={readyBody} />);
+    await user.click(screen.getByRole('button', { name: '반영 방향 보내기' }));
     const input = screen.getByRole('textbox', {
       name: /대면 피드백 반영 내용/,
     });
@@ -481,7 +491,9 @@ describe('MilestoneDetails', () => {
     submitMidReportFeedback.mockImplementation(() => {
       feedbackMutationState.midError = new Error('request failed');
     });
-    await user.click(screen.getByRole('button', { name: '반영 기록 남기기' }));
+    await user.click(
+      screen.getAllByRole('button', { name: '반영 방향 보내기' })[1]!,
+    );
     view.rerender(<MilestoneDetails body={readyBody} />);
 
     expect(submitMidReportFeedback).toHaveBeenCalledWith(
@@ -498,10 +510,7 @@ describe('MilestoneDetails', () => {
     ).toBeVisible();
   });
 
-  it.each([
-    ['proposal-feedback', '제안서를 수정해 다시 제출한 뒤'],
-    ['mid-feedback', '중간보고서를 수정해 다시 제출한 뒤'],
-  ] as const)(
+  it.each([['proposal-feedback', '제안서를 수정해 다시 제출한 뒤']] as const)(
     '%s 상태는 문서 재제출 전 피드백 입력을 잠근다',
     (scenario, reason) => {
       const body = createStudentHomeDashboardPreview(scenario).milestones.find(

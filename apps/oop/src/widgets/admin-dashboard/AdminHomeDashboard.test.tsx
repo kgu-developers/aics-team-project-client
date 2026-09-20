@@ -18,6 +18,29 @@ import { demoAdmin } from '~/mocks/data/users';
 
 const dashboardState = vi.hoisted(() => ({
   meetingContent: '',
+  meetingRecords: [] as {
+    authorId: string;
+    content: string;
+    id: number;
+    location: string;
+    meetingAt: string;
+    participantCount: number;
+    phase: 'MID_CHECK';
+    sectionId: number;
+    sectionName: string;
+    teamId: number;
+    teamName: string;
+  }[],
+  messages: [] as {
+    createdAt: string;
+    id: number;
+    message: string;
+    read: boolean;
+    sectionId: number;
+    sectionName: string;
+    teamId: number;
+    teamName: string;
+  }[],
   milestones: [] as AdminSectionMilestoneDto[],
   noticeError: false,
   noticeScopeStatus: 'ready',
@@ -31,6 +54,33 @@ const dashboardState = vi.hoisted(() => ({
 }));
 beforeEach(() => {
   dashboardState.meetingContent = '발표 자료의 핵심 흐름과 역할을 확정한다.';
+  dashboardState.meetingRecords = [
+    {
+      authorId: '20260001',
+      content: dashboardState.meetingContent,
+      id: 2,
+      location: '온라인',
+      meetingAt: '2026-10-08 00:00',
+      participantCount: 2,
+      phase: 'MID_CHECK',
+      sectionId: 1,
+      sectionName: 'OOP-01',
+      teamId: 12,
+      teamName: '2팀',
+    },
+  ];
+  dashboardState.messages = [
+    {
+      createdAt: '2026-10-09 10:00',
+      id: 1,
+      message: '제안서 보완 사항을 확인해 주세요.',
+      read: false,
+      sectionId: 1,
+      sectionName: '객체지향프로그래밍',
+      teamId: 7,
+      teamName: '1팀',
+    },
+  ];
   dashboardState.milestones = [];
   dashboardState.noticeError = false;
   dashboardState.noticeScopeStatus = 'ready';
@@ -49,21 +99,11 @@ afterEach(() => useAuthStore.setState({ currentUser: null }));
 vi.mock('~/features/admin-meeting/queries', () => ({
   useAdminMeetingRecordListQuery: () => ({
     data: {
-      contents: [
-        {
-          authorId: '20260001',
-          content: dashboardState.meetingContent,
-          id: 2,
-          location: '온라인',
-          meetingAt: '2026-10-08 00:00',
-          participantCount: 2,
-          phase: 'MID_CHECK',
-          sectionId: 1,
-          sectionName: 'OOP-01',
-          teamId: 12,
-          teamName: '2팀',
-        },
-      ],
+      contents: dashboardState.meetingRecords.map((record, index) =>
+        index === 0
+          ? { ...record, content: dashboardState.meetingContent }
+          : record,
+      ),
       pageable: {
         isEnd: true,
         page: 0,
@@ -80,18 +120,7 @@ vi.mock('~/features/admin-meeting/queries', () => ({
 vi.mock('~/features/admin-message/queries', () => ({
   useAdminMessagesQuery: () => ({
     data: {
-      contents: [
-        {
-          createdAt: '2026-10-09 10:00',
-          id: 1,
-          message: '제안서 보완 사항을 확인해 주세요.',
-          read: false,
-          sectionId: 1,
-          sectionName: '객체지향프로그래밍',
-          teamId: 7,
-          teamName: '1팀',
-        },
-      ],
+      contents: dashboardState.messages,
       unreadCount: 1,
     },
     isError: false,
@@ -133,6 +162,16 @@ function renderPage(user = demoAdmin) {
     getParentRoute: () => rootRoute,
     path: '/admin/meetings',
   });
+  const noticesRoute = createRoute({
+    component: () => <div>공지사항 목록</div>,
+    getParentRoute: () => rootRoute,
+    path: '/admin/notices',
+  });
+  const messagesRoute = createRoute({
+    component: () => <div>쪽지함 목록</div>,
+    getParentRoute: () => rootRoute,
+    path: '/admin/messages',
+  });
   const meetingDetailRoute = createRoute({
     component: () => <div>회의록 상세</div>,
     getParentRoute: () => rootRoute,
@@ -152,7 +191,9 @@ function renderPage(user = demoAdmin) {
     history: createMemoryHistory({ initialEntries: ['/admin'] }),
     routeTree: rootRoute.addChildren([
       homeRoute,
+      noticesRoute,
       meetingsRoute,
+      messagesRoute,
       meetingDetailRoute,
       teamMessagesRoute,
       submissionsRoute,
@@ -218,12 +259,17 @@ describe('AdminHomeDashboard', () => {
       await screen.findByText('발표 자료의 핵심 흐름과 역할을 확정한다.'),
     ).toBeInTheDocument();
     expect(screen.getByText('OOP-01 · 2팀')).toBeInTheDocument();
-    expect(screen.getByText('2026-10-08')).toBeInTheDocument();
+    expect(screen.getByText('2026-10-08/09:00')).toBeInTheDocument();
     expect(
       screen.getByRole('link', {
         name: '발표 자료의 핵심 흐름과 역할을 확정한다.',
       }),
     ).toHaveAttribute('href', '/admin/meetings/2');
+    expect(
+      screen
+        .getAllByRole('link', { name: '전체보기 ›' })
+        .map(link => link.getAttribute('href')),
+    ).toContain('/admin/meetings');
     expect(
       screen.queryByText('등록된 회의록이 없습니다.'),
     ).not.toBeInTheDocument();
@@ -259,6 +305,80 @@ describe('AdminHomeDashboard', () => {
     expect(
       screen.getByRole('link', { name: '제안서 보완 사항을 확인해 주세요.' }),
     ).toHaveAttribute('href', '/admin/messages/teams/7');
+  });
+
+  it('공지사항·회의록·쪽지함은 서버가 준 순서의 최신 3건만 표시하고 각 목록으로 연결한다', async () => {
+    dashboardState.notices = Array.from({ length: 4 }, (_, index) => ({
+      id: index + 10,
+      sectionId: 1,
+      title: `공지 ${index + 1}`,
+      content: '본문',
+      publishedAt: `2026-09-${10 - index}T09:00:00+09:00`,
+    }));
+    dashboardState.meetingRecords = Array.from({ length: 4 }, (_, index) => ({
+      authorId: '20260001',
+      content: `회의 ${index + 1}`,
+      id: index + 20,
+      location: '온라인',
+      meetingAt: `2026-10-0${4 - index} 10:00`,
+      participantCount: 2,
+      phase: 'MID_CHECK' as const,
+      sectionId: 1,
+      sectionName: 'OOP-01',
+      teamId: 12,
+      teamName: '2팀',
+    }));
+    dashboardState.meetingContent = '회의 1';
+    dashboardState.messages = Array.from({ length: 4 }, (_, index) => ({
+      createdAt: `2026-10-0${4 - index} 11:00`,
+      id: index + 30,
+      message: `쪽지 ${index + 1}`,
+      read: false,
+      sectionId: 1,
+      sectionName: 'OOP-01',
+      teamId: index + 40,
+      teamName: `${index + 1}팀`,
+    }));
+
+    renderPage();
+
+    const noticePanel = (
+      await screen.findByRole('heading', {
+        name: '공지사항',
+      })
+    ).closest('section')!;
+    const meetingPanel = screen
+      .getByRole('heading', { name: '회의록' })
+      .closest('section')!;
+    const messagePanel = screen
+      .getByRole('heading', { name: /쪽지함/ })
+      .closest('section')!;
+
+    expect(
+      within(noticePanel)
+        .getAllByRole('listitem')
+        .map(item => within(item).getByRole('link').textContent),
+    ).toEqual(['공지 1', '공지 2', '공지 3']);
+    expect(
+      within(meetingPanel)
+        .getAllByRole('listitem')
+        .map(item => within(item).getByRole('link').textContent),
+    ).toEqual(['회의 1', '회의 2', '회의 3']);
+    expect(
+      within(messagePanel)
+        .getAllByRole('listitem')
+        .map(item => within(item).getByRole('link').textContent),
+    ).toEqual(['쪽지 1', '쪽지 2', '쪽지 3']);
+
+    expect(
+      within(noticePanel).getByRole('link', { name: '전체보기 ›' }),
+    ).toHaveAttribute('href', '/admin/notices');
+    expect(
+      within(meetingPanel).getByRole('link', { name: '전체보기 ›' }),
+    ).toHaveAttribute('href', '/admin/meetings');
+    expect(
+      within(messagePanel).getByRole('link', { name: '전체보기 ›' }),
+    ).toHaveAttribute('href', '/admin/messages');
   });
 });
 
@@ -348,7 +468,7 @@ it('공지 게시 시각을 서울 기준 자정 넘김으로 표시한다', asy
   renderPage();
   const link = await screen.findByRole('link', { name: '계약 공지' });
   expect(
-    within(link.closest('li')!).getByText('2026.09.15 00:30'),
+    within(link.closest('li')!).getByText('2026-09-15/00:30'),
   ).toBeInTheDocument();
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
@@ -358,7 +478,7 @@ it('오프셋 없는 공지 게시 시각을 서울 현지 시각으로 표시�
   renderPage();
   const link = await screen.findByRole('link', { name: '계약 공지' });
   expect(
-    within(link.closest('li')!).getByText('2026.08.27 15:00'),
+    within(link.closest('li')!).getByText('2026-08-28/00:00'),
   ).toBeInTheDocument();
 });
 

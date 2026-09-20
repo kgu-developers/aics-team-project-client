@@ -219,7 +219,7 @@ describe('AdminTeamDashboard', () => {
       await screen.findByText('AI 기반 팀 프로젝트 관리 서비스'),
     ).toBeInTheDocument();
     expect(screen.getByText('수정 요청')).toBeInTheDocument();
-    expect(screen.getByText('2026.09.07 18:00')).toBeInTheDocument();
+    expect(screen.getByText('2026-09-07/18:00')).toBeInTheDocument();
     expect(screen.getByText('발표 자료 제출')).toBeInTheDocument();
     expect(screen.getByText('presentation.pdf')).toBeInTheDocument();
     expect(

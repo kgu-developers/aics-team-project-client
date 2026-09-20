@@ -206,6 +206,49 @@ export function updateAdminSectionMilestoneFixture(
   return milestone;
 }
 
+/** Mirrors the server's MilestoneSchedule ordering rules for the window. */
+export function updateAdminSectionMilestoneFixtureEvaluationWindow(
+  sectionId: string,
+  milestoneId: string,
+  input: {
+    clearEvaluationWindow?: boolean;
+    evaluationClosesAt?: string;
+    evaluationOpensAt?: string;
+  },
+): { error: string } | { milestone: AdminSectionMilestoneDto } {
+  const milestone = milestonesBySectionId[sectionId]?.find(
+    candidate => candidate.id === Number(milestoneId),
+  );
+  if (!milestone) return { error: 'MILESTONE_NOT_FOUND' };
+  if (input.clearEvaluationWindow) {
+    milestone.schedule = {
+      ...milestone.schedule,
+      evaluationClosesAt: null,
+      evaluationOpensAt: null,
+    };
+    return { milestone };
+  }
+  const { evaluationClosesAt, evaluationOpensAt } = input;
+  if (!evaluationOpensAt || !evaluationClosesAt)
+    return { error: 'INVALID_MILESTONE_REQUEST' };
+  const dueAt = milestone.schedule.dueAt ?? '';
+  const submissionOrRevisionUntil =
+    milestone.schedule.revisionUntil ?? milestone.schedule.lateSubmissionUntil;
+  if (
+    evaluationOpensAt < dueAt ||
+    (submissionOrRevisionUntil &&
+      evaluationOpensAt < submissionOrRevisionUntil) ||
+    evaluationOpensAt >= evaluationClosesAt
+  )
+    return { error: 'INVALID_MILESTONE_REQUEST' };
+  milestone.schedule = {
+    ...milestone.schedule,
+    evaluationClosesAt,
+    evaluationOpensAt,
+  };
+  return { milestone };
+}
+
 export function updateAdminSectionMilestoneFixtureWeekNumbers(
   sectionId: string,
   changes: readonly { milestoneId: number; weekNumber: number }[],

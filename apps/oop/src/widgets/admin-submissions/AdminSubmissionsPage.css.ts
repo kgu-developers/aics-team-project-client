@@ -144,3 +144,8 @@ export const backLink = style({
     outlineOffset: 2,
   },
 });
+
+export const criteriaNotice = style({
+  marginBottom: 12,
+  padding: 16,
+});

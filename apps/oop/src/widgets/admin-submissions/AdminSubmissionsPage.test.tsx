@@ -8,7 +8,7 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -29,11 +29,13 @@ import AdminSubmissionDetailPage from './AdminSubmissionDetailPage';
 import AdminSubmissionsPage from './AdminSubmissionsPage';
 
 import { resetMockSessionState } from '~/mocks/authSession';
+import { adminPresentationEvaluationListFixture } from '~/mocks/data/adminEvaluationResults';
 import {
   getAdminMilestoneSubmissionsFixture,
   resetAdminMilestoneSubmissionsFixture,
   updatePresentationOrderFixture,
 } from '~/mocks/data/adminMilestoneSubmissions';
+import { getAdminSectionMilestonesFixture } from '~/mocks/data/adminSectionMilestones';
 import { createProjectProposalFixture } from '~/mocks/data/projectProposal';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminEvaluationResultHandlers } from '~/mocks/handlers/adminEvaluationResults';
@@ -217,7 +219,7 @@ describe('AdminSubmissionsPage', () => {
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
     const open = await screen.findByRole('button', {
-      name: '순서 배정 및 평가',
+      name: '발표 순서·평가 항목 설정',
     });
     await waitFor(() => expect(open).toBeEnabled());
     await user.click(open);
@@ -277,7 +279,7 @@ describe('AdminSubmissionsPage', () => {
     await user.click(await screen.findByRole('tab', { name: '중간 점검' }));
 
     expect(await screen.findByText('피드백 제공')).toBeInTheDocument();
-    expect(await screen.findByText('2026.10.14 18:00')).toBeInTheDocument();
+    expect(await screen.findByText('2026-10-14/18:00')).toBeInTheDocument();
     expect(screen.getByText('제출자: 20230001')).toBeInTheDocument();
     expect(screen.queryByText('현재 버전: 2차')).not.toBeInTheDocument();
   });
@@ -561,7 +563,9 @@ describe('AdminSubmissionsPage', () => {
 
     expect(await screen.findByText('보완된 제안서')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /2차 · 20230001 · 2026.09.08 08:30/ }),
+      screen.getByRole('button', {
+        name: /2차 · 20230001 · 2026-09-08\/08:30/,
+      }),
     ).toBeVisible();
     expect(
       screen.getByRole('link', { name: 'proposal-v2.pdf' }),
@@ -646,6 +650,57 @@ describe('AdminSubmissionsPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('서로 다른 제출 규칙에 같은 파일이 연결되어도 두 항목을 안정적으로 렌더링한다', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_VERSION('1005', 1)}`,
+        () =>
+          HttpResponse.json({
+            artifacts: [
+              {
+                downloadUrl: 'https://files.example.com/e2e-submission.pdf',
+                fileId: 41,
+                fileName: 'e2e-submission.pdf',
+                requiredArtifactId: 51,
+                type: 'FILE',
+              },
+              {
+                downloadUrl: 'https://files.example.com/e2e-submission.pdf',
+                fileId: 41,
+                fileName: 'e2e-submission.pdf',
+                requiredArtifactId: 52,
+                type: 'FILE',
+              },
+            ],
+            late: false,
+            submittedAt: '2026-12-01T09:00:00Z',
+            submittedBy: '20230001',
+            version: 1,
+          }),
+      ),
+    );
+
+    try {
+      const user = userEvent.setup();
+      renderPage();
+      await user.click(await screen.findByRole('tab', { name: '최종 보고서' }));
+
+      expect(
+        await screen.findAllByRole('link', { name: 'e2e-submission.pdf' }),
+      ).toHaveLength(2);
+      expect(
+        consoleError.mock.calls.some(call =>
+          call.some(value => String(value).includes('same key')),
+        ),
+      ).toBe(false);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
   it('발표 자료 제출은 현재 파일과 발표 순서를 표시하고 ZIP 다운로드만 제공한다', async () => {
     const user = userEvent.setup();
 
@@ -682,14 +737,66 @@ describe('AdminSubmissionsPage', () => {
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
 
     const settingsButton = await screen.findByRole('button', {
-      name: '순서 배정 및 평가',
+      name: '발표 순서·평가 항목 설정',
     });
     await waitFor(() => expect(settingsButton).toBeEnabled());
 
-    await user.click(screen.getByRole('button', { name: '순서 배정 및 평가' }));
+    await user.click(
+      screen.getByRole('button', { name: '발표 순서·평가 항목 설정' }),
+    );
     expect(
-      await screen.findByRole('heading', { name: '발표 순서 설정' }),
+      await screen.findByRole('heading', { name: '발표 순서·평가 항목 설정' }),
     ).toBeInTheDocument();
+  });
+
+  it('발표 평가 항목이 1개뿐이면 학생에게 그 항목만 보인다고 안내한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRESENTATION_EVALUATIONS('1')}`,
+        () =>
+          HttpResponse.json({
+            ...adminPresentationEvaluationListFixture,
+            criteria: adminPresentationEvaluationListFixture.criteria.slice(
+              0,
+              1,
+            ),
+          }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    expect(
+      await screen.findByText(/발표 평가 항목이 1개뿐입니다/),
+    ).toBeInTheDocument();
+  });
+
+  it('발표 평가 기간이 없으면 발표 마일스톤 상세로 안내한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`,
+        () =>
+          HttpResponse.json({
+            content: getAdminSectionMilestonesFixture('1')!.content.filter(
+              milestone => milestone.id !== 103,
+            ),
+          }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    expect(
+      await screen.findByText('발표 평가 기간이 설정되지 않았습니다.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '발표 마일스톤에서 평가 기간 설정' }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: '발표 순서·평가 항목 설정' }),
+    ).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('발표 평가 설정에서 분반별 평가 항목을 조회하고 생성한다', async () => {
@@ -735,7 +842,7 @@ describe('AdminSubmissionsPage', () => {
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
     await user.click(
-      await screen.findByRole('button', { name: '순서 배정 및 평가' }),
+      await screen.findByRole('button', { name: '발표 순서·평가 항목 설정' }),
     );
 
     expect(
@@ -758,13 +865,26 @@ describe('AdminSubmissionsPage', () => {
     );
   });
 
-  it('발표 평가 목록의 팀 행은 결과 상세로 이동할 수 있게 표시한다', async () => {
+  it('발표 평가 목록의 클릭 가능한 팀 행에 항목 점수·합계·평가 수를 표시한다', async () => {
     const user = userEvent.setup();
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
     expect(
-      await screen.findByRole('row', { name: /OOP-01 - 1팀 발표 평가 보기/ }),
-    ).toHaveAttribute('tabindex', '0');
+      await screen.findByRole('columnheader', {
+        name: '프로젝트 완성도 (10)',
+      }),
+    ).toBeInTheDocument();
+    const row = await screen.findByRole('row', {
+      name: 'OOP-01 - 1팀 발표 평가 보기',
+    });
+    expect(row).toHaveAttribute('tabindex', '0');
+    expect(within(row).getByRole('cell', { name: '9' })).toBeInTheDocument();
+    expect(within(row).getByRole('cell', { name: '17' })).toBeInTheDocument();
+    expect(within(row).getByRole('cell', { name: '2건' })).toBeInTheDocument();
+    expect(
+      within(row).queryByRole('link', { name: 'OOP-01 - 1팀' }),
+    ).not.toBeInTheDocument();
   });
 
   it('발표 자료 제출 fixture의 최신 버전을 조회한다', async () => {

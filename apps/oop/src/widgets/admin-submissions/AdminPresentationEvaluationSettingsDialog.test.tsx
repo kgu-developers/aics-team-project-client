@@ -314,7 +314,7 @@ it('discards unsaved orders on close and initializes from current teams on reope
   expect(close).toHaveBeenCalledOnce();
   rerender({ isOpen: false });
   expect(
-    screen.queryByRole('dialog', { name: '발표 평가 설정' }),
+    screen.queryByRole('dialog', { name: '발표 순서·평가 항목 설정' }),
   ).not.toBeInTheDocument();
   rerender({ isOpen: true });
   expect(

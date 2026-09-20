@@ -14,6 +14,11 @@ export type AdminMilestoneSectionScheduleDraft = {
     time: string;
   };
   isPublished: boolean;
+  /**
+   * Not editable in the form yet; kept from the server so a PUT (which
+   * replaces the whole schedule) does not silently erase it.
+   */
+  revisionUntil?: string | null;
   lateSubmissionUntil: {
     date: string;
     time: string;
@@ -55,12 +60,14 @@ export function assertAdminMilestoneScheduleOrder({
   evaluationOpensAt,
   lateSubmissionUntil,
   opensAt,
+  revisionUntil,
 }: {
   dueAt: string;
   evaluationClosesAt?: string;
   evaluationOpensAt?: string;
   lateSubmissionUntil?: string;
   opensAt?: string;
+  revisionUntil?: string;
 }) {
   if (opensAt && opensAt >= dueAt) {
     throw new Error('공개 시작 일시는 제출 마감 일시보다 앞서야 합니다.');
@@ -80,6 +87,23 @@ export function assertAdminMilestoneScheduleOrder({
     evaluationOpensAt >= evaluationClosesAt
   ) {
     throw new Error('평가 종료 일시는 평가 시작 일시보다 늦어야 합니다.');
+  }
+  // Mirrors the server's MilestoneSchedule rules so the form explains a
+  // rejection instead of a bare 400.
+  if (evaluationOpensAt && evaluationOpensAt < dueAt) {
+    throw new Error(
+      '평가 시작 일시는 제출 마감 일시 이후여야 합니다. 발표 평가는 자료 제출이 끝난 뒤에 시작됩니다.',
+    );
+  }
+  const submissionOrRevisionUntil = revisionUntil ?? lateSubmissionUntil;
+  if (
+    evaluationOpensAt &&
+    submissionOrRevisionUntil &&
+    evaluationOpensAt < submissionOrRevisionUntil
+  ) {
+    throw new Error(
+      '평가 시작 일시는 지각 제출·수정 마감 일시 이후여야 합니다.',
+    );
   }
 }
 
