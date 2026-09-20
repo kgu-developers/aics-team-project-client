@@ -17,8 +17,9 @@ export function safeSubmissionUrl(value?: string | null) {
 }
 
 /** Display-only media may use a same-origin root path as well as HTTP(S). */
-export function safeDisplayUrl(value?: string | null) {
-  const hasUnsafeCharacter = [...(value ?? '')].some(character => {
+export function safeDisplayUrl(value?: unknown) {
+  if (typeof value !== 'string') return undefined;
+  const hasUnsafeCharacter = [...value].some(character => {
     const code = character.charCodeAt(0);
     return code <= 31 || code === 127 || character === '\\';
   });

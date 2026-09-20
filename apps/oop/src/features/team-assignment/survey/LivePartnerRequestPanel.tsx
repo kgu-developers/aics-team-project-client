@@ -16,6 +16,7 @@ import { PartnerRequestDialogs } from './PartnerRequestDialogs';
 type LivePartnerRequestPanelProps = {
   canRequestPartner: boolean;
   draftPreferredPeer: PartnerCandidate | null | undefined;
+  onPartnerApproved: (requesterUserId: string) => void;
   onPreferredPeerChange: (candidate: PartnerCandidate | null) => void;
   preSurveySectionId: number;
   preferredPeerStatus?: PreferredPeerRequestStatus | null;
@@ -25,6 +26,7 @@ type LivePartnerRequestPanelProps = {
 export function LivePartnerRequestPanel({
   canRequestPartner,
   draftPreferredPeer,
+  onPartnerApproved,
   onPreferredPeerChange,
   preSurveySectionId,
   preferredPeerStatus,
@@ -46,6 +48,7 @@ export function LivePartnerRequestPanel({
         decision,
         requesterUserId: request.requester.id,
       });
+      if (decision === 'approve') onPartnerApproved(request.requester.id);
       setApproveRequestOpen(false);
       toast({
         body:

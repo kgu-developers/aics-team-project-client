@@ -166,6 +166,7 @@ export function SurveyForm({
               <LivePartnerRequestPanel
                 canRequestPartner={hasRole}
                 draftPreferredPeer={draftPreferredPeer}
+                onPartnerApproved={setSelectedPreferredPeerUserId}
                 onPreferredPeerChange={candidate => {
                   setDraftPreferredPeer(candidate);
                   setSelectedPreferredPeerUserId(candidate?.id ?? null);

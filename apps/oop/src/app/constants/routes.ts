@@ -39,6 +39,21 @@ export const ROUTES = {
   },
 } as const;
 
+const noTeamAccessibleStudentRoutes = [
+  ROUTES.STUDENT.NOTICES,
+  ROUTES.STUDENT.MESSAGES,
+] as const;
+
+export function isNoTeamAccessibleStudentRoute(pathname?: string) {
+  if (!pathname) return false;
+  const normalizedPathname = pathname.replace(/\/+$/, '') || '/';
+  return noTeamAccessibleStudentRoutes.some(
+    route =>
+      normalizedPathname === route ||
+      normalizedPathname.startsWith(`${route}/`),
+  );
+}
+
 /** ROUTES 트리에서 문자열 리프 경로만 추출한다. */
 type RoutePathOf<T> = T extends string
   ? T

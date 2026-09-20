@@ -31,6 +31,15 @@ describe('resolveStudentLoginDestination', () => {
     ).resolves.toBe('/onboarding/team');
   });
 
+  it.each(['/student/notices', '/student/notices/17', '/student/messages'])(
+    '팀 미배정 학생도 로그인 뒤 분반·사용자 route %s를 유지한다',
+    async redirect => {
+      await expect(
+        resolveStudentLoginDestination({ ...student, teamId: null }, redirect),
+      ).resolves.toBe(redirect);
+    },
+  );
+
   it.each([
     ['팀장', '7'],
     ['팀원', '8'],
@@ -63,6 +72,27 @@ describe('resolveStudentLoginDestination', () => {
       ),
     ).resolves.toBe('/onboarding/team');
   });
+
+  it.each(['/student/notices', '/student/notices/17', '/student/messages'])(
+    '연락처 공개 전 팀 배정 학생도 로그인 뒤 분반·사용자 route %s를 유지한다',
+    async redirect => {
+      await expect(
+        resolveStudentLoginDestination(
+          {
+            ...student,
+            teamId: '7',
+            sections: [
+              {
+                ...student.sections[0]!,
+                contactVisibleFrom: '2099-01-01T00:00:00+09:00',
+              },
+            ],
+          },
+          redirect,
+        ),
+      ).resolves.toBe(redirect);
+    },
+  );
 
   it('연락처 공개 일정이 미설정인 배정 학생은 학생 redirect를 유지한다', async () => {
     await expect(

@@ -1,6 +1,6 @@
 import type { CurrentUser } from '@aics/core';
 
-import { ROUTES } from '~/app/constants/routes';
+import { isNoTeamAccessibleStudentRoute, ROUTES } from '~/app/constants/routes';
 
 import { hasMeetingApiId } from '~/features/meeting/queries/api/meetingApiKeys';
 
@@ -22,12 +22,16 @@ export async function resolveStudentLoginDestination(
   const hasUnambiguousTeam =
     currentUser.sections.length === 1 &&
     hasMeetingApiId(currentUser.teamId ?? undefined);
-  if (!hasUnambiguousTeam) return ROUTES.ONBOARDING.TEAM;
+  if (!hasUnambiguousTeam) {
+    if (redirect && isNoTeamAccessibleStudentRoute(redirect)) return redirect;
+    return ROUTES.ONBOARDING.TEAM;
+  }
 
   if (
     !options.isDemo &&
     resolveContactVisibility(currentUser.sections[0]!, options.now) ===
-      'upcoming'
+      'upcoming' &&
+    !isNoTeamAccessibleStudentRoute(redirect)
   ) {
     return ROUTES.ONBOARDING.TEAM;
   }

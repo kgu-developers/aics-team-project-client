@@ -117,6 +117,103 @@ describe('SurveyForm', () => {
     expect(screen.getByRole('button', { name: '다음 설문' })).toBeDisabled();
   });
 
+  it('받은 파트너 신청을 승인하면 요청자 ID를 최종 설문 payload에 유지한다', async () => {
+    const user = userEvent.setup();
+    const requester = {
+      id: demoStudent.studentNumber,
+      name: demoStudent.name,
+      studentNumber: demoStudent.studentNumber,
+    };
+    const incomingProjection = {
+      ...teamAssignmentFixture,
+      incomingPartnerRequest: {
+        requester,
+        id: 'request-student-a-to-student-b',
+        status: 'pending' as const,
+      },
+      survey: {
+        note: '',
+        rolePreferences: ['DEVELOPMENT' as const],
+        topicIdea: '',
+      },
+    };
+    let submittedPreferredPeerUserId: unknown = 'not-submitted';
+    server.use(
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.ACCEPT_PREFERRED_PEER_REQUEST(':sectionId', ':requesterUserId')}`,
+        ({ params }) => {
+          expect(params.requesterUserId).toBe(requester.id);
+          return HttpResponse.json({ contents: [] });
+        },
+      ),
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.SUBMIT_SURVEY_RESPONSE(':sectionId')}`,
+        async ({ request, params }) => {
+          const body = (await request.json()) as {
+            preferredPeerUserId?: unknown;
+            preferredRoles?: unknown;
+            topicOpinion?: unknown;
+            etcOpinion?: unknown;
+          };
+          submittedPreferredPeerUserId = body.preferredPeerUserId;
+          return HttpResponse.json({
+            id: 1,
+            sectionId: Number(params.sectionId),
+            userId: demoPartnerStudent.studentNumber,
+            preferredRoles: body.preferredRoles,
+            preferredPeerUserId: body.preferredPeerUserId,
+            topicOpinion: body.topicOpinion,
+            etcOpinion: body.etcOpinion,
+            submittedAt: '2026-09-20T10:00:00+09:00',
+          });
+        },
+      ),
+    );
+    const view = renderSurvey(
+      demoPartnerAccessToken,
+      demoPartnerStudent,
+      incomingProjection,
+      'live',
+    );
+
+    await user.click(screen.getByRole('button', { name: '시작하기' }));
+    await user.click(screen.getByRole('button', { name: '승인' }));
+    await user.click(
+      within(
+        screen.getByRole('dialog', { name: '파트너 확정 확인' }),
+      ).getByRole('button', { name: '파트너 확정' }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: '파트너 확정 확인' }),
+      ).not.toBeInTheDocument(),
+    );
+
+    view.rerender(
+      <SurveyForm
+        partnerRequestMode='live'
+        preSurveySectionId={demoPreSurveySectionId}
+        projection={{
+          ...incomingProjection,
+          confirmedPartner: requester,
+          incomingPartnerRequest: undefined,
+        }}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: '다음 설문' }));
+    await user.click(screen.getByRole('button', { name: '설문 제출' }));
+    await user.click(
+      within(screen.getByRole('dialog', { name: '설문 제출 확인' })).getByRole(
+        'button',
+        { name: '제출' },
+      ),
+    );
+
+    await waitFor(() =>
+      expect(submittedPreferredPeerUserId).toBe(requester.id),
+    );
+  });
+
   it('이전 단계 버튼을 눌러 이미 지나간 설문 단계로 돌아갈 수 있다', async () => {
     const user = userEvent.setup();
     renderSurvey();

@@ -77,6 +77,8 @@ describe('파일 제출 입력 검증', () => {
     expect(safeSubmissionUrl('https://user:pass@example.com')).toBeUndefined();
   });
   it('표시용 이미지는 같은 출처의 루트 상대 경로만 추가로 허용한다', () => {
+    expect(safeDisplayUrl(123)).toBeUndefined();
+    expect(safeDisplayUrl({ url: '/screen.png' })).toBeUndefined();
     expect(safeDisplayUrl('/project-images/screen.png')).toBe(
       'http://localhost:3000/project-images/screen.png',
     );

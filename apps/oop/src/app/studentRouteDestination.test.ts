@@ -58,6 +58,24 @@ describe('getStudentRouteDestination', () => {
     ).toBe('/onboarding/team');
   });
 
+  it.each(['/student/notices', '/student/notices/17', '/student/messages'])(
+    '연락처 공개 전 배정 학생도 분반·사용자 route %s 접근을 유지한다',
+    pathname => {
+      expect(
+        getStudentRouteDestination(
+          'ready',
+          false,
+          pathname,
+          {
+            contactVisibleFrom: '2026-09-20T21:00:00+09:00',
+            contactVisibleUntil: null,
+          },
+          Date.parse('2026-09-20T20:00:00+09:00'),
+        ),
+      ).toBeUndefined();
+    },
+  );
+
   it('연락처 공개 후 배정 학생은 학생 route를 유지한다', () => {
     expect(
       getStudentRouteDestination(
