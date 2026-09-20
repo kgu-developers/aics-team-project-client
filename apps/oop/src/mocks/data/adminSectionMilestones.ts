@@ -236,7 +236,8 @@ export function updateAdminSectionMilestoneFixtureEvaluationWindow(
     milestone.schedule.revisionUntil ?? milestone.schedule.lateSubmissionUntil;
   if (
     evaluationOpensAt < dueAt ||
-    (submissionOrRevisionUntil && evaluationOpensAt < submissionOrRevisionUntil) ||
+    (submissionOrRevisionUntil &&
+      evaluationOpensAt < submissionOrRevisionUntil) ||
     evaluationOpensAt >= evaluationClosesAt
   )
     return { error: 'INVALID_MILESTONE_REQUEST' };

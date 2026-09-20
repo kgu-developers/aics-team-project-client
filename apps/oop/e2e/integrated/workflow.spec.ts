@@ -620,9 +620,9 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
         exact: true,
       });
       await expect(row).toBeVisible();
-      await expect(row.getByRole('cell', { name: '5', exact: true })).toHaveCount(
-        2,
-      );
+      await expect(
+        row.getByRole('cell', { name: '5', exact: true }),
+      ).toHaveCount(2);
       await expect(
         row.getByRole('cell', { name: '1건', exact: true }),
       ).toBeVisible();

@@ -54,8 +54,7 @@ const rowInteractiveSelector = [
 
 function isRowInteractiveTarget(target: EventTarget | null) {
   return (
-    target instanceof Element &&
-    target.closest(rowInteractiveSelector) !== null
+    target instanceof Element && target.closest(rowInteractiveSelector) !== null
   );
 }
 

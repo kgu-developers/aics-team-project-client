@@ -24,7 +24,8 @@ const koreanMessageOverrides = {
     '@astryx.pagination.next': '다음 페이지',
     '@astryx.pagination.pageAnnounce': '{current, number}페이지',
     '@astryx.pagination.pageIndicators': '페이지 표시',
-    '@astryx.pagination.pageOfTotal': '{current, number} / {total, number} 페이지',
+    '@astryx.pagination.pageOfTotal':
+      '{current, number} / {total, number} 페이지',
     '@astryx.pagination.previous': '이전 페이지',
     '@astryx.table.pagination.label': '표 페이지 이동',
   },

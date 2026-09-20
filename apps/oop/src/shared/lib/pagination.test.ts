@@ -17,7 +17,11 @@ describe('pagination', () => {
 
   it('현재 페이지의 항목만 잘라 낸다', () => {
     const items = Array.from({ length: 23 }, (_, index) => index);
-    expect(paginate(items, 2)).toEqual({ items: [20, 21, 22], page: 2, pageCount: 3 });
+    expect(paginate(items, 2)).toEqual({
+      items: [20, 21, 22],
+      page: 2,
+      pageCount: 3,
+    });
     expect(paginate(items, 9).page).toBe(2);
   });
 });

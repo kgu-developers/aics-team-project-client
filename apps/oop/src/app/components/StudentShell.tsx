@@ -1,10 +1,5 @@
 import { Divider, Text } from '@aics/design-system';
-import {
-  Link,
-  Navigate,
-  Outlet,
-  useRouterState,
-} from '@tanstack/react-router';
+import { Link, Navigate, Outlet, useRouterState } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 

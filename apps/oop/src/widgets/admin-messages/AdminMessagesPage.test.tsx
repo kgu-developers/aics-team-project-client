@@ -23,19 +23,21 @@ import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 
 // Section teams feed the dependent team filter; the list itself is enough here.
 const server = setupServer(
-  http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS(':sectionId')}`, () =>
-    HttpResponse.json({
-      contents: [
-        {
-          createdAt: '2026-09-08T15:15:06.656Z',
-          id: 7,
-          kickoffRule: null,
-          meetingSchedule: null,
-          name: '7팀',
-          status: 'CONFIRMED',
-        },
-      ],
-    }),
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS(':sectionId')}`,
+    () =>
+      HttpResponse.json({
+        contents: [
+          {
+            createdAt: '2026-09-08T15:15:06.656Z',
+            id: 7,
+            kickoffRule: null,
+            meetingSchedule: null,
+            name: '7팀',
+            status: 'CONFIRMED',
+          },
+        ],
+      }),
   ),
 );
 const clients: QueryClient[] = [];
@@ -167,7 +169,9 @@ it('reaches item 11, keeps page caches separate, and resets pages on section/all
   await screen.findByText('all 쪽지 11');
   expect(screen.getAllByText('현재 분반 하나')).not.toHaveLength(0);
   await user.click(screen.getByRole('combobox', { name: '분반' }));
-  await user.click(await screen.findByRole('option', { name: '현재 분반 하나' }));
+  await user.click(
+    await screen.findByRole('option', { name: '현재 분반 하나' }),
+  );
   await screen.findByText('1 쪽지 1');
   expect(requests.filter(row => row.section === '1')).toEqual([
     { section: '1', page: 0, size: 10 },

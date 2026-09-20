@@ -31,10 +31,7 @@ test('currentProposalDetailPath preserves the proven proposal detail resource', 
 });
 
 test('presentation settings use the current accessible name', () => {
-  assert.equal(
-    presentationSettingsAccessibleName,
-    '발표 순서·평가 항목 설정',
-  );
+  assert.equal(presentationSettingsAccessibleName, '발표 순서·평가 항목 설정');
 });
 
 test('presentationEvaluationRowName targets the clickable evaluation row', () => {

@@ -1,5 +1,4 @@
-export const presentationSettingsAccessibleName =
-  '발표 순서·평가 항목 설정';
+export const presentationSettingsAccessibleName = '발표 순서·평가 항목 설정';
 
 export function presentationEvaluationRowName(teamName: string) {
   return `${teamName} 발표 평가 보기`;

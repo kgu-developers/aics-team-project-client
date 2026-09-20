@@ -40,43 +40,43 @@ function expectedResource(
     path === '/api/v1/auth/refresh' &&
     (status === 401 || status === 403)
   )
-    // Each actor starts in a fresh context. The app and API client can each
-    // attempt anonymous restoration, yielding a 403 then a 401. Only failures
-    // before that actor's first successful login/refresh are expected.
-    {
-      const responseIndex = network.indexOf(response);
-      const hadAuthenticatedSession = network
-        .slice(0, responseIndex)
-        .some(
-          item =>
-            item.actor === actor &&
-            ((item.path === '/api/v1/auth/login' && item.status === 200) ||
-              (item.path === '/api/v1/auth/refresh' && item.status === 200)),
-        );
-      if (!hadAuthenticatedSession) return true;
+  // Each actor starts in a fresh context. The app and API client can each
+  // attempt anonymous restoration, yielding a 403 then a 401. Only failures
+  // before that actor's first successful login/refresh are expected.
+  {
+    const responseIndex = network.indexOf(response);
+    const hadAuthenticatedSession = network
+      .slice(0, responseIndex)
+      .some(
+        item =>
+          item.actor === actor &&
+          ((item.path === '/api/v1/auth/login' && item.status === 200) ||
+            (item.path === '/api/v1/auth/refresh' && item.status === 200)),
+      );
+    if (!hadAuthenticatedSession) return true;
 
-      // A stale admin page can redirect to /login between the stage-level
-      // preflight and its first navigation. Accept only the bounded anonymous
-      // refresh chain that is immediately completed by a successful login in
-      // that same stage; an unrecovered or post-login 401 remains unexpected.
-      for (const item of network.slice(responseIndex + 1)) {
-        if (item.stage !== stage || item.actor !== actor) continue;
-        if (
-          item.method === 'POST' &&
-          item.path === '/api/v1/auth/login' &&
-          item.status === 200
-        )
-          return true;
-        if (
-          item.method === 'POST' &&
-          item.path === '/api/v1/auth/refresh' &&
-          (item.status === 401 || item.status === 403)
-        )
-          continue;
-        return false;
-      }
+    // A stale admin page can redirect to /login between the stage-level
+    // preflight and its first navigation. Accept only the bounded anonymous
+    // refresh chain that is immediately completed by a successful login in
+    // that same stage; an unrecovered or post-login 401 remains unexpected.
+    for (const item of network.slice(responseIndex + 1)) {
+      if (item.stage !== stage || item.actor !== actor) continue;
+      if (
+        item.method === 'POST' &&
+        item.path === '/api/v1/auth/login' &&
+        item.status === 200
+      )
+        return true;
+      if (
+        item.method === 'POST' &&
+        item.path === '/api/v1/auth/refresh' &&
+        (item.status === 401 || item.status === 403)
+      )
+        continue;
       return false;
     }
+    return false;
+  }
   if (method !== 'GET') return false;
   // Deployed contract mismatch: listed version values 9/19 returned 404 in
   // stage 10, including the earlier /admin/oop run. Keep other reads strict.

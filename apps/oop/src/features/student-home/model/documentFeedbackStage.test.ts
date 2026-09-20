@@ -113,7 +113,11 @@ describe('feedback room stage', () => {
       }),
     ).toBe('awaiting-feedback');
     expect(
-      proposalFeedbackRoomStage({ submittedAt: null, messages: [], teamMemberIds }),
+      proposalFeedbackRoomStage({
+        submittedAt: null,
+        messages: [],
+        teamMemberIds,
+      }),
     ).toBe('not-submitted');
   });
 

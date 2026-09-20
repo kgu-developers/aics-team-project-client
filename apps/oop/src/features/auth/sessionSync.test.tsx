@@ -65,9 +65,7 @@ it('다른 탭의 로그아웃 이벤트를 받으면 세션을 정리한다', (
     }),
   );
 
-  expect(useAuthStore.getState().sessionEndReason).toBe(
-    'signed-out-elsewhere',
-  );
+  expect(useAuthStore.getState().sessionEndReason).toBe('signed-out-elsewhere');
   expect(useAuthStore.getState().currentUser).toBeNull();
 });
 

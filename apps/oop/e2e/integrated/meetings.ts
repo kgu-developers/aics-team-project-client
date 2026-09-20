@@ -1,9 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-import {
-  adminMeetingFilter,
-  adminMeetingRow,
-} from './adminMeetingFilter';
+import { adminMeetingFilter, adminMeetingRow } from './adminMeetingFilter';
 import { gotoAdminPath } from './adminNavigation';
 import type { Run } from './data';
 import { meetingRecordRequestPath, routeScope } from './routeScope';

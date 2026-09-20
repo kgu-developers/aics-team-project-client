@@ -576,10 +576,7 @@ test('allows only stage 18 admin missing-project reads proven by the peer list a
     const unexpected = { ...missing, ...changed };
     const error = consoleError(unexpected);
     assert.deepEqual(
-      unexpectedConsoleErrors(
-        [error],
-        [peerList, unexpected, existing],
-      ),
+      unexpectedConsoleErrors([error], [peerList, unexpected, existing]),
       [error],
     );
   }

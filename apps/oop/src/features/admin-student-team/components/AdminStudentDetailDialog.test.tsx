@@ -211,7 +211,9 @@ it('keeps a failed reset open and allows the administrator to retry', async () =
 it('내용에서 시작한 드래그가 바깥에서 끝나도 수강생 정보 모달을 닫지 않는다', async () => {
   useStudentLookupHandler();
   const { onClose } = renderDialog();
-  const dialog = await screen.findByRole('dialog', { name: '김학생 수강생 정보' });
+  const dialog = await screen.findByRole('dialog', {
+    name: '김학생 수강생 정보',
+  });
   const content = await within(dialog).findByText('김학생 정보');
 
   // Browsers dispatch the click on the common ancestor (the <dialog>) when the

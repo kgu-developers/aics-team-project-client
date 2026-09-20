@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import {
-  adminMeetingFilter,
-  adminMeetingRow,
-} from './adminMeetingFilter.ts';
+import { adminMeetingFilter, adminMeetingRow } from './adminMeetingFilter.ts';
 
 test('adminMeetingFilter targets the meetings page accessible group', () => {
   const locator = {};

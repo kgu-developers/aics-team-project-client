@@ -27,9 +27,7 @@ export async function downloadSubmission(
     card.getByRole('link', { name: 'e2e-submission.pdf', exact: true }),
   ).toHaveCount(2);
   await expect(
-    card
-      .getByRole('link', { name: 'e2e-submission.pdf', exact: true })
-      .first(),
+    card.getByRole('link', { name: 'e2e-submission.pdf', exact: true }).first(),
   ).toBeVisible();
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 60_000 }),
