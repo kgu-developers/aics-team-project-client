@@ -91,7 +91,7 @@ function createWrapper() {
   };
 }
 
-function renderPage(currentUser = demoAdmin) {
+function renderPage(currentUser = demoAdmin, initialSectionId?: string) {
   useAuthStore.getState().setAccessToken(demoAdminAccessToken);
   useAuthStore.getState().setCurrentUser(currentUser);
 
@@ -99,7 +99,7 @@ function renderPage(currentUser = demoAdmin) {
 
   return renderWithRouter(
     <Wrapper>
-      <AdminStudentTeamManagement />
+      <AdminStudentTeamManagement initialSectionId={initialSectionId} />
     </Wrapper>,
   );
 }
@@ -132,6 +132,28 @@ describe('AdminStudentTeamManagement', () => {
     expect(
       await screen.findByRole('heading', { name: 'OOP-02 팀 구성' }),
     ).toBeInTheDocument();
+  });
+
+  it('직접 전달된 분반을 처음부터 선택해 수강생 관리를 연다', async () => {
+    renderPage(
+      {
+        ...demoAdmin,
+        sections: [
+          ...demoAdmin.sections,
+          {
+            ...demoAdmin.sections[0]!,
+            code: 'OOP-02',
+            id: '2',
+            name: '객체지향프로그래밍 02분반',
+          },
+        ],
+      },
+      '2',
+    );
+
+    expect(
+      await screen.findByRole('combobox', { name: '분반' }),
+    ).toHaveTextContent('OOP-02');
   });
 
   it('로그인한 관리자의 분반 목록을 분반 선택 UI에 표시한다', async () => {

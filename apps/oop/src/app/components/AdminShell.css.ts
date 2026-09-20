@@ -101,7 +101,8 @@ export const footer = style({
   display: 'flex',
   flexDirection: 'column',
   minHeight: 105,
-  padding: '0 clamp(20px, 5vw, 48px)',
+  paddingBlockStart: tokens.spacing['4'],
+  paddingInline: 'clamp(20px, 5vw, 48px)',
 });
 export const footerBrand = style({
   alignItems: 'center',

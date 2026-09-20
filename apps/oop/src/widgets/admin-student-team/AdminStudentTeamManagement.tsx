@@ -11,7 +11,7 @@ import {
 } from '@aics/design-system';
 import { Link } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -78,10 +78,14 @@ function getTeamMemberRoleErrorMessage(error: unknown) {
   }
 }
 
-export default function AdminStudentTeamManagement() {
+export default function AdminStudentTeamManagement({
+  initialSectionId,
+}: {
+  initialSectionId?: string;
+}) {
   const currentUser = useAuthStore(state => state.currentUser);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
-    null,
+    initialSectionId ?? null,
   );
   const [isFinalizeDialogOpen, setIsFinalizeDialogOpen] = useState(false);
   const [selectedStudentNumber, setSelectedStudentNumber] = useState<
@@ -91,6 +95,11 @@ export default function AdminStudentTeamManagement() {
     string | null
   >(null);
   const sections = currentUser?.sections ?? [];
+
+  useEffect(() => {
+    setSelectedSectionId(initialSectionId ?? null);
+  }, [initialSectionId]);
+
   const selectedSection =
     sections.find(section => section.id === selectedSectionId) ??
     sections[0] ??
