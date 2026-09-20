@@ -2,6 +2,7 @@ import type { TeamAssignmentMember } from '@aics/core';
 import { Button, proportional, Table, useToast } from '@aics/design-system';
 import { Copy } from 'lucide-react';
 
+import { cx } from '~/shared/lib/cx';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import * as styles from './TeamMemberTable.css';
@@ -71,7 +72,12 @@ export function TeamMemberTable({ members, variant }: TeamMemberTableProps) {
   }
 
   return (
-    <div className={styles.table}>
+    <div
+      className={cx(
+        styles.table,
+        hasDepartment && styles.hideDepartmentOnMobile,
+      )}
+    >
       <Table
         columns={
           variant === 'assignment'

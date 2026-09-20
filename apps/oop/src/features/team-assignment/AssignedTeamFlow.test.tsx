@@ -162,7 +162,9 @@ async function claimLeader() {
 it('공개 중에도 결과·팀원·다음 단계를 거친 뒤 연락처를 연결하고 선점 204 후 재조회한다', async () => {
   renderFlow();
   await viewTeam();
+  expect(screen.getByText('한가온')).toBeVisible();
   expect(screen.getByText('20260001')).toBeVisible();
+  expect(screen.queryByText('010-0000-0001')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: '다음' })).toBeEnabled();
   expect(screen.queryByRole('button', { name: '내가 팀장입니다' })).toBeNull();
   expect(contactRequests).not.toHaveBeenCalled();
