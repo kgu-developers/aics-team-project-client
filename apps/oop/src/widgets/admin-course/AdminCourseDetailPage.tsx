@@ -56,7 +56,6 @@ import {
 import { useAuthStore } from '~/features/auth/authStore';
 import { fetchSessionUser } from '~/features/auth/fetchSessionUser';
 
-import { AdminPreSurveyResponses } from '~/widgets/admin-profile/AdminPreSurveyResponses';
 import { formatRosterImportAppliedAt } from '~/widgets/admin-profile/formatRosterImportAppliedAt';
 
 import * as styles from './AdminCourseDetailPage.css';
@@ -509,8 +508,6 @@ export default function AdminCourseDetailPage() {
           </>
         )}
       </section>
-
-      <AdminPreSurveyResponses sections={uploadSections} />
 
       <CourseFormDialog
         courseId={course.id}

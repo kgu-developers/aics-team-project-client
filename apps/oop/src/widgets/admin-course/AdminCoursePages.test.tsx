@@ -203,6 +203,9 @@ describe('AdminCourseDetailPage', () => {
     expect(within(row).getByText('40명')).toBeInTheDocument();
     expect(within(row).getByText('미설정')).toBeInTheDocument();
     expect(await within(row).findByText('없음')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: '사전 정보 내역' }),
+    ).not.toBeInTheDocument();
   });
 
   it('없는 강좌는 목록으로 돌아가는 안내를 보여 준다', async () => {

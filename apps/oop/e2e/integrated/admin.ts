@@ -31,14 +31,19 @@ export async function prepareCourse(page: Page, run: Run) {
   const row = page
     .getByRole('row')
     .filter({ has: page.getByRole('cell', { name: run.course, exact: true }) });
-  await row.getByRole('button', { name: '분반 관리', exact: true }).click();
-  const sectionDialog = page.getByRole('dialog', {
-    name: `${run.course} 분반 관리`,
-    exact: true,
-  });
-  await sectionDialog
+  await row.click();
+  await expect(page).toHaveURL(/\/admin\/sections\/\d+$/);
+  run.coursePath = new URL(page.url()).pathname;
+  await expect(
+    page.getByRole('heading', { name: run.course, level: 1, exact: true }),
+  ).toBeVisible();
+  await page
     .getByRole('button', { name: '분반 등록', exact: true })
     .click();
+  const sectionDialog = page.getByRole('dialog', {
+    name: `${run.course} 분반 등록`,
+    exact: true,
+  });
   await sectionDialog
     .getByRole('textbox', { name: /^분반 코드/ })
     .fill(run.section);
@@ -49,28 +54,13 @@ export async function prepareCourse(page: Page, run: Run) {
   await sectionDialog
     .getByRole('button', { name: '등록', exact: true })
     .click();
-  await expect(
-    sectionDialog.getByText(run.section, { exact: true }),
-  ).toBeVisible();
-  await sectionDialog
-    .getByRole('button', { name: '닫기', exact: true })
-    .click();
+  await expect(sectionDialog).toBeHidden();
+  await expect(page.getByText(run.section, { exact: true })).toBeVisible();
 }
 
 export async function importStudents(page: Page, run: Run) {
-  await page.reload();
-  const course = page
-    .locator('section')
-    .filter({
-      has: page.getByRole('heading', { name: run.course, exact: true }),
-    })
-    .filter({
-      has: page.getByRole('button', {
-        name: '학생 명단 파일 선택',
-        exact: true,
-      }),
-    });
-  await course
+  await page.goto(run.coursePath);
+  await page
     .getByRole('button', { name: '학생 명단 파일 선택', exact: true })
     .click();
   const dialog = page.getByRole('dialog', {
@@ -98,19 +88,8 @@ export async function importStudents(page: Page, run: Run) {
 }
 
 export async function importTeams(page: Page, run: Run) {
-  await page.goto('/admin/sections');
-  const course = page
-    .locator('section')
-    .filter({
-      has: page.getByRole('heading', { name: run.course, exact: true }),
-    })
-    .filter({
-      has: page.getByRole('button', {
-        name: '팀 구성 명단 파일 선택',
-        exact: true,
-      }),
-    });
-  await course
+  await page.goto(run.coursePath);
+  await page
     .getByRole('button', { name: '팀 구성 명단 파일 선택', exact: true })
     .click();
   const dialog = page.getByRole('dialog', {
