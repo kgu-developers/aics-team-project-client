@@ -38,6 +38,29 @@ const team: TeamKickoffResponse = {
 };
 
 describe('resolveLiveTeamAssignmentStage', () => {
+  it('서버 UTC LocalDateTime을 서울 공개 시각과 같은 순간으로 해석한다', () => {
+    const utcSection = {
+      ...section,
+      contactVisibleFrom: '2026-09-10T01:00:00',
+      contactVisibleUntil: '2026-09-10T02:00:00',
+    };
+
+    expect(
+      resolveLiveTeamAssignmentStage(
+        utcSection,
+        team,
+        Date.parse('2026-09-10T09:59:59+09:00'),
+      ),
+    ).toBe('result');
+    expect(
+      resolveLiveTeamAssignmentStage(
+        utcSection,
+        team,
+        Date.parse('2026-09-10T10:00:00+09:00'),
+      ),
+    ).toBe('firstMeeting');
+  });
+
   it('팀 배정 후 연락처 공개 전에는 결과 확인 단계에 머문다', () => {
     expect(
       resolveLiveTeamAssignmentStage(

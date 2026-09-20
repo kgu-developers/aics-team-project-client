@@ -5,7 +5,7 @@ import type {
   TeamKickoffResponse,
 } from '@aics/core';
 
-import { seoulInstant } from '~/shared/lib/seoulInstant';
+import { contactWindowInstant } from '~/shared/lib/contactWindowDateTime';
 
 export type ContactVisibility = 'unscheduled' | 'upcoming' | 'open' | 'closed';
 type ContactWindow = {
@@ -18,7 +18,7 @@ export type LiveTeamAssignmentStage =
 function timestamp(value?: string | null) {
   if (!value) return undefined;
 
-  const parsed = seoulInstant(value);
+  const parsed = contactWindowInstant(value);
   return Number.isNaN(parsed) ? undefined : parsed;
 }
 
