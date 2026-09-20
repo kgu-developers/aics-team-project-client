@@ -347,6 +347,7 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
       http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`, () =>
         HttpResponse.json({ code: 'ACCESS_DENIED' }, { status: 403 }),
       ),
+      proposalDraftSubmissionHandler(),
     );
     render(<StudentHomePage />, { wrapper: Wrapper });
     expect(
@@ -428,6 +429,7 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
           goal: '팀 목표',
         }),
       ),
+      proposalDraftSubmissionHandler(),
     );
     const first = render(<StudentHomePage />, { wrapper: Wrapper });
     expect(
@@ -671,9 +673,9 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
       screen.queryByRole('heading', { name: '우리 팀 주제 후보' }),
     ).not.toBeInTheDocument();
     const trigger = proposal.querySelector('button[aria-expanded]')!;
-    await user.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
     await user.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
     expect(
       screen.getByRole('heading', { name: '주제 후보 선택' }),
     ).toBeVisible();
@@ -768,20 +770,20 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
       ),
     );
     render(<StudentHomePage />, { wrapper: Wrapper });
-    const user = userEvent.setup();
     const button = await screen.findByRole('button', {
       name: '진행 단계 확인',
     });
-    await waitFor(() => expect(button).toBeEnabled());
-    const target = document.getElementById(`student-milestone-${list[1]!.id}`)!;
-    target.scrollIntoView = vi.fn();
-    await user.click(button);
+    await waitFor(() =>
+      expect(button).toHaveAttribute('aria-disabled', 'true'),
+    );
     expect(
       document.getElementById(`student-milestone-${list[1]!.id}`),
-    ).toHaveFocus();
-    expect(
-      document.getElementById(`student-milestone-${list[0]!.id}`),
-    ).toHaveTextContent('수정 요청 · 마감');
+    ).toHaveTextContent('이전 단계 완료 필요');
+    await waitFor(() =>
+      expect(
+        document.getElementById(`student-milestone-${list[0]!.id}`),
+      ).toHaveTextContent('수정 요청 · 마감'),
+    );
     allClosed = true;
     window.dispatchEvent(new Event('focus'));
     await waitFor(() =>
@@ -789,7 +791,7 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     );
     expect(
       document.getElementById(`student-milestone-${list[1]!.id}`),
-    ).toHaveTextContent('수정 요청 · 마감');
+    ).toHaveTextContent('이전 단계 완료 필요');
   });
   it('빈 목록은 조회 실패와 구분한다', async () => {
     server.use(
@@ -944,8 +946,9 @@ describe('학생 홈의 개인 상호평가 연결', () => {
     );
     render(<StudentHomePage />, { wrapper: Wrapper });
     await waitFor(() =>
-      expect(screen.getAllByText('상태 확인 필요')).toHaveLength(2),
+      expect(screen.getAllByText('상태 확인 필요')).toHaveLength(1),
     );
+    expect(screen.getByText('이전 단계 완료 필요')).toBeInTheDocument();
     expect(screen.queryByText('제출 완료')).not.toBeInTheDocument();
     expect(
       screen.getAllByRole('button', { name: '상호평가 확인' }),
@@ -984,6 +987,22 @@ function teamProposalFixture() {
   };
 }
 
+function proposalDraftSubmissionHandler() {
+  return http.get(
+    `${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION(String(list[0]!.id))}`,
+    () =>
+      HttpResponse.json({
+        id: 9000 + list[0]!.id,
+        milestoneId: list[0]!.id,
+        teamId: 7,
+        status: 'NOT_SUBMITTED',
+        currentVersion: 0,
+        canSubmitNow: true,
+        hasPendingReview: false,
+      }),
+  );
+}
+
 function proposalSectionsHandler(
   contents: {
     assigneeUserId?: string | null;
@@ -1014,6 +1033,8 @@ function proposalSectionsHandler(
 }
 
 describe('제안서 작성 영역 상태와 팀장 제출', () => {
+  beforeEach(() => server.use(proposalDraftSubmissionHandler()));
+
   it('작성 영역 상태를 서버 값으로 채운다', async () => {
     server.use(
       http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
@@ -1070,6 +1091,43 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
     expect(
       within(card).queryByRole('button', { name: '제출하기' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('피드백 반영 재제출이 완료된 제안서는 대기 상태로 돌아가지 않는다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+        HttpResponse.json({
+          ...teamProposalFixture(),
+          proposalCompletedAt: '2026-09-12T10:00:00',
+        }),
+      ),
+      proposalSectionsHandler([
+        { section: 'TOPIC', completed: true },
+        { section: 'DATA', completed: true },
+        { section: 'SCREEN', completed: true },
+        { section: 'TEAM_OPERATION', completed: true },
+      ]),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION(String(list[0]!.id))}`,
+        () =>
+          HttpResponse.json({
+            id: 9000 + list[0]!.id,
+            milestoneId: list[0]!.id,
+            teamId: 7,
+            status: 'COMPLETED',
+            currentVersion: 2,
+            canSubmitNow: false,
+            hasPendingReview: false,
+            completedAt: '2026-09-12T10:00:00',
+          }),
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    expect(
+      await screen.findByText('피드백 반영 및 재제출 완료'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/피드백 대기 중/)).not.toBeInTheDocument();
   });
 
   it('작성 영역 상태 조회가 실패하면 실패 문구를 보여준다', async () => {
@@ -1186,6 +1244,40 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
 });
 
 describe('중간보고서 작성 영역 상태와 팀장 제출', () => {
+  it('반영 방향 뒤 재제출이 완료되면 다시 반영 방향을 요구하지 않는다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+        HttpResponse.json({
+          ...midReportFixture(undefined, 'SUBMITTED'),
+          submittedAt: '2026-09-12T10:00:00',
+          submittedBy: liveHomeUser.studentNumber,
+        }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION(String(list[1]!.id))}`,
+        () =>
+          HttpResponse.json({
+            id: 9000 + list[1]!.id,
+            milestoneId: list[1]!.id,
+            teamId: 7,
+            status: 'COMPLETED',
+            currentVersion: 2,
+            canSubmitNow: false,
+            hasPendingReview: false,
+            completedAt: '2026-09-12T10:00:00',
+          }),
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    expect(
+      await screen.findByText('피드백 반영 및 재제출 완료'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/반영 방향을 보내 주세요/),
+    ).not.toBeInTheDocument();
+  });
+
   it('블록 상태를 작성 영역 상태로 보여준다', async () => {
     render(<StudentHomePage />, { wrapper: Wrapper });
 

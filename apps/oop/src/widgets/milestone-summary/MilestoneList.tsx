@@ -8,105 +8,24 @@ import * as styles from './MilestoneList.css';
 type MilestoneListProps = {
   milestones: StudentHomeMilestone[];
   persistenceKey: string;
+  defaultOpenId?: string | null;
   description?: string;
 };
 
 type MilestoneAccordionState = {
+  scopeKey: string;
+  defaultOpenId?: string;
   openIds: string[];
-  knownAvailableIds: string[];
 };
 
-type ScopedMilestoneAccordionState = MilestoneAccordionState & {
-  storageKey: string;
-};
-
-const MILESTONE_ACCORDION_STORAGE_KEY_PREFIX =
-  'oop:student-home:milestone-accordion:v1';
-
-function readMilestoneAccordionState(
-  storageKey: string,
-): MilestoneAccordionState | null {
-  if (typeof window === 'undefined') return null;
-
-  try {
-    const stored = window.sessionStorage.getItem(storageKey);
-    if (!stored) return null;
-
-    const parsed: unknown = JSON.parse(stored);
-    if (
-      !parsed ||
-      typeof parsed !== 'object' ||
-      !('openIds' in parsed) ||
-      !('knownAvailableIds' in parsed) ||
-      !Array.isArray(parsed.openIds) ||
-      !parsed.openIds.every(id => typeof id === 'string') ||
-      !Array.isArray(parsed.knownAvailableIds) ||
-      !parsed.knownAvailableIds.every(id => typeof id === 'string')
-    ) {
-      return null;
-    }
-
-    return {
-      openIds: parsed.openIds,
-      knownAvailableIds: parsed.knownAvailableIds,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function writeMilestoneAccordionState(
-  storageKey: string,
-  state: MilestoneAccordionState,
-) {
-  if (typeof window === 'undefined') return;
-
-  try {
-    window.sessionStorage.setItem(
-      storageKey,
-      JSON.stringify({
-        openIds: state.openIds,
-        knownAvailableIds: state.knownAvailableIds,
-      }),
-    );
-  } catch {
-    // Storage can be unavailable in restricted browser contexts. Local state still works.
-  }
-}
-
-function reconcileMilestoneAccordionState(
-  availableIds: string[],
-  previous: MilestoneAccordionState | null,
-): MilestoneAccordionState {
-  if (!previous) {
-    return { openIds: availableIds, knownAvailableIds: availableIds };
-  }
-
-  const previouslyAvailable = new Set(previous.knownAvailableIds);
-  const previouslyOpen = new Set(previous.openIds);
-  const newlyAvailableIds = availableIds.filter(
-    id => !previouslyAvailable.has(id),
-  );
-
-  return {
-    openIds: [
-      ...previous.openIds,
-      ...newlyAvailableIds.filter(id => !previouslyOpen.has(id)),
-    ],
-    knownAvailableIds: [...previous.knownAvailableIds, ...newlyAvailableIds],
-  };
-}
-
-function hasSameIds(left: string[], right: string[]) {
-  return (
-    left.length === right.length &&
-    left.every((id, index) => id === right[index])
-  );
+function initialOpenIds(defaultOpenId?: string) {
+  return defaultOpenId ? [defaultOpenId] : [];
 }
 
 export default function MilestoneList({
   milestones,
   persistenceKey,
+  defaultOpenId,
   description = '해당 단계를 펼쳐, 더 자세한 내용을 확인 해보세요.',
 }: MilestoneListProps) {
   const detailAvailableIds = useMemo(
@@ -116,53 +35,39 @@ export default function MilestoneList({
         .map(milestone => milestone.id),
     [milestones],
   );
-  const detailAvailableKey = detailAvailableIds.join('|');
-  const storageKey = `${MILESTONE_ACCORDION_STORAGE_KEY_PREFIX}:${persistenceKey}`;
-  const [accordionState, setAccordionState] =
-    useState<ScopedMilestoneAccordionState>(() => ({
-      storageKey,
-      ...reconcileMilestoneAccordionState(
-        detailAvailableIds,
-        readMilestoneAccordionState(storageKey),
-      ),
-    }));
-
-  const resolvedAccordionState =
-    accordionState.storageKey === storageKey
-      ? reconcileMilestoneAccordionState(detailAvailableIds, accordionState)
-      : reconcileMilestoneAccordionState(
-          detailAvailableIds,
-          readMilestoneAccordionState(storageKey),
-        );
-
-  useEffect(() => {
-    const nextAvailableIds = detailAvailableKey
-      ? detailAvailableKey.split('|')
-      : [];
-
-    setAccordionState(current => {
-      const previous =
-        current.storageKey === storageKey
-          ? current
-          : readMilestoneAccordionState(storageKey);
-      const next = reconcileMilestoneAccordionState(nextAvailableIds, previous);
-      return current.storageKey === storageKey &&
-        hasSameIds(current.openIds, next.openIds) &&
-        hasSameIds(current.knownAvailableIds, next.knownAvailableIds)
-        ? current
-        : { storageKey, ...next };
-    });
-  }, [detailAvailableKey, storageKey]);
-
-  useEffect(() => {
-    if (accordionState.storageKey === storageKey) {
-      writeMilestoneAccordionState(storageKey, accordionState);
-    }
-  }, [accordionState, storageKey]);
-
-  const openIds = detailAvailableIds.filter(id =>
-    resolvedAccordionState.openIds.includes(id),
+  const scopeKey = persistenceKey;
+  const resolvedDefaultOpenId =
+    defaultOpenId === undefined
+      ? detailAvailableIds[0]
+      : (defaultOpenId ?? undefined);
+  const [accordionState, setAccordionState] = useState<MilestoneAccordionState>(
+    () => ({
+      scopeKey,
+      defaultOpenId: resolvedDefaultOpenId,
+      openIds: initialOpenIds(resolvedDefaultOpenId),
+    }),
   );
+
+  const isCurrentScope =
+    accordionState.scopeKey === scopeKey &&
+    accordionState.defaultOpenId === resolvedDefaultOpenId;
+  const resolvedOpenIds = isCurrentScope
+    ? accordionState.openIds
+    : initialOpenIds(resolvedDefaultOpenId);
+  const openIds = detailAvailableIds.filter(id => resolvedOpenIds.includes(id));
+
+  useEffect(() => {
+    setAccordionState(current =>
+      current.scopeKey === scopeKey &&
+      current.defaultOpenId === resolvedDefaultOpenId
+        ? current
+        : {
+            scopeKey,
+            defaultOpenId: resolvedDefaultOpenId,
+            openIds: initialOpenIds(resolvedDefaultOpenId),
+          },
+    );
+  }, [resolvedDefaultOpenId, scopeKey]);
 
   return (
     <section className={styles.milestoneSection}>
@@ -183,14 +88,9 @@ export default function MilestoneList({
             const selectedIds = Array.isArray(value) ? value : [value];
             const availableIdSet = new Set(detailAvailableIds);
             setAccordionState({
-              storageKey,
-              openIds: [
-                ...resolvedAccordionState.openIds.filter(
-                  id => !availableIdSet.has(id),
-                ),
-                ...selectedIds,
-              ],
-              knownAvailableIds: resolvedAccordionState.knownAvailableIds,
+              scopeKey,
+              defaultOpenId: resolvedDefaultOpenId,
+              openIds: selectedIds.filter(id => availableIdSet.has(id)),
             });
           }}
         >

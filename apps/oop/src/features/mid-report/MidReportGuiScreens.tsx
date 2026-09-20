@@ -203,11 +203,13 @@ export default function MidReportGuiScreens({
         onOpenChange={next => {
           if (!next && !upload.isPending) closeDialog();
         }}
+        maxHeight='calc(100dvh - 32px)'
+        padding={0}
         purpose='info'
-        width={520}
+        width='min(520px, calc(100dvw - 32px))'
       >
         {editing && (
-          <VStack gap={4}>
+          <VStack className={styles.dialogForm} gap={4}>
             <Heading level={2}>
               {editing.index == null ? '화면 추가' : '화면 편집'}
             </Heading>
@@ -277,7 +279,7 @@ export default function MidReportGuiScreens({
               value={editing.description}
               width='100%'
             />
-            <div className={styles.screenActions}>
+            <div className={styles.dialogActions}>
               <Button
                 isDisabled={isLocked || upload.isPending}
                 label={editing.index == null ? '추가' : '적용'}

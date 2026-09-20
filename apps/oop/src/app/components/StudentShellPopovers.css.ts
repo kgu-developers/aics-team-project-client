@@ -137,11 +137,22 @@ globalStyle(`${navLink}:focus-visible, ${navLinkActive}:focus-visible`, {
 });
 
 export const profilePopover = style({
+  boxSizing: 'border-box',
   display: 'flex',
   flexDirection: 'column',
   gap: tokens.spacing['4'],
+  maxHeight: 'calc(100dvh - 96px)',
+  maxWidth: '100%',
   minWidth: 0,
+  overflowX: 'hidden',
+  overflowY: 'auto',
+  overscrollBehavior: 'contain',
   width: '100%',
+  '@media': {
+    '(max-width: 767px)': {
+      maxHeight: 'calc(100dvh - 72px)',
+    },
+  },
 });
 
 export const profileIdentity = style({

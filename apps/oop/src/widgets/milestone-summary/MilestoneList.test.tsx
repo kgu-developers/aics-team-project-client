@@ -150,7 +150,8 @@ describe('MilestoneList', () => {
     expect(screen.queryByText('피드백 대화')).not.toBeInTheDocument();
   });
 
-  it('제안서 피드백 반영과 조기 활성화된 중간 단계를 함께 상세로 표시한다', () => {
+  it('현재 기간 단계만 기본으로 열고 이전 단계는 사용자가 다시 열 수 있다', async () => {
+    const user = userEvent.setup();
     const dashboard = createStudentHomeDashboardPreview(
       'proposal-feedback-mid-report',
     );
@@ -158,18 +159,24 @@ describe('MilestoneList', () => {
     renderWithRouter(
       <MilestoneList
         milestones={dashboard.milestones}
+        defaultOpenId='mid-review'
         persistenceKey={PERSISTENCE_KEY}
       />,
     );
 
-    expect(screen.getAllByText('수정 가능')).toHaveLength(1);
-    expect(screen.getByText('피드백 반영 가능')).toBeInTheDocument();
-    const writingButtons = screen.getAllByRole('button', { name: '작성하기' });
-    expect(writingButtons).toHaveLength(2);
-    writingButtons.forEach(button => expect(button).toBeEnabled());
+    expect(screen.getByRole('button', { name: /제안서/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(screen.getByRole('button', { name: /중간/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
     expect(screen.getByText('중간보고서 작성')).toBeInTheDocument();
-    expect(screen.getByText('최종 선정 주제')).toBeInTheDocument();
-    expect(screen.getByText('피드백 대화')).toBeInTheDocument();
+
+    const proposalTrigger = screen.getByRole('button', { name: /제안서/ });
+    await user.click(proposalTrigger);
+    expect(proposalTrigger).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('새로 활성화된 마일스톤은 데이터 갱신 뒤에도 기본으로 상세를 연다', () => {
@@ -186,15 +193,22 @@ describe('MilestoneList', () => {
           createStudentHomeDashboardPreview('proposal-feedback-mid-report')
             .milestones
         }
+        defaultOpenId='mid-review'
         persistenceKey={PERSISTENCE_KEY}
       />,
     );
 
-    expect(screen.getByText('피드백 대화')).toBeInTheDocument();
-    expect(screen.getByText('최종 선정 주제')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /제안서/ })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(screen.getByRole('button', { name: /중간/ })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
   });
 
-  it('사용자가 접은 마일스톤을 홈에 다시 진입해도 접힌 상태로 유지한다', async () => {
+  it('홈에 다시 진입하면 현재 기간 단계를 기본으로 다시 연다', async () => {
     const user = userEvent.setup();
     const firstView = renderWithRouter(
       <MilestoneList
@@ -218,7 +232,7 @@ describe('MilestoneList', () => {
 
     expect(screen.getByRole('button', { name: /제안서/ })).toHaveAttribute(
       'aria-expanded',
-      'false',
+      'true',
     );
 
     secondView.unmount();
@@ -235,15 +249,14 @@ describe('MilestoneList', () => {
     );
   });
 
-  it('기존에 접은 상세는 유지하고 새로 활성화된 상세만 기본으로 연다', async () => {
-    const user = userEvent.setup();
+  it('현재 기간 단계가 바뀌면 이전 단계는 닫고 새 단계만 기본으로 연다', () => {
     const { rerender } = renderWithRouter(
       <MilestoneList
         milestones={studentHomeDashboardFixture.milestones}
+        defaultOpenId='proposal'
         persistenceKey={PERSISTENCE_KEY}
       />,
     );
-    await user.click(screen.getByRole('button', { name: /제안서/ }));
 
     rerender(
       <MilestoneList
@@ -251,6 +264,7 @@ describe('MilestoneList', () => {
           createStudentHomeDashboardPreview('proposal-feedback-mid-report')
             .milestones
         }
+        defaultOpenId='mid-review'
         persistenceKey={PERSISTENCE_KEY}
       />,
     );

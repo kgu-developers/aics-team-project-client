@@ -482,6 +482,15 @@ describe('피드백 단계별 노출', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('완료된 제안서는 입력 없이 피드백 대화 이력을 유지한다', async () => {
+    renderFeedback({ ...body, feedbackStage: 'completed' });
+
+    expect(await screen.findByText('피드백 대화')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: /피드백 반영 답변/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it('교수·조교가 먼저 보낸 중간보고서 메시지를 반영 방향 대기 중에도 표시한다', async () => {
     server.use(
       http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`, () =>

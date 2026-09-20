@@ -181,8 +181,10 @@ export default function ScreenImageBoard({
         onOpenChange={next => {
           if (!next && !upload.isPending) closeDialog();
         }}
+        maxHeight='calc(100dvh - 32px)'
+        padding={0}
         purpose='info'
-        width={520}
+        width='min(520px, calc(100dvw - 32px))'
       >
         {editing && (
           <VStack className={styles.dialogForm} gap={4}>
@@ -250,7 +252,7 @@ export default function ScreenImageBoard({
               value={editing.description}
               width='100%'
             />
-            <div className={styles.screenActions}>
+            <div className={styles.dialogActions}>
               <Button
                 isDisabled={
                   disabled || upload.isPending || editing.imageFileId == null

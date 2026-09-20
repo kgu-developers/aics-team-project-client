@@ -430,7 +430,7 @@ function StudentProfilePopover({
         label='내 프로필'
         onOpenChange={onOpenChange}
         placement='below'
-        width='min(340px, calc(100vw - 32px))'
+        width='min(340px, calc(100dvw - 48px))'
       >
         {triggerProps => (
           <IconButton
