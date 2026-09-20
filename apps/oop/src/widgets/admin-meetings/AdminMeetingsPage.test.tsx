@@ -39,6 +39,7 @@ const server = setupServer(
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  window.localStorage.clear();
   server.resetHandlers();
   setApiAccessToken(null);
   useAuthStore.setState({ accessToken: null, currentUser: null });
@@ -77,7 +78,7 @@ function renderPage(initialEntry = '/admin/meetings/') {
 
 describe('AdminMeetingsPage', () => {
   it('관리자 회의록 목록 행은 전체를 눌러 상세를 볼 수 있게 표시한다', async () => {
-    renderPage();
+    const { container } = renderPage();
 
     expect(
       await screen.findByRole('columnheader', { name: '회의 제목' }),
@@ -91,6 +92,9 @@ describe('AdminMeetingsPage', () => {
     expect(
       screen.queryByRole('columnheader', { name: '단계' }),
     ).not.toBeInTheDocument();
+    expect(
+      container.querySelectorAll('[data-unread-indicator="true"]'),
+    ).not.toHaveLength(0);
   });
 
   it('특정 분반을 선택했을 때만 마일스톤 필터를 표시한다', async () => {

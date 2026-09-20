@@ -120,7 +120,7 @@ function getMidReport(teamId: string): MidReport | undefined {
             key: 'guiScreens',
             label: 'GUI 화면',
             value:
-              '[{"title":"홈 화면","imageUrl":"https://example.com/home.png"}]',
+              '[{"id":"home","name":"홈 화면","description":"팀 현황과 마일스톤을 확인합니다.","imageFileId":41,"imageName":"home.png","imageUrl":"https://example.com/home.png"}]',
           },
         ],
         key: 'gui-design',
@@ -134,9 +134,20 @@ function getMidReport(teamId: string): MidReport | undefined {
       {
         fields: [
           {
-            key: 'engine',
-            label: '핵심 로직',
+            key: 'features',
+            label: '구현된 기능 목록',
             value: '팀·제출물·피드백 상태를 관리합니다.',
+          },
+          {
+            key: 'architecture',
+            label: '클래스 구조와 주요 기능 설명',
+            value: '도메인별 책임과 제출 흐름을 분리합니다.',
+          },
+          {
+            key: 'testCases',
+            label: '입력·출력 테스트 케이스',
+            value:
+              '[{"id":"submission","description":"제출물을 작성해 제출합니다.","input":"title=중간보고서","output":"제출 완료"}]',
           },
         ],
         key: 'engine-design',

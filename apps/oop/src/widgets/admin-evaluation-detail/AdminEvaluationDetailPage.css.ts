@@ -24,6 +24,11 @@ export const titleRow = style({
   display: 'flex',
   justifyContent: 'space-between',
 });
+export const titleSection = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+});
 export const evaluatorButton = style({
   background: 'none',
   border: 0,

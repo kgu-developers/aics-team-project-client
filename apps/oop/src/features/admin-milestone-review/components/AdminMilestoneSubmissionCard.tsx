@@ -1,10 +1,13 @@
 import { Text } from '@aics/design-system';
 import type { ReactNode } from 'react';
 
+import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
+
 import * as styles from './AdminMilestoneSubmissionCard.css';
 
 type AdminMilestoneSubmissionCardProps = {
   action: ReactNode;
+  isUnread?: boolean;
   label: string;
   meetingCountLabel?: ReactNode;
   messageCountLabel?: string;
@@ -15,6 +18,7 @@ type AdminMilestoneSubmissionCardProps = {
 
 export function AdminMilestoneSubmissionCard({
   action,
+  isUnread = false,
   label,
   meetingCountLabel,
   messageCountLabel,
@@ -25,7 +29,10 @@ export function AdminMilestoneSubmissionCard({
   return (
     <article className={styles.card}>
       <div className={styles.meta}>
-        <Text className={styles.label}>{label}</Text>
+        <Text className={styles.label}>
+          {isUnread ? <AdminUnreadDot /> : null}
+          {label}
+        </Text>
         <Text className={styles.secondaryLabel}>{secondaryLabel}</Text>
         {submissionMetadata ? (
           <div className={styles.submissionMetadata}>{submissionMetadata}</div>

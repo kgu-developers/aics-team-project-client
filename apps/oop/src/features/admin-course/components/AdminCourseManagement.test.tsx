@@ -534,10 +534,16 @@ describe('AdminCourseManagement', () => {
       within(settingsDialog).getByRole('textbox', { name: /^정원/ }),
     ).toBeDisabled();
     expect(
-      within(settingsDialog).getByRole('combobox', { name: '공개 시작' }),
+      within(settingsDialog).getByLabelText('공개 시작 날짜'),
     ).toBeDisabled();
     expect(
-      within(settingsDialog).getByRole('combobox', { name: '공개 종료' }),
+      within(settingsDialog).getByLabelText('공개 시작 시간'),
+    ).toBeDisabled();
+    expect(
+      within(settingsDialog).getByLabelText('공개 종료 날짜'),
+    ).toBeDisabled();
+    expect(
+      within(settingsDialog).getByLabelText('공개 종료 시간'),
     ).toBeDisabled();
 
     resolveSectionUpdate?.();

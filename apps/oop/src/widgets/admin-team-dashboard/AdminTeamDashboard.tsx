@@ -338,6 +338,7 @@ export default function AdminTeamDashboard() {
               ? 'ready'
               : 'pending'
         }
+        readerId={currentUser?.id}
         sectionId={detailSectionId}
       />
 

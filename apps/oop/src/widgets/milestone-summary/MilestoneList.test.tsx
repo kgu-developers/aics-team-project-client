@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -454,16 +454,23 @@ describe('MilestoneDetails', () => {
     );
 
     await user.click(screen.getByRole('button', { name: '반영 방향 보내기' }));
+    const dialog = screen.getByRole('dialog', {
+      name: '대면 피드백 반영 방향 보내기',
+    });
     await user.click(
-      screen.getAllByRole('button', { name: '반영 방향 보내기' })[1]!,
+      within(dialog).getByRole('button', { name: '반영 방향 보내기' }),
     );
 
-    expect(
-      screen.getByRole('textbox', { name: /대면 피드백 반영 내용/ }),
-    ).toHaveAttribute('aria-invalid', 'true');
-    expect(
-      screen.getByText('대면 피드백과 반영 내용을 입력해 주세요.'),
-    ).toBeVisible();
+    await waitFor(() => {
+      expect(
+        within(dialog).getByRole('textbox', {
+          name: /대면 피드백 반영 내용/,
+        }),
+      ).toHaveAttribute('aria-invalid', 'true');
+      expect(
+        within(dialog).getByText('대면 피드백과 반영 내용을 입력해 주세요.'),
+      ).toBeVisible();
+    });
   });
 
   it('중간보고서 반영 기록 제출이 실패하면 입력을 유지하고 오류를 표시한다', async () => {

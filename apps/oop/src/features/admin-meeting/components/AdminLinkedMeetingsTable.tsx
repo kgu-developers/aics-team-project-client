@@ -10,6 +10,10 @@ import { useMemo } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
+
+import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
+import { useAuthStore } from '~/features/auth/authStore';
 
 type LinkedMeeting = {
   authorName?: string | null;
@@ -31,14 +35,17 @@ export function AdminLinkedMeetingsTable({
   records: LinkedMeeting[];
 }) {
   const navigate = useNavigate();
+  const currentUser = useAuthStore(state => state.currentUser);
+  const { isRead } = useAdminMeetingReadState(currentUser?.id);
   const rowInteractionPlugin = useMemo<LinkedMeetingTablePlugin>(
     () => ({
       transformBodyRow: (rowRenderProps, record) => {
-        const openMeeting = () =>
+        const openMeeting = () => {
           void navigate({
             params: { meetingId: String(record.id) },
             to: ROUTES.ADMIN_MEETING_DETAIL,
           });
+        };
         const onClick = rowRenderProps.htmlProps.onClick;
         const onKeyDown = rowRenderProps.htmlProps.onKeyDown;
 
@@ -68,7 +75,7 @@ export function AdminLinkedMeetingsTable({
         };
       },
     }),
-    [navigate],
+    [isRead, navigate],
   );
 
   return (
@@ -79,6 +86,12 @@ export function AdminLinkedMeetingsTable({
             align: 'start',
             header: '회의 제목',
             key: 'title',
+            renderCell: record => (
+              <>
+                {!isRead(record.id) ? <AdminUnreadDot /> : null}
+                {record.title}
+              </>
+            ),
             width: proportional(1.6, { minWidth: 200 }),
           },
           {

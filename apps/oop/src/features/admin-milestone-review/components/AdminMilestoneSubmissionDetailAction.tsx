@@ -11,6 +11,7 @@ type AdminMilestoneSubmissionDetailActionProps = {
   submissionId: string | null;
   teamId?: string | number;
   unavailableReason?: string;
+  onOpen?: () => void;
 };
 
 export function AdminMilestoneSubmissionDetailAction({
@@ -20,6 +21,7 @@ export function AdminMilestoneSubmissionDetailAction({
   submissionId,
   teamId,
   unavailableReason,
+  onOpen,
 }: AdminMilestoneSubmissionDetailActionProps) {
   if (
     !sectionId ||
@@ -53,6 +55,7 @@ export function AdminMilestoneSubmissionDetailAction({
         ...(apiSectionId === undefined ? {} : { apiSectionId }),
       }}
       to={ROUTES.ADMIN_SUBMISSION_DETAIL}
+      onClick={onOpen}
     >
       상세보기
     </Link>

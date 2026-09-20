@@ -13,8 +13,10 @@ import type { KeyboardEvent } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
+import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
 import { useAdminSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
 import AdminSectionTeamFilter, {
   ALL_SECTIONS,
@@ -35,6 +37,7 @@ function handleRowNavigation(
 
 export default function AdminMeetingsPage() {
   const currentUser = useAuthStore(state => state.currentUser);
+  const { isRead } = useAdminMeetingReadState(currentUser?.id);
   const navigate = useNavigate();
   const search = useSearch({ from: '/admin/meetings/' }) as {
     page?: number;
@@ -183,37 +186,35 @@ export default function AdminMeetingsPage() {
               </tr>
             </thead>
             <tbody>
-              {records.map(record => (
-                <tr
-                  aria-label={`${record.title} 회의록 보기`}
-                  className={styles.clickableRow}
-                  key={record.id}
-                  onClick={() =>
-                    void navigate({
-                      params: { meetingId: String(record.id) },
-                      to: ROUTES.ADMIN_MEETING_DETAIL,
-                    })
-                  }
-                  onKeyDown={event =>
-                    handleRowNavigation(
-                      event,
-                      () =>
-                        void navigate({
-                          params: { meetingId: String(record.id) },
-                          to: ROUTES.ADMIN_MEETING_DETAIL,
-                        }),
-                    )
-                  }
-                  tabIndex={0}
-                >
-                  <td>{formatSeoulDateTime(record.meetingAt)}</td>
-                  <td>{record.sectionName}</td>
-                  <td>{record.teamName}</td>
-                  <td>{record.title}</td>
-                  <td>{record.authorId}</td>
-                  <td>{record.participantCount}명</td>
-                </tr>
-              ))}
+              {records.map(record => {
+                const openMeeting = () => {
+                  void navigate({
+                    params: { meetingId: String(record.id) },
+                    to: ROUTES.ADMIN_MEETING_DETAIL,
+                  });
+                };
+
+                return (
+                  <tr
+                    aria-label={`${record.title} 회의록 보기`}
+                    className={styles.clickableRow}
+                    key={record.id}
+                    onClick={openMeeting}
+                    onKeyDown={event => handleRowNavigation(event, openMeeting)}
+                    tabIndex={0}
+                  >
+                    <td>
+                      {!isRead(record.id) ? <AdminUnreadDot /> : null}
+                      {formatSeoulDateTime(record.meetingAt)}
+                    </td>
+                    <td>{record.sectionName}</td>
+                    <td>{record.teamName}</td>
+                    <td>{record.title}</td>
+                    <td>{record.authorId}</td>
+                    <td>{record.participantCount}명</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </Card>
