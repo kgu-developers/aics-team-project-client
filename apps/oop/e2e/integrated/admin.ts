@@ -3,6 +3,23 @@ import { expect, type Page } from '@playwright/test';
 import { enrollmentFile, teamFile, type Run } from './data';
 import { choose } from './ui';
 
+async function findCourseRow(page: Page, courseName: string) {
+  while (true) {
+    const row = page
+      .getByRole('row')
+      .filter({
+        has: page.getByRole('cell', { name: courseName, exact: true }),
+      });
+    if ((await row.count()) > 0) return row;
+
+    const nextPage = page.getByRole('button', { name: '다음 페이지' });
+    if (await nextPage.isDisabled()) {
+      throw new Error(`등록한 강좌를 목록에서 찾을 수 없습니다: ${courseName}`);
+    }
+    await nextPage.click();
+  }
+}
+
 export async function prepareCourse(page: Page, run: Run) {
   // A sidebar transition can leave the dashboard mounted while Vite loads
   // the cold route. Navigate directly and wait for the destination UI.
@@ -28,9 +45,7 @@ export async function prepareCourse(page: Page, run: Run) {
   await choose(courseDialog, '운영 상태', '운영 중');
   await courseDialog.getByRole('button', { name: '등록', exact: true }).click();
   await expect(courseDialog).toBeHidden();
-  const row = page
-    .getByRole('row')
-    .filter({ has: page.getByRole('cell', { name: run.course, exact: true }) });
+  const row = await findCourseRow(page, run.course);
   await row.click();
   await expect(page).toHaveURL(/\/admin\/sections\/\d+$/);
   run.coursePath = new URL(page.url()).pathname;
@@ -55,7 +70,11 @@ export async function prepareCourse(page: Page, run: Run) {
     .getByRole('button', { name: '등록', exact: true })
     .click();
   await expect(sectionDialog).toBeHidden();
-  await expect(page.getByText(run.section, { exact: true })).toBeVisible();
+  await expect(
+    page
+      .getByRole('table', { name: '연결된 분반 목록' })
+      .getByRole('cell', { name: run.section, exact: true }),
+  ).toBeVisible();
 }
 
 export async function importStudents(page: Page, run: Run) {
