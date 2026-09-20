@@ -76,39 +76,43 @@ export default function AdminStudentDetailDialog({
         width={480}
       >
         <div className={styles.content}>
-          <Heading level={2}>{user?.name ?? '수강생'} 정보</Heading>
-          {userQuery.isPending ? (
-            <Text>수강생 정보를 불러오는 중입니다.</Text>
-          ) : null}
-          {userQuery.isError ? (
-            <Text role='alert'>수강생 정보를 불러오지 못했습니다.</Text>
-          ) : null}
-          {user ? (
-            <dl className={styles.detailList}>
-              <div>
-                <dt>이름</dt>
-                <dd>{user.name}</dd>
-              </div>
-              <div>
-                <dt>학번</dt>
-                <dd>{user.studentNumber}</dd>
-              </div>
-              <div>
-                <dt>이메일</dt>
-                <dd>{user.email}</dd>
-              </div>
-              <div>
-                <dt>전공</dt>
-                <dd>{major ?? '전공 정보 없음'}</dd>
-              </div>
-              <div>
-                <dt>전화번호</dt>
-                <dd>{user.phone}</dd>
-              </div>
-            </dl>
-          ) : null}
-          {details ?? null}
-          <HStack gap={2} justify='end'>
+          <Heading className={styles.title} level={2}>
+            {user?.name ?? '수강생'} 정보
+          </Heading>
+          <div className={styles.body}>
+            {userQuery.isPending ? (
+              <Text>수강생 정보를 불러오는 중입니다.</Text>
+            ) : null}
+            {userQuery.isError ? (
+              <Text role='alert'>수강생 정보를 불러오지 못했습니다.</Text>
+            ) : null}
+            {user ? (
+              <dl className={styles.detailList}>
+                <div>
+                  <dt>이름</dt>
+                  <dd>{user.name}</dd>
+                </div>
+                <div>
+                  <dt>학번</dt>
+                  <dd>{user.studentNumber}</dd>
+                </div>
+                <div>
+                  <dt>이메일</dt>
+                  <dd>{user.email}</dd>
+                </div>
+                <div>
+                  <dt>전공</dt>
+                  <dd>{major ?? '전공 정보 없음'}</dd>
+                </div>
+                <div>
+                  <dt>전화번호</dt>
+                  <dd>{user.phone}</dd>
+                </div>
+              </dl>
+            ) : null}
+            {details ?? null}
+          </div>
+          <HStack className={styles.actions} gap={2} justify='end'>
             {user && allowPasswordReset ? (
               <Button
                 label='비밀번호 초기화'
@@ -141,28 +145,30 @@ export default function AdminStudentDetailDialog({
         {user ? (
           <div className={styles.content}>
             <Heading level={2}>비밀번호를 초기화할까요?</Heading>
-            <div
-              className={styles.description}
-              id='admin-student-password-reset-description'
-            >
-              <Text as='p' display='block'>
-                {user.name}({user.studentNumber}) 학생의 비밀번호를 등록된
-                전화번호로 초기화합니다.
-              </Text>
-              <Text as='p' display='block'>
-                기존 로그인 세션은 모두 해제됩니다.
-              </Text>
-              <Text as='p' display='block'>
-                학생은 초기화 후 새 비밀번호로 변경해야 합니다.
-              </Text>
+            <div className={styles.body}>
+              <div
+                className={styles.description}
+                id='admin-student-password-reset-description'
+              >
+                <Text as='p' display='block'>
+                  {user.name}({user.studentNumber}) 학생의 비밀번호를 등록된
+                  전화번호로 초기화합니다.
+                </Text>
+                <Text as='p' display='block'>
+                  기존 로그인 세션은 모두 해제됩니다.
+                </Text>
+                <Text as='p' display='block'>
+                  학생은 초기화 후 새 비밀번호로 변경해야 합니다.
+                </Text>
+              </div>
+              {resetPasswordMutation.isError ? (
+                <Text role='alert'>
+                  비밀번호를 초기화하지 못했습니다. 잠시 후 다시 시도해 주세요.
+                  계속 실패하면 학생의 등록 정보를 확인해 주세요.
+                </Text>
+              ) : null}
             </div>
-            {resetPasswordMutation.isError ? (
-              <Text role='alert'>
-                비밀번호를 초기화하지 못했습니다. 잠시 후 다시 시도해 주세요.
-                계속 실패하면 학생의 등록 정보를 확인해 주세요.
-              </Text>
-            ) : null}
-            <HStack gap={2} justify='end'>
+            <HStack className={styles.actions} gap={2} justify='end'>
               <Button
                 data-autofocus='true'
                 isDisabled={resetPasswordMutation.isPending}

@@ -33,6 +33,36 @@ function formatDateTime(value: string | null) {
   return value ? formatSeoulDateTime(value) : '-';
 }
 
+function EvaluationTitle({
+  evaluationType,
+  sectionId,
+  title,
+}: {
+  evaluationType: 'peer' | 'presentation';
+  sectionId: string;
+  title: string;
+}) {
+  return (
+    <div className={styles.titleRow}>
+      <Heading level={1}>{title}</Heading>
+      <Link
+        className={styles.backLink}
+        search={{
+          milestoneId:
+            evaluationType === 'presentation'
+              ? 'presentation-evaluate'
+              : 'peer-review',
+          sectionId,
+        }}
+        to={ROUTES.ADMIN_SUBMISSIONS}
+      >
+        ←{' '}
+        {evaluationType === 'peer' ? '상호평가 목록으로' : '발표 평가 목록으로'}
+      </Link>
+    </div>
+  );
+}
+
 function PeerEvaluationResponses({
   evaluation,
 }: {
@@ -97,16 +127,27 @@ function PeerDetail({
     return <Text role='status'>상호평가 결과를 불러오는 중입니다.</Text>;
   if (query.isError || !query.data)
     return (
-      <EmptyState
-        description='잠시 후 다시 시도해 주세요.'
-        title='상호평가 결과를 불러오지 못했습니다.'
-      />
+      <>
+        <EvaluationTitle
+          evaluationType='peer'
+          sectionId={sectionId}
+          title='상호평가 상세보기'
+        />
+        <EmptyState
+          description='잠시 후 다시 시도해 주세요.'
+          title='상호평가 결과를 불러오지 못했습니다.'
+        />
+      </>
     );
   const { data } = query;
   return (
     <>
-      <div>
-        <Heading level={1}>{data.teamName} 상호평가 결과</Heading>
+      <div className={styles.titleSection}>
+        <EvaluationTitle
+          evaluationType='peer'
+          sectionId={sectionId}
+          title={`${data.teamName} 상호평가 결과`}
+        />
         <Text className={styles.metadata}>
           양식 #{data.formId} · 마감 {formatDateTime(data.closesAt)}
         </Text>
@@ -200,10 +241,17 @@ function PresentationDetail({
     return <Text role='status'>발표평가 결과를 불러오는 중입니다.</Text>;
   if (query.isError || !query.data)
     return (
-      <EmptyState
-        description='잠시 후 다시 시도해 주세요.'
-        title='발표평가 결과를 불러오지 못했습니다.'
-      />
+      <>
+        <EvaluationTitle
+          evaluationType='presentation'
+          sectionId={sectionId}
+          title='발표평가 상세보기'
+        />
+        <EmptyState
+          description='잠시 후 다시 시도해 주세요.'
+          title='발표평가 결과를 불러오지 못했습니다.'
+        />
+      </>
     );
   const { data } = query;
   const criteria = [...data.criteria].sort(
@@ -211,8 +259,12 @@ function PresentationDetail({
   );
   return (
     <>
-      <div>
-        <Heading level={1}>{data.teamName} 발표평가 결과</Heading>
+      <div className={styles.titleSection}>
+        <EvaluationTitle
+          evaluationType='presentation'
+          sectionId={sectionId}
+          title={`${data.teamName} 발표평가 결과`}
+        />
         <Text className={styles.metadata}>
           {data.projectTitle ?? '프로젝트 주제 없음'} · 마감{' '}
           {formatDateTime(data.closesAt)}
@@ -318,29 +370,6 @@ export default function AdminEvaluationDetailPage() {
     evaluationType === 'peer' || evaluationType === 'presentation';
   return (
     <main className={styles.page}>
-      <div className={styles.titleRow}>
-        <Heading level={1}>
-          {evaluationType === 'peer'
-            ? '상호평가 상세보기'
-            : '발표평가 상세보기'}
-        </Heading>
-        <Link
-          className={styles.backLink}
-          search={{
-            milestoneId:
-              evaluationType === 'presentation'
-                ? 'presentation-evaluate'
-                : 'peer-review',
-            sectionId: search.sectionId,
-          }}
-          to={ROUTES.ADMIN_SUBMISSIONS}
-        >
-          ←{' '}
-          {evaluationType === 'peer'
-            ? '상호평가 목록으로'
-            : '발표 평가 목록으로'}
-        </Link>
-      </div>
       {!isValidType || !teamId ? (
         <EmptyState
           description='올바른 평가 결과 주소인지 확인해 주세요.'

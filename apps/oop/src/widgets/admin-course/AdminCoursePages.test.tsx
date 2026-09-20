@@ -292,10 +292,24 @@ describe('AdminCourseDetailPage', () => {
       within(settingsDialog).getByRole('textbox', { name: /^정원/ }),
     ).toBeDisabled();
     expect(
-      within(settingsDialog).getByRole('combobox', { name: '공개 시작' }),
+      within(settingsDialog).getByRole('combobox', {
+        name: '공개 시작 날짜',
+      }),
     ).toBeDisabled();
     expect(
-      within(settingsDialog).getByRole('combobox', { name: '공개 종료' }),
+      within(settingsDialog).getByRole('textbox', {
+        name: '공개 시작 시간',
+      }),
+    ).toBeDisabled();
+    expect(
+      within(settingsDialog).getByRole('combobox', {
+        name: '공개 종료 날짜',
+      }),
+    ).toBeDisabled();
+    expect(
+      within(settingsDialog).getByRole('textbox', {
+        name: '공개 종료 시간',
+      }),
     ).toBeDisabled();
 
     resolveSectionUpdate?.();
@@ -305,7 +319,6 @@ describe('AdminCourseDetailPage', () => {
       ).not.toBeInTheDocument();
     });
   });
-
 
   it('분반 설정에서 삭제 확인 후 표에서 제거한다', async () => {
     const user = userEvent.setup();
@@ -460,7 +473,6 @@ describe('AdminCourseDetailPage', () => {
     await user.type(password, 'a'.repeat(57));
     expect(submit).toBeDisabled();
   });
-
 
   it('강좌 정보 수정에서 운영 상태를 보관됨으로 바꾼다', async () => {
     const user = userEvent.setup();

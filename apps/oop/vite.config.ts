@@ -145,10 +145,10 @@ export default defineConfig(({ command, mode }) => {
       env: { VITE_ENABLE_MSW: 'true' },
       environment: 'jsdom',
       // jsdom, MSW, and mutable demo fixtures make the integration-heavy suite
-      // CPU-bound. Limit parallel workers so interaction tests do not time out
-      // only when the complete suite runs.
+      // CPU-bound. Run files sequentially: on Windows, launching a second forks
+      // worker can time out before it responds and yield unhandled test errors.
       pool: 'forks',
-      maxWorkers: 2,
+      maxWorkers: 1,
       minWorkers: 1,
       testTimeout: 15_000,
       setupFiles: './src/test/setup.ts',

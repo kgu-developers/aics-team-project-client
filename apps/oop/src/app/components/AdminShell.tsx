@@ -1,9 +1,11 @@
-import { Divider } from '@aics/design-system';
+import { Divider, Text } from '@aics/design-system';
 import { Link, Outlet, useRouterState } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { useAuthStore } from '~/features/auth/authStore';
+
+import StudentContactLink from '~/widgets/student-contact-link/StudentContactLink';
 
 import * as styles from './AdminShell.css';
 
@@ -87,6 +89,12 @@ export default function AdminShell() {
                 className={styles.universityLogoRightTextOverlay}
               />
             </div>
+          </div>
+          <div className={styles.footerMeta}>
+            <StudentContactLink />
+            <Text color='secondary' type='supporting'>
+              © 2026 KGU Developers CSHOME. All rights reserved.
+            </Text>
           </div>
         </footer>
       </main>

@@ -112,6 +112,21 @@ export const formRow = style({
   gridTemplateColumns: '1fr',
 });
 
+export const visibilityFields = style({
+  display: 'grid',
+  gap: tokens.spacing['2'],
+});
+
+export const dateTimeFields = style({
+  display: 'grid',
+  gap: tokens.spacing['2'],
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  minWidth: 0,
+  '@media': {
+    '(max-width: 560px)': { gridTemplateColumns: '1fr' },
+  },
+});
+
 export const dialogActions = style({
   display: 'flex',
   gap: tokens.spacing['2'],

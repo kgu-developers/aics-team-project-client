@@ -5,6 +5,10 @@ import { Link } from '@tanstack/react-router';
 import { ROUTES } from '~/app/constants/routes';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
+
+import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
+import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminTeamMeetingRecordList.css';
 
@@ -23,6 +27,9 @@ export function AdminTeamMeetingRecordList({
   sectionId,
   teamId,
 }: AdminTeamMeetingRecordListProps) {
+  const currentUser = useAuthStore(state => state.currentUser);
+  const { isRead } = useAdminMeetingReadState(currentUser?.id);
+
   return (
     <section aria-labelledby='team-meetings-heading' className={styles.section}>
       <div className={styles.header}>
@@ -65,6 +72,7 @@ export function AdminTeamMeetingRecordList({
               to={ROUTES.ADMIN_MEETING_DETAIL}
             >
               <div className={styles.recordMain}>
+                {!isRead(record.id) ? <AdminUnreadDot /> : null}
                 <Text className={styles.team}>
                   {record.sectionLabel} · {record.teamLabel}
                 </Text>
