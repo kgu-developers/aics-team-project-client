@@ -51,16 +51,10 @@ function isInScheduleWindow(
 
   if (!submission?.canSubmitNow) return false;
 
-  // Late submission and correction are operative schedule windows too.
-  // canSubmitNow is also the only server-authoritative signal for a
-  // team-specific professor reopening whose deadline is not exposed.
-  const extendedUntil = milestoneTime(
-    submission.status === 'REVISION_REQUESTED'
-      ? milestone.schedule.revisionUntil
-      : milestone.schedule.lateSubmissionUntil,
-  );
+  // After the shared deadline, canSubmitNow is the server-authoritative signal
+  // for late submission, correction, and team-specific professor reopening.
   if (!Number.isFinite(closesAt) || now < closesAt) return false;
-  return !Number.isFinite(extendedUntil) || now < extendedUntil;
+  return true;
 }
 
 /**

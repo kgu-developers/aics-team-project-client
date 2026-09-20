@@ -219,12 +219,13 @@ describe('학생 마일스톤 순차 진행', () => {
     expect(result.defaultOpenId).toBe('2');
   });
 
-  it('별도 마감이 노출되지 않은 교수 재오픈도 현재 단계로 펼친다', () => {
+  it('공용 재제출 마감이 지나도 서버가 허용한 교수 재오픈은 현재 단계로 펼친다', () => {
     const reopened = milestone(
       1,
       '2026-09-01T00:00:00+09:00',
       '2026-09-30T23:59:00+09:00',
     );
+    reopened.schedule.revisionUntil = '2026-10-05T23:59:00+09:00';
     const result = resolveStudentMilestoneProgression(
       [
         {
