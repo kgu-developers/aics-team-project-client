@@ -38,8 +38,8 @@ type CourseTablePlugin = NonNullable<
 >[string];
 
 /**
- * 강좌 목록. Each row opens the course detail where sections, uploads and
- * pre-survey responses for that course live; creation stays here.
+ * 강좌 목록. Each row opens the course detail where sections and roster
+ * uploads for that course live; creation stays here.
  */
 export default function AdminCoursesPage() {
   const navigate = useNavigate();
@@ -125,8 +125,7 @@ export default function AdminCoursesPage() {
         <div>
           <Heading level={1}>강좌·분반 관리</Heading>
           <Text color='secondary'>
-            강좌를 선택하면 분반, 명단 업로드, 사전조사 응답을 한 화면에서
-            관리할 수 있습니다.
+            강좌를 선택하면 분반과 명단 업로드를 한 화면에서 관리할 수 있습니다.
           </Text>
         </div>
         <Button label='강좌 등록' onClick={() => setIsCreateOpen(true)} />

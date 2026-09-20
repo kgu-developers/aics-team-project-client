@@ -146,14 +146,19 @@ describe('AdminCoursesPage', () => {
     )[0]!;
     expect(within(row).getByText('운영 중')).toBeInTheDocument();
     expect(within(row).getByText('2학기')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '삭제' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '삭제' }),
+    ).not.toBeInTheDocument();
 
     await user.click(row);
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/admin/sections/1'),
     );
     expect(
-      await screen.findByRole('heading', { level: 1, name: '객체지향 프로그래밍' }),
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '객체지향 프로그래밍',
+      }),
     ).toBeInTheDocument();
   });
 
@@ -195,9 +200,14 @@ describe('AdminCourseDetailPage', () => {
     renderAt('/admin/sections/1');
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: '객체지향 프로그래밍' }),
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '객체지향 프로그래밍',
+      }),
     ).toBeInTheDocument();
-    const table = await screen.findByRole('table', { name: '연결된 분반 목록' });
+    const table = await screen.findByRole('table', {
+      name: '연결된 분반 목록',
+    });
     const row = within(table).getByRole('row', { name: 'OOP-01 분반 설정' });
     expect(within(row).getByText('월요일 1-2교시')).toBeInTheDocument();
     expect(within(row).getByText('40명')).toBeInTheDocument();
@@ -239,10 +249,51 @@ describe('AdminCourseDetailPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('분반 생성 후 목록 갱신이 실패하면 같은 분반을 다시 등록하지 않는다', async () => {
+    const user = userEvent.setup();
+    let sectionCreateRequests = 0;
+    server.use(
+      http.post(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_SECTIONS}`, () => {
+        sectionCreateRequests += 1;
+        return HttpResponse.json({ id: 99 }, { status: 201 });
+      }),
+      http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+        HttpResponse.json({ code: 'REFRESH_FAILED' }, { status: 500 }),
+      ),
+    );
+    renderAt('/admin/sections/1');
+    await screen.findByRole('row', { name: 'OOP-01 분반 설정' });
+
+    await user.click(screen.getByRole('button', { name: '분반 등록' }));
+    const dialog = await screen.findByRole('dialog', {
+      name: '객체지향 프로그래밍 분반 등록',
+    });
+    const codeInput = within(dialog).getByRole('textbox', {
+      name: /분반 코드/,
+    });
+    await user.type(codeInput, 'OOP-02');
+    await user.type(
+      within(dialog).getByRole('textbox', { name: /수업 시간/ }),
+      '수요일 3-4교시',
+    );
+    await user.click(within(dialog).getByRole('button', { name: '등록' }));
+
+    expect(
+      await within(dialog).findByText('분반 목록을 새로고침하지 못했습니다.'),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: '등록' })).toBeDisabled();
+
+    await user.click(codeInput);
+    await user.keyboard('{Enter}');
+    await waitFor(() => expect(sectionCreateRequests).toBe(1));
+  });
+
   it('행을 누르면 분반 설정을 열고 취소할 수 있다', async () => {
     const user = userEvent.setup();
     renderAt('/admin/sections/1');
-    await user.click(await screen.findByRole('row', { name: 'OOP-01 분반 설정' }));
+    await user.click(
+      await screen.findByRole('row', { name: 'OOP-01 분반 설정' }),
+    );
     const settingsDialog = await screen.findByRole('dialog', {
       name: '분반 정보 수정',
     });
@@ -272,7 +323,9 @@ describe('AdminCourseDetailPage', () => {
     );
 
     renderAt('/admin/sections/1');
-    await user.click(await screen.findByRole('row', { name: 'OOP-01 분반 설정' }));
+    await user.click(
+      await screen.findByRole('row', { name: 'OOP-01 분반 설정' }),
+    );
 
     const settingsDialog = await screen.findByRole('dialog', {
       name: '분반 정보 수정',
@@ -323,7 +376,9 @@ describe('AdminCourseDetailPage', () => {
   it('분반 설정에서 삭제 확인 후 표에서 제거한다', async () => {
     const user = userEvent.setup();
     renderAt('/admin/sections/1');
-    await user.click(await screen.findByRole('row', { name: 'OOP-01 분반 설정' }));
+    await user.click(
+      await screen.findByRole('row', { name: 'OOP-01 분반 설정' }),
+    );
     const settingsDialog = await screen.findByRole('dialog', {
       name: '분반 정보 수정',
     });
@@ -477,7 +532,10 @@ describe('AdminCourseDetailPage', () => {
   it('강좌 정보 수정에서 운영 상태를 보관됨으로 바꾼다', async () => {
     const user = userEvent.setup();
     renderAt('/admin/sections/1');
-    await screen.findByRole('heading', { level: 1, name: '객체지향 프로그래밍' });
+    await screen.findByRole('heading', {
+      level: 1,
+      name: '객체지향 프로그래밍',
+    });
 
     await user.click(screen.getByRole('button', { name: '강좌 정보 수정' }));
     const dialog = await screen.findByRole('dialog', {
@@ -495,10 +553,15 @@ describe('AdminCourseDetailPage', () => {
   it('강좌를 삭제하면 목록으로 돌아간다', async () => {
     const user = userEvent.setup();
     const router = renderAt('/admin/sections/1');
-    await screen.findByRole('heading', { level: 1, name: '객체지향 프로그래밍' });
+    await screen.findByRole('heading', {
+      level: 1,
+      name: '객체지향 프로그래밍',
+    });
 
     await user.click(screen.getByRole('button', { name: '강좌 삭제' }));
-    const dialog = await screen.findByRole('dialog', { name: '강좌 삭제 확인' });
+    const dialog = await screen.findByRole('dialog', {
+      name: '강좌 삭제 확인',
+    });
     await user.click(within(dialog).getByRole('button', { name: '삭제' }));
 
     await waitFor(() =>
@@ -670,5 +733,4 @@ describe('admin section API contract', () => {
       expect.arrayContaining(['OOP-01', 'WEB-01']),
     );
   });
-
 });

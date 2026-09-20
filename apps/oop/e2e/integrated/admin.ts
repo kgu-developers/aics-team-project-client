@@ -5,11 +5,9 @@ import { choose } from './ui';
 
 async function findCourseRow(page: Page, courseName: string) {
   while (true) {
-    const row = page
-      .getByRole('row')
-      .filter({
-        has: page.getByRole('cell', { name: courseName, exact: true }),
-      });
+    const row = page.getByRole('row').filter({
+      has: page.getByRole('cell', { name: courseName, exact: true }),
+    });
     if ((await row.count()) > 0) return row;
 
     const nextPage = page.getByRole('button', { name: '다음 페이지' });
@@ -52,9 +50,7 @@ export async function prepareCourse(page: Page, run: Run) {
   await expect(
     page.getByRole('heading', { name: run.course, level: 1, exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole('button', { name: '분반 등록', exact: true })
-    .click();
+  await page.getByRole('button', { name: '분반 등록', exact: true }).click();
   const sectionDialog = page.getByRole('dialog', {
     name: `${run.course} 분반 등록`,
     exact: true,

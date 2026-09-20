@@ -15,12 +15,11 @@ export const semesterOptions: {
   { label: '겨울학기', value: 'WINTER' },
 ];
 
-export const statusOptions: { label: string; value: AdminOopCourseStatus }[] =
-  [
-    { label: '임시 저장', value: 'DRAFT' },
-    { label: '운영 중', value: 'ACTIVE' },
-    { label: '보관됨', value: 'ARCHIVED' },
-  ];
+export const statusOptions: { label: string; value: AdminOopCourseStatus }[] = [
+  { label: '임시 저장', value: 'DRAFT' },
+  { label: '운영 중', value: 'ACTIVE' },
+  { label: '보관됨', value: 'ARCHIVED' },
+];
 
 export function semesterLabel(value: AdminOopCourseSemester) {
   return semesterOptions.find(option => option.value === value)?.label ?? value;
@@ -40,11 +39,7 @@ export function statusBadgeVariant(
 }
 
 export type ContactVisibilityStatus =
-  | '미설정'
-  | '입력 확인 필요'
-  | '공개 예정'
-  | '공개 중'
-  | '공개 종료';
+  '미설정' | '입력 확인 필요' | '공개 예정' | '공개 중' | '공개 종료';
 
 export function contactVisibilityStatus(
   visibleFrom: string | null | undefined,

@@ -859,7 +859,8 @@ export function SectionCreateDialog({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!isValid || !professorId || submitMutation.isPending) return;
+    if (!isValid || !professorId || submitMutation.isPending || hasRefreshError)
+      return;
 
     const sectionInput: AdminOopSectionInput = {
       capacity,
@@ -962,7 +963,9 @@ export function SectionCreateDialog({
               variant='secondary'
             />
             <Button
-              isDisabled={!isValid || submitMutation.isPending}
+              isDisabled={
+                !isValid || submitMutation.isPending || hasRefreshError
+              }
               isLoading={submitMutation.isPending}
               label='등록'
               type='submit'
