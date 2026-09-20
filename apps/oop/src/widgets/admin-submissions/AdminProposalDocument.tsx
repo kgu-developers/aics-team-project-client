@@ -3,6 +3,7 @@ import { Button, Card, EmptyState, Heading, Text } from '@aics/design-system';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { useAdminProjectProposalQuery } from '~/features/admin-milestone-review/queries';
+import { safeDisplayUrl } from '~/features/submission/submissionUploadInput';
 
 import * as styles from './AdminProposalDocument.css';
 
@@ -66,19 +67,22 @@ export default function AdminProposalDocument({
       </section>
       <section className={styles.section}>
         <Heading level={3}>화면 구성</Heading>
-        {project.screenConfiguration.map((screen, index) => (
-          <figure className={styles.section} key={index}>
-            <figcaption>{screen.title || '화면'}</figcaption>
-            {screen.imageUrl ? (
-              <img
-                className={styles.image}
-                src={screen.imageUrl}
-                alt={screen.title || '제안서 화면'}
-              />
-            ) : null}
-            <Text className={styles.content}>{screen.description}</Text>
-          </figure>
-        ))}
+        {project.screenConfiguration.map((screen, index) => {
+          const imageUrl = safeDisplayUrl(screen.imageUrl);
+          return (
+            <figure className={styles.section} key={index}>
+              <figcaption>{screen.title || '화면'}</figcaption>
+              {imageUrl ? (
+                <img
+                  className={styles.image}
+                  src={imageUrl}
+                  alt={screen.title || '제안서 화면'}
+                />
+              ) : null}
+              <Text className={styles.content}>{screen.description}</Text>
+            </figure>
+          );
+        })}
       </section>
       <section className={styles.section}>
         <Heading level={3}>팀 운영 방식</Heading>

@@ -8,10 +8,14 @@ import type {
 import { seoulInstant } from '~/shared/lib/seoulInstant';
 
 export type ContactVisibility = 'unscheduled' | 'upcoming' | 'open' | 'closed';
+type ContactWindow = {
+  contactVisibleFrom?: string | null;
+  contactVisibleUntil?: string | null;
+};
 export type LiveTeamAssignmentStage =
   'result' | 'firstMeeting' | 'completed' | 'contactClosed';
 
-function timestamp(value: string | null) {
+function timestamp(value?: string | null) {
   if (!value) return undefined;
 
   const parsed = seoulInstant(value);
@@ -19,14 +23,13 @@ function timestamp(value: string | null) {
 }
 
 export function toTeamResultReleaseAt(contactVisibleFrom: string | null) {
-  if (timestamp(contactVisibleFrom) === undefined) return undefined;
-
-  const date = contactVisibleFrom?.match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
-  return date ? `${date}T00:00:00+09:00` : undefined;
+  return timestamp(contactVisibleFrom) === undefined
+    ? undefined
+    : (contactVisibleFrom ?? undefined);
 }
 
 export function resolveContactVisibility(
-  section: SectionResponse,
+  section: ContactWindow,
   now = Date.now(),
 ): ContactVisibility {
   const start = timestamp(section.contactVisibleFrom);

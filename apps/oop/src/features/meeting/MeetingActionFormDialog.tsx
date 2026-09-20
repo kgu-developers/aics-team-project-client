@@ -1,3 +1,4 @@
+import type { MeetingActionStatus } from '@aics/core';
 import {
   Button,
   DateInput,
@@ -15,7 +16,14 @@ export type ActionFormState = {
   content: string;
   dueDate: string;
   meetingId: string;
+  status?: MeetingActionStatus;
 };
+
+const statusOptions: { label: string; value: MeetingActionStatus }[] = [
+  { label: '시작 전', value: 'TODO' },
+  { label: '진행 중', value: 'IN_PROGRESS' },
+  { label: '완료', value: 'DONE' },
+];
 
 export default function MeetingActionFormDialog({
   error,
@@ -113,6 +121,19 @@ export default function MeetingActionFormDialog({
           }
           width='100%'
         />
+        {mode === 'edit' && form.status ? (
+          <Selector
+            isDisabled={isPending}
+            isRequired
+            label='상태'
+            onChange={status =>
+              setForm({ ...form, status: status as MeetingActionStatus })
+            }
+            options={statusOptions}
+            value={form.status}
+            width='100%'
+          />
+        ) : null}
         {mode === 'add' ? (
           <Text color='secondary' type='supporting'>
             새 액션 플랜은 ‘시작 전’ 상태로 추가되며, 추가 후 상태를 변경할 수

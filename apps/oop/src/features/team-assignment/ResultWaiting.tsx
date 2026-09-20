@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { ROUTES } from '~/app/constants/routes';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
+import { seoulInstant } from '~/shared/lib/seoulInstant';
 
 import { formatTeamAssignmentDate } from './formatTeamAssignmentDate';
 import * as styles from './TeamAssignmentFlow.css';
@@ -17,6 +18,11 @@ export default function ResultWaiting({
   resultReleasesAt?: string;
 }) {
   const navigate = useNavigate();
+  const releaseTimestamp = resultReleasesAt
+    ? seoulInstant(resultReleasesAt)
+    : Number.NaN;
+  const hasReleaseSchedule = !Number.isNaN(releaseTimestamp);
+  const isFutureRelease = hasReleaseSchedule && releaseTimestamp > Date.now();
 
   return (
     <section
@@ -32,10 +38,15 @@ export default function ResultWaiting({
         <h1 className={styles.headline} id='team-result-waiting-heading'>
           설문에 응답해 주셔서 감사합니다.
         </h1>
-        {resultReleasesAt ? (
+        {resultReleasesAt && isFutureRelease ? (
           <p>
             팀 선정 결과는 {formatTeamAssignmentDate(resultReleasesAt)}에
             공개됩니다.
+          </p>
+        ) : resultReleasesAt && hasReleaseSchedule ? (
+          <p>
+            팀 선정 결과 공개 시각({formatTeamAssignmentDate(resultReleasesAt)}
+            )이 지났습니다. 배정 결과를 확인하는 중입니다.
           </p>
         ) : (
           <p>팀원 공개 일정은 추후 안내됩니다.</p>

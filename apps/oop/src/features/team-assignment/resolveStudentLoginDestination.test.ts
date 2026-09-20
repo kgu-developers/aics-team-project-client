@@ -1,14 +1,8 @@
-import { fetchTeamAssignmentProjection } from '@aics/api-client';
-import type { CurrentUser, TeamAssignmentProjection } from '@aics/core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { CurrentUser } from '@aics/core';
+import { describe, expect, it } from 'vitest';
 
 import { resolveStudentLoginDestination } from './resolveStudentLoginDestination';
 
-vi.mock('@aics/api-client', () => ({
-  fetchTeamAssignmentProjection: vi.fn(),
-}));
-
-const fetchProjectionMock = vi.mocked(fetchTeamAssignmentProjection);
 const student: CurrentUser = {
   email: 'student@example.com',
   globalRole: 'STUDENT',
@@ -17,45 +11,135 @@ const student: CurrentUser = {
   sections: [
     {
       code: 'OOP-01',
-      id: 'oop-2026-2-01',
+      id: '1',
       name: '객체지향프로그래밍 01분반',
       role: 'STUDENT',
+      contactVisibleFrom: '2020-01-01T00:00:00+09:00',
+      contactVisibleUntil: null,
     },
   ],
   studentNumber: '20260001',
 };
 
-beforeEach(() => {
-  fetchProjectionMock.mockReset();
-});
-
 describe('resolveStudentLoginDestination', () => {
-  it('학생은 팀 온보딩 단일 진입점으로 이동한다', async () => {
-    fetchProjectionMock.mockResolvedValue({
-      phase: 'firstMeeting',
-      sectionId: 'oop-2026-2-01',
-      window: {},
-    } satisfies TeamAssignmentProjection);
-
-    await expect(resolveStudentLoginDestination(student)).resolves.toBe(
-      '/onboarding/team',
-    );
-    expect(fetchProjectionMock).not.toHaveBeenCalled();
-  });
-
-  it('로그인 중에는 팀 배정 API를 조회하지 않는다', async () => {
-    fetchProjectionMock.mockRejectedValue(new Error('projection unavailable'));
-
-    await expect(resolveStudentLoginDestination(student)).resolves.toBe(
-      '/onboarding/team',
-    );
-    expect(fetchProjectionMock).not.toHaveBeenCalled();
-  });
-
-  it('운영자 로그인에는 학생 팀 배정 API를 호출하지 않는다', async () => {
+  it('팀 미배정 학생은 /student redirect보다 팀 온보딩을 우선한다', async () => {
     await expect(
-      resolveStudentLoginDestination({ ...student, globalRole: 'ASSISTANT' }),
+      resolveStudentLoginDestination(
+        { ...student, teamId: null },
+        '/student/meetings',
+      ),
+    ).resolves.toBe('/onboarding/team');
+  });
+
+  it.each([
+    ['팀장', '7'],
+    ['팀원', '8'],
+  ])('배정된 %s 학생은 학생 화면으로 이동한다', async (_role, teamId) => {
+    await expect(
+      resolveStudentLoginDestination({ ...student, teamId }),
+    ).resolves.toBe('/student');
+    await expect(
+      resolveStudentLoginDestination(
+        { ...student, teamId },
+        '/student/meetings',
+      ),
+    ).resolves.toBe('/student/meetings');
+  });
+
+  it('연락처 공개 전 팀 배정 학생은 /student redirect 대신 온보딩으로 이동한다', async () => {
+    await expect(
+      resolveStudentLoginDestination(
+        {
+          ...student,
+          teamId: '7',
+          sections: [
+            {
+              ...student.sections[0]!,
+              contactVisibleFrom: '2099-01-01T00:00:00+09:00',
+            },
+          ],
+        },
+        '/student/meetings',
+      ),
+    ).resolves.toBe('/onboarding/team');
+  });
+
+  it('연락처 공개 일정이 미설정인 배정 학생은 학생 redirect를 유지한다', async () => {
+    await expect(
+      resolveStudentLoginDestination(
+        {
+          ...student,
+          teamId: '7',
+          sections: [
+            {
+              ...student.sections[0]!,
+              contactVisibleFrom: null,
+              contactVisibleUntil: null,
+            },
+          ],
+        },
+        '/student/meetings',
+      ),
+    ).resolves.toBe('/student/meetings');
+  });
+
+  it('MSW demo에서는 공개 전이어도 기존 학생 목적지를 유지한다', async () => {
+    await expect(
+      resolveStudentLoginDestination(
+        {
+          ...student,
+          teamId: '7',
+          sections: [
+            {
+              ...student.sections[0]!,
+              contactVisibleFrom: '2099-01-01T00:00:00+09:00',
+            },
+          ],
+        },
+        '/student/meetings',
+        { isDemo: true },
+      ),
+    ).resolves.toBe('/student/meetings');
+  });
+
+  it('분반이 여러 개인 학생은 scalar teamId를 추측하지 않고 온보딩으로 이동한다', async () => {
+    await expect(
+      resolveStudentLoginDestination({
+        ...student,
+        teamId: '7',
+        sections: [
+          ...student.sections,
+          { ...student.sections[0]!, id: '2', name: '02분반' },
+        ],
+      }),
+    ).resolves.toBe('/onboarding/team');
+  });
+
+  it.each(['ASSISTANT', 'PROFESSOR'] as const)(
+    '%s 운영자는 운영 화면과 운영 redirect를 유지한다',
+    async globalRole => {
+      const operator = { ...student, globalRole };
+      await expect(resolveStudentLoginDestination(operator)).resolves.toBe(
+        '/admin',
+      );
+      await expect(
+        resolveStudentLoginDestination(operator, '/admin/milestones'),
+      ).resolves.toBe('/admin/milestones');
+    },
+  );
+
+  it('역할과 다른 redirect는 각 역할의 홈으로 제한한다', async () => {
+    await expect(
+      resolveStudentLoginDestination(
+        { ...student, teamId: '7' },
+        '/admin/milestones',
+      ),
+    ).resolves.toBe('/student');
+    await expect(
+      resolveStudentLoginDestination(
+        { ...student, globalRole: 'ASSISTANT' },
+        '/student',
+      ),
     ).resolves.toBe('/admin');
-    expect(fetchProjectionMock).not.toHaveBeenCalled();
   });
 });

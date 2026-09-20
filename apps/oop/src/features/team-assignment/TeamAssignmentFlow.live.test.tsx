@@ -19,6 +19,7 @@ const mockSurveyQuery = vi.hoisted(() => vi.fn());
 const mockLiveProjectionQuery = vi.hoisted(() => vi.fn());
 const mockKickoffQuery = vi.hoisted(() => vi.fn());
 const mockProjectionQuery = vi.hoisted(() => vi.fn());
+const mockWaitingPoll = vi.hoisted(() => vi.fn());
 
 vi.mock('~/shared/config/developmentMode', () => ({
   isMockDevelopmentMode: () => false,
@@ -54,6 +55,7 @@ vi.mock('./queries', () => ({
     mutateAsync: vi.fn(),
   }),
   useTeamAssignmentProjectionQuery: mockProjectionQuery,
+  useTeamAssignmentWaitingPoll: mockWaitingPoll,
   useTeamKickoffQuery: mockKickoffQuery,
   useTeamMemberContactsQuery: () => ({
     data: [],
@@ -127,6 +129,7 @@ beforeEach(() => {
   mockLiveProjectionQuery.mockReset();
   mockKickoffQuery.mockReset();
   mockProjectionQuery.mockReset();
+  mockWaitingPoll.mockReset();
   useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setCurrentUser(student);
 
@@ -168,7 +171,7 @@ describe('TeamAssignmentFlow live API mode', () => {
       }),
     ).toBeVisible();
     expect(
-      screen.getByText('팀 선정 결과는 2099-09-10/00:00에 공개됩니다.'),
+      screen.getByText('팀 선정 결과는 2099-09-10/10:00에 공개됩니다.'),
     ).toBeVisible();
     expect(screen.queryByRole('button', { name: '시작하기' })).toBeNull();
     expect(mockLiveProjectionQuery).toHaveBeenCalledWith(
@@ -176,6 +179,22 @@ describe('TeamAssignmentFlow live API mode', () => {
       surveyResponse,
       true,
     );
+    expect(mockWaitingPoll).toHaveBeenCalledWith(true);
+  });
+
+  it('공개 시각이 지난 뒤 팀이 없으면 배정 결과 확인 중이라고 안내한다', () => {
+    mockSectionsQuery.mockReturnValue(
+      queryResult([
+        { ...section, contactVisibleFrom: '2020-09-10T10:00:00+09:00' },
+      ]),
+    );
+    mockSurveyQuery.mockReturnValue(queryResult(surveyResponse));
+
+    renderFlow();
+
+    expect(screen.getByText(/공개 시각.*지났습니다/)).toBeVisible();
+    expect(screen.getByText(/배정 결과를 확인하는 중입니다/)).toBeVisible();
+    expect(screen.queryByText(/결과를 확인해 주세요/)).not.toBeInTheDocument();
   });
 
   it.each([401, 403, 500])(
@@ -252,9 +271,14 @@ describe('TeamAssignmentFlow live API mode', () => {
     ).toBeVisible();
     expect(mockSurveyQuery).toHaveBeenCalledWith(undefined);
   });
-  it('배정된 팀은 kickoff 응답의 이름과 ID로 표시한다', () => {
+  it('배정된 팀은 공개 시각 이후 kickoff 응답의 이름과 ID로 표시한다', () => {
     mockCurrentUserQuery.mockReturnValue(
       queryResult({ ...student, teamId: '4' }),
+    );
+    mockSectionsQuery.mockReturnValue(
+      queryResult([
+        { ...section, contactVisibleFrom: '2020-09-10T10:00:00+09:00' },
+      ]),
     );
     mockSurveyQuery.mockReturnValue(queryResult());
     mockKickoffQuery.mockReturnValue(
@@ -272,10 +296,16 @@ describe('TeamAssignmentFlow live API mode', () => {
     ).toBeVisible();
     expect(mockKickoffQuery).toHaveBeenCalledWith('4');
     expect(mockSurveyQuery).toHaveBeenCalledWith(undefined);
+    expect(mockWaitingPoll).toHaveBeenCalledWith(false);
   });
   it('kickoff의 팀장 확정을 확인하면 학생 홈으로 이동한다', () => {
     mockCurrentUserQuery.mockReturnValue(
       queryResult({ ...student, teamId: '4' }),
+    );
+    mockSectionsQuery.mockReturnValue(
+      queryResult([
+        { ...section, contactVisibleFrom: '2020-09-10T10:00:00+09:00' },
+      ]),
     );
     mockSurveyQuery.mockReturnValue(queryResult());
     mockKickoffQuery.mockReturnValue(

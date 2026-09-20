@@ -68,6 +68,7 @@ let team: TeamKickoffResponse;
 let activeSection: SectionResponse;
 let client: QueryClient;
 const meRequests = vi.fn();
+const kickoffRequests = vi.fn();
 const contactRequests = vi.fn();
 const claimRequests = vi.fn();
 const server = setupServer(
@@ -86,9 +87,10 @@ const server = setupServer(
   http.get(`${API_BASE_URL}${ENDPOINTS.SECTION.MY_SECTIONS}`, () =>
     HttpResponse.json({ contents: [activeSection] }),
   ),
-  http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF('4')}`, () =>
-    HttpResponse.json(team),
-  ),
+  http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF('4')}`, () => {
+    kickoffRequests();
+    return HttpResponse.json(team);
+  }),
   http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.MEMBER_CONTACTS('4')}`, () => {
     contactRequests();
     return HttpResponse.json({
@@ -220,35 +222,52 @@ it('온보딩 결과 안의 팀 요약에는 중복 홈 이동을 표시하지 �
   ).not.toBeInTheDocument();
 });
 
-it.each(['2099-01-01T00:00:00+09:00', null])(
-  '온보딩 시작 전 또는 일정 미설정(%s)이면 팀원 확인의 다음 버튼이 비활성화된다',
-  async start => {
-    activeSection.contactVisibleFrom = start;
-    renderFlow();
-    await viewTeam();
-    const next = screen.getByRole('button', { name: '다음' });
-    expect(next).toBeDisabled();
-    await userEvent.setup().click(next);
-    expect(screen.getByText('20260001')).toBeVisible();
-    expect(
-      screen.queryByRole('button', { name: '내가 팀장입니다' }),
-    ).toBeNull();
-    expect(contactRequests).not.toHaveBeenCalled();
-    expect(claimRequests).not.toHaveBeenCalled();
-  },
-);
+it('연락처 공개 전이면 팀 identity를 조회·노출하지 않는다', async () => {
+  activeSection.contactVisibleFrom = '2099-01-01T10:00:00+09:00';
+  renderFlow();
+
+  expect(
+    await screen.findByRole('heading', {
+      name: '설문에 응답해 주셔서 감사합니다.',
+    }),
+  ).toBeVisible();
+  expect(screen.queryByText('7조에 배정되었어요!')).toBeNull();
+  expect(screen.queryByText('20260001')).toBeNull();
+  expect(kickoffRequests).not.toHaveBeenCalled();
+  expect(contactRequests).not.toHaveBeenCalled();
+  expect(claimRequests).not.toHaveBeenCalled();
+});
+
+it('연락처 공개 일정이 미설정이어도 내 팀 화면에서 identity와 홈 복귀를 제공한다', async () => {
+  activeSection.contactVisibleFrom = null;
+  renderFlow(true);
+
+  expect(await screen.findByText('팀장: 미확정')).toBeVisible();
+  expect(screen.getByText('20260001')).toBeVisible();
+  expect(
+    screen.getByRole('button', { name: '학생 홈으로 돌아가기' }),
+  ).toBeVisible();
+  expect(kickoffRequests).toHaveBeenCalledOnce();
+  expect(contactRequests).not.toHaveBeenCalled();
+  expect(claimRequests).not.toHaveBeenCalled();
+});
 
 it('온보딩 시작 시각이 되면 팀원 확인 화면의 다음만 활성화하고 클릭 후 연락처를 표시한다', async () => {
   const start = Date.parse('2026-09-10T10:00:00+09:00');
   const now = vi.spyOn(Date, 'now').mockReturnValue(start - 60_000);
   activeSection.contactVisibleFrom = '2026-09-10T10:00:00+09:00';
   renderFlow();
-  await viewTeam();
-  expect(screen.getByRole('button', { name: '다음' })).toBeDisabled();
+  expect(
+    await screen.findByRole('heading', {
+      name: '설문에 응답해 주셔서 감사합니다.',
+    }),
+  ).toBeVisible();
+  expect(kickoffRequests).not.toHaveBeenCalled();
   act(() => {
     now.mockReturnValue(start);
     window.dispatchEvent(new Event('focus'));
   });
+  await viewTeam();
   expect(screen.getByRole('button', { name: '다음' })).toBeEnabled();
   expect(contactRequests).not.toHaveBeenCalled();
   expect(screen.queryByRole('button', { name: '내가 팀장입니다' })).toBeNull();

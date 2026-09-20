@@ -93,7 +93,7 @@ const server = setupServer(
           name: '테스트 분반',
           classTime: '',
           capacity: 40,
-          contactVisibleFrom: null,
+          contactVisibleFrom: '2020-01-01T00:00:00+09:00',
           contactVisibleUntil: null,
           courseId: 1,
           courseName: 'OOP',

@@ -13,6 +13,8 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
+import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
+
 import { resolveStudentLoginDestination } from '~/features/team-assignment/resolveStudentLoginDestination';
 
 import * as styles from './LoginForm.css';
@@ -72,11 +74,20 @@ export default function LoginForm() {
   const onSubmit = handleSubmit(async values => {
     try {
       const currentUser = await loginMutation.mutateAsync(values);
-      if (redirect) {
-        await navigate({ href: redirect });
+      const destination = await resolveStudentLoginDestination(
+        currentUser,
+        redirect,
+        {
+          isDemo: isMockDevelopmentMode(
+            import.meta.env.DEV,
+            import.meta.env.VITE_ENABLE_MSW,
+          ),
+        },
+      );
+      if (destination === redirect) {
+        await navigate({ href: destination });
         return;
       }
-      const destination = await resolveStudentLoginDestination(currentUser);
       await navigate({ to: destination });
     } catch {
       // API failures are rendered below; they are not field-validation failures.

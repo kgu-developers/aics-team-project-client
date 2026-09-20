@@ -2,6 +2,7 @@ import type { RequiredSubmissionArtifact } from '@aics/core';
 import { describe, expect, it } from 'vitest';
 
 import {
+  safeDisplayUrl,
   safeSubmissionUrl,
   submissionUploadInput,
 } from './submissionUploadInput';
@@ -74,5 +75,27 @@ describe('파일 제출 입력 검증', () => {
       ),
     ).toThrow('http');
     expect(safeSubmissionUrl('https://user:pass@example.com')).toBeUndefined();
+  });
+  it('표시용 이미지는 같은 출처의 루트 상대 경로만 추가로 허용한다', () => {
+    expect(safeDisplayUrl('/project-images/screen.png')).toBe(
+      'http://localhost:3000/project-images/screen.png',
+    );
+    expect(safeDisplayUrl('//evil.example/screen.png')).toBeUndefined();
+    expect(safeDisplayUrl('/\\evil.example/screen.png')).toBeUndefined();
+    expect(safeDisplayUrl('/\t/evil.example/screen.png')).toBeUndefined();
+    expect(safeDisplayUrl('/\r/evil.example/screen.png')).toBeUndefined();
+    expect(safeDisplayUrl('/\n/evil.example/screen.png')).toBeUndefined();
+    expect(safeDisplayUrl(' https://example.com/screen.png')).toBeUndefined();
+    expect(safeDisplayUrl('javascript:alert(1)')).toBeUndefined();
+    expect(safeDisplayUrl('data:image/png;base64,AA==')).toBeUndefined();
+    expect(
+      safeDisplayUrl('https://user:pass@example.com/screen.png'),
+    ).toBeUndefined();
+    expect(safeDisplayUrl('https://example.com/screen.png')).toBe(
+      'https://example.com/screen.png',
+    );
+    expect(safeDisplayUrl('http://example.com/screen.png')).toBe(
+      'http://example.com/screen.png',
+    );
   });
 });

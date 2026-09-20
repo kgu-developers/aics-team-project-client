@@ -34,6 +34,7 @@ import { useAuthStore } from '~/features/auth/authStore';
 import { useStudentContext } from '~/features/section/useStudentContext';
 
 import StudentShell from './StudentShell';
+import { StudentHeaderActions } from './StudentShellPopovers';
 import * as styles from './StudentShellPopovers.css';
 
 import {
@@ -98,6 +99,22 @@ function renderHeader(
   const context = createWrapper(initialPath);
   return {
     ...render(<StudentShell />, {
+      wrapper: context.wrapper,
+    }),
+    ...context,
+  };
+}
+
+function renderHeaderActions(
+  initialPath = '/onboarding/team',
+  currentUser: CurrentUser = demoStudent,
+) {
+  useAuthStore.getState().markAuthenticated('STUDENT');
+  useAuthStore.getState().setCurrentUser(currentUser);
+  mockSessionResponseHeaders(issueMockSession(demoUserAccounts[0]));
+  const context = createWrapper(initialPath);
+  return {
+    ...render(<StudentHeaderActions currentUser={currentUser} />, {
       wrapper: context.wrapper,
     }),
     ...context,
@@ -529,6 +546,165 @@ describe('StudentHeaderActions', () => {
   );
 });
 
+it('redirects an assigned live student before contact release without requesting kickoff identity', async () => {
+  vi.stubEnv('VITE_ENABLE_MSW', 'false');
+  const section = {
+    id: 2,
+    code: 'OOP-02',
+    name: '테스트 분반',
+    classTime: '',
+    capacity: 40,
+    contactVisibleFrom: '2099-01-01T00:00:00+09:00',
+    contactVisibleUntil: null,
+    courseId: 1,
+    courseName: 'OOP',
+    year: 2026,
+    semester: 'FALL',
+    status: 'ACTIVE',
+  };
+  let kickoffRequests = 0;
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+      HttpResponse.json({
+        ...demoStudent,
+        globalRole: 'USER',
+        sections: [section],
+        teamId: 7,
+      }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.SECTION.MY_SECTIONS}`, () =>
+      HttpResponse.json({ contents: [section] }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF('7')}`, () => {
+      kickoffRequests++;
+      return HttpResponse.json({
+        id: 7,
+        name: '공개 전 팀 이름',
+        members: [{ id: 1, name: '공개 전 팀원', studentNumber: '20260002' }],
+      });
+    }),
+  );
+
+  const { router } = renderHeader('/student', {
+    ...demoStudent,
+    teamId: '7',
+  });
+
+  await waitFor(() =>
+    expect(router.state.location.pathname).toBe('/onboarding/team'),
+  );
+  expect(kickoffRequests).toBe(0);
+  expect(screen.queryByText('공개 전 팀 이름')).not.toBeInTheDocument();
+  expect(screen.queryByText('공개 전 팀원')).not.toBeInTheDocument();
+});
+
+it('shows neutral profile copy without requesting kickoff before contact release', async () => {
+  vi.stubEnv('VITE_ENABLE_MSW', 'false');
+  const section = {
+    id: 2,
+    code: 'OOP-02',
+    name: '테스트 분반',
+    classTime: '',
+    capacity: 40,
+    contactVisibleFrom: '2099-01-01T00:00:00+09:00',
+    contactVisibleUntil: null,
+    courseId: 1,
+    courseName: 'OOP',
+    year: 2026,
+    semester: 'FALL',
+    status: 'ACTIVE',
+  };
+  let kickoffRequests = 0;
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+      HttpResponse.json({
+        ...demoStudent,
+        globalRole: 'USER',
+        sections: [section],
+        teamId: 7,
+      }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.SECTION.MY_SECTIONS}`, () =>
+      HttpResponse.json({ contents: [section] }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF('7')}`, () => {
+      kickoffRequests++;
+      return HttpResponse.json({ id: 7, name: '공개 전 팀', members: [] });
+    }),
+  );
+
+  const view = renderHeaderActions('/onboarding/team', {
+    ...demoStudent,
+    teamId: '7',
+  });
+  await userEvent.click(screen.getByRole('button', { name: '내 프로필 열기' }));
+
+  expect(await screen.findAllByText('공개 예정')).toHaveLength(2);
+  expect(kickoffRequests).toBe(0);
+  expect(screen.queryByRole('link', { name: '공개 예정' })).toBeNull();
+  expect(screen.queryByText('팀 정보 확인 필요')).toBeNull();
+  expect(screen.queryByText('확인 중…')).toBeNull();
+  view.unmount();
+});
+
+it('keeps an assigned student route and kickoff identity when contact release is unscheduled', async () => {
+  vi.stubEnv('VITE_ENABLE_MSW', 'false');
+  const section = {
+    id: 2,
+    code: 'OOP-02',
+    name: '테스트 분반',
+    classTime: '',
+    capacity: 40,
+    contactVisibleFrom: null,
+    contactVisibleUntil: null,
+    courseId: 1,
+    courseName: 'OOP',
+    year: 2026,
+    semester: 'FALL',
+    status: 'ACTIVE',
+  };
+  let kickoffRequests = 0;
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+      HttpResponse.json({
+        ...demoStudent,
+        globalRole: 'USER',
+        sections: [section],
+        teamId: 7,
+      }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.SECTION.MY_SECTIONS}`, () =>
+      HttpResponse.json({ contents: [section] }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF('7')}`, () => {
+      kickoffRequests++;
+      return HttpResponse.json({
+        id: 7,
+        name: '미설정 팀 이름',
+        members: [
+          {
+            id: 1,
+            name: '미설정 팀원',
+            studentNumber: '20260002',
+            isLeader: true,
+          },
+        ],
+      });
+    }),
+  );
+
+  const { router } = renderHeader('/student', {
+    ...demoStudent,
+    teamId: '7',
+  });
+
+  await waitFor(() => expect(router.state.location.pathname).toBe('/student'));
+  await userEvent.click(screen.getByRole('button', { name: '내 프로필 열기' }));
+  expect(await screen.findByText('미설정 팀 이름')).toBeVisible();
+  expect(screen.getByText('미설정 팀원 (20260002)')).toBeVisible();
+  expect(kickoffRequests).toBe(1);
+});
+
 it('uses the selected live section in shell and profile, with no unattributed team request', async () => {
   vi.stubEnv('VITE_ENABLE_MSW', 'false');
   const sections = [1, 2].map(id => ({
@@ -537,7 +713,7 @@ it('uses the selected live section in shell and profile, with no unattributed te
     name: `분반 ${id}`,
     classTime: '',
     capacity: 40,
-    contactVisibleFrom: null,
+    contactVisibleFrom: '2020-01-01T00:00:00+09:00',
     contactVisibleUntil: null,
     courseId: 1,
     courseName: 'OOP',

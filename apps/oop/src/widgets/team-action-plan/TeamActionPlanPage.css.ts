@@ -161,7 +161,7 @@ globalStyle(`${tableFrame} th:nth-child(2), ${tableFrame} td:nth-child(2)`, {
     'screen and (max-width: 1023px)': {
       maxWidth: 'none !important',
       minWidth: '0 !important',
-      width: '55% !important',
+      width: '84% !important',
     },
   },
 });
@@ -169,9 +169,7 @@ globalStyle(`${tableFrame} th:nth-child(2), ${tableFrame} td:nth-child(2)`, {
 globalStyle(`${tableFrame} th:nth-child(4), ${tableFrame} td:nth-child(4)`, {
   '@media': {
     'screen and (max-width: 1023px)': {
-      maxWidth: 'none !important',
-      minWidth: '0 !important',
-      width: '32% !important',
+      display: 'none !important',
     },
   },
 });
@@ -184,7 +182,10 @@ globalStyle(`${tableFrame} th:nth-child(5), ${tableFrame} td:nth-child(5)`, {
       paddingLeft: `${tokens.spacing[1]} !important`,
       paddingRight: `${tokens.spacing[1]} !important`,
       textAlign: 'center',
-      width: '13% !important',
+      width: '10% !important',
+    },
+    'screen and (max-width: 767px)': {
+      width: '16% !important',
     },
   },
 });

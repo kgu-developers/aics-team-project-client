@@ -23,6 +23,7 @@ import PeerEvaluationPage from './PeerEvaluationPage';
 import PresentationEvaluationPage from './PresentationEvaluationPage';
 
 import {
+  getMilestonePresentations,
   getMyTeamEvaluations,
   resetEvaluationMockData,
   setEvaluationWindowStates,
@@ -511,6 +512,99 @@ describe('KD3-92 학생 평가 화면', () => {
     expect(
       screen.getByRole('heading', { name: '진행 일정' }),
     ).toBeInTheDocument();
+  });
+
+  it('같은 출처 상대 경로로 받은 프로젝트 화면 이미지도 표시한다', async () => {
+    const presentations = getMilestonePresentations();
+    const first = presentations[0]!;
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MILESTONE_PRESENTATIONS(':milestoneId')}`,
+        () =>
+          HttpResponse.json({
+            contents: [
+              {
+                ...first,
+                project: {
+                  ...first.project!,
+                  screenConfiguration: [
+                    {
+                      title: '상대 경로 화면',
+                      description: '같은 출처 이미지',
+                      imageFileId: 77,
+                      imageUrl: '/project-images/screen-77.png',
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+      ),
+    );
+
+    renderPresentationPage();
+
+    expect(await screen.findByAltText('상대 경로 화면')).toHaveAttribute(
+      'src',
+      'http://localhost:3000/project-images/screen-77.png',
+    );
+  });
+
+  it('5점을 초과하는 평가 항목은 범위를 제한한 숫자 입력으로 제출한다', async () => {
+    const user = userEvent.setup();
+    const overview = getMyTeamEvaluations(demoStudent.studentNumber);
+    let submittedBody: unknown;
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.MY_TEAM_EVALUATIONS(':milestoneId')}`,
+        () =>
+          HttpResponse.json({
+            ...overview,
+            criteria: [
+              {
+                id: 99,
+                title: '100점 발표 완성도',
+                maxScore: 100,
+                displayOrder: 1,
+              },
+            ],
+          }),
+      ),
+      http.put(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.TEAM_EVALUATION(':milestoneId', ':teamId')}`,
+        async ({ request }) => {
+          submittedBody = await request.json();
+          return HttpResponse.json({
+            id: 1,
+            teamId: 1,
+            scores: [{ criterionId: 99, score: 100 }],
+            submittedAt: '2026-11-10T15:00:00+09:00',
+          });
+        },
+      ),
+    );
+    renderPresentationPage();
+    await user.click(await screen.findByRole('button', { name: '다음 팀' }));
+
+    const score = screen.getByRole('textbox', {
+      name: /100점 발표 완성도 \(최대 100점\)/,
+    });
+    expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+    await user.type(score, '101');
+    expect(score).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('button', { name: '평가 제출' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+
+    await user.clear(score);
+    await user.type(score, '100');
+    await user.click(screen.getByRole('button', { name: '평가 제출' }));
+    await waitFor(() =>
+      expect(submittedBody).toEqual({
+        scores: [{ criterionId: 99, score: 100 }],
+      }),
+    );
   });
 
   it('제출한 평가 점수를 다시 열 때 복원한다', async () => {

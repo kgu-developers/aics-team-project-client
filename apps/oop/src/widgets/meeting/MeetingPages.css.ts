@@ -163,12 +163,15 @@ export const detailCard = style({
   },
 });
 export const editorCard = style({
+  boxSizing: 'border-box',
   display: 'grid',
   gap: 'var(--spacing-4)',
   height: 'auto',
   maxHeight: 'none',
+  maxWidth: '100%',
   minWidth: 0,
   padding: 'var(--spacing-6)',
+  width: '100%',
   '@media': {
     'screen and (max-width: 767px)': {
       border: 0,
@@ -185,6 +188,7 @@ export const documentTitle = style({
 export const properties = style({
   display: 'grid',
   gap: 'var(--spacing-3)',
+  minWidth: 0,
 });
 export const fields = style({
   display: 'grid',

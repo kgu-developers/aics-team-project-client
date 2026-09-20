@@ -5,6 +5,7 @@ import {
 import { studentContextMessages } from '~/features/section/StudentContextState';
 import { useStudentContext } from '~/features/section/useStudentContext';
 import { useSectionAnnouncementsQuery } from '~/features/student-notices/queries';
+import { resolveContactVisibility } from '~/features/team-assignment/liveTeamAssignment';
 import { useTeamKickoffQuery } from '~/features/team-assignment/queries';
 
 import { useTeamProjectQuery } from './useTeamProjectQuery';
@@ -24,7 +25,10 @@ export function useLiveStudentHomeQuery() {
   );
   const meetings = useMeetingRecordSummariesQuery(teamId);
   const actions = useTeamMeetingActionEntriesQuery(teamId);
-  const kickoff = useTeamKickoffQuery(teamId);
+  const contactVisibility = resolveContactVisibility(context.section ?? {});
+  const kickoff = useTeamKickoffQuery(
+    !context.section || contactVisibility === 'upcoming' ? undefined : teamId,
+  );
   const project = useTeamProjectQuery(teamId);
   const missingSection = !sectionId
     ? studentContextMessages[context.status]

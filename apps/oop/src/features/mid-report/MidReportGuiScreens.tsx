@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '~/features/auth/authStore';
 import type { DocumentEditorField } from '~/features/editor/documentEditor';
 import { useSubmitProjectImageMutation } from '~/features/editor/queries';
+import { safeDisplayUrl } from '~/features/submission/submissionUploadInput';
 
 import * as styles from './MidReportStructuredFields.css';
 
@@ -48,9 +49,7 @@ function readRows(value: string) {
   }
 }
 function savedImageUrl(row: GuiScreenRow) {
-  return row.imageUrl && /^(https?:\/\/|\/(?!\/))/.test(row.imageUrl)
-    ? row.imageUrl
-    : null;
+  return safeDisplayUrl(row.imageUrl) ?? null;
 }
 export default function MidReportGuiScreens({
   fields,
@@ -128,7 +127,7 @@ export default function MidReportGuiScreens({
     closeDialog();
   };
   return (
-    <VStack gap={4}>
+    <VStack className={styles.screenBoard} gap={4}>
       <ul className={styles.screenList}>
         {rows.map((row, index) => {
           const url = imageOf(row);

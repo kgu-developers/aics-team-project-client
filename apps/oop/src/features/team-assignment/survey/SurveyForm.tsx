@@ -1,4 +1,5 @@
 import type {
+  PartnerCandidate,
   TeamAssignmentProjection,
   TeamAssignmentSurvey,
   TeamRolePreference,
@@ -58,6 +59,10 @@ export function SurveyForm({
   const [survey, setSurvey] = useState<TeamAssignmentSurvey>(
     projection?.survey ?? { note: '', rolePreferences: [], topicIdea: '' },
   );
+  const [selectedPreferredPeerUserId, setSelectedPreferredPeerUserId] =
+    useState(preferredPeerUserId);
+  const [draftPreferredPeer, setDraftPreferredPeer] =
+    useState<PartnerCandidate | null>();
   const hasRole = survey.rolePreferences.length > 0;
   const hasIncomingPartnerRequest = Boolean(projection?.incomingPartnerRequest);
 
@@ -96,7 +101,7 @@ export function SurveyForm({
       await submitSurvey.mutateAsync({
         sectionId: preSurveySectionId,
         projectionSectionId: projection?.sectionId,
-        preferredPeerUserId,
+        preferredPeerUserId: selectedPreferredPeerUserId,
         survey,
       });
       setSubmitConfirmOpen(false);
@@ -159,10 +164,15 @@ export function SurveyForm({
           >
             {projection && partnerRequestMode === 'live' ? (
               <LivePartnerRequestPanel
+                canRequestPartner={hasRole}
+                draftPreferredPeer={draftPreferredPeer}
+                onPreferredPeerChange={candidate => {
+                  setDraftPreferredPeer(candidate);
+                  setSelectedPreferredPeerUserId(candidate?.id ?? null);
+                }}
                 preSurveySectionId={preSurveySectionId}
                 preferredPeerStatus={preferredPeerStatus}
                 projection={projection}
-                survey={survey}
               />
             ) : projection ? (
               <PartnerRequestPanel projection={projection} />

@@ -40,7 +40,7 @@ export function PartnerRequestDialogs({
           <VStack gap={2}>
             <Heading level={2}>파트너 신청을 취소할까요?</Heading>
             <Text color='secondary'>
-              취소하면 상대 학생의 받은 신청 목록에서도 사라집니다.
+              취소하면 선택한 파트너가 설문 응답에 포함되지 않아요.
             </Text>
           </VStack>
           <HStack gap={2} justify='end'>

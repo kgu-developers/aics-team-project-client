@@ -15,6 +15,7 @@ import {
   RadioList,
   RadioListItem,
   Text,
+  TextInput,
   useToast,
 } from '@aics/design-system';
 import { useEffect, useRef, useState } from 'react';
@@ -26,7 +27,10 @@ import { PdfPreview } from '~/shared/ui/PdfPreview';
 import { useAuthStore } from '~/features/auth/authStore';
 import StudentContextState from '~/features/section/StudentContextState';
 import { useStudentContext } from '~/features/section/useStudentContext';
-import { safeSubmissionUrl } from '~/features/submission/submissionUploadInput';
+import {
+  safeDisplayUrl,
+  safeSubmissionUrl,
+} from '~/features/submission/submissionUploadInput';
 
 import { formatEvaluationRemainingTime } from './formatEvaluationRemainingTime';
 import { getEvaluationErrorMessage } from './getEvaluationErrorMessage';
@@ -118,7 +122,7 @@ function PresentationViewer({
   const pdf = findPdfArtifact(team);
   const teamLabel = team.teamName ?? `${team.teamId}팀`;
   const screens = (project?.screenConfiguration ?? []).flatMap(screen => {
-    const imageUrl = safeSubmissionUrl(screen.imageUrl);
+    const imageUrl = safeDisplayUrl(screen.imageUrl);
     return imageUrl ? [{ ...screen, imageUrl }] : [];
   });
   const dataItems = (project?.dataConfiguration ?? []).filter(item =>
@@ -338,6 +342,9 @@ function EvaluationForm({
     (evaluation?.scores ?? []).map(score => [score.criterionId, score.score]),
   );
   const [scores, setScores] = useState<Record<number, number>>(submitted);
+  const [numericScoreInputs, setNumericScoreInputs] = useState<
+    Record<number, string>
+  >({});
   const [isResubmitConfirmationOpen, setIsResubmitConfirmationOpen] =
     useState(false);
   const scoreKey = JSON.stringify(submitted);
@@ -345,9 +352,18 @@ function EvaluationForm({
   if (lastKey.current !== scoreKey) {
     lastKey.current = scoreKey;
     setScores(submitted);
+    setNumericScoreInputs({});
   }
   const editable = windowState === 'OPEN' && !isMyTeam;
-  const missing = criteria.filter(criterion => scores[criterion.id] == null);
+  const invalid = criteria.filter(criterion => {
+    const score = scores[criterion.id];
+    return (
+      score == null ||
+      !Number.isInteger(score) ||
+      score < 1 ||
+      score > criterion.maxScore
+    );
+  });
 
   return (
     <Card padding={5} width='100%'>
@@ -365,39 +381,86 @@ function EvaluationForm({
             </p>
           ) : null}
         </div>
-        {criteria.map(criterion => (
-          <RadioList
-            className={styles.scoreList}
-            isDisabled={!editable}
-            isRequired
-            key={criterion.id}
-            label={`${criterion.title} (최대 ${criterion.maxScore}점)`}
-            onChange={value =>
-              setScores(current => ({
-                ...current,
-                [criterion.id]: Number(value),
-              }))
-            }
-            orientation='horizontal'
-            value={
-              scores[criterion.id] == null ? '' : String(scores[criterion.id])
-            }
-          >
-            {Array.from(
-              { length: criterion.maxScore },
-              (_, index) => index + 1,
-            ).map(score => (
-              <RadioListItem
-                key={score}
-                label={`${score}점`}
-                value={String(score)}
-              />
-            ))}
-          </RadioList>
-        ))}
+        {criteria.map(criterion =>
+          criterion.maxScore > 5 ? (
+            <TextInput
+              description={`1~${criterion.maxScore} 사이의 정수를 입력해 주세요.`}
+              isDisabled={!editable}
+              isRequired
+              key={criterion.id}
+              label={`${criterion.title} (최대 ${criterion.maxScore}점)`}
+              onChange={value => {
+                setNumericScoreInputs(current => ({
+                  ...current,
+                  [criterion.id]: value,
+                }));
+                setScores(current => {
+                  const score = Number(value);
+                  if (
+                    !/^\d+$/.test(value) ||
+                    !Number.isInteger(score) ||
+                    score < 1 ||
+                    score > criterion.maxScore
+                  ) {
+                    const next = { ...current };
+                    delete next[criterion.id];
+                    return next;
+                  }
+                  return { ...current, [criterion.id]: score };
+                });
+              }}
+              placeholder={`1~${criterion.maxScore}`}
+              status={
+                (numericScoreInputs[criterion.id] ?? '').trim() &&
+                scores[criterion.id] == null
+                  ? {
+                      message: `1~${criterion.maxScore} 사이의 정수를 입력해 주세요.`,
+                      type: 'error',
+                    }
+                  : undefined
+              }
+              value={
+                numericScoreInputs[criterion.id] ??
+                (scores[criterion.id] == null
+                  ? ''
+                  : String(scores[criterion.id]))
+              }
+              width='100%'
+            />
+          ) : (
+            <RadioList
+              className={styles.scoreList}
+              isDisabled={!editable}
+              isRequired
+              key={criterion.id}
+              label={`${criterion.title} (최대 ${criterion.maxScore}점)`}
+              onChange={value =>
+                setScores(current => ({
+                  ...current,
+                  [criterion.id]: Number(value),
+                }))
+              }
+              orientation='horizontal'
+              value={
+                scores[criterion.id] == null ? '' : String(scores[criterion.id])
+              }
+            >
+              {Array.from(
+                { length: criterion.maxScore },
+                (_, index) => index + 1,
+              ).map(score => (
+                <RadioListItem
+                  key={score}
+                  label={`${score}점`}
+                  value={String(score)}
+                />
+              ))}
+            </RadioList>
+          ),
+        )}
         {editable ? (
           <Button
-            isDisabled={isSubmitting || missing.length > 0}
+            isDisabled={isSubmitting || invalid.length > 0}
             isLoading={isSubmitting}
             label={evaluation?.submittedAt ? '평가 다시 제출' : '평가 제출'}
             onClick={() => {
@@ -405,11 +468,11 @@ function EvaluationForm({
                 setIsResubmitConfirmationOpen(true);
                 return;
               }
-              onSubmit(scores);
+              if (!invalid.length) onSubmit(scores);
             }}
             tooltip={
-              missing.length
-                ? `${missing.map(criterion => criterion.title).join(', ')} 항목을 입력해 주세요.`
+              invalid.length
+                ? `${invalid.map(criterion => criterion.title).join(', ')} 항목에 유효한 점수를 입력해 주세요.`
                 : undefined
             }
           />
@@ -438,7 +501,7 @@ function EvaluationForm({
                 onClick={() => {
                   if (isSubmitting) return;
                   setIsResubmitConfirmationOpen(false);
-                  onSubmit(scores);
+                  if (!invalid.length) onSubmit(scores);
                 }}
                 variant='primary'
               />

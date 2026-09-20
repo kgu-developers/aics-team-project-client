@@ -537,6 +537,27 @@ it('화면 이름과 설명은 편집 모달에서만 수정한다', async () =>
     title: '도서 목록',
   });
 });
+it('저장된 화면의 역슬래시 기반 외부 이미지 URL을 렌더링하지 않는다', async () => {
+  const project = createProjectProposalFixture();
+  server.use(
+    http.get(projectUrl, () =>
+      HttpResponse.json({
+        ...project,
+        screenConfiguration: project.screenConfiguration.map((screen, index) =>
+          index === 0
+            ? { ...screen, imageUrl: '/\\attacker.example/beacon.png' }
+            : screen,
+        ),
+      }),
+    ),
+  );
+
+  render('screen-composition');
+  await startScreenSection();
+
+  expect(screen.getByText('등록한 이미지가 없습니다.')).toBeVisible();
+  expect(screen.queryByRole('img', { name: '도서 목록' })).toBeNull();
+});
 it('화면 칸을 지우면 저장 본문에서도 빠진다', async () => {
   render('screen-composition');
   await startScreenSection();

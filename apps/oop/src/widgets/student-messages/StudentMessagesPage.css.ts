@@ -2,6 +2,7 @@ import { tokens } from '@aics/design-system';
 import { globalStyle, style } from '@vanilla-extract/css';
 
 export const page = style({
+  boxSizing: 'border-box',
   display: 'flex',
   flexDirection: 'column',
   gap: tokens.spacing['5'],
@@ -9,6 +10,11 @@ export const page = style({
   maxWidth: 1120,
   paddingBlock: tokens.spacing['4'],
   width: '100%',
+  '@media': {
+    'screen and (max-width: 767px)': {
+      padding: `${tokens.spacing['4']} ${tokens.spacing['4']} ${tokens.spacing['8']}`,
+    },
+  },
 });
 
 export const heading = style({ margin: 0 });

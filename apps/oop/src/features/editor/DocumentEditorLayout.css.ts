@@ -1,10 +1,16 @@
 import { style } from '@vanilla-extract/css';
 
 export const layout = style({
+  boxSizing: 'border-box',
   display: 'grid',
   gap: 'var(--spacing-6)',
   gridTemplateColumns: 'minmax(0, 1fr)',
+  minWidth: 0,
+  width: '100%',
   '@media': {
+    'screen and (max-width: 767px)': {
+      paddingInline: 'var(--spacing-4)',
+    },
     'screen and (min-width: 1024px)': {
       gridTemplateColumns: '240px minmax(0, 1fr)',
     },
@@ -14,6 +20,7 @@ export const sidebar = style({
   display: 'grid',
   gap: 'var(--spacing-3)',
   alignContent: 'start',
+  minWidth: 0,
 });
 export const sidebarTitle = style({
   margin: 0,
