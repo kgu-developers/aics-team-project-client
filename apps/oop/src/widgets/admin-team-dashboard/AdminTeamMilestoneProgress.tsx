@@ -19,6 +19,7 @@ import {
   type AdminSubmissionVersionDetailView,
 } from '~/features/admin-milestone-review/model';
 import { useDownloadAdminSubmissionArtifactsMutation } from '~/features/admin-milestone-review/queries';
+import { useAdminSubmissionReadState } from '~/features/admin-submission-read/useAdminSubmissionReadState';
 import type { TeamMilestoneProgress } from '~/features/admin-team-dashboard/model';
 
 import * as styles from './AdminTeamMilestoneProgress.css';
@@ -27,6 +28,7 @@ type AdminTeamMilestoneProgressProps = {
   apiSectionId?: string;
   milestones: TeamMilestoneProgress[];
   milestoneListState: 'error' | 'pending' | 'ready';
+  readerId?: string;
   sectionId: string;
 };
 
@@ -142,10 +144,12 @@ export default function AdminTeamMilestoneProgress({
   apiSectionId,
   milestones,
   milestoneListState,
+  readerId,
   sectionId,
 }: AdminTeamMilestoneProgressProps) {
   const downloadArtifactsMutation =
     useDownloadAdminSubmissionArtifactsMutation();
+  const submissionReadState = useAdminSubmissionReadState(readerId);
 
   return (
     <section className={styles.section}>
@@ -172,6 +176,14 @@ export default function AdminTeamMilestoneProgress({
           {milestones.map(milestone => {
             const submission = milestone.submission;
             const submissionId = submission?.submissionId ?? null;
+            const readTarget = submission
+              ? {
+                  milestoneId: milestone.milestone.id,
+                  sectionId: apiSectionId ?? sectionId,
+                  submissionId,
+                  version: submission.currentVersion,
+                }
+              : null;
             const isVersionDetailAvailable =
               milestone.milestone.type === 'PROPOSAL' ||
               milestone.milestone.type === 'MID_REPORT';
@@ -200,6 +212,8 @@ export default function AdminTeamMilestoneProgress({
                       onClick={
                         submissionId
                           ? () => {
+                              if (readTarget)
+                                submissionReadState.markAsRead(readTarget);
                               downloadArtifactsMutation.mutate(submissionId);
                             }
                           : undefined
@@ -216,11 +230,19 @@ export default function AdminTeamMilestoneProgress({
                       sectionId={sectionId}
                       submissionId={submissionId}
                       teamId={submission?.teamId}
+                      onOpen={
+                        readTarget
+                          ? () => submissionReadState.markAsRead(readTarget)
+                          : undefined
+                      }
                       unavailableReason={unavailableReason}
                     />
                   )
                 }
                 key={`${milestone.milestone.id}-${milestone.milestone.type}`}
+                isUnread={
+                  readTarget !== null && !submissionReadState.isRead(readTarget)
+                }
                 label={milestone.milestone.title}
                 meetingCountLabel={
                   submission ? (

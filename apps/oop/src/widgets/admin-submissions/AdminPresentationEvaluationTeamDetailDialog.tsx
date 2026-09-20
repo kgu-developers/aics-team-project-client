@@ -11,8 +11,11 @@ import { Link } from '@tanstack/react-router';
 import { ROUTES } from '~/app/constants/routes';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 
+import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
 import { useAdminPresentationEvaluationTeamQuery } from '~/features/admin-milestone-review/queries';
+import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminPresentationEvaluationSettingsDialog.css';
 
@@ -31,6 +34,8 @@ export function AdminPresentationEvaluationTeamDetailDialog({
   sectionId,
   teamId,
 }: Props) {
+  const currentUser = useAuthStore(state => state.currentUser);
+  const meetingReadState = useAdminMeetingReadState(currentUser?.id);
   const query = useAdminPresentationEvaluationTeamQuery(
     sectionId,
     isOpen ? teamId : undefined,
@@ -128,8 +133,12 @@ export function AdminPresentationEvaluationTeamDetailDialog({
                     className={styles.meetingLink}
                     key={record.id}
                     params={{ meetingId: String(record.id) }}
+                    onClick={() => meetingReadState.markAsRead(record.id)}
                     to={ROUTES.ADMIN_MEETING_DETAIL}
                   >
+                    {!meetingReadState.isRead(record.id) ? (
+                      <AdminUnreadDot />
+                    ) : null}
                     {record.title} · {record.phase} ·{' '}
                     {formatSeoulDateTime(record.meetingAt)} · 참가자{' '}
                     {record.participantCount}명

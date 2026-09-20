@@ -246,7 +246,9 @@ describe('AdminTeamDashboard', () => {
         .getByRole('region', { name: '회의록' })
         .querySelectorAll('a[href^="/admin/meetings/"]'),
     ).toHaveLength(1);
-    expect(screen.queryByLabelText('읽지 않음')).not.toBeInTheDocument();
+    expect(
+      document.querySelectorAll('[data-unread-indicator="true"]'),
+    ).not.toHaveLength(0);
     expect(
       screen
         .getAllByRole('link', { name: '상세보기' })

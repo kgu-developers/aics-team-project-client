@@ -611,9 +611,7 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'OOP-01 - 2팀 중간보고서' }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText('프로젝트 주제'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('프로젝트 주제')).toBeInTheDocument();
     expect(
       screen.getByText('캠퍼스 학습 일정 관리 서비스'),
     ).toBeInTheDocument();

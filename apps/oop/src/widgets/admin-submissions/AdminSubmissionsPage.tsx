@@ -45,6 +45,7 @@ import {
   useAdminSubmissionVersionDetailsQueries,
   useDownloadAdminSubmissionArtifactsMutation,
 } from '~/features/admin-milestone-review/queries';
+import { useAdminSubmissionReadState } from '~/features/admin-submission-read/useAdminSubmissionReadState';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import { AdminPresentationEvaluationSettingsDialog } from './AdminPresentationEvaluationSettingsDialog';
@@ -224,6 +225,7 @@ function getDownloadSummary(
 
 export default function AdminSubmissionsPage() {
   const currentUser = useAuthStore(state => state.currentUser);
+  const submissionReadState = useAdminSubmissionReadState(currentUser?.id);
   const navigate = useNavigate();
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [isEvaluationSettingsOpen, setIsEvaluationSettingsOpen] =
@@ -865,6 +867,14 @@ export default function AdminSubmissionsPage() {
                   <div className={styles.list}>
                     {pagedSubmissions.items.map(submission => {
                       const submissionId = submission.submissionId;
+                      const readTarget = effectiveSectionId
+                        ? {
+                            milestoneId: selectedMilestone.id,
+                            sectionId: effectiveSectionId,
+                            submissionId,
+                            version: submission.currentVersion,
+                          }
+                        : null;
                       const isVersionDetailAvailable =
                         versionDetailMilestoneIds.has(activeMilestoneId);
                       const versionMetadataQuery =
@@ -892,6 +902,10 @@ export default function AdminSubmissionsPage() {
                                 onClick={
                                   submissionId
                                     ? () => {
+                                        if (readTarget)
+                                          submissionReadState.markAsRead(
+                                            readTarget,
+                                          );
                                         downloadArtifactsMutation.mutate(
                                           submissionId,
                                         );
@@ -905,6 +919,14 @@ export default function AdminSubmissionsPage() {
                                 sectionId={effectiveSectionId}
                                 submissionId={submissionId}
                                 teamId={submission.teamId}
+                                onOpen={
+                                  readTarget
+                                    ? () =>
+                                        submissionReadState.markAsRead(
+                                          readTarget,
+                                        )
+                                    : undefined
+                                }
                                 unavailableReason={
                                   isVersionDetailAvailable
                                     ? undefined
@@ -914,6 +936,10 @@ export default function AdminSubmissionsPage() {
                             )
                           }
                           key={submission.teamId}
+                          isUnread={
+                            readTarget !== null &&
+                            !submissionReadState.isRead(readTarget)
+                          }
                           label={submission.teamName}
                           secondaryLabel={submission.statusLabel}
                           submissionMetadata={getSubmissionMetadata(
