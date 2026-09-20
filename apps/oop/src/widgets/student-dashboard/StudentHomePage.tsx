@@ -401,11 +401,13 @@ export default function StudentHomePage() {
         const proposalStage = proposalFeedbackStage({
           submittedAt: project.proposalCompletedAt,
           messages: proposalMessages.data,
+          relatedId: project.id,
           teamMemberIds: home.teamMemberIds,
           isMessagesReady: proposalMessages.isSuccess,
         });
         const isFeedbackCycleCompleted =
-          submission?.isSuccess && submission.data.status === 'COMPLETED';
+          (submission?.isSuccess && submission.data.status === 'COMPLETED') ||
+          proposalStage === 'completed';
         if (isFeedbackCycleCompleted) {
           summary.status = 'completed';
           summary.statusLabel = '단계 완료';
@@ -413,11 +415,13 @@ export default function StudentHomePage() {
         summary.body = {
           kind: 'proposal-feedback',
           teamId: home.teamId,
+          proposalId: project.id,
           feedbackStage: isFeedbackCycleCompleted
             ? 'completed'
             : proposalFeedbackRoomStage({
                 submittedAt: project.proposalCompletedAt,
                 messages: proposalMessages.data,
+                relatedId: project.id,
                 teamMemberIds: home.teamMemberIds,
                 isMessagesReady: proposalMessages.isSuccess,
               }),

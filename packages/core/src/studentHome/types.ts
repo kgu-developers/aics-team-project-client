@@ -108,6 +108,8 @@ export type StudentHomeMilestoneBody =
       kind: 'proposal-feedback';
       /** Team resolved by the consuming page's current server identity. */
       teamId?: string;
+      /** Current project whose proposal messages belong in this feedback room. */
+      proposalId?: number;
       /**
        * Where the document is in the feedback flow. Undefined keeps the
        * legacy always-visible feedback room (previews, fixtures).

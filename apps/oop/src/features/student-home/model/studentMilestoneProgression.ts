@@ -88,18 +88,23 @@ export function resolveStudentMilestoneProgression(
 export function lockStudentHomeMilestone(
   milestone: StudentHomeMilestone,
 ): StudentHomeMilestone {
+  const beforePeriod = milestone.status === 'before-period';
   return {
     ...milestone,
-    status: 'unavailable',
-    statusLabel: '이전 단계 완료 필요',
-    currentStepLabel: '이전 단계를 먼저 완료해 주세요.',
+    status: beforePeriod ? 'before-period' : 'unavailable',
+    statusLabel: beforePeriod ? '기간 전' : '이전 단계 완료 필요',
+    currentStepLabel: beforePeriod
+      ? '기간이 시작되면 진행할 수 있어요.'
+      : '이전 단계를 먼저 완료해 주세요.',
     interaction: 'static',
     isDetailAvailable: false,
     body: undefined,
     rows: milestone.rows.map(row => ({
       ...row,
       actionDisabled: true,
-      actionNotice: '이전 단계를 완료하면 진행할 수 있어요.',
+      actionNotice: beforePeriod
+        ? '기간이 시작되면 진행할 수 있어요.'
+        : '이전 단계를 완료하면 진행할 수 있어요.',
     })),
   };
 }

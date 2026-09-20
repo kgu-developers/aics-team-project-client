@@ -205,6 +205,7 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
         threadId: 70,
         senderId: 'test-professor',
         relatedType: 'PROPOSAL',
+        relatedId: 21,
         message: '핵심 기능과 역할 분담을 구체적으로 정리해 주세요.',
         createdAt: '2026-09-10 10:00',
         important: false,
@@ -274,6 +275,7 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
             threadId: 70,
             senderId: liveHomeUser.studentNumber,
             relatedType: 'PROPOSAL' as const,
+            relatedId: 21,
             message: '핵심 기능과 역할 분담을 반영했습니다.',
             createdAt: '2026-09-10 10:10',
           };
@@ -742,6 +744,47 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
       requests.filter(path => path === ENDPOINTS.STUDENT_MILESTONE.LIST('2')),
     ).toHaveLength(1);
   });
+  it('다음 단계 시작 전에는 이전 단계가 미완료여도 기간 전으로 표시한다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`, () =>
+        HttpResponse.json({
+          contents: list.map((item, index) => ({
+            ...item,
+            schedule: {
+              opensAt:
+                index === 0
+                  ? '2026-09-01T09:00:00+09:00'
+                  : '2099-09-23T09:00:00+09:00',
+              dueAt: '2099-12-15T23:59:00+09:00',
+            },
+          })),
+        }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION(':id')}`,
+        ({ params }) =>
+          HttpResponse.json({
+            id: 9000 + Number(params.id),
+            milestoneId: Number(params.id),
+            teamId: 7,
+            status: 'NOT_SUBMITTED',
+            currentVersion: 0,
+            canSubmitNow: false,
+            hasPendingReview: false,
+          }),
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    const futureCardId = `student-milestone-${list[1]!.id}`;
+    await waitFor(() =>
+      expect(document.getElementById(futureCardId)).toHaveTextContent('기간 전'),
+    );
+    expect(document.getElementById(futureCardId)).not.toHaveTextContent(
+      '이전 단계 완료 필요',
+    );
+  });
+
   it('마감된 이전 단계 대신 열린 단계로 이동하고 재조회 후 모두 마감이면 CTA를 비활성화한다', async () => {
     let allClosed = false;
     server.use(
@@ -1093,6 +1136,67 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('다른 제안서의 피드백은 현재 제안서 대기 상태와 대화 영역을 열지 않는다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+        HttpResponse.json({
+          ...teamProposalFixture(),
+          proposalCompletedAt: '2026-09-12T10:00:00',
+        }),
+      ),
+      proposalSectionsHandler([
+        { section: 'TOPIC', completed: true },
+        { section: 'DATA', completed: true },
+        { section: 'SCREEN', completed: true },
+        { section: 'TEAM_OPERATION', completed: true },
+      ]),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`,
+        ({ request }) => {
+          const relatedType = new URL(request.url).searchParams.get(
+            'relatedType',
+          );
+          const contents =
+            relatedType === 'PROPOSAL'
+              ? [
+                  {
+                    id: 900,
+                    threadId: 70,
+                    senderId: 'test-professor',
+                    relatedType: 'PROPOSAL',
+                    relatedId: 20,
+                    message: '다른 제안서 피드백',
+                    createdAt: '2026-09-11T10:00:00',
+                    important: false,
+                    read: true,
+                  },
+                ]
+              : [];
+          return HttpResponse.json({
+            contents,
+            pageable: {
+              page: 0,
+              size: 100,
+              totalElements: contents.length,
+              totalPages: contents.length ? 1 : 0,
+              isEnd: true,
+            },
+          });
+        },
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    expect(
+      (await screen.findAllByText(/제출 완료 · 피드백 대기 중/)).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText('다른 제안서 피드백')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: /피드백 반영 답변/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('이전 단계 완료 필요')).toBeInTheDocument();
+  });
+
   it('피드백 반영 재제출이 완료된 제안서는 대기 상태로 돌아가지 않는다', async () => {
     server.use(
       http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
@@ -1114,12 +1218,47 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
             id: 9000 + list[0]!.id,
             milestoneId: list[0]!.id,
             teamId: 7,
-            status: 'COMPLETED',
-            currentVersion: 2,
+            // Proposal completion is owned by Project.proposalCompletedAt;
+            // the generic submission record remains non-terminal in production.
+            status: 'NOT_SUBMITTED',
+            currentVersion: 0,
             canSubmitNow: false,
             hasPendingReview: false,
-            completedAt: '2026-09-12T10:00:00',
           }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`,
+        ({ request }) => {
+          const relatedType = new URL(request.url).searchParams.get(
+            'relatedType',
+          );
+          const contents =
+            relatedType === 'PROPOSAL'
+              ? [
+                  {
+                    id: 901,
+                    threadId: 70,
+                    senderId: 'test-professor',
+                    relatedType: 'PROPOSAL',
+                    relatedId: 21,
+                    message: '제안서 내용을 보완해 주세요.',
+                    createdAt: '2026-09-11T10:00:00',
+                    important: false,
+                    read: true,
+                  },
+                ]
+              : [];
+          return HttpResponse.json({
+            contents,
+            pageable: {
+              page: 0,
+              size: 100,
+              totalElements: contents.length,
+              totalPages: contents.length ? 1 : 0,
+              isEnd: true,
+            },
+          });
+        },
       ),
     );
     render(<StudentHomePage />, { wrapper: Wrapper });
@@ -1128,6 +1267,11 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
       await screen.findByText('피드백 반영 및 재제출 완료'),
     ).toBeInTheDocument();
     expect(screen.queryByText(/피드백 대기 중/)).not.toBeInTheDocument();
+    const midReportCard = screen.getByText('중간보고서').closest('article');
+    if (!midReportCard) throw new Error('중간 점검 카드를 찾을 수 없습니다.');
+    expect(
+      within(midReportCard).queryByText('이전 단계 완료 필요'),
+    ).not.toBeInTheDocument();
   });
 
   it('작성 영역 상태 조회가 실패하면 실패 문구를 보여준다', async () => {

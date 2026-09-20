@@ -253,4 +253,22 @@ describe('학생 마일스톤 순차 진행', () => {
       actionNotice: '이전 단계를 완료하면 진행할 수 있어요.',
     });
   });
+
+  it('시작 전 단계는 선행 단계가 미완료여도 기간 전 상태를 우선한다', () => {
+    const beforePeriod = {
+      ...summary(2),
+      status: 'before-period' as const,
+      statusLabel: '기간 전',
+    };
+    const locked = lockStudentHomeMilestone(beforePeriod);
+    expect(locked.status).toBe('before-period');
+    expect(locked.statusLabel).toBe('기간 전');
+    expect(locked.currentStepLabel).toBe('기간이 시작되면 진행할 수 있어요.');
+    expect(locked.isDetailAvailable).toBe(false);
+    expect(locked.body).toBeUndefined();
+    expect(locked.rows[0]).toMatchObject({
+      actionDisabled: true,
+      actionNotice: '기간이 시작되면 진행할 수 있어요.',
+    });
+  });
 });
