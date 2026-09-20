@@ -79,7 +79,7 @@ export const shellCourse = style({
   },
 });
 
-export const shellIdentity = style({
+export const shellSection = style({
   marginLeft: '0.25em',
   '@media': {
     '(max-width: 767px)': {

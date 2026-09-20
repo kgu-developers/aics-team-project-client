@@ -2,6 +2,7 @@ import { Divider, Text } from '@aics/design-system';
 import { Link, Navigate, Outlet, useRouterState } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
+import { getStudentRouteDestination } from '~/app/studentRouteDestination';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 
@@ -29,6 +30,9 @@ export default function StudentShell() {
   const currentUser = useAuthStore(state => state.currentUser);
   // Select a primitive so the subscription never re-renders on identity alone.
   const currentHref = useRouterState({ select: state => state.location.href });
+  const currentPathname = useRouterState({
+    select: state => state.location.pathname,
+  });
 
   if (!hasSession || !currentUser) {
     // `safeRedirectPath` drops /login itself, so a router that keeps this
@@ -43,6 +47,16 @@ export default function StudentShell() {
 
   if (currentUser.globalRole !== 'STUDENT') {
     return <Navigate to={ROUTES.ADMIN} />;
+  }
+
+  const guardedDestination = getStudentRouteDestination(
+    context.status,
+    isDemo,
+    currentPathname,
+    context.section,
+  );
+  if (guardedDestination) {
+    return <Navigate replace to={guardedDestination} />;
   }
 
   const section =
@@ -76,16 +90,17 @@ export default function StudentShell() {
             >
               {oopCourseConfig.title}
             </Text>
-            <Text
-              aria-hidden='true'
-              className={styles.shellIdentity}
-              color='secondary'
-              type='body'
-              weight='medium'
-            >
-              ({currentUser.name}/{currentUser.studentNumber}
-              {sectionCode})
-            </Text>
+            {sectionCode ? (
+              <Text
+                aria-hidden='true'
+                className={styles.shellSection}
+                color='secondary'
+                type='body'
+                weight='medium'
+              >
+                {sectionCode}
+              </Text>
+            ) : null}
           </Link>
 
           <StudentHeaderActions currentUser={currentUser} />

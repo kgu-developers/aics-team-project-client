@@ -159,6 +159,9 @@ describe('TeamActionPlanPage', () => {
     ).toBeGreaterThan(0);
     expect(screen.getByLabelText('상태')).toBeInTheDocument();
     expect(screen.getAllByLabelText('담당자').length).toBeGreaterThan(0);
+    expect(screen.getByText(/.* · .* · 진행 중/)).not.toHaveAttribute(
+      'aria-label',
+    );
 
     await user.click(screen.getByRole('combobox', { name: '상태' }));
     await user.click(screen.getByRole('option', { name: '진행 중' }));

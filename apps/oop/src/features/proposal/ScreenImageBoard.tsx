@@ -18,6 +18,7 @@ import { Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { useSubmitProjectImageMutation } from '~/features/editor/queries';
+import { safeDisplayUrl } from '~/features/submission/submissionUploadInput';
 
 import * as styles from './ProjectProposalFields.css';
 
@@ -74,13 +75,16 @@ export default function ScreenImageBoard({
       return next;
     });
   }, [usedFileIdKey]);
-  const imageUrl = (row: ProposalScreenItem) =>
-    (row.imageFileId != null ? previews[row.imageFileId] : undefined) ??
-    project.screenConfiguration.find(
+  const imageUrl = (row: ProposalScreenItem) => {
+    const preview =
+      row.imageFileId != null ? previews[row.imageFileId] : undefined;
+    if (preview) return preview;
+    const savedUrl = project.screenConfiguration.find(
       saved =>
         saved.imageFileId != null && saved.imageFileId === row.imageFileId,
-    )?.imageUrl ??
-    null;
+    )?.imageUrl;
+    return safeDisplayUrl(savedUrl) ?? null;
+  };
   const closeDialog = () => {
     setEditing(null);
     upload.reset();
@@ -104,7 +108,7 @@ export default function ScreenImageBoard({
     closeDialog();
   };
   return (
-    <VStack gap={4}>
+    <VStack className={styles.screenBoard} gap={4}>
       <ul className={styles.screenList}>
         {rows.map((row, index) => {
           const url = imageUrl(row);

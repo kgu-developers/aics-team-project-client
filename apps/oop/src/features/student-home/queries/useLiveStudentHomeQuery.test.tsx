@@ -31,7 +31,7 @@ const server = setupServer(
           name: '테스트 분반',
           classTime: '',
           capacity: 40,
-          contactVisibleFrom: null,
+          contactVisibleFrom: '2020-01-01T00:00:00+09:00',
           contactVisibleUntil: null,
           courseId: 1,
           courseName: 'OOP',
@@ -101,6 +101,83 @@ describe('학생 홈 개별 API 계약 조회 (UI 연결과 별도 검증)', () 
     expect(requests).toContain(ENDPOINTS.USER.ME);
     expect(requests).not.toContain(ENDPOINTS.SECTION.STUDENT_DASHBOARD('2'));
   });
+
+  it('연락처 공개 전에는 kickoff를 요청하거나 팀·구성원 식별자를 노출하지 않는다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.SECTION.MY_SECTIONS}`, () =>
+        HttpResponse.json({
+          contents: [
+            {
+              id: 2,
+              code: 'OOP-2',
+              name: '테스트 분반',
+              classTime: '',
+              capacity: 40,
+              contactVisibleFrom: '2099-01-01T00:00:00+09:00',
+              contactVisibleUntil: null,
+              courseId: 1,
+              courseName: 'OOP',
+              year: 2026,
+              semester: 'FALL',
+              status: 'ACTIVE',
+            },
+          ],
+        }),
+      ),
+    );
+    const { result } = renderHomeQuery();
+
+    await waitFor(() => expect(result.current.context.status).toBe('ready'));
+    expect(requests).not.toContain(ENDPOINTS.TEAM.KICKOFF('7'));
+    expect(result.current.teamName).toBeUndefined();
+    expect(result.current.teamMemberIds).toBeUndefined();
+    expect(result.current.isTeamLeader).toBe(false);
+  });
+
+  it.each([
+    ['공개 일정 미설정', null, null],
+    ['해석할 수 없는 공개 일정', 'not-a-date', null],
+    [
+      '공개 기간 종료',
+      '2020-01-01T00:00:00+09:00',
+      '2020-01-02T00:00:00+09:00',
+    ],
+  ])(
+    '연락처 %s에는 kickoff 기반 팀 기능을 유지한다',
+    async (_label, contactVisibleFrom, contactVisibleUntil) => {
+      server.use(
+        http.get(`${API_BASE_URL}${ENDPOINTS.SECTION.MY_SECTIONS}`, () =>
+          HttpResponse.json({
+            contents: [
+              {
+                id: 2,
+                code: 'OOP-2',
+                name: '테스트 분반',
+                classTime: '',
+                capacity: 40,
+                contactVisibleFrom,
+                contactVisibleUntil,
+                courseId: 1,
+                courseName: 'OOP',
+                year: 2026,
+                semester: 'FALL',
+                status: 'ACTIVE',
+              },
+            ],
+          }),
+        ),
+      );
+      const { result } = renderHomeQuery();
+
+      await waitFor(() => expect(result.current.teamName).toBe('테스트 7팀'));
+      expect(requests).toContain(ENDPOINTS.TEAM.KICKOFF('7'));
+      expect(result.current.teamMemberIds).toEqual([
+        liveHomeUser.studentNumber,
+        '202600002',
+      ]);
+      expect(result.current.isTeamLeader).toBe(true);
+    },
+  );
 
   it('액션 403을 빈 목록 성공으로 처리하지 않고 공지 성공을 보존하며 개별 재시도한다', async () => {
     server.use(

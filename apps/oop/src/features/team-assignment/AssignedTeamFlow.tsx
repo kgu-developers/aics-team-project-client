@@ -9,10 +9,12 @@ import {
   resolveContactVisibility,
   resolveLiveTeamAssignmentStage,
   toTeamAssignmentProjection,
+  toTeamResultReleaseAt,
 } from './liveTeamAssignment';
 import { isValidPositiveTeamId, useTeamKickoffQuery } from './queries';
 import { ResultAnnouncement, TeamSummary } from './result';
 import LiveFirstMeeting from './result/LiveFirstMeeting';
+import ResultWaiting from './ResultWaiting';
 import { useContactWindowClock } from './useContactWindowClock';
 
 export default function AssignedTeamFlow({
@@ -24,12 +26,46 @@ export default function AssignedTeamFlow({
   teamId: string;
   teamOnly: boolean;
 }) {
-  const [isFirstMeeting, setIsFirstMeeting] = useState(false);
-  const query = useTeamKickoffQuery(teamId);
   const now = useContactWindowClock(
     section.contactVisibleFrom,
     section.contactVisibleUntil,
   );
+  const contactVisibility = resolveContactVisibility(section, now);
+
+  if (contactVisibility === 'upcoming') {
+    return (
+      <ResultWaiting
+        resultReleasesAt={toTeamResultReleaseAt(section.contactVisibleFrom)}
+      />
+    );
+  }
+
+  return (
+    <VisibleAssignedTeamFlow
+      contactVisibility={contactVisibility}
+      now={now}
+      section={section}
+      teamId={teamId}
+      teamOnly={teamOnly}
+    />
+  );
+}
+
+function VisibleAssignedTeamFlow({
+  contactVisibility,
+  now,
+  section,
+  teamId,
+  teamOnly,
+}: {
+  contactVisibility: ReturnType<typeof resolveContactVisibility>;
+  now: number;
+  section: SectionResponse;
+  teamId: string;
+  teamOnly: boolean;
+}) {
+  const [isFirstMeeting, setIsFirstMeeting] = useState(false);
+  const query = useTeamKickoffQuery(teamId);
 
   if (!isValidPositiveTeamId(teamId)) {
     return <p role='alert'>배정된 팀 ID를 확인할 수 없습니다.</p>;
@@ -72,7 +108,7 @@ export default function AssignedTeamFlow({
   return (
     <LiveFirstMeeting
       projection={projection}
-      contactVisibility={resolveContactVisibility(section, now)}
+      contactVisibility={contactVisibility}
     />
   );
 }

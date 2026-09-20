@@ -168,9 +168,9 @@ it('연락처는 시작·종료 경계를 포함하고 잘못된 종료값은 �
   ).toBe('closed');
 });
 
-it('팀원 공개 시각은 연락처 공개 당일 한국 시간 자정으로 계산한다', () => {
+it('팀원 공개 시각은 과거 자정으로 바꾸지 않고 실제 연락처 공개 시각을 사용한다', () => {
   expect(toTeamResultReleaseAt('2026-09-10T10:00:00+09:00')).toBe(
-    '2026-09-10T00:00:00+09:00',
+    '2026-09-10T10:00:00+09:00',
   );
   expect(toTeamResultReleaseAt(null)).toBeUndefined();
   expect(toTeamResultReleaseAt('invalid')).toBeUndefined();

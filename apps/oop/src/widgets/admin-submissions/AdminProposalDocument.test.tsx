@@ -98,3 +98,28 @@ it('유효한 문서를 실제 조회하는 동안 로딩을 표시하고 응답
     cleanup();
   }
 });
+
+it('서버 문서의 백슬래시 기반 외부 이미지 URL을 렌더링하지 않는다', async () => {
+  const project = createProjectProposalFixture();
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('19')}`, () =>
+      HttpResponse.json({
+        ...project,
+        screenConfiguration: project.screenConfiguration.map(screen => ({
+          ...screen,
+          imageUrl: '/\\attacker.example/beacon.png',
+        })),
+      }),
+    ),
+  );
+
+  const cleanup = renderDocument('1', '19');
+  try {
+    expect(
+      await screen.findByRole('heading', { name: project.title }),
+    ).toBeVisible();
+    expect(screen.queryByRole('img', { name: '도서 목록' })).toBeNull();
+  } finally {
+    cleanup();
+  }
+});

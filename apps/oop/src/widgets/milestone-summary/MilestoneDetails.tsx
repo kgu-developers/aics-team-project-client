@@ -20,10 +20,13 @@ import { Link } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
 import { type FormEvent, type ReactNode, useState } from 'react';
 
+import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
+import { useAuthStore } from '~/features/auth/authStore';
 import { useMilestonePresentationsQuery } from '~/features/evaluation/queries';
 import ProjectTopicBoard from '~/features/project-topic/ProjectTopicBoard';
+import { useStudentContext } from '~/features/section/useStudentContext';
 import {
   useProposalFeedbackQuery,
   useMidReportFeedbackQuery,
@@ -348,9 +351,11 @@ function SectionStatusList({
   );
 }
 
-function PresentationTeamDetails({
+export function PresentationTeamDetails({
+  myTeamId,
   presentations,
 }: {
+  myTeamId: string | null;
   presentations: MilestonePresentation[];
 }) {
   const teams = [...presentations].sort(
@@ -364,26 +369,31 @@ function PresentationTeamDetails({
     <>
       {teams.map(team => {
         const project = team.project;
-        const materials = team.artifacts.flatMap((artifact, index) => {
-          if (artifact.type !== 'FILE' && artifact.type !== 'LINK') return [];
-          const value = artifact.fileName ?? artifact.url ?? undefined;
-          return [
-            {
-              extension:
-                artifact.type === 'FILE'
-                  ? (artifact.fileName?.split('.').pop()?.toUpperCase() ??
-                    'FILE')
-                  : 'LINK',
-              href: safeSubmissionUrl(
-                artifact.type === 'FILE' ? artifact.downloadUrl : artifact.url,
-              ),
-              id: `${team.submissionId}:${index}`,
-              kind: artifact.type,
-              label: artifact.type === 'FILE' ? '제출 파일' : '제출 링크',
-              value,
-            },
-          ];
-        });
+        const isMyTeam = String(team.teamId) === myTeamId;
+        const materials = (isMyTeam ? team.artifacts : []).flatMap(
+          (artifact, index) => {
+            if (artifact.type !== 'FILE' && artifact.type !== 'LINK') return [];
+            const value = artifact.fileName ?? artifact.url ?? undefined;
+            return [
+              {
+                extension:
+                  artifact.type === 'FILE'
+                    ? (artifact.fileName?.split('.').pop()?.toUpperCase() ??
+                      'FILE')
+                    : 'LINK',
+                href: safeSubmissionUrl(
+                  artifact.type === 'FILE'
+                    ? artifact.downloadUrl
+                    : artifact.url,
+                ),
+                id: `${team.submissionId}:${index}`,
+                kind: artifact.type,
+                label: artifact.type === 'FILE' ? '제출 파일' : '제출 링크',
+                value,
+              },
+            ];
+          },
+        );
         return (
           <section className={styles.feedbackList} key={team.teamId}>
             <SectionBanner
@@ -414,10 +424,12 @@ function PresentationTeamDetails({
                 프로젝트 저장소 열기
               </a>
             ) : null}
-            <SubmissionMaterials
-              materials={materials}
-              showMetadataTitle={false}
-            />
+            {isMyTeam ? (
+              <SubmissionMaterials
+                materials={materials}
+                showMetadataTitle={false}
+              />
+            ) : null}
           </section>
         );
       })}
@@ -630,6 +642,13 @@ function PresentationEvaluationBody({
   body: Extract<StudentHomeMilestoneBody, { kind: 'presentation-evaluation' }>;
   milestoneId?: string;
 }) {
+  const isDemo = isMockDevelopmentMode(
+    import.meta.env.DEV,
+    import.meta.env.VITE_ENABLE_MSW,
+  );
+  const currentUser = useAuthStore(state => state.currentUser);
+  const context = useStudentContext(!isDemo);
+  const myTeamId = (isDemo ? currentUser?.teamId : context.teamId) ?? null;
   const presentationsQuery = useMilestonePresentationsQuery(milestoneId ?? '');
   return (
     <div className={styles.root}>
@@ -638,7 +657,10 @@ function PresentationEvaluationBody({
       ) : null}
       {presentationsQuery.isSuccess ? (
         presentationsQuery.data.length ? (
-          <PresentationTeamDetails presentations={presentationsQuery.data} />
+          <PresentationTeamDetails
+            myTeamId={myTeamId}
+            presentations={presentationsQuery.data}
+          />
         ) : (
           <p className={styles.guide}>제출된 발표 자료가 아직 없어요.</p>
         )

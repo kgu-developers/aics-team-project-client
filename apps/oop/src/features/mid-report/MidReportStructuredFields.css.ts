@@ -14,13 +14,24 @@ export const imagePreview = style({
   objectFit: 'contain',
 });
 
+export const screenBoard = style({
+  maxWidth: '100%',
+  minWidth: 0,
+  overflow: 'hidden',
+  width: '100%',
+});
+
 export const screenList = style({
+  boxSizing: 'border-box',
   display: 'flex',
   gap: 'var(--spacing-4)',
   listStyle: 'none',
   margin: 0,
+  maxWidth: '100%',
+  minWidth: 0,
   overflowX: 'auto',
   padding: 0,
+  width: '100%',
 });
 export const screenCard = style({
   border: '1px solid var(--color-border)',
@@ -29,6 +40,7 @@ export const screenCard = style({
   flex: '0 0 240px',
   gap: 'var(--spacing-3)',
   justifyItems: 'start',
+  minWidth: 0,
   padding: 'var(--spacing-4)',
 });
 export const screenActions = style({

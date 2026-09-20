@@ -159,7 +159,7 @@ describe('StudentNoticeDetailPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByAltText('일정 이미지.svg 미리보기')).toHaveAttribute(
       'src',
-      '/evaluation/cineflow-screen-1.svg',
+      'http://localhost:3000/evaluation/cineflow-screen-1.svg',
     );
     expect(
       screen.queryByAltText('일정 안내.pdf 미리보기'),
@@ -169,6 +169,34 @@ describe('StudentNoticeDetailPage', () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('dialog', { name: '첨부 이미지 미리보기' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('안전하지 않은 이미지 첨부 URL은 미리보기로 렌더링하지 않는다', () => {
+    mockSectionAnnouncementsQuery.mockReturnValue({
+      data: [
+        {
+          ...mySectionAnnouncements[0]!,
+          attachments: [
+            {
+              ...mySectionAnnouncements[0]!.attachments![0],
+              url: '/\\attacker.example/beacon.png',
+            },
+          ],
+        },
+      ],
+      isError: false,
+      isPending: false,
+    });
+
+    renderWithRouter(
+      <AstryxThemeProvider>
+        <StudentNoticeDetailPage noticeId='1' />
+      </AstryxThemeProvider>,
+    );
+
+    expect(
+      screen.queryByAltText('일정 이미지.svg 미리보기'),
     ).not.toBeInTheDocument();
   });
 

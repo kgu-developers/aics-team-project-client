@@ -265,6 +265,40 @@ it('담당자와 기한을 비우면 clear 플래그로 서버와 화면에 반�
   });
 });
 
+it('수정 Dialog에서 상태를 함께 변경해 모바일 관리 흐름을 제공한다', async () => {
+  const user = userEvent.setup();
+  const bodies: unknown[] = [];
+  server.use(
+    http.patch(
+      `${API_BASE_URL}/api/v1/meeting-actions/41`,
+      async ({ request }) => {
+        bodies.push(await request.clone().json());
+        return undefined;
+      },
+    ),
+  );
+  renderPage();
+  await ready();
+  await user.click(
+    within(
+      screen.getByRole('row', { name: /회의록 상세 화면 검증/ }),
+    ).getByRole('button', { name: '수정' }),
+  );
+  const dialog = screen.getByRole('dialog', { name: '액션 플랜 수정' });
+  await user.click(within(dialog).getByRole('combobox', { name: /^상태/ }));
+  await user.click(screen.getByRole('option', { name: '완료' }));
+  await user.click(within(dialog).getByRole('button', { name: '저장' }));
+
+  await waitFor(() =>
+    expect(
+      screen.queryByRole('dialog', { name: '액션 플랜 수정' }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(bodies).toEqual([
+    { content: '회의록 상세 화면 검증', status: 'DONE' },
+  ]);
+});
+
 it('상태를 PATCH로 변경하고 필터된 목록에서 제거한다', async () => {
   const user = userEvent.setup();
   renderPage();

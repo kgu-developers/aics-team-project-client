@@ -1,7 +1,7 @@
 import type {
+  PartnerCandidate,
   PreferredPeerRequestStatus,
   TeamAssignmentProjection,
-  TeamAssignmentSurvey,
 } from '@aics/core';
 import { Button, Text, TextInput, useToast } from '@aics/design-system';
 import { useState } from 'react';
@@ -9,34 +9,36 @@ import { useState } from 'react';
 import {
   useDecidePreferredPeerRequestMutation,
   usePreSurveyClassmates,
-  useUpdatePreferredPeerMutation,
 } from '../queries';
 import * as styles from '../TeamAssignmentFlow.css';
 import { PartnerRequestDialogs } from './PartnerRequestDialogs';
 
 type LivePartnerRequestPanelProps = {
+  canRequestPartner: boolean;
+  draftPreferredPeer: PartnerCandidate | null | undefined;
+  onPartnerApproved: (requesterUserId: string) => void;
+  onPreferredPeerChange: (candidate: PartnerCandidate | null) => void;
   preSurveySectionId: number;
   preferredPeerStatus?: PreferredPeerRequestStatus | null;
   projection: TeamAssignmentProjection;
-  survey: TeamAssignmentSurvey;
 };
 
 export function LivePartnerRequestPanel({
+  canRequestPartner,
+  draftPreferredPeer,
+  onPartnerApproved,
+  onPreferredPeerChange,
   preSurveySectionId,
   preferredPeerStatus,
   projection,
-  survey,
 }: LivePartnerRequestPanelProps) {
   const toast = useToast();
   const [partnerQuery, setPartnerQuery] = useState('');
   const [cancelRequestOpen, setCancelRequestOpen] = useState(false);
   const [approveRequestOpen, setApproveRequestOpen] = useState(false);
   const classmates = usePreSurveyClassmates(preSurveySectionId, partnerQuery);
-  const updatePreferredPeer =
-    useUpdatePreferredPeerMutation(preSurveySectionId);
   const decideRequest =
     useDecidePreferredPeerRequestMutation(preSurveySectionId);
-  const canRequestPartner = survey.rolePreferences.length > 0;
 
   async function respond(decision: 'approve' | 'reject') {
     const request = projection.incomingPartnerRequest;
@@ -46,6 +48,7 @@ export function LivePartnerRequestPanel({
         decision,
         requesterUserId: request.requester.id,
       });
+      if (decision === 'approve') onPartnerApproved(request.requester.id);
       setApproveRequestOpen(false);
       toast({
         body:
@@ -61,25 +64,17 @@ export function LivePartnerRequestPanel({
     }
   }
 
-  async function updatePartner(preferredPeerUserId: string | null) {
-    try {
-      await updatePreferredPeer.mutateAsync({ preferredPeerUserId, survey });
-      setCancelRequestOpen(false);
-      setPartnerQuery('');
-      toast({
-        body: preferredPeerUserId
-          ? '파트너 신청을 보냈습니다.'
-          : '파트너 신청을 취소했습니다.',
-      });
-    } catch {
-      toast({
-        body: preferredPeerUserId
-          ? '파트너 신청을 만들지 못했습니다. 다시 시도해 주세요.'
-          : '파트너 신청을 취소하지 못했습니다. 다시 시도해 주세요.',
-        type: 'error',
-      });
-    }
+  function updatePartner(candidate: PartnerCandidate | null) {
+    onPreferredPeerChange(candidate);
+    setCancelRequestOpen(false);
+    setPartnerQuery('');
   }
+
+  const outgoingPartner =
+    draftPreferredPeer === undefined
+      ? projection.outgoingPartnerRequest?.recipient
+      : (draftPreferredPeer ?? undefined);
+  const hasDraftPartnerChange = draftPreferredPeer !== undefined;
 
   return (
     <>
@@ -113,17 +108,21 @@ export function LivePartnerRequestPanel({
             />
           </div>
         </section>
-      ) : projection.outgoingPartnerRequest ? (
+      ) : outgoingPartner ? (
         <section
-          aria-label='보낸 파트너 신청'
+          aria-label={
+            hasDraftPartnerChange ? '선택한 파트너' : '보낸 파트너 신청'
+          }
           className={styles.partnerRequest}
         >
           <Text as='p' color='secondary' type='supporting'>
-            <strong>{projection.outgoingPartnerRequest.recipient.name}</strong>{' '}
-            님의 응답을 기다리고 있습니다.
+            <strong>{outgoingPartner.name}</strong>{' '}
+            {hasDraftPartnerChange
+              ? '님을 선택했습니다. 설문을 제출하면 신청이 전송됩니다.'
+              : '님의 응답을 기다리고 있습니다.'}
           </Text>
           <Text as='p' color='secondary' type='supporting'>
-            {projection.outgoingPartnerRequest.recipient.studentNumber}
+            {outgoingPartner.studentNumber}
           </Text>
           <div className={styles.requestActions}>
             <Button
@@ -143,7 +142,7 @@ export function LivePartnerRequestPanel({
             {projection.confirmedPartner.studentNumber}
           </Text>
         </section>
-      ) : preferredPeerStatus === 'REJECTED' ? (
+      ) : preferredPeerStatus === 'REJECTED' && !hasDraftPartnerChange ? (
         <section
           aria-label='거절된 파트너 신청'
           className={styles.partnerRequest}
@@ -154,9 +153,8 @@ export function LivePartnerRequestPanel({
           </Text>
           <div className={styles.requestActions}>
             <Button
-              isLoading={updatePreferredPeer.isPending}
               label='다른 파트너 찾기'
-              onClick={() => void updatePartner(null)}
+              onClick={() => updatePartner(null)}
               variant='secondary'
             />
           </div>
@@ -171,7 +169,7 @@ export function LivePartnerRequestPanel({
           />
           {!canRequestPartner ? (
             <Text as='p' color='secondary' type='supporting'>
-              역할을 하나 이상 선택하면 파트너 신청을 보낼 수 있어요.
+              역할을 하나 이상 선택하면 파트너를 선택할 수 있어요.
             </Text>
           ) : null}
           {classmates.isFetching ? (
@@ -195,9 +193,15 @@ export function LivePartnerRequestPanel({
           {classmates.data?.map(candidate => (
             <button
               className={styles.partnerCandidate}
-              disabled={!canRequestPartner || updatePreferredPeer.isPending}
+              disabled={!canRequestPartner}
               key={candidate.userId}
-              onClick={() => void updatePartner(candidate.userId)}
+              onClick={() =>
+                updatePartner({
+                  id: candidate.userId,
+                  name: candidate.name,
+                  studentNumber: candidate.userId,
+                })
+              }
               type='button'
             >
               <span>{candidate.name}</span>
@@ -218,10 +222,10 @@ export function LivePartnerRequestPanel({
         approveRequestOpen={approveRequestOpen}
         cancelRequestOpen={cancelRequestOpen}
         isApproving={decideRequest.isPending}
-        isCancelling={updatePreferredPeer.isPending}
+        isCancelling={false}
         onApprove={() => void respond('approve')}
         onApproveOpenChange={setApproveRequestOpen}
-        onCancel={() => void updatePartner(null)}
+        onCancel={() => updatePartner(null)}
         onCancelOpenChange={setCancelRequestOpen}
       />
     </>

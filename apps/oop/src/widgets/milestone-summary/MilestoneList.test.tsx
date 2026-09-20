@@ -1,6 +1,7 @@
+import type { MilestonePresentation } from '@aics/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { submitMidReportFeedback, submitProposalFeedbackResponse } = vi.hoisted(
   () => ({
@@ -23,6 +24,12 @@ const {
   resetProposalMutation: vi.fn(),
   updateSubmissionConfirmation: vi.fn(),
   toast: vi.fn(),
+}));
+const { presentationQueryState, studentContextState } = vi.hoisted(() => ({
+  presentationQueryState: { data: [] as MilestonePresentation[] },
+  studentContextState: {
+    current: { status: 'loading' } as { status: string; teamId?: string },
+  },
 }));
 
 vi.mock('@aics/design-system', async importOriginal => {
@@ -62,11 +69,21 @@ vi.mock('~/features/submission/queries', () => ({
   }),
 }));
 
+vi.mock('~/features/evaluation/queries', () => ({
+  useMilestonePresentationsQuery: () => ({
+    data: presentationQueryState.data,
+    isError: false,
+    isPending: false,
+    isSuccess: true,
+  }),
+}));
+
 import { useAuthStore } from '~/features/auth/authStore';
 
-import MilestoneDetails from './MilestoneDetails';
+import MilestoneDetails, { PresentationTeamDetails } from './MilestoneDetails';
 import MilestoneList from './MilestoneList';
 
+import { getMilestonePresentations } from '~/mocks/data/evaluation';
 import { getCurrentMidReport } from '~/mocks/data/midReport';
 import { getCurrentPresentation } from '~/mocks/data/presentation';
 import {
@@ -331,7 +348,13 @@ describe('MilestoneDetails', () => {
     resetMidMutation.mockReset();
     resetProposalMutation.mockReset();
     toast.mockReset();
+    presentationQueryState.data = [];
+    studentContextState.current = { status: 'loading' };
     useAuthStore.setState({ currentUser: { ...demoStudent, teamId: '7' } });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
   });
 
   it('현재 주제 선정 세부 단계의 후보와 완료 현황을 표시한다', () => {
@@ -549,6 +572,49 @@ describe('MilestoneDetails', () => {
     },
   );
 
+  it('발표 평가 마일스톤은 발표 순서를 모두 표시하되 우리 팀 파일만 노출한다', () => {
+    renderWithRouter(
+      <PresentationTeamDetails
+        myTeamId='7'
+        presentations={getMilestonePresentations()}
+      />,
+    );
+
+    expect(screen.getByText(/1번 발표 · CineFlow/)).toBeVisible();
+    expect(screen.getByText(/2번 발표 · BookLoop/)).toBeVisible();
+    expect(screen.getByText(/3번 발표 · CafeQueue/)).toBeVisible();
+    expect(screen.getByRole('link', { name: '다운로드' })).toHaveAttribute(
+      'href',
+      expect.stringContaining('cineflow'),
+    );
+    expect(
+      screen.queryByText('bookloop-final-presentation.pdf'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('cafequeue-presentation.pdf'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('세션 중 팀이 배정되면 live context의 팀 ID로 우리 팀 발표 자료를 표시한다', () => {
+    vi.stubEnv('VITE_ENABLE_MSW', 'false');
+    useAuthStore.setState({ currentUser: { ...demoStudent, teamId: null } });
+    studentContextState.current = { status: 'ready', teamId: '7' };
+    presentationQueryState.data = getMilestonePresentations();
+    const body = createStudentHomeDashboardPreview(
+      'presentation-evaluation',
+    ).milestones.find(
+      milestone => milestone.body?.kind === 'presentation-evaluation',
+    )?.body;
+    if (!body || body.kind !== 'presentation-evaluation') {
+      throw new Error('presentation evaluation body 없음');
+    }
+
+    renderWithRouter(<MilestoneDetails body={body} milestoneId='22' />);
+
+    expect(screen.getByText('cineflow-presentation.pdf')).toBeVisible();
+    expect(screen.queryByText('bookloop-presentation.pdf')).toBeNull();
+  });
+
   it('발표 자료 상세는 제출 자료 제목 아래에 메타데이터를 1회만 표시한다', () => {
     const body = createStudentHomeDashboardPreview(
       'presentation-material',
@@ -649,5 +715,5 @@ describe('MilestoneDetails', () => {
 });
 
 vi.mock('~/features/section/useStudentContext', () => ({
-  useStudentContext: () => ({ status: 'loading' }),
+  useStudentContext: () => studentContextState.current,
 }));

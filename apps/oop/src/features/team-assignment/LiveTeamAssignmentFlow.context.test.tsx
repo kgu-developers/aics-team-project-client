@@ -373,10 +373,14 @@ it('hides the survey after a prerequisite refetch fails and recovers with the se
   ]);
 });
 
-it('requests only the attributed kickoff and rejects a mismatched returned team', async () => {
+it('requests only the attributed kickoff after contact visibility and rejects a mismatched returned team', async () => {
+  const visibleSecond = {
+    ...second,
+    contactVisibleFrom: '2020-01-01T00:00:00+09:00',
+  };
   setup({
-    memberships: [second],
-    activeSections: [section, second],
+    memberships: [visibleSecond],
+    activeSections: [section, visibleSecond],
     teamId: 7,
   });
   server.use(

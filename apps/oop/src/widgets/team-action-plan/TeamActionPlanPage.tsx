@@ -149,6 +149,7 @@ function TeamActionPlanContent({
       content: row.content,
       dueDate: actionDueDate(row.dueDate),
       meetingId: row.meetingRecord.id,
+      status: row.status,
     });
   };
 
@@ -165,6 +166,9 @@ function TeamActionPlanContent({
               : {}),
             ...(form.dueDate !== actionDueDate(editingAction.dueDate)
               ? { dueDate: form.dueDate || null }
+              : {}),
+            ...(form.status && form.status !== editingAction.status
+              ? { status: form.status }
               : {}),
           },
           meetingId: editingAction.meetingRecord.id,
@@ -252,12 +256,9 @@ function TeamActionPlanContent({
                 {row.content}
               </a>
             </Tooltip>
-            <span
-              aria-label={`기한 ${row.dueDate ? formatSeoulDateTime(row.dueDate) : '미정'}, 담당자 ${row.assignee?.name ?? '미정'}`}
-              className={styles.mobileActionMeta}
-            >
+            <span className={styles.mobileActionMeta}>
               {row.dueDate ? formatSeoulDateTime(row.dueDate) : '미정'} ·{' '}
-              {row.assignee?.name ?? '미정'}
+              {row.assignee?.name ?? '미정'} · {statusLabels[row.status]}
             </span>
           </div>
         ),

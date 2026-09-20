@@ -15,6 +15,32 @@ export function safeSubmissionUrl(value?: string | null) {
     return undefined;
   }
 }
+
+/** Display-only media may use a same-origin root path as well as HTTP(S). */
+export function safeDisplayUrl(value?: unknown) {
+  if (typeof value !== 'string') return undefined;
+  const hasUnsafeCharacter = [...value].some(character => {
+    const code = character.charCodeAt(0);
+    return code <= 31 || code === 127 || character === '\\';
+  });
+  if (!value || value !== value.trim() || hasUnsafeCharacter) {
+    return undefined;
+  }
+
+  if (value.startsWith('/') && !value.startsWith('//')) {
+    try {
+      const base = new URL(globalThis.location?.origin ?? 'http://localhost');
+      const url = new URL(value, base);
+      return url.origin === base.origin &&
+        ['http:', 'https:'].includes(url.protocol)
+        ? url.href
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+  return safeSubmissionUrl(value);
+}
 export function submissionUploadInput(
   rules: RequiredSubmissionArtifact[],
   files: Record<number, File | null>,

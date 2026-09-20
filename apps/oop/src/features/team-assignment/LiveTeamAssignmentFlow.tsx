@@ -19,6 +19,7 @@ import OnboardingRecovery from './OnboardingRecovery';
 import {
   useLivePreSurveyProjectionQuery,
   useMyTeamAssignmentSurveyQuery,
+  useTeamAssignmentWaitingPoll,
 } from './queries';
 import ResultWaiting from './ResultWaiting';
 import { SurveyForm } from './survey/SurveyForm';
@@ -59,6 +60,12 @@ export default function LiveTeamAssignmentFlow({
   );
   const shouldShowSurvey =
     isEditingSurvey || Boolean(projectionQuery.data?.incomingPartnerRequest);
+  const isWaitingForAssignment =
+    authenticated &&
+    context.status === 'no-team' &&
+    hasSubmittedSurvey &&
+    !shouldShowSurvey;
+  useTeamAssignmentWaitingPoll(isWaitingForAssignment);
 
   useEffect(() => {
     if (surveyNotFound && section) setEditingSectionId(section.id);

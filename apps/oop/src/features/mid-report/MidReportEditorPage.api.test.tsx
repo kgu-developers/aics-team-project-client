@@ -27,6 +27,7 @@ import {
 import { useAuthStore } from '~/features/auth/authStore';
 
 import MidReportEditorPage from './MidReportEditorPage';
+import MidReportGuiScreens from './MidReportGuiScreens';
 
 import {
   getCurrentMidReport,
@@ -252,6 +253,42 @@ it('imageFileId를 숫자로 저장하고 재조회한 이미지 URL을 복원�
     response: { status: 403, data: { code: 'MID_REPORT_GUI_IMAGE_NOT_OWNED' } },
   });
   server.events.removeAllListeners('request:start');
+});
+
+it('GUI 화면의 역슬래시 기반 외부 이미지 URL을 렌더링하지 않는다', async () => {
+  const report = getCurrentMidReport();
+  const field = report.blocks
+    .find(block => block.key === 'gui-design')!
+    .fields.find(field => field.key === 'guiScreens')!;
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  clients.push(client);
+  renderWithRouter(
+    <QueryClientProvider client={client}>
+      <MidReportGuiScreens
+        fields={[
+          {
+            ...field,
+            value: JSON.stringify([
+              {
+                id: 'unsafe-screen',
+                name: '위험 화면',
+                description: '외부 URL',
+                imageFileId: 501,
+                imageUrl: '/\\attacker.example/beacon.png',
+              },
+            ]),
+          },
+        ]}
+        isLocked={false}
+        onFieldsChange={vi.fn()}
+      />
+    </QueryClientProvider>,
+  );
+
+  expect(screen.getByText('등록한 이미지가 없습니다.')).toBeVisible();
+  expect(screen.queryByRole('img', { name: '위험 화면' })).toBeNull();
 });
 
 it('화면 이미지를 업로드해 받은 파일 ID를 저장 요청에 담는다', async () => {

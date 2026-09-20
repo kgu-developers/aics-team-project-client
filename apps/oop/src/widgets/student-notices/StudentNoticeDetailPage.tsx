@@ -18,6 +18,7 @@ import StudentContextState from '~/features/section/StudentContextState';
 import { useStudentContext } from '~/features/section/useStudentContext';
 import { useSectionAnnouncementsQuery } from '~/features/student-notices/queries';
 import { useStudentNoticeReadState } from '~/features/student-notices/useStudentNoticeReadState';
+import { safeDisplayUrl } from '~/features/submission/submissionUploadInput';
 
 import * as styles from './StudentNoticePages.css';
 
@@ -166,19 +167,23 @@ export default function StudentNoticeDetailPage({
             aria-label='첨부 이미지 미리보기'
             className={styles.imagePreviewList}
           >
-            {imageAttachments.map(attachment => (
-              <figure className={styles.imagePreview} key={attachment.id}>
-                <img
-                  alt={`${attachment.fileName} 미리보기`}
-                  className={styles.previewImage}
-                  loading='lazy'
-                  src={attachment.url}
-                />
-                <figcaption className={styles.imageCaption}>
-                  {attachment.fileName}
-                </figcaption>
-              </figure>
-            ))}
+            {imageAttachments.map(attachment => {
+              const src = safeDisplayUrl(attachment.url);
+              if (!src) return null;
+              return (
+                <figure className={styles.imagePreview} key={attachment.id}>
+                  <img
+                    alt={`${attachment.fileName} 미리보기`}
+                    className={styles.previewImage}
+                    loading='lazy'
+                    src={src}
+                  />
+                  <figcaption className={styles.imageCaption}>
+                    {attachment.fileName}
+                  </figcaption>
+                </figure>
+              );
+            })}
           </section>
         ) : null}
         {announcement.attachments?.length ? (

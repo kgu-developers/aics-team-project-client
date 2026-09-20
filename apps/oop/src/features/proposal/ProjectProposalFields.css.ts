@@ -28,13 +28,23 @@ export const image = style({
   maxHeight: '240px',
   objectFit: 'contain',
 });
+export const screenBoard = style({
+  maxWidth: '100%',
+  minWidth: 0,
+  overflow: 'hidden',
+  width: '100%',
+});
 export const screenList = style({
+  boxSizing: 'border-box',
   display: 'flex',
   gap: 'var(--spacing-4)',
   listStyle: 'none',
   margin: 0,
+  maxWidth: '100%',
+  minWidth: 0,
   overflowX: 'auto',
   padding: 0,
+  width: '100%',
 });
 export const screenAddCell = style({
   alignItems: 'center',

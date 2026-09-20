@@ -1,4 +1,4 @@
-import type { CurrentUser } from '@aics/core';
+import type { CurrentUser, TeamKickoffResponse } from '@aics/core';
 import {
   Avatar,
   Button,
@@ -30,6 +30,7 @@ import {
   type PasswordValidationIssue,
 } from '~/features/auth/validatePasswordChange';
 import { useStudentContext } from '~/features/section/useStudentContext';
+import { resolveContactVisibility } from '~/features/team-assignment/liveTeamAssignment';
 import {
   isValidPositiveTeamId,
   useTeamKickoffQuery,
@@ -38,6 +39,70 @@ import {
 import { oopCourseConfig } from '~/course/config';
 
 import * as styles from './StudentShellPopovers.css';
+
+function resolveProfileTeamName({
+  teamId,
+  isKickoffGated,
+  isInvalidTeamId,
+  isKickoffError,
+  kickoff,
+  legacyTeamName,
+}: {
+  teamId?: string;
+  isKickoffGated: boolean;
+  isInvalidTeamId: boolean;
+  isKickoffError: boolean;
+  kickoff?: TeamKickoffResponse;
+  legacyTeamName?: string;
+}) {
+  if (teamId === undefined) return legacyTeamName;
+  if (isKickoffGated) return '공개 예정';
+  if (isInvalidTeamId || isKickoffError) return '팀 정보 확인 필요';
+  return kickoff?.name ?? '팀 정보 확인 필요';
+}
+
+function resolveProfileLeaderName({
+  teamId,
+  isKickoffGated,
+  isInvalidTeamId,
+  isKickoffError,
+  isKickoffPending,
+  liveLeader,
+  legacyLeaderName,
+}: {
+  teamId?: string;
+  isKickoffGated: boolean;
+  isInvalidTeamId: boolean;
+  isKickoffError: boolean;
+  isKickoffPending: boolean;
+  liveLeader?: TeamKickoffResponse['members'][number];
+  legacyLeaderName?: string | null;
+}) {
+  if (teamId === undefined) return legacyLeaderName ?? '미확정';
+  if (isKickoffGated) return '공개 예정';
+  if (isInvalidTeamId || isKickoffError) return '확인 필요';
+  if (isKickoffPending) return '확인 중…';
+  if (!liveLeader) return '미확정';
+  return `${liveLeader.name ?? liveLeader.studentNumber} (${liveLeader.studentNumber})`;
+}
+
+function resolveProfileTeamValue({
+  teamName,
+  isKickoffGated,
+  hasUnresolvedTeamMembership,
+}: {
+  teamName?: string;
+  isKickoffGated: boolean;
+  hasUnresolvedTeamMembership: boolean;
+}) {
+  if (teamName) {
+    return { label: teamName, isLink: !isKickoffGated };
+  }
+  if (hasUnresolvedTeamMembership) {
+    return { label: '팀 소속 확인 필요', isLink: false };
+  }
+  return { label: '미배정', isLink: false };
+}
 
 function PasswordChangeDialog({
   isOpen,
@@ -214,8 +279,13 @@ function StudentProfilePopover({
   const teamId = isDemo ? (currentUser.teamId ?? undefined) : context.teamId;
   const isInvalidTeamId =
     teamId !== undefined && !isValidPositiveTeamId(teamId);
+  const contactVisibility = isDemo
+    ? 'open'
+    : resolveContactVisibility(context.section ?? {});
+  const isKickoffGated =
+    !isDemo && (!context.section || contactVisibility === 'upcoming');
   const kickoff = useTeamKickoffQuery(
-    isOpen && !isInvalidTeamId ? teamId : undefined,
+    isOpen && !isKickoffGated && !isInvalidTeamId ? teamId : undefined,
   );
   const verifiedKickoff =
     kickoff.isSuccess && String(kickoff.data.id) === teamId
@@ -223,22 +293,28 @@ function StudentProfilePopover({
       : undefined;
   const liveLeader = verifiedKickoff?.members.find(member => member.isLeader);
   const legacyLeader = team?.members.find(member => member.isLeader);
-  const teamName =
-    teamId !== undefined
-      ? isInvalidTeamId || kickoff.isError
-        ? '팀 정보 확인 필요'
-        : (verifiedKickoff?.name ?? '팀 정보 확인 필요')
-      : team?.name;
-  const leaderName =
-    teamId !== undefined
-      ? isInvalidTeamId || kickoff.isError
-        ? '확인 필요'
-        : kickoff.isPending
-          ? '확인 중…'
-          : liveLeader
-            ? `${liveLeader.name ?? liveLeader.studentNumber} (${liveLeader.studentNumber})`
-            : '미확정'
-      : (legacyLeader?.name ?? '미확정');
+  const teamName = resolveProfileTeamName({
+    teamId,
+    isKickoffGated,
+    isInvalidTeamId,
+    isKickoffError: kickoff.isError,
+    kickoff: verifiedKickoff,
+    legacyTeamName: team?.name,
+  });
+  const leaderName = resolveProfileLeaderName({
+    teamId,
+    isKickoffGated,
+    isInvalidTeamId,
+    isKickoffError: kickoff.isError,
+    isKickoffPending: kickoff.isPending,
+    liveLeader,
+    legacyLeaderName: legacyLeader?.name,
+  });
+  const teamValue = resolveProfileTeamValue({
+    teamName,
+    isKickoffGated,
+    hasUnresolvedTeamMembership: !isDemo && context.status !== 'no-team',
+  });
 
   const openPasswordDialog = () => {
     onOpenChange(false);
@@ -298,18 +374,16 @@ function StudentProfilePopover({
         <div className={styles.profileDetailRow}>
           <dt>팀</dt>
           <dd>
-            {teamName ? (
+            {teamValue.isLink ? (
               <Link
                 className={styles.profileTeamLink}
                 to={ROUTES.STUDENT.TEAM}
                 onClick={() => onOpenChange(false)}
               >
-                {teamName}
+                {teamValue.label}
               </Link>
-            ) : !isDemo && context.status !== 'no-team' ? (
-              '팀 소속 확인 필요'
             ) : (
-              '미배정'
+              teamValue.label
             )}
           </dd>
         </div>

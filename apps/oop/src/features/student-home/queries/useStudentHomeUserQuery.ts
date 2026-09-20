@@ -8,8 +8,15 @@ import {
 
 import { studentHomeKeys } from './studentHomeKeys';
 
+type StudentHomeUserQueryOptions = {
+  refetchInterval?: number | false;
+};
+
 /** Keep the documented /me identity separate from legacy demo presentation data. */
-export function useStudentHomeUserQuery(enabled = true) {
+export function useStudentHomeUserQuery(
+  enabled = true,
+  options: StudentHomeUserQueryOptions = {},
+) {
   const authenticated = useAuthStore(selectHasAuthenticatedSession);
   const role = useAuthStore(state => state.sessionRole);
   const studentNumber = useAuthStore(state => state.currentUser?.studentNumber);
@@ -18,6 +25,7 @@ export function useStudentHomeUserQuery(enabled = true) {
     queryKey: studentHomeKeys.user(studentNumber, role),
     queryFn: () => fetchCurrentUser('STUDENT'),
     enabled: enabled && authenticated && role === 'STUDENT',
+    refetchInterval: options.refetchInterval,
     retry: false,
   });
 }

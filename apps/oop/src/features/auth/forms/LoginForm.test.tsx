@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { useAuthStore } from '../authStore';
 import LoginForm from './LoginForm';
 
-import { demoAdmin } from '~/mocks/data/users';
+import { demoAdmin, demoStudent } from '~/mocks/data/users';
 
 const navigate = vi.fn();
 const search: { redirect?: string } = {};
@@ -27,6 +27,7 @@ vi.mock('../queries/useLoginMutation', () => ({
 }));
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   navigate.mockReset();
   mutateAsync.mockReset();
   delete search.redirect;
@@ -85,7 +86,65 @@ describe('LoginForm', () => {
     expect(useAuthStore.getState().sessionEndReason).toBeNull();
   });
 
-  it('로그인 뒤 redirect 검색값으로 원래 화면에 돌아간다', async () => {
+  it('팀 미배정 학생 로그인은 /student redirect보다 팀 온보딩을 우선한다', async () => {
+    search.redirect = '/student';
+    mutateAsync.mockResolvedValue({ ...demoStudent, teamId: null });
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText(/학번/), demoStudent.studentNumber);
+    await user.type(screen.getByLabelText(/비밀번호/), 'password');
+    await user.click(screen.getByRole('button', { name: '로그인' }));
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith({ to: '/onboarding/team' }),
+    );
+    expect(navigate).not.toHaveBeenCalledWith({ href: '/student' });
+  });
+
+  it('배정된 학생 로그인은 학생 redirect로 돌아간다', async () => {
+    search.redirect = '/student/meetings';
+    mutateAsync.mockResolvedValue({ ...demoStudent, teamId: '7' });
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText(/학번/), demoStudent.studentNumber);
+    await user.type(screen.getByLabelText(/비밀번호/), 'password');
+    await user.click(screen.getByRole('button', { name: '로그인' }));
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith({ href: '/student/meetings' }),
+    );
+  });
+
+  it('실서버 모드의 공개 전 배정 학생은 학생 redirect 대신 온보딩으로 이동한다', async () => {
+    vi.stubEnv('VITE_ENABLE_MSW', 'false');
+    search.redirect = '/student/meetings';
+    mutateAsync.mockResolvedValue({
+      ...demoStudent,
+      teamId: '7',
+      sections: [
+        {
+          ...demoStudent.sections[0]!,
+          contactVisibleFrom: '2099-01-01T00:00:00+09:00',
+          contactVisibleUntil: null,
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText(/학번/), demoStudent.studentNumber);
+    await user.type(screen.getByLabelText(/비밀번호/), 'password');
+    await user.click(screen.getByRole('button', { name: '로그인' }));
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith({ to: '/onboarding/team' }),
+    );
+    expect(navigate).not.toHaveBeenCalledWith({ href: '/student/meetings' });
+  });
+
+  it('운영자 로그인 뒤 redirect 검색값으로 원래 화면에 돌아간다', async () => {
     search.redirect = '/admin/milestones/new?sectionId=1';
     mutateAsync.mockResolvedValue(demoAdmin);
     const user = userEvent.setup();
