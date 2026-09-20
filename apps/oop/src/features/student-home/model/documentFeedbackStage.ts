@@ -10,16 +10,14 @@ export type { DocumentFeedbackStage };
  */
 export const documentFeedbackStageCopy = {
   proposal: {
-    awaiting:
-      '제출 완료 · 교수/조교 피드백을 기다리고 있어요. 피드백이 오면 이곳에서 답변할 수 있어요.',
-    checking: '제출 완료 · 피드백 상태를 확인하는 중이에요.',
-    checkFailed: '제출 완료 · 피드백 상태를 불러오지 못했어요.',
+    awaiting: '제출 완료 · 피드백 대기 중',
+    checking: '제출 완료 · 상태 확인 중',
+    checkFailed: '제출 완료 · 상태 확인 실패',
   },
   midReport: {
-    awaiting:
-      '제출 완료 · 대면 피드백을 받은 뒤 반영 방향을 보내면 피드백 대화가 시작돼요.',
-    checking: '제출 완료 · 피드백 상태를 확인하는 중이에요.',
-    checkFailed: '제출 완료 · 피드백 상태를 불러오지 못했어요.',
+    awaiting: '제출 완료 · 반영 방향을 보내 주세요.',
+    checking: '제출 완료 · 상태 확인 중',
+    checkFailed: '제출 완료 · 상태 확인 실패',
   },
 } as const;
 

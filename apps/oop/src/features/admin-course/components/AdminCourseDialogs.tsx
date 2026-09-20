@@ -1011,4 +1011,3 @@ export function CourseDeleteDialog({
     </Dialog>
   );
 }
-

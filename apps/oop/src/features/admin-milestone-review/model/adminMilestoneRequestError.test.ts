@@ -20,7 +20,10 @@ function axiosError(status: number, data: unknown) {
 describe('adminMilestoneRequestError', () => {
   it('서버 message가 있으면 그대로 사용하고 상태·코드를 덧붙인다', () => {
     const error = toAdminMilestoneRequestError(
-      axiosError(400, { code: 'INVALID_INPUT', message: '제목이 너무 깁니다.' }),
+      axiosError(400, {
+        code: 'INVALID_INPUT',
+        message: '제목이 너무 깁니다.',
+      }),
     );
     expect(error).toEqual({
       code: 'INVALID_INPUT',
@@ -47,8 +50,8 @@ describe('adminMilestoneRequestError', () => {
     expect(toAdminMilestoneRequestError(new Error('Network Error'))).toEqual({
       message: 'Network Error',
     });
-    expect(toAdminMilestoneRequestError(axiosError(502, null)).message).toContain(
-      '서버가 응답하지 않습니다',
-    );
+    expect(
+      toAdminMilestoneRequestError(axiosError(502, null)).message,
+    ).toContain('서버가 응답하지 않습니다');
   });
 });

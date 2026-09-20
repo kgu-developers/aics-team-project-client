@@ -10,7 +10,7 @@ import {
 } from '@aics/design-system';
 import { useEffect, useState } from 'react';
 
-import { seoulInstant } from '~/shared/lib/seoulInstant';
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -43,17 +43,6 @@ type SubmissionFilePanelProps = {
 const READ_ONLY_MESSAGE =
   '읽기 전용 상태에서는 파일을 선택하거나 교체할 수 없어요.';
 
-const submittedAtFormatter = new Intl.DateTimeFormat('ko-KR', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-  timeZone: 'Asia/Seoul',
-});
-
-function formatSubmittedAt(value: string) {
-  const instant = seoulInstant(value);
-  return Number.isNaN(instant) ? value : submittedAtFormatter.format(instant);
-}
-
 function SubmittedFileSummary({ submission }: { submission: Submission }) {
   const version = submission.currentVersion;
 
@@ -73,8 +62,8 @@ function SubmittedFileSummary({ submission }: { submission: Submission }) {
       ))}
       <Text color='secondary' type='supporting'>
         제출자 {version.submittedBy.name} · 제출{' '}
-        {formatSubmittedAt(version.submittedAt)} · 수정{' '}
-        {formatSubmittedAt(version.updatedAt)}
+        {formatSeoulDateTime(version.submittedAt)} · 수정{' '}
+        {formatSeoulDateTime(version.updatedAt)}
       </Text>
     </VStack>
   );

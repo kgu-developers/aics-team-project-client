@@ -13,6 +13,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminNoticesRouteImport } from './routes/admin.notices'
+import { Route as StudentEditorProposalSectionRouteImport } from './routes/student.editor.proposal.$section'
+import { Route as StudentEditorMidReviewSectionRouteImport } from './routes/student.editor.mid-review.$section'
 
 const StudentLazyRouteImport = createFileRoute('/student')()
 const AdminLazyRouteImport = createFileRoute('/admin')()
@@ -106,14 +108,8 @@ const AdminNoticesNoticeIdIndexLazyRouteImport = createFileRoute(
 const StudentMeetingsMeetingIdEditLazyRouteImport = createFileRoute(
   '/student/meetings/$meetingId/edit',
 )()
-const StudentEditorProposalSectionLazyRouteImport = createFileRoute(
-  '/student/editor/proposal/$section',
-)()
 const StudentEditorPresentationSectionLazyRouteImport = createFileRoute(
   '/student/editor/presentation/$section',
-)()
-const StudentEditorMidReviewSectionLazyRouteImport = createFileRoute(
-  '/student/editor/mid-review/$section',
 )()
 const AdminNoticesNoticeIdEditLazyRouteImport = createFileRoute(
   '/admin/notices/$noticeId/edit',
@@ -471,16 +467,6 @@ const StudentMeetingsMeetingIdEditLazyRoute =
       (d) => d.Route,
     ),
   )
-const StudentEditorProposalSectionLazyRoute =
-  StudentEditorProposalSectionLazyRouteImport.update({
-    id: '/editor/proposal/$section',
-    path: '/editor/proposal/$section',
-    getParentRoute: () => StudentLazyRoute,
-  } as any).lazy(() =>
-    import('./routes/student.editor.proposal.$section.lazy').then(
-      (d) => d.Route,
-    ),
-  )
 const StudentEditorPresentationSectionLazyRoute =
   StudentEditorPresentationSectionLazyRouteImport.update({
     id: '/editor/presentation/$section',
@@ -488,16 +474,6 @@ const StudentEditorPresentationSectionLazyRoute =
     getParentRoute: () => StudentLazyRoute,
   } as any).lazy(() =>
     import('./routes/student.editor.presentation.$section.lazy').then(
-      (d) => d.Route,
-    ),
-  )
-const StudentEditorMidReviewSectionLazyRoute =
-  StudentEditorMidReviewSectionLazyRouteImport.update({
-    id: '/editor/mid-review/$section',
-    path: '/editor/mid-review/$section',
-    getParentRoute: () => StudentLazyRoute,
-  } as any).lazy(() =>
-    import('./routes/student.editor.mid-review.$section.lazy').then(
       (d) => d.Route,
     ),
   )
@@ -516,6 +492,26 @@ const AdminMessagesTeamsTeamIdLazyRoute =
     getParentRoute: () => AdminMessagesLazyRoute,
   } as any).lazy(() =>
     import('./routes/admin.messages.teams.$teamId.lazy').then((d) => d.Route),
+  )
+const StudentEditorProposalSectionRoute =
+  StudentEditorProposalSectionRouteImport.update({
+    id: '/editor/proposal/$section',
+    path: '/editor/proposal/$section',
+    getParentRoute: () => StudentLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/student.editor.proposal.$section.lazy').then(
+      (d) => d.Route,
+    ),
+  )
+const StudentEditorMidReviewSectionRoute =
+  StudentEditorMidReviewSectionRouteImport.update({
+    id: '/editor/mid-review/$section',
+    path: '/editor/mid-review/$section',
+    getParentRoute: () => StudentLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/student.editor.mid-review.$section.lazy').then(
+      (d) => d.Route,
+    ),
   )
 const AdminEvaluationsEvaluationTypeTeamsTeamIdLazyRoute =
   AdminEvaluationsEvaluationTypeTeamsTeamIdLazyRouteImport.update({
@@ -573,11 +569,11 @@ export interface FileRoutesByFullPath {
   '/onboarding/team/': typeof OnboardingTeamIndexLazyRoute
   '/student/meetings/': typeof StudentMeetingsIndexLazyRoute
   '/student/notices/': typeof StudentNoticesIndexLazyRoute
+  '/student/editor/mid-review/$section': typeof StudentEditorMidReviewSectionRoute
+  '/student/editor/proposal/$section': typeof StudentEditorProposalSectionRoute
   '/admin/messages/teams/$teamId': typeof AdminMessagesTeamsTeamIdLazyRoute
   '/admin/notices/$noticeId/edit': typeof AdminNoticesNoticeIdEditLazyRoute
-  '/student/editor/mid-review/$section': typeof StudentEditorMidReviewSectionLazyRoute
   '/student/editor/presentation/$section': typeof StudentEditorPresentationSectionLazyRoute
-  '/student/editor/proposal/$section': typeof StudentEditorProposalSectionLazyRoute
   '/student/meetings/$meetingId/edit': typeof StudentMeetingsMeetingIdEditLazyRoute
   '/admin/notices/$noticeId/': typeof AdminNoticesNoticeIdIndexLazyRoute
   '/student/meetings/$meetingId/': typeof StudentMeetingsMeetingIdIndexLazyRoute
@@ -616,11 +612,11 @@ export interface FileRoutesByTo {
   '/onboarding/team': typeof OnboardingTeamIndexLazyRoute
   '/student/meetings': typeof StudentMeetingsIndexLazyRoute
   '/student/notices': typeof StudentNoticesIndexLazyRoute
+  '/student/editor/mid-review/$section': typeof StudentEditorMidReviewSectionRoute
+  '/student/editor/proposal/$section': typeof StudentEditorProposalSectionRoute
   '/admin/messages/teams/$teamId': typeof AdminMessagesTeamsTeamIdLazyRoute
   '/admin/notices/$noticeId/edit': typeof AdminNoticesNoticeIdEditLazyRoute
-  '/student/editor/mid-review/$section': typeof StudentEditorMidReviewSectionLazyRoute
   '/student/editor/presentation/$section': typeof StudentEditorPresentationSectionLazyRoute
-  '/student/editor/proposal/$section': typeof StudentEditorProposalSectionLazyRoute
   '/student/meetings/$meetingId/edit': typeof StudentMeetingsMeetingIdEditLazyRoute
   '/admin/notices/$noticeId': typeof AdminNoticesNoticeIdIndexLazyRoute
   '/student/meetings/$meetingId': typeof StudentMeetingsMeetingIdIndexLazyRoute
@@ -673,11 +669,11 @@ export interface FileRoutesById {
   '/onboarding/team/': typeof OnboardingTeamIndexLazyRoute
   '/student/meetings/': typeof StudentMeetingsIndexLazyRoute
   '/student/notices/': typeof StudentNoticesIndexLazyRoute
+  '/student/editor/mid-review/$section': typeof StudentEditorMidReviewSectionRoute
+  '/student/editor/proposal/$section': typeof StudentEditorProposalSectionRoute
   '/admin/messages/teams/$teamId': typeof AdminMessagesTeamsTeamIdLazyRoute
   '/admin/notices/$noticeId/edit': typeof AdminNoticesNoticeIdEditLazyRoute
-  '/student/editor/mid-review/$section': typeof StudentEditorMidReviewSectionLazyRoute
   '/student/editor/presentation/$section': typeof StudentEditorPresentationSectionLazyRoute
-  '/student/editor/proposal/$section': typeof StudentEditorProposalSectionLazyRoute
   '/student/meetings/$meetingId/edit': typeof StudentMeetingsMeetingIdEditLazyRoute
   '/admin/notices/$noticeId/': typeof AdminNoticesNoticeIdIndexLazyRoute
   '/student/meetings/$meetingId/': typeof StudentMeetingsMeetingIdIndexLazyRoute
@@ -731,11 +727,11 @@ export interface FileRouteTypes {
     | '/onboarding/team/'
     | '/student/meetings/'
     | '/student/notices/'
+    | '/student/editor/mid-review/$section'
+    | '/student/editor/proposal/$section'
     | '/admin/messages/teams/$teamId'
     | '/admin/notices/$noticeId/edit'
-    | '/student/editor/mid-review/$section'
     | '/student/editor/presentation/$section'
-    | '/student/editor/proposal/$section'
     | '/student/meetings/$meetingId/edit'
     | '/admin/notices/$noticeId/'
     | '/student/meetings/$meetingId/'
@@ -774,11 +770,11 @@ export interface FileRouteTypes {
     | '/onboarding/team'
     | '/student/meetings'
     | '/student/notices'
+    | '/student/editor/mid-review/$section'
+    | '/student/editor/proposal/$section'
     | '/admin/messages/teams/$teamId'
     | '/admin/notices/$noticeId/edit'
-    | '/student/editor/mid-review/$section'
     | '/student/editor/presentation/$section'
-    | '/student/editor/proposal/$section'
     | '/student/meetings/$meetingId/edit'
     | '/admin/notices/$noticeId'
     | '/student/meetings/$meetingId'
@@ -830,11 +826,11 @@ export interface FileRouteTypes {
     | '/onboarding/team/'
     | '/student/meetings/'
     | '/student/notices/'
+    | '/student/editor/mid-review/$section'
+    | '/student/editor/proposal/$section'
     | '/admin/messages/teams/$teamId'
     | '/admin/notices/$noticeId/edit'
-    | '/student/editor/mid-review/$section'
     | '/student/editor/presentation/$section'
-    | '/student/editor/proposal/$section'
     | '/student/meetings/$meetingId/edit'
     | '/admin/notices/$noticeId/'
     | '/student/meetings/$meetingId/'
@@ -1188,25 +1184,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StudentMeetingsMeetingIdEditLazyRouteImport
       parentRoute: typeof StudentMeetingsMeetingIdLazyRoute
     }
-    '/student/editor/proposal/$section': {
-      id: '/student/editor/proposal/$section'
-      path: '/editor/proposal/$section'
-      fullPath: '/student/editor/proposal/$section'
-      preLoaderRoute: typeof StudentEditorProposalSectionLazyRouteImport
-      parentRoute: typeof StudentLazyRoute
-    }
     '/student/editor/presentation/$section': {
       id: '/student/editor/presentation/$section'
       path: '/editor/presentation/$section'
       fullPath: '/student/editor/presentation/$section'
       preLoaderRoute: typeof StudentEditorPresentationSectionLazyRouteImport
-      parentRoute: typeof StudentLazyRoute
-    }
-    '/student/editor/mid-review/$section': {
-      id: '/student/editor/mid-review/$section'
-      path: '/editor/mid-review/$section'
-      fullPath: '/student/editor/mid-review/$section'
-      preLoaderRoute: typeof StudentEditorMidReviewSectionLazyRouteImport
       parentRoute: typeof StudentLazyRoute
     }
     '/admin/notices/$noticeId/edit': {
@@ -1222,6 +1204,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/messages/teams/$teamId'
       preLoaderRoute: typeof AdminMessagesTeamsTeamIdLazyRouteImport
       parentRoute: typeof AdminMessagesLazyRoute
+    }
+    '/student/editor/proposal/$section': {
+      id: '/student/editor/proposal/$section'
+      path: '/editor/proposal/$section'
+      fullPath: '/student/editor/proposal/$section'
+      preLoaderRoute: typeof StudentEditorProposalSectionRouteImport
+      parentRoute: typeof StudentLazyRoute
+    }
+    '/student/editor/mid-review/$section': {
+      id: '/student/editor/mid-review/$section'
+      path: '/editor/mid-review/$section'
+      fullPath: '/student/editor/mid-review/$section'
+      preLoaderRoute: typeof StudentEditorMidReviewSectionRouteImport
+      parentRoute: typeof StudentLazyRoute
     }
     '/admin/evaluations/$evaluationType/teams/$teamId': {
       id: '/admin/evaluations/$evaluationType/teams/$teamId'
@@ -1424,9 +1420,9 @@ interface StudentLazyRouteChildren {
   StudentTeamLazyRoute: typeof StudentTeamLazyRoute
   StudentIndexLazyRoute: typeof StudentIndexLazyRoute
   StudentTeamActionPlansLazyRoute: typeof StudentTeamActionPlansLazyRoute
-  StudentEditorMidReviewSectionLazyRoute: typeof StudentEditorMidReviewSectionLazyRoute
+  StudentEditorMidReviewSectionRoute: typeof StudentEditorMidReviewSectionRoute
+  StudentEditorProposalSectionRoute: typeof StudentEditorProposalSectionRoute
   StudentEditorPresentationSectionLazyRoute: typeof StudentEditorPresentationSectionLazyRoute
-  StudentEditorProposalSectionLazyRoute: typeof StudentEditorProposalSectionLazyRoute
 }
 
 const StudentLazyRouteChildren: StudentLazyRouteChildren = {
@@ -1439,11 +1435,10 @@ const StudentLazyRouteChildren: StudentLazyRouteChildren = {
   StudentTeamLazyRoute: StudentTeamLazyRoute,
   StudentIndexLazyRoute: StudentIndexLazyRoute,
   StudentTeamActionPlansLazyRoute: StudentTeamActionPlansLazyRoute,
-  StudentEditorMidReviewSectionLazyRoute:
-    StudentEditorMidReviewSectionLazyRoute,
+  StudentEditorMidReviewSectionRoute: StudentEditorMidReviewSectionRoute,
+  StudentEditorProposalSectionRoute: StudentEditorProposalSectionRoute,
   StudentEditorPresentationSectionLazyRoute:
     StudentEditorPresentationSectionLazyRoute,
-  StudentEditorProposalSectionLazyRoute: StudentEditorProposalSectionLazyRoute,
 }
 
 const StudentLazyRouteWithChildren = StudentLazyRoute._addFileChildren(

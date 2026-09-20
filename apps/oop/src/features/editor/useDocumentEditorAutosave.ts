@@ -24,6 +24,7 @@ type Draft = {
 type PreservedDraft = Pick<Draft, 'fields' | 'revision'>;
 
 type UseDocumentEditorAutosaveInput<D extends DocumentEditorDocument> = {
+  autosave?: boolean;
   block: D['blocks'][number] | null;
   canSave: boolean;
   retryVersionConflict?: boolean;
@@ -40,6 +41,7 @@ type UseDocumentEditorAutosaveInput<D extends DocumentEditorDocument> = {
  * 보낸 저장 응답이 이후 입력을 덮어쓰지 않는다.
  */
 export function useDocumentEditorAutosave<D extends DocumentEditorDocument>({
+  autosave = true,
   block,
   canSave,
   document,
@@ -353,9 +355,9 @@ export function useDocumentEditorAutosave<D extends DocumentEditorDocument>({
         revision: previous.revision + 1,
       });
       forceRerender();
-      scheduleSave(block.key);
+      if (autosave) scheduleSave(block.key);
     },
-    [block, forceRerender, scheduleSave],
+    [autosave, block, forceRerender, scheduleSave],
   );
 
   useEffect(() => {
@@ -369,7 +371,7 @@ export function useDocumentEditorAutosave<D extends DocumentEditorDocument>({
     return () => {
       clearTimer(activeBlockKey);
       const mayFlushAfterExit =
-        savePermissionsRef.current.get(activeBlockKey) === true;
+        autosave && savePermissionsRef.current.get(activeBlockKey) === true;
       if (mayFlushAfterExit) {
         const exitFlush = flushBlock(activeBlockKey, true);
         exitFlushesRef.current.set(activeBlockIdentity, exitFlush);
@@ -382,7 +384,7 @@ export function useDocumentEditorAutosave<D extends DocumentEditorDocument>({
       }
       savePermissionsRef.current.set(activeBlockKey, false);
     };
-  }, [activeBlockIdentity, activeBlockKey, clearTimer, flushBlock]);
+  }, [activeBlockIdentity, activeBlockKey, autosave, clearTimer, flushBlock]);
 
   useEffect(() => {
     mountedRef.current = true;

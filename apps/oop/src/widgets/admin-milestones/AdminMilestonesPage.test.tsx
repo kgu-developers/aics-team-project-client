@@ -78,7 +78,9 @@ describe('AdminMilestonesPage', () => {
     const user = userEvent.setup();
     const router = renderPage();
 
-    const row = await screen.findByRole('row', { name: '제안서 마일스톤 보기' });
+    const row = await screen.findByRole('row', {
+      name: '제안서 마일스톤 보기',
+    });
     const trigger = screen.getByRole('combobox', {
       name: 'OOP-01 제안서 공개 상태',
     });

@@ -2,6 +2,8 @@ import type { AdminSubmissionProposalFeedbackDto } from '@aics/api-client';
 import { Button, Card, Heading, Text, TextArea } from '@aics/design-system';
 import { useEffect, useState } from 'react';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+
 import * as styles from './AdminProposalFeedbackPanel.css';
 
 type AdminProposalFeedbackPanelProps = {
@@ -43,7 +45,7 @@ export function AdminProposalFeedbackPanel({
             {history.map(entry => (
               <div className={styles.historyItem} key={entry.feedbackId}>
                 <Text className={styles.meta}>
-                  {entry.authorName} · {entry.createdAt}
+                  {entry.authorName} · {formatSeoulDateTime(entry.createdAt)}
                 </Text>
                 <Text>{entry.content}</Text>
               </div>
@@ -60,7 +62,7 @@ export function AdminProposalFeedbackPanel({
             <>
               <Text className={styles.meta}>
                 {latestStudentResponse.authorName} ·{' '}
-                {latestStudentResponse.createdAt}
+                {formatSeoulDateTime(latestStudentResponse.createdAt)}
               </Text>
               <Text>{latestStudentResponse.content}</Text>
             </>

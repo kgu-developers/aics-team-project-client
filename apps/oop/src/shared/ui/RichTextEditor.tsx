@@ -109,7 +109,7 @@ export default function RichTextEditor({
       <Text id={labelId} weight='medium'>
         {label}
       </Text>
-      <div aria-label={`${label} 서식`} className={styles.toolbar} role='toolbar'>
+      <div aria-label={`${label} 서식`} className={styles.toolbar} role='group'>
         {tools.map(({ icon: Icon, label: toolLabel, run }) => (
           <IconButton
             icon={<Icon aria-hidden='true' size={18} />}

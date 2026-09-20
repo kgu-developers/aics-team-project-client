@@ -9,7 +9,7 @@ import {
   Text,
 } from '@aics/design-system';
 
-import { seoulInstant } from '~/shared/lib/seoulInstant';
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import * as styles from './SubmissionMaterials.css';
 
@@ -18,17 +18,6 @@ type SubmissionMaterialsProps = {
   metadata?: StudentHomeSubmissionMetadata;
   showMetadataTitle?: boolean;
 };
-
-const submittedAtFormatter = new Intl.DateTimeFormat('ko-KR', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-  timeZone: 'Asia/Seoul',
-});
-
-function formatSubmittedAt(value: string) {
-  const instant = seoulInstant(value);
-  return Number.isNaN(instant) ? value : submittedAtFormatter.format(instant);
-}
 
 export default function SubmissionMaterials({
   materials,
@@ -96,10 +85,10 @@ export default function SubmissionMaterials({
             {metadata.submittedBy}
           </MetadataListItem>
           <MetadataListItem label='제출 일시'>
-            {formatSubmittedAt(metadata.submittedAt)}
+            {formatSeoulDateTime(metadata.submittedAt)}
           </MetadataListItem>
           <MetadataListItem label='변경 일시'>
-            {formatSubmittedAt(metadata.updatedAt)}
+            {formatSeoulDateTime(metadata.updatedAt)}
           </MetadataListItem>
         </MetadataList>
       ) : null}

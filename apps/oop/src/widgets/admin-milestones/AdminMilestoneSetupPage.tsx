@@ -1138,6 +1138,10 @@ export default function AdminMilestoneSetupPage() {
                                 : ''
                             }`
                           : `생성에 실패했습니다.${
+                              result.failureMessage
+                                ? ` ${result.failureMessage}`
+                                : ''
+                            }${
                               result.error
                                 ? ` ${formatAdminMilestoneRequestError(result.error)}`
                                 : ''

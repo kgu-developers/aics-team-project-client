@@ -392,7 +392,7 @@ test('keeps the stage 06 backend thread 500 and later thread failures unexpected
   assert.deepEqual(unexpectedConsoleErrors(errors, withRecovery), errors);
 });
 
-test('allows only the exact initial anonymous refresh 403 for each fresh actor', () => {
+test('allows only the exact initial anonymous refresh 401/403 for each fresh actor', () => {
   const refresh = {
     stage: '01',
     actor: 'admin',
@@ -410,12 +410,27 @@ test('allows only the exact initial anonymous refresh 403 for each fresh actor',
     ),
     [],
   );
+  const unauthorizedRefresh = { ...refresh, status: 401 };
+  assert.deepEqual(
+    unexpectedConsoleErrors(
+      [consoleError(unauthorizedRefresh)],
+      [unauthorizedRefresh],
+    ),
+    [],
+  );
+  const chainedUnauthorized = { ...unauthorizedRefresh };
+  assert.deepEqual(
+    unexpectedConsoleErrors(
+      [consoleError(refresh), consoleError(chainedUnauthorized)],
+      [refresh, chainedUnauthorized, login],
+    ),
+    [],
+  );
   for (const changed of [
     { method: 'GET' },
     { path: '/api/v1/oop/auth/refresh' },
     { path: '/api/v1/auth/refresh/extra' },
     { path: '/api/v1/admin/courses' },
-    { status: 401 },
     { status: 404 },
     { status: 500 },
   ]) {
@@ -451,6 +466,145 @@ test('allows only the exact initial anonymous refresh 403 for each fresh actor',
   assert.deepEqual(unexpectedConsoleErrors([consoleError(refresh)], []), [
     consoleError(refresh),
   ]);
+});
+
+test('allows an expired admin refresh only when same-stage recovery immediately logs in', () => {
+  const previousLogin = {
+    stage: '01',
+    actor: 'admin',
+    method: 'POST',
+    path: '/api/v1/auth/login',
+    status: 200,
+  };
+  const expiredRefresh = {
+    stage: 'M09',
+    actor: 'admin',
+    method: 'POST',
+    path: '/api/v1/auth/refresh',
+    status: 401,
+  };
+  const recoveryLogin = { ...previousLogin, stage: 'M09' };
+  assert.deepEqual(
+    unexpectedConsoleErrors(
+      [consoleError(expiredRefresh)],
+      [previousLogin, expiredRefresh, recoveryLogin],
+    ),
+    [],
+  );
+  const secondRefresh = { ...expiredRefresh, status: 403 };
+  assert.deepEqual(
+    unexpectedConsoleErrors(
+      [consoleError(expiredRefresh), consoleError(secondRefresh)],
+      [previousLogin, expiredRefresh, secondRefresh, recoveryLogin],
+    ),
+    [],
+  );
+
+  for (const suffix of [
+    [],
+    [
+      {
+        ...expiredRefresh,
+        method: 'GET',
+        path: '/api/v1/admin/meeting-records',
+        status: 200,
+      },
+      recoveryLogin,
+    ],
+    [{ ...recoveryLogin, actor: 'leader' }],
+    [{ ...recoveryLogin, stage: 'M12' }],
+    [{ ...recoveryLogin, status: 401 }],
+  ]) {
+    const error = consoleError(expiredRefresh);
+    assert.deepEqual(
+      unexpectedConsoleErrors(
+        [error],
+        [previousLogin, expiredRefresh, ...suffix],
+      ),
+      [error],
+    );
+  }
+});
+
+test('allows only stage 18 admin missing-project reads proven by the peer list and another team project', () => {
+  const peerList = {
+    stage: '18',
+    actor: 'admin',
+    method: 'GET',
+    path: '/api/v1/admin/sections/44/peer-evaluations',
+    status: 200,
+  };
+  const missing = {
+    stage: '18',
+    actor: 'admin',
+    method: 'GET',
+    path: '/api/v1/teams/77/project',
+    status: 404,
+  };
+  const existing = {
+    ...missing,
+    path: '/api/v1/teams/76/project',
+    status: 200,
+  };
+  assert.deepEqual(
+    unexpectedConsoleErrors(
+      [consoleError(missing)],
+      [peerList, missing, existing],
+    ),
+    [],
+  );
+
+  for (const network of [
+    [missing, existing],
+    [peerList, missing],
+    [peerList, existing, missing],
+    [peerList, missing, { ...existing, path: '/api/v1/teams/77/project' }],
+    [{ ...peerList, status: 404 }, missing, existing],
+    [{ ...peerList, stage: '17' }, missing, existing],
+  ]) {
+    const error = consoleError(missing);
+    assert.deepEqual(unexpectedConsoleErrors([error], network), [error]);
+  }
+  for (const changed of [
+    { stage: '17' },
+    { actor: 'leader' },
+    { method: 'POST' },
+    { status: 403 },
+    { path: '/api/v1/teams/077/project' },
+    { path: '/api/v1/teams/77/project/extra' },
+  ]) {
+    const unexpected = { ...missing, ...changed };
+    const error = consoleError(unexpected);
+    assert.deepEqual(
+      unexpectedConsoleErrors([error], [peerList, unexpected, existing]),
+      [error],
+    );
+  }
+});
+
+test('allows only stage 06 student reads of the not-yet-created current mid-report', () => {
+  const missing = {
+    stage: '06',
+    actor: 'leader',
+    method: 'GET',
+    path: '/api/v1/mid-reports/current',
+    status: 404,
+  };
+  assert.deepEqual(
+    unexpectedConsoleErrors([consoleError(missing)], [missing]),
+    [],
+  );
+  for (const changed of [
+    { stage: '09' },
+    { actor: 'admin' },
+    { method: 'POST' },
+    { path: '/api/v1/mid-reports/1' },
+    { status: 403 },
+  ]) {
+    const unexpected = { ...missing, ...changed };
+    const error = consoleError(unexpected);
+    assert.deepEqual(unexpectedConsoleErrors([error], [unexpected]), [error]);
+  }
 });
 
 test('keeps uncorrelated resources, unexpected 403/404/500 and React/application errors as failures', () => {

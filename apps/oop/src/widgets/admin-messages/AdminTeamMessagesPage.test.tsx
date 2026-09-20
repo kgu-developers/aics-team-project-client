@@ -192,5 +192,5 @@ it('formats ISO message creation times in Seoul across midnight', async () => {
     ),
   );
   renderPage();
-  expect(await screen.findByText(/2026\.09\.02 08:30/)).toBeVisible();
+  expect(await screen.findByText(/2026-09-02\/08:30/)).toBeVisible();
 });

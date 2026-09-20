@@ -25,6 +25,7 @@ import DocumentAccessNotice from '~/features/editor/DocumentAccessNotice';
 import DocumentActionBar from '~/features/editor/DocumentActionBar';
 import DocumentEditorLayout from '~/features/editor/DocumentEditorLayout';
 import { documentRequestErrorMessage } from '~/features/editor/documentRequestErrorMessage';
+import type { EditorReturnContext } from '~/features/editor/editorReturnContext';
 import { useDocumentSectionLock } from '~/features/editor/queries';
 
 import {
@@ -45,8 +46,10 @@ import {
 } from './queries/projectProposalKeys';
 
 export default function ProjectProposalEditorPage({
+  returnTo,
   section,
 }: {
+  returnTo?: EditorReturnContext;
   section: string;
 }) {
   const session = useAuthStore();
@@ -93,6 +96,7 @@ export default function ProjectProposalEditorPage({
         section,
       ])}
       project={query.data}
+      returnTo={returnTo}
       section={section}
     />
   );
@@ -100,9 +104,11 @@ export default function ProjectProposalEditorPage({
 
 function ProjectProposalDocument({
   project,
+  returnTo,
   section,
 }: {
   project: ProjectProposalResponse;
+  returnTo?: EditorReturnContext;
   section: string;
 }) {
   const session = useAuthStore();
@@ -195,6 +201,7 @@ function ProjectProposalDocument({
           {project.teamOperation.name} · {project.title}
         </Text>
       }
+      returnTo={returnTo}
       sections={EDITOR_DOCS.proposal.sections.map(item => {
         const type = proposalSectionBySlug[item.slug];
         const state = states.data?.contents.find(

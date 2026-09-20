@@ -190,6 +190,7 @@ describe('KD3-92 학생 평가 화면', () => {
 
   it('최종 제출 충돌 시 성공 처리하지 않고 작성 내용을 유지한다', async () => {
     const user = userEvent.setup();
+    const submit = vi.fn();
     const answer = {
       kind: 'TEAMMATE_CONTRIBUTION',
       targetUserId: '20260003',
@@ -222,6 +223,7 @@ describe('KD3-92 학생 평가 화면', () => {
       http.post(
         `${API_BASE_URL}${ENDPOINTS.EVALUATION.PEER_RESPONSES(':formId')}`,
         async ({ request }) => {
+          submit();
           expect(await request.json()).toMatchObject({
             submit: true,
             selfContribution: '테스트 역할',
@@ -243,6 +245,7 @@ describe('KD3-92 학생 평가 화면', () => {
     );
     renderPage(<PeerEvaluationPage />);
     await user.click(await screen.findByRole('button', { name: '제출하기' }));
+    await user.click(screen.getByRole('button', { name: '최종 제출' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(
       '상호평가를 제출하지 못했어요. 요청이 기존 데이터와 충돌합니다.',
     );
@@ -250,6 +253,16 @@ describe('KD3-92 학생 평가 화면', () => {
     expect(
       screen.queryByText('상호평가를 제출했어요.'),
     ).not.toBeInTheDocument();
+    expect(submit).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: '제출하기' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: '제출하기' }));
+    const retryConfirmation = screen.getByRole('alertdialog', {
+      name: '상호평가 최종 제출 확인',
+    });
+    await user.click(
+      within(retryConfirmation).getByRole('button', { name: '계속 수정' }),
+    );
+    expect(submit).toHaveBeenCalledOnce();
     await user.click(screen.getByRole('button', { name: '수정' }));
     expect(screen.getByRole('textbox', { name: /기여도/ })).toHaveValue('100');
     expect(screen.getByRole('textbox', { name: /기여 내용/ })).toHaveValue(
@@ -321,6 +334,22 @@ describe('KD3-92 학생 평가 화면', () => {
 
     expect(screen.getByText('기여도 합계 100%')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '제출하기' }));
+    let confirmation = screen.getByRole('alertdialog', {
+      name: '상호평가 최종 제출 확인',
+    });
+    await user.click(
+      within(confirmation).getByRole('button', { name: '계속 수정' }),
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(screen.getByText('기여도 합계 100%')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '제출하기' }));
+    confirmation = screen.getByRole('alertdialog', {
+      name: '상호평가 최종 제출 확인',
+    });
+    await user.click(
+      within(confirmation).getByRole('button', { name: '최종 제출' }),
+    );
 
     expect(
       await screen.findByText('상호평가를 제출했어요.'),
@@ -517,6 +546,60 @@ describe('KD3-92 학생 평가 화면', () => {
     expect(
       screen.getByRole('button', { name: '평가 다시 제출' }),
     ).not.toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('제출한 발표 평가의 재제출은 확인 전 요청하지 않고 취소해도 점수를 유지한다', async () => {
+    const user = userEvent.setup();
+    const overview = getMyTeamEvaluations(demoStudent.studentNumber);
+    const submit = vi.fn(() => new HttpResponse(null, { status: 204 }));
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.MY_TEAM_EVALUATIONS(':milestoneId')}`,
+        () =>
+          HttpResponse.json({
+            ...overview,
+            evaluations: [
+              {
+                id: 1,
+                teamId: 1,
+                scores: teamEvaluationCriteria.map(criterion => ({
+                  criterionId: criterion.id,
+                  score: 4,
+                })),
+                submittedAt: '2026-11-10T15:00:00+09:00',
+              },
+            ],
+          }),
+      ),
+      http.put(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.TEAM_EVALUATION(':milestoneId', ':teamId')}`,
+        () => {
+          submit();
+          return HttpResponse.json({
+            id: 1,
+            teamId: 1,
+            scores: teamEvaluationCriteria.map(criterion => ({
+              criterionId: criterion.id,
+              score: 4,
+            })),
+            submittedAt: '2026-11-10T15:00:00+09:00',
+          });
+        },
+      ),
+    );
+    renderPresentationPage();
+    await user.click(await screen.findByRole('button', { name: '다음 팀' }));
+    const score = (await screen.findAllByRole('radio', { name: '4점' }))[0]!;
+
+    await user.click(screen.getByRole('button', { name: '평가 다시 제출' }));
+    expect(submit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: '계속 수정' }));
+    expect(score).toBeChecked();
+    expect(submit).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: '평가 다시 제출' }));
+    await user.click(screen.getByRole('button', { name: '다시 제출' }));
+    await waitFor(() => expect(submit).toHaveBeenCalledOnce());
   });
 
   it('마감 시각이 지나면 평가 기간 상태를 다시 읽어 입력을 잠근다', async () => {

@@ -23,7 +23,8 @@ import { useUpdateAdminSectionMilestoneEvaluationWindowMutation } from '~/featur
 import * as styles from './AdminMilestoneEvaluationWindowDialog.css';
 
 type DateTimeDraft = { date: string; time: string };
-type DateValue = `${number}${number}${number}${number}-${number}${number}-${number}${number}`;
+type DateValue =
+  `${number}${number}${number}${number}-${number}${number}-${number}${number}`;
 
 function toDraft(value: string | null | undefined): DateTimeDraft {
   const match = value ? /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(value) : null;
@@ -93,7 +94,9 @@ export default function AdminMilestoneEvaluationWindowDialog({
     milestone.schedule.evaluationClosesAt,
   );
 
-  async function submit(input: Parameters<typeof mutation.mutateAsync>[0]['input']) {
+  async function submit(
+    input: Parameters<typeof mutation.mutateAsync>[0]['input'],
+  ) {
     setFormError(undefined);
     try {
       await mutation.mutateAsync({
@@ -121,7 +124,8 @@ export default function AdminMilestoneEvaluationWindowDialog({
         dueAt: milestone.schedule.dueAt ?? '',
         evaluationClosesAt,
         evaluationOpensAt,
-        lateSubmissionUntil: milestone.schedule.lateSubmissionUntil ?? undefined,
+        lateSubmissionUntil:
+          milestone.schedule.lateSubmissionUntil ?? undefined,
         revisionUntil: milestone.schedule.revisionUntil ?? undefined,
       });
     } catch (error) {
@@ -153,8 +157,16 @@ export default function AdminMilestoneEvaluationWindowDialog({
             : ''}{' '}
           이후에 시작해야 합니다.
         </Text>
-        <DateTimeFields label='평가 시작' onChange={setOpensAt} value={opensAt} />
-        <DateTimeFields label='평가 종료' onChange={setClosesAt} value={closesAt} />
+        <DateTimeFields
+          label='평가 시작'
+          onChange={setOpensAt}
+          value={opensAt}
+        />
+        <DateTimeFields
+          label='평가 종료'
+          onChange={setClosesAt}
+          value={closesAt}
+        />
         {formError ? (
           <Text role='alert' type='supporting'>
             {formError}

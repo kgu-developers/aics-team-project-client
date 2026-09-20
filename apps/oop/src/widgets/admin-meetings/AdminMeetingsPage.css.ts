@@ -11,6 +11,8 @@ export const page = style({
   width: '100%',
 });
 
+export const pagination = style({ alignSelf: 'flex-end' });
+
 export const tableCard = style({
   overflowX: 'auto',
   padding: 0,

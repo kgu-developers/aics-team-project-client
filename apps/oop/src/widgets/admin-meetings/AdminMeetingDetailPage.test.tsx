@@ -146,7 +146,7 @@ it('formats an ISO rollover in Seoul without creating a local read record', asyn
     ),
   );
   renderPage();
-  await screen.findByText('2026.09.02 08:30');
+  await screen.findByText('2026-09-02/08:30');
   expect(
     localStorage.getItem(`aics:admin:read:${demoAdmin.id}:1:meetings`),
   ).toBeNull();

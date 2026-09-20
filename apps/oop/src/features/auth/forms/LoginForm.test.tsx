@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { StrictMode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { useAuthStore } from '../authStore';
@@ -63,6 +64,20 @@ describe('LoginForm', () => {
   it('다른 탭 로그아웃으로 세션이 끝났으면 그 이유를 한 번 안내한다', () => {
     useAuthStore.getState().clearSession('signed-out-elsewhere');
     render(<LoginForm />);
+
+    expect(
+      screen.getByText(/다른 탭이나 창에서 로그아웃되었습니다\./),
+    ).toHaveAttribute('role', 'status');
+    expect(useAuthStore.getState().sessionEndReason).toBeNull();
+  });
+
+  it('StrictMode에서도 세션 종료 이유를 삼키지 않고 안내한다', () => {
+    useAuthStore.getState().clearSession('signed-out-elsewhere');
+    render(
+      <StrictMode>
+        <LoginForm />
+      </StrictMode>,
+    );
 
     expect(
       screen.getByText(/다른 탭이나 창에서 로그아웃되었습니다\./),

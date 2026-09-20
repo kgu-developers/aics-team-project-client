@@ -75,6 +75,11 @@ export const actions = style({
   justifyContent: 'flex-end',
   marginTop: 8,
 });
+export const leaveDialog = style({
+  display: 'grid',
+  gap: tokens.spacing[4],
+  padding: tokens.spacing[5],
+});
 export const fields = style({
   display: 'flex',
   flexDirection: 'column',

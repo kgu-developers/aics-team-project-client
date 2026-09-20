@@ -1,5 +1,7 @@
 import type { StudentHomeMilestoneBody } from '@aics/core';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+
 import { useAuthStore } from '~/features/auth/authStore';
 import { isValidPositiveTeamId } from '~/features/team-assignment/queries/useTeamMemberContactsQuery';
 import { useTeamMessagesQuery } from '~/features/team-message/queries';
@@ -23,7 +25,7 @@ export function useProposalFeedbackQuery(body: ProposalFeedbackBody) {
     feedback: query.isSuccess
       ? query.data.map(message => ({
           id: String(message.id),
-          title: `${message.senderName?.trim() || message.senderId} (${message.createdAt})`,
+          title: `${message.senderName?.trim() || message.senderId} (${formatSeoulDateTime(message.createdAt)})`,
           content: message.message,
         }))
       : [],

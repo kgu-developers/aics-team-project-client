@@ -57,4 +57,37 @@ describe('toAdminSubmissionVersionDetailView', () => {
       }),
     );
   });
+
+  it('같은 파일명이 여러 제출 규칙에 연결되어도 고유한 렌더링 식별자를 만든다', () => {
+    const view = toAdminSubmissionVersionDetailView({
+      artifacts: [
+        {
+          downloadUrl: '/files/11',
+          fileId: 11,
+          fileName: 'e2e-submission.pdf',
+          requiredArtifactId: 21,
+          type: 'FILE',
+        },
+        {
+          downloadUrl: '/files/11',
+          fileId: 11,
+          fileName: 'e2e-submission.pdf',
+          requiredArtifactId: 22,
+          type: 'FILE',
+        },
+      ],
+      late: false,
+      submittedAt: '2026-09-07T09:00:00Z',
+      submittedBy: '20230001',
+      version: 1,
+    });
+
+    expect(view.artifacts.map(artifact => artifact.identityKey)).toEqual([
+      'FILE:21:11:e2e-submission.pdf:0',
+      'FILE:22:11:e2e-submission.pdf:1',
+    ]);
+    expect(
+      new Set(view.artifacts.map(artifact => artifact.identityKey)).size,
+    ).toBe(2);
+  });
 });

@@ -22,7 +22,11 @@ export function useUpdateAdminSectionMilestoneEvaluationWindowMutation() {
       milestoneId,
       sectionId,
     }: UpdateAdminSectionMilestoneEvaluationWindowInput) =>
-      updateAdminSectionMilestoneEvaluationWindow(sectionId, milestoneId, input),
+      updateAdminSectionMilestoneEvaluationWindow(
+        sectionId,
+        milestoneId,
+        input,
+      ),
     onSuccess: async (_, variables) => {
       await Promise.all([
         queryClient.invalidateQueries({

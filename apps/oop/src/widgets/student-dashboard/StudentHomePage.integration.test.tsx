@@ -1061,7 +1061,7 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
     render(<StudentHomePage />, { wrapper: Wrapper });
 
     const card = (
-      await screen.findAllByText(/제출 완료 · 교수\/조교 피드백/)
+      await screen.findAllByText(/제출 완료 · 피드백 대기 중/)
     )[0]!.closest('article');
     if (!card) throw new Error('제안서 마일스톤 카드를 찾을 수 없습니다.');
     expect(

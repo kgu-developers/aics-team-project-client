@@ -133,8 +133,7 @@ describe('마감과 팀별 제출 가능 상태', () => {
       due,
     );
     expect(result.status).toBe('revision-available');
-    expect(result.dueDate).toContain('재제출 마감');
-    expect(result.dueDate).toContain('15.');
+    expect(result.dueDate).toBe('재제출 마감 · 2026-10-15/18:30');
   });
   it('지각 제출 가능 기간에는 원래 마감 대신 지각 기한을 안내한다', () => {
     const result = studentMilestoneSummary(
@@ -174,9 +173,9 @@ describe('마감과 팀별 제출 가능 상태', () => {
       'unavailable',
     );
   });
-  it('오프셋 없는 서버 일정은 한국 시각으로 해석한다', () => {
+  it('오프셋 없는 서버 일정은 비교에는 서울 시각, 표시에는 UTC 보정을 적용한다', () => {
     expect(milestoneTime('2026-10-10T18:30:00')).toBe(due);
-    expect(milestoneDate('2026-10-10T18:30:00')).toContain('18:30');
+    expect(milestoneDate('2026-10-10T18:30:00')).toBe('2026-10-11/03:30');
     expect(milestoneDate(null)).toBe('일정 미정');
     expect(milestoneDate('invalid')).toBe('일정 확인 필요');
   });
@@ -247,6 +246,6 @@ describe('발표 자료와 평가 구분', () => {
         actionTo: '/student/presentation-evaluation',
       }),
     ]);
-    expect(summary.dueDate).toContain('09. 17.');
+    expect(summary.dueDate).toBe('~ 2026-09-18/08:59');
   });
 });

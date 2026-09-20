@@ -10,6 +10,8 @@ import { Link } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+
 import { useAdminPresentationEvaluationTeamQuery } from '~/features/admin-milestone-review/queries';
 
 import * as styles from './AdminPresentationEvaluationSettingsDialog.css';
@@ -128,8 +130,9 @@ export function AdminPresentationEvaluationTeamDetailDialog({
                     params={{ meetingId: String(record.id) }}
                     to={ROUTES.ADMIN_MEETING_DETAIL}
                   >
-                    {record.title} · {record.phase} · {record.meetingAt} ·
-                    참가자 {record.participantCount}명
+                    {record.title} · {record.phase} ·{' '}
+                    {formatSeoulDateTime(record.meetingAt)} · 참가자{' '}
+                    {record.participantCount}명
                   </Link>
                 ))}
               </VStack>

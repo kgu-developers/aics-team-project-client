@@ -1,6 +1,8 @@
 import type { StudentSubmissionVersionResponse } from '@aics/core';
 import { Button, Text, VStack } from '@aics/design-system';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+
 import { safeSubmissionUrl } from '~/features/submission/submissionUploadInput';
 
 import * as styles from './SubmissionHistory.css';
@@ -24,7 +26,7 @@ export default function SubmissionHistory({
             <VStack gap={1} key={version.id}>
               <Text weight='medium'>
                 v{version.version} · {version.submittedBy.name} ·{' '}
-                {version.submittedAt}
+                {formatSeoulDateTime(version.submittedAt)}
               </Text>
               {version.description ? <Text>{version.description}</Text> : null}
               {version.changeNote ? (

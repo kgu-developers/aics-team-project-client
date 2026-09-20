@@ -53,6 +53,10 @@ import {
   submissionDetail,
   submissions,
 } from './review';
+import {
+  currentProposalDetailPath,
+  presentationEvaluationRowName,
+} from './reviewRoute';
 import { createStageRunner } from './stages';
 import {
   createProject,
@@ -153,14 +157,7 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
             new URL(admin.url()).pathname === '/login'
           ) {
             loginRecoveries.push({ stage: id, actor: 'admin' });
-            await login(
-              admin,
-              {
-                studentNumber: env.OOP_E2E_ADMIN_NUMBER!,
-                password: env.OOP_E2E_ADMIN_PASSWORD!,
-              },
-              'admin',
-            );
+            await loginAdmin();
           }
           await action();
         },
@@ -246,6 +243,16 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
     return page;
   }
   const admin = await actor('admin');
+  async function loginAdmin() {
+    await login(
+      admin,
+      {
+        studentNumber: env.OOP_E2E_ADMIN_NUMBER!,
+        password: env.OOP_E2E_ADMIN_PASSWORD!,
+      },
+      'admin',
+    );
+  }
   const students = new Map<Actor, Page>();
   const loggedIn = new Set<Actor>();
   async function student(role: Actor) {
@@ -280,14 +287,7 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
   };
   try {
     await phase('01', '관리자 로그인과 전용 강좌·분반 생성', async () => {
-      await login(
-        admin,
-        {
-          studentNumber: env.OOP_E2E_ADMIN_NUMBER!,
-          password: env.OOP_E2E_ADMIN_PASSWORD!,
-        },
-        'admin',
-      );
+      await loginAdmin();
       await prepareCourse(admin, run);
     });
     await phase(
@@ -395,6 +395,7 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
             resources.meeting.adminListPath = list;
             await saveResources();
           },
+          loginAdmin,
         );
         await evidence(admin, 'M04-admin-original');
       },
@@ -440,6 +441,7 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
           resources.meeting.adminListPath = list;
           await saveResources();
         },
+        loginAdmin,
       );
       await evidence(admin, 'M09-admin-updated');
     });
@@ -479,6 +481,7 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
           admin,
           run,
           ownedMeeting(),
+          loginAdmin,
         );
         resources.meeting.lastVerifiedStage = 'M12';
         await saveResources();
@@ -536,6 +539,7 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
     });
     await phase('08', '관리자 제안서 조회·피드백과 학생 답변', async () => {
       const feedback = await proposalFeedback(admin, run);
+      const proposalDetailPath = currentProposalDetailPath(admin.url());
       await (await student('leader')).goto('/student');
       await expect(
         (await student('leader')).getByText(feedback, { exact: true }),
@@ -555,7 +559,13 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
           exact: true,
         }),
       ).toBeVisible();
-      await submissionDetail(admin, run, '제안서');
+      // The proposal detail was already proven through the selected submitted
+      // card above. Re-open that exact resource after the student's reply;
+      // a fresh list read can temporarily project the document as unsubmitted.
+      await admin.goto(proposalDetailPath);
+      await expect(
+        admin.getByRole('heading', { name: '제출물 > 제안서', exact: true }),
+      ).toBeVisible();
       await expect(
         admin.getByText(`예외 처리 계획을 추가했습니다. ${run.key}`, {
           exact: true,
@@ -599,11 +609,22 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
     await phase('13', '다른 팀 발표 평가와 관리자 결과 조회', async () => {
       await evaluatePresentation(await student('leader'), run);
       await submissions(admin, run, '발표 평가');
-      const row = admin.getByRole('row').filter({
-        has: admin.getByRole('link', { name: run.comparison, exact: true }),
-      });
       await expect(
-        row.getByRole('cell', { name: '5', exact: true }).first(),
+        admin.getByRole('columnheader', {
+          name: '설계 완성도 (5)',
+          exact: true,
+        }),
+      ).toBeVisible();
+      const row = admin.getByRole('row', {
+        name: presentationEvaluationRowName(run.comparison),
+        exact: true,
+      });
+      await expect(row).toBeVisible();
+      await expect(
+        row.getByRole('cell', { name: '5', exact: true }),
+      ).toHaveCount(2);
+      await expect(
+        row.getByRole('cell', { name: '1건', exact: true }),
       ).toBeVisible();
     });
     await phase('14', '최종보고서 PDF 제출', async () => {
@@ -653,7 +674,12 @@ test('관리자 준비 → 학생 작성·제출 → 관리자 검토 통합 플
     await phase('18', '학생 상호평가 제출과 관리자 결과 조회', async () => {
       await submitPeerEvaluation(await student('leader'));
       await submissions(admin, run, '상호 평가');
-      await admin.getByRole('link', { name: run.team, exact: true }).click();
+      await admin
+        .getByRole('row', {
+          name: `${run.team} 상호평가 보기`,
+          exact: true,
+        })
+        .click();
       await expect(
         admin.getByText(run.users.leader.name, { exact: true }).first(),
       ).toBeVisible();

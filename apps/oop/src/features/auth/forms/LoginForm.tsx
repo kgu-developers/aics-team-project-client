@@ -9,7 +9,7 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -47,10 +47,14 @@ export default function LoginForm() {
   const navigate = useNavigate();
   const { redirect } = useSearch({ from: '/login' });
   const loginMutation = useLoginMutation();
-  // Read once on mount so the notice survives re-renders but not a revisit.
-  const [sessionEndReason] = useState(() =>
-    useAuthStore.getState().consumeSessionEndReason(),
+  // Capture without mutating during render. Consuming in an effect keeps the
+  // committed notice stable when StrictMode replays mount effects.
+  const [sessionEndReason] = useState(
+    () => useAuthStore.getState().sessionEndReason,
   );
+  useEffect(() => {
+    useAuthStore.getState().consumeSessionEndReason();
+  }, []);
   const {
     formState: { errors },
     handleSubmit,

@@ -8,11 +8,25 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -82,7 +96,10 @@ function renderPage(milestoneId: string) {
   setApiAccessToken(demoAdminAccessToken);
   useAuthStore.setState({
     accessToken: demoAdminAccessToken,
-    currentUser: { ...demoAdmin, sections: [{ ...demoAdmin.sections[0]!, id: '1' }] },
+    currentUser: {
+      ...demoAdmin,
+      sections: [{ ...demoAdmin.sections[0]!, id: '1' }],
+    },
   });
   const root = createRootRoute();
   const route = createRoute({
@@ -108,7 +125,11 @@ function renderPage(milestoneId: string) {
   );
 }
 
-function fill(dialog: HTMLElement, opens: [string, string], closes: [string, string]) {
+function fill(
+  dialog: HTMLElement,
+  opens: [string, string],
+  closes: [string, string],
+) {
   fireEvent.change(within(dialog).getByLabelText('평가 시작 날짜'), {
     target: { value: opens[0] },
   });
@@ -127,8 +148,14 @@ describe('AdminMilestoneDetailPage 발표 평가 기간', () => {
   it('평가 기간 전용 API로 발표 평가 기간을 추가하고 상세에 반영한다', async () => {
     const patches: unknown[] = [];
     server.events.on('request:start', ({ request }) => {
-      if (request.method === 'PATCH' && request.url.endsWith('/evaluation-window'))
-        void request.clone().json().then(body => patches.push(body));
+      if (
+        request.method === 'PATCH' &&
+        request.url.endsWith('/evaluation-window')
+      )
+        void request
+          .clone()
+          .json()
+          .then(body => patches.push(body));
     });
     const user = userEvent.setup();
     renderPage('106');
@@ -136,8 +163,12 @@ describe('AdminMilestoneDetailPage 발표 평가 기간', () => {
     expect(
       await screen.findByText(/발표 평가 기간이 없으면/),
     ).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '발표 평가 기간 설정' }));
-    const dialog = await screen.findByRole('dialog', { name: '발표 평가 기간 설정' });
+    await user.click(
+      screen.getByRole('button', { name: '발표 평가 기간 설정' }),
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: '발표 평가 기간 설정',
+    });
     fill(dialog, ['2026-11-14', '09:00'], ['2026-11-20', '18:00']);
     await user.click(within(dialog).getByRole('button', { name: '저장' }));
 
@@ -149,7 +180,9 @@ describe('AdminMilestoneDetailPage 발표 평가 기간', () => {
         },
       ]),
     );
-    expect(await screen.findByText(/발표 평가 기간이 설정되어 있어/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/발표 평가 기간이 설정되어 있어/),
+    ).toBeInTheDocument();
     expect(screen.getByText('평가 시작 일시')).toBeInTheDocument();
     server.events.removeAllListeners();
   });
@@ -160,7 +193,9 @@ describe('AdminMilestoneDetailPage 발표 평가 기간', () => {
     await user.click(
       await screen.findByRole('button', { name: '발표 평가 기간 설정' }),
     );
-    const dialog = await screen.findByRole('dialog', { name: '발표 평가 기간 설정' });
+    const dialog = await screen.findByRole('dialog', {
+      name: '발표 평가 기간 설정',
+    });
     // dueAt of milestone 106 is 2026-11-13T14:59:00Z (= 11-13 23:59 KST)
     fill(dialog, ['2026-11-10', '09:00'], ['2026-11-20', '18:00']);
     await user.click(within(dialog).getByRole('button', { name: '저장' }));
@@ -175,7 +210,10 @@ describe('AdminMilestoneDetailPage 발표 평가 기간', () => {
       http.patch(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_EVALUATION_WINDOW('1', '106')}`,
         () =>
-          HttpResponse.json({ code: 'INVALID_MILESTONE_REQUEST' }, { status: 400 }),
+          HttpResponse.json(
+            { code: 'INVALID_MILESTONE_REQUEST' },
+            { status: 400 },
+          ),
       ),
     );
     const user = userEvent.setup();
@@ -183,7 +221,9 @@ describe('AdminMilestoneDetailPage 발표 평가 기간', () => {
     await user.click(
       await screen.findByRole('button', { name: '발표 평가 기간 설정' }),
     );
-    const dialog = await screen.findByRole('dialog', { name: '발표 평가 기간 설정' });
+    const dialog = await screen.findByRole('dialog', {
+      name: '발표 평가 기간 설정',
+    });
     fill(dialog, ['2026-11-14', '09:00'], ['2026-11-20', '18:00']);
     await user.click(within(dialog).getByRole('button', { name: '저장' }));
 

@@ -8,6 +8,7 @@ import { useAuthStore } from '~/features/auth/authStore';
 import DocumentEditorPage, {
   getSaveErrorMessage,
 } from '~/features/editor/DocumentEditorPage';
+import type { EditorReturnContext } from '~/features/editor/editorReturnContext';
 
 import ProposalStructuredFields from './ProposalStructuredFields';
 import {
@@ -17,7 +18,10 @@ import {
   useUpdateProposalBlockMutation,
 } from './queries';
 
-type ProposalEditorPageProps = { section: string };
+type ProposalEditorPageProps = {
+  returnTo?: EditorReturnContext;
+  section: string;
+};
 
 export function canSubmitProposalDocument(
   proposal: Proposal,
@@ -65,6 +69,7 @@ const COPY = {
 } as const;
 
 export default function ProposalPreviewPage({
+  returnTo,
   section,
 }: ProposalEditorPageProps) {
   const toast = useToast();
@@ -102,7 +107,10 @@ export default function ProposalPreviewPage({
             label='학생 홈으로 돌아가기'
             variant='primary'
             onClick={() => {
-              void navigate({ to: '/student' });
+              void navigate({
+                hash: returnTo ? `student-milestone-${returnTo}` : '',
+                to: '/student',
+              });
             }}
           />
         }
@@ -187,6 +195,7 @@ export default function ProposalPreviewPage({
           ? getSaveErrorMessage(mutation.error, COPY.saveFailed)
           : null,
       }}
+      returnTo={returnTo}
       section={section}
     />
   );

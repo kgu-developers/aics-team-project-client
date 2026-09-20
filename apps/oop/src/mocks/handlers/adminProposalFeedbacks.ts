@@ -55,6 +55,25 @@ function isAdmin(request: Request) {
   return getMockAuthenticatedAccount(request)?.user.id === demoAdmin.id;
 }
 
+function currentSeoulDateTime() {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      day: '2-digit',
+      hour: '2-digit',
+      hourCycle: 'h23',
+      minute: '2-digit',
+      month: '2-digit',
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+    })
+      .formatToParts(new Date())
+      .filter(part => part.type !== 'literal')
+      .map(part => [part.type, part.value]),
+  );
+
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}`;
+}
+
 function hasAccessibleTeam(sectionId: string, teamId: string) {
   return accessibleSectionIds.has(sectionId) && teamId === '1';
 }
@@ -144,7 +163,7 @@ export const adminProposalFeedbackHandlers = [
         return HttpResponse.json({ code: 'INVALID_REQUEST' }, { status: 400 });
 
       const feedback = {
-        createdAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        createdAt: currentSeoulDateTime(),
         message: body.message.trim(),
         messageId: Math.max(0, ...feedbacks.map(item => item.messageId)) + 1,
         projectId: 1001,

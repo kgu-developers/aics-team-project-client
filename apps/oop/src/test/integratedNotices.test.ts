@@ -70,7 +70,13 @@ test('notice creation waits for the exact create route and ready form before sel
   const run = { section: 'E2E249-section' } as Run;
   choose.mockImplementation(async (scope, label, option) => {
     expect(readiness).toEqual({ route: true, heading: true, form: true });
-    expect([scope, label, option]).toEqual([page, '분반', run.section]);
+    expect(scope).toBe(page);
+    expect(label).toBe('분반');
+    expect(option).toBeInstanceOf(RegExp);
+    expect((option as RegExp).test(`${run.section} · 통합 테스트 전용`)).toBe(
+      true,
+    );
+    expect((option as RegExp).test(`다른-${run.section}`)).toBe(false);
     // Stop before publication; this regression exercises navigation only.
     throw selected;
   });

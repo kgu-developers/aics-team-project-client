@@ -2,6 +2,7 @@ import {
   Card,
   EmptyState,
   Heading,
+  Pagination,
   Selector,
   SelectorOption,
   Text,
@@ -12,17 +13,16 @@ import type { KeyboardEvent } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
-import { LIST_PAGE_SIZE } from '~/shared/lib/pagination';
-import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { useAdminSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
-import AdminSectionTeamFilter from '~/features/admin-section/components/AdminSectionTeamFilter';
+import AdminSectionTeamFilter, {
+  ALL_SECTIONS,
+  ALL_TEAMS,
+} from '~/features/admin-section/components/AdminSectionTeamFilter';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMeetingsPage.css';
-
-const allSectionsValue = 'all';
 
 function handleRowNavigation(
   event: KeyboardEvent<HTMLTableRowElement>,
@@ -38,55 +38,57 @@ export default function AdminMeetingsPage() {
   const navigate = useNavigate();
   const search = useSearch({ from: '/admin/meetings/' }) as {
     page?: number;
-    sectionId?: string;
-    teamId?: string;
-    milestoneId?: string;
+    sectionId?: number | string;
+    teamId?: number | string;
+    milestoneId?: number | string;
   };
   const accessibleSections = currentUser?.sections ?? [];
   const accessibleSectionIds = accessibleSections.map(section => section.id);
-  // Hand-typed URLs arrive as numbers; router links serialize strings.
   const requestedSectionId =
     search.sectionId === undefined ? undefined : String(search.sectionId);
+  const requestedTeamId =
+    search.teamId === undefined ? undefined : String(search.teamId);
+  const requestedMilestoneId =
+    search.milestoneId === undefined ? undefined : String(search.milestoneId);
   const selectedSectionId =
     requestedSectionId && accessibleSectionIds.includes(requestedSectionId)
       ? requestedSectionId
-      : allSectionsValue;
+      : ALL_SECTIONS;
   const requestedPage = Number(search.page ?? 0);
   const selectedPage =
     Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 0;
   const selectedMilestoneId =
-    selectedSectionId === allSectionsValue ? undefined : search.milestoneId;
+    selectedSectionId === ALL_SECTIONS ? undefined : requestedMilestoneId;
+  const selectedTeamId =
+    selectedSectionId === ALL_SECTIONS ? undefined : requestedTeamId;
   const milestonesQuery = useAdminSectionMilestonesQuery(
-    selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
+    selectedSectionId === ALL_SECTIONS ? undefined : selectedSectionId,
   );
-  // A team id may arrive by URL without a section; keep honoring it.
-  const selectedTeamId = search.teamId ? String(search.teamId) : undefined;
   const query = useAdminMeetingRecordListQuery(accessibleSectionIds, {
     page: selectedPage,
     sectionId:
-      selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
+      selectedSectionId === ALL_SECTIONS ? undefined : selectedSectionId,
     teamId: selectedTeamId,
     milestoneId: selectedMilestoneId,
-    size: LIST_PAGE_SIZE,
+    size: 20,
   });
   const records = query.data?.contents ?? [];
 
   function selectSection(sectionId: string) {
     void navigate({
-      search: sectionId === allSectionsValue ? {} : { sectionId, page: 0 },
+      search: sectionId === ALL_SECTIONS ? {} : { sectionId, page: 0 },
       to: ROUTES.ADMIN_MEETINGS,
     });
   }
 
-  // Filters narrow from section → team → milestone; changing one resets the page.
-  function applyFilters(next: { milestoneId?: string; teamId?: string }) {
+  function selectMilestone(milestoneId: string) {
     void navigate({
       search: {
-        ...(selectedSectionId === allSectionsValue
+        ...(selectedSectionId === ALL_SECTIONS
           ? {}
           : { sectionId: selectedSectionId }),
-        ...(next.teamId ? { teamId: next.teamId } : {}),
-        ...(next.milestoneId ? { milestoneId: next.milestoneId } : {}),
+        ...(selectedTeamId ? { teamId: selectedTeamId } : {}),
+        ...(milestoneId ? { milestoneId } : {}),
         page: 0,
       },
       to: ROUTES.ADMIN_MEETINGS,
@@ -94,17 +96,21 @@ export default function AdminMeetingsPage() {
   }
 
   function selectTeam(teamId: string) {
-    applyFilters({ milestoneId: selectedMilestoneId, teamId });
-  }
-
-  function selectMilestone(milestoneId: string) {
-    applyFilters({ milestoneId, teamId: selectedTeamId });
+    void navigate({
+      search: {
+        sectionId: selectedSectionId,
+        ...(teamId !== ALL_TEAMS ? { teamId } : {}),
+        ...(selectedMilestoneId ? { milestoneId: selectedMilestoneId } : {}),
+        page: 0,
+      },
+      to: ROUTES.ADMIN_MEETINGS,
+    });
   }
 
   function selectPage(page: number) {
     void navigate({
       search: {
-        ...(selectedSectionId === allSectionsValue
+        ...(selectedSectionId === ALL_SECTIONS
           ? {}
           : { sectionId: selectedSectionId }),
         ...(selectedTeamId ? { teamId: selectedTeamId } : {}),
@@ -119,13 +125,12 @@ export default function AdminMeetingsPage() {
     <div className={styles.page}>
       <Heading level={1}>회의록</Heading>
       <AdminSectionTeamFilter
-        label='회의록 필터'
         onSectionChange={selectSection}
         onTeamChange={selectTeam}
         sectionId={selectedSectionId}
-        teamId={selectedTeamId}
+        teamId={selectedTeamId ?? ALL_TEAMS}
       >
-        {selectedSectionId !== allSectionsValue ? (
+        {selectedSectionId !== ALL_SECTIONS ? (
           <Selector
             label='마일스톤 필터'
             onChange={selectMilestone}
@@ -213,13 +218,15 @@ export default function AdminMeetingsPage() {
           </table>
         </Card>
       )}
-      {query.data ? (
-        <ListPagination
+      {query.data && query.data.pageable.totalPages > 1 ? (
+        <Pagination
+          className={styles.pagination}
           isDisabled={query.isFetching}
-          label='회의록 페이지 이동'
-          onPageChange={selectPage}
-          page={selectedPage}
-          pageCount={query.data.pageable.totalPages}
+          onChange={page => selectPage(page - 1)}
+          page={selectedPage + 1}
+          pageSize={query.data.pageable.size}
+          totalPages={query.data.pageable.totalPages}
+          variant='compact'
         />
       ) : null}
     </div>

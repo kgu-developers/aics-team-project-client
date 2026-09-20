@@ -36,10 +36,6 @@ type DashboardListItem = {
   title: string;
 };
 
-function formatMeetingCreatedAt(value: string) {
-  return value.replace('T', ' ').slice(0, 10);
-}
-
 function getMeetingContentPreview(content: string) {
   const normalized = getRichTextPlainText(parseMeetingContent(content))
     .replace(/\s+/g, ' ')
@@ -262,9 +258,9 @@ export default function AdminHomeDashboard() {
   const meetingItems: DashboardListItem[] = (
     meetingRecordsQuery.data?.contents ?? []
   )
-    .slice(0, 4)
+    .slice(0, 3)
     .map(record => ({
-      date: formatMeetingCreatedAt(record.meetingAt),
+      date: formatSeoulDateTime(record.meetingAt),
       meetingId: String(record.id),
       section: `${getSectionDisplayLabel(
         accessibleSections,
@@ -317,7 +313,7 @@ export default function AdminHomeDashboard() {
     .slice(0, 3)
     .map(message => ({
       id: String(message.id),
-      date: formatMeetingCreatedAt(message.createdAt),
+      date: formatSeoulDateTime(message.createdAt),
       section: `${getSectionDisplayLabel(
         accessibleSections,
         message.sectionId,

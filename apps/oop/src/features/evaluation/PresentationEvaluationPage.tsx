@@ -7,16 +7,20 @@ import type {
 import {
   Button,
   Card,
+  Dialog,
   Divider,
   EmptyState,
+  Heading,
+  HStack,
   RadioList,
   RadioListItem,
+  Text,
   useToast,
 } from '@aics/design-system';
 import { useEffect, useRef, useState } from 'react';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
-import { seoulInstant } from '~/shared/lib/seoulInstant';
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { PdfPreview } from '~/shared/ui/PdfPreview';
 
 import { useAuthStore } from '~/features/auth/authStore';
@@ -81,27 +85,9 @@ function EvaluationTimer({
   );
 }
 
-const windowDateFormatter = new Intl.DateTimeFormat('ko-KR', {
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  month: 'long',
-  timeZone: 'Asia/Seoul',
-});
-const windowTimeFormatter = new Intl.DateTimeFormat('ko-KR', {
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Asia/Seoul',
-});
-
 /** Course times are fixed to Asia/Seoul regardless of the viewer's timezone. */
 function formatEvaluationWindow(opensAt: string, closesAt: string) {
-  const opensAtTime = seoulInstant(opensAt);
-  const closesAtTime = seoulInstant(closesAt);
-  if (!Number.isFinite(opensAtTime) || !Number.isFinite(closesAtTime))
-    return `${opensAt} ~ ${closesAt}`;
-
-  return `${windowDateFormatter.format(opensAtTime)} ~ ${windowTimeFormatter.format(closesAtTime)}`;
+  return `${formatSeoulDateTime(opensAt)} ~ ${formatSeoulDateTime(closesAt)}`;
 }
 
 function findPdfArtifact(team: MilestonePresentation) {
@@ -352,6 +338,8 @@ function EvaluationForm({
     (evaluation?.scores ?? []).map(score => [score.criterionId, score.score]),
   );
   const [scores, setScores] = useState<Record<number, number>>(submitted);
+  const [isResubmitConfirmationOpen, setIsResubmitConfirmationOpen] =
+    useState(false);
   const scoreKey = JSON.stringify(submitted);
   const lastKey = useRef(scoreKey);
   if (lastKey.current !== scoreKey) {
@@ -412,7 +400,13 @@ function EvaluationForm({
             isDisabled={isSubmitting || missing.length > 0}
             isLoading={isSubmitting}
             label={evaluation?.submittedAt ? '평가 다시 제출' : '평가 제출'}
-            onClick={() => onSubmit(scores)}
+            onClick={() => {
+              if (evaluation?.submittedAt) {
+                setIsResubmitConfirmationOpen(true);
+                return;
+              }
+              onSubmit(scores);
+            }}
             tooltip={
               missing.length
                 ? `${missing.map(criterion => criterion.title).join(', ')} 항목을 입력해 주세요.`
@@ -420,6 +414,37 @@ function EvaluationForm({
             }
           />
         ) : null}
+        <Dialog
+          aria-label='발표 평가 다시 제출 확인'
+          isOpen={isResubmitConfirmationOpen}
+          onOpenChange={setIsResubmitConfirmationOpen}
+          purpose='info'
+          role='alertdialog'
+        >
+          <div className={styles.confirmationDialog}>
+            <Heading level={2}>평가를 다시 제출할까요?</Heading>
+            <Text>기존에 제출한 점수가 현재 입력한 점수로 바뀝니다.</Text>
+            <HStack gap={2} justify='end'>
+              <Button
+                data-autofocus='true'
+                label='계속 수정'
+                onClick={() => setIsResubmitConfirmationOpen(false)}
+                variant='secondary'
+              />
+              <Button
+                isDisabled={isSubmitting}
+                isLoading={isSubmitting}
+                label='다시 제출'
+                onClick={() => {
+                  if (isSubmitting) return;
+                  setIsResubmitConfirmationOpen(false);
+                  onSubmit(scores);
+                }}
+                variant='primary'
+              />
+            </HStack>
+          </div>
+        </Dialog>
       </section>
     </Card>
   );

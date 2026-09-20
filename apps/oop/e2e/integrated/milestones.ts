@@ -1,6 +1,10 @@
 import { expect, type Page } from '@playwright/test';
 
 import type { Run } from './data';
+import {
+  createdMilestonePath,
+  milestoneTemplateOption,
+} from './milestoneRoute';
 import { choose, fillDate } from './ui';
 
 export const milestoneNames = [
@@ -29,7 +33,7 @@ export async function createMilestones(
     await sections.click();
     await page.getByRole('option', { name: new RegExp(run.section) }).click();
     await page.keyboard.press('Escape');
-    await choose(page, '마일스톤 기본 양식', name);
+    await choose(page, '마일스톤 기본 양식', milestoneTemplateOption(name));
     await page
       .getByRole('spinbutton', { name: '진행 주차', exact: true })
       .fill(String(milestoneNames.indexOf(name) + 1));
@@ -81,21 +85,35 @@ export async function createMilestones(
       await artifact.getByRole('button', { name: '추가', exact: true }).click();
       await expect(artifact).toBeHidden();
     }
+    const creationResponse = page.waitForResponse(response => {
+      const path = new URL(response.url()).pathname;
+      return (
+        response.request().method() === 'POST' &&
+        /^\/api\/v1\/admin\/sections\/\d+\/milestones$/.test(path)
+      );
+    });
     await page.getByRole('button', { name: '저장', exact: true }).click();
-    await expect(page.getByText(/생성하고 공개했습니다/)).toBeVisible();
+    const created = await creationResponse;
+    expect(created.status(), 'milestone creation must return 201').toBe(201);
+    const href = createdMilestonePath(created.url(), await created.json());
+    await expect(page).toHaveURL(
+      url => url.pathname.replace(/\/$/, '') === '/admin/milestones',
+    );
     await expect(
       page.getByText(/산출물 일부 등록에 실패|상호평가 양식 생성에 실패/),
     ).toHaveCount(0);
-    await page.goto('/admin/milestones', { waitUntil: 'domcontentloaded' });
-    await page
-      .getByRole('group', { name: '분반 필터' })
-      .getByRole('button', { name: run.section, exact: true })
-      .click();
-    const link = page.getByRole('link', { name, exact: true });
-    await expect(link).toBeVisible();
-    const href = await link.getAttribute('href');
-    expect(href).toBeTruthy();
-    links[name] = href!;
+    await choose(
+      page.getByRole('group', { name: '분반 필터' }),
+      '분반',
+      run.section,
+    );
+    await expect(
+      page.getByRole('row', {
+        name: `${name} 마일스톤 보기`,
+        exact: true,
+      }),
+    ).toBeVisible();
+    links[name] = href;
   }
   return links;
 }

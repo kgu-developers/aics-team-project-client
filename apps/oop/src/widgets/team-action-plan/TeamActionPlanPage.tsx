@@ -21,6 +21,7 @@ import { useMemo, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import MeetingActionDeleteDialog from '~/features/meeting/MeetingActionDeleteDialog';
@@ -228,7 +229,9 @@ function TeamActionPlanContent({
         key: 'dueDate',
         renderCell: row => (
           <div className={styles.cell}>
-            <span>{actionDueDate(row.dueDate) || '미정'}</span>
+            <span>
+              {row.dueDate ? formatSeoulDateTime(row.dueDate) : '미정'}
+            </span>
           </div>
         ),
         width: proportional(1.1, { minWidth: 0 }),
@@ -250,10 +253,10 @@ function TeamActionPlanContent({
               </a>
             </Tooltip>
             <span
-              aria-label={`기한 ${actionDueDate(row.dueDate) || '미정'}, 담당자 ${row.assignee?.name ?? '미정'}`}
+              aria-label={`기한 ${row.dueDate ? formatSeoulDateTime(row.dueDate) : '미정'}, 담당자 ${row.assignee?.name ?? '미정'}`}
               className={styles.mobileActionMeta}
             >
-              {actionDueDate(row.dueDate) || '미정'} ·{' '}
+              {row.dueDate ? formatSeoulDateTime(row.dueDate) : '미정'} ·{' '}
               {row.assignee?.name ?? '미정'}
             </span>
           </div>

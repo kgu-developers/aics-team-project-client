@@ -2,8 +2,10 @@ import type { RichTextJson, SectionAnnouncementResponse } from '@aics/core';
 import {
   Button,
   Card,
+  Dialog,
   EmptyState,
   Heading,
+  HStack,
   MultiSelector,
   Selector,
   SelectorOption,
@@ -12,11 +14,17 @@ import {
 } from '@aics/design-system';
 import {
   Link,
+  useBlocker,
   useNavigate,
   useParams,
   useSearch,
 } from '@tanstack/react-router';
-import { type KeyboardEvent, useState } from 'react';
+import {
+  type KeyboardEvent,
+  type MutableRefObject,
+  useRef,
+  useState,
+} from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -201,9 +209,7 @@ export function AdminNoticeListPage() {
                   }
                   tabIndex={0}
                 >
-                  <td>
-                    {formatSeoulDateTime(notice.publishedAt).slice(0, 10)}
-                  </td>
+                  <td>{formatSeoulDateTime(notice.publishedAt)}</td>
                   <td>
                     {user?.sections.find(
                       section => noticeId(section.id) === notice.sectionId,
@@ -347,6 +353,51 @@ function validText(title: string, content: RichTextJson) {
   );
 }
 
+function NoticeDraftBlocker({
+  allowNavigation,
+  dirty,
+  pending,
+}: {
+  allowNavigation: MutableRefObject<boolean>;
+  dirty: boolean;
+  pending: boolean;
+}) {
+  const blocker = useBlocker({
+    withResolver: true,
+    enableBeforeUnload: () => !allowNavigation.current && dirty,
+    shouldBlockFn: () => !allowNavigation.current && dirty,
+  });
+
+  return (
+    <Dialog
+      aria-label='저장하지 않은 내용이 있어요.'
+      isOpen={blocker.status === 'blocked'}
+      onOpenChange={open => open || blocker.reset?.()}
+      purpose='info'
+      role='alertdialog'
+    >
+      <div className={styles.leaveDialog}>
+        <Heading level={2}>저장하지 않은 내용이 있어요.</Heading>
+        <Text>이동하면 변경 내용이 사라집니다.</Text>
+        <HStack gap={2} justify='end'>
+          <Button
+            data-autofocus='true'
+            label='계속 작성'
+            onClick={() => blocker.reset?.()}
+            variant='secondary'
+          />
+          <Button
+            isDisabled={pending}
+            label='변경 버리고 이동'
+            onClick={() => blocker.proceed?.()}
+            variant='destructive'
+          />
+        </HStack>
+      </div>
+    </Dialog>
+  );
+}
+
 function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
   const navigate = useNavigate();
   const { user, section, sectionId } = useNoticeScope();
@@ -355,10 +406,12 @@ function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
     parseRichTextContent(notice.content),
   );
   const mutation = useUpdateSectionAnnouncementMutation();
+  const allowNavigation = useRef(false);
   const serializedContent = serializeRichTextContent(content);
   const input = {
     ...(title.trim() !== notice.title ? { title: title.trim() } : {}),
-    ...(serializedContent !== serializeRichTextContent(parseRichTextContent(notice.content))
+    ...(serializedContent !==
+    serializeRichTextContent(parseRichTextContent(notice.content))
       ? { content: serializedContent }
       : {}),
   };
@@ -366,12 +419,14 @@ function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
     canPublishNotice(user, section) &&
     validText(title, content) &&
     Object.keys(input).length > 0;
-  const back = () =>
+  const back = (saved = false) => {
+    if (saved) allowNavigation.current = true;
     void navigate({
       to: '/admin/notices/$noticeId',
       params: { noticeId: String(notice.id) },
       search: { sectionId },
     });
+  };
   return (
     <Card className={styles.formCard}>
       <Heading level={2}>공지사항 수정</Heading>
@@ -399,7 +454,7 @@ function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
           label='취소'
           variant='secondary'
           isDisabled={mutation.isPending}
-          onClick={back}
+          onClick={() => back()}
         />
         <Button
           label='저장'
@@ -412,11 +467,16 @@ function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
                 sectionId: notice.sectionId,
                 announcementId: notice.id,
               },
-              { onSuccess: back },
+              { onSuccess: () => back(true) },
             )
           }
         />
       </div>
+      <NoticeDraftBlocker
+        allowNavigation={allowNavigation}
+        dirty={Object.keys(input).length > 0}
+        pending={mutation.isPending}
+      />
     </Card>
   );
 }
@@ -452,6 +512,7 @@ export function AdminNoticeNewPage() {
     sectionId === undefined ? [] : [String(sectionId)],
   );
   const mutation = useSubmitSectionAnnouncementsMutation();
+  const allowNavigation = useRef(false);
   const publishableSections = (user?.sections ?? []).filter(section =>
     canPublishNotice(user, section),
   );
@@ -460,6 +521,12 @@ export function AdminNoticeNewPage() {
   );
   const canSave = selectedSections.length > 0 && validText(title, content);
   const selectedSectionId = noticeId(selectedSectionIds[0]);
+  const initialSectionIds = sectionId === undefined ? [] : [String(sectionId)];
+  const dirty =
+    title !== '' ||
+    serializeRichTextContent(content) !==
+      serializeRichTextContent(emptyRichText) ||
+    JSON.stringify(selectedSectionIds) !== JSON.stringify(initialSectionIds);
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
@@ -548,6 +615,7 @@ export function AdminNoticeNewPage() {
                       );
                       return;
                     }
+                    allowNavigation.current = true;
                     void navigate({
                       to: ROUTES.ADMIN_NOTICES,
                       search: { sectionId: selectedSectionId },
@@ -558,6 +626,11 @@ export function AdminNoticeNewPage() {
             }}
           />
         </div>
+        <NoticeDraftBlocker
+          allowNavigation={allowNavigation}
+          dirty={dirty}
+          pending={mutation.isPending}
+        />
       </Card>
     </div>
   );

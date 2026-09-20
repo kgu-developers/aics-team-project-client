@@ -125,6 +125,8 @@ function PeerEvaluationForm({
       '',
   );
   const [clientError, setClientError] = useState('');
+  const [isSubmitConfirmationOpen, setIsSubmitConfirmationOpen] =
+    useState(false);
   const [editingTargetId, setEditingTargetId] = useState<string | null>(null);
   const [editingDraft, setEditingDraft] =
     useState<PeerEvaluationTargetDraft | null>(null);
@@ -238,25 +240,25 @@ function PeerEvaluationForm({
     }
   };
 
-  const submit = () => {
+  const validateSubmission = () => {
     if (isReadOnly || draftMutation.isPending || submitMutation.isPending)
-      return;
+      return null;
     setClientError('');
     draftMutation.reset();
     submitMutation.reset();
     const input = buildInput(true);
-    if (!validateLength(input)) return;
+    if (!validateLength(input)) return null;
     const teammateAnswers = input.answers.filter(
       (answer): answer is PeerEvaluationTeammateAnswer =>
         answer.kind === 'TEAMMATE_CONTRIBUTION',
     );
     if (teammateAnswers.some(answer => answer.contributionPercent === null)) {
       setClientError('모든 팀원의 기여도를 입력해 주세요.');
-      return;
+      return null;
     }
     if (total !== 100) {
       setClientError('제출하려면 팀원 기여도 합계를 100%로 맞춰 주세요.');
-      return;
+      return null;
     }
     if (
       !selfContribution.trim() ||
@@ -271,8 +273,20 @@ function PeerEvaluationForm({
       setClientError(
         '제출하려면 모든 개인보고서와 팀원 평가 항목을 작성해 주세요.',
       );
-      return;
+      return null;
     }
+    return input;
+  };
+
+  const submit = () => {
+    if (!validateSubmission()) return;
+    setIsSubmitConfirmationOpen(true);
+  };
+
+  const confirmSubmit = () => {
+    const input = validateSubmission();
+    if (!input) return;
+    setIsSubmitConfirmationOpen(false);
     submitMutation.mutate(input, {
       onSuccess: () => {
         toast({ body: '상호평가를 제출했어요.' });
@@ -576,6 +590,33 @@ function PeerEvaluationForm({
               </HStack>
             </div>
           ) : null}
+        </Dialog>
+        <Dialog
+          aria-label='상호평가 최종 제출 확인'
+          isOpen={isSubmitConfirmationOpen}
+          onOpenChange={setIsSubmitConfirmationOpen}
+          purpose='info'
+          role='alertdialog'
+        >
+          <div className={styles.dialogContent}>
+            <Heading level={2}>상호평가를 최종 제출할까요?</Heading>
+            <Text>제출 후에는 응답을 수정할 수 없습니다.</Text>
+            <HStack className={styles.dialogActions} gap={2} justify='end'>
+              <Button
+                data-autofocus='true'
+                label='계속 수정'
+                onClick={() => setIsSubmitConfirmationOpen(false)}
+                variant='secondary'
+              />
+              <Button
+                isDisabled={submitMutation.isPending}
+                isLoading={submitMutation.isPending}
+                label='최종 제출'
+                onClick={confirmSubmit}
+                variant='primary'
+              />
+            </HStack>
+          </div>
         </Dialog>
       </form>
     </SurveyShell>
