@@ -9,25 +9,24 @@ import type {
 import {
   Button,
   Card,
-  DateTimeInput,
+  DateInput,
   Dialog,
-  EmptyState,
   Heading,
   HStack,
   Selector,
   SelectorOption,
   Text,
   TextInput,
+  TimeInput,
   useToast,
   VStack,
-  type ISODateTimeString,
+  type TimeInputProps,
 } from '@aics/design-system';
-import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { type FormEvent, useEffect, useRef, useState } from 'react';
 
 import { seoulInstant } from '~/shared/lib/seoulInstant';
 
 import {
-  useAdminOopSectionsQuery,
   useRemoveAdminOopSectionMutation,
   useSubmitAdminOopSectionMutation,
   useUpdateAdminOopSectionMutation,
@@ -42,25 +41,17 @@ import { AdminAssistantEnrollmentDialog } from '~/widgets/admin-student-team/Adm
 
 import {
   useAdminOopCourseQuery,
-  useAdminOopCoursesQuery,
   useRemoveAdminOopCourseMutation,
   useSubmitAdminOopCourseMutation,
   useUpdateAdminOopCourseMutation,
 } from '../queries';
-import * as styles from './AdminCourseManagement.css';
-
-const semesterOptions: { label: string; value: AdminOopCourseSemester }[] = [
-  { label: '1학기', value: 'SPRING' },
-  { label: '여름학기', value: 'SUMMER' },
-  { label: '2학기', value: 'FALL' },
-  { label: '겨울학기', value: 'WINTER' },
-];
-
-const statusOptions: { label: string; value: AdminOopCourseStatus }[] = [
-  { label: '임시 저장', value: 'DRAFT' },
-  { label: '운영 중', value: 'ACTIVE' },
-  { label: '보관됨', value: 'ARCHIVED' },
-];
+import * as styles from './AdminCourseDialogs.css';
+import {
+  contactVisibilityStatus,
+  semesterLabel,
+  semesterOptions,
+  statusOptions,
+} from '../model/courseLabels';
 
 const initialInput: AdminOopCourseInput = {
   name: '',
@@ -71,34 +62,24 @@ const initialInput: AdminOopCourseInput = {
 
 type CourseFormInput = Omit<AdminOopCourseInput, 'year'> & { year: string };
 
-function semesterLabel(value: AdminOopCourseSemester) {
-  return semesterOptions.find(option => option.value === value)?.label ?? value;
+type DateTimeDraft = { date: string; time: string };
+type DateValue =
+  `${number}${number}${number}${number}-${number}${number}-${number}${number}`;
+
+function toDateTimeDraft(value: string): DateTimeDraft {
+  const date = /^(\d{4}-\d{2}-\d{2})/.exec(value)?.[1] ?? '';
+  const time = /T(\d{2}:\d{2})/.exec(value)?.[1] ?? '';
+  return { date, time };
 }
 
-function statusLabel(value: AdminOopCourseStatus) {
-  return statusOptions.find(option => option.value === value)?.label ?? value;
+function toDateTimeValue(draft: DateTimeDraft) {
+  if (draft.date && draft.time) return `${draft.date}T${draft.time}:00`;
+  if (draft.date) return `${draft.date}T`;
+  if (draft.time) return `T${draft.time}`;
+  return '';
 }
 
-function contactVisibilityStatus(visibleFrom: string, visibleUntil: string) {
-  if (!visibleFrom && !visibleUntil) return '미설정';
-
-  const startsAt = seoulInstant(visibleFrom);
-  const endsAt = seoulInstant(visibleUntil);
-  if (Number.isNaN(startsAt) || Number.isNaN(endsAt) || startsAt >= endsAt) {
-    return '입력 확인 필요';
-  }
-
-  const now = Date.now();
-  if (now < startsAt) return '공개 예정';
-  if (now <= endsAt) return '공개 중';
-  return '공개 종료';
-}
-
-function SectionAssistantManagement({
-  section,
-}: {
-  section: AdminOopSectionDto;
-}) {
+function SectionAssistantPanel({ section }: { section: AdminOopSectionDto }) {
   const [isEnrollmentDialogOpen, setIsEnrollmentDialogOpen] = useState(false);
   const enrollmentsQuery = useAdminSectionEnrollmentsQuery(String(section.id));
   const withdrawAssistantMutation = useWithdrawAdminSectionEnrollmentMutation();
@@ -229,6 +210,39 @@ function SectionAssistantManagement({
   );
 }
 
+/** 조교 목록·등록·수정·제외를 다루는 분반별 대화상자. */
+export function SectionAssistantManagement({
+  isOpen,
+  onClose,
+  section,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  section: AdminOopSectionDto;
+}) {
+  return (
+    <Dialog
+      aria-label={`${section.code} 조교 관리`}
+      isOpen={isOpen}
+      onOpenChange={open => {
+        if (!open) onClose();
+      }}
+      purpose='info'
+      width={520}
+    >
+      <div className={styles.dialogBody}>
+        <Heading className={styles.dialogTitle} level={2}>
+          {section.code} 조교 관리
+        </Heading>
+        <SectionAssistantPanel section={section} />
+        <HStack gap={2} justify='end'>
+          <Button label='닫기' onClick={onClose} variant='secondary' />
+        </HStack>
+      </div>
+    </Dialog>
+  );
+}
+
 function toInput(course: AdminOopCourseDto): CourseFormInput {
   return {
     name: course.name,
@@ -238,7 +252,7 @@ function toInput(course: AdminOopCourseDto): CourseFormInput {
   };
 }
 
-function CourseFormDialog({
+export function CourseFormDialog({
   courseId,
   isOpen,
   onClose,
@@ -428,7 +442,7 @@ function CourseFormDialog({
   );
 }
 
-function SectionSettingsDialog({
+export function SectionSettingsDialog({
   isOpen,
   onClose,
   onDeleted,
@@ -634,25 +648,42 @@ function SectionSettingsDialog({
               {visibilityStatus}
             </Text>
           </HStack>
-          <div className={styles.formRow}>
-            <DateTimeInput
-              isDisabled={isPending}
-              label='공개 시작'
-              onChange={value => setVisibleFrom(value ?? '')}
-              value={
-                visibleFrom ? (visibleFrom as ISODateTimeString) : undefined
-              }
-              width='100%'
-            />
-            <DateTimeInput
-              isDisabled={isPending}
-              label='공개 종료'
-              onChange={value => setVisibleUntil(value ?? '')}
-              value={
-                visibleUntil ? (visibleUntil as ISODateTimeString) : undefined
-              }
-              width='100%'
-            />
+          <div className={styles.visibilityFields}>
+            {(
+              [
+                ['공개 시작', visibleFrom, setVisibleFrom],
+                ['공개 종료', visibleUntil, setVisibleUntil],
+              ] as const
+            ).map(([label, value, setValue]) => {
+              const draft = toDateTimeDraft(value);
+              const updateDraft = (next: Partial<DateTimeDraft>) =>
+                setValue(toDateTimeValue({ ...draft, ...next }));
+
+              return (
+                <div className={styles.dateTimeFields} key={label}>
+                  <DateInput
+                    isDisabled={isPending}
+                    label={`${label} 날짜`}
+                    onChange={date => updateDraft({ date: date ?? '' })}
+                    placeholder='날짜 선택'
+                    value={draft.date ? (draft.date as DateValue) : undefined}
+                    width='100%'
+                  />
+                  <TimeInput
+                    hourFormat='24h'
+                    isDisabled={isPending}
+                    label={`${label} 시간`}
+                    onChange={time => updateDraft({ time: time ?? '' })}
+                    value={
+                      draft.time
+                        ? (draft.time as TimeInputProps['value'])
+                        : undefined
+                    }
+                    width='100%'
+                  />
+                </div>
+              );
+            })}
           </div>
           {!isVisibilityRangeValid && (visibleFrom || visibleUntil) ? (
             <Text className={styles.error} role='alert'>
@@ -787,73 +818,49 @@ function SectionSettingsDialog({
   );
 }
 
-function CourseSectionDialog({
+export function SectionCreateDialog({
   course,
   isOpen,
   onClose,
-  onSectionCreated,
+  onCreated,
   professorId,
 }: {
-  course: AdminOopCourseDto | null;
+  course: AdminOopCourseDto;
   isOpen: boolean;
   onClose: () => void;
-  onSectionCreated: () => Promise<boolean>;
+  /** Refreshes section list + session; resolves false when that refresh failed. */
+  onCreated: () => Promise<boolean>;
   professorId: string | undefined;
 }) {
   const toast = useToast();
-  const sectionsQuery = useAdminOopSectionsQuery(
-    course ? { courseId: course.id } : undefined,
-  );
   const submitMutation = useSubmitAdminOopSectionMutation();
-  const initializedDialog = useRef(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [sectionToEdit, setSectionToEdit] = useState<AdminOopSectionDto | null>(
-    null,
-  );
-  const [hasRefreshError, setHasRefreshError] = useState(false);
   const [input, setInput] = useState({
     capacity: '40',
     classTime: '',
     code: '',
   });
+  const [hasRefreshError, setHasRefreshError] = useState(false);
 
-  useEffect(() => {
-    if (!isOpen) {
-      initializedDialog.current = false;
-      return;
-    }
-    if (initializedDialog.current) return;
-    initializedDialog.current = true;
-    setIsCreating(false);
+  function close() {
+    if (submitMutation.isPending) return;
     setInput({ capacity: '40', classTime: '', code: '' });
     setHasRefreshError(false);
     submitMutation.reset();
-  }, [isOpen, submitMutation]);
-
-  function close() {
-    if (!submitMutation.isPending) onClose();
+    onClose();
   }
 
-  async function refreshSectionsAndSession() {
-    const sectionResult = await sectionsQuery.refetch();
-    const sessionRefreshed = await onSectionCreated();
-    return !sectionResult.isError && sessionRefreshed;
-  }
+  const capacity = Number(input.capacity);
+  const isValid =
+    Boolean(professorId) &&
+    input.code.trim().length > 0 &&
+    input.classTime.trim().length > 0 &&
+    Number.isInteger(capacity) &&
+    capacity >= 1;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const capacity = Number(input.capacity);
-    if (
-      !course ||
-      !professorId ||
-      !input.code.trim() ||
-      !input.classTime.trim() ||
-      !Number.isInteger(capacity) ||
-      capacity < 1 ||
-      submitMutation.isPending
-    ) {
+    if (!isValid || !professorId || submitMutation.isPending || hasRefreshError)
       return;
-    }
 
     const sectionInput: AdminOopSectionInput = {
       capacity,
@@ -864,64 +871,72 @@ function CourseSectionDialog({
     };
     submitMutation.mutate(sectionInput, {
       onSuccess: async () => {
-        setIsCreating(false);
-        setInput({ capacity: '40', classTime: '', code: '' });
-        const refreshed = await refreshSectionsAndSession();
+        const refreshed = await onCreated();
         if (!refreshed) {
           setHasRefreshError(true);
           return;
         }
         toast({ body: '분반을 등록했어요.' });
+        close();
       },
     });
   }
 
   return (
-    <>
-      <Dialog
-        aria-label={course ? `${course.name} 분반 관리` : '분반 관리'}
-        isOpen={isOpen}
-        onOpenChange={open => {
-          if (!open) close();
-        }}
-        purpose='info'
-        width='min(680px, calc(100vw - 32px))'
-      >
-        <div className={styles.dialogBody}>
-          <Heading className={styles.dialogTitle} level={2}>
-            {course?.name ?? '강좌'} 분반 관리
-          </Heading>
-          {!isCreating && !professorId ? (
+    <Dialog
+      aria-label={`${course.name} 분반 등록`}
+      isOpen={isOpen}
+      onOpenChange={open => {
+        if (!open) close();
+      }}
+      purpose='form'
+      width={520}
+    >
+      <div className={styles.dialogBody}>
+        <Heading className={styles.dialogTitle} level={2}>
+          분반 등록
+        </Heading>
+        <form className={styles.form} onSubmit={handleSubmit}>
+          <TextInput
+            isDisabled={submitMutation.isPending}
+            isRequired
+            label='분반 코드'
+            onChange={code => setInput(current => ({ ...current, code }))}
+            placeholder='예) OOP-01'
+            value={input.code}
+            width='100%'
+          />
+          <TextInput
+            isDisabled={submitMutation.isPending}
+            isRequired
+            label='수업 시간'
+            onChange={classTime =>
+              setInput(current => ({ ...current, classTime }))
+            }
+            placeholder='예) 월요일 1-2교시'
+            value={input.classTime}
+            width='100%'
+          />
+          <TextInput
+            isDisabled={submitMutation.isPending}
+            isRequired
+            label='정원'
+            onChange={capacity =>
+              setInput(current => ({ ...current, capacity }))
+            }
+            value={input.capacity}
+            width='100%'
+          />
+          <Text color='secondary' type='supporting'>
+            담당 교수는 현재 로그인한 관리자 계정으로 등록됩니다.
+          </Text>
+          {!professorId ? (
             <Text role='alert'>로그인한 관리자 정보를 확인할 수 없습니다.</Text>
-          ) : !isCreating && sectionsQuery.isPending ? (
-            <Text aria-live='polite' role='status'>
-              연결된 분반을 불러오는 중입니다.
+          ) : null}
+          {submitMutation.isError ? (
+            <Text className={styles.error} role='alert'>
+              분반을 등록하지 못했습니다. 다시 시도해 주세요.
             </Text>
-          ) : !isCreating && sectionsQuery.isError ? (
-            <Text role='alert'>연결된 분반을 불러오지 못했습니다.</Text>
-          ) : !isCreating &&
-            (sectionsQuery.data?.contents.length ?? 0) === 0 ? (
-            <Text color='secondary'>등록된 분반이 없습니다.</Text>
-          ) : !isCreating ? (
-            <ul aria-label='연결된 분반 목록' className={styles.sectionList}>
-              {sectionsQuery.data?.contents.map(section => (
-                <li className={styles.sectionItem} key={section.id}>
-                  <strong className={styles.sectionCode}>{section.code}</strong>
-                  <span className={styles.sectionMeta}>
-                    {section.classTime} · 정원 {section.capacity}명
-                  </span>
-                  <SectionAssistantManagement section={section} />
-                  <Button
-                    className={styles.sectionEditButton}
-                    label='분반 정보 수정'
-                    onClick={() => setSectionToEdit(section)}
-                    size='sm'
-                    variant='secondary'
-                    width='100%'
-                  />
-                </li>
-              ))}
-            </ul>
           ) : null}
           {hasRefreshError ? (
             <HStack gap={2} justify='end'>
@@ -929,108 +944,49 @@ function CourseSectionDialog({
               <Button
                 label='분반 목록 새로고침'
                 onClick={() =>
-                  void refreshSectionsAndSession().then(success =>
-                    setHasRefreshError(!success),
-                  )
+                  void onCreated().then(success => {
+                    setHasRefreshError(!success);
+                    if (success) close();
+                  })
                 }
                 size='sm'
                 variant='secondary'
               />
             </HStack>
           ) : null}
-          {!isCreating ? (
-            <HStack gap={2} justify='end'>
-              <Button label='닫기' onClick={close} variant='secondary' />
-              <Button
-                isDisabled={!professorId || sectionsQuery.isPending}
-                label='분반 등록'
-                onClick={() => setIsCreating(true)}
-              />
-            </HStack>
-          ) : (
-            <form className={styles.form} onSubmit={handleSubmit}>
-              <TextInput
-                isDisabled={submitMutation.isPending}
-                isRequired
-                label='분반 코드'
-                onChange={code => setInput(current => ({ ...current, code }))}
-                placeholder='예) OOP-01'
-                value={input.code}
-                width='100%'
-              />
-              <TextInput
-                isDisabled={submitMutation.isPending}
-                isRequired
-                label='수업 시간'
-                onChange={classTime =>
-                  setInput(current => ({ ...current, classTime }))
-                }
-                placeholder='예) 월요일 1-2교시'
-                value={input.classTime}
-                width='100%'
-              />
-              <TextInput
-                isDisabled={submitMutation.isPending}
-                isRequired
-                label='정원'
-                onChange={capacity =>
-                  setInput(current => ({ ...current, capacity }))
-                }
-                value={input.capacity}
-                width='100%'
-              />
-              <Text color='secondary' type='supporting'>
-                담당 교수는 현재 로그인한 관리자 계정으로 등록됩니다.
-              </Text>
-              {submitMutation.isError ? (
-                <Text className={styles.error} role='alert'>
-                  분반을 등록하지 못했습니다. 다시 시도해 주세요.
-                </Text>
-              ) : null}
-              <HStack className={styles.dialogActions} gap={2} justify='end'>
-                <Button
-                  isDisabled={submitMutation.isPending}
-                  label='취소'
-                  onClick={() => setIsCreating(false)}
-                  type='button'
-                  variant='secondary'
-                />
-                <Button
-                  isDisabled={
-                    !input.code.trim() ||
-                    !input.classTime.trim() ||
-                    !Number.isInteger(Number(input.capacity)) ||
-                    Number(input.capacity) < 1 ||
-                    submitMutation.isPending
-                  }
-                  isLoading={submitMutation.isPending}
-                  label='등록'
-                  type='submit'
-                />
-              </HStack>
-            </form>
-          )}
-        </div>
-      </Dialog>
-      <SectionSettingsDialog
-        isOpen={sectionToEdit !== null}
-        onClose={() => setSectionToEdit(null)}
-        onDeleted={onSectionCreated}
-        onSaved={refreshSectionsAndSession}
-        section={sectionToEdit}
-      />
-    </>
+          <HStack className={styles.dialogActions} gap={2} justify='end'>
+            <Button
+              isDisabled={submitMutation.isPending}
+              label='취소'
+              onClick={close}
+              type='button'
+              variant='secondary'
+            />
+            <Button
+              isDisabled={
+                !isValid || submitMutation.isPending || hasRefreshError
+              }
+              isLoading={submitMutation.isPending}
+              label='등록'
+              type='submit'
+            />
+          </HStack>
+        </form>
+      </div>
+    </Dialog>
   );
 }
 
-function CourseDeleteDialog({
+export function CourseDeleteDialog({
   course,
   isOpen,
   onClose,
+  onDeleted,
 }: {
   course: AdminOopCourseDto | null;
   isOpen: boolean;
   onClose: () => void;
+  onDeleted?: () => void;
 }) {
   const toast = useToast();
   const removeMutation = useRemoveAdminOopCourseMutation();
@@ -1044,6 +1000,7 @@ function CourseDeleteDialog({
 
     removeMutation.mutate(course.id, {
       onSuccess: () => {
+        onDeleted?.();
         toast({ body: '강좌를 삭제했어요.' });
         onClose();
       },
@@ -1090,178 +1047,5 @@ function CourseDeleteDialog({
         </HStack>
       </div>
     </Dialog>
-  );
-}
-
-export default function AdminCourseManagement({
-  onSectionCreated,
-  professorId,
-}: {
-  onSectionCreated: () => Promise<boolean>;
-  professorId: string | undefined;
-}) {
-  const coursesQuery = useAdminOopCoursesQuery();
-  const [yearFilter, setYearFilter] = useState('ALL');
-  const [semesterFilter, setSemesterFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [dialogCourseId, setDialogCourseId] = useState<
-    number | null | undefined
-  >(undefined);
-  const [sectionManagementCourse, setSectionManagementCourse] =
-    useState<AdminOopCourseDto | null>(null);
-  const [courseToDelete, setCourseToDelete] =
-    useState<AdminOopCourseDto | null>(null);
-  const courses = coursesQuery.data?.contents ?? [];
-  const years = [...new Set(courses.map(course => course.year))].sort(
-    (left, right) => right - left,
-  );
-  const filteredCourses = useMemo(
-    () =>
-      courses.filter(
-        course =>
-          (yearFilter === 'ALL' || String(course.year) === yearFilter) &&
-          (semesterFilter === 'ALL' || course.semester === semesterFilter) &&
-          (statusFilter === 'ALL' || course.status === statusFilter),
-      ),
-    [courses, semesterFilter, statusFilter, yearFilter],
-  );
-
-  return (
-    <Card padding={4}>
-      <section
-        aria-labelledby='course-management-title'
-        className={styles.section}
-      >
-        <HStack justify='between'>
-          <div className={styles.heading}>
-            <Heading id='course-management-title' level={2}>
-              강좌 관리
-            </Heading>
-            <Text color='secondary' type='supporting'>
-              강좌를 등록하고 운영 상태를 관리합니다.
-            </Text>
-          </div>
-          <Button label='강좌 등록' onClick={() => setDialogCourseId(null)} />
-        </HStack>
-        <div aria-label='강좌 필터' className={styles.filters} role='group'>
-          <Selector
-            label='연도'
-            onChange={setYearFilter}
-            options={[
-              { label: '전체 연도', value: 'ALL' },
-              ...years.map(year => ({
-                label: `${year}년`,
-                value: String(year),
-              })),
-            ]}
-            renderOption={option => (
-              <SelectorOption label={option.label ?? option.value} />
-            )}
-            value={yearFilter}
-            width='100%'
-          />
-          <Selector
-            label='학기'
-            onChange={setSemesterFilter}
-            options={[{ label: '전체 학기', value: 'ALL' }, ...semesterOptions]}
-            renderOption={option => (
-              <SelectorOption label={option.label ?? option.value} />
-            )}
-            value={semesterFilter}
-            width='100%'
-          />
-          <Selector
-            label='상태'
-            onChange={setStatusFilter}
-            options={[{ label: '전체 상태', value: 'ALL' }, ...statusOptions]}
-            renderOption={option => (
-              <SelectorOption label={option.label ?? option.value} />
-            )}
-            value={statusFilter}
-            width='100%'
-          />
-        </div>
-        {coursesQuery.isPending ? (
-          <Text aria-live='polite' role='status'>
-            강좌 목록을 불러오는 중입니다.
-          </Text>
-        ) : coursesQuery.isError ? (
-          <EmptyState
-            description='잠시 후 다시 시도해 주세요.'
-            title='강좌 목록을 불러오지 못했습니다.'
-          />
-        ) : filteredCourses.length === 0 ? (
-          <EmptyState
-            description='필터를 바꾸거나 새 강좌를 등록해 주세요.'
-            title='표시할 강좌가 없습니다.'
-          />
-        ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th scope='col'>강좌명</th>
-                  <th scope='col'>연도</th>
-                  <th scope='col'>학기</th>
-                  <th scope='col'>상태</th>
-                  <th scope='col'>관리</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredCourses.map(course => (
-                  <tr key={course.id}>
-                    <td>{course.name}</td>
-                    <td>{course.year}</td>
-                    <td>{semesterLabel(course.semester)}</td>
-                    <td className={styles.status}>
-                      {statusLabel(course.status)}
-                    </td>
-                    <td>
-                      <div className={styles.rowActions}>
-                        <Button
-                          label='분반 관리'
-                          onClick={() => setSectionManagementCourse(course)}
-                          size='sm'
-                          variant='secondary'
-                        />
-                        <Button
-                          label='상세/수정'
-                          onClick={() => setDialogCourseId(course.id)}
-                          size='sm'
-                          variant='secondary'
-                        />
-                        <Button
-                          label='삭제'
-                          onClick={() => setCourseToDelete(course)}
-                          size='sm'
-                          variant='ghost'
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-      <CourseFormDialog
-        courseId={dialogCourseId ?? null}
-        isOpen={dialogCourseId !== undefined}
-        onClose={() => setDialogCourseId(undefined)}
-      />
-      <CourseSectionDialog
-        course={sectionManagementCourse}
-        isOpen={sectionManagementCourse !== null}
-        onClose={() => setSectionManagementCourse(null)}
-        onSectionCreated={onSectionCreated}
-        professorId={professorId}
-      />
-      <CourseDeleteDialog
-        course={courseToDelete}
-        isOpen={courseToDelete !== null}
-        onClose={() => setCourseToDelete(null)}
-      />
-    </Card>
   );
 }

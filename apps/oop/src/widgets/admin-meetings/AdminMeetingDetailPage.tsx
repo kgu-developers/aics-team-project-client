@@ -1,6 +1,6 @@
 import { Card, EmptyState, Heading, Text } from '@aics/design-system';
 import { Link, useParams } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -9,8 +9,10 @@ import RichTextViewer from '~/shared/ui/RichTextViewer';
 
 import { getRichTextPlainText } from '~/features/admin-meeting/model/getRichTextPlainText';
 import { useAdminMeetingRecordDetailQuery } from '~/features/admin-meeting/queries';
+import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
 import AdminStudentDetailDialog from '~/features/admin-student-team/components/AdminStudentDetailDialog';
 import { useAdminSectionEnrollmentsQuery } from '~/features/admin-student-team/queries';
+import { useAuthStore } from '~/features/auth/authStore';
 import { parseMeetingContent } from '~/features/meeting/model/studentMeeting';
 
 import * as styles from './AdminMeetingDetailPage.css';
@@ -20,10 +22,18 @@ export default function AdminMeetingDetailPage() {
     string | null
   >(null);
   const { meetingId } = useParams({ from: '/admin/meetings/$meetingId' });
+  const currentUser = useAuthStore(state => state.currentUser);
+  const { markAsRead } = useAdminMeetingReadState(currentUser?.id);
   const query = useAdminMeetingRecordDetailQuery(meetingId);
   const enrollmentsQuery = useAdminSectionEnrollmentsQuery(
     query.data ? String(query.data.sectionId) : undefined,
   );
+
+  useEffect(() => {
+    if (query.isSuccess && query.data) {
+      markAsRead(query.data.id);
+    }
+  }, [markAsRead, query.data, query.isSuccess]);
 
   if (query.isPending) {
     return (

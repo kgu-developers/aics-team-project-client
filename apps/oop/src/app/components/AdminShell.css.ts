@@ -109,6 +109,13 @@ export const footerBrand = style({
   flex: 1,
   justifyContent: 'center',
 });
+export const footerMeta = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['2'],
+  paddingBottom: tokens.spacing['5'],
+});
 const darkLogoTextOverlay = {
   backgroundImage: "url('/brand/kyonggi-university.png')",
   backgroundSize: '100% 100%',

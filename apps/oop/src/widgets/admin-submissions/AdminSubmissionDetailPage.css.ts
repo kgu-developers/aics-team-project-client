@@ -241,11 +241,25 @@ export const screenList = style({
   display: 'grid',
   gap: 12,
   gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  listStyle: 'none',
+  margin: 0,
+  padding: 0,
   '@media': {
     'screen and (max-width: 720px)': {
       gridTemplateColumns: '1fr',
     },
   },
+});
+
+export const screenCard = style({
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: 8,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+  minWidth: 0,
+  overflow: 'hidden',
+  padding: 12,
 });
 
 export const evaluatorButton = style({

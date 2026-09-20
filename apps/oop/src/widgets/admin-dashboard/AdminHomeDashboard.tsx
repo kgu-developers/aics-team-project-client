@@ -9,9 +9,11 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { getSectionDisplayLabel } from '~/shared/lib/getSectionDisplayLabel';
+import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 
 import { getRichTextPlainText } from '~/features/admin-meeting/model/getRichTextPlainText';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
+import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
 import { useAdminMessagesQuery } from '~/features/admin-message/queries';
 import {
   formatAdminMilestoneDate,
@@ -83,11 +85,13 @@ function List({
   isMeetingList = false,
   isMessageList = false,
   isNoticeList = false,
+  isMeetingRead,
   items,
 }: {
   isMeetingList?: boolean;
   isMessageList?: boolean;
   isNoticeList?: boolean;
+  isMeetingRead?: (meetingId: string) => boolean;
   items: readonly DashboardListItem[];
 }) {
   return (
@@ -100,6 +104,11 @@ function List({
           }
         >
           <span className={styles.itemMeta}>
+            {isMeetingList &&
+            item.meetingId &&
+            !isMeetingRead?.(item.meetingId) ? (
+              <AdminUnreadDot />
+            ) : null}
             <span className={styles.label}>{item.section}</span>
           </span>
           {isNoticeList && item.id ? (
@@ -144,6 +153,7 @@ function Panel({
   partialErrorMessage,
   isMeetingPanel = false,
   isMessagePanel = false,
+  isMeetingRead,
   title,
   items,
   action,
@@ -153,6 +163,7 @@ function Panel({
   partialErrorMessage?: string;
   isMeetingPanel?: boolean;
   isMessagePanel?: boolean;
+  isMeetingRead?: (meetingId: string) => boolean;
   title: string;
   items: readonly DashboardListItem[];
   action?: boolean;
@@ -192,6 +203,7 @@ function Panel({
           <List
             isMeetingList={isMeetingPanel}
             isMessageList={isMessagePanel}
+            isMeetingRead={isMeetingRead}
             isNoticeList={isNoticePanel}
             items={items}
           />
@@ -219,6 +231,7 @@ function Panel({
 export default function AdminHomeDashboard() {
   const navigate = useNavigate();
   const currentUser = useAuthStore(state => state.currentUser);
+  const meetingReadState = useAdminMeetingReadState(currentUser?.id);
   const accessibleSections = currentUser?.sections ?? [];
   const accessibleSectionIds = accessibleSections.map(section => section.id);
   const milestoneQueries =
@@ -438,6 +451,7 @@ export default function AdminHomeDashboard() {
         <Panel
           emptyMessage={meetingEmptyMessage}
           isMeetingPanel
+          isMeetingRead={meetingReadState.isRead}
           items={meetingItems}
           title='회의록'
         />

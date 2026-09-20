@@ -23,7 +23,6 @@ import { useAuthStore } from '~/features/auth/authStore';
 
 import { AdminPreSurveyResponses } from './AdminPreSurveyResponses';
 import AdminProfilePage from './AdminProfilePage';
-import AdminCourseOperations from '../admin-course/AdminCourseOperations';
 
 import {
   mockSessionResponseHeaders,
@@ -32,7 +31,6 @@ import {
 import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
 import { resetAdminProfileMockData } from '~/mocks/data/adminProfile';
 import { resetAdminSectionsMockData } from '~/mocks/data/adminSections';
-import { adminStudentsFixture } from '~/mocks/data/adminStudentTeams';
 import {
   demoAdmin,
   demoAdminAccessToken,
@@ -46,10 +44,6 @@ import {
   resetAdminStudentTeamMockState,
 } from '~/mocks/handlers/adminStudentTeams';
 import { authHandlers, resetDemoPasswordState } from '~/mocks/handlers/auth';
-
-const demoSectionStudentCount = adminStudentsFixture.filter(
-  student => student.sectionId === 'oop-2026-2-01',
-).length;
 
 const server = setupServer(
   ...adminCourseHandlers,
@@ -163,6 +157,21 @@ afterAll(() => {
   }
 });
 
+// The pre-survey panel now lives on the course detail page; it is rendered
+// here with the signed-in admin's sections to keep its behaviors covered.
+function PreSurveyForCurrentUser() {
+  const sections = useAuthStore(state => state.currentUser?.sections) ?? [];
+  return (
+    <AdminPreSurveyResponses
+      sections={sections.map(section => ({
+        code: section.code,
+        id: section.id,
+        name: section.name,
+      }))}
+    />
+  );
+}
+
 function renderPage() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
@@ -183,7 +192,7 @@ function renderPage() {
     ...render(
       <>
         <AdminProfilePage />
-        <AdminCourseOperations />
+        <PreSurveyForCurrentUser />
       </>,
       { wrapper: Wrapper },
     ),
@@ -288,155 +297,10 @@ describe('AdminProfilePage', () => {
     expect(screen.getByLabelText('이메일')).toBeDisabled();
   });
 
-  it('수강생 명단 Excel 파일을 미리보기로 검증하고 반영할 수 있다', async () => {
-    const user = userEvent.setup({ applyAccept: false });
-    renderPage();
-
-    await user.click(
-      screen.getByRole('button', { name: '학생 명단 파일 선택' }),
-    );
-    const fileInput =
-      document.querySelector<HTMLInputElement>('input[type="file"]');
-
-    if (!fileInput) throw new Error('파일 선택 input을 찾을 수 없습니다.');
-
-    await user.upload(fileInput, new File(['not excel'], 'students.txt'));
-    const excelFile = new File(['excel data'], '1151.xlsx', {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    });
-    await user.upload(fileInput, excelFile);
-    await user.click(screen.getByRole('button', { name: '미리보기' }));
-    expect(
-      await screen.findByText(`전체 ${demoSectionStudentCount}건`),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(`중복 ${demoSectionStudentCount}건`),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '반영하기' })).toBeEnabled();
-  });
-
-  it('수강생 명단을 반영하면 분반별 업로드 현황을 최신 파일로 갱신한다', async () => {
-    const user = userEvent.setup();
-    renderPage();
-
-    await user.click(
-      screen.getByRole('button', { name: '학생 명단 파일 선택' }),
-    );
-    const fileInput =
-      document.querySelector<HTMLInputElement>('input[type="file"]');
-
-    if (!fileInput) throw new Error('파일 선택 input을 찾을 수 없습니다.');
-
-    await user.upload(fileInput, new File(['excel data'], 'students-01.xlsx'));
-    await user.click(screen.getByRole('button', { name: '미리보기' }));
-    await user.click(await screen.findByRole('button', { name: '반영하기' }));
-
-    expect(
-      await screen.findByText(/^students-01\.xlsx · /),
-    ).toBeInTheDocument();
-    expect(screen.getAllByText('파일 없음')).toHaveLength(1);
-  });
-
-  it('팀 구성 명단을 반영하면 팀 명단 현황만 최신 파일로 갱신한다', async () => {
-    const user = userEvent.setup();
-    renderPage();
-
-    await user.click(
-      screen.getByRole('button', { name: '팀 구성 명단 파일 선택' }),
-    );
-    const fileInput = document.querySelector<HTMLInputElement>(
-      'dialog[open] input[type="file"]',
-    );
-
-    if (!fileInput) throw new Error('파일 선택 input을 찾을 수 없습니다.');
-
-    await user.upload(fileInput, new File(['excel data'], 'teams-01.xlsx'));
-    await user.click(screen.getByRole('button', { name: '미리보기' }));
-    await user.click(await screen.findByRole('button', { name: '반영하기' }));
-
-    expect(await screen.findByText(/^teams-01\.xlsx · /)).toBeInTheDocument();
-    expect(screen.getAllByText('파일 없음')).toHaveLength(1);
-  });
-
-  it('명단 반영 현황을 조회하지 못하면 오류 상태를 표시한다', async () => {
-    server.use(
-      http.get(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ROSTER_IMPORT_STATUS(':sectionId')}`,
-        () =>
-          HttpResponse.json(
-            { code: 'ROSTER_IMPORT_STATUS_LOOKUP_FAILED' },
-            { status: 500 },
-          ),
-      ),
-    );
-    renderPage();
-
-    expect(
-      await screen.findAllByText('업로드 현황을 불러오지 못했습니다.'),
-    ).toHaveLength(2);
-  });
-
-  it('파일명이 없는 기존 반영 이력은 파일 없음으로 표시한다', async () => {
-    server.use(
-      http.get(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ROSTER_IMPORT_STATUS(':sectionId')}`,
-        () =>
-          HttpResponse.json({
-            studentRoster: null,
-            teamRoster: {
-              appliedAt: '2026-09-09T07:00:00',
-              fileName: null,
-            },
-          }),
-      ),
-    );
-    renderPage();
-
-    expect(await screen.findAllByText('파일 없음')).toHaveLength(2);
-  });
-
-  it('업로드 모달을 닫으면 미리보기 상태를 초기화한다', async () => {
-    const user = userEvent.setup();
-    renderPage();
-
-    await user.click(
-      screen.getByRole('button', { name: '학생 명단 파일 선택' }),
-    );
-    const fileInput =
-      document.querySelector<HTMLInputElement>('input[type="file"]');
-
-    if (!fileInput) throw new Error('파일 선택 input을 찾을 수 없습니다.');
-
-    await user.upload(fileInput, new File(['excel data'], '1151.xlsx'));
-    await user.click(screen.getByRole('button', { name: '미리보기' }));
-    expect(
-      await screen.findByText(`전체 ${demoSectionStudentCount}건`),
-    ).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: '취소' }));
-    await user.click(
-      screen.getByRole('button', { name: '학생 명단 파일 선택' }),
-    );
-
-    expect(screen.queryByText(/^전체 \d+건$/)).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: '반영하기' }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '미리보기' })).toBeDisabled();
-    expect(
-      document.querySelector<HTMLInputElement>(
-        'dialog[open] input[type="file"]',
-      )?.files,
-    ).toHaveLength(0);
-  });
-
-  it('담당 분반이 없으면 데이터 업로드를 막고 이유를 표시한다', () => {
+  it('담당 분반이 없으면 사전 정보 조회를 막고 이유를 표시한다', () => {
     useAuthStore.setState({ currentUser: { ...demoAdmin, sections: [] } });
     renderPage();
 
-    expect(
-      screen.getByText('담당 분반이 없어 명단 파일을 선택할 수 없습니다.'),
-    ).toBeInTheDocument();
     expect(
       screen.getByText('담당 분반이 없어 사전 정보를 조회할 수 없습니다.'),
     ).toBeInTheDocument();

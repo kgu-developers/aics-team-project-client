@@ -57,6 +57,7 @@ export function createRun() {
     key,
     users,
     course: `OOP 통합 ${key}`,
+    coursePath: '',
     section: key,
     team: `통합 팀 ${key}`,
     comparison: `비교 팀 ${key}`,

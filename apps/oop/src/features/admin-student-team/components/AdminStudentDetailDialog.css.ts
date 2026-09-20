@@ -5,13 +5,33 @@ export const content = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 16,
+  maxHeight: 'calc(100dvh - 80px)',
+  overflow: 'hidden',
   wordBreak: 'keep-all',
+});
+
+export const title = style({
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
 });
 
 export const description = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 6,
+});
+
+export const body = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 16,
+  minHeight: 0,
+  overflowY: 'auto',
+  paddingRight: 4,
+});
+
+export const actions = style({
+  flex: '0 0 auto',
 });
 
 export const detailList = style({
