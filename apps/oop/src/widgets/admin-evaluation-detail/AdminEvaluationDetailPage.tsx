@@ -127,10 +127,17 @@ function PeerDetail({
     return <Text role='status'>상호평가 결과를 불러오는 중입니다.</Text>;
   if (query.isError || !query.data)
     return (
-      <EmptyState
-        description='잠시 후 다시 시도해 주세요.'
-        title='상호평가 결과를 불러오지 못했습니다.'
-      />
+      <>
+        <EvaluationTitle
+          evaluationType='peer'
+          sectionId={sectionId}
+          title='상호평가 상세보기'
+        />
+        <EmptyState
+          description='잠시 후 다시 시도해 주세요.'
+          title='상호평가 결과를 불러오지 못했습니다.'
+        />
+      </>
     );
   const { data } = query;
   return (
@@ -234,10 +241,17 @@ function PresentationDetail({
     return <Text role='status'>발표평가 결과를 불러오는 중입니다.</Text>;
   if (query.isError || !query.data)
     return (
-      <EmptyState
-        description='잠시 후 다시 시도해 주세요.'
-        title='발표평가 결과를 불러오지 못했습니다.'
-      />
+      <>
+        <EvaluationTitle
+          evaluationType='presentation'
+          sectionId={sectionId}
+          title='발표평가 상세보기'
+        />
+        <EmptyState
+          description='잠시 후 다시 시도해 주세요.'
+          title='발표평가 결과를 불러오지 못했습니다.'
+        />
+      </>
     );
   const { data } = query;
   const criteria = [...data.criteria].sort(

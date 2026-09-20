@@ -902,12 +902,16 @@ export default function AdminSubmissionsPage() {
                                 onClick={
                                   submissionId
                                     ? () => {
-                                        if (readTarget)
-                                          submissionReadState.markAsRead(
-                                            readTarget,
-                                          );
                                         downloadArtifactsMutation.mutate(
                                           submissionId,
+                                          {
+                                            onSuccess: () => {
+                                              if (readTarget)
+                                                submissionReadState.markAsRead(
+                                                  readTarget,
+                                                );
+                                            },
+                                          },
                                         );
                                       }
                                     : undefined

@@ -28,7 +28,7 @@ export function AdminTeamMeetingRecordList({
   teamId,
 }: AdminTeamMeetingRecordListProps) {
   const currentUser = useAuthStore(state => state.currentUser);
-  const { isRead, markAsRead } = useAdminMeetingReadState(currentUser?.id);
+  const { isRead } = useAdminMeetingReadState(currentUser?.id);
 
   return (
     <section aria-labelledby='team-meetings-heading' className={styles.section}>
@@ -68,7 +68,6 @@ export function AdminTeamMeetingRecordList({
               className={styles.record}
               key={record.id}
               params={{ meetingId: record.id }}
-              onClick={() => markAsRead(record.id)}
               search={{ sectionId: record.sectionId, teamId: record.teamId }}
               to={ROUTES.ADMIN_MEETING_DETAIL}
             >

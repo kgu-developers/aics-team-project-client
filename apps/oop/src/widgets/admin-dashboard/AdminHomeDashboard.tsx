@@ -87,14 +87,12 @@ function List({
   isNoticeList = false,
   isMeetingRead,
   items,
-  onMeetingOpen,
 }: {
   isMeetingList?: boolean;
   isMessageList?: boolean;
   isNoticeList?: boolean;
   isMeetingRead?: (meetingId: string) => boolean;
   items: readonly DashboardListItem[];
-  onMeetingOpen?: (meetingId: string) => void;
 }) {
   return (
     <ul className={styles.list}>
@@ -128,7 +126,6 @@ function List({
             <Link
               className={styles.itemTitle}
               params={{ meetingId: item.meetingId }}
-              onClick={() => onMeetingOpen?.(item.meetingId!)}
               to={ROUTES.ADMIN_MEETING_DETAIL}
             >
               {item.title}
@@ -159,7 +156,6 @@ function Panel({
   isMeetingRead,
   title,
   items,
-  onMeetingOpen,
   action,
   isNoticePanel = false,
 }: {
@@ -170,7 +166,6 @@ function Panel({
   isMeetingRead?: (meetingId: string) => boolean;
   title: string;
   items: readonly DashboardListItem[];
-  onMeetingOpen?: (meetingId: string) => void;
   action?: boolean;
   isNoticePanel?: boolean;
 }) {
@@ -211,7 +206,6 @@ function Panel({
             isMeetingRead={isMeetingRead}
             isNoticeList={isNoticePanel}
             items={items}
-            onMeetingOpen={onMeetingOpen}
           />
         ) : emptyMessage ? (
           <p className={styles.panelState}>{emptyMessage}</p>
@@ -459,7 +453,6 @@ export default function AdminHomeDashboard() {
           isMeetingPanel
           isMeetingRead={meetingReadState.isRead}
           items={meetingItems}
-          onMeetingOpen={meetingReadState.markAsRead}
           title='회의록'
         />
       </div>

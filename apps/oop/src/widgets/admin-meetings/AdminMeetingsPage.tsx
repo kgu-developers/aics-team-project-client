@@ -37,7 +37,7 @@ function handleRowNavigation(
 
 export default function AdminMeetingsPage() {
   const currentUser = useAuthStore(state => state.currentUser);
-  const { isRead, markAsRead } = useAdminMeetingReadState(currentUser?.id);
+  const { isRead } = useAdminMeetingReadState(currentUser?.id);
   const navigate = useNavigate();
   const search = useSearch({ from: '/admin/meetings/' }) as {
     page?: number;
@@ -188,7 +188,6 @@ export default function AdminMeetingsPage() {
             <tbody>
               {records.map(record => {
                 const openMeeting = () => {
-                  markAsRead(record.id);
                   void navigate({
                     params: { meetingId: String(record.id) },
                     to: ROUTES.ADMIN_MEETING_DETAIL,

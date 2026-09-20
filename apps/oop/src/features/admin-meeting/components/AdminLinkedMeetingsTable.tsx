@@ -36,12 +36,11 @@ export function AdminLinkedMeetingsTable({
 }) {
   const navigate = useNavigate();
   const currentUser = useAuthStore(state => state.currentUser);
-  const { isRead, markAsRead } = useAdminMeetingReadState(currentUser?.id);
+  const { isRead } = useAdminMeetingReadState(currentUser?.id);
   const rowInteractionPlugin = useMemo<LinkedMeetingTablePlugin>(
     () => ({
       transformBodyRow: (rowRenderProps, record) => {
         const openMeeting = () => {
-          markAsRead(record.id);
           void navigate({
             params: { meetingId: String(record.id) },
             to: ROUTES.ADMIN_MEETING_DETAIL,
@@ -76,7 +75,7 @@ export function AdminLinkedMeetingsTable({
         };
       },
     }),
-    [isRead, markAsRead, navigate],
+    [isRead, navigate],
   );
 
   return (

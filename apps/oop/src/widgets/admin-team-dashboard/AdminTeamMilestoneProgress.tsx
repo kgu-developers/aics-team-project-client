@@ -212,9 +212,12 @@ export default function AdminTeamMilestoneProgress({
                       onClick={
                         submissionId
                           ? () => {
-                              if (readTarget)
-                                submissionReadState.markAsRead(readTarget);
-                              downloadArtifactsMutation.mutate(submissionId);
+                              downloadArtifactsMutation.mutate(submissionId, {
+                                onSuccess: () => {
+                                  if (readTarget)
+                                    submissionReadState.markAsRead(readTarget);
+                                },
+                              });
                             }
                           : undefined
                       }

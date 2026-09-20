@@ -133,7 +133,6 @@ export function AdminPresentationEvaluationTeamDetailDialog({
                     className={styles.meetingLink}
                     key={record.id}
                     params={{ meetingId: String(record.id) }}
-                    onClick={() => meetingReadState.markAsRead(record.id)}
                     to={ROUTES.ADMIN_MEETING_DETAIL}
                   >
                     {!meetingReadState.isRead(record.id) ? (
