@@ -209,9 +209,7 @@ export function AdminNoticeListPage() {
                   }
                   tabIndex={0}
                 >
-                  <td>
-                    {formatSeoulDateTime(notice.publishedAt).slice(0, 10)}
-                  </td>
+                  <td>{formatSeoulDateTime(notice.publishedAt)}</td>
                   <td>
                     {user?.sections.find(
                       section => noticeId(section.id) === notice.sectionId,
@@ -372,7 +370,7 @@ function NoticeDraftBlocker({
 
   return (
     <Dialog
-      aria-label='저장하지 않은 공지사항 초안'
+      aria-label='저장하지 않은 내용이 있어요.'
       isOpen={blocker.status === 'blocked'}
       onOpenChange={open => open || blocker.reset?.()}
       purpose='info'
@@ -380,7 +378,7 @@ function NoticeDraftBlocker({
     >
       <div className={styles.leaveDialog}>
         <Heading level={2}>저장하지 않은 내용이 있어요.</Heading>
-        <Text>이동하면 작성한 공지사항 초안이 사라집니다.</Text>
+        <Text>이동하면 변경 내용이 사라집니다.</Text>
         <HStack gap={2} justify='end'>
           <Button
             data-autofocus='true'
@@ -390,7 +388,7 @@ function NoticeDraftBlocker({
           />
           <Button
             isDisabled={pending}
-            label='초안 버리고 이동'
+            label='변경 버리고 이동'
             onClick={() => blocker.proceed?.()}
             variant='destructive'
           />
@@ -412,7 +410,8 @@ function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
   const serializedContent = serializeRichTextContent(content);
   const input = {
     ...(title.trim() !== notice.title ? { title: title.trim() } : {}),
-    ...(serializedContent !== serializeRichTextContent(parseRichTextContent(notice.content))
+    ...(serializedContent !==
+    serializeRichTextContent(parseRichTextContent(notice.content))
       ? { content: serializedContent }
       : {}),
   };

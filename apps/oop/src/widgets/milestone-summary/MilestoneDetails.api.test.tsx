@@ -102,13 +102,13 @@ describe('existing proposal feedback form with team messages', () => {
     });
     renderFeedback();
     expect(
-      await screen.findByText('검수 학생 (2026-09-01 10:10)'),
+      await screen.findByText('검수 학생 (2026-09-01/19:10)'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('검수 교수 (2026-09-01 10:00)'),
+      screen.getByText('검수 교수 (2026-09-01/19:00)'),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(`${demoStudent.studentNumber} (2026-09-01 10:10)`),
+      screen.queryByText(`${demoStudent.studentNumber} (2026-09-01/19:10)`),
     ).not.toBeInTheDocument();
     expect(screen.getByText('피드백 대화')).toBeInTheDocument();
     expect(screen.queryByText('교수 피드백')).not.toBeInTheDocument();
@@ -142,7 +142,7 @@ describe('existing proposal feedback form with team messages', () => {
       renderFeedback();
       expect(
         await screen.findByText(
-          `${demoStudent.studentNumber} (2026-09-01 10:10)`,
+          `${demoStudent.studentNumber} (2026-09-01/19:10)`,
         ),
       ).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '답변 보내기' })).toBeEnabled();
@@ -374,24 +374,27 @@ describe('중간보고서 피드백 메시지', () => {
     );
     const view = renderFeedback(midBody);
     const button = await screen.findByRole('button', {
-      name: '반영 기록 남기기',
+      name: '반영 방향 보내기',
     });
     await waitFor(() =>
       expect(button).not.toHaveAttribute('aria-disabled', 'true'),
     );
+    await userEvent.setup().click(button);
     await userEvent
       .setup()
       .type(
         screen.getByRole('textbox', { name: /대면 피드백 반영 내용/ }),
         '대면 피드백을 기록했습니다.',
       );
-    await userEvent.setup().click(button);
+    await userEvent
+      .setup()
+      .click(screen.getAllByRole('button', { name: '반영 방향 보내기' })[1]!);
     expect(
       await screen.findByText('대면 피드백을 기록했습니다.'),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('textbox', { name: /대면 피드백 반영 내용/ }),
-    ).toHaveValue('');
+      screen.queryByRole('textbox', { name: /대면 피드백 반영 내용/ }),
+    ).not.toBeInTheDocument();
     messages.push({
       id: 902,
       threadId: 70,
@@ -412,7 +415,7 @@ describe('중간보고서 피드백 메시지', () => {
     expect(screen.getByText('피드백 대화')).toBeInTheDocument();
     expect(screen.queryByText('교수 추가 답변')).not.toBeInTheDocument();
     expect(
-      screen.getByText('검수 교수 (2026-09-10 10:10)'),
+      screen.getByText('검수 교수 (2026-09-10/19:10)'),
     ).toBeInTheDocument();
     expect(
       requests.some(
@@ -441,13 +444,16 @@ describe('중간보고서 피드백 메시지', () => {
     expect(
       screen.queryByText('기능별 역할 분담도 함께 정리해 주세요.'),
     ).not.toBeInTheDocument();
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: '반영 방향 보내기' }));
     const input = screen.getByRole('textbox', {
       name: /대면 피드백 반영 내용/,
     });
     await userEvent.setup().type(input, '보존할 기록');
     await userEvent
       .setup()
-      .click(screen.getByRole('button', { name: '반영 기록 남기기' }));
+      .click(screen.getAllByRole('button', { name: '반영 방향 보내기' })[1]!);
     expect(
       await screen.findByText('현재 팀의 피드백만 작성할 수 있어요.'),
     ).toBeInTheDocument();
@@ -469,7 +475,7 @@ describe('피드백 단계별 노출', () => {
 
     renderFeedback({ ...body, feedbackStage: 'awaiting-feedback' });
     expect(
-      await screen.findByText(/교수\/조교 피드백을 기다리고 있어요/),
+      await screen.findByText(/제출 완료 · 피드백 대기 중/),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('textbox', { name: /피드백 반영 답변/ }),
@@ -522,7 +528,7 @@ describe('피드백 단계별 노출', () => {
     ).toBeInTheDocument();
   });
 
-  it('중간보고서는 첫 반영 방향을 모달로 보내고, 보낸 뒤에는 인라인 대화로 이어진다', async () => {
+  it('중간보고서는 첫 반영 방향만 모달로 보내고, 보낸 뒤에는 입력 없이 대화만 보인다', async () => {
     const messages: Array<Record<string, unknown>> = [];
     server.use(
       http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`, () =>
@@ -606,7 +612,7 @@ describe('피드백 단계별 노출', () => {
       await screen.findByText('대면 피드백을 기록했습니다.'),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('textbox', { name: /대면 피드백 반영 내용/ }),
-    ).toBeInTheDocument();
+      screen.queryByRole('textbox', { name: /대면 피드백 반영 내용/ }),
+    ).not.toBeInTheDocument();
   });
 });

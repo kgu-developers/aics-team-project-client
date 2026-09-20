@@ -141,7 +141,7 @@ it('실제 팀 ID와 학번으로 목록·제목 링크·기한·담당자를 �
   expect(
     await screen.findByRole('tooltip', { name: '회의록: 진행 점검 회의' }),
   ).toBeVisible();
-  expect(screen.getByText('2026-09-10')).toBeVisible();
+  expect(screen.getByText('2026-09-11/03:00')).toBeVisible();
   await user.click(screen.getByRole('combobox', { name: '담당자' }));
   await user.click(screen.getByRole('option', { name: 'OOP 데모 학생 A' }));
   expect(

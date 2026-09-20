@@ -32,7 +32,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
-import { seoulInstant } from '~/shared/lib/seoulInstant';
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import RichTextEditor from '~/shared/ui/RichTextEditor';
 import RichTextViewer from '~/shared/ui/RichTextViewer';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
@@ -82,16 +82,6 @@ const requestErrorMessage =
 function toDateInput(value: string) {
   return value.slice(0, 10);
 }
-const heldAtFormatter = new Intl.DateTimeFormat('ko-KR', {
-  dateStyle: 'long',
-  timeZone: 'Asia/Seoul',
-});
-
-function formatHeldAt(value: string) {
-  const instant = seoulInstant(value);
-  return Number.isNaN(instant) ? value : heldAtFormatter.format(instant);
-}
-
 function hasRichTextContent(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
 
@@ -115,7 +105,7 @@ function createMeetingListColumns({
       key: 'heldAt',
       header: '날짜',
       width: proportional(1, { minWidth: 80 }),
-      renderCell: record => <>{record.heldAt.slice(0, 10)}</>,
+      renderCell: record => <>{formatSeoulDateTime(record.heldAt)}</>,
     },
     {
       key: 'heading',
@@ -1040,7 +1030,7 @@ export function MeetingDeleteDialog({
         <Card className={styles.deletePreview} variant='muted'>
           <Text weight='medium'>{record.title}</Text>
           <Text color='secondary' type='supporting'>
-            {formatHeldAt(record.heldAt)} · 작성 {record.createdBy.name}
+            {formatSeoulDateTime(record.heldAt)} · 작성 {record.createdBy.name}
           </Text>
         </Card>
         {isError ? (
@@ -1143,10 +1133,8 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
         <div>
           <Heading level={1}>{record.title}</Heading>
           <p className={styles.meta}>
-            {formatHeldAt(record.heldAt)}
-            {record.phase
-              ? ` ${record.heldAt.slice(11, 16)} · ${meetingPhaseLabels[record.phase]}`
-              : ''}
+            {formatSeoulDateTime(record.heldAt)}
+            {record.phase ? ` · ${meetingPhaseLabels[record.phase]}` : ''}
             {record.location ? ` · ${record.location}` : ''}
           </p>
         </div>
@@ -1180,7 +1168,7 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
         <footer className={styles.detailFooter}>
           <Text color='secondary' type='supporting'>
             최초 작성 {record.createdBy.name} · 최종 수정{' '}
-            {formatHeldAt(record.updatedAt)}
+            {formatSeoulDateTime(record.updatedAt)}
           </Text>
           <div className={`${styles.actions} ${styles.detailActions}`}>
             {context.canEditRecord ? (

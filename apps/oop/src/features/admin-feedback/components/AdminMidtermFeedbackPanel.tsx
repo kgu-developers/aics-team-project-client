@@ -2,6 +2,8 @@ import type { AdminMidtermFeedbackDto } from '@aics/api-client';
 import { Button, Card, Heading, Text, TextArea } from '@aics/design-system';
 import { useEffect, useState } from 'react';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+
 import * as styles from './AdminProposalFeedbackPanel.css';
 
 type AdminMidtermFeedbackPanelProps = {
@@ -39,7 +41,7 @@ export function AdminMidtermFeedbackPanel({
           <div className={styles.response}>
             <Text className={styles.meta}>
               {feedback.latestStudentResponse.authorName} ·{' '}
-              {feedback.latestStudentResponse.createdAt}
+              {formatSeoulDateTime(feedback.latestStudentResponse.createdAt)}
             </Text>
             <Text>{feedback.latestStudentResponse.content}</Text>
           </div>

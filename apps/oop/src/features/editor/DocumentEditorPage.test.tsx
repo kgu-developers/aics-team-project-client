@@ -237,6 +237,94 @@ describe('DocumentEditorPage 자동 저장', () => {
     expect(saveBlock).toHaveBeenCalledTimes(1);
   });
 
+  it('수동 저장 모드는 입력만으로 요청하지 않고 저장 버튼으로 반영한다', async () => {
+    vi.useFakeTimers();
+    const saveBlock = vi.fn(async () => createDocument(2, '기존 팀명'));
+
+    renderWithRouter(
+      <DocumentEditorPage
+        copy={copy}
+        completion={{
+          completeBlock: saveBlock,
+          completeError: null,
+          completing: false,
+          isBlockCompleted: () => false,
+          isDocumentSubmitted: () => false,
+        }}
+        docId='mid-review'
+        documentQuery={query(createDocument())}
+        editLockTargetType={null}
+        saveBlock={saveBlock}
+        saveMode='manual'
+        saveState={{ error: null, saving: false }}
+        section='topic'
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('주제 이름'), {
+      target: { value: '수동 저장 입력' },
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(1_000);
+    });
+
+    expect(saveBlock).not.toHaveBeenCalled();
+    expect(screen.getByText('저장되지 않은 변경 사항')).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '저장' }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(saveBlock).toHaveBeenCalledTimes(1);
+    expect(saveBlock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fields: [
+          expect.objectContaining({
+            key: 'topicName',
+            value: '수동 저장 입력',
+          }),
+        ],
+      }),
+    );
+  });
+
+  it('수동 저장 초안은 이동 전에 제안서와 같은 확인을 표시한다', async () => {
+    const saveBlock = vi.fn(async () => createDocument());
+    renderWithRouter(
+      <DocumentEditorPage
+        copy={copy}
+        completion={{
+          completeBlock: saveBlock,
+          completeError: null,
+          completing: false,
+          isBlockCompleted: () => false,
+          isDocumentSubmitted: () => false,
+        }}
+        docId='mid-review'
+        documentQuery={query(createDocument())}
+        editLockTargetType={null}
+        saveBlock={saveBlock}
+        saveMode='manual'
+        saveState={{ error: null, saving: false }}
+        section='topic'
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('주제 이름'), {
+      target: { value: '이동 전 입력' },
+    });
+    fireEvent.click(screen.getByRole('link', { name: '학생 홈으로' }));
+
+    expect(
+      await screen.findByRole('alertdialog', {
+        name: '저장하지 않은 내용이 있어요.',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '변경 버리고 이동' }),
+    ).toBeInTheDocument();
+  });
+
   it('디바운스 전에 섹션을 이동해도 draft를 즉시 저장하고 돌아왔을 때 유지한다', async () => {
     const pendingSave = deferred<TestDocument>();
     const saveBlock = vi.fn(() => pendingSave.promise);

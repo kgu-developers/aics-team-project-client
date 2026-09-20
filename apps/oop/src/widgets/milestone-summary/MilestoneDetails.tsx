@@ -1,5 +1,4 @@
 import type {
-  MidReportFeedback,
   MilestonePresentation,
   ProposalFeedbackResponse,
   StudentHomeFeedbackMessage,
@@ -13,7 +12,6 @@ import {
   Heading,
   HStack,
   StatusDot,
-  Text,
   TextArea,
   useToast,
   type StatusDotVariant,
@@ -22,7 +20,7 @@ import { Link } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
 import { type FormEvent, type ReactNode, useState } from 'react';
 
-import { seoulInstant } from '~/shared/lib/seoulInstant';
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { useMilestonePresentationsQuery } from '~/features/evaluation/queries';
 import ProjectTopicBoard from '~/features/project-topic/ProjectTopicBoard';
@@ -89,17 +87,6 @@ function FeedbackList({
   );
 }
 
-const submittedAtFormatter = new Intl.DateTimeFormat('ko-KR', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-  timeZone: 'Asia/Seoul',
-});
-
-function formatSubmittedAt(value: string) {
-  const instant = seoulInstant(value);
-  return Number.isNaN(instant) ? value : submittedAtFormatter.format(instant);
-}
-
 function getFeedbackSubmitErrorMessage(error: unknown, fallback: string) {
   if (!isAxiosError(error)) return fallback;
 
@@ -126,25 +113,9 @@ function SubmittedProposalResponse({
     <article className={styles.feedbackItem}>
       <p className={styles.feedbackTitle}>
         {response.submittedBy} · 반영 답변 (
-        {formatSubmittedAt(response.submittedAt)})
+        {formatSeoulDateTime(response.submittedAt)})
       </p>
       <p className={styles.feedbackContent}>{response.content}</p>
-    </article>
-  );
-}
-
-function SubmittedMidReportFeedback({
-  feedback,
-}: {
-  feedback: MidReportFeedback;
-}) {
-  return (
-    <article className={styles.feedbackItem}>
-      <p className={styles.feedbackTitle}>
-        {feedback.submittedBy} · 반영 기록 (
-        {formatSubmittedAt(feedback.submittedAt)})
-      </p>
-      <p className={styles.feedbackContent}>{feedback.content}</p>
     </article>
   );
 }
@@ -306,7 +277,6 @@ function MidReportFeedbackForm({
         <p className={styles.feedbackBlocked}>{blockedReason}</p>
       ) : null}
       <TextArea
-        description='대면 피드백에서 들은 내용과 이를 문서와 프로젝트에 어떻게 반영했는지 함께 작성해 주세요.'
         isDisabled={isDisabled}
         isRequired
         label='대면 피드백 반영 내용'
@@ -348,7 +318,7 @@ function SectionStatusList({
               <span className={styles.sectionLabel}>{section.label}</span>
               {section.updatedAt ? (
                 <span className={styles.sectionUpdatedAt}>
-                  ({section.updatedAt})
+                  ({formatSeoulDateTime(section.updatedAt)})
                 </span>
               ) : null}
             </span>
@@ -515,7 +485,6 @@ function ProposalFeedbackBody({
         <>
           <SectionBanner title='피드백 대화' />
           <FeedbackList feedback={body.feedback} />
-          <SectionBanner title='피드백 반영 답변' />
           {body.studentResponse ? (
             <SubmittedProposalResponse response={body.studentResponse} />
           ) : (
@@ -530,7 +499,6 @@ function ProposalFeedbackBody({
         </>
       ) : (
         <>
-          <SectionBanner title='피드백' />
           <FeedbackStageCard
             message={
               stage === 'unknown'
@@ -543,7 +511,6 @@ function ProposalFeedbackBody({
       )}
       <SectionBanner title='작성 영역별 상태' />
       <SectionStatusList sections={body.sections} />
-      <p className={styles.guide}>{body.guide}</p>
     </div>
   );
 }
@@ -554,27 +521,12 @@ function MidReportFeedbackBody({
   body: Extract<StudentHomeMilestoneBody, { kind: 'mid-review-feedback' }>;
 }) {
   const body = useMidReportFeedbackQuery(sourceBody);
-  const stage = body.feedbackStage ?? 'feedback-arrived';
+  const stage = body.feedbackStage ?? 'awaiting-feedback';
   const [isFirstMessageOpen, setIsFirstMessageOpen] = useState(false);
   return (
     <div className={styles.root}>
-      {stage === 'not-submitted' ? null : stage === 'feedback-arrived' ? (
+      {stage === 'not-submitted' || stage === 'feedback-arrived' ? null : (
         <>
-          <SectionBanner title='대면 피드백 반영 기록' />
-          {body.studentFeedback ? (
-            <SubmittedMidReportFeedback feedback={body.studentFeedback} />
-          ) : (
-            <MidReportFeedbackForm
-              key={body.teamId}
-              teamId={body.teamId}
-              blockedReason={body.responseBlockedReason}
-              canSubmit={body.canSubmitResponse}
-            />
-          )}
-        </>
-      ) : (
-        <>
-          <SectionBanner title='대면 피드백' />
           <FeedbackStageCard
             action={
               stage === 'awaiting-feedback' ? (
@@ -612,11 +564,6 @@ function MidReportFeedbackBody({
           >
             <div className={styles.feedbackDialogContent}>
               <Heading level={2}>대면 피드백 반영 방향 보내기</Heading>
-              <Text color='secondary'>
-                중간보고서를 제출하고 대면 피드백을 받은 뒤에 보내 주세요. 보낸
-                내용은 담당 교수·조교 쪽지함으로 전달되고, 이후 대화는 이
-                화면에서 이어집니다.
-              </Text>
               <MidReportFeedbackForm
                 key={body.teamId}
                 teamId={body.teamId}
@@ -644,7 +591,6 @@ function MidReportFeedbackBody({
       ) : null}
       <SectionBanner title='작성 영역별 상태' />
       <SectionStatusList sections={body.sections} />
-      <p className={styles.guide}>{body.guide}</p>
     </div>
   );
 }

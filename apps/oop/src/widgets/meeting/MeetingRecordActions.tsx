@@ -10,6 +10,7 @@ import {
 } from '@aics/design-system';
 import { useState, type ReactNode } from 'react';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import MeetingActionDeleteDialog from '~/features/meeting/MeetingActionDeleteDialog';
@@ -217,7 +218,11 @@ export default function MeetingRecordActions({
               width: proportional(1, { minWidth: 105 }),
               renderCell: (action: MeetingAction) => (
                 <ActionCell label='기한'>
-                  <Text>{actionDueDate(action.dueDate) || '미정'}</Text>
+                  <Text>
+                    {action.dueDate
+                      ? formatSeoulDateTime(action.dueDate)
+                      : '미정'}
+                  </Text>
                 </ActionCell>
               ),
             },

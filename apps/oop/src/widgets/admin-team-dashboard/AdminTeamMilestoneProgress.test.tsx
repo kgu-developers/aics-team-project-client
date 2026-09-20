@@ -110,7 +110,7 @@ describe('AdminTeamMilestoneProgress', () => {
 
     expect(await screen.findByText('제안서')).toBeInTheDocument();
     expect(screen.getByText('제출 완료')).toBeInTheDocument();
-    expect(screen.getByText('2026.10.10 18:00')).toBeInTheDocument();
+    expect(screen.getByText('2026-10-10/18:00')).toBeInTheDocument();
     expect(
       screen.getByText('제출자: 홍길동', { exact: false }),
     ).toBeInTheDocument();

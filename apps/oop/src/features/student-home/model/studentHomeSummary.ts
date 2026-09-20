@@ -6,6 +6,7 @@ import type {
   TeamKickoffResponse,
 } from '@aics/core';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import {
   getRichTextPlainText,
   parseRichTextContent,
@@ -41,7 +42,7 @@ export function homeAnnouncements(
       id: String(item.id),
       title: item.title,
       content: getRichTextPlainText(parseRichTextContent(item.content)),
-      date: item.publishedAt.slice(0, 10),
+      date: formatSeoulDateTime(item.publishedAt),
     }));
 }
 
@@ -84,6 +85,6 @@ export function homeAssignedActions(
       meetingId: action.meetingRecordId,
       content: action.content,
       assignee: action.assignee,
-      dueDate: action.dueAt?.slice(0, 10) ?? null,
+      dueDate: action.dueAt ? formatSeoulDateTime(action.dueAt) : null,
     }));
 }

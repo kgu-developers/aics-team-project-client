@@ -20,7 +20,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
-import { seoulInstant } from '~/shared/lib/seoulInstant';
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { PdfPreview } from '~/shared/ui/PdfPreview';
 
 import { useAuthStore } from '~/features/auth/authStore';
@@ -85,27 +85,9 @@ function EvaluationTimer({
   );
 }
 
-const windowDateFormatter = new Intl.DateTimeFormat('ko-KR', {
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  month: 'long',
-  timeZone: 'Asia/Seoul',
-});
-const windowTimeFormatter = new Intl.DateTimeFormat('ko-KR', {
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Asia/Seoul',
-});
-
 /** Course times are fixed to Asia/Seoul regardless of the viewer's timezone. */
 function formatEvaluationWindow(opensAt: string, closesAt: string) {
-  const opensAtTime = seoulInstant(opensAt);
-  const closesAtTime = seoulInstant(closesAt);
-  if (!Number.isFinite(opensAtTime) || !Number.isFinite(closesAtTime))
-    return `${opensAt} ~ ${closesAt}`;
-
-  return `${windowDateFormatter.format(opensAtTime)} ~ ${windowTimeFormatter.format(closesAtTime)}`;
+  return `${formatSeoulDateTime(opensAt)} ~ ${formatSeoulDateTime(closesAt)}`;
 }
 
 function findPdfArtifact(team: MilestonePresentation) {

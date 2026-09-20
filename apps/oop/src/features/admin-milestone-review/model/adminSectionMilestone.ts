@@ -4,7 +4,7 @@ import type {
   AdminSectionMilestoneDto,
 } from '@aics/api-client';
 
-import { seoulInstant } from '~/shared/lib/seoulInstant';
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 const milestoneTypeLabels: Record<AdminMilestoneType, string> = {
   FINAL_REPORT: '최종 보고서',
@@ -17,23 +17,11 @@ const milestoneTypeLabels: Record<AdminMilestoneType, string> = {
   PROPOSAL: '제안서',
 };
 
-const adminMilestoneDateFormatter = new Intl.DateTimeFormat('ko-KR', {
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  month: '2-digit',
-  timeZone: 'Asia/Seoul',
-  year: 'numeric',
-});
-
-/** Server `LocalDateTime` values mean Asia/Seoul regardless of the viewer's timezone. */
+/** Formats milestone dates with the shared Seoul display contract. */
 export function formatAdminMilestoneDate(value: string | null | undefined) {
-  const instant = seoulInstant(value);
-  if (Number.isNaN(instant)) {
-    return '-';
-  }
-
-  return adminMilestoneDateFormatter.format(instant);
+  if (!value) return '-';
+  const formatted = formatSeoulDateTime(value);
+  return formatted === value ? '-' : formatted;
 }
 
 export function getAdminMilestoneTypeLabel(type: AdminMilestoneType) {

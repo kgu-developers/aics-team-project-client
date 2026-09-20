@@ -170,10 +170,10 @@ it('목록과 상세가 오프셋 없는 게시일을 호스트 TZ와 무관하�
   const row = await screen.findByRole('row', {
     name: /이미지 자료 확인 안내 공지사항 보기/,
   });
-  expect(within(row).getByText('2026.08.27')).toBeInTheDocument();
+  expect(within(row).getByText('2026-08-28/00:00')).toBeInTheDocument();
   await user.click(row);
   expect(
-    await screen.findByText('게시일시 : 2026.08.27 15:00'),
+    await screen.findByText('게시일시 : 2026-08-28/00:00'),
   ).toBeInTheDocument();
 });
 
@@ -253,7 +253,7 @@ it('새 공지 초안에서 취소한 이동은 입력을 보존하고 확인 �
 
   await user.click(screen.getByRole('button', { name: '취소' }));
   const dialog = await screen.findByRole('alertdialog', {
-    name: '저장하지 않은 공지사항 초안',
+    name: '저장하지 않은 내용이 있어요.',
   });
   await user.click(within(dialog).getByRole('button', { name: '계속 작성' }));
 
@@ -267,9 +267,9 @@ it('새 공지 초안에서 취소한 이동은 입력을 보존하고 확인 �
   await user.click(
     within(
       await screen.findByRole('alertdialog', {
-        name: '저장하지 않은 공지사항 초안',
+        name: '저장하지 않은 내용이 있어요.',
       }),
-    ).getByRole('button', { name: '초안 버리고 이동' }),
+    ).getByRole('button', { name: '변경 버리고 이동' }),
   );
   await waitFor(() =>
     expect(router.state.location.href).toBe('/admin/notices?sectionId=1'),
@@ -284,7 +284,7 @@ it('기존 공지 수정 초안은 목록 링크 이동을 막고 취소하면 �
 
   await user.click(screen.getByRole('link', { name: '← 공지사항 목록으로' }));
   const dialog = await screen.findByRole('alertdialog', {
-    name: '저장하지 않은 공지사항 초안',
+    name: '저장하지 않은 내용이 있어요.',
   });
   await user.click(within(dialog).getByRole('button', { name: '계속 작성' }));
 

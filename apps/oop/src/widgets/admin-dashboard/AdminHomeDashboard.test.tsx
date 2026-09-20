@@ -259,7 +259,7 @@ describe('AdminHomeDashboard', () => {
       await screen.findByText('발표 자료의 핵심 흐름과 역할을 확정한다.'),
     ).toBeInTheDocument();
     expect(screen.getByText('OOP-01 · 2팀')).toBeInTheDocument();
-    expect(screen.getByText('2026-10-08')).toBeInTheDocument();
+    expect(screen.getByText('2026-10-08/09:00')).toBeInTheDocument();
     expect(
       screen.getByRole('link', {
         name: '발표 자료의 핵심 흐름과 역할을 확정한다.',
@@ -468,7 +468,7 @@ it('공지 게시 시각을 서울 기준 자정 넘김으로 표시한다', asy
   renderPage();
   const link = await screen.findByRole('link', { name: '계약 공지' });
   expect(
-    within(link.closest('li')!).getByText('2026.09.15 00:30'),
+    within(link.closest('li')!).getByText('2026-09-15/00:30'),
   ).toBeInTheDocument();
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
@@ -478,7 +478,7 @@ it('오프셋 없는 공지 게시 시각을 서울 현지 시각으로 표시�
   renderPage();
   const link = await screen.findByRole('link', { name: '계약 공지' });
   expect(
-    within(link.closest('li')!).getByText('2026.08.27 15:00'),
+    within(link.closest('li')!).getByText('2026-08-28/00:00'),
   ).toBeInTheDocument();
 });
 

@@ -12,6 +12,7 @@ import type { TableColumn } from '@aics/design-system';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useMemo } from 'react';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
 import SectionSelection from '~/features/section/SectionSelection';
@@ -30,7 +31,7 @@ function createStudentNoticeColumns(
       key: 'publishedAt',
       header: '날짜',
       width: proportional(1, { minWidth: 80 }),
-      renderCell: item => <>{item.publishedAt.slice(0, 10)}</>,
+      renderCell: item => <>{formatSeoulDateTime(item.publishedAt)}</>,
     },
     {
       key: 'title',

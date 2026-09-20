@@ -195,6 +195,7 @@ export default function MidReportEditorPage({
         return null;
       }}
       saveBlock={saveBlock}
+      saveMode='manual'
       saveState={{
         saving: mutation.isPending,
         error: mutation.isError

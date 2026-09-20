@@ -98,7 +98,8 @@ describe('AdminMeetingsPage', () => {
     renderPage();
 
     expect(screen.queryByLabelText('마일스톤 필터')).not.toBeInTheDocument();
-    await user.click(await screen.findByRole('button', { name: 'OOP-01' }));
+    await user.click(await screen.findByRole('combobox', { name: '분반' }));
+    await user.click(await screen.findByRole('option', { name: 'OOP-01' }));
     const milestoneFilter = await screen.findByLabelText('마일스톤 필터');
     expect(milestoneFilter).toBeInTheDocument();
 
@@ -144,7 +145,7 @@ describe('AdminMeetingsPage', () => {
     const user = userEvent.setup();
     renderPage('/admin/meetings/?sectionId=1');
 
-    const teamFilter = await screen.findByLabelText('팀 필터');
+    const teamFilter = await screen.findByRole('combobox', { name: '팀' });
     await user.click(teamFilter);
     await user.click(await screen.findByRole('option', { name: '2팀' }));
 
@@ -192,5 +193,5 @@ it('formats offset-bearing meeting times in Seoul across midnight', async () => 
     ),
   );
   renderPage();
-  expect(await screen.findByText('2026.09.02 08:30')).toBeVisible();
+  expect(await screen.findByText('2026-09-02/08:30')).toBeVisible();
 });

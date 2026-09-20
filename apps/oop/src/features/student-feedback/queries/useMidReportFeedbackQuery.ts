@@ -1,5 +1,7 @@
 import type { StudentHomeMilestoneBody } from '@aics/core';
 
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+
 import { useAuthStore } from '~/features/auth/authStore';
 import { isValidPositiveTeamId } from '~/features/team-assignment/queries/useTeamMemberContactsQuery';
 import { useTeamMessagesQuery } from '~/features/team-message/queries';
@@ -10,18 +12,23 @@ type MidReportFeedbackBody = Extract<
 >;
 
 export function useMidReportFeedbackQuery(body: MidReportFeedbackBody) {
-  const sessionTeamId = useAuthStore(
-    state => state.currentUser?.teamId ?? undefined,
-  );
-  const teamId = body.teamId ?? sessionTeamId;
+  const currentUser = useAuthStore(state => state.currentUser);
+  const teamId = body.teamId ?? currentUser?.teamId ?? undefined;
   const query = useTeamMessagesQuery(teamId, 'MID_REPORT');
+  const hasSubmittedFeedback = Boolean(
+    currentUser &&
+    query.data?.some(message => message.senderId === currentUser.studentNumber),
+  );
   return {
     ...body,
+    feedbackStage: hasSubmittedFeedback
+      ? 'feedback-arrived'
+      : body.feedbackStage,
     teamId,
     feedback: query.isSuccess
       ? query.data.map(message => ({
           id: String(message.id),
-          title: `${message.senderName?.trim() || message.senderId} (${message.createdAt})`,
+          title: `${message.senderName?.trim() || message.senderId} (${formatSeoulDateTime(message.createdAt)})`,
           content: message.message,
         }))
       : [],

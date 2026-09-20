@@ -130,7 +130,7 @@ describe('StudentNoticeDetailPage', () => {
       </AstryxThemeProvider>,
     );
 
-    expect(screen.getByText('게시일 : 2025.12.17 09:00')).toBeInTheDocument();
+    expect(screen.getByText('게시일 : 2025-12-17/18:00')).toBeInTheDocument();
     expect(screen.getByText(/분반 :/)).toBeInTheDocument();
   });
 

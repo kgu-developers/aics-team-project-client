@@ -108,7 +108,8 @@ export default function AdminMeetingDetailPage() {
           )}
         </section>
         <Text color='secondary' type='supporting'>
-          최초 작성 {record.authorId} · 최종 수정 {record.updatedAt}
+          최초 작성 {record.authorId} · 최종 수정{' '}
+          {record.updatedAt ? formatSeoulDateTime(record.updatedAt) : '-'}
         </Text>
       </Card>
       <AdminStudentDetailDialog

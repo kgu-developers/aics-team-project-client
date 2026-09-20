@@ -11,6 +11,7 @@ import { type KeyboardEvent, useRef, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { useAuthStore } from '~/features/auth/authStore';
 import type { HomeQueryState } from '~/features/student-home/model/homeQueryState';
@@ -292,7 +293,7 @@ export default function StudentHomeHero({
                                   : `액션 플랜 ${record.actions.length}건`}
                               </p>
                               <p className={styles.noticeDate}>
-                                {record.heldAt.slice(0, 10)}
+                                {formatSeoulDateTime(record.heldAt)}
                               </p>
                             </div>
                           </div>

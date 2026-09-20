@@ -69,6 +69,7 @@ it('숫자 ID 문서를 읽고 잠금 획득 후 저장·완료한 내용을 재
   expect(input).toBeDisabled();
   await waitFor(() => expect(input).toBeEnabled());
   fireEvent.change(input, { target: { value: '수정한 프로젝트 제목' } });
+  fireEvent.click(screen.getByRole('button', { name: '저장' }));
   await waitFor(
     () =>
       expect(getCurrentMidReport().blocks[0]!.fields[0]!.value).toBe(
@@ -101,6 +102,7 @@ it('버전 충돌은 한 번만 요청하고 입력을 보존한다', async () =
   const input = await screen.findByRole('textbox', { name: '프로젝트 제목' });
   await waitFor(() => expect(input).toBeEnabled());
   fireEvent.change(input, { target: { value: '보존해야 하는 초안' } });
+  fireEvent.click(screen.getByRole('button', { name: '저장' }));
   await screen.findByText(/최신 문서를 확인해 주세요/);
   expect(input).toHaveValue('보존해야 하는 초안');
   expect(save).toHaveBeenCalledTimes(1);
@@ -129,6 +131,7 @@ it('잠금 소유권을 잃으면 저장 요청 없이 초안을 남긴다', asy
     ),
   );
   fireEvent.change(input, { target: { value: '잠금 상실 전 초안' } });
+  fireEvent.click(screen.getByRole('button', { name: '저장' }));
   await waitFor(() => expect(input).toBeDisabled(), { timeout: 2500 });
   expect(input).toHaveValue('잠금 상실 전 초안');
   expect(save).not.toHaveBeenCalled();
@@ -279,8 +282,8 @@ it('화면 이미지를 업로드해 받은 파일 ID를 저장 요청에 담는
     await userEvent.type(await screen.findByLabelText('이름'), '대출 화면');
     await userEvent.click(screen.getByRole('button', { name: '추가' }));
 
-    // The editor autosaves the block, so the upload result reaches the server
-    // without a separate save action.
+    expect(bodies).toHaveLength(0);
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
     await waitFor(() => expect(bodies).not.toHaveLength(0), { timeout: 2500 });
     const saved = JSON.parse(
       (bodies.at(-1) as { fields: { value: string }[] }).fields[0]!.value,

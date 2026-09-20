@@ -16,12 +16,13 @@ import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { useAdminSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
-import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
+import AdminSectionTeamFilter, {
+  ALL_SECTIONS,
+  ALL_TEAMS,
+} from '~/features/admin-section/components/AdminSectionTeamFilter';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMeetingsPage.css';
-
-const allSectionsValue = 'all';
 
 function handleRowNavigation(
   event: KeyboardEvent<HTMLTableRowElement>,
@@ -52,24 +53,21 @@ export default function AdminMeetingsPage() {
   const selectedSectionId =
     requestedSectionId && accessibleSectionIds.includes(requestedSectionId)
       ? requestedSectionId
-      : allSectionsValue;
+      : ALL_SECTIONS;
   const requestedPage = Number(search.page ?? 0);
   const selectedPage =
     Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 0;
   const selectedMilestoneId =
-    selectedSectionId === allSectionsValue ? undefined : requestedMilestoneId;
+    selectedSectionId === ALL_SECTIONS ? undefined : requestedMilestoneId;
   const selectedTeamId =
-    selectedSectionId === allSectionsValue ? undefined : requestedTeamId;
+    selectedSectionId === ALL_SECTIONS ? undefined : requestedTeamId;
   const milestonesQuery = useAdminSectionMilestonesQuery(
-    selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
-  );
-  const teamsQuery = useAdminSectionTeamsQuery(
-    selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
+    selectedSectionId === ALL_SECTIONS ? undefined : selectedSectionId,
   );
   const query = useAdminMeetingRecordListQuery(accessibleSectionIds, {
     page: selectedPage,
     sectionId:
-      selectedSectionId === allSectionsValue ? undefined : selectedSectionId,
+      selectedSectionId === ALL_SECTIONS ? undefined : selectedSectionId,
     teamId: selectedTeamId,
     milestoneId: selectedMilestoneId,
     size: 20,
@@ -78,7 +76,7 @@ export default function AdminMeetingsPage() {
 
   function selectSection(sectionId: string) {
     void navigate({
-      search: sectionId === allSectionsValue ? {} : { sectionId, page: 0 },
+      search: sectionId === ALL_SECTIONS ? {} : { sectionId, page: 0 },
       to: ROUTES.ADMIN_MEETINGS,
     });
   }
@@ -86,7 +84,7 @@ export default function AdminMeetingsPage() {
   function selectMilestone(milestoneId: string) {
     void navigate({
       search: {
-        ...(selectedSectionId === allSectionsValue
+        ...(selectedSectionId === ALL_SECTIONS
           ? {}
           : { sectionId: selectedSectionId }),
         ...(selectedTeamId ? { teamId: selectedTeamId } : {}),
@@ -101,7 +99,7 @@ export default function AdminMeetingsPage() {
     void navigate({
       search: {
         sectionId: selectedSectionId,
-        ...(teamId ? { teamId } : {}),
+        ...(teamId !== ALL_TEAMS ? { teamId } : {}),
         ...(selectedMilestoneId ? { milestoneId: selectedMilestoneId } : {}),
         page: 0,
       },
@@ -112,7 +110,7 @@ export default function AdminMeetingsPage() {
   function selectPage(page: number) {
     void navigate({
       search: {
-        ...(selectedSectionId === allSectionsValue
+        ...(selectedSectionId === ALL_SECTIONS
           ? {}
           : { sectionId: selectedSectionId }),
         ...(selectedTeamId ? { teamId: selectedTeamId } : {}),
@@ -126,47 +124,13 @@ export default function AdminMeetingsPage() {
   return (
     <div className={styles.page}>
       <Heading level={1}>회의록</Heading>
-      <div className={styles.filters} role='group' aria-label='분반 필터'>
-        {[
-          { label: '전체', value: allSectionsValue },
-          ...accessibleSections.map(section => ({
-            label: section.code,
-            value: section.id,
-          })),
-        ].map(section => (
-          <button
-            aria-pressed={selectedSectionId === section.value}
-            className={
-              selectedSectionId === section.value
-                ? styles.filterActive
-                : styles.filter
-            }
-            key={section.value}
-            onClick={() => selectSection(section.value)}
-            type='button'
-          >
-            {section.label}
-          </button>
-        ))}
-      </div>
-      {selectedSectionId !== allSectionsValue ? (
-        <div className={styles.filterSelectors}>
-          <Selector
-            label='팀 필터'
-            onChange={selectTeam}
-            options={[
-              { label: '전체 팀', value: '' },
-              ...(teamsQuery.data?.contents ?? []).map(team => ({
-                label: team.name,
-                value: String(team.id),
-              })),
-            ]}
-            renderOption={option => (
-              <SelectorOption label={option.label ?? option.value} />
-            )}
-            value={selectedTeamId ?? ''}
-            width={320}
-          />
+      <AdminSectionTeamFilter
+        onSectionChange={selectSection}
+        onTeamChange={selectTeam}
+        sectionId={selectedSectionId}
+        teamId={selectedTeamId ?? ALL_TEAMS}
+      >
+        {selectedSectionId !== ALL_SECTIONS ? (
           <Selector
             label='마일스톤 필터'
             onChange={selectMilestone}
@@ -183,8 +147,8 @@ export default function AdminMeetingsPage() {
             value={selectedMilestoneId ?? ''}
             width={320}
           />
-        </div>
-      ) : null}
+        ) : null}
+      </AdminSectionTeamFilter>
 
       {accessibleSectionIds.length === 0 ? (
         <EmptyState

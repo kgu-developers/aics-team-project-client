@@ -119,12 +119,16 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
             <div className={styles.field}>
               <Text className={styles.fieldLabel}>제출 일시</Text>
               <Text className={styles.fieldValue}>
-                {report.submittedAt ?? '-'}
+                {report.submittedAt
+                  ? formatSeoulDateTime(report.submittedAt)
+                  : '-'}
               </Text>
             </div>
             <div className={styles.field}>
               <Text className={styles.fieldLabel}>마감 일시</Text>
-              <Text className={styles.fieldValue}>{report.dueDate ?? '-'}</Text>
+              <Text className={styles.fieldValue}>
+                {report.dueDate ? formatSeoulDateTime(report.dueDate) : '-'}
+              </Text>
             </div>
           </div>
         </section>
@@ -134,7 +138,7 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
             <Text className={styles.metadata}>
               상태: {block.status} · 마지막 편집:{' '}
               {block.lastEditedByName ?? block.lastEditedBy ?? '-'} ·{' '}
-              {block.lastSavedAt ?? '-'}
+              {block.lastSavedAt ? formatSeoulDateTime(block.lastSavedAt) : '-'}
             </Text>
             <pre className={styles.fieldValue}>
               {formatBlockFields(block.fields)}

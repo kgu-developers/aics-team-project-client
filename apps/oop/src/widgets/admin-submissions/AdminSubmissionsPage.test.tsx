@@ -279,7 +279,7 @@ describe('AdminSubmissionsPage', () => {
     await user.click(await screen.findByRole('tab', { name: '중간 점검' }));
 
     expect(await screen.findByText('피드백 제공')).toBeInTheDocument();
-    expect(await screen.findByText('2026.10.14 18:00')).toBeInTheDocument();
+    expect(await screen.findByText('2026-10-14/18:00')).toBeInTheDocument();
     expect(screen.getByText('제출자: 20230001')).toBeInTheDocument();
     expect(screen.queryByText('현재 버전: 2차')).not.toBeInTheDocument();
   });
@@ -563,7 +563,9 @@ describe('AdminSubmissionsPage', () => {
 
     expect(await screen.findByText('보완된 제안서')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /2차 · 20230001 · 2026.09.08 08:30/ }),
+      screen.getByRole('button', {
+        name: /2차 · 20230001 · 2026-09-08\/08:30/,
+      }),
     ).toBeVisible();
     expect(
       screen.getByRole('link', { name: 'proposal-v2.pdf' }),
@@ -649,7 +651,9 @@ describe('AdminSubmissionsPage', () => {
   });
 
   it('서로 다른 제출 규칙에 같은 파일이 연결되어도 두 항목을 안정적으로 렌더링한다', async () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_VERSION('1005', 1)}`,
@@ -682,9 +686,7 @@ describe('AdminSubmissionsPage', () => {
     try {
       const user = userEvent.setup();
       renderPage();
-      await user.click(
-        await screen.findByRole('tab', { name: '최종 보고서' }),
-      );
+      await user.click(await screen.findByRole('tab', { name: '최종 보고서' }));
 
       expect(
         await screen.findAllByRole('link', { name: 'e2e-submission.pdf' }),
@@ -739,7 +741,9 @@ describe('AdminSubmissionsPage', () => {
     });
     await waitFor(() => expect(settingsButton).toBeEnabled());
 
-    await user.click(screen.getByRole('button', { name: '발표 순서·평가 항목 설정' }));
+    await user.click(
+      screen.getByRole('button', { name: '발표 순서·평가 항목 설정' }),
+    );
     expect(
       await screen.findByRole('heading', { name: '발표 순서·평가 항목 설정' }),
     ).toBeInTheDocument();
@@ -752,7 +756,10 @@ describe('AdminSubmissionsPage', () => {
         () =>
           HttpResponse.json({
             ...adminPresentationEvaluationListFixture,
-            criteria: adminPresentationEvaluationListFixture.criteria.slice(0, 1),
+            criteria: adminPresentationEvaluationListFixture.criteria.slice(
+              0,
+              1,
+            ),
           }),
       ),
     );
@@ -767,12 +774,14 @@ describe('AdminSubmissionsPage', () => {
 
   it('발표 평가 기간이 없으면 발표 마일스톤 상세로 안내한다', async () => {
     server.use(
-      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`, () =>
-        HttpResponse.json({
-          content: getAdminSectionMilestonesFixture('1')!.content.filter(
-            milestone => milestone.id !== 103,
-          ),
-        }),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`,
+        () =>
+          HttpResponse.json({
+            content: getAdminSectionMilestonesFixture('1')!.content.filter(
+              milestone => milestone.id !== 103,
+            ),
+          }),
       ),
     );
     const user = userEvent.setup();
