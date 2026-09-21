@@ -24,6 +24,8 @@ export const documentFeedbackStageCopy = {
 type Input = {
   submittedAt?: string | null;
   messages?: TeamMessage[];
+  /** Resource ID that the messages must belong to when the caller knows it. */
+  relatedId?: number;
   /** Student numbers of the current team, undefined until the team is known. */
   teamMemberIds?: string[];
   /** False while the message query is pending or failed. */
@@ -45,29 +47,57 @@ const after = (message: TeamMessage, submittedAt: string) => {
 export function proposalFeedbackStage({
   submittedAt,
   messages,
+  relatedId,
   teamMemberIds,
   isMessagesReady = true,
 }: Input): DocumentFeedbackStage {
   if (!submittedAt) return 'not-submitted';
   // Unknown membership or messages must not be read as "no feedback yet".
   if (!teamMemberIds || !isMessagesReady) return 'unknown';
-  const staffMessage = (messages ?? []).some(
+  const staffMessages = (messages ?? []).filter(
     message =>
-      !teamMemberIds.includes(message.senderId) && after(message, submittedAt),
+      !teamMemberIds.includes(message.senderId) &&
+      (relatedId === undefined || message.relatedId === relatedId),
   );
-  return staffMessage ? 'feedback-arrived' : 'awaiting-feedback';
+  const submitted = seoulInstant(submittedAt);
+  const submittedAfterFeedback = staffMessages.some(message => {
+    const feedbackSent = seoulInstant(message.createdAt);
+    return (
+      Number.isFinite(feedbackSent) &&
+      Number.isFinite(submitted) &&
+      feedbackSent < submitted
+    );
+  });
+  if (submittedAfterFeedback) return 'completed';
+
+  return staffMessages.some(message => after(message, submittedAt))
+    ? 'feedback-arrived'
+    : 'awaiting-feedback';
 }
 
 /** 중간보고서: 학생이 먼저 팀 메시지를 보내면 피드백 단계가 시작된다. */
 export function midReportFeedbackStage({
   submittedAt,
   messages,
+  relatedId,
   teamMemberIds,
   isMessagesReady = true,
 }: Input): DocumentFeedbackStage {
   if (!submittedAt) return 'not-submitted';
   if (!teamMemberIds || !isMessagesReady) return 'unknown';
-  const studentMessage = (messages ?? []).some(
+  const relevantMessages = (messages ?? []).filter(
+    message => relatedId === undefined || message.relatedId === relatedId,
+  );
+  const submitted = seoulInstant(submittedAt);
+  const submittedAfterMessage = relevantMessages.some(message => {
+    const sent = seoulInstant(message.createdAt);
+    return (
+      Number.isFinite(sent) && Number.isFinite(submitted) && sent < submitted
+    );
+  });
+  if (submittedAfterMessage) return 'completed';
+
+  const studentMessage = relevantMessages.some(
     message =>
       teamMemberIds.includes(message.senderId) && after(message, submittedAt),
   );
@@ -81,14 +111,22 @@ export function midReportFeedbackStage({
  * 'unknown' so the room shows a checking state instead of vanishing.
  */
 function feedbackRoomStage(
-  { submittedAt, messages, teamMemberIds, isMessagesReady = true }: Input,
+  {
+    submittedAt,
+    messages,
+    relatedId,
+    teamMemberIds,
+    isMessagesReady = true,
+  }: Input,
   startedBy: 'staff' | 'student',
 ): DocumentFeedbackStage {
   if (!teamMemberIds || !isMessagesReady) return 'unknown';
-  const started = (messages ?? []).some(message =>
-    startedBy === 'staff'
-      ? !teamMemberIds.includes(message.senderId)
-      : teamMemberIds.includes(message.senderId),
+  const started = (messages ?? []).some(
+    message =>
+      (relatedId === undefined || message.relatedId === relatedId) &&
+      (startedBy === 'staff'
+        ? !teamMemberIds.includes(message.senderId)
+        : teamMemberIds.includes(message.senderId)),
   );
   if (started) return 'feedback-arrived';
   return submittedAt ? 'awaiting-feedback' : 'not-submitted';

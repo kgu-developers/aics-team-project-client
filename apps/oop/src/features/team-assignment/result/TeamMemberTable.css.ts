@@ -7,6 +7,8 @@ export const table = style({
   width: '100%',
 });
 
+export const hideDepartmentOnMobile = style({});
+
 globalStyle(`${table} table`, {
   '@media': {
     'screen and (max-width: 767px)': {
@@ -16,10 +18,13 @@ globalStyle(`${table} table`, {
   },
 });
 
-globalStyle(`${table} th:first-child, ${table} td:first-child`, {
-  '@media': {
-    'screen and (max-width: 767px)': {
-      display: 'none',
+globalStyle(
+  `${table}.${hideDepartmentOnMobile} th:first-child, ${table}.${hideDepartmentOnMobile} td:first-child`,
+  {
+    '@media': {
+      'screen and (max-width: 767px)': {
+        display: 'none',
+      },
     },
   },
-});
+);

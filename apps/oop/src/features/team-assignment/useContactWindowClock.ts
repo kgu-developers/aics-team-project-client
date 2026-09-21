@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { seoulInstant } from '~/shared/lib/seoulInstant';
+import { contactWindowInstant } from '~/shared/lib/contactWindowDateTime';
 
 export function useContactWindowClock(
   contactVisibleFrom?: string | null,
@@ -12,9 +12,9 @@ export function useContactWindowClock(
     const update = () => setNow(Date.now());
     const currentTime = Date.now();
     const boundaries = [
-      seoulInstant(contactVisibleFrom),
+      contactWindowInstant(contactVisibleFrom),
       // The server includes the end timestamp; hide contacts immediately after it.
-      seoulInstant(contactVisibleUntil) + 1,
+      contactWindowInstant(contactVisibleUntil) + 1,
     ];
     const nextBoundary = boundaries
       .filter(value => Number.isFinite(value) && value > currentTime)

@@ -4,7 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { ROUTES } from '~/app/constants/routes';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
-import { seoulInstant } from '~/shared/lib/seoulInstant';
+import { contactWindowInstant } from '~/shared/lib/contactWindowDateTime';
 
 import { formatTeamAssignmentDate } from './formatTeamAssignmentDate';
 import * as styles from './TeamAssignmentFlow.css';
@@ -19,7 +19,7 @@ export default function ResultWaiting({
 }) {
   const navigate = useNavigate();
   const releaseTimestamp = resultReleasesAt
-    ? seoulInstant(resultReleasesAt)
+    ? contactWindowInstant(resultReleasesAt)
     : Number.NaN;
   const hasReleaseSchedule = !Number.isNaN(releaseTimestamp);
   const isFutureRelease = hasReleaseSchedule && releaseTimestamp > Date.now();

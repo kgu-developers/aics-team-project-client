@@ -110,10 +110,22 @@ function renderAt(initialEntry: string) {
     getParentRoute: () => sectionsRoute,
     path: '/$courseId',
   });
+  const studentTeamRoute = createRoute({
+    component: () => <div>수강생·팀 관리 페이지</div>,
+    getParentRoute: () => root,
+    path: '/admin/student-team',
+    validateSearch: (
+      search: Record<string, unknown>,
+    ): { sectionId?: number } => ({
+      sectionId:
+        typeof search.sectionId === 'number' ? search.sectionId : undefined,
+    }),
+  });
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
     routeTree: root.addChildren([
       sectionsRoute.addChildren([listRoute, detailRoute]),
+      studentTeamRoute,
     ]),
   });
   render(
@@ -214,8 +226,49 @@ describe('AdminCourseDetailPage', () => {
     expect(within(row).getByText('미설정')).toBeInTheDocument();
     expect(await within(row).findByText('없음')).toBeInTheDocument();
     expect(
-      screen.queryByRole('heading', { name: '사전 정보 내역' }),
-    ).not.toBeInTheDocument();
+      await screen.findByRole('heading', { name: '사전 정보 내역' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '사전 정보 다운로드' }),
+    ).toBeEnabled();
+  });
+
+  it('사전 정보 패널에는 현재 강좌 조회로 불러온 분반만 전달한다', async () => {
+    useAuthStore.setState({
+      currentUser: {
+        ...demoAdmin,
+        sections: [
+          {
+            ...demoAdmin.sections[0]!,
+            code: '다른 강좌 분반',
+            id: '999',
+            name: '다른 강좌 분반',
+          },
+        ],
+      },
+    });
+
+    renderAt('/admin/sections/1');
+
+    const sectionSelector = await screen.findByRole('combobox', {
+      name: '분반',
+    });
+    expect(sectionSelector).toHaveTextContent('OOP-01');
+    expect(sectionSelector).not.toHaveTextContent('다른 강좌 분반');
+  });
+
+  it('분반의 수강생 관리 동작은 해당 분반이 선택된 관리 페이지로 이동한다', async () => {
+    const user = userEvent.setup();
+    const router = renderAt('/admin/sections/1');
+    const row = await screen.findByRole('row', { name: 'OOP-01 분반 설정' });
+
+    await user.click(within(row).getByRole('button', { name: '수강생 관리' }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe('/admin/student-team');
+      expect(router.state.location.search).toEqual({ sectionId: 1 });
+    });
+    expect(screen.getByText('수강생·팀 관리 페이지')).toBeInTheDocument();
   });
 
   it('없는 강좌는 목록으로 돌아가는 안내를 보여 준다', async () => {

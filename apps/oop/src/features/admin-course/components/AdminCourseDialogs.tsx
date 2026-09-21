@@ -24,6 +24,10 @@ import {
 } from '@aics/design-system';
 import { type FormEvent, useEffect, useRef, useState } from 'react';
 
+import {
+  toContactWindowFormDateTime,
+  toContactWindowServerDateTime,
+} from '~/shared/lib/contactWindowDateTime';
 import { seoulInstant } from '~/shared/lib/seoulInstant';
 
 import {
@@ -478,8 +482,8 @@ export function SectionSettingsDialog({
     setCapacity(String(section.capacity));
     setClassTime(section.classTime);
     setCode(section.code);
-    setVisibleFrom(section.contactVisibleFrom ?? '');
-    setVisibleUntil(section.contactVisibleUntil ?? '');
+    setVisibleFrom(toContactWindowFormDateTime(section.contactVisibleFrom));
+    setVisibleUntil(toContactWindowFormDateTime(section.contactVisibleUntil));
     resetUpdateSectionMutation();
     resetRemoveSectionMutation();
     resetUpdateVisibilityMutation();
@@ -501,11 +505,17 @@ export function SectionSettingsDialog({
     (!visibleFrom && !visibleUntil) ||
     (Boolean(visibleFrom && visibleUntil) &&
       seoulInstant(visibleFrom) < seoulInstant(visibleUntil));
-  const visibilityStatus = contactVisibilityStatus(visibleFrom, visibleUntil);
+  const visibilityStatus = contactVisibilityStatus(
+    visibleFrom ? toContactWindowServerDateTime(visibleFrom) : visibleFrom,
+    visibleUntil ? toContactWindowServerDateTime(visibleUntil) : visibleUntil,
+  );
 
   function visibilityInput() {
     return visibleFrom || visibleUntil
-      ? { visibleFrom, visibleUntil }
+      ? {
+          visibleFrom: toContactWindowServerDateTime(visibleFrom),
+          visibleUntil: toContactWindowServerDateTime(visibleUntil),
+        }
       : { visibleFrom: null, visibleUntil: null };
   }
 

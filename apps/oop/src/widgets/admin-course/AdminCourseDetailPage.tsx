@@ -56,6 +56,7 @@ import {
 import { useAuthStore } from '~/features/auth/authStore';
 import { fetchSessionUser } from '~/features/auth/fetchSessionUser';
 
+import { AdminPreSurveyResponses } from '~/widgets/admin-profile/AdminPreSurveyResponses';
 import { formatRosterImportAppliedAt } from '~/widgets/admin-profile/formatRosterImportAppliedAt';
 
 import * as styles from './AdminCourseDetailPage.css';
@@ -399,6 +400,25 @@ export default function AdminCourseDetailPage() {
                   ),
                   width: proportional(1, { minWidth: 150 }),
                 },
+                {
+                  align: 'start',
+                  header: '수강생',
+                  key: 'name',
+                  renderCell: section => (
+                    <Button
+                      label='수강생 관리'
+                      onClick={() =>
+                        void navigate({
+                          to: ROUTES.ADMIN_STUDENT_TEAM,
+                          search: { sectionId: section.id },
+                        })
+                      }
+                      size='sm'
+                      variant='secondary'
+                    />
+                  ),
+                  width: proportional(0.8, { minWidth: 130 }),
+                },
               ]}
               data={sections}
               dividers='rows'
@@ -410,6 +430,16 @@ export default function AdminCourseDetailPage() {
           </Card>
         )}
       </section>
+
+      {!sectionsQuery.isPending && !sectionsQuery.isError ? (
+        <AdminPreSurveyResponses
+          sections={sections.map(section => ({
+            code: section.code,
+            id: String(section.id),
+            name: section.name,
+          }))}
+        />
+      ) : null}
 
       <section aria-labelledby='course-upload-title' className={styles.block}>
         <div className={styles.blockHeader}>

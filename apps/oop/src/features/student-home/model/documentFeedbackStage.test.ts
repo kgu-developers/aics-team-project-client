@@ -8,11 +8,16 @@ import {
   proposalFeedbackStage,
 } from './documentFeedbackStage';
 
-const message = (senderId: string, createdAt: string): TeamMessage => ({
+const message = (
+  senderId: string,
+  createdAt: string,
+  relatedId = 21,
+): TeamMessage => ({
   id: 1,
   threadId: 7,
   senderId,
   relatedType: 'PROPOSAL',
+  relatedId,
   message: '확인해 주세요.',
   createdAt,
   important: false,
@@ -59,11 +64,41 @@ it('중간보고서는 학생 메시지가 먼저 필요하다', () => {
     }),
   ).toBe('feedback-arrived');
 });
-it('제출 이전 메시지는 피드백으로 보지 않는다', () => {
+it('중간보고서는 메시지가 있는 상태에서 새 제출 시각이 생기면 완료로 본다', () => {
+  expect(
+    midReportFeedbackStage({
+      submittedAt: '2026-09-10 10:00',
+      messages: [message('20260001', '2026-09-09 09:00', 701)],
+      relatedId: 701,
+      teamMemberIds,
+    }),
+  ).toBe('completed');
+});
+it('현재 제안서 피드백이 있는 상태에서 새 완료 시각이 생기면 재제출 완료로 본다', () => {
   expect(
     proposalFeedbackStage({
       submittedAt: '2026-09-10 10:00',
       messages: [message('professor-1', '2026-09-09 09:00')],
+      relatedId: 21,
+      teamMemberIds,
+    }),
+  ).toBe('completed');
+});
+it('다른 제안서의 과거 교수 피드백은 재제출 근거로 사용하지 않는다', () => {
+  expect(
+    proposalFeedbackStage({
+      submittedAt: '2026-09-10 10:00',
+      messages: [message('professor-1', '2026-09-09 09:00', 20)],
+      relatedId: 21,
+      teamMemberIds,
+    }),
+  ).toBe('awaiting-feedback');
+});
+it('현재 제출 전의 팀원 메시지만으로는 재제출 완료로 보지 않는다', () => {
+  expect(
+    proposalFeedbackStage({
+      submittedAt: '2026-09-10 10:00',
+      messages: [message('20260001', '2026-09-09 09:00')],
       teamMemberIds,
     }),
   ).toBe('awaiting-feedback');
@@ -102,6 +137,17 @@ describe('feedback room stage', () => {
         teamMemberIds,
       }),
     ).toBe('feedback-arrived');
+  });
+
+  it('다른 제안서의 교수 메시지로 현재 제안서 피드백 영역을 열지 않는다', () => {
+    expect(
+      proposalFeedbackRoomStage({
+        submittedAt: '2026-09-09T10:00:00',
+        messages: [message('prof', at, 20)],
+        relatedId: 21,
+        teamMemberIds,
+      }),
+    ).toBe('awaiting-feedback');
   });
 
   it('제출했지만 메시지가 없으면 대기, 제출도 메시지도 없으면 감춘다', () => {

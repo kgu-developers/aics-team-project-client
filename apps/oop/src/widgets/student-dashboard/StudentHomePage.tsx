@@ -213,11 +213,16 @@ export default function StudentHomePage() {
       const midReportStage = midReportFeedbackStage({
         submittedAt: midReport.data?.submittedAt,
         messages: midReportMessages.data,
+        relatedId:
+          midReport.data?.id === undefined
+            ? undefined
+            : Number(midReport.data.id),
         teamMemberIds: home.teamMemberIds,
         isMessagesReady: midReportMessages.isSuccess,
       });
       const isFeedbackCycleCompleted =
-        submission?.isSuccess && submission.data.status === 'COMPLETED';
+        (submission?.isSuccess && submission.data.status === 'COMPLETED') ||
+        midReportStage === 'completed';
       if (isFeedbackCycleCompleted) {
         summary.status = 'completed';
         summary.statusLabel = '단계 완료';
@@ -225,11 +230,19 @@ export default function StudentHomePage() {
       summary.body = {
         kind: 'mid-review-feedback',
         teamId: home.teamId,
+        submissionId:
+          midReport.data?.id === undefined
+            ? undefined
+            : String(midReport.data.id),
         feedbackStage: isFeedbackCycleCompleted
           ? 'completed'
           : midReportFeedbackRoomStage({
               submittedAt: midReport.data?.submittedAt,
               messages: midReportMessages.data,
+              relatedId:
+                midReport.data?.id === undefined
+                  ? undefined
+                  : Number(midReport.data.id),
               teamMemberIds: home.teamMemberIds,
               isMessagesReady: midReportMessages.isSuccess,
             }),
@@ -401,11 +414,13 @@ export default function StudentHomePage() {
         const proposalStage = proposalFeedbackStage({
           submittedAt: project.proposalCompletedAt,
           messages: proposalMessages.data,
+          relatedId: project.id,
           teamMemberIds: home.teamMemberIds,
           isMessagesReady: proposalMessages.isSuccess,
         });
         const isFeedbackCycleCompleted =
-          submission?.isSuccess && submission.data.status === 'COMPLETED';
+          (submission?.isSuccess && submission.data.status === 'COMPLETED') ||
+          proposalStage === 'completed';
         if (isFeedbackCycleCompleted) {
           summary.status = 'completed';
           summary.statusLabel = '단계 완료';
@@ -413,11 +428,13 @@ export default function StudentHomePage() {
         summary.body = {
           kind: 'proposal-feedback',
           teamId: home.teamId,
+          proposalId: project.id,
           feedbackStage: isFeedbackCycleCompleted
             ? 'completed'
             : proposalFeedbackRoomStage({
                 submittedAt: project.proposalCompletedAt,
                 messages: proposalMessages.data,
+                relatedId: project.id,
                 teamMemberIds: home.teamMemberIds,
                 isMessagesReady: proposalMessages.isSuccess,
               }),

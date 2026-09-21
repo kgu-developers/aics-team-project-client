@@ -3,7 +3,7 @@ import type {
   AdminOopCourseStatus,
 } from '@aics/api-client';
 
-import { seoulInstant } from '~/shared/lib/seoulInstant';
+import { contactWindowInstant } from '~/shared/lib/contactWindowDateTime';
 
 export const semesterOptions: {
   label: string;
@@ -48,8 +48,8 @@ export function contactVisibilityStatus(
 ): ContactVisibilityStatus {
   if (!visibleFrom && !visibleUntil) return '미설정';
 
-  const startsAt = seoulInstant(visibleFrom);
-  const endsAt = seoulInstant(visibleUntil);
+  const startsAt = contactWindowInstant(visibleFrom);
+  const endsAt = contactWindowInstant(visibleUntil);
   if (Number.isNaN(startsAt) || Number.isNaN(endsAt) || startsAt >= endsAt) {
     return '입력 확인 필요';
   }
