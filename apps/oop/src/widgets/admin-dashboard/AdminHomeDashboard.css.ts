@@ -136,6 +136,12 @@ export const sectionLabel = style({
   overflowWrap: 'anywhere',
   wordBreak: 'break-word',
 });
+export const sectionLink = style({
+  color: tokens.color.text.accent,
+  display: 'block',
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
+});
 export const grid = style({
   display: 'grid',
   gap: 28,

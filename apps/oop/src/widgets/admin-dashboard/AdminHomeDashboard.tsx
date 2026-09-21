@@ -14,7 +14,10 @@ import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 import { getRichTextPlainText } from '~/features/admin-meeting/model/getRichTextPlainText';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
-import { useAdminMessagesQuery } from '~/features/admin-message/queries';
+import {
+  useAdminMessagesQuery,
+  useUpdateAdminMessageReadMutation,
+} from '~/features/admin-message/queries';
 import {
   formatAdminMilestoneDate,
   isPresentationEvaluationMilestone,
@@ -32,6 +35,7 @@ type DashboardListItem = {
   date: string;
   id?: string;
   meetingId?: string;
+  read?: boolean;
   teamId?: string;
   section: string;
   sectionId?: string;
@@ -86,12 +90,14 @@ function List({
   isMessageList = false,
   isNoticeList = false,
   isMeetingRead,
+  onOpenMessage,
   items,
 }: {
   isMeetingList?: boolean;
   isMessageList?: boolean;
   isNoticeList?: boolean;
   isMeetingRead?: (meetingId: string) => boolean;
+  onOpenMessage?: (messageId: number) => void;
   items: readonly DashboardListItem[];
 }) {
   return (
@@ -109,6 +115,7 @@ function List({
             !isMeetingRead?.(item.meetingId) ? (
               <AdminUnreadDot />
             ) : null}
+            {isMessageList && item.read === false ? <AdminUnreadDot /> : null}
             <span className={styles.label}>{item.section}</span>
           </span>
           {isNoticeList && item.id ? (
@@ -133,6 +140,11 @@ function List({
           ) : isMessageList && item.teamId ? (
             <Link
               className={styles.itemTitle}
+              onClick={() => {
+                if (item.id && item.read === false) {
+                  onOpenMessage?.(Number(item.id));
+                }
+              }}
               params={{ teamId: item.teamId }}
               to={ROUTES.ADMIN_MESSAGE_TEAM}
             >
@@ -154,6 +166,7 @@ function Panel({
   isMeetingPanel = false,
   isMessagePanel = false,
   isMeetingRead,
+  onOpenMessage,
   title,
   items,
   action,
@@ -164,6 +177,7 @@ function Panel({
   isMeetingPanel?: boolean;
   isMessagePanel?: boolean;
   isMeetingRead?: (meetingId: string) => boolean;
+  onOpenMessage?: (messageId: number) => void;
   title: string;
   items: readonly DashboardListItem[];
   action?: boolean;
@@ -205,6 +219,7 @@ function Panel({
             isMessageList={isMessagePanel}
             isMeetingRead={isMeetingRead}
             isNoticeList={isNoticePanel}
+            onOpenMessage={onOpenMessage}
             items={items}
           />
         ) : emptyMessage ? (
@@ -234,13 +249,22 @@ export default function AdminHomeDashboard() {
   const meetingReadState = useAdminMeetingReadState(currentUser?.id);
   const accessibleSections = currentUser?.sections ?? [];
   const accessibleSectionIds = accessibleSections.map(section => section.id);
-  const milestoneQueries =
-    useAdminAccessibleSectionMilestonesQuery(accessibleSectionIds);
+  const activeScheduleSections = accessibleSections.filter(
+    section => section.status === 'ACTIVE',
+  );
+  const activeScheduleSectionIds = activeScheduleSections.map(
+    section => section.id,
+  );
+  const milestoneQueries = useAdminAccessibleSectionMilestonesQuery(
+    activeScheduleSectionIds,
+  );
   const meetingRecordsQuery =
     useAdminMeetingRecordListQuery(accessibleSectionIds);
   const messagesQuery = useAdminMessagesQuery();
+  const messageReadMutation = useUpdateAdminMessageReadMutation();
   const noticesQuery = useAdminAccessibleNoticesQuery();
-  const scheduleSections = accessibleSections.map((section, index) => ({
+  const scheduleSections = activeScheduleSections.map((section, index) => ({
+    courseId: section.courseId,
     milestones: milestoneQueries[index]?.data?.content ?? [],
     sectionId: section.id,
     sectionLabel: section.code,
@@ -332,6 +356,7 @@ export default function AdminHomeDashboard() {
         message.sectionId,
         message.sectionName,
       )} · ${message.teamName}`,
+      read: message.read,
       teamId: String(message.teamId),
       title: message.message,
     }));
@@ -354,9 +379,9 @@ export default function AdminHomeDashboard() {
           />
         </div>
         <div className={styles.tableWrap}>
-          {accessibleSectionIds.length === 0 ? (
+          {activeScheduleSectionIds.length === 0 ? (
             <p className={styles.scheduleState}>
-              담당 분반이 없어 진행 일정을 표시할 수 없습니다.
+              운영 중인 담당 분반이 없어 진행 일정을 표시할 수 없습니다.
             </p>
           ) : isMilestoneSchedulePending ? (
             <p
@@ -393,9 +418,19 @@ export default function AdminHomeDashboard() {
                 {scheduleSections.map(section => (
                   <tr key={section.sectionId}>
                     <td>
-                      <span className={styles.sectionLabel}>
-                        {section.sectionLabel}
-                      </span>
+                      {section.courseId === undefined ? (
+                        <span className={styles.sectionLabel}>
+                          {section.sectionLabel}
+                        </span>
+                      ) : (
+                        <Link
+                          className={styles.sectionLink}
+                          params={{ courseId: String(section.courseId) }}
+                          to={ROUTES.ADMIN_COURSE_DETAIL}
+                        >
+                          {section.sectionLabel}
+                        </Link>
+                      )}
                     </td>
                     {milestoneColumns.map(milestone => {
                       const sectionMilestone = section.milestones.find(
@@ -460,6 +495,7 @@ export default function AdminHomeDashboard() {
         emptyMessage={messageEmptyMessage}
         isMessagePanel
         items={messageItems}
+        onOpenMessage={messageId => messageReadMutation.mutate(messageId)}
         title={
           messagesQuery.data
             ? `쪽지함 · 미확인 ${messagesQuery.data.unreadCount}건`
