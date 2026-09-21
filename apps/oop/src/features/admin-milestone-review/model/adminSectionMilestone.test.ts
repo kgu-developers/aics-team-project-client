@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   formatAdminMilestoneDate,
+  formatAdminPresentationEvaluationDate,
   getAdminMilestoneStatusLabel,
   getAdminMilestoneTypeLabel,
 } from './adminSectionMilestone';
@@ -30,5 +31,15 @@ describe('adminSectionMilestone', () => {
     expect(getAdminMilestoneStatusLabel('DRAFT')).toBe('미공개');
     expect(getAdminMilestoneStatusLabel('PUBLISHED')).toBe('공개');
     expect(getAdminMilestoneStatusLabel('CLOSED')).toBe('마감');
+  });
+
+  it('발표 평가의 오프셋 없는 LocalDateTime을 서울 벽시각 그대로 표시한다', () => {
+    expect(formatAdminPresentationEvaluationDate('2026-09-21T09:00:00')).toBe(
+      '2026-09-21/09:00',
+    );
+    expect(formatAdminPresentationEvaluationDate('2026-09-21T09:00:00Z')).toBe(
+      '2026-09-21/18:00',
+    );
+    expect(formatAdminPresentationEvaluationDate('invalid')).toBe('-');
   });
 });

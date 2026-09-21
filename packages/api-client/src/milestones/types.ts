@@ -30,7 +30,7 @@ export type AdminSectionMilestoneDto = {
   allowResubmissionBeforeDueAt: boolean;
   description?: string | null;
   id: number;
-  peerEvaluationForm?: AdminPeerEvaluationFormDto | null;
+  peerEvaluationForm: AdminPeerEvaluationFormDto | null;
   schedule: AdminMilestoneScheduleDto;
   sectionId: number;
   status: AdminMilestoneStatus;

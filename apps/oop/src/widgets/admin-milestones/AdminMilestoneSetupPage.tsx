@@ -1,4 +1,8 @@
 import {
+  fetchAdminSectionMilestone,
+  type AdminPeerEvaluationFormCreateInput,
+} from '@aics/api-client';
+import {
   Button,
   Card,
   CheckboxList,
@@ -15,6 +19,7 @@ import {
   TimeInput,
   type TimeInputProps,
 } from '@aics/design-system';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
@@ -45,6 +50,7 @@ import {
   type MilestoneTemplateId,
 } from '~/features/admin-milestone-review/model';
 import {
+  adminSectionMilestoneKeys,
   useSubmitAdminSectionMilestonesMutation,
   useSubmitAdminRequiredArtifactsMutation,
   useAdminAccessibleSectionMilestonesQuery,
@@ -52,6 +58,7 @@ import {
   useAdminSectionMilestonesQuery,
   useAdminTeamEvaluationCriteriaQuery,
   useUpdateAdminSectionMilestoneMutation,
+  useUpdateAdminSectionMilestoneEvaluationWindowMutation,
   type SubmitAdminSectionMilestonesInput,
   type SubmitAdminSectionMilestonesResult,
 } from '~/features/admin-milestone-review/queries';
@@ -144,10 +151,7 @@ function PeerEvaluationQuestionsGuide() {
           <Heading level={3}>프로젝트 평가</Heading>
           <ul className={styles.evaluationQuestionList}>
             {peerEvaluationProjectQuestions.map(question => (
-              <li
-                className={styles.evaluationQuestionItem}
-                key={question.label}
-              >
+              <li className={styles.evaluationQuestionItem} key={question.label}>
                 <Text weight='medium'>{question.label}</Text>
                 <Text color='secondary' type='supporting'>
                   {question.description}
@@ -160,10 +164,7 @@ function PeerEvaluationQuestionsGuide() {
           <Heading level={3}>팀원별 기여도 평가</Heading>
           <ul className={styles.evaluationQuestionList}>
             {peerEvaluationTeammateQuestions.map(question => (
-              <li
-                className={styles.evaluationQuestionItem}
-                key={question.label}
-              >
+              <li className={styles.evaluationQuestionItem} key={question.label}>
                 <Text weight='medium'>{question.label}</Text>
                 <Text color='secondary' type='supporting'>
                   {question.description}
@@ -257,9 +258,24 @@ function PresentationEvaluationQuestionsGuideSection({
   );
 }
 
+function hasMatchingPeerEvaluationForm(
+  milestone: Awaited<ReturnType<typeof fetchAdminSectionMilestone>>,
+  input: AdminPeerEvaluationFormCreateInput,
+) {
+  const form = milestone.peerEvaluationForm;
+  return (
+    milestone.type === 'PEER_EVALUATION' &&
+    form?.milestoneId === input.milestoneId &&
+    form.anonymous === input.anonymous &&
+    form.opensAt === input.opensAt &&
+    form.closesAt === input.closesAt
+  );
+}
+
 export default function AdminMilestoneSetupPage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const rawSearch = useSearch({ from: '/admin/milestones/new' }) as {
     milestoneId?: string | number;
     sectionId?: string | number;
@@ -310,8 +326,19 @@ export default function AdminMilestoneSetupPage() {
     useState<ReadonlySet<string>>();
   const [peerEvaluationFormFailures, setPeerEvaluationFormFailures] =
     useState<ReadonlySet<string>>();
+  const [peerEvaluationFormInputs, setPeerEvaluationFormInputs] = useState<
+    Readonly<Record<string, AdminPeerEvaluationFormCreateInput>>
+  >({});
+  const [
+    presentationEvaluationWindowFailures,
+    setPresentationEvaluationWindowFailures,
+  ] = useState<ReadonlySet<string>>();
   const [isSubmittingPeerEvaluationForms, setIsSubmittingPeerEvaluationForms] =
     useState(false);
+  const [
+    isSubmittingPresentationEvaluationWindows,
+    setIsSubmittingPresentationEvaluationWindows,
+  ] = useState(false);
   const [peerEvaluationAnonymous, setPeerEvaluationAnonymous] = useState(true);
   const [requiredArtifactDrafts, setRequiredArtifactDrafts] = useState<
     AdminRequiredArtifactDraft[]
@@ -331,6 +358,8 @@ export default function AdminMilestoneSetupPage() {
   const submitRequiredArtifactsMutation =
     useSubmitAdminRequiredArtifactsMutation();
   const updateMilestoneMutation = useUpdateAdminSectionMilestoneMutation();
+  const updateEvaluationWindowMutation =
+    useUpdateAdminSectionMilestoneEvaluationWindowMutation();
   const createPeerEvaluationFormMutation =
     useCreateAdminPeerEvaluationFormMutation();
   const milestoneQuery = useAdminSectionMilestoneQuery(
@@ -362,10 +391,14 @@ export default function AdminMilestoneSetupPage() {
   const hasRetryablePeerEvaluationForm = Boolean(
     peerEvaluationFormFailures?.size,
   );
+  const hasRetryablePresentationEvaluationWindow = Boolean(
+    presentationEvaluationWindowFailures?.size,
+  );
   const hasNonRetryableFollowUpFailure = Boolean(
     submissionResults &&
     !hasFailedMilestoneCreation &&
     !hasRetryablePeerEvaluationForm &&
+    !hasRetryablePresentationEvaluationWindow &&
     (artifactSubmissionFailures?.size ||
       submissionResults.some(result => result.status === 'publish-failed')),
   );
@@ -424,13 +457,12 @@ export default function AdminMilestoneSetupPage() {
         milestone.schedule,
         milestone.status,
         milestone.allowResubmissionBeforeDueAt,
+        milestone.type,
         milestone.peerEvaluationForm,
       ),
     });
-    if (milestone.type === 'PEER_EVALUATION') {
-      setPeerEvaluationAnonymous(
-        milestone.peerEvaluationForm?.anonymous ?? true,
-      );
+    if (typeof milestone.peerEvaluationForm?.anonymous === 'boolean') {
+      setPeerEvaluationAnonymous(milestone.peerEvaluationForm.anonymous);
     }
   }, [editingMilestoneId, editingSectionId, isEditing, milestoneQuery.data]);
 
@@ -529,8 +561,8 @@ export default function AdminMilestoneSetupPage() {
           currentStatus: milestone.status,
           currentWeekNumber: milestone.weekNumber,
           input: createAdminMilestoneUpdateInput({
-            description,
             anonymous: isPeerEvaluation ? peerEvaluationAnonymous : undefined,
+            description,
             schedule,
             title,
             type: milestone.type,
@@ -588,9 +620,7 @@ export default function AdminMilestoneSetupPage() {
       return;
     }
     if (isDuplicateCheckPending) {
-      setFormError(
-        '기존 마일스톤을 확인하는 중입니다. 잠시 후 다시 저장해주세요.',
-      );
+      setFormError('기존 마일스톤을 확인하는 중입니다. 잠시 후 다시 저장해주세요.');
       return;
     }
     if (isDuplicateCheckError) {
@@ -669,8 +699,33 @@ export default function AdminMilestoneSetupPage() {
           { status: 'create-failed' }
         > => result.status !== 'create-failed',
       );
+      const nextPeerEvaluationFormInputs = {
+        ...peerEvaluationFormInputs,
+      };
+      if (isPeerEvaluation) {
+        newlyCreatedMilestones.forEach(result => {
+          const submitted = sectionsToSubmit.find(
+            section => section.sectionId === result.sectionId,
+          );
+          const evaluationOpensAt = submitted?.input.schedule.evaluationOpensAt;
+          const evaluationClosesAt =
+            submitted?.input.schedule.evaluationClosesAt;
+          if (
+            result.milestoneId !== undefined &&
+            evaluationOpensAt &&
+            evaluationClosesAt
+          ) {
+            nextPeerEvaluationFormInputs[result.sectionId] = {
+              anonymous: peerEvaluationAnonymous,
+              closesAt: evaluationClosesAt,
+              milestoneId: result.milestoneId,
+              opensAt: evaluationOpensAt,
+            };
+          }
+        });
+      }
       const artifactResults =
-        requiredArtifactDrafts.length === 0
+        isPeerEvaluation || requiredArtifactDrafts.length === 0
           ? []
           : await submitRequiredArtifactsMutation.mutateAsync({
               submissions: newlyCreatedMilestones.map(result => ({
@@ -698,37 +753,119 @@ export default function AdminMilestoneSetupPage() {
                 peerEvaluationFormFailures?.has(result.sectionId) === true),
           )
         : [];
-      const peerEvaluationFormResults = isPeerEvaluation
+      const presentationMilestones = isPresentation
+        ? results.filter(
+            (
+              result,
+            ): result is Exclude<
+              (typeof results)[number],
+              { status: 'create-failed' }
+            > =>
+              result.status !== 'create-failed' &&
+              Boolean(
+                sectionSchedules[result.sectionId]?.evaluationOpensAt.date &&
+                sectionSchedules[result.sectionId]?.evaluationOpensAt.time &&
+                sectionSchedules[result.sectionId]?.evaluationClosesAt.date &&
+                sectionSchedules[result.sectionId]?.evaluationClosesAt.time,
+              ) &&
+              (newResults.some(
+                newResult => newResult.sectionId === result.sectionId,
+              ) ||
+                presentationEvaluationWindowFailures?.has(result.sectionId) ===
+                  true),
+          )
+        : [];
+      const presentationEvaluationWindowResults = isPresentation
         ? await Promise.all(
-            peerEvaluationMilestones.map(async result => {
-              // Peer evaluation has its own form window. Milestone evaluation
-              // fields describe the period after a presentation submission closes.
+            presentationMilestones.map(async result => {
               const schedule = sectionSchedules[result.sectionId];
-              const opensAt = schedule
+              const opensAtDraft = schedule
                 ? toAdminMilestoneDateTime(schedule.evaluationOpensAt)
                 : undefined;
-              const closesAt = schedule
+              const closesAtDraft = schedule
                 ? toAdminMilestoneDateTime(schedule.evaluationClosesAt)
                 : undefined;
-              const milestoneId = result.milestoneId;
+              const evaluationOpensAt = opensAtDraft;
+              const evaluationClosesAt = closesAtDraft;
 
-              if (!opensAt || !closesAt || milestoneId === undefined)
+              if (
+                !evaluationOpensAt ||
+                !evaluationClosesAt ||
+                result.milestoneId === undefined
+              )
                 return { sectionId: result.sectionId };
 
               try {
-                setIsSubmittingPeerEvaluationForms(true);
-                await createPeerEvaluationFormMutation.mutateAsync({
-                  input: {
-                    anonymous: peerEvaluationAnonymous,
-                    closesAt,
-                    milestoneId,
-                    opensAt,
-                  },
+                setIsSubmittingPresentationEvaluationWindows(true);
+                await updateEvaluationWindowMutation.mutateAsync({
+                  input: { evaluationClosesAt, evaluationOpensAt },
+                  milestoneId: String(result.milestoneId),
                   sectionId: result.sectionId,
                 });
                 return { sectionId: result.sectionId, succeeded: true };
               } catch {
                 return { sectionId: result.sectionId };
+              }
+            }),
+          )
+        : [];
+      const peerEvaluationFormResults = isPeerEvaluation
+        ? await Promise.all(
+            peerEvaluationMilestones.map(async result => {
+              const input = nextPeerEvaluationFormInputs[result.sectionId];
+              if (!input) return { sectionId: result.sectionId };
+
+              const detailQueryKey = adminSectionMilestoneKeys.detail(
+                result.sectionId,
+                String(input.milestoneId),
+              );
+              const invalidateMilestoneQueries = () =>
+                Promise.all([
+                  queryClient.invalidateQueries({
+                    queryKey: adminSectionMilestoneKeys.list(result.sectionId),
+                  }),
+                  queryClient.invalidateQueries({ queryKey: detailQueryKey }),
+                ]);
+
+              try {
+                setIsSubmittingPeerEvaluationForms(true);
+                await createPeerEvaluationFormMutation.mutateAsync({
+                  input,
+                  sectionId: result.sectionId,
+                });
+                await invalidateMilestoneQueries();
+                return { sectionId: result.sectionId, succeeded: true };
+              } catch (error) {
+                const isAlreadyCreated =
+                  isAxiosError<{ code?: string }>(error) &&
+                  error.response?.status === 409 &&
+                  error.response.data?.code ===
+                    'PEER_EVALUATION_FORM_ALREADY_EXISTS';
+                if (!isAlreadyCreated) return { sectionId: result.sectionId };
+
+                try {
+                  await queryClient.invalidateQueries({
+                    queryKey: detailQueryKey,
+                    refetchType: 'none',
+                  });
+                  const milestone = await queryClient.fetchQuery({
+                    queryFn: () =>
+                      fetchAdminSectionMilestone(
+                        result.sectionId,
+                        String(input.milestoneId),
+                      ),
+                    queryKey: detailQueryKey,
+                  });
+                  if (!hasMatchingPeerEvaluationForm(milestone, input))
+                    return { sectionId: result.sectionId };
+
+                  await queryClient.invalidateQueries({
+                    queryKey: adminSectionMilestoneKeys.list(result.sectionId),
+                  });
+                  return { sectionId: result.sectionId, succeeded: true };
+                } catch {
+                  return { sectionId: result.sectionId };
+                }
               }
             }),
           )
@@ -745,13 +882,29 @@ export default function AdminMilestoneSetupPage() {
         peerEvaluationFormFailures,
       );
       peerEvaluationFormResults.forEach(result => {
-        if (result.succeeded)
+        if (result.succeeded) {
           nextPeerEvaluationFormFailures.delete(result.sectionId);
-        else nextPeerEvaluationFormFailures.add(result.sectionId);
+          delete nextPeerEvaluationFormInputs[result.sectionId];
+        } else nextPeerEvaluationFormFailures.add(result.sectionId);
+      });
+      const nextPresentationEvaluationWindowFailures = new Set(
+        presentationEvaluationWindowFailures,
+      );
+      presentationEvaluationWindowResults.forEach(result => {
+        if (result.succeeded)
+          nextPresentationEvaluationWindowFailures.delete(result.sectionId);
+        else nextPresentationEvaluationWindowFailures.add(result.sectionId);
       });
       setSubmissionResults(results);
       setArtifactSubmissionFailures(nextArtifactSubmissionFailures);
       setPeerEvaluationFormFailures(nextPeerEvaluationFormFailures);
+      setPeerEvaluationFormInputs(nextPeerEvaluationFormInputs);
+      setPresentationEvaluationWindowFailures(
+        nextPresentationEvaluationWindowFailures,
+      );
+      if (nextPresentationEvaluationWindowFailures.size > 0) {
+        setFormError('마일스톤을 저장하지 못했습니다.');
+      }
 
       const createdWithoutFollowUpFailure =
         results.length > 0 &&
@@ -762,7 +915,9 @@ export default function AdminMilestoneSetupPage() {
         artifactResults.every(result => result.failedCount === 0) &&
         nextArtifactSubmissionFailures.size === 0 &&
         peerEvaluationFormResults.every(result => result.succeeded) &&
-        nextPeerEvaluationFormFailures.size === 0;
+        nextPeerEvaluationFormFailures.size === 0 &&
+        presentationEvaluationWindowResults.every(result => result.succeeded) &&
+        nextPresentationEvaluationWindowFailures.size === 0;
 
       if (createdWithoutFollowUpFailure) {
         await navigate({
@@ -779,6 +934,7 @@ export default function AdminMilestoneSetupPage() {
       );
     } finally {
       setIsSubmittingPeerEvaluationForms(false);
+      setIsSubmittingPresentationEvaluationWindows(false);
     }
   };
 
@@ -812,13 +968,6 @@ export default function AdminMilestoneSetupPage() {
     return (
       <div className={styles.page}>
         <EmptyState
-          actions={
-            <Button
-              label='다시 시도'
-              onClick={() => void milestoneQuery.refetch()}
-              variant='secondary'
-            />
-          }
           description='잠시 후 다시 시도해주세요.'
           title='마일스톤 정보를 불러오지 못했습니다.'
         />
@@ -909,27 +1058,6 @@ export default function AdminMilestoneSetupPage() {
                     : '선택한 분반마다 공개 일정과 공개 상태를 따로 설정합니다.'}{' '}
                   저장하면 선택한 분반별로 독립된 요청이 전송됩니다.
                 </Text>
-                {isDuplicateCheckPending ? (
-                  <Text aria-live='polite' color='secondary' role='status'>
-                    기존 마일스톤을 확인하는 중입니다.
-                  </Text>
-                ) : isDuplicateCheckError ? (
-                  <Text className={styles.formError} role='alert'>
-                    기존 마일스톤을 불러오지 못해 중복 여부를 확인할 수
-                    없습니다. 잠시 후 다시 시도해주세요.
-                  </Text>
-                ) : duplicateMilestones.length > 0 ? (
-                  <Text className={styles.formError} role='alert'>
-                    다음 분반에는 같은 유형의 마일스톤이 이미 있습니다. 마일스톤
-                    목록에서 기존 항목을 수정해주세요:{' '}
-                    {duplicateMilestones
-                      .map(
-                        ({ milestone, sectionId }) =>
-                          `${getSectionLabel(sectionId)} — ${milestone.title}`,
-                      )
-                      .join(', ')}
-                  </Text>
-                ) : null}
                 <Selector
                   aria-label='마일스톤 기본 양식'
                   label='마일스톤 기본 양식'
@@ -1226,89 +1354,94 @@ export default function AdminMilestoneSetupPage() {
                         />
                       )}
                       {!isPeerEvaluation ? (
-                        <CheckboxList
-                          description='마감 일시와 지각 제출 정책은 선택한 분반별로 따로 설정됩니다.'
-                          label='제출 정책'
-                          onChange={values =>
-                            updateSectionSchedule(section.id, current => ({
-                              ...current,
-                              allowLateSubmission: values.includes(
-                                'allow-late-submission',
-                              ),
-                              allowSubmissionEditBeforeDueAt: values.includes(
-                                'allow-submission-edit-before-due-at',
-                              ),
-                            }))
-                          }
-                          value={[
-                            ...(schedule.allowSubmissionEditBeforeDueAt
-                              ? ['allow-submission-edit-before-due-at']
-                              : []),
-                            ...(schedule.allowLateSubmission
-                              ? ['allow-late-submission']
-                              : []),
-                          ]}
-                        >
-                          <CheckboxListItem
-                            description='제출 마감 일시 전까지 이미 제출한 내용을 수정할 수 있습니다.'
-                            label='제출 마감 전 수정 허용'
-                            value='allow-submission-edit-before-due-at'
-                          />
-                          <CheckboxListItem
-                            description='제출 마감 이후에도 지각 상태로 제출할 수 있습니다.'
-                            label='지각 제출 허용'
-                            value='allow-late-submission'
-                          />
-                        </CheckboxList>
-                      ) : null}
-                      {!isPeerEvaluation && schedule.allowLateSubmission ? (
-                        <div className={styles.scheduleField}>
-                          <Text weight='medium'>지각 제출 마감 일시</Text>
-                          <div className={styles.scheduleInputs}>
-                            <DateInput
-                              hasClear
-                              label={`${section.code} 지각 제출 마감일`}
-                              onChange={date =>
-                                updateSectionSchedule(section.id, current => ({
-                                  ...current,
-                                  lateSubmissionUntil: {
-                                    ...current.lateSubmissionUntil,
-                                    date: date ?? '',
-                                  },
-                                }))
-                              }
-                              placeholder='날짜 선택'
-                              value={
-                                schedule.lateSubmissionUntil.date
-                                  ? (schedule.lateSubmissionUntil
-                                      .date as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
-                                  : undefined
-                              }
-                              width='100%'
+                        <>
+                          <CheckboxList
+                            description='마감 일시와 지각 제출 정책은 선택한 분반별로 따로 설정됩니다.'
+                            label='제출 정책'
+                            onChange={values =>
+                              updateSectionSchedule(section.id, current => ({
+                                ...current,
+                                allowLateSubmission: values.includes(
+                                  'allow-late-submission',
+                                ),
+                                allowSubmissionEditBeforeDueAt: values.includes(
+                                  'allow-submission-edit-before-due-at',
+                                ),
+                              }))
+                            }
+                            value={[
+                              ...(schedule.allowSubmissionEditBeforeDueAt
+                                ? ['allow-submission-edit-before-due-at']
+                                : []),
+                              ...(schedule.allowLateSubmission
+                                ? ['allow-late-submission']
+                                : []),
+                            ]}
+                          >
+                            <CheckboxListItem
+                              description='제출 마감 일시 전까지 이미 제출한 내용을 수정할 수 있습니다.'
+                              label='제출 마감 전 수정 허용'
+                              value='allow-submission-edit-before-due-at'
                             />
-                            <label>
-                              <Text type='supporting'>{`${section.code} 지각 제출 마감 시간`}</Text>
-                              <input
-                                aria-label={`${section.code} 지각 제출 마감 시간`}
-                                className={styles.timeInput}
-                                onChange={event =>
-                                  updateSectionSchedule(
-                                    section.id,
-                                    current => ({
-                                      ...current,
-                                      lateSubmissionUntil: {
-                                        ...current.lateSubmissionUntil,
-                                        time: event.target.value,
-                                      },
-                                    }),
-                                  )
-                                }
-                                type='time'
-                                value={schedule.lateSubmissionUntil.time}
-                              />
-                            </label>
-                          </div>
-                        </div>
+                            <CheckboxListItem
+                              description='제출 마감 이후에도 지각 상태로 제출할 수 있습니다.'
+                              label='지각 제출 허용'
+                              value='allow-late-submission'
+                            />
+                          </CheckboxList>
+                          {schedule.allowLateSubmission ? (
+                            <div className={styles.scheduleField}>
+                              <Text weight='medium'>지각 제출 마감 일시</Text>
+                              <div className={styles.scheduleInputs}>
+                                <DateInput
+                                  hasClear
+                                  label={`${section.code} 지각 제출 마감일`}
+                                  onChange={date =>
+                                    updateSectionSchedule(
+                                      section.id,
+                                      current => ({
+                                        ...current,
+                                        lateSubmissionUntil: {
+                                          ...current.lateSubmissionUntil,
+                                          date: date ?? '',
+                                        },
+                                      }),
+                                    )
+                                  }
+                                  placeholder='날짜 선택'
+                                  value={
+                                    schedule.lateSubmissionUntil.date
+                                      ? (schedule.lateSubmissionUntil
+                                          .date as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
+                                      : undefined
+                                  }
+                                  width='100%'
+                                />
+                                <label>
+                                  <Text type='supporting'>{`${section.code} 지각 제출 마감 시간`}</Text>
+                                  <input
+                                    aria-label={`${section.code} 지각 제출 마감 시간`}
+                                    className={styles.timeInput}
+                                    onChange={event =>
+                                      updateSectionSchedule(
+                                        section.id,
+                                        current => ({
+                                          ...current,
+                                          lateSubmissionUntil: {
+                                            ...current.lateSubmissionUntil,
+                                            time: event.target.value,
+                                          },
+                                        }),
+                                      )
+                                    }
+                                    type='time'
+                                    value={schedule.lateSubmissionUntil.time}
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          ) : null}
+                        </>
                       ) : null}
                     </article>
                   );
@@ -1335,7 +1468,7 @@ export default function AdminMilestoneSetupPage() {
             />
           ) : null}
 
-          {!isEditing ? (
+          {!isEditing && !isPeerEvaluation ? (
             <section className={styles.section}>
               <Heading className={styles.sectionTitle} level={2}>
                 선택한 프리셋
@@ -1365,6 +1498,27 @@ export default function AdminMilestoneSetupPage() {
             {formError ? (
               <Text className={styles.formError} role='alert'>
                 {formError}
+              </Text>
+            ) : null}
+            {!isEditing && isDuplicateCheckPending ? (
+              <Text aria-live='polite' color='secondary' role='status'>
+                기존 마일스톤을 확인하는 중입니다.
+              </Text>
+            ) : !isEditing && isDuplicateCheckError ? (
+              <Text className={styles.formError} role='alert'>
+                기존 마일스톤을 불러오지 못해 중복 여부를 확인할 수 없습니다.
+                잠시 후 다시 시도해주세요.
+              </Text>
+            ) : !isEditing && duplicateMilestones.length > 0 ? (
+              <Text className={styles.formError} role='alert'>
+                다음 분반에는 같은 유형의 마일스톤이 이미 있습니다. 마일스톤
+                목록에서 기존 항목을 수정해주세요:{' '}
+                {duplicateMilestones
+                  .map(
+                    ({ milestone, sectionId }) =>
+                      `${getSectionLabel(sectionId)} — ${milestone.title}`,
+                  )
+                  .join(', ')}
               </Text>
             ) : null}
             {!isEditing && submissionResults ? (
@@ -1425,6 +1579,7 @@ export default function AdminMilestoneSetupPage() {
                 submitMilestonesMutation.isPending ||
                 submitRequiredArtifactsMutation.isPending ||
                 isSubmittingPeerEvaluationForms ||
+                isSubmittingPresentationEvaluationWindows ||
                 updateMilestoneMutation.isPending ||
                 hasNonRetryableFollowUpFailure ||
                 (!isEditing &&
@@ -1436,10 +1591,13 @@ export default function AdminMilestoneSetupPage() {
                 submitMilestonesMutation.isPending ||
                 submitRequiredArtifactsMutation.isPending ||
                 isSubmittingPeerEvaluationForms ||
+                isSubmittingPresentationEvaluationWindows ||
                 updateMilestoneMutation.isPending
               }
               label={
-                hasFailedMilestoneCreation || hasRetryablePeerEvaluationForm
+                hasFailedMilestoneCreation ||
+                hasRetryablePeerEvaluationForm ||
+                hasRetryablePresentationEvaluationWindow
                   ? '실패한 작업 다시 시도'
                   : '저장'
               }

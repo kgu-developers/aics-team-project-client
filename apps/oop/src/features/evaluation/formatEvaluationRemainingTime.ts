@@ -1,8 +1,8 @@
 import { seoulInstant } from '~/shared/lib/seoulInstant';
 
 /**
- * The server sends `LocalDateTime` strings without an offset; they mean
- * Asia/Seoul, so they must not go through `Date.parse` (browser-local).
+ * The server's schedule LocalDateTime values use the course timezone,
+ * independent of the browser's host timezone.
  */
 export function formatEvaluationRemainingTime(
   closesAt: string,

@@ -120,3 +120,47 @@ it('locks the section/file during apply, retains returned counts, and requires C
     document.querySelector<HTMLInputElement>('input[type="file"]')?.files,
   ).toHaveLength(0);
 });
+
+it('shows required alias guidance and the server duplicate-alias preview error', async () => {
+  setApiAccessToken('test-token');
+  server.use(
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ENROLLMENT_IMPORT_PREVIEW('1')}`,
+      () =>
+        HttpResponse.json(
+          {
+            code: 'IMPORT_BATCH_FILE_INVALID',
+            message: '전공, 학과, 소속 컬럼이 중복되었습니다.',
+          },
+          { status: 400 },
+        ),
+    ),
+  );
+  render(
+    <AstryxThemeProvider>
+      <QueryClientProvider client={client}>
+        <EnrollmentImportDialog
+          isOpen
+          onClose={vi.fn()}
+          onSectionChange={vi.fn()}
+          sectionId='1'
+          sections={[{ id: '1', code: '01', name: '분반 1' }]}
+        />
+      </QueryClientProvider>
+    </AstryxThemeProvider>,
+  );
+  expect(
+    screen.getByText(
+      '학번은 필수입니다. 전공·학과·소속은 같은 항목의 별칭이므로 한 파일에는 셋 중 하나만 넣어주세요.',
+    ),
+  ).toBeVisible();
+
+  const user = userEvent.setup();
+  const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+  await user.upload(input, new File(['excel'], 'duplicate-alias.xlsx'));
+  await user.click(screen.getByRole('button', { name: '미리보기' }));
+
+  expect(
+    await screen.findByText('전공, 학과, 소속 컬럼이 중복되었습니다.'),
+  ).toHaveAttribute('role', 'alert');
+});

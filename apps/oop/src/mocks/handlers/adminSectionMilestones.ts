@@ -22,6 +22,20 @@ function isAdminRequest(request: Request) {
   return getMockAuthenticatedAccount(request)?.user.id === demoAdmin.id;
 }
 
+function isCoherentPeerEvaluationSchedule(
+  input: AdminMilestoneCreateInput | AdminMilestoneUpdateInput,
+) {
+  const { dueAt, evaluationClosesAt, evaluationOpensAt, opensAt } =
+    input.schedule;
+  return (
+    typeof evaluationOpensAt === 'string' &&
+    typeof evaluationClosesAt === 'string' &&
+    evaluationOpensAt < evaluationClosesAt &&
+    dueAt === evaluationClosesAt &&
+    opensAt === evaluationOpensAt
+  );
+}
+
 export const adminSectionMilestoneHandlers = [
   http.post(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES(':sectionId')}`,
@@ -33,9 +47,22 @@ export const adminSectionMilestoneHandlers = [
         );
       }
 
+      const input = (await request.json()) as AdminMilestoneCreateInput;
+      if (
+        input.type === 'PEER_EVALUATION' &&
+        !isCoherentPeerEvaluationSchedule(input)
+      ) {
+        return HttpResponse.json(
+          {
+            code: 'INVALID_MILESTONE_REQUEST',
+            message: '상호평가 시작·종료 일시를 확인해주세요.',
+          },
+          { status: 400 },
+        );
+      }
       const milestone = createAdminSectionMilestoneFixture(
         String(params.sectionId),
-        (await request.json()) as AdminMilestoneCreateInput,
+        input,
       );
       return milestone
         ? HttpResponse.json({ id: milestone.id }, { status: 201 })
@@ -137,10 +164,24 @@ export const adminSectionMilestoneHandlers = [
         );
       }
 
+      const input = (await request.json()) as AdminMilestoneUpdateInput;
+      if (
+        input.type === 'PEER_EVALUATION' &&
+        (!isCoherentPeerEvaluationSchedule(input) ||
+          typeof input.anonymous !== 'boolean')
+      ) {
+        return HttpResponse.json(
+          {
+            code: 'INVALID_MILESTONE_REQUEST',
+            message: '상호평가 기간과 익명 설정을 확인해주세요.',
+          },
+          { status: 400 },
+        );
+      }
       const milestone = updateAdminSectionMilestoneFixture(
         String(params.sectionId),
         String(params.milestoneId),
-        (await request.json()) as AdminMilestoneUpdateInput,
+        input,
       );
       return milestone
         ? new HttpResponse(null, { status: 204 })

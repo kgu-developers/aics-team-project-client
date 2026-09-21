@@ -1,7 +1,8 @@
+import { fetchTeamKickoff } from '@aics/api-client';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StrictMode } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAuthStore } from '../authStore';
 import LoginForm from './LoginForm';
@@ -26,10 +27,32 @@ vi.mock('../queries/useLoginMutation', () => ({
   }),
 }));
 
+vi.mock('@aics/api-client', async importOriginal => ({
+  ...(await importOriginal<typeof import('@aics/api-client')>()),
+  fetchTeamKickoff: vi.fn(),
+}));
+
+const fetchKickoffMock = vi.mocked(fetchTeamKickoff);
+
+beforeEach(() => {
+  fetchKickoffMock.mockResolvedValue({
+    id: 7,
+    name: '7조',
+    members: [
+      {
+        id: 10,
+        studentNumber: demoStudent.studentNumber,
+        isLeader: true,
+      },
+    ],
+  });
+});
+
 afterEach(() => {
   vi.unstubAllEnvs();
   navigate.mockReset();
   mutateAsync.mockReset();
+  fetchKickoffMock.mockReset();
   delete search.redirect;
   useAuthStore.setState({ sessionEndReason: null });
 });
@@ -115,6 +138,51 @@ describe('LoginForm', () => {
     await waitFor(() =>
       expect(navigate).toHaveBeenCalledWith({ href: '/student/meetings' }),
     );
+  });
+
+  it('팀장이 없는 배정 학생은 세션 만료 뒤 온보딩 redirect로 복구한다', async () => {
+    vi.stubEnv('VITE_ENABLE_MSW', 'false');
+    search.redirect = '/onboarding/team';
+    mutateAsync.mockResolvedValue({ ...demoStudent, teamId: '7' });
+    fetchKickoffMock.mockResolvedValue({
+      id: 7,
+      name: '7조',
+      members: [
+        {
+          id: 10,
+          studentNumber: demoStudent.studentNumber,
+          isLeader: false,
+        },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText(/학번/), demoStudent.studentNumber);
+    await user.type(screen.getByLabelText(/비밀번호/), 'password');
+    await user.click(screen.getByRole('button', { name: '로그인' }));
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith({ href: '/onboarding/team' }),
+    );
+  });
+
+  it('kickoff 조회 실패 시 로그인 화면에 남지 않고 온보딩 복구 화면으로 이동한다', async () => {
+    vi.stubEnv('VITE_ENABLE_MSW', 'false');
+    search.redirect = '/student/meetings';
+    mutateAsync.mockResolvedValue({ ...demoStudent, teamId: '7' });
+    fetchKickoffMock.mockRejectedValue(new Error('kickoff unavailable'));
+    const user = userEvent.setup();
+    render(<LoginForm />);
+
+    await user.type(screen.getByLabelText(/학번/), demoStudent.studentNumber);
+    await user.type(screen.getByLabelText(/비밀번호/), 'password');
+    await user.click(screen.getByRole('button', { name: '로그인' }));
+
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith({ to: '/onboarding/team' }),
+    );
+    expect(navigate).not.toHaveBeenCalledWith({ href: '/student/meetings' });
   });
 
   it('실서버 모드의 공개 전 배정 학생은 학생 redirect 대신 온보딩으로 이동한다', async () => {

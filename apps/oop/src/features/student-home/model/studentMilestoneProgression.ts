@@ -46,12 +46,17 @@ function isInScheduleWindow(
   submission: MyTeamMilestoneSubmissionResponse | undefined,
   now: number,
 ) {
-  const opensAt = milestoneTime(
-    milestone.schedule.evaluationOpensAt ?? milestone.schedule.opensAt,
+  const hasEvaluationWindow = Boolean(
+    milestone.type === 'PRESENTATION' &&
+    milestone.schedule.evaluationOpensAt &&
+    milestone.schedule.evaluationClosesAt,
   );
-  const closesAt = milestoneTime(
-    milestone.schedule.evaluationClosesAt ?? milestone.schedule.dueAt,
-  );
+  const opensAt = hasEvaluationWindow
+    ? milestoneTime(milestone.schedule.evaluationOpensAt)
+    : milestoneTime(milestone.schedule.opensAt);
+  const closesAt = hasEvaluationWindow
+    ? milestoneTime(milestone.schedule.evaluationClosesAt)
+    : milestoneTime(milestone.schedule.dueAt);
 
   if (
     Number.isFinite(opensAt) &&

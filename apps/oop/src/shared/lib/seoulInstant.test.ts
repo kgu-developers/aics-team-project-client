@@ -24,6 +24,7 @@ it.each([
   'invalid',
   '08/27/2026',
   '2026-13-27',
+  '2026-02-30T12:00:00',
   '2026-08-27T99:00',
 ])('%s is not a server timestamp', value => {
   expect(seoulInstant(value)).toBeNaN();

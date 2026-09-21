@@ -18,6 +18,7 @@ const submittedMilestone: TeamMilestoneProgress = {
   milestone: {
     allowResubmissionBeforeDueAt: false,
     id: 101,
+    peerEvaluationForm: null,
     schedule: { dueAt: '2026-10-15T14:59:00Z' },
     sectionId: 1,
     status: 'PUBLISHED',

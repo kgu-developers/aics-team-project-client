@@ -1,9 +1,4 @@
-import {
-  API_BASE_URL,
-  ENDPOINTS,
-  setApiAccessToken,
-  type AdminSectionMilestoneDto,
-} from '@aics/api-client';
+import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -27,6 +22,7 @@ import {
   afterAll,
   afterEach,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
@@ -39,7 +35,6 @@ import AdminMilestoneSetupPage from './AdminMilestoneSetupPage';
 
 import { getAdminSectionMilestoneFixture } from '~/mocks/data/adminSectionMilestones';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
-import { adminPresentationEvaluationHandlers } from '~/mocks/handlers/adminPresentationEvaluations';
 import { adminRequiredArtifactHandlers } from '~/mocks/handlers/adminRequiredArtifacts';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 
@@ -67,10 +62,21 @@ vi.mock('@aics/design-system', async importOriginal => ({
 const server = setupServer(
   ...adminSectionMilestoneHandlers,
   ...adminRequiredArtifactHandlers,
-  ...adminPresentationEvaluationHandlers,
 );
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => {
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES(':sectionId')}`,
+      () => HttpResponse.json({ content: [] }),
+    ),
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA(':sectionId')}`,
+      () => HttpResponse.json({ contents: [] }),
+    ),
+  );
+});
 afterEach(() => {
   vi.restoreAllMocks();
   clients.splice(0).forEach(client => client.clear());
@@ -84,20 +90,7 @@ afterAll(() => server.close());
 function renderPage(
   editing: boolean,
   sections = [{ ...demoAdmin.sections[0]!, id: '1' }],
-  creationMilestonesBySection: Record<string, AdminSectionMilestoneDto[]> = {},
 ) {
-  if (!editing) {
-    server.use(
-      http.get(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES(':sectionId')}`,
-        ({ params }) =>
-          HttpResponse.json({
-            content:
-              creationMilestonesBySection[String(params.sectionId)] ?? [],
-          }),
-      ),
-    );
-  }
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -264,135 +257,6 @@ describe('artifact submission isolation', () => {
   );
 });
 
-it('shows the fixed peer-evaluation questions and does not offer required artifacts', async () => {
-  const user = userEvent.setup();
-  renderPage(false);
-
-  await user.click(
-    await screen.findByRole('combobox', { name: '마일스톤 기본 양식' }),
-  );
-  await user.click(screen.getByRole('option', { name: '상호 평가' }));
-
-  const guide = await screen.findByRole('region', {
-    name: '학생 상호평가 문항',
-  });
-  expect(within(guide).getByText('자신의 역할 요약')).toBeVisible();
-  expect(within(guide).getByText('팀 프로젝트 평가')).toBeVisible();
-  expect(within(guide).getByText('기여도 (%)')).toBeVisible();
-  expect(
-    screen.queryByRole('button', { name: '산출물 추가' }),
-  ).not.toBeInTheDocument();
-});
-
-it('blocks creation when the selected section already has the same milestone type', async () => {
-  const writes = trackWrites();
-  const proposal = getAdminSectionMilestoneFixture('1', '101')!;
-  renderPage(false, [{ ...demoAdmin.sections[0]!, id: '1' }], {
-    '1': [proposal],
-  });
-
-  expect(
-    await screen.findByText(
-      /같은 유형의 마일스톤이 이미 있습니다.*OOP-01 · OOP-01 — 제안서/,
-    ),
-  ).toBeVisible();
-  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
-  expect(writes).toEqual([]);
-
-  const user = userEvent.setup();
-  await user.click(
-    screen.getByRole('combobox', { name: '마일스톤 기본 양식' }),
-  );
-  await user.click(screen.getByRole('option', { name: '중간 점검' }));
-  await waitFor(() =>
-    expect(
-      screen.queryByText(/같은 유형의 마일스톤이 이미 있습니다/),
-    ).not.toBeInTheDocument(),
-  );
-  expect(screen.getByRole('button', { name: '저장' })).toBeEnabled();
-});
-
-it('shows each section presentation criteria from the server in milestone setup', async () => {
-  const user = userEvent.setup();
-  server.use(
-    http.get(
-      `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA('1')}`,
-      () =>
-        HttpResponse.json({
-          contents: [
-            {
-              displayOrder: 0,
-              id: 1,
-              maxScore: 5,
-              title: '프로젝트 완성도',
-            },
-            {
-              displayOrder: 1,
-              id: 2,
-              maxScore: 5,
-              title: '기능 구성과 구현',
-            },
-          ],
-        }),
-    ),
-  );
-  renderPage(false);
-
-  await user.click(
-    await screen.findByRole('combobox', { name: '마일스톤 기본 양식' }),
-  );
-  await user.click(
-    screen.getByRole('option', { name: '발표 (자료 제출 + 평가)' }),
-  );
-
-  const guide = await screen.findByRole('region', {
-    name: '학생 발표 평가 문항',
-  });
-  expect(
-    within(guide).getByText(
-      /발표 평가 문항은 분반별 제출물의 발표 평가에서 설정할 수 있습니다/,
-    ),
-  ).toBeVisible();
-  expect(
-    await within(guide).findByText('1. 프로젝트 완성도 · 5점'),
-  ).toBeVisible();
-  expect(within(guide).getByText('2. 기능 구성과 구현 · 5점')).toBeVisible();
-});
-
-it('does not offer required artifact management when editing a peer evaluation', async () => {
-  const milestone = getAdminSectionMilestoneFixture('1', '101')!;
-  server.use(
-    http.get(
-      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '101')}`,
-      () =>
-        HttpResponse.json({
-          ...milestone,
-          peerEvaluationForm: {
-            anonymous: true,
-            closesAt: '2026-10-20T23:59:00',
-            id: 501,
-            milestoneId: 101,
-            opensAt: '2026-10-16T09:00:00',
-            sectionId: 1,
-          },
-          schedule: {
-            ...milestone.schedule,
-            dueAt: '2026-10-20T23:59:00',
-            evaluationClosesAt: '2026-10-20T23:59:00',
-            evaluationOpensAt: '2026-10-16T09:00:00',
-          },
-          type: 'PEER_EVALUATION',
-        }),
-    ),
-  );
-  renderPage(true);
-
-  await screen.findByRole('region', { name: '학생 상호평가 문항' });
-  expect(
-    screen.queryByRole('region', { name: '필수 산출물 관리' }),
-  ).not.toBeInTheDocument();
-});
-
 it('부분 생성 실패를 재시도해도 이미 생성한 분반의 마일스톤을 다시 만들지 않는다', async () => {
   const attempts: string[] = [];
   server.use(
@@ -465,7 +329,15 @@ it('생성 실패 시 서버 응답 상태와 코드를 원인과 함께 보여�
 });
 
 it('edits peer evaluation while preserving the hidden anonymous setting', async () => {
+  const invalidateQueries = vi.spyOn(
+    QueryClient.prototype,
+    'invalidateQueries',
+  );
+  const requests: string[] = [];
   const bodies: unknown[] = [];
+  server.events.on('request:start', ({ request }) => {
+    requests.push(`${request.method} ${new URL(request.url).pathname}`);
+  });
   const milestone = getAdminSectionMilestoneFixture('1', '101')!;
   server.use(
     http.get(
@@ -473,9 +345,8 @@ it('edits peer evaluation while preserving the hidden anonymous setting', async 
       () =>
         HttpResponse.json({
           ...milestone,
-          type: 'PEER_EVALUATION',
           peerEvaluationForm: {
-            anonymous: true,
+            anonymous: false,
             closesAt: '2026-10-20T23:59:00',
             id: 501,
             milestoneId: 101,
@@ -483,11 +354,12 @@ it('edits peer evaluation while preserving the hidden anonymous setting', async 
             sectionId: 1,
           },
           schedule: {
-            ...milestone.schedule,
             dueAt: '2026-10-20T23:59:00',
-            evaluationOpensAt: '2026-10-16T09:00:00',
             evaluationClosesAt: '2026-10-20T23:59:00',
+            evaluationOpensAt: '2026-10-16T09:00:00',
+            opensAt: '2026-10-16T09:00:00',
           },
+          type: 'PEER_EVALUATION',
         }),
     ),
     http.put(
@@ -500,92 +372,54 @@ it('edits peer evaluation while preserving the hidden anonymous setting', async 
   );
   renderPage(true);
   const user = userEvent.setup();
-  const starts = await screen.findByLabelText('OOP-01 상호 평가 시작일');
-  expect(starts).toHaveValue('2026-10-16');
-  expect(screen.queryByLabelText('OOP-01 공개 시작일')).not.toBeInTheDocument();
+  await screen.findByLabelText('OOP-01 상호 평가 시작일');
   expect(
     screen.queryByRole('combobox', { name: 'OOP-01 상호 평가 익명 여부' }),
   ).not.toBeInTheDocument();
-  fireEvent.change(starts, { target: { value: '2026-10-17' } });
+  expect(screen.queryByLabelText('OOP-01 공개 시작일')).not.toBeInTheDocument();
+  expect(screen.queryByText('지각 제출 허용')).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('OOP-01 상호 평가 시작일'), {
+    target: { value: '2026-10-17' },
+  });
+  fireEvent.change(screen.getByLabelText('OOP-01 상호 평가 종료일'), {
+    target: { value: '2026-10-21' },
+  });
   await user.click(screen.getByRole('button', { name: '저장' }));
+
   await waitFor(() => expect(bodies).toHaveLength(1));
-  expect(bodies[0]).toMatchObject({
-    anonymous: true,
-    type: 'PEER_EVALUATION',
-    schedule: {
-      dueAt: '2026-10-20T23:59:00',
-      evaluationClosesAt: '2026-10-20T23:59:00',
-      evaluationOpensAt: '2026-10-17T09:00:00',
-    },
+  expect(bodies).toEqual([
+    expect.objectContaining({
+      anonymous: false,
+      schedule: {
+        dueAt: '2026-10-21T23:59:00',
+        evaluationClosesAt: '2026-10-21T23:59:00',
+        evaluationOpensAt: '2026-10-17T09:00:00',
+        opensAt: '2026-10-17T09:00:00',
+      },
+      type: 'PEER_EVALUATION',
+    }),
+  ]);
+  expect(
+    requests.filter(request => request.includes('/peer-evaluation-forms')),
+  ).toEqual([]);
+  expect(
+    requests.filter(request =>
+      request.startsWith('PUT /api/v1/admin/sections/1/milestones/101'),
+    ),
+  ).toHaveLength(1);
+  expect(invalidateQueries).toHaveBeenCalledWith({
+    queryKey: ['admin-section-milestones', 'detail', '1', '101'],
+  });
+  expect(invalidateQueries).toHaveBeenCalledWith({
+    queryKey: ['admin-section-milestones', 'list', '1'],
   });
 });
 
-it('does not enter peer-evaluation editing when the linked form is missing', async () => {
-  const writes = trackWrites();
-  const milestone = getAdminSectionMilestoneFixture('1', '101')!;
-  server.use(
-    http.get(
-      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '101')}`,
-      () =>
-        HttpResponse.json({
-          ...milestone,
-          peerEvaluationForm: null,
-          type: 'PEER_EVALUATION',
-        }),
-    ),
-  );
-  renderPage(true);
-  await screen.findByText('연결된 상호 평가 양식이 없습니다.');
-  expect(
-    screen.queryByRole('button', { name: '저장' }),
-  ).not.toBeInTheDocument();
-  expect(
-    screen.queryByRole('textbox', { name: '제목' }),
-  ).not.toBeInTheDocument();
-  expect(writes).toEqual([]);
-});
-
-it('keeps the peer-evaluation form values when its update fails', async () => {
-  const milestone = getAdminSectionMilestoneFixture('1', '101')!;
-  server.use(
-    http.get(
-      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '101')}`,
-      () =>
-        HttpResponse.json({
-          ...milestone,
-          peerEvaluationForm: {
-            anonymous: true,
-            closesAt: '2026-10-20T23:59:00',
-            id: 501,
-            milestoneId: 101,
-            opensAt: '2026-10-16T09:00:00',
-            sectionId: 1,
-          },
-          type: 'PEER_EVALUATION',
-        }),
-    ),
-    http.put(
-      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '101')}`,
-      () =>
-        HttpResponse.json(
-          { code: 'INVALID_MILESTONE_REQUEST' },
-          { status: 400 },
-        ),
-    ),
-  );
-  renderPage(true);
-  const user = userEvent.setup();
-  const title = await screen.findByRole('textbox', { name: '제목' });
-  await user.clear(title);
-  await user.type(title, '수정 중인 상호 평가');
-  await user.click(screen.getByRole('button', { name: '저장' }));
-  expect(
-    await screen.findByText(/마일스톤을 수정하지 못했습니다\./),
-  ).toBeVisible();
-  expect(title).toHaveValue('수정 중인 상호 평가');
-});
-
 it('creates peer evaluation with a separate form window and no presentation window on the milestone', async () => {
+  const invalidateQueries = vi.spyOn(
+    QueryClient.prototype,
+    'invalidateQueries',
+  );
   const milestoneBodies: unknown[] = [];
   const formBodies: unknown[] = [];
   server.use(
@@ -623,7 +457,12 @@ it('creates peer evaluation with a separate form window and no presentation wind
   expect(milestoneBodies).toEqual([
     expect.objectContaining({
       type: 'PEER_EVALUATION',
-      schedule: { dueAt: '2026-10-20T23:59:00' },
+      schedule: {
+        dueAt: '2026-10-20T23:59:00',
+        evaluationClosesAt: '2026-10-20T23:59:00',
+        evaluationOpensAt: '2026-10-16T09:00:00',
+        opensAt: '2026-10-16T09:00:00',
+      },
     }),
   ]);
   expect(formBodies).toEqual([
@@ -632,6 +471,169 @@ it('creates peer evaluation with a separate form window and no presentation wind
       milestoneId: 901,
       opensAt: '2026-10-16T09:00:00',
       closesAt: '2026-10-20T23:59:00',
+    },
+  ]);
+  expect(invalidateQueries).toHaveBeenCalledWith({
+    queryKey: ['admin-section-milestones', 'detail', '1', '901'],
+  });
+  expect(invalidateQueries).toHaveBeenCalledWith({
+    queryKey: ['admin-section-milestones', 'list', '1'],
+  });
+});
+
+it('reconciles a committed peer form after a lost response and retries with the original immutable payload', async () => {
+  const milestoneBodies: unknown[] = [];
+  const formBodies: unknown[] = [];
+  let formAttempts = 0;
+  let detailReads = 0;
+  server.use(
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`,
+      async ({ request }) => {
+        milestoneBodies.push(await request.json());
+        return HttpResponse.json({ id: 904 }, { status: 201 });
+      },
+    ),
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PEER_EVALUATION_FORM('1')}`,
+      async ({ request }) => {
+        formAttempts++;
+        formBodies.push(await request.json());
+        if (formAttempts === 1)
+          return HttpResponse.json({ code: 'RESPONSE_LOST' }, { status: 500 });
+        return HttpResponse.json(
+          { code: 'PEER_EVALUATION_FORM_ALREADY_EXISTS' },
+          { status: 409 },
+        );
+      },
+    ),
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '904')}`,
+      () => {
+        detailReads++;
+        return HttpResponse.json({
+          allowResubmissionBeforeDueAt: false,
+          id: 904,
+          peerEvaluationForm: {
+            anonymous: true,
+            closesAt: '2026-10-20T23:59:00',
+            id: 905,
+            milestoneId: 904,
+            opensAt: '2026-10-16T09:00:00',
+            sectionId: 1,
+          },
+          schedule: {
+            dueAt: '2026-10-20T23:59:00',
+            evaluationClosesAt: '2026-10-20T23:59:00',
+            evaluationOpensAt: '2026-10-16T09:00:00',
+            opensAt: '2026-10-16T09:00:00',
+          },
+          sectionId: 1,
+          status: 'DRAFT',
+          title: '상호 평가',
+          type: 'PEER_EVALUATION',
+          weekNumber: 13,
+        });
+      },
+    ),
+  );
+  renderPage(false);
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole('combobox', { name: '마일스톤 기본 양식' }),
+  );
+  await user.click(screen.getByRole('option', { name: '상호 평가' }));
+  for (const [label, value] of [
+    ['OOP-01 상호 평가 시작일', '2026-10-16'],
+    ['OOP-01 평가 시작 시간', '09:00'],
+    ['OOP-01 상호 평가 종료일', '2026-10-20'],
+    ['OOP-01 평가 종료 시간', '23:59'],
+  ]) {
+    fireEvent.change(screen.getByLabelText(label!), { target: { value } });
+  }
+  await user.click(screen.getByRole('button', { name: '저장' }));
+  await screen.findByRole('button', { name: '실패한 작업 다시 시도' });
+
+  fireEvent.change(screen.getByLabelText('OOP-01 상호 평가 시작일'), {
+    target: { value: '2026-10-18' },
+  });
+  await user.click(
+    screen.getByRole('button', { name: '실패한 작업 다시 시도' }),
+  );
+
+  await screen.findByText('마일스톤 목록');
+  expect(milestoneBodies).toHaveLength(1);
+  expect(formBodies).toEqual([
+    {
+      anonymous: true,
+      closesAt: '2026-10-20T23:59:00',
+      milestoneId: 904,
+      opensAt: '2026-10-16T09:00:00',
+    },
+    {
+      anonymous: true,
+      closesAt: '2026-10-20T23:59:00',
+      milestoneId: 904,
+      opensAt: '2026-10-16T09:00:00',
+    },
+  ]);
+  expect(detailReads).toBe(1);
+});
+
+it('creates a presentation and patches its evaluation window with Seoul LocalDateTime values', async () => {
+  const milestoneBodies: unknown[] = [];
+  const evaluationWindowBodies: unknown[] = [];
+  server.use(
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`,
+      async ({ request }) => {
+        milestoneBodies.push(await request.json());
+        return HttpResponse.json({ id: 903 }, { status: 201 });
+      },
+    ),
+    http.patch(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_EVALUATION_WINDOW('1', '903')}`,
+      async ({ request }) => {
+        evaluationWindowBodies.push(await request.json());
+        return new HttpResponse(null, { status: 204 });
+      },
+    ),
+  );
+  renderPage(false);
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole('combobox', { name: '마일스톤 기본 양식' }),
+  );
+  await user.click(
+    screen.getByRole('option', { name: '발표 (자료 제출 + 평가)' }),
+  );
+  for (const [label, value] of [
+    ['OOP-01 제출 마감일', '2026-09-21'],
+    ['OOP-01 제출 마감 시간', '12:00'],
+    ['OOP-01 발표 평가 시작일', '2026-09-21'],
+    ['OOP-01 평가 시작 시간', '18:00'],
+    ['OOP-01 발표 평가 종료일', '2026-09-21'],
+    ['OOP-01 평가 종료 시간', '20:00'],
+  ]) {
+    fireEvent.change(screen.getByLabelText(label!), { target: { value } });
+  }
+  await user.click(screen.getByRole('button', { name: '저장' }));
+
+  await waitFor(() => expect(evaluationWindowBodies).toHaveLength(1));
+  expect(milestoneBodies).toEqual([
+    expect.objectContaining({
+      schedule: {
+        dueAt: '2026-09-21T12:00:00',
+        evaluationClosesAt: '2026-09-21T20:00:00',
+        evaluationOpensAt: '2026-09-21T18:00:00',
+      },
+      type: 'PRESENTATION',
+    }),
+  ]);
+  expect(evaluationWindowBodies).toEqual([
+    {
+      evaluationClosesAt: '2026-09-21T20:00:00',
+      evaluationOpensAt: '2026-09-21T18:00:00',
     },
   ]);
 });

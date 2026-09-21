@@ -12,6 +12,7 @@ import { ROUTES } from '~/app/constants/routes';
 
 import {
   formatAdminMilestoneDate,
+  formatAdminPresentationEvaluationDate,
   getAdminMilestoneStatusLabel,
   getAdminMilestoneTypeLabel,
 } from '~/features/admin-milestone-review/model';
@@ -182,17 +183,29 @@ export default function AdminMilestoneDetailPage() {
               {milestone.schedule.evaluationOpensAt ? (
                 <ReadOnlyField
                   label='평가 시작 일시'
-                  value={formatAdminMilestoneDate(
-                    milestone.schedule.evaluationOpensAt,
-                  )}
+                  value={
+                    milestone.type === 'PRESENTATION'
+                      ? formatAdminPresentationEvaluationDate(
+                          milestone.schedule.evaluationOpensAt,
+                        )
+                      : formatAdminMilestoneDate(
+                          milestone.schedule.evaluationOpensAt,
+                        )
+                  }
                 />
               ) : null}
               {milestone.schedule.evaluationClosesAt ? (
                 <ReadOnlyField
                   label='평가 종료 일시'
-                  value={formatAdminMilestoneDate(
-                    milestone.schedule.evaluationClosesAt,
-                  )}
+                  value={
+                    milestone.type === 'PRESENTATION'
+                      ? formatAdminPresentationEvaluationDate(
+                          milestone.schedule.evaluationClosesAt,
+                        )
+                      : formatAdminMilestoneDate(
+                          milestone.schedule.evaluationClosesAt,
+                        )
+                  }
                 />
               ) : null}
             </div>

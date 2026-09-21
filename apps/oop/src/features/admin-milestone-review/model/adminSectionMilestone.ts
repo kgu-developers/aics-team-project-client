@@ -24,6 +24,12 @@ export function formatAdminMilestoneDate(value: string | null | undefined) {
   return formatted === value ? '-' : formatted;
 }
 
+export function formatAdminPresentationEvaluationDate(
+  value: string | null | undefined,
+) {
+  return formatAdminMilestoneDate(value);
+}
+
 export function getAdminMilestoneTypeLabel(type: AdminMilestoneType) {
   return milestoneTypeLabels[type];
 }
