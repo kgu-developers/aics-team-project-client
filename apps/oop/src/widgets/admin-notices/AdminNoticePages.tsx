@@ -40,6 +40,7 @@ import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 import RichTextEditor from '~/shared/ui/RichTextEditor';
 import RichTextViewer from '~/shared/ui/RichTextViewer';
 
+import { useActiveAdminSections } from '~/features/admin-course/queries';
 import {
   canPublishNotice,
   noticeId,
@@ -58,8 +59,17 @@ import * as styles from './AdminNoticePages.css';
 
 function useNoticeScope() {
   const { sectionId } = useSearch({ from: '/admin/notices' });
-  const user = useAuthStore(state => state.currentUser);
-  return { sectionId, user, section: noticeSection(user, sectionId) };
+  const currentUser = useAuthStore(state => state.currentUser);
+  const activeSectionsQuery = useActiveAdminSections();
+  const user = currentUser
+    ? { ...currentUser, sections: activeSectionsQuery.data }
+    : null;
+  return {
+    activeSectionsQuery,
+    sectionId,
+    user,
+    section: noticeSection(user, sectionId),
+  };
 }
 
 function handleRowNavigation(
@@ -95,14 +105,14 @@ function SectionSelect({
   onChange: (value: number | undefined) => void;
   isDisabled?: boolean;
 }) {
-  const user = useAuthStore(state => state.currentUser);
+  const activeSectionsQuery = useActiveAdminSections();
   return (
     <Selector
       label='분반'
       placeholder='분반을 선택해 주세요.'
       options={[
         ...(includeAll ? [{ label: '전체 분반', value: 'all' }] : []),
-        ...(user?.sections ?? [])
+        ...activeSectionsQuery.data
           .filter(section => noticeId(section.id) !== undefined)
           .map(section => ({ label: section.code, value: section.id })),
       ]}
@@ -111,7 +121,11 @@ function SectionSelect({
       )}
       value={value === undefined ? (includeAll ? 'all' : '') : String(value)}
       onChange={value => onChange(noticeId(value))}
-      isDisabled={isDisabled}
+      isDisabled={
+        isDisabled ||
+        activeSectionsQuery.isPending ||
+        activeSectionsQuery.isError
+      }
       width={320}
     />
   );

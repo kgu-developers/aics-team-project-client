@@ -35,6 +35,7 @@ import AdminMilestoneSetupPage from './AdminMilestoneSetupPage';
 
 import { getAdminSectionMilestoneFixture } from '~/mocks/data/adminSectionMilestones';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminRequiredArtifactHandlers } from '~/mocks/handlers/adminRequiredArtifacts';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 
@@ -60,6 +61,7 @@ vi.mock('@aics/design-system', async importOriginal => ({
 }));
 
 const server = setupServer(
+  ...adminCourseHandlers,
   ...adminSectionMilestoneHandlers,
   ...adminRequiredArtifactHandlers,
 );

@@ -18,13 +18,14 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminStudentTeamManagement from './AdminStudentTeamManagement';
 
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import {
   adminStudentTeamHandlers,
   resetAdminStudentTeamMockState,
 } from '~/mocks/handlers/adminStudentTeams';
 import { renderWithRouter } from '~/test/renderWithRouter';
 
-const server = setupServer(...adminStudentTeamHandlers);
+const server = setupServer(...adminCourseHandlers, ...adminStudentTeamHandlers);
 const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
   'close',
@@ -113,6 +114,7 @@ describe('AdminStudentTeamManagement', () => {
       sections: [
         ...demoAdmin.sections,
         {
+          ...demoAdmin.sections[0]!,
           id: 'oop-2026-2-02',
           code: 'OOP-02',
           name: '객체지향프로그래밍 02분반',
@@ -124,7 +126,7 @@ describe('AdminStudentTeamManagement', () => {
     const sectionSelect = await screen.findByRole('combobox', {
       name: '분반',
     });
-    expect(sectionSelect).toHaveTextContent('OOP-01');
+    await waitFor(() => expect(sectionSelect).toHaveTextContent('OOP-01'));
 
     await user.click(sectionSelect);
     await user.click(await screen.findByRole('option', { name: 'OOP-02' }));
@@ -151,9 +153,11 @@ describe('AdminStudentTeamManagement', () => {
       '2',
     );
 
-    expect(
-      await screen.findByRole('combobox', { name: '분반' }),
-    ).toHaveTextContent('OOP-02');
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: '분반' })).toHaveTextContent(
+        'OOP-02',
+      ),
+    );
   });
 
   it('직접 전달된 분반이 담당 목록에 없으면 다른 분반으로 대체하지 않는다', async () => {
@@ -170,9 +174,11 @@ describe('AdminStudentTeamManagement', () => {
   it('로그인한 관리자의 분반 목록을 분반 선택 UI에 표시한다', async () => {
     renderPage();
 
-    expect(
-      await screen.findByRole('combobox', { name: '분반' }),
-    ).toHaveTextContent('OOP-01');
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: '분반' })).toHaveTextContent(
+        'OOP-01',
+      ),
+    );
     expect(screen.queryByText('1151 (월6)')).not.toBeInTheDocument();
   });
 

@@ -18,9 +18,13 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminMilestonesPage from './AdminMilestonesPage';
 
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 
-const server = setupServer(...adminSectionMilestoneHandlers);
+const server = setupServer(
+  ...adminCourseHandlers,
+  ...adminSectionMilestoneHandlers,
+);
 const clients: QueryClient[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));

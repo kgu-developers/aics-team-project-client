@@ -31,6 +31,7 @@ import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { paginate } from '~/shared/lib/pagination';
 import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
+import { useActiveAdminSections } from '~/features/admin-course/queries';
 import {
   useAdminPeerEvaluationsQuery,
   useAdminPresentationEvaluationsQuery,
@@ -255,7 +256,8 @@ export default function AdminSubmissionsPage() {
     ? milestoneId
     : 'proposal';
   const activeTab = MILESTONE_TABS.find(tab => tab.id === activeMilestoneId);
-  const accessibleSections = currentUser?.sections ?? [];
+  const activeSectionsQuery = useActiveAdminSections();
+  const accessibleSections = activeSectionsQuery.data;
   const accessibleSectionIds = accessibleSections.map(section => section.id);
   const effectiveSectionId = sectionId ?? accessibleSectionIds[0];
   const isAccessibleSection = Boolean(
@@ -560,6 +562,7 @@ export default function AdminSubmissionsPage() {
           {accessibleSections.length > 0 ? (
             <Selector
               aria-label='조회할 분반'
+              isDisabled={activeSectionsQuery.isPending}
               label='분반 선택'
               onChange={selectSection}
               options={sectionOptions}

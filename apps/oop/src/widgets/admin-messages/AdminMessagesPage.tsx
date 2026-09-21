@@ -13,6 +13,7 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { getSectionDisplayLabel } from '~/shared/lib/getSectionDisplayLabel';
 
+import { useActiveAdminSections } from '~/features/admin-course/queries';
 import {
   useAdminMessagesQuery,
   useUpdateAdminMessageReadMutation,
@@ -21,14 +22,13 @@ import AdminSectionTeamFilter, {
   ALL_SECTIONS,
   ALL_TEAMS,
 } from '~/features/admin-section/components/AdminSectionTeamFilter';
-import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMessagesPage.css';
 
 export default function AdminMessagesPage() {
   const navigate = useNavigate();
-  const currentUser = useAuthStore(state => state.currentUser);
-  const sections = currentUser?.sections ?? [];
+  const activeSectionsQuery = useActiveAdminSections();
+  const sections = activeSectionsQuery.data;
   const [sectionId, setSectionId] = useState<string>();
   const [teamId, setTeamId] = useState<string>();
   const [page, setPage] = useState(0);

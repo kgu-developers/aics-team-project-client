@@ -26,6 +26,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { useActiveAdminSections } from '~/features/admin-course/queries';
 import { useCreateAdminPeerEvaluationFormMutation } from '~/features/admin-evaluation/queries';
 import AdminRequiredArtifactDraftEditor from '~/features/admin-milestone-review/components/AdminRequiredArtifactDraftEditor';
 import AdminRequiredArtifactsManager from '~/features/admin-milestone-review/components/AdminRequiredArtifactsManager';
@@ -62,7 +63,6 @@ import {
   type SubmitAdminSectionMilestonesInput,
   type SubmitAdminSectionMilestonesResult,
 } from '~/features/admin-milestone-review/queries';
-import { useAuthStore } from '~/features/auth/authStore';
 
 import {
   peerEvaluationProjectQuestions,
@@ -279,7 +279,7 @@ function hasMatchingPeerEvaluationForm(
 }
 
 export default function AdminMilestoneSetupPage() {
-  const currentUser = useAuthStore(state => state.currentUser);
+  const activeSectionsQuery = useActiveAdminSections();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const rawSearch = useSearch({ from: '/admin/milestones/new' }) as {
@@ -297,7 +297,7 @@ export default function AdminMilestoneSetupPage() {
         ? undefined
         : String(rawSearch.sectionId),
   };
-  const sections = currentUser?.sections ?? [];
+  const sections = activeSectionsQuery.data;
   const editingMilestoneId =
     search.milestoneId && /^\d+$/.test(search.milestoneId)
       ? search.milestoneId
@@ -383,6 +383,7 @@ export default function AdminMilestoneSetupPage() {
   const selectedSectionMilestoneQueries =
     useAdminAccessibleSectionMilestonesQuery(isEditing ? [] : sectionIds);
   const hydratedMilestoneKey = useRef<string | undefined>(undefined);
+  const initializedCreationSection = useRef(Boolean(initialSectionId));
   const sectionOptions = sections.map(section => ({
     label: `${section.code} · ${section.name}`,
     value: section.id,
@@ -443,6 +444,22 @@ export default function AdminMilestoneSetupPage() {
         return duplicate ? [{ milestone: duplicate, sectionId }] : [];
       })
     : [];
+
+  useEffect(() => {
+    if (
+      editingMilestoneId ||
+      initializedCreationSection.current ||
+      !initialSectionId
+    ) {
+      return;
+    }
+
+    initializedCreationSection.current = true;
+    setSectionIds([initialSectionId]);
+    setSectionSchedules({
+      [initialSectionId]: createAdminMilestoneSectionScheduleDraft(),
+    });
+  }, [editingMilestoneId, initialSectionId]);
 
   useEffect(() => {
     const milestone = milestoneQuery.data;

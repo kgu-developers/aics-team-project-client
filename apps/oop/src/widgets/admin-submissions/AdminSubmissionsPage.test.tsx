@@ -38,6 +38,7 @@ import {
 import { getAdminSectionMilestonesFixture } from '~/mocks/data/adminSectionMilestones';
 import { createProjectProposalFixture } from '~/mocks/data/projectProposal';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminEvaluationResultHandlers } from '~/mocks/handlers/adminEvaluationResults';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 import {
@@ -59,6 +60,7 @@ const server = setupServer(
     `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM(':teamId')}`,
     () => HttpResponse.json({ code: 'PROJECT_NOT_FOUND' }, { status: 404 }),
   ),
+  ...adminCourseHandlers,
   ...adminMeetingHandlers,
   ...adminMidReportHandlers,
   ...adminMilestoneSubmissionDetailHandlers,
