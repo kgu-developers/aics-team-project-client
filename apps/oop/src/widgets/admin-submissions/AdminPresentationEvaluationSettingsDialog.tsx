@@ -83,8 +83,14 @@ export function AdminPresentationEvaluationSettingsDialog({
   useEffect(() => {
     if (!isOpen || Number.isNaN(evaluationStartsAtInstant)) return;
 
-    const remaining = evaluationStartsAtInstant - Date.now();
-    if (remaining <= 0) return;
+    const now = Date.now();
+    const remaining = evaluationStartsAtInstant - now;
+    if (remaining <= 0) {
+      setEvaluationClock(current =>
+        isEvaluationLockedAt(current) ? current : now,
+      );
+      return;
+    }
 
     const timer = window.setTimeout(
       () => setEvaluationClock(Date.now()),

@@ -255,6 +255,35 @@ it('locks presentation order while the settings dialog remains open', () => {
   expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
 });
 
+it('locks settings immediately when the dialog opens after evaluation starts', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime('2026-09-22T09:00:00+09:00');
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA('1')}`,
+      () => HttpResponse.json({ contents: [] }),
+    ),
+  );
+
+  const { rerender } = setup(teams, AdminPresentationEvaluationSettingsDialog);
+  rerender({
+    evaluationStartsAt: '2026-09-22T09:00:01+09:00',
+    isOpen: false,
+  });
+
+  act(() => vi.advanceTimersByTime(1_025));
+  rerender({
+    evaluationStartsAt: '2026-09-22T09:00:01+09:00',
+    isOpen: true,
+  });
+
+  expect(
+    screen.getByRole('combobox', { name: '7팀 발표 순서' }),
+  ).toBeDisabled();
+  expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '평가 항목 추가' })).toBeDisabled();
+});
+
 it('preserves unsaved orders through criterion creation and teams refetch, then submits those explicit orders', async () => {
   const criterion = { id: 1, title: '새 항목', maxScore: 5, displayOrder: 0 };
   let criterionCreated = false;
