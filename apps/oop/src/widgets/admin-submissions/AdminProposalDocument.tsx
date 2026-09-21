@@ -50,13 +50,13 @@ export default function AdminProposalDocument({
           : '작성 중'}
       </Text>
       <section className={styles.section}>
-        <Heading level={3}>주제</Heading>
+        <Heading level={3}>1. 주제</Heading>
         <Text className={styles.content}>{project.description}</Text>
         <Heading level={4}>프로젝트 목표</Heading>
         <Text className={styles.content}>{project.goal}</Text>
       </section>
       <section className={styles.section}>
-        <Heading level={3}>데이터 구성</Heading>
+        <Heading level={3}>2. 데이터 구성</Heading>
         {project.dataConfiguration.map((item, index) => (
           <div className={styles.section} key={index}>
             <Text>{item.name || '데이터'}</Text>
@@ -66,7 +66,7 @@ export default function AdminProposalDocument({
         ))}
       </section>
       <section className={styles.section}>
-        <Heading level={3}>화면 구성</Heading>
+        <Heading level={3}>3. 화면 구성</Heading>
         {project.screenConfiguration.map((screen, index) => {
           const imageUrl = safeDisplayUrl(screen.imageUrl);
           return (
@@ -85,7 +85,7 @@ export default function AdminProposalDocument({
         })}
       </section>
       <section className={styles.section}>
-        <Heading level={3}>팀 운영 방식</Heading>
+        <Heading level={3}>4. 팀 운영 방식</Heading>
         <Text>{project.teamOperation.name}</Text>
         {project.teamOperation.members.map(member => (
           <Text key={member.studentNumber}>
