@@ -6,6 +6,7 @@ import type {
 import { describe, expect, it } from 'vitest';
 
 import {
+  areAllStudentMilestonesTerminal,
   lockStudentHomeMilestone,
   resolveStudentMilestoneProgression,
 } from './studentMilestoneProgression';
@@ -73,6 +74,22 @@ function submission(
 }
 
 describe('학생 마일스톤 순차 진행', () => {
+  it('완료와 마감 상태만 남았을 때 학기 전체를 종료 상태로 판단한다', () => {
+    expect(
+      areAllStudentMilestonesTerminal([
+        { ...summary(1), status: 'completed' },
+        { ...summary(2), status: 'closed' },
+      ]),
+    ).toBe(true);
+    expect(
+      areAllStudentMilestonesTerminal([
+        { ...summary(1), status: 'completed' },
+        summary(2),
+      ]),
+    ).toBe(false);
+    expect(areAllStudentMilestonesTerminal([])).toBe(false);
+  });
+
   it('이후 일정이 열려도 이전 단계가 완료되지 않으면 잠근다', () => {
     const first = milestone(
       1,

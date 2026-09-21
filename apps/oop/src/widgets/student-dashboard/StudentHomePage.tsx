@@ -26,6 +26,7 @@ import { peerEvaluationHomeSummary } from '~/features/student-home/model/peerEva
 import { proposalSectionStatuses } from '~/features/student-home/model/proposalSectionStatuses';
 import { selectActiveMilestone } from '~/features/student-home/model/selectActiveMilestone';
 import {
+  areAllStudentMilestonesTerminal,
   lockStudentHomeMilestone,
   resolveStudentMilestoneProgression,
 } from '~/features/student-home/model/studentMilestoneProgression';
@@ -585,17 +586,28 @@ export default function StudentHomePage() {
       ),
     ),
   );
+  const isSemesterComplete =
+    areAllStudentMilestonesTerminal(summarizedMilestones);
+  let heroHeading = '팀 프로젝트 진행 상태를 확인해 주세요.';
+  let heroDescription =
+    '아래에서 단계별 일정과 내 팀 제출 상태를 확인할 수 있어요.';
+
+  if (isSemesterComplete) {
+    heroHeading = '한 학기 동안 수고 많으셨습니다.';
+    heroDescription =
+      '모든 팀 프로젝트 일정이 마감되었습니다. 아래에서 제출 결과와 활동 기록을 확인할 수 있어요.';
+  } else if (activeMilestone) {
+    heroHeading = `${activeMilestone.title} 진행 상태를 확인해 주세요.`;
+    heroDescription = `${activeMilestone.title} · ${activeMilestone.statusLabel}`;
+  }
+
   const hero = {
     date: new Intl.DateTimeFormat('ko-KR', {
       timeZone: 'Asia/Seoul',
       dateStyle: 'long',
     }).format(new Date()),
-    heading: activeMilestone
-      ? `${activeMilestone.title} 진행 상태를 확인해 주세요.`
-      : '팀 프로젝트 진행 상태를 확인해 주세요.',
-    description: activeMilestone
-      ? `${activeMilestone.title} · ${activeMilestone.statusLabel}`
-      : '아래에서 단계별 일정과 내 팀 제출 상태를 확인할 수 있어요.',
+    heading: heroHeading,
+    description: heroDescription,
     ctaLabel: '진행 단계 확인',
   };
 
@@ -630,6 +642,7 @@ export default function StudentHomePage() {
         sectionId={home.sectionId}
         canCreateMeeting={Boolean(home.teamId)}
         onCtaClick={focusActiveMilestone}
+        showCta={!isSemesterComplete}
       />
       <TopicApiProvider
         sectionId={home.sectionId}

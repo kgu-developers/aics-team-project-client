@@ -46,6 +46,33 @@ describe('StudentHomeHero', () => {
     expect(onCtaClick).toHaveBeenCalledOnce();
   });
 
+  it('학기 종료 상태에서는 진행 CTA를 제거하고 기록 탭은 유지한다', async () => {
+    renderWithRouter(
+      <StudentHomeHero
+        announcements={studentHomeDashboardFixture.announcements}
+        hero={{
+          ...studentHomeDashboardFixture.hero,
+          heading: '한 학기 동안 수고 많으셨습니다.',
+        }}
+        showCta={false}
+      />,
+    );
+
+    expect(
+      screen.getByRole('heading', {
+        name: '한 학기 동안 수고 많으셨습니다.',
+      }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('button', {
+        name: studentHomeDashboardFixture.hero.ctaLabel,
+      }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '공지사항' })).toBeVisible();
+    expect(screen.getByRole('tab', { name: '회의록' })).toBeVisible();
+    expect(screen.getByRole('tab', { name: '액션 플랜' })).toBeVisible();
+  });
+
   it('커스텀 바로가기 탭을 클릭해서 전환한다', async () => {
     const user = userEvent.setup();
 

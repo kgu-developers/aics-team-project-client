@@ -792,16 +792,15 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     );
   });
 
-  it('마감된 이전 단계 대신 열린 단계로 이동하고 재조회 후 모두 마감이면 CTA를 비활성화한다', async () => {
-    let allClosed = false;
+  it('진행 중 단계가 남으면 기존 히어로와 활성 CTA를 유지한다', async () => {
     server.use(
       http.get(`${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`, () =>
         HttpResponse.json({
-          contents: list.map((item, index) => ({
+          contents: list.map(item => ({
             ...item,
             type: 'GENERAL',
-            status: index === 0 ? 'CLOSED' : 'PUBLISHED',
-            schedule: { dueAt: '2020-01-01T00:00:00+09:00' },
+            status: 'PUBLISHED',
+            schedule: { dueAt: '2099-01-01T00:00:00+09:00' },
           })),
         }),
       ),
@@ -814,7 +813,7 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
             teamId: 7,
             status: 'REVISION_REQUESTED',
             currentVersion: 1,
-            canSubmitNow: !allClosed && Number(params.id) === list[1]!.id,
+            canSubmitNow: Number(params.id) === list[0]!.id,
             hasPendingReview: true,
           }),
       ),
@@ -823,25 +822,63 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     const button = await screen.findByRole('button', {
       name: '진행 단계 확인',
     });
+    expect(
+      screen.getByRole('heading', {
+        name: '팀 프로젝트 진행 상태를 확인해 주세요.',
+      }),
+    ).toBeVisible();
     await waitFor(() =>
-      expect(button).toHaveAttribute('aria-disabled', 'true'),
+      expect(button).not.toHaveAttribute('aria-disabled', 'true'),
     );
     expect(
-      document.getElementById(`student-milestone-${list[1]!.id}`),
-    ).toHaveTextContent('이전 단계 완료 필요');
-    await waitFor(() =>
-      expect(
-        document.getElementById(`student-milestone-${list[0]!.id}`),
-      ).toHaveTextContent('마감'),
+      document.getElementById(`student-milestone-${list[0]!.id}`),
+    ).not.toHaveTextContent('이전 단계 완료 필요');
+  });
+
+  it('모든 단계가 마감되면 학기 종료 히어로와 기록 탭만 유지한다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`, () =>
+        HttpResponse.json({
+          contents: list.map(item => ({
+            ...item,
+            type: 'GENERAL',
+            status: 'CLOSED',
+            schedule: { dueAt: '2020-01-01T00:00:00+09:00' },
+          })),
+        }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION(':id')}`,
+        ({ params }) =>
+          HttpResponse.json({
+            id: 9000 + Number(params.id),
+            milestoneId: Number(params.id),
+            teamId: 7,
+            status: 'SUBMITTED',
+            currentVersion: 1,
+            canSubmitNow: false,
+            hasPendingReview: false,
+          }),
+      ),
     );
-    allClosed = true;
-    window.dispatchEvent(new Event('focus'));
-    await waitFor(() =>
-      expect(button).toHaveAttribute('aria-disabled', 'true'),
-    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
     expect(
-      document.getElementById(`student-milestone-${list[1]!.id}`),
-    ).toHaveTextContent('이전 단계 완료 필요');
+      await screen.findByRole('heading', {
+        name: '한 학기 동안 수고 많으셨습니다.',
+      }),
+    ).toBeVisible();
+    expect(
+      screen.getByText(
+        '모든 팀 프로젝트 일정이 마감되었습니다. 아래에서 제출 결과와 활동 기록을 확인할 수 있어요.',
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('button', { name: '진행 단계 확인' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '공지사항' })).toBeVisible();
+    expect(screen.getByRole('tab', { name: '회의록' })).toBeVisible();
+    expect(screen.getByRole('tab', { name: '액션 플랜' })).toBeVisible();
   });
   it.each([
     {

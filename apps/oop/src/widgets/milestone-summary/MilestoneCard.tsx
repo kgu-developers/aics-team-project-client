@@ -332,19 +332,25 @@ export default function MilestoneCard({
                 }
               >
                 {state =>
-                  renderRow(
-                    { ...row, value: state.value },
-                    <Button
-                      className={styles.rowAction}
-                      label={state.actionLabel}
-                      isDisabled={state.disabled}
-                      isLoading={state.busy}
-                      tooltip={state.notice}
-                      onClick={() => void state.onAction()}
-                      size='md'
-                      variant='primary'
-                    />,
-                  )
+                  state.actionLabel
+                    ? renderRow(
+                        { ...row, value: state.value },
+                        <Button
+                          className={styles.rowAction}
+                          label={state.actionLabel}
+                          isDisabled={state.disabled}
+                          isLoading={state.busy}
+                          tooltip={state.notice}
+                          onClick={() => void state.onAction()}
+                          size='md'
+                          variant='primary'
+                        />,
+                      )
+                    : renderRow({
+                        ...row,
+                        value: state.value,
+                        actionLabel: undefined,
+                      })
                 }
               </FinalReportSubmissionAction>
             ) : (
