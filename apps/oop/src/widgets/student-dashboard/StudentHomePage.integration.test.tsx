@@ -778,7 +778,9 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
 
     const futureCardId = `student-milestone-${list[1]!.id}`;
     await waitFor(() =>
-      expect(document.getElementById(futureCardId)).toHaveTextContent('기간 전'),
+      expect(document.getElementById(futureCardId)).toHaveTextContent(
+        '기간 전',
+      ),
     );
     expect(document.getElementById(futureCardId)).not.toHaveTextContent(
       '이전 단계 완료 필요',

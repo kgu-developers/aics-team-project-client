@@ -214,7 +214,9 @@ export default function StudentHomePage() {
         submittedAt: midReport.data?.submittedAt,
         messages: midReportMessages.data,
         relatedId:
-          midReport.data?.id === undefined ? undefined : Number(midReport.data.id),
+          midReport.data?.id === undefined
+            ? undefined
+            : Number(midReport.data.id),
         teamMemberIds: home.teamMemberIds,
         isMessagesReady: midReportMessages.isSuccess,
       });
@@ -229,7 +231,9 @@ export default function StudentHomePage() {
         kind: 'mid-review-feedback',
         teamId: home.teamId,
         submissionId:
-          midReport.data?.id === undefined ? undefined : String(midReport.data.id),
+          midReport.data?.id === undefined
+            ? undefined
+            : String(midReport.data.id),
         feedbackStage: isFeedbackCycleCompleted
           ? 'completed'
           : midReportFeedbackRoomStage({

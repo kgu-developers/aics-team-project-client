@@ -91,7 +91,9 @@ export function midReportFeedbackStage({
   const submitted = seoulInstant(submittedAt);
   const submittedAfterMessage = relevantMessages.some(message => {
     const sent = seoulInstant(message.createdAt);
-    return Number.isFinite(sent) && Number.isFinite(submitted) && sent < submitted;
+    return (
+      Number.isFinite(sent) && Number.isFinite(submitted) && sent < submitted
+    );
   });
   if (submittedAfterMessage) return 'completed';
 
