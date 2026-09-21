@@ -37,6 +37,7 @@ import {
   createAdminMilestoneUpdateInput,
   findMilestoneTemplate,
   formatAdminMilestoneRequestError,
+  getAdminMilestoneTypeForTemplate,
   getAdminMilestoneTypeLabel,
   isMilestoneTemplateId,
   isSupportedMilestoneCreationTemplate,
@@ -52,14 +53,21 @@ import {
   adminSectionMilestoneKeys,
   useSubmitAdminSectionMilestonesMutation,
   useSubmitAdminRequiredArtifactsMutation,
+  useAdminAccessibleSectionMilestonesQuery,
   useAdminSectionMilestoneQuery,
   useAdminSectionMilestonesQuery,
+  useAdminTeamEvaluationCriteriaQuery,
   useUpdateAdminSectionMilestoneMutation,
   useUpdateAdminSectionMilestoneEvaluationWindowMutation,
   type SubmitAdminSectionMilestonesInput,
   type SubmitAdminSectionMilestonesResult,
 } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
+
+import {
+  peerEvaluationProjectQuestions,
+  peerEvaluationTeammateQuestions,
+} from '~/course/peerEvaluationQuestions';
 
 import * as styles from './AdminMilestoneSetupPage.css';
 
@@ -112,6 +120,147 @@ function ScheduleTimeInput({ label, onChange, value }: ScheduleTimeInputProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+type MilestoneSection = {
+  code: string;
+  id: string;
+  name: string;
+};
+
+function PeerEvaluationQuestionsGuide() {
+  return (
+    <section
+      aria-labelledby='peer-evaluation-questions'
+      className={styles.section}
+    >
+      <Heading
+        className={styles.sectionTitle}
+        id='peer-evaluation-questions'
+        level={2}
+      >
+        학생 상호평가 문항
+      </Heading>
+      <Text color='secondary' type='supporting'>
+        상호평가는 고정 양식입니다. 아래 문항은 학생 화면에도 동일하게 표시되며,
+        이 화면에서는 변경할 수 없습니다.
+      </Text>
+      <div className={styles.sectionScheduleList}>
+        <article className={styles.sectionSchedule}>
+          <Heading level={3}>프로젝트 평가</Heading>
+          <ul className={styles.evaluationQuestionList}>
+            {peerEvaluationProjectQuestions.map(question => (
+              <li
+                className={styles.evaluationQuestionItem}
+                key={question.label}
+              >
+                <Text weight='medium'>{question.label}</Text>
+                <Text color='secondary' type='supporting'>
+                  {question.description}
+                </Text>
+              </li>
+            ))}
+          </ul>
+        </article>
+        <article className={styles.sectionSchedule}>
+          <Heading level={3}>팀원별 기여도 평가</Heading>
+          <ul className={styles.evaluationQuestionList}>
+            {peerEvaluationTeammateQuestions.map(question => (
+              <li
+                className={styles.evaluationQuestionItem}
+                key={question.label}
+              >
+                <Text weight='medium'>{question.label}</Text>
+                <Text color='secondary' type='supporting'>
+                  {question.description}
+                </Text>
+              </li>
+            ))}
+          </ul>
+        </article>
+      </div>
+    </section>
+  );
+}
+
+function PresentationEvaluationQuestionsGuide({
+  section,
+}: {
+  section: MilestoneSection;
+}) {
+  const criteriaQuery = useAdminTeamEvaluationCriteriaQuery(section.id);
+
+  return (
+    <article className={styles.sectionSchedule}>
+      <Heading level={3}>{`${section.code} · ${section.name}`}</Heading>
+      {criteriaQuery.isPending ? (
+        <Text aria-live='polite' role='status'>
+          학생 발표 평가 문항을 불러오는 중입니다.
+        </Text>
+      ) : criteriaQuery.isError ? (
+        <Text role='alert'>
+          학생 발표 평가 문항을 불러오지 못했습니다. 제출물 관리의 발표 평가
+          화면에서 다시 확인해 주세요.
+        </Text>
+      ) : (criteriaQuery.data?.contents.length ?? 0) === 0 ? (
+        <Text color='secondary' type='supporting'>
+          아직 등록된 발표 평가 문항이 없습니다. 분반별 제출물의 발표 평가에서
+          문항을 추가하면 학생 발표 평가 화면에도 표시됩니다.
+        </Text>
+      ) : (
+        <ul className={styles.resultList}>
+          {criteriaQuery.data?.contents.map(criterion => (
+            <li key={criterion.id}>
+              <Text weight='medium'>
+                {criterion.displayOrder + 1}. {criterion.title} ·{' '}
+                {criterion.maxScore}점
+              </Text>
+            </li>
+          ))}
+        </ul>
+      )}
+    </article>
+  );
+}
+
+function PresentationEvaluationQuestionsGuideSection({
+  sections,
+}: {
+  sections: MilestoneSection[];
+}) {
+  return (
+    <section
+      aria-labelledby='presentation-evaluation-questions'
+      className={styles.section}
+    >
+      <Heading
+        className={styles.sectionTitle}
+        id='presentation-evaluation-questions'
+        level={2}
+      >
+        학생 발표 평가 문항
+      </Heading>
+      <Text color='secondary' type='supporting'>
+        발표 평가 문항은 분반별 제출물의 발표 평가에서 설정할 수 있습니다. 이
+        마일스톤 화면에서는 분반별 현재 문항만 확인하며, 등록된 항목은 학생 발표
+        평가 화면에 그대로 표시됩니다.
+      </Text>
+      {sections.length === 0 ? (
+        <Text color='secondary' type='supporting'>
+          문항을 확인할 분반을 하나 이상 선택해 주세요.
+        </Text>
+      ) : (
+        <div className={styles.sectionScheduleList}>
+          {sections.map(section => (
+            <PresentationEvaluationQuestionsGuide
+              key={section.id}
+              section={section}
+            />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -231,6 +380,8 @@ export default function AdminMilestoneSetupPage() {
     : templateId === 'peer-review';
   const sectionMilestonesQuery =
     useAdminSectionMilestonesQuery(editingSectionId);
+  const selectedSectionMilestoneQueries =
+    useAdminAccessibleSectionMilestonesQuery(isEditing ? [] : sectionIds);
   const hydratedMilestoneKey = useRef<string | undefined>(undefined);
   const sectionOptions = sections.map(section => ({
     label: `${section.code} · ${section.name}`,
@@ -257,6 +408,41 @@ export default function AdminMilestoneSetupPage() {
     (artifactSubmissionFailures?.size ||
       submissionResults.some(result => result.status === 'publish-failed')),
   );
+  const selectedMilestoneType = getAdminMilestoneTypeForTemplate(templateId);
+  const sectionsPendingMilestoneCreation = selectedSections.filter(section => {
+    const previousResult = submissionResults?.find(
+      result => result.sectionId === section.id,
+    );
+    return !previousResult || previousResult.status === 'create-failed';
+  });
+  const pendingCreationSectionIds = new Set(
+    sectionsPendingMilestoneCreation.map(section => section.id),
+  );
+  const selectedMilestoneQueriesBySectionId = new Map(
+    sectionIds.map((sectionId, index) => [
+      sectionId,
+      selectedSectionMilestoneQueries[index],
+    ]),
+  );
+  const isDuplicateCheckPending = sectionsPendingMilestoneCreation.some(
+    section =>
+      selectedMilestoneQueriesBySectionId.get(section.id)?.isPending === true,
+  );
+  const isDuplicateCheckError = sectionsPendingMilestoneCreation.some(
+    section =>
+      selectedMilestoneQueriesBySectionId.get(section.id)?.isError === true,
+  );
+  const duplicateMilestones = selectedMilestoneType
+    ? sectionIds.flatMap(sectionId => {
+        if (!pendingCreationSectionIds.has(sectionId)) return [];
+        const duplicate = selectedMilestoneQueriesBySectionId
+          .get(sectionId)
+          ?.data?.content.find(
+            milestone => milestone.type === selectedMilestoneType,
+          );
+        return duplicate ? [{ milestone: duplicate, sectionId }] : [];
+      })
+    : [];
 
   useEffect(() => {
     const milestone = milestoneQuery.data;
@@ -439,6 +625,29 @@ export default function AdminMilestoneSetupPage() {
       setFormError('대상 분반을 하나 이상 선택해주세요.');
       return;
     }
+    if (isDuplicateCheckPending) {
+      setFormError(
+        '기존 마일스톤을 확인하는 중입니다. 잠시 후 다시 저장해주세요.',
+      );
+      return;
+    }
+    if (isDuplicateCheckError) {
+      setFormError(
+        '기존 마일스톤을 불러오지 못해 중복 여부를 확인할 수 없습니다. 잠시 후 다시 시도해주세요.',
+      );
+      return;
+    }
+    if (duplicateMilestones.length > 0) {
+      setFormError(
+        `다음 분반에는 같은 유형의 마일스톤이 이미 있습니다. 마일스톤 목록에서 기존 항목을 수정해주세요: ${duplicateMilestones
+          .map(
+            ({ milestone, sectionId }) =>
+              `${getSectionLabel(sectionId)} — ${milestone.title}`,
+          )
+          .join(', ')}`,
+      );
+      return;
+    }
 
     const previousResultsBySection = new Map(
       (submissionResults ?? []).map(result => [result.sectionId, result]),
@@ -524,7 +733,7 @@ export default function AdminMilestoneSetupPage() {
         });
       }
       const artifactResults =
-        requiredArtifactDrafts.length === 0
+        isPeerEvaluation || requiredArtifactDrafts.length === 0
           ? []
           : await submitRequiredArtifactsMutation.mutateAsync({
               submissions: newlyCreatedMilestones.map(result => ({
@@ -769,6 +978,28 @@ export default function AdminMilestoneSetupPage() {
         <EmptyState
           description='잠시 후 다시 시도해주세요.'
           title='마일스톤 정보를 불러오지 못했습니다.'
+        />
+      </div>
+    );
+  }
+
+  if (
+    isEditing &&
+    isPeerEvaluation &&
+    !milestoneQuery.data?.peerEvaluationForm
+  ) {
+    return (
+      <div className={styles.page}>
+        <EmptyState
+          title='연결된 상호 평가 양식이 없습니다.'
+          description='상호 평가 기간을 확인할 수 없어 안전하게 수정할 수 없습니다. 다시 조회해도 계속되면 양식 설정을 확인해 주세요.'
+          actions={
+            <Button
+              label='다시 조회'
+              onClick={() => void milestoneQuery.refetch()}
+              variant='secondary'
+            />
+          }
         />
       </div>
     );
@@ -1097,30 +1328,6 @@ export default function AdminMilestoneSetupPage() {
                           </div>
                         </div>
                       ) : null}
-                      {isPeerEvaluation &&
-                      section.id === selectedSections[0]?.id ? (
-                        <Selector
-                          aria-label={`${section.code} 상호 평가 익명 여부`}
-                          label='평가 결과 익명 공개'
-                          description='선택한 모든 분반의 상호평가 양식에 동일하게 적용됩니다.'
-                          onChange={value =>
-                            setPeerEvaluationAnonymous(value === 'anonymous')
-                          }
-                          options={[
-                            { label: '익명 공개', value: 'anonymous' },
-                            { label: '실명 공개', value: 'identified' },
-                          ]}
-                          renderOption={option => (
-                            <SelectorOption
-                              label={option.label ?? option.value}
-                            />
-                          )}
-                          value={
-                            peerEvaluationAnonymous ? 'anonymous' : 'identified'
-                          }
-                          width={180}
-                        />
-                      ) : null}
                       {isEditing && milestoneQuery.data?.status === 'CLOSED' ? (
                         <div className={styles.scheduleField}>
                           <Text weight='medium'>공개 상태</Text>
@@ -1251,14 +1458,25 @@ export default function AdminMilestoneSetupPage() {
             )}
           </section>
 
-          {isEditing && editingSectionId && editingMilestoneId ? (
+          {isPeerEvaluation ? <PeerEvaluationQuestionsGuide /> : null}
+
+          {isPresentation ? (
+            <PresentationEvaluationQuestionsGuideSection
+              sections={selectedSections}
+            />
+          ) : null}
+
+          {isEditing &&
+          !isPeerEvaluation &&
+          editingSectionId &&
+          editingMilestoneId ? (
             <AdminRequiredArtifactsManager
               milestoneId={editingMilestoneId}
               sectionId={editingSectionId}
             />
           ) : null}
 
-          {!isEditing ? (
+          {!isEditing && !isPeerEvaluation ? (
             <section className={styles.section}>
               <Heading className={styles.sectionTitle} level={2}>
                 선택한 프리셋
@@ -1270,7 +1488,7 @@ export default function AdminMilestoneSetupPage() {
             </section>
           ) : null}
 
-          {!isEditing ? (
+          {!isEditing && !isPeerEvaluation ? (
             <AdminRequiredArtifactDraftEditor
               onChange={setRequiredArtifactDrafts}
               value={requiredArtifactDrafts}
@@ -1288,6 +1506,27 @@ export default function AdminMilestoneSetupPage() {
             {formError ? (
               <Text className={styles.formError} role='alert'>
                 {formError}
+              </Text>
+            ) : null}
+            {!isEditing && isDuplicateCheckPending ? (
+              <Text aria-live='polite' color='secondary' role='status'>
+                기존 마일스톤을 확인하는 중입니다.
+              </Text>
+            ) : !isEditing && isDuplicateCheckError ? (
+              <Text className={styles.formError} role='alert'>
+                기존 마일스톤을 불러오지 못해 중복 여부를 확인할 수 없습니다.
+                잠시 후 다시 시도해주세요.
+              </Text>
+            ) : !isEditing && duplicateMilestones.length > 0 ? (
+              <Text className={styles.formError} role='alert'>
+                다음 분반에는 같은 유형의 마일스톤이 이미 있습니다. 마일스톤
+                목록에서 기존 항목을 수정해주세요:{' '}
+                {duplicateMilestones
+                  .map(
+                    ({ milestone, sectionId }) =>
+                      `${getSectionLabel(sectionId)} — ${milestone.title}`,
+                  )
+                  .join(', ')}
               </Text>
             ) : null}
             {!isEditing && submissionResults ? (
@@ -1350,7 +1589,11 @@ export default function AdminMilestoneSetupPage() {
                 isSubmittingPeerEvaluationForms ||
                 isSubmittingPresentationEvaluationWindows ||
                 updateMilestoneMutation.isPending ||
-                hasNonRetryableFollowUpFailure
+                hasNonRetryableFollowUpFailure ||
+                (!isEditing &&
+                  (isDuplicateCheckPending ||
+                    isDuplicateCheckError ||
+                    duplicateMilestones.length > 0))
               }
               isLoading={
                 submitMilestonesMutation.isPending ||

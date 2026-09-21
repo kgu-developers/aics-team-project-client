@@ -22,6 +22,7 @@ import {
   afterAll,
   afterEach,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
@@ -64,6 +65,18 @@ const server = setupServer(
 );
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => {
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES(':sectionId')}`,
+      () => HttpResponse.json({ content: [] }),
+    ),
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA(':sectionId')}`,
+      () => HttpResponse.json({ contents: [] }),
+    ),
+  );
+});
 afterEach(() => {
   vi.restoreAllMocks();
   clients.splice(0).forEach(client => client.clear());
@@ -315,7 +328,7 @@ it('생성 실패 시 서버 응답 상태와 코드를 원인과 함께 보여�
   expect(screen.queryByText('마일스톤 목록')).not.toBeInTheDocument();
 });
 
-it('hydrates identified peer evaluation and edits period plus anonymity with one milestone PUT only', async () => {
+it('edits peer evaluation while preserving the hidden anonymous setting', async () => {
   const invalidateQueries = vi.spyOn(
     QueryClient.prototype,
     'invalidateQueries',
@@ -359,10 +372,10 @@ it('hydrates identified peer evaluation and edits period plus anonymity with one
   );
   renderPage(true);
   const user = userEvent.setup();
-  const anonymity = await screen.findByRole('combobox', {
-    name: 'OOP-01 상호 평가 익명 여부',
-  });
-  await waitFor(() => expect(anonymity).toHaveTextContent('실명 공개'));
+  await screen.findByLabelText('OOP-01 상호 평가 시작일');
+  expect(
+    screen.queryByRole('combobox', { name: 'OOP-01 상호 평가 익명 여부' }),
+  ).not.toBeInTheDocument();
   expect(screen.queryByLabelText('OOP-01 공개 시작일')).not.toBeInTheDocument();
   expect(screen.queryByText('지각 제출 허용')).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText('OOP-01 상호 평가 시작일'), {

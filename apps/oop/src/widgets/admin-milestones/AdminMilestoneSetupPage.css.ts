@@ -137,3 +137,18 @@ export const resultList = style({
   margin: 0,
   paddingLeft: 20,
 });
+
+export const evaluationQuestionList = style({
+  display: 'flex',
+  flex: '1 1 100%',
+  flexDirection: 'column',
+  gap: 12,
+  margin: 0,
+  paddingLeft: 20,
+});
+
+export const evaluationQuestionItem = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 6,
+});

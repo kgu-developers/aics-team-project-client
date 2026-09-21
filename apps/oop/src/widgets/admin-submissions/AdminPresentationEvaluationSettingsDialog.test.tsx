@@ -18,6 +18,7 @@ const server = setupServer();
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  vi.useRealTimers();
   server.resetHandlers();
   clients.splice(0).forEach(client => client.clear());
   setApiAccessToken(null);
@@ -62,6 +63,7 @@ function setup(
     <AstryxThemeProvider>
       <QueryClientProvider client={client}>
         <Dialog
+          evaluationStartsAt={null}
           isOpen
           onClose={close}
           sectionId='1'
@@ -163,7 +165,7 @@ it('submits exactly the displayed explicit order array', async () => {
     ),
   );
   const { close } = setup();
-  await userEvent.click(screen.getByRole('button', { name: '저장' }));
+  await userEvent.click(screen.getByRole('button', { name: '발표 순서 저장' }));
   await waitFor(() => expect(close).toHaveBeenCalledOnce());
   expect(bodies).toEqual([
     {
@@ -173,6 +175,113 @@ it('submits exactly the displayed explicit order array', async () => {
       ],
     },
   ]);
+});
+
+it('shows an empty-team message and prevents an empty presentation-order request', async () => {
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA('1')}`,
+      () => HttpResponse.json({ contents: [] }),
+    ),
+  );
+
+  setup([]);
+
+  expect(
+    screen.getByText('발표 순서를 설정할 팀이 없습니다.'),
+  ).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
+});
+
+it('locks presentation orders and criteria after the evaluation period starts', async () => {
+  const orderRequests: unknown[] = [];
+  const criterionRequests: unknown[] = [];
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA('1')}`,
+      () => HttpResponse.json({ contents: [] }),
+    ),
+    http.patch(
+      `${API_BASE_URL}${ENDPOINTS.SUBMISSION.PRESENTATION_ORDER('10')}`,
+      async ({ request }) => {
+        orderRequests.push(await request.json());
+        return new HttpResponse(null, { status: 204 });
+      },
+    ),
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA('1')}`,
+      async ({ request }) => {
+        criterionRequests.push(await request.json());
+        return HttpResponse.json({ id: 1 });
+      },
+    ),
+  );
+
+  setup(teams, AdminPresentationEvaluationSettingsDialog).rerender({
+    evaluationStartsAt: '2020-01-01T00:00:00+09:00',
+  });
+
+  await screen.findByText('등록된 평가 항목이 없습니다.');
+  expect(
+    screen.getByRole('combobox', { name: '7팀 발표 순서' }),
+  ).toBeDisabled();
+  expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
+  expect(screen.getByRole('textbox', { name: /평가 항목명/ })).toBeDisabled();
+  expect(screen.getByRole('spinbutton', { name: '배점' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '평가 항목 추가' })).toBeDisabled();
+  expect(orderRequests).toEqual([]);
+  expect(criterionRequests).toEqual([]);
+});
+
+it('locks presentation order while the settings dialog remains open', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime('2026-09-22T09:00:00+09:00');
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA('1')}`,
+      () => HttpResponse.json({ contents: [] }),
+    ),
+  );
+
+  setup(teams, AdminPresentationEvaluationSettingsDialog).rerender({
+    evaluationStartsAt: '2026-09-22T09:00:01+09:00',
+  });
+  const order = screen.getByRole('combobox', { name: '7팀 발표 순서' });
+  expect(order).toBeEnabled();
+
+  act(() => vi.advanceTimersByTime(1_025));
+
+  expect(order).toBeDisabled();
+  expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
+});
+
+it('locks settings immediately when the dialog opens after evaluation starts', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime('2026-09-22T09:00:00+09:00');
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA('1')}`,
+      () => HttpResponse.json({ contents: [] }),
+    ),
+  );
+
+  const { rerender } = setup(teams, AdminPresentationEvaluationSettingsDialog);
+  rerender({
+    evaluationStartsAt: '2026-09-22T09:00:01+09:00',
+    isOpen: false,
+  });
+
+  act(() => vi.advanceTimersByTime(1_025));
+  rerender({
+    evaluationStartsAt: '2026-09-22T09:00:01+09:00',
+    isOpen: true,
+  });
+
+  expect(
+    screen.getByRole('combobox', { name: '7팀 발표 순서' }),
+  ).toBeDisabled();
+  expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: '평가 항목 추가' })).toBeDisabled();
 });
 
 it('preserves unsaved orders through criterion creation and teams refetch, then submits those explicit orders', async () => {
@@ -258,7 +367,7 @@ it('preserves unsaved orders through criterion creation and teams refetch, then 
   expect(second).toHaveTextContent('1번');
   expect(orderBodies).toEqual([]);
   expect(close).not.toHaveBeenCalled();
-  await user.click(screen.getByRole('button', { name: '저장' }));
+  await user.click(screen.getByRole('button', { name: '발표 순서 저장' }));
   await waitFor(() => expect(close).toHaveBeenCalledOnce());
   expect(orderBodies).toEqual([
     {

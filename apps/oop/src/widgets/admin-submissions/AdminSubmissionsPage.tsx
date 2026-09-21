@@ -3,6 +3,7 @@ import {
   type AdminSectionMilestoneDto,
 } from '@aics/api-client';
 import {
+  Badge,
   Button,
   Card,
   EmptyState,
@@ -15,7 +16,13 @@ import {
   Text,
 } from '@aics/design-system';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { type KeyboardEvent, useMemo, useRef, useState } from 'react';
+import {
+  type KeyboardEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -45,10 +52,12 @@ import {
   useAdminSubmissionVersionDetailsQueries,
   useDownloadAdminSubmissionArtifactsMutation,
 } from '~/features/admin-milestone-review/queries';
+import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 import { useAdminSubmissionReadState } from '~/features/admin-submission-read/useAdminSubmissionReadState';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import { AdminPresentationEvaluationSettingsDialog } from './AdminPresentationEvaluationSettingsDialog';
+import { getPresentationEvaluationSetupStatus } from './adminPresentationOrder';
 import * as styles from './AdminSubmissionsPage.css';
 
 const MILESTONE_TABS = [
@@ -230,6 +239,9 @@ export default function AdminSubmissionsPage() {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [isEvaluationSettingsOpen, setIsEvaluationSettingsOpen] =
     useState(false);
+  const [presentationReadinessClock, setPresentationReadinessClock] = useState(
+    () => Date.now(),
+  );
   const downloadArtifactsMutation =
     useDownloadAdminSubmissionArtifactsMutation();
   const search = useSearch({ from: '/admin/submissions' }) as {
@@ -321,7 +333,13 @@ export default function AdminSubmissionsPage() {
       ? { milestoneId: presentationEvaluationMilestone.id }
       : {},
   );
-  // The order is stored on each milestone submission, not on evaluation scores.
+  const presentationTeamsQuery = useAdminSectionTeamsQuery(
+    activeMilestoneId === 'presentation-evaluate' && isAccessibleSection
+      ? effectiveSectionId
+      : undefined,
+  );
+  // Existing orders belong to milestone submissions, but every section team must
+  // be selectable before a team creates its presentation submission.
   const presentationOrdersQuery = useAdminMilestoneSubmissionsQuery(
     presentationEvaluationMilestone
       ? String(presentationEvaluationMilestone.id)
@@ -333,15 +351,45 @@ export default function AdminSubmissionsPage() {
       ? effectiveSectionId
       : undefined,
   );
-  const presentationOrderTeams = useMemo(
-    () =>
-      (presentationOrdersQuery.data?.submissions ?? []).map(team => ({
-        presentationOrder: team.presentationOrder,
-        teamId: Number(team.teamId),
-        teamName: team.teamName,
-      })),
-    [presentationOrdersQuery.data?.submissions],
-  );
+  const presentationOrderTeams = useMemo(() => {
+    const ordersByTeamId = new Map(
+      (presentationOrdersQuery.data?.submissions ?? []).map(team => [
+        Number(team.teamId),
+        team.presentationOrder,
+      ]),
+    );
+
+    return (presentationTeamsQuery.data?.contents ?? []).map(team => ({
+      presentationOrder: ordersByTeamId.get(team.id) ?? null,
+      teamId: team.id,
+      teamName: team.name,
+    }));
+  }, [
+    presentationOrdersQuery.data?.submissions,
+    presentationTeamsQuery.data?.contents,
+  ]);
+  const presentationSetupStatus =
+    presentationEvaluationMilestone &&
+    presentationEvaluationsQuery.data &&
+    presentationTeamsQuery.data &&
+    presentationOrdersQuery.data
+      ? getPresentationEvaluationSetupStatus({
+          criteriaCount: presentationEvaluationsQuery.data.criteria.length,
+          evaluationStartsAt:
+            presentationEvaluationMilestone.schedule.evaluationOpensAt,
+          now: presentationReadinessClock,
+          teams: presentationOrderTeams,
+        })
+      : null;
+
+  useEffect(() => {
+    if (activeMilestoneId !== 'presentation-evaluate') return;
+    const timer = window.setInterval(
+      () => setPresentationReadinessClock(Date.now()),
+      60_000,
+    );
+    return () => window.clearInterval(timer);
+  }, [activeMilestoneId]);
   const isPresentationMilestoneLoading = sectionMilestonesQuery.isPending;
   const isPresentationMilestoneError = sectionMilestonesQuery.isError;
   const isPresentationMilestoneMissing =
@@ -567,7 +615,23 @@ export default function AdminSubmissionsPage() {
             ) : (
               <>
                 <div className={styles.evaluationHeader}>
-                  <Heading level={2}>발표 평가 목록</Heading>
+                  <div className={styles.evaluationTitle}>
+                    <Heading level={2}>발표 평가 목록</Heading>
+                    {presentationSetupStatus ? (
+                      <Badge
+                        label={
+                          presentationSetupStatus.isComplete
+                            ? '설정 완료'
+                            : '설정 필요'
+                        }
+                        variant={
+                          presentationSetupStatus.isComplete
+                            ? 'success'
+                            : 'neutral'
+                        }
+                      />
+                    ) : null}
+                  </div>
                   <div className={styles.evaluationActions}>
                     <Button
                       isDisabled={
@@ -577,6 +641,9 @@ export default function AdminSubmissionsPage() {
                         presentationEvaluationsQuery.isPending ||
                         presentationEvaluationsQuery.isError ||
                         !presentationEvaluationsQuery.data ||
+                        presentationTeamsQuery.isPending ||
+                        presentationTeamsQuery.isError ||
+                        !presentationTeamsQuery.data ||
                         presentationOrdersQuery.isPending ||
                         presentationOrdersQuery.isError ||
                         !presentationOrdersQuery.data
@@ -594,15 +661,44 @@ export default function AdminSubmissionsPage() {
                                 ? '발표 평가 결과를 불러오는 중입니다.'
                                 : presentationEvaluationsQuery.isError
                                   ? '발표 평가 결과를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
-                                  : presentationOrdersQuery.isPending
-                                    ? '발표 순서를 불러오는 중입니다.'
-                                    : presentationOrdersQuery.isError
-                                      ? '발표 순서를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
-                                      : undefined
+                                  : presentationTeamsQuery.isPending
+                                    ? '분반 팀을 불러오는 중입니다.'
+                                    : presentationTeamsQuery.isError
+                                      ? '분반 팀을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+                                      : presentationOrdersQuery.isPending
+                                        ? '발표 순서를 불러오는 중입니다.'
+                                        : presentationOrdersQuery.isError
+                                          ? '발표 순서를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+                                          : undefined
                       }
                     />
                   </div>
                 </div>
+                {presentationSetupStatus &&
+                !presentationSetupStatus.isComplete ? (
+                  <div
+                    className={cx(
+                      styles.setupWarning,
+                      presentationSetupStatus.urgency !== 'upcoming'
+                        ? styles.setupWarningUrgent
+                        : '',
+                    )}
+                    role='alert'
+                  >
+                    <Text>
+                      {presentationSetupStatus.urgency === 'started'
+                        ? '발표 평가가 시작되었지만 설정이 완료되지 않았습니다.'
+                        : presentationSetupStatus.urgency === 'imminent'
+                          ? '발표 평가 시작이 24시간 이내입니다. 지금 설정을 완료해 주세요.'
+                          : '발표 평가 설정이 완료되지 않았습니다. 평가 시작 전에 확인해 주세요.'}
+                    </Text>
+                    <div className={styles.setupWarningList}>
+                      {presentationSetupStatus.issues.map(issue => (
+                        <Text key={issue}>{issue}</Text>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 {isPresentationMilestoneMissing ? (
                   <EmptyState
                     actions={
@@ -728,6 +824,10 @@ export default function AdminSubmissionsPage() {
                     </Card>
                     {effectiveSectionId && presentationEvaluationMilestone ? (
                       <AdminPresentationEvaluationSettingsDialog
+                        evaluationStartsAt={
+                          presentationEvaluationMilestone.schedule
+                            .evaluationOpensAt ?? null
+                        }
                         isOpen={isEvaluationSettingsOpen}
                         milestoneId={String(presentationEvaluationMilestone.id)}
                         sectionId={effectiveSectionId}
