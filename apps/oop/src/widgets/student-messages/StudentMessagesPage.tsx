@@ -16,12 +16,15 @@ import { cx } from '~/shared/lib/cx';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import { useCurrentMidReportQuery } from '~/features/mid-report/queries';
 import StudentContextState from '~/features/section/StudentContextState';
 import { useStudentContext } from '~/features/section/useStudentContext';
+import { proposalFeedbackStage } from '~/features/student-home/model/documentFeedbackStage';
 import {
   useMilestoneScheduleClock,
   useStudentMilestonesQuery,
 } from '~/features/student-home/queries';
+import { useTeamProjectQuery } from '~/features/student-home/queries/useTeamProjectQuery';
 import { useTeamKickoffQuery } from '~/features/team-assignment/queries';
 import {
   useSubmitTeamMessageMutation,
@@ -67,6 +70,8 @@ export default function StudentMessagesPage() {
     !isDemo && context.section?.id ? String(context.section.id) : undefined;
   const teamQuery = useTeamKickoffQuery(teamId);
   const messagesQuery = useTeamMessagesQuery(teamId);
+  const projectQuery = useTeamProjectQuery(isDemo ? undefined : teamId);
+  const midReportQuery = useCurrentMidReportQuery(!isDemo && Boolean(teamId));
   const milestonesQuery = useStudentMilestonesQuery(sectionId, teamId);
   const now = useMilestoneScheduleClock(
     milestonesQuery.milestones,
@@ -108,8 +113,42 @@ export default function StudentMessagesPage() {
         belongsToConversation(message, selectedMessage),
       )
     : [];
+  const teamMemberIds = teamQuery.isSuccess
+    ? [...memberIds].filter((memberId): memberId is string => Boolean(memberId))
+    : undefined;
+  const proposalCycleCompleted = Boolean(
+    projectQuery.data &&
+    proposalFeedbackStage({
+      submittedAt: projectQuery.data.proposalCompletedAt,
+      messages,
+      relatedId: projectQuery.data.id,
+      teamMemberIds,
+      isMessagesReady: messagesQuery.isSuccess,
+    }) === 'completed',
+  );
+  const midReportCycleCompleted = Boolean(
+    midReportQuery.data?.status === 'SUBMITTED' &&
+    midReportQuery.data.revision?.resubmittedAt,
+  );
+  const isProposalReply = selectedMessage?.relatedType === 'PROPOSAL';
+  const isMidReportReply = selectedMessage?.relatedType === 'MID_REPORT';
   const replyAvailability = selectedMessage
     ? messageReplyAvailability({
+        isFeedbackCycleCompleted:
+          (isProposalReply && proposalCycleCompleted) ||
+          (isMidReportReply && midReportCycleCompleted),
+        isFeedbackCycleError:
+          (isProposalReply &&
+            (projectQuery.isError ||
+              teamQuery.isError ||
+              messagesQuery.isError)) ||
+          (isMidReportReply && midReportQuery.isError),
+        isFeedbackCyclePending:
+          (isProposalReply &&
+            (projectQuery.isPending ||
+              teamQuery.isPending ||
+              messagesQuery.isPending)) ||
+          (isMidReportReply && midReportQuery.isPending),
         isDemo,
         isMilestoneListError: milestonesQuery.list.isError,
         isMilestoneListPending: milestonesQuery.list.isPending,

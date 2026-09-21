@@ -26,7 +26,11 @@ function selectMeetingHomeSummary(
     assignedActions: currentUserId
       ? recordsByRecentMeeting
           .flatMap(record => record.actions)
-          .filter(action => action.assignee?.userId === currentUserId)
+          .filter(
+            action =>
+              action.assignee?.userId === currentUserId &&
+              action.status !== 'DONE',
+          )
           .slice(0, HOME_LIST_LIMIT)
       : [],
   };

@@ -97,6 +97,32 @@ describe('AdminMeetingsPage', () => {
     ).not.toHaveLength(0);
   });
 
+  it('회의록 목록을 페이지당 10개로 요청한다', async () => {
+    let requestedSize: string | null = null;
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS_LIST}`,
+        ({ request }) => {
+          requestedSize = new URL(request.url).searchParams.get('size');
+          return HttpResponse.json({
+            contents: [],
+            pageable: {
+              isEnd: true,
+              page: 0,
+              size: 10,
+              totalElements: 0,
+              totalPages: 0,
+            },
+          });
+        },
+      ),
+    );
+
+    renderPage();
+    await screen.findByText('등록된 회의록이 없습니다.');
+    expect(requestedSize).toBe('10');
+  });
+
   it('특정 분반을 선택했을 때만 마일스톤 필터를 표시한다', async () => {
     const user = userEvent.setup();
     renderPage();

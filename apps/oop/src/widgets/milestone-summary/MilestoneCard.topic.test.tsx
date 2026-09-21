@@ -11,7 +11,7 @@ import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
 import { useAuthStore } from '~/features/auth/authStore';
 import { TopicApiProvider } from '~/features/project-topic/TopicApiContext';
 
-import MilestoneCard from './MilestoneCard';
+import MilestoneCard, { milestoneHeaderStatusLabel } from './MilestoneCard';
 
 import { demoAccessToken } from '~/mocks/data/users';
 import { createLiveTopicHandlers } from '~/mocks/handlers/liveTopic';
@@ -32,7 +32,7 @@ afterAll(() => server.close());
 const milestone: StudentHomeMilestone = {
   id: '1301',
   title: '제안서',
-  period: '진행 중',
+  period: '기간 안내',
   dueDate: '마감 전',
   status: 'in-progress',
   statusLabel: '미제출',
@@ -90,6 +90,46 @@ function setup({ votes = 3, studentNumber = '20260001' } = {}) {
     },
   };
 }
+it('공통 헤더 문구를 사용하되 조회·잠금 상태는 원인을 보존한다', () => {
+  expect(milestoneHeaderStatusLabel(milestone)).toBe('진행 중');
+  expect(
+    milestoneHeaderStatusLabel({
+      ...milestone,
+      status: 'unavailable',
+      statusLabel: '조회 실패',
+    }),
+  ).toBe('조회 실패');
+  expect(
+    milestoneHeaderStatusLabel({
+      ...milestone,
+      status: 'unavailable',
+      statusLabel: '이전 단계 완료 필요',
+    }),
+  ).toBe('이전 단계 완료 필요');
+  expect(
+    milestoneHeaderStatusLabel({
+      ...milestone,
+      status: 'unavailable',
+      statusLabel: '팀 배정 대기',
+    }),
+  ).toBe('팀 배정 대기');
+  expect(
+    milestoneHeaderStatusLabel({
+      ...milestone,
+      status: 'before-period',
+      statusLabel: '일정 미정',
+    }),
+  ).toBe('일정 미정');
+});
+
+it('아코디언 헤더는 단계별 문구 대신 공통 진행 상태를 표시한다', async () => {
+  setup();
+  await waitFor(() => expect(client.isFetching()).toBe(0));
+
+  expect(screen.getByText('진행 중')).toBeInTheDocument();
+  expect(screen.queryByText('미제출')).not.toBeInTheDocument();
+});
+
 it('팀장에게 전원 투표 뒤 기존 CTA 한 개만 확정으로 전환하고 성공 후 작성 화면으로 이동한다', async () => {
   const state = setup({ votes: 2 });
   await waitFor(() => expect(client.isFetching()).toBe(0));

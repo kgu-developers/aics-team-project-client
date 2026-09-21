@@ -18,7 +18,6 @@ import {
   canCompleteMidReportBlock,
   completeMidReportBlock,
   getCurrentMidReport,
-  hasRequiredMidReportRevisionChanges,
   saveMidReportBlock,
   submitCurrentMidReport,
 } from '../data/midReport';
@@ -360,12 +359,6 @@ export const midReportHandlers = [
         return error(
           'MID_REPORT_INCOMPLETE',
           '모든 작성 영역을 완료 처리해 주세요.',
-          422,
-        );
-      if (!hasRequiredMidReportRevisionChanges())
-        return error(
-          'MID_REPORT_REVISION_CHANGES_REQUIRED',
-          '피드백 대상 영역을 실제로 수정한 뒤 다시 완료해 주세요.',
           422,
         );
       const submitted = submitCurrentMidReport(input.version, student.name);

@@ -208,13 +208,15 @@ export function submitDocumentSession<
   document: Session<TBlock>,
   version: number,
   submitterName: string,
+  requireRevisionChanges = true,
 ): Session<TBlock> | null {
   if (
     document.version !== version ||
     document.status === 'SUBMITTED' ||
     document.teamLeaderName !== submitterName ||
     document.blocks.some(block => block.status !== 'COMPLETED') ||
-    (document.status === 'REVISION_REQUESTED' &&
+    (requireRevisionChanges &&
+      document.status === 'REVISION_REQUESTED' &&
       !hasEveryAffectedBlockChanged(document))
   )
     return null;

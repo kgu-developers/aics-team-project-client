@@ -119,7 +119,7 @@ describe('mid-report fixture', () => {
     ).toBe(false);
   });
 
-  it('수정 요청 블록을 원본으로 되돌리면 재제출을 막고 실제 변경 뒤에만 허용한다', () => {
+  it('수정 요청 블록을 원본 그대로 완료해도 재제출을 허용한다', () => {
     resetMidReportMockData();
     const requested = ensureMidReportFeedbackRevision();
     const gui = requested.blocks.find(block => block.key === 'gui-design');
@@ -158,27 +158,6 @@ describe('mid-report fixture', () => {
         revertedCompletion.version,
         requested.teamLeaderName,
       ),
-    ).toBeNull();
-
-    const changedAgain = saveMidReportBlock(
-      gui.key,
-      revertedCompletion.version,
-      gui.fields.map(field =>
-        field.key === 'guiScreens'
-          ? { ...field, value: field.value.replace('메인 화면', '홈 화면') }
-          : field,
-      ),
-      requested.teamLeaderName,
-    );
-    if (!changedAgain) throw new Error('second GUI revision save is required');
-    const completed = completeMidReportBlock(
-      gui.key,
-      changedAgain.version,
-      requested.teamLeaderName,
-    );
-    if (!completed) throw new Error('GUI revision completion is required');
-    expect(
-      submitCurrentMidReport(completed.version, requested.teamLeaderName),
     ).toMatchObject({
       status: 'SUBMITTED',
       revision: { resubmittedAt: expect.any(String) },

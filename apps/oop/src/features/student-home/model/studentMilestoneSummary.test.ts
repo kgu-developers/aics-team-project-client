@@ -216,14 +216,37 @@ describe('발표 자료와 평가 구분', () => {
       evaluationClosesAt: '2026-09-17T23:59:00',
     },
   };
-  it('같은 타입이라도 평가 기간이 있는 경우에만 평가로 구분한다', () => {
-    expect(isPresentationEvaluation(evaluation)).toBe(true);
+  it('평가 기간이 설정되어 있어도 시작 시각부터 평가 단계로 구분한다', () => {
     expect(
-      isPresentationEvaluation({ ...milestone, type: 'PRESENTATION' }),
+      isPresentationEvaluation(
+        evaluation,
+        Date.parse('2026-09-09T23:59:59+09:00'),
+      ),
+    ).toBe(false);
+    expect(
+      isPresentationEvaluation(
+        evaluation,
+        Date.parse('2026-09-10T00:00:00+09:00'),
+      ),
+    ).toBe(true);
+    expect(
+      isPresentationEvaluation(
+        { ...milestone, type: 'PRESENTATION' },
+        Date.parse('2026-09-10T00:00:00+09:00'),
+      ),
     ).toBe(false);
   });
+  it('평가 시작 전에는 발표 자료 단계를 유지한다', () => {
+    const summary = studentMilestoneSummary(
+      evaluation,
+      submission,
+      Date.parse('2026-09-09T23:59:59+09:00'),
+    );
+    expect(summary.currentStepLabel).toBe(evaluation.title);
+    expect(summary.body).toBeUndefined();
+    expect(summary.statusLabel).not.toBe('평가 기간 전');
+  });
   it.each([
-    ['2026-09-09T23:59:59+09:00', '평가 기간 전'],
     ['2026-09-10T00:00:00+09:00', '평가 기간 중'],
     ['2026-09-17T23:59:00+09:00', '평가 마감'],
   ])('평가 일정 %s에서는 %s으로 표시한다', (at, label) => {

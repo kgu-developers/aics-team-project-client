@@ -12,17 +12,20 @@ const message = (
   senderId: string,
   createdAt: string,
   relatedId = 21,
+  relatedType: TeamMessage['relatedType'] = 'PROPOSAL',
 ): TeamMessage => ({
   id: 1,
   threadId: 7,
   senderId,
-  relatedType: 'PROPOSAL',
+  relatedType,
   relatedId,
   message: '확인해 주세요.',
   createdAt,
   important: false,
   read: false,
 });
+const midMessage = (senderId: string, createdAt: string, relatedId = 21) =>
+  message(senderId, createdAt, relatedId, 'MID_REPORT');
 const teamMemberIds = ['20260001', '20260003'];
 
 it('제출 전에는 피드백 단계가 아니다', () => {
@@ -52,27 +55,27 @@ it('중간보고서는 학생 메시지가 먼저 필요하다', () => {
   expect(
     midReportFeedbackStage({
       submittedAt,
-      messages: [message('professor-1', '2026-09-11 09:00')],
+      messages: [midMessage('professor-1', '2026-09-11 09:00')],
       teamMemberIds,
     }),
   ).toBe('awaiting-feedback');
   expect(
     midReportFeedbackStage({
       submittedAt,
-      messages: [message('20260003', '2026-09-11 09:00')],
+      messages: [midMessage('20260003', '2026-09-11 09:00')],
       teamMemberIds,
     }),
   ).toBe('feedback-arrived');
 });
-it('중간보고서는 메시지가 있는 상태에서 새 제출 시각이 생기면 완료로 본다', () => {
+it('중간보고서 완료는 과거 메시지 시각으로 추론하지 않는다', () => {
   expect(
     midReportFeedbackStage({
       submittedAt: '2026-09-10 10:00',
-      messages: [message('20260001', '2026-09-09 09:00', 701)],
+      messages: [midMessage('20260001', '2026-09-09 09:00', 701)],
       relatedId: 701,
       teamMemberIds,
     }),
-  ).toBe('completed');
+  ).toBe('awaiting-feedback');
 });
 it('현재 제안서 피드백이 있는 상태에서 새 완료 시각이 생기면 재제출 완료로 본다', () => {
   expect(
@@ -83,6 +86,29 @@ it('현재 제안서 피드백이 있는 상태에서 새 완료 시각이 생�
       teamMemberIds,
     }),
   ).toBe('completed');
+});
+it('재제출 완료 뒤 새 교수 피드백이 오면 피드백 단계를 다시 연다', () => {
+  expect(
+    proposalFeedbackStage({
+      submittedAt: '2026-09-10 10:00',
+      messages: [
+        message('professor-1', '2026-09-09 09:00'),
+        message('professor-1', '2026-09-11 09:00'),
+      ],
+      relatedId: 21,
+      teamMemberIds,
+    }),
+  ).toBe('feedback-arrived');
+});
+it('같은 ID를 가진 다른 문서의 메시지는 제안서 재제출 근거로 사용하지 않는다', () => {
+  expect(
+    proposalFeedbackStage({
+      submittedAt: '2026-09-10 10:00',
+      messages: [midMessage('professor-1', '2026-09-09 09:00', 21)],
+      relatedId: 21,
+      teamMemberIds,
+    }),
+  ).toBe('awaiting-feedback');
 });
 it('다른 제안서의 과거 교수 피드백은 재제출 근거로 사용하지 않는다', () => {
   expect(
@@ -171,14 +197,14 @@ describe('feedback room stage', () => {
     expect(
       midReportFeedbackRoomStage({
         submittedAt: '2026-09-09T10:00:00',
-        messages: [message('s1', at)],
+        messages: [midMessage('s1', at)],
         teamMemberIds,
       }),
     ).toBe('feedback-arrived');
     expect(
       midReportFeedbackRoomStage({
         submittedAt: '2026-09-09T10:00:00',
-        messages: [message('prof', at)],
+        messages: [midMessage('prof', at)],
         teamMemberIds,
       }),
     ).toBe('awaiting-feedback');

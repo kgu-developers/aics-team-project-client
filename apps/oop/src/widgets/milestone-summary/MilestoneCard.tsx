@@ -42,6 +42,32 @@ const STATUS_VARIANT = {
   'before-period': 'neutral',
 } as const;
 
+const STATUS_LABEL = {
+  completed: '완료',
+  closed: '마감',
+  unavailable: '진행 전',
+  'in-progress': '진행 중',
+  'revision-available': '진행 중',
+  'before-period': '진행 전',
+} as const;
+
+const OPERATIONAL_STATUS_LABELS = new Set([
+  '조회 중',
+  '조회 실패',
+  '상태 확인 필요',
+  '이전 단계 완료 필요',
+  '팀 배정 대기',
+  '팀 소속 확인 필요',
+  '양식 준비 중',
+  '일정 미정',
+]);
+
+export function milestoneHeaderStatusLabel(milestone: StudentHomeMilestone) {
+  return OPERATIONAL_STATUS_LABELS.has(milestone.statusLabel)
+    ? milestone.statusLabel
+    : STATUS_LABEL[milestone.status];
+}
+
 export default function MilestoneCard({
   milestone,
   isOpen,
@@ -80,6 +106,7 @@ export default function MilestoneCard({
   const isCollapsible =
     milestone.isDetailAvailable && milestone.interaction === 'collapsible';
   const statusVariant = STATUS_VARIANT[milestone.status];
+  const statusLabel = milestoneHeaderStatusLabel(milestone);
   const editorReturnTo =
     milestone.id === 'proposal' || milestone.id === 'mid-review'
       ? milestone.id
@@ -265,8 +292,8 @@ export default function MilestoneCard({
         )}
       >
         <div className={styles.statusIndicator}>
-          <StatusDot label={milestone.statusLabel} variant={statusVariant} />
-          <p className={styles.statusLabel}>{milestone.statusLabel}</p>
+          <StatusDot label={statusLabel} variant={statusVariant} />
+          <p className={styles.statusLabel}>{statusLabel}</p>
         </div>
         {isOpen ? (
           <>

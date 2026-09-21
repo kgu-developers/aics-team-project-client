@@ -329,7 +329,7 @@ describe('student feedback handlers', () => {
     expect(duplicateResponse.status).toBe(409);
   });
 
-  it('중간보고서를 최초 제출하고 대면 피드백 대상 블록을 실제 변경·완료·재제출한 뒤 반영 내용을 저장한다', async () => {
+  it('중간보고서 수정 요청 블록을 다시 완료하면 내용 변경 없이 재제출하고 반영 내용을 저장한다', async () => {
     const originalSubmission = await submitInitialMidReport();
     expect(originalSubmission).toMatchObject({
       status: 'SUBMITTED',
@@ -390,77 +390,8 @@ describe('student feedback handlers', () => {
       ENDPOINTS.MID_REPORT.SUBMIT(completedWithoutChange.id),
       { version: completedWithoutChange.version },
     );
-    expect(unchangedResubmission.status).toBe(422);
+    expect(unchangedResubmission.status).toBe(200);
     await expect(unchangedResubmission.json()).resolves.toMatchObject({
-      code: 'MID_REPORT_REVISION_CHANGES_REQUIRED',
-    });
-
-    const changedGuiFields = gui.fields.map(field =>
-      field.key === 'guiScreens'
-        ? {
-            ...field,
-            value: field.value.replace(
-              '상영 일정과 예매 현황을 확인합니다.',
-              '검색 단계를 줄인 상영 일정과 예매 현황을 확인합니다.',
-            ),
-          }
-        : field,
-    );
-    const saveResponse = await sendStudentJson(
-      ENDPOINTS.MID_REPORT.BLOCK(completedWithoutChange.id, gui.key),
-      {
-        version: completedWithoutChange.version,
-        fields: changedGuiFields,
-      },
-      'PATCH',
-    );
-    expect(saveResponse.status).toBe(200);
-    const changed = (await saveResponse.json()) as MidReport;
-    expect(changed.revision?.changedBlockKeys).toEqual(['gui-design']);
-
-    const revertResponse = await sendStudentJson(
-      ENDPOINTS.MID_REPORT.BLOCK(changed.id, gui.key),
-      { version: changed.version, fields: gui.fields },
-      'PATCH',
-    );
-    expect(revertResponse.status).toBe(200);
-    const reverted = (await revertResponse.json()) as MidReport;
-    expect(reverted.revision?.changedBlockKeys).toEqual([]);
-    const revertedCompletionResponse = await sendStudentJson(
-      ENDPOINTS.MID_REPORT.BLOCK_COMPLETION(reverted.id, gui.key),
-      { version: reverted.version },
-    );
-    expect(revertedCompletionResponse.status).toBe(200);
-    const revertedCompletion =
-      (await revertedCompletionResponse.json()) as MidReport;
-    const revertedResubmission = await sendStudentJson(
-      ENDPOINTS.MID_REPORT.SUBMIT(revertedCompletion.id),
-      { version: revertedCompletion.version },
-    );
-    expect(revertedResubmission.status).toBe(422);
-    await expect(revertedResubmission.json()).resolves.toMatchObject({
-      code: 'MID_REPORT_REVISION_CHANGES_REQUIRED',
-    });
-
-    const secondSaveResponse = await sendStudentJson(
-      ENDPOINTS.MID_REPORT.BLOCK(revertedCompletion.id, gui.key),
-      { version: revertedCompletion.version, fields: changedGuiFields },
-      'PATCH',
-    );
-    expect(secondSaveResponse.status).toBe(200);
-    const saved = (await secondSaveResponse.json()) as MidReport;
-    const completionResponse = await sendStudentJson(
-      ENDPOINTS.MID_REPORT.BLOCK_COMPLETION(saved.id, gui.key),
-      { version: saved.version },
-    );
-    expect(completionResponse.status).toBe(200);
-    const completed = (await completionResponse.json()) as MidReport;
-    const resubmissionResponse = await sendStudentJson(
-      ENDPOINTS.MID_REPORT.SUBMIT(completed.id),
-      { version: completed.version },
-    );
-    expect(resubmissionResponse.status).toBe(200);
-    await expect(resubmissionResponse.json()).resolves.toMatchObject({
       status: 'SUBMITTED',
       revision: { resubmittedAt: expect.any(String) },
     });

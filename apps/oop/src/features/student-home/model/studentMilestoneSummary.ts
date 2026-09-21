@@ -34,13 +34,19 @@ export function milestoneDate(value?: string | null) {
     : formatted;
 }
 
-export function isPresentationEvaluation(milestone: StudentMilestoneResponse) {
+export function isPresentationEvaluation(
+  milestone: StudentMilestoneResponse,
+  now: number,
+) {
+  const evaluationOpensAt = milestoneTime(milestone.schedule.evaluationOpensAt);
   return (
     milestone.type === 'PRESENTATION' &&
     Boolean(
       milestone.schedule.evaluationOpensAt &&
       milestone.schedule.evaluationClosesAt,
-    )
+    ) &&
+    Number.isFinite(evaluationOpensAt) &&
+    now >= evaluationOpensAt
   );
 }
 
@@ -50,22 +56,16 @@ export function studentMilestoneSummary(
   submission: MyTeamMilestoneSubmissionResponse | undefined,
   now: number,
 ): StudentHomeMilestone {
-  if (isPresentationEvaluation(milestone)) {
-    const start = milestoneTime(milestone.schedule.evaluationOpensAt);
+  if (isPresentationEvaluation(milestone, now)) {
     const end = milestoneTime(milestone.schedule.evaluationClosesAt);
-    const before = now < start;
     const closed = milestone.status === 'CLOSED' || now >= end;
     return {
       id: String(milestone.id),
       title: milestone.title,
       period: `평가 기간 : ${milestoneDate(milestone.schedule.evaluationOpensAt)} ~ ${milestoneDate(milestone.schedule.evaluationClosesAt)}`,
       dueDate: `~ ${milestoneDate(milestone.schedule.evaluationClosesAt)}`,
-      status: closed ? 'closed' : before ? 'before-period' : 'in-progress',
-      statusLabel: closed
-        ? '평가 마감'
-        : before
-          ? '평가 기간 전'
-          : '평가 기간 중',
+      status: closed ? 'closed' : 'in-progress',
+      statusLabel: closed ? '평가 마감' : '평가 기간 중',
       currentStepLabel: '발표 평가',
       interaction: 'collapsible',
       isDetailAvailable: true,
