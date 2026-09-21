@@ -1,3 +1,4 @@
+import { fetchTeamKickoff } from '@aics/api-client';
 import type { CurrentUser } from '@aics/core';
 
 import { isNoTeamAccessibleStudentRoute, ROUTES } from '~/app/constants/routes';
@@ -13,7 +14,11 @@ function isRoleRoute(path: string | undefined, routeRoot: string) {
 export async function resolveStudentLoginDestination(
   currentUser: CurrentUser,
   redirect?: string,
-  options: { isDemo?: boolean; now?: number } = {},
+  options: {
+    fetchKickoff?: typeof fetchTeamKickoff;
+    isDemo?: boolean;
+    now?: number;
+  } = {},
 ) {
   if (currentUser.globalRole !== 'STUDENT') {
     return isRoleRoute(redirect, ROUTES.ADMIN) ? redirect : ROUTES.ADMIN;
@@ -27,13 +32,30 @@ export async function resolveStudentLoginDestination(
     return ROUTES.ONBOARDING.TEAM;
   }
 
-  if (
+  const isBeforeContactRelease =
     !options.isDemo &&
     resolveContactVisibility(currentUser.sections[0]!, options.now) ===
-      'upcoming' &&
-    !isNoTeamAccessibleStudentRoute(redirect)
-  ) {
-    return ROUTES.ONBOARDING.TEAM;
+      'upcoming';
+  if (isBeforeContactRelease) {
+    return redirect && isNoTeamAccessibleStudentRoute(redirect)
+      ? redirect
+      : ROUTES.ONBOARDING.TEAM;
+  }
+
+  if (!options.isDemo) {
+    try {
+      const kickoff = await (options.fetchKickoff ?? fetchTeamKickoff)(
+        currentUser.teamId!,
+      );
+      const hasConfirmedLeader = kickoff.members.some(
+        member => member.isLeader,
+      );
+      if (String(kickoff.id) !== currentUser.teamId || !hasConfirmedLeader) {
+        return ROUTES.ONBOARDING.TEAM;
+      }
+    } catch {
+      return ROUTES.ONBOARDING.TEAM;
+    }
   }
 
   return isRoleRoute(redirect, ROUTES.STUDENT.HOME)

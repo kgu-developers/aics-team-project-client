@@ -58,6 +58,29 @@ it('화면을 유지해도 정확한 마감 시각에 서버 제출 가능 상�
   unmount();
   expect(vi.getTimerCount()).toBeLessThanOrEqual(1); // Query cache GC may remain.
 });
+it('발표 평가의 UTC LocalDateTime 시작 경계에서 학생 홈을 갱신한다', async () => {
+  const evaluationOpensAt = Date.parse('2026-10-10T09:00:00Z');
+  vi.setSystemTime(evaluationOpensAt - 1000);
+  const presentation: StudentMilestoneResponse = {
+    ...milestone,
+    type: 'PRESENTATION',
+    schedule: {
+      dueAt: '2026-10-10T17:00:00',
+      evaluationOpensAt: '2026-10-10T09:00:00',
+      evaluationClosesAt: '2026-10-10T10:00:00',
+    },
+  };
+  const { result } = renderHook(
+    () => useMilestoneScheduleClock([presentation], '2', '7'),
+    { wrapper },
+  );
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+  });
+
+  expect(result.current).toBeGreaterThanOrEqual(evaluationOpensAt);
+});
 it('팀이 바뀌면 화면 복귀 시 새 팀의 상태만 무효화한다', async () => {
   const oldKey = ['student-home', 'submission', '2', '7', 47];
   const newKey = ['student-home', 'submission', '2', '8', 47];

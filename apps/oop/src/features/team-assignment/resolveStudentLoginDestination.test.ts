@@ -1,5 +1,5 @@
-import type { CurrentUser } from '@aics/core';
-import { describe, expect, it } from 'vitest';
+import type { CurrentUser, TeamKickoffResponse } from '@aics/core';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resolveStudentLoginDestination } from './resolveStudentLoginDestination';
 
@@ -21,38 +21,110 @@ const student: CurrentUser = {
   studentNumber: '20260001',
 };
 
+const completedKickoff: TeamKickoffResponse = {
+  id: 7,
+  name: '7조',
+  members: [
+    {
+      id: 10,
+      studentNumber: student.studentNumber,
+      isLeader: true,
+    },
+  ],
+};
+
+const fetchKickoff = vi.fn();
+const options = { fetchKickoff };
+
 describe('resolveStudentLoginDestination', () => {
+  beforeEach(() => {
+    fetchKickoff.mockReset();
+    fetchKickoff.mockResolvedValue(completedKickoff);
+  });
+
   it('팀 미배정 학생은 /student redirect보다 팀 온보딩을 우선한다', async () => {
     await expect(
       resolveStudentLoginDestination(
         { ...student, teamId: null },
         '/student/meetings',
+        options,
       ),
     ).resolves.toBe('/onboarding/team');
+    expect(fetchKickoff).not.toHaveBeenCalled();
   });
 
   it.each(['/student/notices', '/student/notices/17', '/student/messages'])(
     '팀 미배정 학생도 로그인 뒤 분반·사용자 route %s를 유지한다',
     async redirect => {
       await expect(
-        resolveStudentLoginDestination({ ...student, teamId: null }, redirect),
+        resolveStudentLoginDestination(
+          { ...student, teamId: null },
+          redirect,
+          options,
+        ),
       ).resolves.toBe(redirect);
+      expect(fetchKickoff).not.toHaveBeenCalled();
     },
   );
 
-  it.each([
-    ['팀장', '7'],
-    ['팀원', '8'],
-  ])('배정된 %s 학생은 학생 화면으로 이동한다', async (_role, teamId) => {
+  it('팀장이 확정된 배정 학생은 기존 학생 목적지를 유지한다', async () => {
     await expect(
-      resolveStudentLoginDestination({ ...student, teamId }),
+      resolveStudentLoginDestination(
+        { ...student, teamId: '7' },
+        undefined,
+        options,
+      ),
     ).resolves.toBe('/student');
     await expect(
       resolveStudentLoginDestination(
-        { ...student, teamId },
+        { ...student, teamId: '7' },
         '/student/meetings',
+        options,
       ),
     ).resolves.toBe('/student/meetings');
+    expect(fetchKickoff).toHaveBeenCalledWith('7');
+  });
+
+  it('배정됐지만 팀장이 확정되지 않은 학생은 팀 온보딩으로 이동한다', async () => {
+    fetchKickoff.mockResolvedValue({
+      ...completedKickoff,
+      members: completedKickoff.members.map(member => ({
+        ...member,
+        isLeader: false,
+      })),
+    });
+
+    await expect(
+      resolveStudentLoginDestination(
+        { ...student, teamId: '7' },
+        '/student/meetings',
+        options,
+      ),
+    ).resolves.toBe('/onboarding/team');
+  });
+
+  it('kickoff 조회가 실패하면 성공한 학생 목적지를 표시하지 않고 온보딩으로 복구한다', async () => {
+    fetchKickoff.mockRejectedValue(new Error('kickoff unavailable'));
+
+    await expect(
+      resolveStudentLoginDestination(
+        { ...student, teamId: '7' },
+        '/student/meetings',
+        options,
+      ),
+    ).resolves.toBe('/onboarding/team');
+  });
+
+  it('다른 팀 kickoff 응답은 온보딩으로 안전하게 복구한다', async () => {
+    fetchKickoff.mockResolvedValue({ ...completedKickoff, id: 8 });
+
+    await expect(
+      resolveStudentLoginDestination(
+        { ...student, teamId: '7' },
+        '/student/meetings',
+        options,
+      ),
+    ).resolves.toBe('/onboarding/team');
   });
 
   it('연락처 공개 전 팀 배정 학생은 /student redirect 대신 온보딩으로 이동한다', async () => {
@@ -69,8 +141,10 @@ describe('resolveStudentLoginDestination', () => {
           ],
         },
         '/student/meetings',
+        options,
       ),
     ).resolves.toBe('/onboarding/team');
+    expect(fetchKickoff).not.toHaveBeenCalled();
   });
 
   it.each(['/student/notices', '/student/notices/17', '/student/messages'])(
@@ -89,8 +163,10 @@ describe('resolveStudentLoginDestination', () => {
             ],
           },
           redirect,
+          options,
         ),
       ).resolves.toBe(redirect);
+      expect(fetchKickoff).not.toHaveBeenCalled();
     },
   );
 
@@ -109,6 +185,7 @@ describe('resolveStudentLoginDestination', () => {
           ],
         },
         '/student/meetings',
+        options,
       ),
     ).resolves.toBe('/student/meetings');
   });
@@ -127,34 +204,41 @@ describe('resolveStudentLoginDestination', () => {
           ],
         },
         '/student/meetings',
-        { isDemo: true },
+        { ...options, isDemo: true },
       ),
     ).resolves.toBe('/student/meetings');
+    expect(fetchKickoff).not.toHaveBeenCalled();
   });
 
   it('분반이 여러 개인 학생은 scalar teamId를 추측하지 않고 온보딩으로 이동한다', async () => {
     await expect(
-      resolveStudentLoginDestination({
-        ...student,
-        teamId: '7',
-        sections: [
-          ...student.sections,
-          { ...student.sections[0]!, id: '2', name: '02분반' },
-        ],
-      }),
+      resolveStudentLoginDestination(
+        {
+          ...student,
+          teamId: '7',
+          sections: [
+            ...student.sections,
+            { ...student.sections[0]!, id: '2', name: '02분반' },
+          ],
+        },
+        undefined,
+        options,
+      ),
     ).resolves.toBe('/onboarding/team');
+    expect(fetchKickoff).not.toHaveBeenCalled();
   });
 
   it.each(['ASSISTANT', 'PROFESSOR'] as const)(
     '%s 운영자는 운영 화면과 운영 redirect를 유지한다',
     async globalRole => {
       const operator = { ...student, globalRole };
-      await expect(resolveStudentLoginDestination(operator)).resolves.toBe(
-        '/admin',
-      );
       await expect(
-        resolveStudentLoginDestination(operator, '/admin/milestones'),
+        resolveStudentLoginDestination(operator, undefined, options),
+      ).resolves.toBe('/admin');
+      await expect(
+        resolveStudentLoginDestination(operator, '/admin/milestones', options),
       ).resolves.toBe('/admin/milestones');
+      expect(fetchKickoff).not.toHaveBeenCalled();
     },
   );
 
@@ -163,12 +247,14 @@ describe('resolveStudentLoginDestination', () => {
       resolveStudentLoginDestination(
         { ...student, teamId: '7' },
         '/admin/milestones',
+        options,
       ),
     ).resolves.toBe('/student');
     await expect(
       resolveStudentLoginDestination(
         { ...student, globalRole: 'ASSISTANT' },
         '/student',
+        options,
       ),
     ).resolves.toBe('/admin');
   });

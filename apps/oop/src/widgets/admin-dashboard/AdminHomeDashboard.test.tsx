@@ -210,6 +210,7 @@ describe('AdminHomeDashboard', () => {
       {
         allowResubmissionBeforeDueAt: false,
         id: 101,
+        peerEvaluationForm: null,
         schedule: { dueAt: '2026-10-08T23:59:00' },
         sectionId: 1,
         status: 'PUBLISHED',
@@ -220,6 +221,7 @@ describe('AdminHomeDashboard', () => {
       {
         allowResubmissionBeforeDueAt: false,
         id: 102,
+        peerEvaluationForm: null,
         schedule: { dueAt: '2026-10-29T23:59:00' },
         sectionId: 1,
         status: 'PUBLISHED',

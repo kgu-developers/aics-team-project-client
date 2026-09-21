@@ -8,6 +8,7 @@ import {
   isPresentationEvaluation,
   milestoneDate,
   milestoneTime,
+  presentationEvaluationDate,
   studentMilestoneSummary,
 } from './studentMilestoneSummary';
 
@@ -216,39 +217,62 @@ describe('발표 자료와 평가 구분', () => {
       evaluationClosesAt: '2026-09-17T23:59:00',
     },
   };
+  it('발표 평가 UTC LocalDateTime은 서울 표시와 비교에서 같은 순간을 쓴다', () => {
+    expect(presentationEvaluationDate('2026-09-21T09:00:00')).toBe(
+      '2026-09-21/18:00',
+    );
+    expect(presentationEvaluationDate('invalid')).toBe('일정 확인 필요');
+  });
   it('평가 기간이 설정되어 있어도 시작 시각부터 평가 단계로 구분한다', () => {
     expect(
       isPresentationEvaluation(
         evaluation,
-        Date.parse('2026-09-09T23:59:59+09:00'),
+        Date.parse('2026-09-10T08:59:59+09:00'),
       ),
     ).toBe(false);
     expect(
       isPresentationEvaluation(
         evaluation,
-        Date.parse('2026-09-10T00:00:00+09:00'),
+        Date.parse('2026-09-10T09:00:00+09:00'),
       ),
     ).toBe(true);
     expect(
       isPresentationEvaluation(
         { ...milestone, type: 'PRESENTATION' },
-        Date.parse('2026-09-10T00:00:00+09:00'),
+        Date.parse('2026-09-10T09:00:00+09:00'),
       ),
     ).toBe(false);
+  });
+  it.each([
+    ['종료 시각이 잘못된 경우', 'invalid'],
+    ['종료 시각이 시작보다 빠른 경우', '2026-09-09T23:59:59'],
+  ])('%s 평가 단계와 CTA를 열지 않는다', (_case, evaluationClosesAt) => {
+    const invalidWindow = {
+      ...evaluation,
+      schedule: { ...evaluation.schedule, evaluationClosesAt },
+    };
+    const now = Date.parse('2026-09-10T09:00:00+09:00');
+
+    expect(isPresentationEvaluation(invalidWindow, now)).toBe(false);
+    const summary = studentMilestoneSummary(invalidWindow, submission, now);
+    expect(summary.currentStepLabel).toBe(evaluation.title);
+    expect(summary.rows[0]?.actionTo).not.toBe(
+      '/student/presentation-evaluation',
+    );
   });
   it('평가 시작 전에는 발표 자료 단계를 유지한다', () => {
     const summary = studentMilestoneSummary(
       evaluation,
       submission,
-      Date.parse('2026-09-09T23:59:59+09:00'),
+      Date.parse('2026-09-10T08:59:59+09:00'),
     );
     expect(summary.currentStepLabel).toBe(evaluation.title);
     expect(summary.body).toBeUndefined();
     expect(summary.statusLabel).not.toBe('평가 기간 전');
   });
   it.each([
-    ['2026-09-10T00:00:00+09:00', 'in-progress', '평가 기간 중', true],
-    ['2026-09-17T23:59:00+09:00', 'completed', '평가 완료', false],
+    ['2026-09-10T09:00:00+09:00', 'in-progress', '평가 기간 중', true],
+    ['2026-09-18T08:59:00+09:00', 'completed', '평가 완료', false],
   ] as const)(
     '평가 일정 %s에서는 상태 %s와 문구 %s에 맞는 CTA를 표시한다',
     (at, status, label, hasCta) => {
@@ -275,7 +299,7 @@ describe('발표 자료와 평가 구분', () => {
       expect(summary.rows[0]?.actionTo).toBe(
         hasCta ? '/student/presentation-evaluation' : undefined,
       );
-      expect(summary.dueDate).toBe('~ 2026-09-17/23:59');
+      expect(summary.dueDate).toBe('~ 2026-09-18/08:59');
     },
   );
 
@@ -310,7 +334,7 @@ describe('발표 자료와 평가 구분', () => {
     expect(summary.statusLabel).toBe('평가 완료');
     expect(summary.currentStepLabel).toBe('발표 평가');
     expect(summary.period).toBe(
-      '평가 기간 : 2026-09-20/00:00 ~ 2026-09-27/23:59',
+      '평가 기간 : 2026-09-20/09:00 ~ 2026-09-28/08:59',
     );
     expect(summary.body?.kind).toBe('presentation-evaluation');
   });

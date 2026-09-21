@@ -1,14 +1,14 @@
-import { seoulInstant } from '~/shared/lib/seoulInstant';
+import { presentationEvaluationInstant } from './presentationEvaluationDateTime';
 
 /**
- * The server sends `LocalDateTime` strings without an offset; they mean
- * Asia/Seoul, so they must not go through `Date.parse` (browser-local).
+ * Presentation evaluation LocalDateTime values are stored against the
+ * server's UTC clock; explicit zones still identify their own instant.
  */
 export function formatEvaluationRemainingTime(
   closesAt: string,
   now = Date.now(),
 ) {
-  const closesAtTime = seoulInstant(closesAt);
+  const closesAtTime = presentationEvaluationInstant(closesAt);
   if (!Number.isFinite(closesAtTime)) return null;
 
   const remainingSeconds = Math.max(0, Math.ceil((closesAtTime - now) / 1000));

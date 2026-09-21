@@ -1,5 +1,6 @@
 export {
   formatAdminMilestoneDate,
+  formatAdminPresentationEvaluationDate,
   getAdminMilestoneStatusLabel,
   getAdminMilestoneTypeLabel,
   isPresentationEvaluationMilestone,

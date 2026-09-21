@@ -21,10 +21,10 @@ describe('formatEvaluationRemainingTime', () => {
     ).toBe('00:00:00');
   });
 
-  it('오프셋 없는 서버 LocalDateTime은 Asia/Seoul로 해석한다', () => {
+  it('오프셋 없는 서버 LocalDateTime은 UTC로 해석한다', () => {
     expect(
       formatEvaluationRemainingTime(
-        '2026-08-26T19:00:00',
+        '2026-08-26T10:00:00',
         Date.parse('2026-08-26T09:59:30.000Z'),
       ),
     ).toBe('00:00:30');

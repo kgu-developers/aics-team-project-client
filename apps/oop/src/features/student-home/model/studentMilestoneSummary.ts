@@ -9,6 +9,11 @@ import { ROUTES } from '~/app/constants/routes';
 import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { seoulInstant } from '~/shared/lib/seoulInstant';
 
+import {
+  formatPresentationEvaluationDateTime,
+  presentationEvaluationInstant,
+} from '~/features/evaluation/presentationEvaluationDateTime';
+
 const submissionLabels: Record<
   MyTeamMilestoneSubmissionResponse['status'],
   string
@@ -34,24 +39,33 @@ export function milestoneDate(value?: string | null) {
     : formatted;
 }
 
-function hasPresentationEvaluationWindow(milestone: StudentMilestoneResponse) {
-  return Boolean(
-    milestone.type === 'PRESENTATION' &&
-    milestone.schedule.evaluationOpensAt &&
+export function presentationEvaluationDate(value?: string | null) {
+  if (!value) return '일정 미정';
+  return formatPresentationEvaluationDateTime(value) ?? '일정 확인 필요';
+}
+
+function getPresentationEvaluationWindow(milestone: StudentMilestoneResponse) {
+  if (milestone.type !== 'PRESENTATION') return undefined;
+
+  const opensAt = presentationEvaluationInstant(
+    milestone.schedule.evaluationOpensAt,
+  );
+  const closesAt = presentationEvaluationInstant(
     milestone.schedule.evaluationClosesAt,
   );
+  return Number.isFinite(opensAt) &&
+    Number.isFinite(closesAt) &&
+    opensAt < closesAt
+    ? { closesAt, opensAt }
+    : undefined;
 }
 
 export function isPresentationEvaluation(
   milestone: StudentMilestoneResponse,
   now: number,
 ) {
-  const evaluationOpensAt = milestoneTime(milestone.schedule.evaluationOpensAt);
-  return (
-    hasPresentationEvaluationWindow(milestone) &&
-    Number.isFinite(evaluationOpensAt) &&
-    now >= evaluationOpensAt
-  );
+  const window = getPresentationEvaluationWindow(milestone);
+  return Boolean(window && now >= window.opensAt);
 }
 
 /** Submission completion and publication closing are different facts. */
@@ -62,20 +76,20 @@ export function studentMilestoneSummary(
 ): StudentHomeMilestone {
   const isClosedPresentation =
     milestone.type === 'PRESENTATION' && milestone.status === 'CLOSED';
-  const hasEvaluationWindow = hasPresentationEvaluationWindow(milestone);
+  const evaluationWindow = getPresentationEvaluationWindow(milestone);
   if (
-    hasEvaluationWindow &&
+    evaluationWindow &&
     (isClosedPresentation || isPresentationEvaluation(milestone, now))
   ) {
-    const end = milestoneTime(milestone.schedule.evaluationClosesAt);
-    const closed = milestone.status === 'CLOSED' || now >= end;
+    const closed =
+      milestone.status === 'CLOSED' || now >= evaluationWindow.closesAt;
     // Presentation evaluation is terminal when its schedule closes or the
     // server closes the milestone, without changing the shared submission.
     return {
       id: String(milestone.id),
       title: milestone.title,
-      period: `평가 기간 : ${milestoneDate(milestone.schedule.evaluationOpensAt)} ~ ${milestoneDate(milestone.schedule.evaluationClosesAt)}`,
-      dueDate: `~ ${milestoneDate(milestone.schedule.evaluationClosesAt)}`,
+      period: `평가 기간 : ${presentationEvaluationDate(milestone.schedule.evaluationOpensAt)} ~ ${presentationEvaluationDate(milestone.schedule.evaluationClosesAt)}`,
+      dueDate: `~ ${presentationEvaluationDate(milestone.schedule.evaluationClosesAt)}`,
       status: closed ? 'completed' : 'in-progress',
       statusLabel: closed ? '평가 완료' : '평가 기간 중',
       currentStepLabel: '발표 평가',
@@ -96,7 +110,7 @@ export function studentMilestoneSummary(
         project: { title: '프로젝트 정보', description: '' },
         orderGuide: '발표 순서를 확인할 수 없어요.',
         teams: [],
-        timeGuide: `평가 기간 : ${milestoneDate(milestone.schedule.evaluationOpensAt)} ~ ${milestoneDate(milestone.schedule.evaluationClosesAt)}`,
+        timeGuide: `평가 기간 : ${presentationEvaluationDate(milestone.schedule.evaluationOpensAt)} ~ ${presentationEvaluationDate(milestone.schedule.evaluationClosesAt)}`,
       },
     };
   }

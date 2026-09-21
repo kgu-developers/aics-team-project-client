@@ -3,6 +3,8 @@ import type {
   AdminMilestoneType,
 } from '@aics/api-client';
 
+import { toPresentationEvaluationServerDateTime } from '~/features/evaluation/presentationEvaluationDateTime';
+
 import {
   assertAdminMilestoneScheduleOrder,
   type AdminMilestoneSectionScheduleDraft,
@@ -42,15 +44,16 @@ export function createAdminMilestoneCreateInput({
   }
 
   const opensAt = toAdminMilestoneDateTime(schedule.opensAt);
-  const evaluationOpensAt = toAdminMilestoneDateTime(
+  const evaluationOpensAtDraft = toAdminMilestoneDateTime(
     schedule.evaluationOpensAt,
   );
-  const evaluationClosesAt = toAdminMilestoneDateTime(
+  const evaluationClosesAtDraft = toAdminMilestoneDateTime(
     schedule.evaluationClosesAt,
   );
   const isPeerEvaluation = templateId === 'peer-review';
+  const isPresentation = templateId === 'presentation-submit';
   const dueAt = isPeerEvaluation
-    ? evaluationClosesAt
+    ? evaluationClosesAtDraft
     : toAdminMilestoneDateTime(schedule.dueAt);
 
   if (!dueAt) {
@@ -60,6 +63,32 @@ export function createAdminMilestoneCreateInput({
         : '제출 마감 일시를 입력해주세요.',
     );
   }
+  if (isPeerEvaluation) {
+    if (!evaluationOpensAtDraft) {
+      throw new Error('상호 평가 시작 일시를 입력해주세요.');
+    }
+    if (!evaluationClosesAtDraft) {
+      throw new Error('상호 평가 종료 일시를 입력해주세요.');
+    }
+    if (evaluationOpensAtDraft >= evaluationClosesAtDraft) {
+      throw new Error('평가 종료 일시는 평가 시작 일시보다 늦어야 합니다.');
+    }
+
+    return {
+      allowResubmissionBeforeDueAt: schedule.allowSubmissionEditBeforeDueAt,
+      description: description.trim() || undefined,
+      schedule: {
+        dueAt: evaluationClosesAtDraft,
+        evaluationClosesAt: evaluationClosesAtDraft,
+        evaluationOpensAt: evaluationOpensAtDraft,
+        opensAt: evaluationOpensAtDraft,
+      },
+      title: title.trim(),
+      type: milestoneTypeByTemplateId[templateId],
+      weekNumber,
+    };
+  }
+
   const lateSubmissionUntil = schedule.allowLateSubmission
     ? toAdminMilestoneDateTime(schedule.lateSubmissionUntil)
     : undefined;
@@ -68,28 +97,28 @@ export function createAdminMilestoneCreateInput({
     throw new Error('지각 제출 마감 일시를 입력해주세요.');
   }
 
-  if (isPeerEvaluation) {
-    // The peer-evaluation window belongs to its own form; the milestone only
-    // carries the closing time as dueAt, so the submission-order rules do
-    // not apply.
-    if (!evaluationOpensAt) {
-      throw new Error('상호 평가 시작 일시를 입력해주세요.');
-    }
-    if (!evaluationClosesAt) {
-      throw new Error('상호 평가 종료 일시를 입력해주세요.');
-    }
-    if (evaluationOpensAt >= evaluationClosesAt) {
-      throw new Error('평가 종료 일시는 평가 시작 일시보다 늦어야 합니다.');
-    }
-    assertAdminMilestoneScheduleOrder({ dueAt, lateSubmissionUntil, opensAt });
-  } else {
-    assertAdminMilestoneScheduleOrder({
-      dueAt,
-      evaluationClosesAt,
-      evaluationOpensAt,
-      lateSubmissionUntil,
-      opensAt,
-    });
+  assertAdminMilestoneScheduleOrder({
+    dueAt,
+    evaluationClosesAt: evaluationClosesAtDraft,
+    evaluationOpensAt: evaluationOpensAtDraft,
+    lateSubmissionUntil,
+    opensAt,
+  });
+
+  const evaluationOpensAt = isPresentation
+    ? evaluationOpensAtDraft &&
+      toPresentationEvaluationServerDateTime(evaluationOpensAtDraft)
+    : evaluationOpensAtDraft;
+  const evaluationClosesAt = isPresentation
+    ? evaluationClosesAtDraft &&
+      toPresentationEvaluationServerDateTime(evaluationClosesAtDraft)
+    : evaluationClosesAtDraft;
+  if (
+    isPresentation &&
+    ((evaluationOpensAtDraft && !evaluationOpensAt) ||
+      (evaluationClosesAtDraft && !evaluationClosesAt))
+  ) {
+    throw new Error('평가 기간 일시를 확인해주세요.');
   }
 
   return {
@@ -97,10 +126,8 @@ export function createAdminMilestoneCreateInput({
     description: description.trim() || undefined,
     schedule: {
       dueAt,
-      ...(!isPeerEvaluation && evaluationClosesAt
-        ? { evaluationClosesAt }
-        : {}),
-      ...(!isPeerEvaluation && evaluationOpensAt ? { evaluationOpensAt } : {}),
+      ...(evaluationClosesAt ? { evaluationClosesAt } : {}),
+      ...(evaluationOpensAt ? { evaluationOpensAt } : {}),
       ...(opensAt ? { opensAt } : {}),
       ...(lateSubmissionUntil ? { lateSubmissionUntil } : {}),
     },

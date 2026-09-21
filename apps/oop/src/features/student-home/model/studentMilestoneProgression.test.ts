@@ -260,6 +260,43 @@ describe('학생 마일스톤 순차 진행', () => {
     expect(result.defaultOpenId).toBe('1');
   });
 
+  it('발표 평가의 UTC LocalDateTime 경계를 서울의 같은 순간에 펼친다', () => {
+    const presentation = {
+      ...milestone(1, '2026-09-01T00:00:00+09:00', '2026-09-30T23:59:00+09:00'),
+      type: 'PRESENTATION' as const,
+      schedule: {
+        dueAt: '2026-09-30T23:59:00+09:00',
+        evaluationOpensAt: '2026-10-10T03:00:00',
+        evaluationClosesAt: '2026-10-10T04:00:00',
+      },
+    };
+
+    expect(
+      resolveStudentMilestoneProgression(
+        [
+          {
+            milestone: presentation,
+            submission: submission(1),
+            summary: summary(1),
+          },
+        ],
+        Date.parse('2026-10-10T11:59:59+09:00'),
+      ).defaultOpenId,
+    ).toBeUndefined();
+    expect(
+      resolveStudentMilestoneProgression(
+        [
+          {
+            milestone: presentation,
+            submission: submission(1),
+            summary: summary(1),
+          },
+        ],
+        Date.parse('2026-10-10T12:00:00+09:00'),
+      ).defaultOpenId,
+    ).toBe('1');
+  });
+
   it('잠긴 단계는 내용을 숨기고 동작을 비활성화한다', () => {
     const locked = lockStudentHomeMilestone(summary(2));
     expect(locked.statusLabel).toBe('이전 단계 완료 필요');

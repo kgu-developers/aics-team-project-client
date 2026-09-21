@@ -6,6 +6,8 @@ import type {
 
 import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 
+import { formatPresentationEvaluationDateTime } from '~/features/evaluation/presentationEvaluationDateTime';
+
 const milestoneTypeLabels: Record<AdminMilestoneType, string> = {
   FINAL_REPORT: '최종 보고서',
   GENERAL: '일반',
@@ -22,6 +24,12 @@ export function formatAdminMilestoneDate(value: string | null | undefined) {
   if (!value) return '-';
   const formatted = formatCourseScheduleDateTime(value);
   return formatted === value ? '-' : formatted;
+}
+
+export function formatAdminPresentationEvaluationDate(
+  value: string | null | undefined,
+) {
+  return formatPresentationEvaluationDateTime(value) ?? '-';
 }
 
 export function getAdminMilestoneTypeLabel(type: AdminMilestoneType) {

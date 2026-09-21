@@ -8,6 +8,7 @@ import {
   SelectorOption,
   Text,
 } from '@aics/design-system';
+import { isAxiosError } from 'axios';
 import { useState } from 'react';
 
 import {
@@ -15,6 +16,14 @@ import {
   usePreviewAdminEnrollmentImportMutation,
 } from '../queries';
 import * as styles from './TeamImportDialog.css';
+
+function getPreviewErrorMessage(error: unknown) {
+  const fallback = '파일을 검증하지 못했습니다. 다시 시도해 주세요.';
+  if (!isAxiosError<{ message?: unknown }>(error)) return fallback;
+
+  const message = error.response?.data?.message;
+  return typeof message === 'string' && message.trim() ? message : fallback;
+}
 
 type EnrollmentImportDialogProps = {
   isOpen: boolean;
@@ -70,6 +79,10 @@ export default function EnrollmentImportDialog({
             파일을 미리보기로 검증한 뒤, 오류가 없을 때만 수강생 명단을
             반영합니다.
           </Text>
+          <Text color='secondary' type='supporting'>
+            학번은 필수입니다. 전공·학과·소속은 같은 항목의 별칭이므로 한
+            파일에는 셋 중 하나만 넣어주세요.
+          </Text>
           <Selector
             isDisabled={controlsLocked}
             label='분반'
@@ -107,7 +120,7 @@ export default function EnrollmentImportDialog({
           />
           {previewMutation.isError ? (
             <Text role='alert'>
-              파일을 검증하지 못했습니다. 다시 시도해 주세요.
+              {getPreviewErrorMessage(previewMutation.error)}
             </Text>
           ) : null}
           {preview ? (
