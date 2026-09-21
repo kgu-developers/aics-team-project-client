@@ -70,6 +70,34 @@ export const evaluationHeader = style({
   justifyContent: 'space-between',
 });
 
+export const evaluationTitle = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 8,
+});
+
+export const setupWarning = style({
+  background: tokens.color.background.muted,
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: 8,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 6,
+  padding: 16,
+});
+
+export const setupWarningUrgent = style({
+  borderColor: tokens.color.accent,
+  borderWidth: 2,
+});
+
+export const setupWarningList = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 4,
+});
+
 export const evaluationActions = style({
   alignItems: 'center',
   display: 'flex',

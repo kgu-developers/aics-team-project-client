@@ -12,6 +12,8 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 import {
   useAdminTeamEvaluationCriteriaQuery,
   useCreateAdminTeamEvaluationCriterionMutation,
@@ -23,6 +25,7 @@ import * as styles from './AdminPresentationEvaluationSettingsDialog.css';
 import { validatePresentationOrders } from './adminPresentationOrder';
 
 type Props = {
+  evaluationStartsAt: string | null;
   isOpen: boolean;
   onClose: () => void;
   teams: Array<{
@@ -35,6 +38,7 @@ type Props = {
 };
 
 export function AdminPresentationEvaluationSettingsDialog({
+  evaluationStartsAt,
   isOpen,
   onClose,
   teams,
@@ -59,10 +63,35 @@ export function AdminPresentationEvaluationSettingsDialog({
   const [criterionTitle, setCriterionTitle] = useState('');
   const [criterionMaxScore, setCriterionMaxScore] = useState('');
   const [criterionError, setCriterionError] = useState<string | null>(null);
+  const [evaluationClock, setEvaluationClock] = useState(() => Date.now());
   const initializedContext = useRef<{
     sectionId: string;
     milestoneId: string;
   } | null>(null);
+  const evaluationStartsAtInstant = useMemo(
+    () => seoulInstant(evaluationStartsAt),
+    [evaluationStartsAt],
+  );
+  const hasInvalidEvaluationStart =
+    evaluationStartsAt !== null && Number.isNaN(evaluationStartsAtInstant);
+  const isEvaluationLockedAt = (instant: number) =>
+    hasInvalidEvaluationStart ||
+    (!Number.isNaN(evaluationStartsAtInstant) &&
+      instant >= evaluationStartsAtInstant);
+  const isEvaluationLocked = isEvaluationLockedAt(evaluationClock);
+
+  useEffect(() => {
+    if (!isOpen || Number.isNaN(evaluationStartsAtInstant)) return;
+
+    const remaining = evaluationStartsAtInstant - Date.now();
+    if (remaining <= 0) return;
+
+    const timer = window.setTimeout(
+      () => setEvaluationClock(Date.now()),
+      Math.min(remaining + 25, 2_147_483_647),
+    );
+    return () => window.clearTimeout(timer);
+  }, [evaluationClock, evaluationStartsAtInstant, isOpen]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -90,7 +119,9 @@ export function AdminPresentationEvaluationSettingsDialog({
   }));
 
   function handleSave() {
-    if (saveMutation.isPending) return;
+    // Recheck real time in the event handler because background tabs may delay
+    // the render timer past the evaluation start instant.
+    if (isEvaluationLockedAt(Date.now()) || saveMutation.isPending) return;
     const result = validatePresentationOrders(teams, orders);
     if (!result.ok) {
       setError(result.error);
@@ -116,7 +147,12 @@ export function AdminPresentationEvaluationSettingsDialog({
   }
 
   function handleCreateCriterion() {
-    if (!criteriaQuery.isSuccess || createCriterionMutation.isPending) return;
+    if (
+      isEvaluationLockedAt(Date.now()) ||
+      !criteriaQuery.isSuccess ||
+      createCriterionMutation.isPending
+    )
+      return;
     const title = criterionTitle.trim();
     const maxScore = Number(criterionMaxScore);
 
@@ -175,40 +211,74 @@ export function AdminPresentationEvaluationSettingsDialog({
           기간은 발표 마일스톤 상세에서 수정합니다.
         </Text>
         <VStack gap={3}>
-          {teams.map(team => (
-            <HStack
-              align='center'
-              className={styles.teamRow}
-              gap={3}
-              key={team.teamId}
-            >
-              <Text className={styles.teamName}>{team.teamName}</Text>
-              <Selector
-                aria-label={`${team.teamName} 발표 순서`}
-                label='발표 순서'
-                onChange={value =>
-                  setOrders(current => ({
-                    ...current,
-                    [team.teamId]: Number(value),
-                  }))
-                }
-                options={orderOptions}
-                renderOption={option => (
-                  <SelectorOption label={option.label ?? option.value} />
-                )}
-                value={
-                  orders[team.teamId] == null ? '' : String(orders[team.teamId])
-                }
-                width={120}
-              />
-            </HStack>
-          ))}
+          {isEvaluationLocked ? (
+            <Text color='secondary' role='status' type='supporting'>
+              {hasInvalidEvaluationStart
+                ? '평가 시작 시각을 확인할 수 없어 발표 순서를 변경할 수 없습니다.'
+                : '평가 기간이 시작되어 발표 순서를 변경할 수 없습니다.'}
+            </Text>
+          ) : null}
+          {teams.length ? (
+            teams.map(team => (
+              <HStack
+                align='center'
+                className={styles.teamRow}
+                gap={3}
+                key={team.teamId}
+              >
+                <Text className={styles.teamName}>{team.teamName}</Text>
+                <Selector
+                  aria-label={`${team.teamName} 발표 순서`}
+                  isDisabled={isEvaluationLocked || saveMutation.isPending}
+                  label='발표 순서'
+                  onChange={value =>
+                    setOrders(current => ({
+                      ...current,
+                      [team.teamId]: Number(value),
+                    }))
+                  }
+                  options={orderOptions}
+                  renderOption={option => (
+                    <SelectorOption label={option.label ?? option.value} />
+                  )}
+                  value={
+                    orders[team.teamId] == null
+                      ? ''
+                      : String(orders[team.teamId])
+                  }
+                  width={120}
+                />
+              </HStack>
+            ))
+          ) : (
+            <Text color='secondary'>발표 순서를 설정할 팀이 없습니다.</Text>
+          )}
+          {error ? <Text className={styles.errorText}>{error}</Text> : null}
+          <HStack justify='end'>
+            <Button
+              isDisabled={
+                isEvaluationLocked ||
+                saveMutation.isPending ||
+                teams.length === 0
+              }
+              label={saveMutation.isPending ? '저장 중...' : '발표 순서 저장'}
+              onClick={handleSave}
+              type='button'
+            />
+          </HStack>
         </VStack>
         <VStack gap={2}>
           <Heading level={3}>평가 항목</Heading>
           <Text color='secondary' type='supporting'>
             평가 항목은 표시 순서대로 학생 발표 평가에 적용됩니다.
           </Text>
+          {isEvaluationLocked ? (
+            <Text color='secondary' role='status' type='supporting'>
+              {hasInvalidEvaluationStart
+                ? '평가 시작 시각을 확인할 수 없어 평가 항목을 추가할 수 없습니다.'
+                : '평가 기간이 시작되어 평가 항목을 추가할 수 없습니다.'}
+            </Text>
+          ) : null}
           {criteriaQuery.isPending ? (
             <Text aria-live='polite' role='status'>
               평가 항목을 불러오는 중입니다.
@@ -236,7 +306,7 @@ export function AdminPresentationEvaluationSettingsDialog({
             <Text color='secondary'>등록된 평가 항목이 없습니다.</Text>
           )}
           <TextInput
-            isDisabled={createCriterionMutation.isPending}
+            isDisabled={isEvaluationLocked || createCriterionMutation.isPending}
             isRequired
             label='평가 항목명'
             onChange={setCriterionTitle}
@@ -248,7 +318,7 @@ export function AdminPresentationEvaluationSettingsDialog({
             <input
               aria-label='배점'
               className={styles.timeInput}
-              disabled={createCriterionMutation.isPending}
+              disabled={isEvaluationLocked || createCriterionMutation.isPending}
               min='1'
               onChange={event => setCriterionMaxScore(event.target.value)}
               step='1'
@@ -264,7 +334,9 @@ export function AdminPresentationEvaluationSettingsDialog({
           <HStack justify='end'>
             <Button
               isDisabled={
-                createCriterionMutation.isPending || !criteriaQuery.isSuccess
+                isEvaluationLocked ||
+                createCriterionMutation.isPending ||
+                !criteriaQuery.isSuccess
               }
               isLoading={createCriterionMutation.isPending}
               label='평가 항목 추가'
@@ -274,19 +346,12 @@ export function AdminPresentationEvaluationSettingsDialog({
             />
           </HStack>
         </VStack>
-        {error ? <Text className={styles.errorText}>{error}</Text> : null}
         <HStack justify='end' gap={2}>
           <Button
             label='취소'
             onClick={onClose}
             type='button'
             variant='secondary'
-          />
-          <Button
-            isDisabled={saveMutation.isPending}
-            label={saveMutation.isPending ? '저장 중...' : '저장'}
-            onClick={handleSave}
-            type='button'
           />
         </HStack>
       </VStack>

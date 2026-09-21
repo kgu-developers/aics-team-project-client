@@ -51,6 +51,7 @@ import {
   resetPresentationEvaluationScenario,
 } from '~/mocks/handlers/adminPresentationEvaluations';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
+import { adminStudentTeamHandlers } from '~/mocks/handlers/adminStudentTeams';
 import { createTeamMessageHandlers } from '~/mocks/handlers/teamMessages';
 
 const server = setupServer(
@@ -65,6 +66,7 @@ const server = setupServer(
   ...adminEvaluationResultHandlers,
   ...adminPresentationEvaluationHandlers,
   ...adminSectionMilestoneHandlers,
+  ...adminStudentTeamHandlers,
   ...createTeamMessageHandlers(),
 );
 
@@ -214,7 +216,7 @@ describe('AdminSubmissionsPage', () => {
     },
   );
 
-  it('저장한 발표 순서를 설정 창 재진입 후에도 제출 목록 API에서 복원한다', async () => {
+  it('저장한 발표 순서를 설정 창 재진입 후에도 분반 팀 목록에 복원한다', async () => {
     const user = userEvent.setup();
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
@@ -223,24 +225,20 @@ describe('AdminSubmissionsPage', () => {
     });
     await waitFor(() => expect(open).toBeEnabled());
     await user.click(open);
-    await user.click(
-      screen.getByRole('combobox', { name: 'OOP-01 - 1팀 발표 순서' }),
-    );
+    await user.click(screen.getByRole('combobox', { name: '1팀 발표 순서' }));
     await user.click(screen.getByRole('option', { name: '2번' }));
-    await user.click(
-      screen.getByRole('combobox', { name: 'OOP-01 - 2팀 발표 순서' }),
-    );
+    await user.click(screen.getByRole('combobox', { name: '2팀 발표 순서' }));
     await user.click(screen.getByRole('option', { name: '1번' }));
-    await user.click(screen.getByRole('button', { name: '저장' }));
+    await user.click(screen.getByRole('button', { name: '발표 순서 저장' }));
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
     );
     await user.click(open);
     expect(
-      screen.getByRole('combobox', { name: 'OOP-01 - 1팀 발표 순서' }),
+      screen.getByRole('combobox', { name: '1팀 발표 순서' }),
     ).toHaveTextContent('2번');
     expect(
-      screen.getByRole('combobox', { name: 'OOP-01 - 2팀 발표 순서' }),
+      screen.getByRole('combobox', { name: '2팀 발표 순서' }),
     ).toHaveTextContent('1번');
   });
 
@@ -769,6 +767,7 @@ describe('AdminSubmissionsPage', () => {
       name: '발표 순서·평가 항목 설정',
     });
     await waitFor(() => expect(settingsButton).toBeEnabled());
+    expect(screen.getByText('설정 완료')).toBeVisible();
 
     await user.click(
       screen.getByRole('button', { name: '발표 순서·평가 항목 설정' }),
@@ -776,6 +775,50 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('heading', { name: '발표 순서·평가 항목 설정' }),
     ).toBeInTheDocument();
+  });
+
+  it('발표 평가 설정이 부족하면 평가 시작 전 경고와 설정 필요 상태를 표시한다', async () => {
+    const evaluationStartsAt = new Date(
+      Date.now() + 48 * 60 * 60 * 1000,
+    ).toISOString();
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`,
+        () =>
+          HttpResponse.json({
+            content: getAdminSectionMilestonesFixture('1')!.content.map(
+              milestone =>
+                milestone.id === 103
+                  ? {
+                      ...milestone,
+                      schedule: {
+                        ...milestone.schedule,
+                        evaluationOpensAt: evaluationStartsAt,
+                      },
+                    }
+                  : milestone,
+            ),
+          }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRESENTATION_EVALUATIONS('1')}`,
+        () =>
+          HttpResponse.json({
+            ...adminPresentationEvaluationListFixture,
+            criteria: [],
+          }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    expect(await screen.findByText('설정 필요')).toBeVisible();
+    const warning = screen.getByRole('alert');
+    expect(warning).toHaveTextContent(
+      '발표 평가 설정이 완료되지 않았습니다. 평가 시작 전에 확인해 주세요.',
+    );
+    expect(warning).toHaveTextContent('평가 항목을 1개 이상 추가해 주세요.');
   });
 
   it('발표 평가 항목이 1개뿐이면 학생에게 그 항목만 보인다고 안내한다', async () => {
