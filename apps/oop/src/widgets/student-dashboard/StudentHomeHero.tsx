@@ -46,6 +46,7 @@ type StudentHomeHeroProps = {
   canCreateMeeting?: boolean;
   meetingState?: 'error' | 'pending' | 'ready';
   onCtaClick?: () => void;
+  showCta?: boolean;
 };
 
 export default function StudentHomeHero({
@@ -61,6 +62,7 @@ export default function StudentHomeHero({
   sectionId: suppliedSectionId,
   canCreateMeeting = true,
   onCtaClick,
+  showCta = true,
 }: StudentHomeHeroProps) {
   const navigate = useNavigate();
   const currentUser = useAuthStore(state => state.currentUser);
@@ -131,22 +133,26 @@ export default function StudentHomeHero({
           <h2 className={styles.heroHeading}>{hero.heading}</h2>
           <p className={styles.heroDesc}>{hero.description}</p>
           <div className={styles.heroSpacer} />
-          <Button
-            className={styles.cta}
-            endContent={<ArrowRight aria-hidden='true' size={24} />}
-            label={hero.ctaLabel}
-            onClick={
-              hero.actionTo ? () => navigate({ to: hero.actionTo }) : onCtaClick
-            }
-            size='lg'
-            isDisabled={!hero.actionTo && !onCtaClick}
-            tooltip={
-              hero.actionTo || onCtaClick
-                ? undefined
-                : '현재 이동할 수 있는 진행 단계가 없어요.'
-            }
-            variant='primary'
-          />
+          {showCta ? (
+            <Button
+              className={styles.cta}
+              endContent={<ArrowRight aria-hidden='true' size={24} />}
+              label={hero.ctaLabel}
+              onClick={
+                hero.actionTo
+                  ? () => navigate({ to: hero.actionTo })
+                  : onCtaClick
+              }
+              size='lg'
+              isDisabled={!hero.actionTo && !onCtaClick}
+              tooltip={
+                hero.actionTo || onCtaClick
+                  ? undefined
+                  : '현재 이동할 수 있는 진행 단계가 없어요.'
+              }
+              variant='primary'
+            />
+          ) : null}
         </div>
 
         <div className={styles.shortcut}>

@@ -247,11 +247,11 @@ describe('발표 자료와 평가 구분', () => {
     expect(summary.statusLabel).not.toBe('평가 기간 전');
   });
   it.each([
-    ['2026-09-10T00:00:00+09:00', 'in-progress', '평가 기간 중'],
-    ['2026-09-17T23:59:00+09:00', 'completed', '평가 완료'],
+    ['2026-09-10T00:00:00+09:00', 'in-progress', '평가 기간 중', true],
+    ['2026-09-17T23:59:00+09:00', 'completed', '평가 완료', false],
   ] as const)(
-    '평가 일정 %s에서는 상태 %s와 문구 %s으로 표시한다',
-    (at, status, label) => {
+    '평가 일정 %s에서는 상태 %s와 문구 %s에 맞는 CTA를 표시한다',
+    (at, status, label, hasCta) => {
       const summary = studentMilestoneSummary(
         evaluation,
         submission,
@@ -266,12 +266,15 @@ describe('발표 자료와 평가 구분', () => {
         kind: 'presentation-evaluation',
         teams: [],
       });
-      expect(summary.rows).toEqual([
-        expect.objectContaining({
-          actionLabel: '평가하기',
-          actionTo: '/student/presentation-evaluation',
-        }),
-      ]);
+      expect(summary.rows[0]).toMatchObject({
+        value: '발표 자료 및 평가 확인',
+      });
+      expect(summary.rows[0]?.actionLabel).toBe(
+        hasCta ? '평가하기' : undefined,
+      );
+      expect(summary.rows[0]?.actionTo).toBe(
+        hasCta ? '/student/presentation-evaluation' : undefined,
+      );
       expect(summary.dueDate).toBe('~ 2026-09-17/23:59');
     },
   );
@@ -285,6 +288,10 @@ describe('발표 자료와 평가 구분', () => {
 
     expect(summary.status).toBe('completed');
     expect(summary.statusLabel).toBe('평가 완료');
+    expect(summary.rows[0]).toMatchObject({
+      value: '발표 자료 및 평가 확인',
+    });
+    expect(summary.rows[0]?.actionLabel).toBeUndefined();
   });
 
   it('평가 일정이 설정되면 시작 전 서버 CLOSED도 평가 구조로 완료한다', () => {

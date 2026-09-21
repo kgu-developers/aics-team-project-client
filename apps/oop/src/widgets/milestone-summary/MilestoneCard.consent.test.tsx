@@ -208,13 +208,15 @@ it('이전 단계가 미완료이면 서버가 제출을 허용해도 팀장 최
   expect(screen.queryByText('파일 제출 폼 열림')).not.toBeInTheDocument();
   expect(onSubmissionRead).not.toHaveBeenCalled();
 });
-it('전원 승인 후 팀장 CTA가 최종 완료로 전환되고 완료 상태를 표시한다', async () => {
+it('전원 승인 후 최종 완료하면 완료 상태만 남기고 CTA를 제거한다', async () => {
   setup({ leader: true, allConfirmed: true });
   await screen.findByText('승인 2/2명');
   await userEvent.click(screen.getByRole('button', { name: '최종 완료' }));
   await screen.findByText('승인 2/2명 · 완료');
-  expect(screen.getByRole('button', { name: '완료' })).toBeDisabled();
-  expect(screen.getAllByRole('button')).toHaveLength(1);
+  expect(
+    screen.queryByRole('button', { name: '완료' }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByRole('button')).not.toBeInTheDocument();
 });
 it('승인 실패 시 기존 CTA로 재조회하고 다시 승인할 수 있다', async () => {
   setup();

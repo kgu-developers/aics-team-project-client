@@ -17,6 +17,19 @@ export type StudentMilestoneProgression = {
   unlockedIds: Set<string>;
 };
 
+/** Uses normalized home statuses so deadline and server-close semantics stay centralized. */
+export function areAllStudentMilestonesTerminal(
+  milestones: StudentHomeMilestone[],
+) {
+  return (
+    milestones.length > 0 &&
+    milestones.every(
+      milestone =>
+        milestone.status === 'completed' || milestone.status === 'closed',
+    )
+  );
+}
+
 export function hasTerminalMilestoneCompletion({
   submission,
   summary,

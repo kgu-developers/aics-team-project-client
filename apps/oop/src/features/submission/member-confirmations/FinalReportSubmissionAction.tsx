@@ -12,7 +12,7 @@ import { useLiveSubmissionConsent } from './queries';
 
 type ActionState = {
   value: string;
-  actionLabel: string;
+  actionLabel?: string;
   disabled: boolean;
   busy: boolean;
   notice?: string;
@@ -101,7 +101,7 @@ export default function FinalReportSubmissionAction({
         ? '미제출'
         : '승인 현황 확인 중...';
   const actionLabel = completed
-    ? '완료'
+    ? undefined
     : !submitted
       ? leader
         ? '파일 제출'
