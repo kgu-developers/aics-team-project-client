@@ -173,9 +173,9 @@ describe('마감과 팀별 제출 가능 상태', () => {
       'unavailable',
     );
   });
-  it('오프셋 없는 서버 일정은 비교에는 서울 시각, 표시에는 UTC 보정을 적용한다', () => {
+  it('오프셋 없는 서버 일정은 비교와 표시에 같은 서울 시각을 사용한다', () => {
     expect(milestoneTime('2026-10-10T18:30:00')).toBe(due);
-    expect(milestoneDate('2026-10-10T18:30:00')).toBe('2026-10-11/03:30');
+    expect(milestoneDate('2026-10-10T18:30:00')).toBe('2026-10-10/18:30');
     expect(milestoneDate(null)).toBe('일정 미정');
     expect(milestoneDate('invalid')).toBe('일정 확인 필요');
   });
@@ -247,28 +247,86 @@ describe('발표 자료와 평가 구분', () => {
     expect(summary.statusLabel).not.toBe('평가 기간 전');
   });
   it.each([
-    ['2026-09-10T00:00:00+09:00', '평가 기간 중'],
-    ['2026-09-17T23:59:00+09:00', '평가 마감'],
-  ])('평가 일정 %s에서는 %s으로 표시한다', (at, label) => {
+    ['2026-09-10T00:00:00+09:00', 'in-progress', '평가 기간 중'],
+    ['2026-09-17T23:59:00+09:00', 'completed', '평가 완료'],
+  ] as const)(
+    '평가 일정 %s에서는 상태 %s와 문구 %s으로 표시한다',
+    (at, status, label) => {
+      const summary = studentMilestoneSummary(
+        evaluation,
+        submission,
+        Date.parse(at),
+      );
+      expect(summary.status).toBe(status);
+      expect(summary.statusLabel).toBe(label);
+      expect(summary.currentStepLabel).toBe('발표 평가');
+      expect(summary.interaction).toBe('collapsible');
+      expect(summary.isDetailAvailable).toBe(true);
+      expect(summary.body).toMatchObject({
+        kind: 'presentation-evaluation',
+        teams: [],
+      });
+      expect(summary.rows).toEqual([
+        expect.objectContaining({
+          actionLabel: '평가하기',
+          actionTo: '/student/presentation-evaluation',
+        }),
+      ]);
+      expect(summary.dueDate).toBe('~ 2026-09-17/23:59');
+    },
+  );
+
+  it('평가 기간 중 마일스톤이 CLOSED가 되면 제출 상태와 무관하게 완료한다', () => {
     const summary = studentMilestoneSummary(
-      evaluation,
-      submission,
-      Date.parse(at),
+      { ...evaluation, status: 'CLOSED' },
+      { ...submission, status: 'SUBMITTED' },
+      Date.parse('2026-09-12T12:00:00+09:00'),
     );
-    expect(summary.statusLabel).toBe(label);
+
+    expect(summary.status).toBe('completed');
+    expect(summary.statusLabel).toBe('평가 완료');
+  });
+
+  it('평가 일정이 설정되면 시작 전 서버 CLOSED도 평가 구조로 완료한다', () => {
+    const schedule = {
+      dueAt: '2026-09-10T00:00:00',
+      evaluationOpensAt: '2026-09-20T00:00:00',
+      evaluationClosesAt: '2026-09-27T23:59:00',
+    };
+    const summary = studentMilestoneSummary(
+      { ...evaluation, status: 'CLOSED', schedule },
+      { ...submission, status: 'SUBMITTED' },
+      Date.parse('2026-09-12T12:00:00+09:00'),
+    );
+
+    expect(summary.status).toBe('completed');
+    expect(summary.statusLabel).toBe('평가 완료');
     expect(summary.currentStepLabel).toBe('발표 평가');
-    expect(summary.interaction).toBe('collapsible');
-    expect(summary.isDetailAvailable).toBe(true);
-    expect(summary.body).toMatchObject({
-      kind: 'presentation-evaluation',
-      teams: [],
-    });
-    expect(summary.rows).toEqual([
-      expect.objectContaining({
-        actionLabel: '평가하기',
-        actionTo: '/student/presentation-evaluation',
-      }),
-    ]);
-    expect(summary.dueDate).toBe('~ 2026-09-18/08:59');
+    expect(summary.period).toBe(
+      '평가 기간 : 2026-09-20/00:00 ~ 2026-09-27/23:59',
+    );
+    expect(summary.body?.kind).toBe('presentation-evaluation');
+  });
+
+  it('평가 일정이 없는 서버 CLOSED 발표는 자료 제출 구조와 일정으로 완료한다', () => {
+    const summary = studentMilestoneSummary(
+      {
+        ...evaluation,
+        status: 'CLOSED',
+        schedule: {
+          opensAt: '2026-09-01T00:00:00',
+          dueAt: '2026-09-10T23:59:00',
+        },
+      },
+      { ...submission, status: 'SUBMITTED' },
+      Date.parse('2026-09-12T12:00:00+09:00'),
+    );
+
+    expect(summary.status).toBe('completed');
+    expect(summary.statusLabel).toBe('단계 완료');
+    expect(summary.currentStepLabel).toBe(evaluation.title);
+    expect(summary.period).toBe('기간 : 2026-09-01/00:00 ~ 2026-09-10/23:59');
+    expect(summary.body).toBeUndefined();
+    expect(summary.rows).toEqual([]);
   });
 });

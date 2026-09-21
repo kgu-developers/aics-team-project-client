@@ -21,7 +21,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
-import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { PdfPreview } from '~/shared/ui/PdfPreview';
 
 import { useAuthStore } from '~/features/auth/authStore';
@@ -91,7 +91,7 @@ function EvaluationTimer({
 
 /** Course times are fixed to Asia/Seoul regardless of the viewer's timezone. */
 function formatEvaluationWindow(opensAt: string, closesAt: string) {
-  return `${formatSeoulDateTime(opensAt)} ~ ${formatSeoulDateTime(closesAt)}`;
+  return `${formatCourseScheduleDateTime(opensAt)} ~ ${formatCourseScheduleDateTime(closesAt)}`;
 }
 
 function findPdfArtifact(team: MilestonePresentation) {

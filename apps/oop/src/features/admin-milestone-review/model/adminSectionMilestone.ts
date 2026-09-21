@@ -4,7 +4,7 @@ import type {
   AdminSectionMilestoneDto,
 } from '@aics/api-client';
 
-import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 
 const milestoneTypeLabels: Record<AdminMilestoneType, string> = {
   FINAL_REPORT: '최종 보고서',
@@ -17,10 +17,10 @@ const milestoneTypeLabels: Record<AdminMilestoneType, string> = {
   PROPOSAL: '제안서',
 };
 
-/** Formats milestone dates with the shared Seoul display contract. */
+/** Formats course milestone boundaries as Seoul wall-clock schedule values. */
 export function formatAdminMilestoneDate(value: string | null | undefined) {
   if (!value) return '-';
-  const formatted = formatSeoulDateTime(value);
+  const formatted = formatCourseScheduleDateTime(value);
   return formatted === value ? '-' : formatted;
 }
 

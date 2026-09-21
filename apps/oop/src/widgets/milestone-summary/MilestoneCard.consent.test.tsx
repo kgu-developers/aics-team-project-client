@@ -68,6 +68,7 @@ function setup({
   showFiles = false,
   detailError = false,
   cardMilestone = milestone,
+  onSubmissionRead,
 }: {
   leader?: boolean;
   allConfirmed?: boolean;
@@ -75,6 +76,7 @@ function setup({
   showFiles?: boolean;
   detailError?: boolean;
   cardMilestone?: StudentHomeMilestone;
+  onSubmissionRead?: () => void;
 } = {}) {
   const user = leader ? demoStudent : demoPartnerStudent;
   useAuthStore
@@ -83,11 +85,14 @@ function setup({
   useAuthStore.getState().setCurrentUser(user);
   server.use(
     ...createStudentSubmissionConsentHandlers({
-      getSubmission: () => ({
-        ...studentSubmissionConsent,
-        currentVersion: version,
-        status: version ? 'SUBMITTED' : 'NOT_SUBMITTED',
-      }),
+      getSubmission: () => {
+        onSubmissionRead?.();
+        return {
+          ...studentSubmissionConsent,
+          currentVersion: version,
+          status: version ? 'SUBMITTED' : 'NOT_SUBMITTED',
+        };
+      },
       initialConfirmations: allConfirmed ? { '20260003': version } : {},
     }),
     http.get(`${API_BASE_URL}/api/v1/teams/7/kickoff`, () =>
@@ -183,6 +188,25 @@ it('전원 승인 전 팀장 CTA는 파일 교체를 연다', async () => {
   await screen.findByText('승인 1/2명');
   await userEvent.click(screen.getByRole('button', { name: '파일 교체' }));
   expect(await screen.findByText('파일 제출 폼 열림')).toBeVisible();
+});
+it('이전 단계가 미완료이면 서버가 제출을 허용해도 팀장 최종보고서 CTA를 잠근다', async () => {
+  const onSubmissionRead = vi.fn();
+  setup({
+    leader: true,
+    version: 0,
+    onSubmissionRead,
+    cardMilestone: {
+      ...milestone,
+      statusLabel: '이전 단계 완료 필요',
+      rows: milestone.rows.map(row => ({ ...row, actionDisabled: true })),
+    },
+  });
+  expect(screen.getByText('v2 제출됨')).toBeInTheDocument();
+  const action = screen.getByRole('button', { name: '파일 교체' });
+  expect(action).toBeDisabled();
+  await userEvent.click(action);
+  expect(screen.queryByText('파일 제출 폼 열림')).not.toBeInTheDocument();
+  expect(onSubmissionRead).not.toHaveBeenCalled();
 });
 it('전원 승인 후 팀장 CTA가 최종 완료로 전환되고 완료 상태를 표시한다', async () => {
   setup({ leader: true, allConfirmed: true });

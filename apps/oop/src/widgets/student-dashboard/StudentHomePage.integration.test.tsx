@@ -36,6 +36,7 @@ import { studentHomeLiveHandlers } from '~/mocks/handlers/studentHomeLive';
 
 const list = studentMilestoneFixtures(2).slice(0, 2);
 const requests: string[] = [];
+const requestLog: { method: string; path: string }[] = [];
 const midReportFieldKeys: Record<string, string[]> = {
   topic: ['title', 'description'],
   'gui-design': ['guiScreens'],
@@ -160,9 +161,11 @@ let queryClient: QueryClient;
 let navigationHistory = createMemoryHistory({ initialEntries: ['/student'] });
 beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' });
-  server.events.on('request:start', ({ request }) =>
-    requests.push(new URL(request.url).pathname),
-  );
+  server.events.on('request:start', ({ request }) => {
+    const path = new URL(request.url).pathname;
+    requests.push(path);
+    requestLog.push({ method: request.method, path });
+  });
 });
 beforeEach(() => {
   sessionStorage.clear();
@@ -178,6 +181,8 @@ afterEach(() => {
   server.resetHandlers();
   useAuthStore.getState().clearSession();
   requests.length = 0;
+  requestLog.length = 0;
+  vi.restoreAllMocks();
 });
 afterAll(() => server.close());
 function Wrapper({ children }: PropsWithChildren) {
@@ -838,6 +843,172 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
       document.getElementById(`student-milestone-${list[1]!.id}`),
     ).toHaveTextContent('이전 단계 완료 필요');
   });
+  it.each([
+    {
+      name: '평가 기간 중',
+      now: '2026-09-17T12:00:00+09:00',
+      configuredEvaluationWindow: true,
+      milestoneStatus: 'PUBLISHED',
+      presentationStatus: '진행 중',
+      finalReportLocked: true,
+    },
+    {
+      name: '평가 마감 시각',
+      now: '2026-09-18T00:00:00+09:00',
+      configuredEvaluationWindow: true,
+      milestoneStatus: 'PUBLISHED',
+      presentationStatus: '완료',
+      finalReportLocked: false,
+    },
+    {
+      name: '평가 시작 전 서버 마감',
+      now: '2026-09-12T00:00:00+09:00',
+      configuredEvaluationWindow: true,
+      milestoneStatus: 'CLOSED',
+      presentationStatus: '완료',
+      finalReportLocked: false,
+    },
+    {
+      name: '평가 일정 없이 서버 마감',
+      now: '2026-09-18T00:00:00+09:00',
+      configuredEvaluationWindow: false,
+      milestoneStatus: 'CLOSED',
+      presentationStatus: '완료',
+      finalReportLocked: false,
+    },
+  ])(
+    '발표 $name에는 제출 완료 처리 없이 최종보고서 잠금을 결정한다',
+    async ({
+      now,
+      configuredEvaluationWindow,
+      milestoneStatus,
+      presentationStatus,
+      finalReportLocked,
+    }) => {
+      vi.spyOn(Date, 'now').mockReturnValue(Date.parse(now));
+      const presentation = {
+        ...studentMilestoneFixtures(2)[2]!,
+        status: milestoneStatus,
+        schedule: configuredEvaluationWindow
+          ? {
+              dueAt: '2026-09-10T23:59:00+09:00',
+              evaluationOpensAt: '2026-09-15T00:00:00+09:00',
+              evaluationClosesAt: '2026-09-18T00:00:00+09:00',
+            }
+          : {
+              opensAt: '2026-09-01T00:00:00+09:00',
+              dueAt: '2026-09-10T23:59:00+09:00',
+            },
+      };
+      const finalReport = {
+        ...studentMilestoneFixtures(2)[3]!,
+        schedule: {
+          opensAt: '2026-09-01T00:00:00+09:00',
+          dueAt: '2026-10-01T23:59:00+09:00',
+        },
+      };
+      server.use(
+        http.get(
+          `${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`,
+          () => HttpResponse.json({ contents: [presentation, finalReport] }),
+        ),
+        http.get(
+          `${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION(':id')}`,
+          ({ params }) =>
+            HttpResponse.json({
+              id: 9000 + Number(params.id),
+              milestoneId: Number(params.id),
+              teamId: 7,
+              status:
+                Number(params.id) === presentation.id
+                  ? 'SUBMITTED'
+                  : 'NOT_SUBMITTED',
+              currentVersion: Number(params.id) === presentation.id ? 1 : 0,
+              canSubmitNow: Number(params.id) === finalReport.id,
+              hasPendingReview: false,
+            }),
+        ),
+        http.get(
+          `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MILESTONE_PRESENTATIONS(String(presentation.id))}`,
+          () => HttpResponse.json({ contents: [] }),
+        ),
+        http.get(
+          `${API_BASE_URL}${ENDPOINTS.SUBMISSION.DETAIL(String(9000 + presentation.id))}`,
+          () =>
+            HttpResponse.json({
+              id: 9000 + presentation.id,
+              milestoneId: presentation.id,
+              teamId: 7,
+              status: 'SUBMITTED',
+              currentVersion: 1,
+              canSubmitNow: false,
+              hasPendingReview: false,
+            }),
+        ),
+        http.get(
+          `${API_BASE_URL}${ENDPOINTS.SUBMISSION.VERSIONS(String(9000 + presentation.id))}`,
+          () => HttpResponse.json({ contents: [] }),
+        ),
+        http.get(
+          `${API_BASE_URL}${ENDPOINTS.SUBMISSION.DETAIL(String(9000 + finalReport.id))}`,
+          () =>
+            HttpResponse.json({
+              id: 9000 + finalReport.id,
+              milestoneId: finalReport.id,
+              teamId: 7,
+              status: 'NOT_SUBMITTED',
+              currentVersion: 0,
+              canSubmitNow: true,
+              hasPendingReview: false,
+            }),
+        ),
+        http.get(
+          `${API_BASE_URL}${ENDPOINTS.SUBMISSION.VERSIONS(String(9000 + finalReport.id))}`,
+          () => HttpResponse.json({ contents: [] }),
+        ),
+      );
+
+      render(<StudentHomePage />, { wrapper: Wrapper });
+
+      const presentationCardId = `student-milestone-${presentation.id}`;
+      const finalReportCardId = `student-milestone-${finalReport.id}`;
+      await waitFor(() =>
+        expect(document.getElementById(presentationCardId)).toHaveTextContent(
+          presentationStatus,
+        ),
+      );
+      const presentationCard = document.getElementById(presentationCardId)!;
+      if (configuredEvaluationWindow) {
+        expect(presentationCard).toHaveTextContent('발표 평가');
+      } else {
+        expect(presentationCard).toHaveTextContent('발표 자료 제출');
+        expect(presentationCard).not.toHaveTextContent('평가 기간');
+      }
+      await waitFor(() => {
+        const finalReportCard = document.getElementById(finalReportCardId);
+        if (finalReportLocked) {
+          expect(finalReportCard).toHaveTextContent('이전 단계 완료 필요');
+        } else {
+          expect(finalReportCard).toHaveTextContent('진행 중');
+          expect(finalReportCard).not.toHaveTextContent('이전 단계 완료 필요');
+        }
+      });
+      expect(
+        within(document.getElementById(presentationCardId)!).queryByRole(
+          'button',
+          { name: /완료/ },
+        ),
+      ).not.toBeInTheDocument();
+      expect(
+        requestLog.some(
+          request =>
+            request.method === 'PATCH' &&
+            /\/submissions\/\d+\/complete$/.test(request.path),
+        ),
+      ).toBe(false);
+    },
+  );
+
   it('빈 목록은 조회 실패와 구분한다', async () => {
     server.use(
       http.get(`${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`, () =>

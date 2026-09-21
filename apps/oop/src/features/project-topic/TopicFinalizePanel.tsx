@@ -37,6 +37,7 @@ export type TopicFinalizePanelProps = {
   eligibility: TopicParticipationEligibility;
   participationBusy?: boolean;
   className?: string;
+  isDisabled?: boolean;
   onFinalized?: (result: TopicFinalizeResponse) => void;
 };
 
@@ -56,6 +57,7 @@ function TopicFinalization({
   eligibility,
   participationBusy = false,
   className,
+  isDisabled = false,
   onFinalized,
 }: TopicFinalizePanelProps) {
   const ready =
@@ -110,6 +112,7 @@ function TopicFinalization({
     candidates.isFetching;
   const completed = Boolean(project.data?.proposalCompletedAt);
   const canFinalize =
+    !isDisabled &&
     ready &&
     isLeader &&
     hasAllTopicVotes(
