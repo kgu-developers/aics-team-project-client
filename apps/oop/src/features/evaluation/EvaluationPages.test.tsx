@@ -442,7 +442,7 @@ describe('KD3-92 학생 평가 화면', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('오프셋 없는 평가 일정은 타이머와 같은 서울 시각 경계로 표시한다', async () => {
+  it('오프셋 없는 평가 일정은 타이머와 같은 서울 벽시각으로 표시한다', async () => {
     const overview = getMyTeamEvaluations(demoStudent.studentNumber);
     server.use(
       http.get(

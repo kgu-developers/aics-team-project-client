@@ -25,6 +25,7 @@ const response: AdminSectionMilestoneDto = {
   allowResubmissionBeforeDueAt: false,
   description: '프로젝트의 목표와 구성 방식을 정리합니다.',
   id: 101,
+  peerEvaluationForm: null,
   schedule: { dueAt: '2026-10-15T14:59:00Z' },
   sectionId: 1,
   status: 'PUBLISHED',

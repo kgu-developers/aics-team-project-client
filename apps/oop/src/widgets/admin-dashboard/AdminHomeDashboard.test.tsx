@@ -8,6 +8,7 @@ import {
   createRouter,
 } from '@tanstack/react-router';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
@@ -41,7 +42,9 @@ const dashboardState = vi.hoisted(() => ({
     teamId: number;
     teamName: string;
   }[],
+  milestoneSectionIds: [] as string[],
   milestones: [] as AdminSectionMilestoneDto[],
+  markMessageRead: vi.fn(),
   noticeError: false,
   noticeScopeStatus: 'ready',
   notices: [] as {
@@ -81,7 +84,9 @@ beforeEach(() => {
       teamName: '1팀',
     },
   ];
+  dashboardState.milestoneSectionIds = [];
   dashboardState.milestones = [];
+  dashboardState.markMessageRead.mockReset();
   dashboardState.noticeError = false;
   dashboardState.noticeScopeStatus = 'ready';
   dashboardState.notices = [
@@ -121,20 +126,26 @@ vi.mock('~/features/admin-message/queries', () => ({
   useAdminMessagesQuery: () => ({
     data: {
       contents: dashboardState.messages,
-      unreadCount: 1,
+      unreadCount: dashboardState.messages.filter(message => !message.read)
+        .length,
     },
     isError: false,
     isPending: false,
   }),
+  useUpdateAdminMessageReadMutation: () => ({
+    mutate: dashboardState.markMessageRead,
+  }),
 }));
 
 vi.mock('~/features/admin-milestone-review/queries', () => ({
-  useAdminAccessibleSectionMilestonesQuery: (sectionIds: string[]) =>
-    sectionIds.map(() => ({
+  useAdminAccessibleSectionMilestonesQuery: (sectionIds: string[]) => {
+    dashboardState.milestoneSectionIds = sectionIds;
+    return sectionIds.map(() => ({
       data: { content: dashboardState.milestones },
       isError: false,
       isPending: false,
-    })),
+    }));
+  },
 }));
 
 vi.mock('~/features/admin-notices/queries', () => ({
@@ -187,6 +198,11 @@ function renderPage(user = demoAdmin) {
     getParentRoute: () => rootRoute,
     path: '/admin/submissions/',
   });
+  const courseDetailRoute = createRoute({
+    component: () => <div>분반 상세</div>,
+    getParentRoute: () => rootRoute,
+    path: '/admin/sections/$courseId',
+  });
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: ['/admin'] }),
     routeTree: rootRoute.addChildren([
@@ -197,6 +213,7 @@ function renderPage(user = demoAdmin) {
       meetingDetailRoute,
       teamMessagesRoute,
       submissionsRoute,
+      courseDetailRoute,
     ]),
   });
 
@@ -210,6 +227,7 @@ describe('AdminHomeDashboard', () => {
       {
         allowResubmissionBeforeDueAt: false,
         id: 101,
+        peerEvaluationForm: null,
         schedule: { dueAt: '2026-10-08T23:59:00' },
         sectionId: 1,
         status: 'PUBLISHED',
@@ -220,6 +238,7 @@ describe('AdminHomeDashboard', () => {
       {
         allowResubmissionBeforeDueAt: false,
         id: 102,
+        peerEvaluationForm: null,
         schedule: { dueAt: '2026-10-29T23:59:00' },
         sectionId: 1,
         status: 'PUBLISHED',
@@ -250,6 +269,52 @@ describe('AdminHomeDashboard', () => {
         'https://aics.test',
       ).searchParams.get('milestoneId'),
     ).toBe('midterm');
+  });
+
+  it('운영 중인 분반만 일정에 표시하고 분반 항목을 상세로 연결한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage({
+      ...demoAdmin,
+      sections: [
+        { ...demoAdmin.sections[0]!, courseId: 1, status: 'ACTIVE' },
+        {
+          ...demoAdmin.sections[0]!,
+          code: 'OOP-02',
+          courseId: 2,
+          id: '2',
+          name: 'OOP-02',
+          status: 'ARCHIVED',
+        },
+      ],
+    });
+
+    const activeSectionLink = await screen.findByRole('link', {
+      name: 'OOP-01',
+    });
+    expect(dashboardState.milestoneSectionIds).toEqual(['1']);
+    expect(activeSectionLink).toHaveAttribute('href', '/admin/sections/1');
+    expect(screen.queryByText('OOP-02')).not.toBeInTheDocument();
+
+    await user.click(activeSectionLink);
+    expect(await screen.findByText('분반 상세')).toBeInTheDocument();
+  });
+
+  it('운영 중인 담당 분반이 없으면 일정 조회 대신 안내를 표시한다', async () => {
+    renderPage({
+      ...demoAdmin,
+      sections: demoAdmin.sections.map(section => ({
+        ...section,
+        status: 'ARCHIVED' as const,
+      })),
+    });
+
+    expect(
+      await screen.findByText(
+        '운영 중인 담당 분반이 없어 진행 일정을 표시할 수 없습니다.',
+      ),
+    ).toBeInTheDocument();
+    expect(dashboardState.milestoneSectionIds).toEqual([]);
   });
 
   it('현재 회의록 목록 계약의 contents를 홈 위젯에 표시한다', async () => {
@@ -296,15 +361,58 @@ describe('AdminHomeDashboard', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('홈 쪽지함은 통합 쪽지함 응답의 미확인 수와 메시지로 표시한다', async () => {
+  it('홈 쪽지함은 메시지별 미확인 상태를 표시하고 열 때 읽음 처리한다', async () => {
+    const user = userEvent.setup();
+    dashboardState.messages.push({
+      ...dashboardState.messages[0]!,
+      id: 2,
+      message: '이미 확인한 메시지입니다.',
+      read: true,
+      teamId: 8,
+      teamName: '2팀',
+    });
+
     renderPage();
 
     expect(
       await screen.findByRole('heading', { name: '쪽지함 · 미확인 1건' }),
     ).toBeInTheDocument();
+    const unreadLink = screen.getByRole('link', {
+      name: '제안서 보완 사항을 확인해 주세요.',
+    });
+    const readLink = screen.getByRole('link', {
+      name: '이미 확인한 메시지입니다.',
+    });
+    expect(unreadLink).toHaveAttribute('href', '/admin/messages/teams/7');
     expect(
-      screen.getByRole('link', { name: '제안서 보완 사항을 확인해 주세요.' }),
-    ).toHaveAttribute('href', '/admin/messages/teams/7');
+      within(unreadLink.closest('li')!).getByRole('img', {
+        name: '읽지 않음',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(readLink.closest('li')!).queryByRole('img', {
+        name: '읽지 않음',
+      }),
+    ).not.toBeInTheDocument();
+
+    await user.click(unreadLink);
+    expect(dashboardState.markMessageRead).toHaveBeenCalledWith(1);
+    expect(await screen.findByText('팀 대화')).toBeInTheDocument();
+  });
+
+  it('이미 읽은 홈 쪽지는 추가 읽음 요청 없이 대화로 이동한다', async () => {
+    const user = userEvent.setup();
+    dashboardState.messages[0]!.read = true;
+
+    renderPage();
+
+    const readLink = await screen.findByRole('link', {
+      name: '제안서 보완 사항을 확인해 주세요.',
+    });
+    await user.click(readLink);
+
+    expect(dashboardState.markMessageRead).not.toHaveBeenCalled();
+    expect(await screen.findByText('팀 대화')).toBeInTheDocument();
   });
 
   it('공지사항·회의록·쪽지함은 서버가 준 순서의 최신 3건만 표시하고 각 목록으로 연결한다', async () => {

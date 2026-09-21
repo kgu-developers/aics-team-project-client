@@ -66,7 +66,7 @@ describe('createAdminMilestoneCreateInput', () => {
   it('발표 양식은 제출 마감과 평가 기간을 함께 포함해 PRESENTATION으로 생성한다', () => {
     const schedule = createAdminMilestoneSectionScheduleDraft();
     schedule.dueAt = { date: '2026-09-10', time: '23:59' };
-    schedule.evaluationOpensAt = { date: '2026-09-11', time: '09:00' };
+    schedule.evaluationOpensAt = { date: '2026-09-11', time: '18:00' };
     schedule.evaluationClosesAt = { date: '2026-09-15', time: '18:00' };
 
     expect(
@@ -81,13 +81,34 @@ describe('createAdminMilestoneCreateInput', () => {
       schedule: {
         dueAt: '2026-09-10T23:59:00',
         evaluationClosesAt: '2026-09-15T18:00:00',
-        evaluationOpensAt: '2026-09-11T09:00:00',
+        evaluationOpensAt: '2026-09-11T18:00:00',
       },
       type: 'PRESENTATION',
     });
   });
 
-  it('상호평가 기간은 별도 양식이 소유하고 마일스톤에는 종료일만 보낸다', () => {
+  it('발표 평가 기간을 다른 마일스톤 일정과 같은 서울 LocalDateTime으로 보낸다', () => {
+    const schedule = createAdminMilestoneSectionScheduleDraft();
+    schedule.dueAt = { date: '2026-09-21', time: '12:00' };
+    schedule.evaluationOpensAt = { date: '2026-09-21', time: '18:00' };
+    schedule.evaluationClosesAt = { date: '2026-09-21', time: '20:00' };
+
+    expect(
+      createAdminMilestoneCreateInput({
+        description: '',
+        schedule,
+        templateId: 'presentation-submit',
+        title: '발표',
+        weekNumber: 2,
+      }).schedule,
+    ).toEqual({
+      dueAt: '2026-09-21T12:00:00',
+      evaluationClosesAt: '2026-09-21T20:00:00',
+      evaluationOpensAt: '2026-09-21T18:00:00',
+    });
+  });
+
+  it('상호평가 생성은 같은 시작·종료 별칭과 종료 dueAt을 보낸다', () => {
     const schedule = createAdminMilestoneSectionScheduleDraft();
     schedule.evaluationOpensAt = { date: '2026-12-08', time: '09:00' };
     schedule.evaluationClosesAt = { date: '2026-12-14', time: '23:59' };
@@ -103,7 +124,12 @@ describe('createAdminMilestoneCreateInput', () => {
     ).toEqual({
       allowResubmissionBeforeDueAt: false,
       description: '팀원 상호 평가',
-      schedule: { dueAt: '2026-12-14T23:59:00' },
+      schedule: {
+        dueAt: '2026-12-14T23:59:00',
+        evaluationClosesAt: '2026-12-14T23:59:00',
+        evaluationOpensAt: '2026-12-08T09:00:00',
+        opensAt: '2026-12-08T09:00:00',
+      },
       title: '상호 평가',
       type: 'PEER_EVALUATION',
       weekNumber: 13,

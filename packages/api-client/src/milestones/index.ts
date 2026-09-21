@@ -15,6 +15,7 @@ export type {
   AdminMilestoneCreateInput,
   AdminMilestoneEvaluationWindowInput,
   AdminMilestonePersistResponse,
+  AdminPeerEvaluationFormDto,
   AdminMilestoneScheduleRequest,
   AdminMilestoneScheduleDto,
   AdminMilestoneStatus,

@@ -1127,6 +1127,16 @@ export const adminStudentTeamHandlers = [
         );
       }
 
+      if (file.name.toLowerCase().includes('duplicate-alias')) {
+        return HttpResponse.json(
+          {
+            code: 'IMPORT_BATCH_FILE_INVALID',
+            message: '전공, 학과, 소속 컬럼이 중복되었습니다.',
+          },
+          { status: 400 },
+        );
+      }
+
       const importId = nextEnrollmentImportId++;
       const students = adminStudentsFixture.filter(
         student => student.sectionId === resolveFixtureSectionId(sectionId),

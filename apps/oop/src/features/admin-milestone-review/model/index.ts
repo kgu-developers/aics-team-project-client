@@ -1,5 +1,6 @@
 export {
   formatAdminMilestoneDate,
+  formatAdminPresentationEvaluationDate,
   getAdminMilestoneStatusLabel,
   getAdminMilestoneTypeLabel,
   isPresentationEvaluationMilestone,
@@ -25,6 +26,7 @@ export {
   createAdminMilestoneSectionScheduleDraft,
   syncAdminMilestoneSectionScheduleDrafts,
   toAdminMilestoneDateTime,
+  toAdminMilestoneDateTimeDraft,
   type AdminMilestoneSectionScheduleDraft,
 } from './adminMilestoneSetupDraft';
 export {

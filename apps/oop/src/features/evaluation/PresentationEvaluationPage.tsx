@@ -91,7 +91,9 @@ function EvaluationTimer({
 
 /** Course times are fixed to Asia/Seoul regardless of the viewer's timezone. */
 function formatEvaluationWindow(opensAt: string, closesAt: string) {
-  return `${formatCourseScheduleDateTime(opensAt)} ~ ${formatCourseScheduleDateTime(closesAt)}`;
+  const formattedOpensAt = formatCourseScheduleDateTime(opensAt);
+  const formattedClosesAt = formatCourseScheduleDateTime(closesAt);
+  return `${formattedOpensAt === opensAt ? '-' : formattedOpensAt} ~ ${formattedClosesAt === closesAt ? '-' : formattedClosesAt}`;
 }
 
 function findPdfArtifact(team: MilestonePresentation) {
