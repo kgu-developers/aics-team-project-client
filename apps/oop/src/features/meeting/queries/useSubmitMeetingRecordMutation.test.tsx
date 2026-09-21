@@ -4,7 +4,7 @@ import {
   fetchMeetingRecordDetail,
 } from '@aics/api-client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import type { PropsWithChildren } from 'react';
@@ -162,7 +162,10 @@ it.each([400, 403, 409, 503, 'network'] as const)(
       );
     });
     expect(request).toHaveBeenCalledTimes(1);
-    if (status === 409)
-      expect(result.current.error?.message).toContain('서버 데이터 충돌');
+    if (status === 409) {
+      await waitFor(() =>
+        expect(result.current.error?.message).toContain('서버 데이터 충돌'),
+      );
+    }
   },
 );
