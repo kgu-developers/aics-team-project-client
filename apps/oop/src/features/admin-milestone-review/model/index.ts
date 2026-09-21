@@ -29,6 +29,7 @@ export {
 } from './adminMilestoneSetupDraft';
 export {
   createAdminMilestoneCreateInput,
+  getAdminMilestoneTypeForTemplate,
   isSupportedMilestoneCreationTemplate,
 } from './adminMilestoneCreation';
 export {

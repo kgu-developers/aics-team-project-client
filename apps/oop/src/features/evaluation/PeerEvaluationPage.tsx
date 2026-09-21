@@ -31,6 +31,11 @@ import { useAuthStore } from '~/features/auth/authStore';
 import StudentContextState from '~/features/section/StudentContextState';
 import { useStudentContext } from '~/features/section/useStudentContext';
 
+import {
+  peerEvaluationProjectQuestions,
+  peerEvaluationTeammateQuestions,
+} from '~/course/peerEvaluationQuestions';
+
 import { getEvaluationErrorMessage } from './getEvaluationErrorMessage';
 import * as styles from './PeerEvaluationPage.css';
 import {
@@ -390,30 +395,30 @@ function PeerEvaluationForm({
               title='프로젝트 평가'
             >
               <TextArea
-                description='맡은 역할과 실제 수행 작업'
+                description={peerEvaluationProjectQuestions[0].description}
                 isDisabled={isReadOnly}
                 isRequired
-                label='자신의 역할 요약'
+                label={peerEvaluationProjectQuestions[0].label}
                 onChange={setSelfContribution}
                 rows={2}
                 value={selfContribution}
                 width='100%'
               />
               <TextArea
-                description='결과물/협업의 잘된 점·아쉬운 점'
+                description={peerEvaluationProjectQuestions[1].description}
                 isDisabled={isReadOnly}
                 isRequired
-                label='팀 프로젝트 평가'
+                label={peerEvaluationProjectQuestions[1].label}
                 onChange={setProjectReviewComment}
                 rows={2}
                 value={projectReviewComment}
                 width='100%'
               />
               <TextArea
-                description='소감이나 칭찬할 팀원의 기여'
+                description={peerEvaluationProjectQuestions[2].description}
                 isDisabled={isReadOnly}
                 isRequired
-                label='소감 또는 팀원 칭찬'
+                label={peerEvaluationProjectQuestions[2].label}
                 onChange={setReflectionComment}
                 rows={2}
                 value={reflectionComment}
@@ -531,7 +536,7 @@ function PeerEvaluationForm({
                 description='0~100 사이 정수'
                 isDisabled={isReadOnly}
                 isRequired
-                label='기여도 (%)'
+                label={peerEvaluationTeammateQuestions[0].label}
                 onChange={value => {
                   if (/^\d{0,3}$/.test(value) && Number(value || 0) <= 100)
                     setEditingDraft(current =>
@@ -545,7 +550,7 @@ function PeerEvaluationForm({
               <TextArea
                 isDisabled={isReadOnly}
                 isRequired
-                label='기여 내용'
+                label={peerEvaluationTeammateQuestions[1].label}
                 onChange={value =>
                   setEditingDraft(current =>
                     current
@@ -560,7 +565,7 @@ function PeerEvaluationForm({
               <TextInput
                 isDisabled={isReadOnly}
                 isRequired
-                label='한줄평가'
+                label={peerEvaluationTeammateQuestions[2].label}
                 onChange={value =>
                   setEditingDraft(current =>
                     current

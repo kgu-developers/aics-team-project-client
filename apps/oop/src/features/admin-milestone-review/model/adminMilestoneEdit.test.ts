@@ -164,4 +164,65 @@ describe('adminMilestoneEdit', () => {
       },
     });
   });
+
+  it('상호 평가는 양식 기간과 익명 여부를 같은 마일스톤 수정 요청으로 저장한다', () => {
+    const schedule = createAdminMilestoneSectionScheduleDraftFromDto(
+      {
+        dueAt: '2026-11-20T18:00:00',
+        evaluationClosesAt: '2026-11-20T18:00:00',
+        evaluationOpensAt: '2026-11-16T09:00:00',
+      },
+      'DRAFT',
+      false,
+      {
+        anonymous: true,
+        closesAt: '2026-11-20T18:00:00',
+        id: 10,
+        milestoneId: 20,
+        opensAt: '2026-11-16T09:00:00',
+        sectionId: 1,
+      },
+    );
+
+    expect(
+      createAdminMilestoneUpdateInput({
+        anonymous: false,
+        description: '상호 평가',
+        schedule,
+        title: '상호 평가',
+        type: 'PEER_EVALUATION',
+      }),
+    ).toMatchObject({
+      anonymous: false,
+      schedule: {
+        dueAt: '2026-11-20T18:00:00',
+        evaluationClosesAt: '2026-11-20T18:00:00',
+        evaluationOpensAt: '2026-11-16T09:00:00',
+      },
+      type: 'PEER_EVALUATION',
+    });
+  });
+
+  it('상호 평가 기간이 역전되면 저장 전에 막는다', () => {
+    const schedule = createAdminMilestoneSectionScheduleDraftFromDto(
+      {
+        dueAt: '2026-11-20T18:00:00',
+        evaluationClosesAt: '2026-11-20T18:00:00',
+        evaluationOpensAt: '2026-11-16T09:00:00',
+      },
+      'DRAFT',
+      false,
+    );
+    schedule.evaluationOpensAt = { date: '2026-11-21', time: '09:00' };
+
+    expect(() =>
+      createAdminMilestoneUpdateInput({
+        anonymous: true,
+        description: '상호 평가',
+        schedule,
+        title: '상호 평가',
+        type: 'PEER_EVALUATION',
+      }),
+    ).toThrow('평가 종료 일시는 평가 시작 일시보다 늦어야 합니다.');
+  });
 });

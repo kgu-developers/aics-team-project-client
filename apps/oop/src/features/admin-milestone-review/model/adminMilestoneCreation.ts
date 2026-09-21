@@ -24,6 +24,14 @@ export function isSupportedMilestoneCreationTemplate(
   return templateId in milestoneTypeByTemplateId;
 }
 
+export function getAdminMilestoneTypeForTemplate(
+  templateId: MilestoneTemplateId,
+): AdminMilestoneType | undefined {
+  return isSupportedMilestoneCreationTemplate(templateId)
+    ? milestoneTypeByTemplateId[templateId]
+    : undefined;
+}
+
 export function createAdminMilestoneCreateInput({
   description,
   schedule,

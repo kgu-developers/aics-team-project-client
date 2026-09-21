@@ -17,10 +17,20 @@ export type AdminMilestoneScheduleDto = {
   revisionUntil?: string | null;
 };
 
+export type AdminPeerEvaluationFormDto = {
+  anonymous: boolean;
+  closesAt: string;
+  id: number;
+  milestoneId: number;
+  opensAt: string;
+  sectionId: number;
+};
+
 export type AdminSectionMilestoneDto = {
   allowResubmissionBeforeDueAt: boolean;
   description?: string | null;
   id: number;
+  peerEvaluationForm?: AdminPeerEvaluationFormDto | null;
   schedule: AdminMilestoneScheduleDto;
   sectionId: number;
   status: AdminMilestoneStatus;
@@ -54,6 +64,7 @@ export type AdminMilestoneCreateInput = {
 /** 기존 마일스톤의 내용·제출 일정 변경 요청이다. 주차는 전용 일괄 변경 API로 관리한다. */
 export type AdminMilestoneUpdateInput = {
   allowResubmissionBeforeDueAt: boolean;
+  anonymous?: boolean;
   description?: string;
   schedule: AdminMilestoneScheduleRequest;
   title: string;

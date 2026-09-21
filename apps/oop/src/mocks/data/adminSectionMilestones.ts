@@ -86,6 +86,14 @@ const sectionOneMilestones: AdminSectionMilestoneDto[] = [
     allowResubmissionBeforeDueAt: false,
     description: '팀원 기여도와 프로젝트 평가를 제출합니다.',
     id: 105,
+    peerEvaluationForm: {
+      anonymous: true,
+      closesAt: '2026-12-14T14:59:00Z',
+      id: 501,
+      milestoneId: 105,
+      opensAt: '2026-12-08T00:00:00Z',
+      sectionId: 1,
+    },
     schedule: {
       dueAt: '2026-12-14T14:59:00Z',
       evaluationClosesAt: '2026-12-14T14:59:00Z',
