@@ -151,7 +151,10 @@ function PeerEvaluationQuestionsGuide() {
           <Heading level={3}>프로젝트 평가</Heading>
           <ul className={styles.evaluationQuestionList}>
             {peerEvaluationProjectQuestions.map(question => (
-              <li className={styles.evaluationQuestionItem} key={question.label}>
+              <li
+                className={styles.evaluationQuestionItem}
+                key={question.label}
+              >
                 <Text weight='medium'>{question.label}</Text>
                 <Text color='secondary' type='supporting'>
                   {question.description}
@@ -164,7 +167,10 @@ function PeerEvaluationQuestionsGuide() {
           <Heading level={3}>팀원별 기여도 평가</Heading>
           <ul className={styles.evaluationQuestionList}>
             {peerEvaluationTeammateQuestions.map(question => (
-              <li className={styles.evaluationQuestionItem} key={question.label}>
+              <li
+                className={styles.evaluationQuestionItem}
+                key={question.label}
+              >
                 <Text weight='medium'>{question.label}</Text>
                 <Text color='secondary' type='supporting'>
                   {question.description}
@@ -620,7 +626,9 @@ export default function AdminMilestoneSetupPage() {
       return;
     }
     if (isDuplicateCheckPending) {
-      setFormError('기존 마일스톤을 확인하는 중입니다. 잠시 후 다시 저장해주세요.');
+      setFormError(
+        '기존 마일스톤을 확인하는 중입니다. 잠시 후 다시 저장해주세요.',
+      );
       return;
     }
     if (isDuplicateCheckError) {
