@@ -1,3 +1,6 @@
+import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 export type AdminMilestoneSectionScheduleDraft = {
   allowLateSubmission: boolean;
   allowSubmissionEditBeforeDueAt: boolean;
@@ -54,6 +57,18 @@ export function toAdminMilestoneDateTime(
   return `${dateTime.date}T${dateTime.time}:00`;
 }
 
+export function toAdminMilestoneDateTimeDraft(
+  value: string | null | undefined,
+): { date: string; time: string } {
+  if (!value) return createDateTimeDraft();
+
+  const formatted = formatCourseScheduleDateTime(value);
+  const match = /^(\d{4}-\d{2}-\d{2})\/(\d{2}:\d{2})$/.exec(formatted);
+  return match
+    ? { date: match[1] ?? '', time: match[2] ?? '' }
+    : createDateTimeDraft();
+}
+
 export function assertAdminMilestoneScheduleOrder({
   dueAt,
   evaluationClosesAt,
@@ -69,10 +84,51 @@ export function assertAdminMilestoneScheduleOrder({
   opensAt?: string;
   revisionUntil?: string;
 }) {
-  if (opensAt && opensAt >= dueAt) {
+  const dueAtTime = seoulInstant(dueAt);
+  const opensAtTime = opensAt ? seoulInstant(opensAt) : undefined;
+  const lateSubmissionUntilTime = lateSubmissionUntil
+    ? seoulInstant(lateSubmissionUntil)
+    : undefined;
+  const revisionUntilTime = revisionUntil
+    ? seoulInstant(revisionUntil)
+    : undefined;
+  const evaluationOpensAtTime = evaluationOpensAt
+    ? seoulInstant(evaluationOpensAt)
+    : undefined;
+  const evaluationClosesAtTime = evaluationClosesAt
+    ? seoulInstant(evaluationClosesAt)
+    : undefined;
+
+  if (!Number.isFinite(dueAtTime)) {
+    throw new Error('마일스톤 일정을 확인해주세요.');
+  }
+  if (opensAtTime !== undefined && !Number.isFinite(opensAtTime)) {
+    throw new Error('마일스톤 일정을 확인해주세요.');
+  }
+  if (
+    lateSubmissionUntilTime !== undefined &&
+    !Number.isFinite(lateSubmissionUntilTime)
+  ) {
+    throw new Error('마일스톤 일정을 확인해주세요.');
+  }
+  if (revisionUntilTime !== undefined && !Number.isFinite(revisionUntilTime)) {
+    throw new Error('수정 마감 일시를 확인해주세요.');
+  }
+  if (
+    (evaluationOpensAtTime !== undefined &&
+      !Number.isFinite(evaluationOpensAtTime)) ||
+    (evaluationClosesAtTime !== undefined &&
+      !Number.isFinite(evaluationClosesAtTime))
+  ) {
+    throw new Error('평가 기간 일시를 확인해주세요.');
+  }
+  if (opensAtTime !== undefined && opensAtTime >= dueAtTime) {
     throw new Error('공개 시작 일시는 제출 마감 일시보다 앞서야 합니다.');
   }
-  if (lateSubmissionUntil && lateSubmissionUntil <= dueAt) {
+  if (
+    lateSubmissionUntilTime !== undefined &&
+    lateSubmissionUntilTime <= dueAtTime
+  ) {
     throw new Error('지각 제출 마감 일시는 제출 마감 일시보다 뒤여야 합니다.');
   }
   if (evaluationOpensAt && !evaluationClosesAt) {
@@ -82,24 +138,28 @@ export function assertAdminMilestoneScheduleOrder({
     throw new Error('평가 시작 일시를 입력해주세요.');
   }
   if (
-    evaluationOpensAt &&
-    evaluationClosesAt &&
-    evaluationOpensAt >= evaluationClosesAt
+    evaluationOpensAtTime !== undefined &&
+    evaluationClosesAtTime !== undefined &&
+    evaluationOpensAtTime >= evaluationClosesAtTime
   ) {
     throw new Error('평가 종료 일시는 평가 시작 일시보다 늦어야 합니다.');
   }
   // Mirrors the server's MilestoneSchedule rules so the form explains a
   // rejection instead of a bare 400.
-  if (evaluationOpensAt && evaluationOpensAt < dueAt) {
+  if (
+    evaluationOpensAtTime !== undefined &&
+    evaluationOpensAtTime < dueAtTime
+  ) {
     throw new Error(
       '평가 시작 일시는 제출 마감 일시 이후여야 합니다. 발표 평가는 자료 제출이 끝난 뒤에 시작됩니다.',
     );
   }
-  const submissionOrRevisionUntil = revisionUntil ?? lateSubmissionUntil;
+  const submissionOrRevisionUntilTime =
+    revisionUntilTime ?? lateSubmissionUntilTime;
   if (
-    evaluationOpensAt &&
-    submissionOrRevisionUntil &&
-    evaluationOpensAt < submissionOrRevisionUntil
+    evaluationOpensAtTime !== undefined &&
+    submissionOrRevisionUntilTime !== undefined &&
+    evaluationOpensAtTime < submissionOrRevisionUntilTime
   ) {
     throw new Error(
       '평가 시작 일시는 지각 제출·수정 마감 일시 이후여야 합니다.',

@@ -2,8 +2,6 @@ import type { StudentMilestoneResponse } from '@aics/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
-import { presentationEvaluationInstant } from '~/features/evaluation/presentationEvaluationDateTime';
-
 import { studentHomeKeys } from './studentHomeKeys';
 import { milestoneTime } from '../model/studentMilestoneSummary';
 
@@ -16,14 +14,8 @@ export function useMilestoneScheduleClock(
   const client = useQueryClient();
   const [now, setNow] = useState(Date.now);
   const boundaries = milestones
-    .flatMap(item =>
-      Object.entries(item.schedule).map(([field, value]) =>
-        item.type === 'PRESENTATION' &&
-        (field === 'evaluationOpensAt' || field === 'evaluationClosesAt')
-          ? presentationEvaluationInstant(value)
-          : milestoneTime(value),
-      ),
-    )
+    .flatMap(item => Object.values(item.schedule))
+    .map(milestoneTime)
     .filter(Number.isFinite)
     .sort((a, b) => a - b)
     .join(',');

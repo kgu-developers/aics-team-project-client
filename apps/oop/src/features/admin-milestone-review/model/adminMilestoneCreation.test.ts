@@ -80,14 +80,14 @@ describe('createAdminMilestoneCreateInput', () => {
     ).toMatchObject({
       schedule: {
         dueAt: '2026-09-10T23:59:00',
-        evaluationClosesAt: '2026-09-15T09:00:00',
-        evaluationOpensAt: '2026-09-11T09:00:00',
+        evaluationClosesAt: '2026-09-15T18:00:00',
+        evaluationOpensAt: '2026-09-11T18:00:00',
       },
       type: 'PRESENTATION',
     });
   });
 
-  it('서울 초안 순서로 검증한 뒤 발표 평가 기간만 UTC LocalDateTime으로 바꾼다', () => {
+  it('발표 평가 기간을 다른 마일스톤 일정과 같은 서울 LocalDateTime으로 보낸다', () => {
     const schedule = createAdminMilestoneSectionScheduleDraft();
     schedule.dueAt = { date: '2026-09-21', time: '12:00' };
     schedule.evaluationOpensAt = { date: '2026-09-21', time: '18:00' };
@@ -103,12 +103,12 @@ describe('createAdminMilestoneCreateInput', () => {
       }).schedule,
     ).toEqual({
       dueAt: '2026-09-21T12:00:00',
-      evaluationClosesAt: '2026-09-21T11:00:00',
-      evaluationOpensAt: '2026-09-21T09:00:00',
+      evaluationClosesAt: '2026-09-21T20:00:00',
+      evaluationOpensAt: '2026-09-21T18:00:00',
     });
   });
 
-  it('상호평가 생성은 UTC 변환 없이 같은 시작·종료 별칭과 종료 dueAt을 보낸다', () => {
+  it('상호평가 생성은 같은 시작·종료 별칭과 종료 dueAt을 보낸다', () => {
     const schedule = createAdminMilestoneSectionScheduleDraft();
     schedule.evaluationOpensAt = { date: '2026-12-08', time: '09:00' };
     schedule.evaluationClosesAt = { date: '2026-12-14', time: '23:59' };

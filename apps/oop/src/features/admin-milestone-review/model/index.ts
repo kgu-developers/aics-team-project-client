@@ -26,6 +26,7 @@ export {
   createAdminMilestoneSectionScheduleDraft,
   syncAdminMilestoneSectionScheduleDrafts,
   toAdminMilestoneDateTime,
+  toAdminMilestoneDateTimeDraft,
   type AdminMilestoneSectionScheduleDraft,
 } from './adminMilestoneSetupDraft';
 export {

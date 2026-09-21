@@ -9,11 +9,6 @@ import { ROUTES } from '~/app/constants/routes';
 import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { seoulInstant } from '~/shared/lib/seoulInstant';
 
-import {
-  formatPresentationEvaluationDateTime,
-  presentationEvaluationInstant,
-} from '~/features/evaluation/presentationEvaluationDateTime';
-
 const submissionLabels: Record<
   MyTeamMilestoneSubmissionResponse['status'],
   string
@@ -40,19 +35,14 @@ export function milestoneDate(value?: string | null) {
 }
 
 export function presentationEvaluationDate(value?: string | null) {
-  if (!value) return '일정 미정';
-  return formatPresentationEvaluationDateTime(value) ?? '일정 확인 필요';
+  return milestoneDate(value);
 }
 
 function getPresentationEvaluationWindow(milestone: StudentMilestoneResponse) {
   if (milestone.type !== 'PRESENTATION') return undefined;
 
-  const opensAt = presentationEvaluationInstant(
-    milestone.schedule.evaluationOpensAt,
-  );
-  const closesAt = presentationEvaluationInstant(
-    milestone.schedule.evaluationClosesAt,
-  );
+  const opensAt = milestoneTime(milestone.schedule.evaluationOpensAt);
+  const closesAt = milestoneTime(milestone.schedule.evaluationClosesAt);
   return Number.isFinite(opensAt) &&
     Number.isFinite(closesAt) &&
     opensAt < closesAt

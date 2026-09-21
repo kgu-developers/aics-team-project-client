@@ -1,14 +1,14 @@
-import { presentationEvaluationInstant } from './presentationEvaluationDateTime';
+import { seoulInstant } from '~/shared/lib/seoulInstant';
 
 /**
- * Presentation evaluation LocalDateTime values are stored against the
- * server's UTC clock; explicit zones still identify their own instant.
+ * The server's schedule LocalDateTime values use the course timezone,
+ * independent of the browser's host timezone.
  */
 export function formatEvaluationRemainingTime(
   closesAt: string,
   now = Date.now(),
 ) {
-  const closesAtTime = presentationEvaluationInstant(closesAt);
+  const closesAtTime = seoulInstant(closesAt);
   if (!Number.isFinite(closesAtTime)) return null;
 
   const remainingSeconds = Math.max(0, Math.ceil((closesAtTime - now) / 1000));

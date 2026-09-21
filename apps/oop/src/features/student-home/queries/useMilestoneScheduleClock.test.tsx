@@ -58,8 +58,8 @@ it('화면을 유지해도 정확한 마감 시각에 서버 제출 가능 상�
   unmount();
   expect(vi.getTimerCount()).toBeLessThanOrEqual(1); // Query cache GC may remain.
 });
-it('발표 평가의 UTC LocalDateTime 시작 경계에서 학생 홈을 갱신한다', async () => {
-  const evaluationOpensAt = Date.parse('2026-10-10T09:00:00Z');
+it('발표 평가의 서울 LocalDateTime 시작 경계에서 학생 홈을 갱신한다', async () => {
+  const evaluationOpensAt = Date.parse('2026-10-10T09:00:00+09:00');
   vi.setSystemTime(evaluationOpensAt - 1000);
   const presentation: StudentMilestoneResponse = {
     ...milestone,

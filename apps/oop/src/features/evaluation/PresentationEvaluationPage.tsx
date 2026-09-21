@@ -21,6 +21,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
+import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { PdfPreview } from '~/shared/ui/PdfPreview';
 
 import { useAuthStore } from '~/features/auth/authStore';
@@ -33,7 +34,6 @@ import {
 
 import { formatEvaluationRemainingTime } from './formatEvaluationRemainingTime';
 import { getEvaluationErrorMessage } from './getEvaluationErrorMessage';
-import { formatPresentationEvaluationDateTime } from './presentationEvaluationDateTime';
 import * as styles from './PresentationEvaluationPage.css';
 import {
   useEvaluationContextQuery,
@@ -91,7 +91,9 @@ function EvaluationTimer({
 
 /** Course times are fixed to Asia/Seoul regardless of the viewer's timezone. */
 function formatEvaluationWindow(opensAt: string, closesAt: string) {
-  return `${formatPresentationEvaluationDateTime(opensAt) ?? '-'} ~ ${formatPresentationEvaluationDateTime(closesAt) ?? '-'}`;
+  const formattedOpensAt = formatCourseScheduleDateTime(opensAt);
+  const formattedClosesAt = formatCourseScheduleDateTime(closesAt);
+  return `${formattedOpensAt === opensAt ? '-' : formattedOpensAt} ~ ${formattedClosesAt === closesAt ? '-' : formattedClosesAt}`;
 }
 
 function findPdfArtifact(team: MilestonePresentation) {

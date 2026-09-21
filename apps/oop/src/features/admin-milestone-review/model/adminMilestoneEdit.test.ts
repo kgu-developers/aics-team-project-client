@@ -273,8 +273,8 @@ describe('adminMilestoneEdit', () => {
     const schedule = createAdminMilestoneSectionScheduleDraftFromDto(
       {
         dueAt: '2026-11-20T18:00:00',
-        evaluationClosesAt: '2026-11-25T09:00:00',
-        evaluationOpensAt: '2026-11-21T09:00:00',
+        evaluationClosesAt: '2026-11-25T18:00:00',
+        evaluationOpensAt: '2026-11-21T18:00:00',
         opensAt: '2026-11-10T09:00:00',
       },
       'DRAFT',
@@ -301,10 +301,67 @@ describe('adminMilestoneEdit', () => {
     ).toMatchObject({
       schedule: {
         dueAt: '2026-11-20T18:00:00',
-        evaluationClosesAt: '2026-11-25T09:00:00',
-        evaluationOpensAt: '2026-11-21T09:00:00',
+        evaluationClosesAt: '2026-11-25T18:00:00',
+        evaluationOpensAt: '2026-11-21T18:00:00',
         opensAt: '2026-11-10T09:00:00',
       },
     });
+  });
+
+  it('명시적 오프셋 일정은 서울 시각으로 복원하고 LocalDateTime으로 저장한다', () => {
+    const schedule = createAdminMilestoneSectionScheduleDraftFromDto(
+      {
+        dueAt: '2026-09-21T09:00:00Z',
+        evaluationClosesAt: '2026-09-21T11:00:00Z',
+        evaluationOpensAt: '2026-09-21T10:00:00Z',
+        opensAt: '2026-09-20T23:00:00Z',
+      },
+      'DRAFT',
+      false,
+      'PRESENTATION',
+    );
+
+    expect(schedule).toMatchObject({
+      dueAt: { date: '2026-09-21', time: '18:00' },
+      evaluationClosesAt: { date: '2026-09-21', time: '20:00' },
+      evaluationOpensAt: { date: '2026-09-21', time: '19:00' },
+      opensAt: { date: '2026-09-21', time: '08:00' },
+    });
+    expect(
+      createAdminMilestoneUpdateInput({
+        description: '',
+        schedule,
+        title: '발표',
+        type: 'PRESENTATION',
+      }).schedule,
+    ).toEqual({
+      dueAt: '2026-09-21T18:00:00',
+      evaluationClosesAt: '2026-09-21T20:00:00',
+      evaluationOpensAt: '2026-09-21T19:00:00',
+      opensAt: '2026-09-21T08:00:00',
+    });
+  });
+
+  it('명시적 오프셋 수정 마감과 서울 평가 시작은 실제 시각으로 비교한다', () => {
+    const schedule = createAdminMilestoneSectionScheduleDraftFromDto(
+      {
+        dueAt: '2026-09-21T18:00:00',
+        evaluationClosesAt: '2026-09-21T20:00:00',
+        evaluationOpensAt: '2026-09-21T19:00:00',
+        revisionUntil: '2026-09-21T10:30:00Z',
+      },
+      'DRAFT',
+      false,
+      'PRESENTATION',
+    );
+
+    expect(() =>
+      createAdminMilestoneUpdateInput({
+        description: '',
+        schedule,
+        title: '발표',
+        type: 'PRESENTATION',
+      }),
+    ).toThrow('지각 제출·수정 마감 일시 이후여야 합니다');
   });
 });

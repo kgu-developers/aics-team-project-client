@@ -16,31 +16,16 @@ import {
   formatAdminMilestoneDate,
   formatAdminMilestoneRequestError,
   toAdminMilestoneDateTime,
+  toAdminMilestoneDateTimeDraft,
   toAdminMilestoneRequestError,
 } from '~/features/admin-milestone-review/model';
 import { useUpdateAdminSectionMilestoneEvaluationWindowMutation } from '~/features/admin-milestone-review/queries';
-import {
-  toPresentationEvaluationPrerequisiteDateTime,
-  toPresentationEvaluationSeoulDateTimeInput,
-  toPresentationEvaluationServerDateTime,
-} from '~/features/evaluation/presentationEvaluationDateTime';
 
 import * as styles from './AdminMilestoneEvaluationWindowDialog.css';
 
 type DateTimeDraft = { date: string; time: string };
 type DateValue =
   `${number}${number}${number}${number}-${number}${number}-${number}${number}`;
-
-function toDraft(value: string | null | undefined): DateTimeDraft {
-  const match = value ? /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(value) : null;
-  return match
-    ? { date: match[1] ?? '', time: match[2] ?? '' }
-    : { date: '', time: '' };
-}
-
-function toEvaluationDraft(value: string | null | undefined) {
-  return toDraft(toPresentationEvaluationSeoulDateTimeInput(value));
-}
 
 function DateTimeFields({
   label,
@@ -92,10 +77,10 @@ export default function AdminMilestoneEvaluationWindowDialog({
 }) {
   const mutation = useUpdateAdminSectionMilestoneEvaluationWindowMutation();
   const [opensAt, setOpensAt] = useState(() =>
-    toEvaluationDraft(milestone.schedule.evaluationOpensAt),
+    toAdminMilestoneDateTimeDraft(milestone.schedule.evaluationOpensAt),
   );
   const [closesAt, setClosesAt] = useState(() =>
-    toEvaluationDraft(milestone.schedule.evaluationClosesAt),
+    toAdminMilestoneDateTimeDraft(milestone.schedule.evaluationClosesAt),
   );
   const [formError, setFormError] = useState<string>();
   const hasExistingWindow = Boolean(
@@ -128,30 +113,14 @@ export default function AdminMilestoneEvaluationWindowDialog({
       setFormError('평가 시작·종료 일시를 모두 입력해주세요.');
       return;
     }
-    const dueAt = toPresentationEvaluationPrerequisiteDateTime(
-      milestone.schedule.dueAt,
-    );
-    const lateSubmissionUntil = toPresentationEvaluationPrerequisiteDateTime(
-      milestone.schedule.lateSubmissionUntil,
-    );
-    const revisionUntil = toPresentationEvaluationPrerequisiteDateTime(
-      milestone.schedule.revisionUntil,
-    );
-    if (
-      !dueAt ||
-      (milestone.schedule.lateSubmissionUntil && !lateSubmissionUntil) ||
-      (milestone.schedule.revisionUntil && !revisionUntil)
-    ) {
-      setFormError('마일스톤 일정을 확인해주세요.');
-      return;
-    }
     try {
       assertAdminMilestoneScheduleOrder({
-        dueAt,
+        dueAt: milestone.schedule.dueAt ?? '',
         evaluationClosesAt: evaluationClosesAtDraft,
         evaluationOpensAt: evaluationOpensAtDraft,
-        lateSubmissionUntil,
-        revisionUntil,
+        lateSubmissionUntil:
+          milestone.schedule.lateSubmissionUntil ?? undefined,
+        revisionUntil: milestone.schedule.revisionUntil ?? undefined,
       });
     } catch (error) {
       setFormError(
@@ -159,17 +128,10 @@ export default function AdminMilestoneEvaluationWindowDialog({
       );
       return;
     }
-    const evaluationOpensAt = toPresentationEvaluationServerDateTime(
-      evaluationOpensAtDraft,
-    );
-    const evaluationClosesAt = toPresentationEvaluationServerDateTime(
-      evaluationClosesAtDraft,
-    );
-    if (!evaluationOpensAt || !evaluationClosesAt) {
-      setFormError('평가 기간 일시를 확인해주세요.');
-      return;
-    }
-    void submit({ evaluationClosesAt, evaluationOpensAt });
+    void submit({
+      evaluationClosesAt: evaluationClosesAtDraft,
+      evaluationOpensAt: evaluationOpensAtDraft,
+    });
   }
 
   return (

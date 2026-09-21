@@ -567,7 +567,7 @@ it('reconciles a committed peer form after a lost response and retries with the 
   expect(detailReads).toBe(1);
 });
 
-it('creates a presentation and patches its evaluation window with UTC LocalDateTime values', async () => {
+it('creates a presentation and patches its evaluation window with Seoul LocalDateTime values', async () => {
   const milestoneBodies: unknown[] = [];
   const evaluationWindowBodies: unknown[] = [];
   server.use(
@@ -611,16 +611,16 @@ it('creates a presentation and patches its evaluation window with UTC LocalDateT
     expect.objectContaining({
       schedule: {
         dueAt: '2026-09-21T12:00:00',
-        evaluationClosesAt: '2026-09-21T11:00:00',
-        evaluationOpensAt: '2026-09-21T09:00:00',
+        evaluationClosesAt: '2026-09-21T20:00:00',
+        evaluationOpensAt: '2026-09-21T18:00:00',
       },
       type: 'PRESENTATION',
     }),
   ]);
   expect(evaluationWindowBodies).toEqual([
     {
-      evaluationClosesAt: '2026-09-21T11:00:00',
-      evaluationOpensAt: '2026-09-21T09:00:00',
+      evaluationClosesAt: '2026-09-21T20:00:00',
+      evaluationOpensAt: '2026-09-21T18:00:00',
     },
   ]);
 });

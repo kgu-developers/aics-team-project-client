@@ -146,7 +146,7 @@ function fill(
 }
 
 describe('AdminMilestoneDetailPage 발표 평가 기간', () => {
-  it('UTC LocalDateTime 응답을 상세와 전용 다이얼로그에서 서울 시각으로 보여준다', async () => {
+  it('서울 LocalDateTime 응답을 상세와 전용 다이얼로그에서 같은 시각으로 보여준다', async () => {
     const milestone = getAdminSectionMilestoneFixture('1', '106')!;
     server.use(
       http.get(
@@ -165,8 +165,8 @@ describe('AdminMilestoneDetailPage 발표 평가 기간', () => {
     const user = userEvent.setup();
     renderPage('106');
 
-    expect(await screen.findByText('2026-11-14/18:00')).toBeInTheDocument();
-    expect(screen.getByText('2026-11-21/03:00')).toBeInTheDocument();
+    expect(await screen.findByText('2026-11-14/09:00')).toBeInTheDocument();
+    expect(screen.getByText('2026-11-20/18:00')).toBeInTheDocument();
     await user.click(
       screen.getByRole('button', { name: '발표 평가 기간 설정' }),
     );
@@ -177,13 +177,54 @@ describe('AdminMilestoneDetailPage 발표 평가 기간', () => {
       '2026-11-14',
     );
     expect(within(dialog).getByLabelText('평가 시작 시간')).toHaveValue(
-      '18:00',
+      '09:00',
     );
     expect(within(dialog).getByLabelText('평가 종료 날짜')).toHaveValue(
-      '2026-11-21',
+      '2026-11-20',
     );
     expect(within(dialog).getByLabelText('평가 종료 시간')).toHaveValue(
-      '03:00',
+      '18:00',
+    );
+  });
+
+  it('명시적 오프셋 응답도 상세와 전용 다이얼로그에서 같은 서울 시각으로 보여준다', async () => {
+    const milestone = getAdminSectionMilestoneFixture('1', '106')!;
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '106')}`,
+        () =>
+          HttpResponse.json({
+            ...milestone,
+            schedule: {
+              ...milestone.schedule,
+              evaluationClosesAt: '2026-11-20T09:00:00Z',
+              evaluationOpensAt: '2026-11-14T00:00:00Z',
+            },
+          }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage('106');
+
+    expect(await screen.findByText('2026-11-14/09:00')).toBeInTheDocument();
+    expect(screen.getByText('2026-11-20/18:00')).toBeInTheDocument();
+    await user.click(
+      screen.getByRole('button', { name: '발표 평가 기간 설정' }),
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: '발표 평가 기간 설정',
+    });
+    expect(within(dialog).getByLabelText('평가 시작 날짜')).toHaveValue(
+      '2026-11-14',
+    );
+    expect(within(dialog).getByLabelText('평가 시작 시간')).toHaveValue(
+      '09:00',
+    );
+    expect(within(dialog).getByLabelText('평가 종료 날짜')).toHaveValue(
+      '2026-11-20',
+    );
+    expect(within(dialog).getByLabelText('평가 종료 시간')).toHaveValue(
+      '18:00',
     );
   });
 
@@ -217,8 +258,8 @@ describe('AdminMilestoneDetailPage 발표 평가 기간', () => {
     await waitFor(() =>
       expect(patches).toEqual([
         {
-          evaluationClosesAt: '2026-11-20T09:00:00',
-          evaluationOpensAt: '2026-11-14T00:00:00',
+          evaluationClosesAt: '2026-11-20T18:00:00',
+          evaluationOpensAt: '2026-11-14T09:00:00',
         },
       ]),
     );
@@ -239,8 +280,9 @@ describe('AdminMilestoneDetailPage 발표 평가 기간', () => {
     const dialog = await screen.findByRole('dialog', {
       name: '발표 평가 기간 설정',
     });
-    // dueAt of milestone 106 is 2026-11-13T14:59:00Z (= 11-13 23:59 KST)
-    fill(dialog, ['2026-11-10', '09:00'], ['2026-11-20', '18:00']);
+    // dueAt of milestone 106 is 2026-11-13T14:59:00Z (= 11-13 23:59 KST).
+    // Raw-string ordering would incorrectly accept this 20:00 Seoul start.
+    fill(dialog, ['2026-11-13', '20:00'], ['2026-11-20', '18:00']);
     await user.click(within(dialog).getByRole('button', { name: '저장' }));
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
@@ -249,12 +291,12 @@ describe('AdminMilestoneDetailPage 발표 평가 기간', () => {
   });
 
   it.each([
-    ['제출 마감', 'dueAt'],
-    ['지각 제출 마감', 'lateSubmissionUntil'],
-    ['수정 마감', 'revisionUntil'],
+    ['제출 마감', 'dueAt', '마일스톤 일정을 확인해주세요.'],
+    ['지각 제출 마감', 'lateSubmissionUntil', '마일스톤 일정을 확인해주세요.'],
+    ['수정 마감', 'revisionUntil', '수정 마감 일시를 확인해주세요.'],
   ] as const)(
     '달력에 없는 기존 %s 일시면 평가 기간 요청을 보내지 않는다',
-    async (_label, field) => {
+    async (_label, field, message) => {
       const milestone = getAdminSectionMilestoneFixture('1', '106')!;
       let patchCount = 0;
       server.use(
@@ -289,7 +331,7 @@ describe('AdminMilestoneDetailPage 발표 평가 기간', () => {
       await user.click(within(dialog).getByRole('button', { name: '저장' }));
 
       expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-        '마일스톤 일정을 확인해주세요.',
+        message,
       );
       expect(patchCount).toBe(0);
     },

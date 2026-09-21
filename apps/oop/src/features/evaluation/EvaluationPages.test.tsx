@@ -442,7 +442,7 @@ describe('KD3-92 학생 평가 화면', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('오프셋 없는 UTC 평가 일정은 타이머와 같은 서울 시각 경계로 표시한다', async () => {
+  it('오프셋 없는 평가 일정은 타이머와 같은 서울 벽시각으로 표시한다', async () => {
     const overview = getMyTeamEvaluations(demoStudent.studentNumber);
     server.use(
       http.get(
@@ -459,7 +459,7 @@ describe('KD3-92 학생 평가 화면', () => {
     renderPresentationPage();
 
     expect(
-      await screen.findByText('2026-11-10/23:00 ~ 2026-11-11/01:00'),
+      await screen.findByText('2026-11-10/14:00 ~ 2026-11-10/16:00'),
     ).toBeInTheDocument();
     expect(screen.getByRole('timer')).toHaveTextContent('평가 마감까지');
   });

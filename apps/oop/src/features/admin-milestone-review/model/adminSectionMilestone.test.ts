@@ -33,9 +33,9 @@ describe('adminSectionMilestone', () => {
     expect(getAdminMilestoneStatusLabel('CLOSED')).toBe('마감');
   });
 
-  it('발표 평가의 오프셋 없는 UTC LocalDateTime을 서울 시각으로 표시한다', () => {
+  it('발표 평가의 오프셋 없는 LocalDateTime을 서울 벽시각 그대로 표시한다', () => {
     expect(formatAdminPresentationEvaluationDate('2026-09-21T09:00:00')).toBe(
-      '2026-09-21/18:00',
+      '2026-09-21/09:00',
     );
     expect(formatAdminPresentationEvaluationDate('2026-09-21T09:00:00Z')).toBe(
       '2026-09-21/18:00',

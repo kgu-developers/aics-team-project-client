@@ -60,7 +60,6 @@ import {
   type SubmitAdminSectionMilestonesResult,
 } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
-import { toPresentationEvaluationServerDateTime } from '~/features/evaluation/presentationEvaluationDateTime';
 
 import * as styles from './AdminMilestoneSetupPage.css';
 
@@ -585,12 +584,8 @@ export default function AdminMilestoneSetupPage() {
               const closesAtDraft = schedule
                 ? toAdminMilestoneDateTime(schedule.evaluationClosesAt)
                 : undefined;
-              const evaluationOpensAt = opensAtDraft
-                ? toPresentationEvaluationServerDateTime(opensAtDraft)
-                : undefined;
-              const evaluationClosesAt = closesAtDraft
-                ? toPresentationEvaluationServerDateTime(closesAtDraft)
-                : undefined;
+              const evaluationOpensAt = opensAtDraft;
+              const evaluationClosesAt = closesAtDraft;
 
               if (
                 !evaluationOpensAt ||

@@ -213,13 +213,13 @@ describe('발표 자료와 평가 구분', () => {
     type: 'PRESENTATION',
     schedule: {
       dueAt: '2026-09-10T00:00:00',
-      evaluationOpensAt: '2026-09-10T00:00:00',
+      evaluationOpensAt: '2026-09-10T09:00:00',
       evaluationClosesAt: '2026-09-17T23:59:00',
     },
   };
-  it('발표 평가 UTC LocalDateTime은 서울 표시와 비교에서 같은 순간을 쓴다', () => {
+  it('발표 평가 LocalDateTime은 서울 표시와 비교에서 같은 벽시각을 쓴다', () => {
     expect(presentationEvaluationDate('2026-09-21T09:00:00')).toBe(
-      '2026-09-21/18:00',
+      '2026-09-21/09:00',
     );
     expect(presentationEvaluationDate('invalid')).toBe('일정 확인 필요');
   });
@@ -299,7 +299,7 @@ describe('발표 자료와 평가 구분', () => {
       expect(summary.rows[0]?.actionTo).toBe(
         hasCta ? '/student/presentation-evaluation' : undefined,
       );
-      expect(summary.dueDate).toBe('~ 2026-09-18/08:59');
+      expect(summary.dueDate).toBe('~ 2026-09-17/23:59');
     },
   );
 
@@ -334,7 +334,7 @@ describe('발표 자료와 평가 구분', () => {
     expect(summary.statusLabel).toBe('평가 완료');
     expect(summary.currentStepLabel).toBe('발표 평가');
     expect(summary.period).toBe(
-      '평가 기간 : 2026-09-20/09:00 ~ 2026-09-28/08:59',
+      '평가 기간 : 2026-09-20/00:00 ~ 2026-09-27/23:59',
     );
     expect(summary.body?.kind).toBe('presentation-evaluation');
   });

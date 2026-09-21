@@ -3,8 +3,6 @@ import type {
   AdminMilestoneType,
 } from '@aics/api-client';
 
-import { toPresentationEvaluationServerDateTime } from '~/features/evaluation/presentationEvaluationDateTime';
-
 import {
   assertAdminMilestoneScheduleOrder,
   type AdminMilestoneSectionScheduleDraft,
@@ -51,7 +49,6 @@ export function createAdminMilestoneCreateInput({
     schedule.evaluationClosesAt,
   );
   const isPeerEvaluation = templateId === 'peer-review';
-  const isPresentation = templateId === 'presentation-submit';
   const dueAt = isPeerEvaluation
     ? evaluationClosesAtDraft
     : toAdminMilestoneDateTime(schedule.dueAt);
@@ -105,29 +102,17 @@ export function createAdminMilestoneCreateInput({
     opensAt,
   });
 
-  const evaluationOpensAt = isPresentation
-    ? evaluationOpensAtDraft &&
-      toPresentationEvaluationServerDateTime(evaluationOpensAtDraft)
-    : evaluationOpensAtDraft;
-  const evaluationClosesAt = isPresentation
-    ? evaluationClosesAtDraft &&
-      toPresentationEvaluationServerDateTime(evaluationClosesAtDraft)
-    : evaluationClosesAtDraft;
-  if (
-    isPresentation &&
-    ((evaluationOpensAtDraft && !evaluationOpensAt) ||
-      (evaluationClosesAtDraft && !evaluationClosesAt))
-  ) {
-    throw new Error('평가 기간 일시를 확인해주세요.');
-  }
-
   return {
     allowResubmissionBeforeDueAt: schedule.allowSubmissionEditBeforeDueAt,
     description: description.trim() || undefined,
     schedule: {
       dueAt,
-      ...(evaluationClosesAt ? { evaluationClosesAt } : {}),
-      ...(evaluationOpensAt ? { evaluationOpensAt } : {}),
+      ...(evaluationClosesAtDraft
+        ? { evaluationClosesAt: evaluationClosesAtDraft }
+        : {}),
+      ...(evaluationOpensAtDraft
+        ? { evaluationOpensAt: evaluationOpensAtDraft }
+        : {}),
       ...(opensAt ? { opensAt } : {}),
       ...(lateSubmissionUntil ? { lateSubmissionUntil } : {}),
     },

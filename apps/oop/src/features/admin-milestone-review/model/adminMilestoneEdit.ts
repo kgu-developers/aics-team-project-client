@@ -6,29 +6,12 @@ import type {
 } from '@aics/api-client';
 
 import {
-  toPresentationEvaluationPrerequisiteDateTime,
-  toPresentationEvaluationSeoulDateTimeInput,
-  toPresentationEvaluationServerDateTime,
-} from '~/features/evaluation/presentationEvaluationDateTime';
-
-import {
   assertAdminMilestoneScheduleOrder,
   createAdminMilestoneSectionScheduleDraft,
   toAdminMilestoneDateTime,
+  toAdminMilestoneDateTimeDraft,
   type AdminMilestoneSectionScheduleDraft,
 } from './adminMilestoneSetupDraft';
-
-function toDateTimeDraft(value: string | null | undefined): {
-  date: string;
-  time: string;
-} {
-  if (!value) return { date: '', time: '' };
-
-  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(value);
-  return match
-    ? { date: match[1] ?? '', time: match[2] ?? '' }
-    : { date: '', time: '' };
-}
 
 export function createAdminMilestoneSectionScheduleDraftFromDto(
   schedule: AdminMilestoneScheduleDto,
@@ -38,35 +21,31 @@ export function createAdminMilestoneSectionScheduleDraftFromDto(
   peerEvaluationForm?: AdminPeerEvaluationFormDto | null,
 ): AdminMilestoneSectionScheduleDraft {
   const isPeerEvaluation = type === 'PEER_EVALUATION';
-  const evaluationClosesAt =
-    type === 'PRESENTATION'
-      ? toPresentationEvaluationSeoulDateTimeInput(schedule.evaluationClosesAt)
-      : isPeerEvaluation
-        ? (peerEvaluationForm?.closesAt ??
-          schedule.evaluationClosesAt ??
-          schedule.dueAt)
-        : schedule.evaluationClosesAt;
-  const evaluationOpensAt =
-    type === 'PRESENTATION'
-      ? toPresentationEvaluationSeoulDateTimeInput(schedule.evaluationOpensAt)
-      : isPeerEvaluation
-        ? (peerEvaluationForm?.opensAt ??
-          schedule.evaluationOpensAt ??
-          schedule.opensAt)
-        : schedule.evaluationOpensAt;
+  const evaluationClosesAt = isPeerEvaluation
+    ? (peerEvaluationForm?.closesAt ??
+      schedule.evaluationClosesAt ??
+      schedule.dueAt)
+    : schedule.evaluationClosesAt;
+  const evaluationOpensAt = isPeerEvaluation
+    ? (peerEvaluationForm?.opensAt ??
+      schedule.evaluationOpensAt ??
+      schedule.opensAt)
+    : schedule.evaluationOpensAt;
 
   return {
     ...createAdminMilestoneSectionScheduleDraft(),
     allowLateSubmission: Boolean(schedule.lateSubmissionUntil),
     allowSubmissionEditBeforeDueAt: allowResubmissionBeforeDueAt,
-    dueAt: toDateTimeDraft(
+    dueAt: toAdminMilestoneDateTimeDraft(
       isPeerEvaluation ? evaluationClosesAt : schedule.dueAt,
     ),
-    evaluationClosesAt: toDateTimeDraft(evaluationClosesAt),
-    evaluationOpensAt: toDateTimeDraft(evaluationOpensAt),
+    evaluationClosesAt: toAdminMilestoneDateTimeDraft(evaluationClosesAt),
+    evaluationOpensAt: toAdminMilestoneDateTimeDraft(evaluationOpensAt),
     isPublished: status === 'PUBLISHED',
-    lateSubmissionUntil: toDateTimeDraft(schedule.lateSubmissionUntil),
-    opensAt: toDateTimeDraft(
+    lateSubmissionUntil: toAdminMilestoneDateTimeDraft(
+      schedule.lateSubmissionUntil,
+    ),
+    opensAt: toAdminMilestoneDateTimeDraft(
       isPeerEvaluation ? evaluationOpensAt : schedule.opensAt,
     ),
     revisionUntil: schedule.revisionUntil ?? null,
@@ -134,60 +113,26 @@ export function createAdminMilestoneUpdateInput({
   }
 
   const revisionUntil = schedule.revisionUntil ?? undefined;
-  const isPresentation = type === 'PRESENTATION';
-  const dueAtForComparison = isPresentation
-    ? toPresentationEvaluationPrerequisiteDateTime(dueAt)
-    : dueAt;
-  const lateSubmissionUntilForComparison =
-    isPresentation && lateSubmissionUntil
-      ? toPresentationEvaluationPrerequisiteDateTime(lateSubmissionUntil)
-      : lateSubmissionUntil;
-  const revisionUntilForComparison =
-    isPresentation && revisionUntil
-      ? toPresentationEvaluationPrerequisiteDateTime(revisionUntil)
-      : revisionUntil;
-  if (
-    isPresentation &&
-    (!dueAtForComparison ||
-      (lateSubmissionUntil && !lateSubmissionUntilForComparison))
-  ) {
-    throw new Error('마일스톤 일정을 확인해주세요.');
-  }
-  if (isPresentation && revisionUntil && !revisionUntilForComparison) {
-    throw new Error('수정 마감 일시를 확인해주세요.');
-  }
   assertAdminMilestoneScheduleOrder({
-    dueAt: dueAtForComparison ?? dueAt,
+    dueAt,
     evaluationClosesAt: evaluationClosesAtDraft,
     evaluationOpensAt: evaluationOpensAtDraft,
-    lateSubmissionUntil: lateSubmissionUntilForComparison,
+    lateSubmissionUntil,
     opensAt,
-    revisionUntil: revisionUntilForComparison,
+    revisionUntil,
   });
-
-  const evaluationOpensAt = isPresentation
-    ? evaluationOpensAtDraft &&
-      toPresentationEvaluationServerDateTime(evaluationOpensAtDraft)
-    : evaluationOpensAtDraft;
-  const evaluationClosesAt = isPresentation
-    ? evaluationClosesAtDraft &&
-      toPresentationEvaluationServerDateTime(evaluationClosesAtDraft)
-    : evaluationClosesAtDraft;
-  if (
-    isPresentation &&
-    ((evaluationOpensAtDraft && !evaluationOpensAt) ||
-      (evaluationClosesAtDraft && !evaluationClosesAt))
-  ) {
-    throw new Error('평가 기간 일시를 확인해주세요.');
-  }
 
   return {
     allowResubmissionBeforeDueAt: schedule.allowSubmissionEditBeforeDueAt,
     description: description.trim() || undefined,
     schedule: {
       dueAt,
-      ...(evaluationClosesAt ? { evaluationClosesAt } : {}),
-      ...(evaluationOpensAt ? { evaluationOpensAt } : {}),
+      ...(evaluationClosesAtDraft
+        ? { evaluationClosesAt: evaluationClosesAtDraft }
+        : {}),
+      ...(evaluationOpensAtDraft
+        ? { evaluationOpensAt: evaluationOpensAtDraft }
+        : {}),
       ...(opensAt ? { opensAt } : {}),
       ...(lateSubmissionUntil ? { lateSubmissionUntil } : {}),
       ...(revisionUntil ? { revisionUntil } : {}),

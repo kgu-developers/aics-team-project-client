@@ -260,14 +260,14 @@ describe('학생 마일스톤 순차 진행', () => {
     expect(result.defaultOpenId).toBe('1');
   });
 
-  it('발표 평가의 UTC LocalDateTime 경계를 서울의 같은 순간에 펼친다', () => {
+  it('발표 평가의 서울 LocalDateTime 시작 경계에서 펼친다', () => {
     const presentation = {
       ...milestone(1, '2026-09-01T00:00:00+09:00', '2026-09-30T23:59:00+09:00'),
       type: 'PRESENTATION' as const,
       schedule: {
         dueAt: '2026-09-30T23:59:00+09:00',
-        evaluationOpensAt: '2026-10-10T03:00:00',
-        evaluationClosesAt: '2026-10-10T04:00:00',
+        evaluationOpensAt: '2026-10-10T12:00:00',
+        evaluationClosesAt: '2026-10-10T13:00:00',
       },
     };
 

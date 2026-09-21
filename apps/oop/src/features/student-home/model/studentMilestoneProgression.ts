@@ -4,8 +4,6 @@ import type {
   StudentMilestoneResponse,
 } from '@aics/core';
 
-import { presentationEvaluationInstant } from '~/features/evaluation/presentationEvaluationDateTime';
-
 import { milestoneTime } from './studentMilestoneSummary';
 
 type ProgressionItem = {
@@ -54,10 +52,10 @@ function isInScheduleWindow(
     milestone.schedule.evaluationClosesAt,
   );
   const opensAt = hasEvaluationWindow
-    ? presentationEvaluationInstant(milestone.schedule.evaluationOpensAt)
+    ? milestoneTime(milestone.schedule.evaluationOpensAt)
     : milestoneTime(milestone.schedule.opensAt);
   const closesAt = hasEvaluationWindow
-    ? presentationEvaluationInstant(milestone.schedule.evaluationClosesAt)
+    ? milestoneTime(milestone.schedule.evaluationClosesAt)
     : milestoneTime(milestone.schedule.dueAt);
 
   if (
