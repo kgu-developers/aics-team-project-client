@@ -29,10 +29,7 @@ import {
   lockStudentHomeMilestone,
   resolveStudentMilestoneProgression,
 } from '~/features/student-home/model/studentMilestoneProgression';
-import {
-  isPresentationEvaluation,
-  studentMilestoneSummary,
-} from '~/features/student-home/model/studentMilestoneSummary';
+import { studentMilestoneSummary } from '~/features/student-home/model/studentMilestoneSummary';
 import {
   useLiveStudentHomeQuery,
   useMilestoneScheduleClock,
@@ -179,16 +176,14 @@ export default function StudentHomePage() {
       submission?.isSuccess ? submission.data : undefined,
       now,
     );
-    if (isPresentationEvaluation(milestone, now)) {
-      if (summary.body?.kind === 'presentation-evaluation') {
-        const project =
-          home.project.state.status === 'ready' ? home.project.data : undefined;
-        summary.body.project = {
-          title: project?.title || '프로젝트 정보',
-          description:
-            project?.description || '프로젝트 정보를 확인할 수 없어요.',
-        };
-      }
+    if (summary.body?.kind === 'presentation-evaluation') {
+      const project =
+        home.project.state.status === 'ready' ? home.project.data : undefined;
+      summary.body.project = {
+        title: project?.title || '프로젝트 정보',
+        description:
+          project?.description || '프로젝트 정보를 확인할 수 없어요.',
+      };
       return summary;
     }
     if (milestone.type === 'PEER_EVALUATION') {

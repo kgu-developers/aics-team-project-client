@@ -223,6 +223,7 @@ export default function MilestoneCard({
                     {...topicApi.scope}
                     participationBusy={topicApi.busy}
                     className={styles.rowAction}
+                    isDisabled={!canAct || row.actionDisabled}
                     onFinalized={() => {
                       void navigate({
                         search: { returnTo: 'proposal' },
@@ -322,7 +323,7 @@ export default function MilestoneCard({
               row.id === 'final-report-submission'
                 ? submissionTargets[milestone.id]
                 : undefined;
-            return target && canAct ? (
+            return target && canAct && !row.actionDisabled ? (
               <FinalReportSubmissionAction
                 key={row.id}
                 target={target}

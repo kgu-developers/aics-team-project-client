@@ -48,7 +48,15 @@ const milestone: StudentHomeMilestone = {
     },
   ],
 };
-function setup({ votes = 3, studentNumber = '20260001' } = {}) {
+function setup({
+  votes = 3,
+  studentNumber = '20260001',
+  cardMilestone = milestone,
+}: {
+  votes?: number;
+  studentNumber?: string;
+  cardMilestone?: StudentHomeMilestone;
+} = {}) {
   useAuthStore.getState().setAccessToken(demoAccessToken);
   let count = votes;
   server.use(
@@ -79,7 +87,7 @@ function setup({ votes = 3, studentNumber = '20260001' } = {}) {
           studentNumber={studentNumber}
           eligibility={{ status: 'open' }}
         >
-          <MilestoneCard milestone={milestone} isOpen />
+          <MilestoneCard milestone={cardMilestone} isOpen />
         </TopicApiProvider>
       </QueryClientProvider>
     </AstryxThemeProvider>,
@@ -157,6 +165,21 @@ it('팀장에게 전원 투표 뒤 기존 CTA 한 개만 확정으로 전환하�
       to: '/student/editor/proposal/team-info',
     }),
   );
+});
+it('상위 단계 잠금은 로컬 확정 조건을 충족한 주제 CTA에도 유지된다', async () => {
+  setup({
+    cardMilestone: {
+      ...milestone,
+      rows: milestone.rows.map(row => ({ ...row, actionDisabled: true })),
+    },
+  });
+  await waitFor(() => expect(client.isFetching()).toBe(0));
+  const action = screen.getByRole('button', { name: '주제 확정' });
+  expect(action).toBeDisabled();
+  await userEvent.click(action);
+  expect(
+    screen.queryByRole('dialog', { name: '팀 주제 확정' }),
+  ).not.toBeInTheDocument();
 });
 it('팀원은 전원 투표 상태에서도 후보 추가를 유지한다', async () => {
   setup({ studentNumber: '20260003' });

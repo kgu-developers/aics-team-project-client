@@ -17,9 +17,9 @@ describe('adminSectionMilestone', () => {
     expect(formatAdminMilestoneDate('not-a-date')).toBe('-');
   });
 
-  it('오프셋 없는 서버 시각은 UTC로 보정하고 명시된 UTC 시각은 중복 보정하지 않는다', () => {
+  it('오프셋 없는 일정과 명시된 UTC 일정을 같은 서울 경계로 표시한다', () => {
     expect(formatAdminMilestoneDate('2026-09-30T10:10:00')).toBe(
-      '2026-09-30/19:10',
+      '2026-09-30/10:10',
     );
     expect(formatAdminMilestoneDate('2026-09-30T01:10:00Z')).toBe(
       '2026-09-30/10:10',

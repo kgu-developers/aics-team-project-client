@@ -442,6 +442,28 @@ describe('KD3-92 학생 평가 화면', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('오프셋 없는 평가 일정은 타이머와 같은 서울 시각 경계로 표시한다', async () => {
+    const overview = getMyTeamEvaluations(demoStudent.studentNumber);
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.MY_TEAM_EVALUATIONS(':milestoneId')}`,
+        () =>
+          HttpResponse.json({
+            ...overview,
+            evaluationOpensAt: '2026-11-10T14:00:00',
+            evaluationClosesAt: '2026-11-10T16:00:00',
+          }),
+      ),
+    );
+
+    renderPresentationPage();
+
+    expect(
+      await screen.findByText('2026-11-10/14:00 ~ 2026-11-10/16:00'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('timer')).toHaveTextContent('평가 마감까지');
+  });
+
   it('다른 팀 발표 자료를 확인하고 평가를 제출한다', async () => {
     const user = userEvent.setup();
     renderPresentationPage();

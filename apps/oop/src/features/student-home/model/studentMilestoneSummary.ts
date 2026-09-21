@@ -6,7 +6,7 @@ import type {
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { seoulInstant } from '~/shared/lib/seoulInstant';
 
 const submissionLabels: Record<
@@ -28,10 +28,18 @@ export function milestoneTime(value?: string | null) {
 
 export function milestoneDate(value?: string | null) {
   if (!value) return '일정 미정';
-  const formatted = formatSeoulDateTime(value);
+  const formatted = formatCourseScheduleDateTime(value);
   return formatted === value && Number.isNaN(milestoneTime(value))
     ? '일정 확인 필요'
     : formatted;
+}
+
+function hasPresentationEvaluationWindow(milestone: StudentMilestoneResponse) {
+  return Boolean(
+    milestone.type === 'PRESENTATION' &&
+    milestone.schedule.evaluationOpensAt &&
+    milestone.schedule.evaluationClosesAt,
+  );
 }
 
 export function isPresentationEvaluation(
@@ -40,11 +48,7 @@ export function isPresentationEvaluation(
 ) {
   const evaluationOpensAt = milestoneTime(milestone.schedule.evaluationOpensAt);
   return (
-    milestone.type === 'PRESENTATION' &&
-    Boolean(
-      milestone.schedule.evaluationOpensAt &&
-      milestone.schedule.evaluationClosesAt,
-    ) &&
+    hasPresentationEvaluationWindow(milestone) &&
     Number.isFinite(evaluationOpensAt) &&
     now >= evaluationOpensAt
   );
@@ -56,16 +60,24 @@ export function studentMilestoneSummary(
   submission: MyTeamMilestoneSubmissionResponse | undefined,
   now: number,
 ): StudentHomeMilestone {
-  if (isPresentationEvaluation(milestone, now)) {
+  const isClosedPresentation =
+    milestone.type === 'PRESENTATION' && milestone.status === 'CLOSED';
+  const hasEvaluationWindow = hasPresentationEvaluationWindow(milestone);
+  if (
+    hasEvaluationWindow &&
+    (isClosedPresentation || isPresentationEvaluation(milestone, now))
+  ) {
     const end = milestoneTime(milestone.schedule.evaluationClosesAt);
     const closed = milestone.status === 'CLOSED' || now >= end;
+    // Presentation evaluation is terminal when its schedule closes or the
+    // server closes the milestone, without changing the shared submission.
     return {
       id: String(milestone.id),
       title: milestone.title,
       period: `평가 기간 : ${milestoneDate(milestone.schedule.evaluationOpensAt)} ~ ${milestoneDate(milestone.schedule.evaluationClosesAt)}`,
       dueDate: `~ ${milestoneDate(milestone.schedule.evaluationClosesAt)}`,
-      status: closed ? 'closed' : 'in-progress',
-      statusLabel: closed ? '평가 마감' : '평가 기간 중',
+      status: closed ? 'completed' : 'in-progress',
+      statusLabel: closed ? '평가 완료' : '평가 기간 중',
       currentStepLabel: '발표 평가',
       interaction: 'collapsible',
       isDetailAvailable: true,
@@ -100,23 +112,31 @@ export function studentMilestoneSummary(
     submission?.status === 'NOT_SUBMITTED' &&
     !canSubmit;
   const closed = !canSubmit && (milestone.status === 'CLOSED' || now >= dueAt);
-  const status: StudentHomeMilestone['status'] =
-    submission?.status === 'COMPLETED'
-      ? 'completed'
-      : !submission
-        ? 'unavailable'
-        : canSubmit && submission.status === 'REVISION_REQUESTED'
-          ? 'revision-available'
-          : closed
-            ? 'closed'
-            : beforePeriod
-              ? 'before-period'
-              : 'in-progress';
-  let statusLabel = beforePeriod
-    ? '기간 전'
-    : submission
-      ? submissionLabels[submission.status]
-      : '상태 확인 필요';
+  let status: StudentHomeMilestone['status'];
+  if (isClosedPresentation || submission?.status === 'COMPLETED') {
+    status = 'completed';
+  } else if (!submission) {
+    status = 'unavailable';
+  } else if (canSubmit && submission.status === 'REVISION_REQUESTED') {
+    status = 'revision-available';
+  } else if (closed) {
+    status = 'closed';
+  } else if (beforePeriod) {
+    status = 'before-period';
+  } else {
+    status = 'in-progress';
+  }
+
+  let statusLabel: string;
+  if (isClosedPresentation) {
+    statusLabel = '단계 완료';
+  } else if (beforePeriod) {
+    statusLabel = '기간 전';
+  } else if (submission) {
+    statusLabel = submissionLabels[submission.status];
+  } else {
+    statusLabel = '상태 확인 필요';
+  }
   if (status === 'closed') statusLabel += ' · 마감';
 
   // canSubmitNow also covers team-specific reopening whose deadline is not exposed.
