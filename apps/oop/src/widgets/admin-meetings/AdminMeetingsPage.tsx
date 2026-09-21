@@ -73,7 +73,7 @@ export default function AdminMeetingsPage() {
       selectedSectionId === ALL_SECTIONS ? undefined : selectedSectionId,
     teamId: selectedTeamId,
     milestoneId: selectedMilestoneId,
-    size: 20,
+    size: 10,
   });
   const records = query.data?.contents ?? [];
 

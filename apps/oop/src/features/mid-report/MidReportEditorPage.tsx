@@ -34,15 +34,7 @@ export function canSubmitMidReportDocument(
   )
     return false;
 
-  return (
-    report.status !== 'REVISION_REQUESTED' ||
-    Boolean(
-      report.revision &&
-      report.revision.affectedBlockKeys.every(key =>
-        report.revision?.changedBlockKeys.includes(key),
-      ),
-    )
-  );
+  return true;
 }
 
 export function getMidReportSubmitDisabledReason(
@@ -54,8 +46,6 @@ export function getMidReportSubmitDisabledReason(
     return '팀장만 중간보고서를 제출할 수 있어요.';
   if (report.blocks.some(block => block.status !== 'COMPLETED'))
     return '모든 작성 영역을 완료 처리하면 제출할 수 있어요.';
-  if (!canSubmitMidReportDocument(report, currentUserName))
-    return '피드백 대상 영역을 실제로 수정한 뒤 다시 완료해 주세요.';
   return report.status === 'REVISION_REQUESTED'
     ? '피드백을 반영한 수정본을 다시 제출할 수 있어요.'
     : '모든 작성 영역이 완료되어 제출할 수 있어요.';

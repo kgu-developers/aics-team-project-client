@@ -56,19 +56,23 @@ export function proposalFeedbackStage({
   if (!teamMemberIds || !isMessagesReady) return 'unknown';
   const staffMessages = (messages ?? []).filter(
     message =>
+      message.relatedType === 'PROPOSAL' &&
       !teamMemberIds.includes(message.senderId) &&
       (relatedId === undefined || message.relatedId === relatedId),
   );
   const submitted = seoulInstant(submittedAt);
-  const submittedAfterFeedback = staffMessages.some(message => {
+  const latestFeedbackSent = staffMessages.reduce((latest, message) => {
     const feedbackSent = seoulInstant(message.createdAt);
-    return (
-      Number.isFinite(feedbackSent) &&
-      Number.isFinite(submitted) &&
-      feedbackSent < submitted
-    );
-  });
-  if (submittedAfterFeedback) return 'completed';
+    return Number.isFinite(feedbackSent)
+      ? Math.max(latest, feedbackSent)
+      : latest;
+  }, Number.NEGATIVE_INFINITY);
+  if (
+    Number.isFinite(submitted) &&
+    Number.isFinite(latestFeedbackSent) &&
+    latestFeedbackSent < submitted
+  )
+    return 'completed';
 
   return staffMessages.some(message => after(message, submittedAt))
     ? 'feedback-arrived'
@@ -86,17 +90,10 @@ export function midReportFeedbackStage({
   if (!submittedAt) return 'not-submitted';
   if (!teamMemberIds || !isMessagesReady) return 'unknown';
   const relevantMessages = (messages ?? []).filter(
-    message => relatedId === undefined || message.relatedId === relatedId,
+    message =>
+      message.relatedType === 'MID_REPORT' &&
+      (relatedId === undefined || message.relatedId === relatedId),
   );
-  const submitted = seoulInstant(submittedAt);
-  const submittedAfterMessage = relevantMessages.some(message => {
-    const sent = seoulInstant(message.createdAt);
-    return (
-      Number.isFinite(sent) && Number.isFinite(submitted) && sent < submitted
-    );
-  });
-  if (submittedAfterMessage) return 'completed';
-
   const studentMessage = relevantMessages.some(
     message =>
       teamMemberIds.includes(message.senderId) && after(message, submittedAt),
@@ -119,10 +116,12 @@ function feedbackRoomStage(
     isMessagesReady = true,
   }: Input,
   startedBy: 'staff' | 'student',
+  relatedType: TeamMessage['relatedType'],
 ): DocumentFeedbackStage {
   if (!teamMemberIds || !isMessagesReady) return 'unknown';
   const started = (messages ?? []).some(
     message =>
+      message.relatedType === relatedType &&
       (relatedId === undefined || message.relatedId === relatedId) &&
       (startedBy === 'staff'
         ? !teamMemberIds.includes(message.senderId)
@@ -133,9 +132,9 @@ function feedbackRoomStage(
 }
 
 export function proposalFeedbackRoomStage(input: Input) {
-  return feedbackRoomStage(input, 'staff');
+  return feedbackRoomStage(input, 'staff', 'PROPOSAL');
 }
 
 export function midReportFeedbackRoomStage(input: Input) {
-  return feedbackRoomStage(input, 'student');
+  return feedbackRoomStage(input, 'student', 'MID_REPORT');
 }

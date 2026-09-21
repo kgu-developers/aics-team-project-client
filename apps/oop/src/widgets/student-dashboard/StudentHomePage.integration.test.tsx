@@ -645,10 +645,10 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     ).toBeInTheDocument();
     expect(
       document.getElementById(`student-milestone-${list[0]!.id}`),
-    ).toHaveTextContent('단계 완료');
+    ).toHaveTextContent('완료');
     expect(
       document.getElementById(`student-milestone-${list[1]!.id}`),
-    ).toHaveTextContent('수정 요청');
+    ).toHaveTextContent('진행 중');
     expect(
       document.querySelectorAll(
         '[id^=student-milestone-] button[aria-expanded]',
@@ -724,7 +724,7 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     await screen.findByRole('button', { name: '제출 상태 다시 시도' });
     expect(
       document.getElementById(`student-milestone-${list[0]!.id}`),
-    ).toHaveTextContent('단계 완료');
+    ).toHaveTextContent('완료');
     expect(
       document.getElementById(`student-milestone-${list[1]!.id}`),
     ).toHaveTextContent('조회 실패');
@@ -738,7 +738,7 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     await waitFor(() =>
       expect(
         document.getElementById(`student-milestone-${list[1]!.id}`),
-      ).toHaveTextContent('수정 요청'),
+      ).toHaveTextContent('진행 중'),
     );
     expect(
       requests.filter(path => path === ENDPOINTS.STUDENT_MILESTONE.LIST('2')),
@@ -779,7 +779,7 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     const futureCardId = `student-milestone-${list[1]!.id}`;
     await waitFor(() =>
       expect(document.getElementById(futureCardId)).toHaveTextContent(
-        '기간 전',
+        '진행 전',
       ),
     );
     expect(document.getElementById(futureCardId)).not.toHaveTextContent(
@@ -827,7 +827,7 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     await waitFor(() =>
       expect(
         document.getElementById(`student-milestone-${list[0]!.id}`),
-      ).toHaveTextContent('수정 요청 · 마감'),
+      ).toHaveTextContent('마감'),
     );
     allClosed = true;
     window.dispatchEvent(new Event('focus'));
@@ -894,7 +894,7 @@ describe('학생 홈의 개인 상호평가 연결', () => {
     const user = userEvent.setup();
     const button = await screen.findByRole('button', { name: '상호평가 작성' });
     const card = button.closest('#student-milestone-2313')! as HTMLElement;
-    expect(within(card).getByText('미작성')).toBeInTheDocument();
+    expect(within(card).getByText('진행 중')).toBeInTheDocument();
     await waitFor(() =>
       expect(requests).not.toContain(
         ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION('2313'),
@@ -907,8 +907,8 @@ describe('학생 홈의 개인 상호평가 연결', () => {
   });
 
   it.each([
-    ['DRAFT', '작성 중', '이어 작성'],
-    ['SUBMITTED', '제출 완료', '제출 내역 보기'],
+    ['DRAFT', '진행 중', '이어 작성'],
+    ['SUBMITTED', '완료', '제출 내역 보기'],
   ])(
     '내 응답 %s를 새 조회에서도 홈에 복원한다',
     async (status, label, action) => {

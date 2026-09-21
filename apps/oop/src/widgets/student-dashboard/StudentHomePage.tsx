@@ -179,7 +179,7 @@ export default function StudentHomePage() {
       submission?.isSuccess ? submission.data : undefined,
       now,
     );
-    if (isPresentationEvaluation(milestone)) {
+    if (isPresentationEvaluation(milestone, now)) {
       if (summary.body?.kind === 'presentation-evaluation') {
         const project =
           home.project.state.status === 'ready' ? home.project.data : undefined;
@@ -222,7 +222,9 @@ export default function StudentHomePage() {
       });
       const isFeedbackCycleCompleted =
         (submission?.isSuccess && submission.data.status === 'COMPLETED') ||
-        midReportStage === 'completed';
+        (midReport.isSuccess &&
+          midReport.data.status === 'SUBMITTED' &&
+          Boolean(midReport.data.revision?.resubmittedAt));
       if (isFeedbackCycleCompleted) {
         summary.status = 'completed';
         summary.statusLabel = '단계 완료';

@@ -502,7 +502,9 @@ function withDocumentProgress(
             actionDisabled:
               (submitted && !isFeedbackRevision) || !canOpenEditor,
             actionNotice: isFeedbackRevision
-              ? '피드백 대상 영역을 실제로 수정하고 완료 처리한 뒤 다시 제출해 주세요.'
+              ? documentLabel === '중간보고서'
+                ? '피드백 대상 영역을 확인하고 완료 처리한 뒤 다시 제출해 주세요.'
+                : '피드백 대상 영역을 실제로 수정하고 완료 처리한 뒤 다시 제출해 주세요.'
               : submitted
                 ? `제출된 ${documentLabel}는 읽기 전용으로 확인할 수 있어요.`
                 : canOpenEditor

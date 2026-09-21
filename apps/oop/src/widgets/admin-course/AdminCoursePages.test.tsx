@@ -150,12 +150,10 @@ describe('AdminCoursesPage', () => {
     const user = userEvent.setup();
     const router = renderAt('/admin/sections');
 
-    // Two courses share the name (2026 ACTIVE, 2025 ARCHIVED).
-    const row = (
-      await screen.findAllByRole('row', {
-        name: '객체지향 프로그래밍 강좌 상세 보기',
-      })
-    )[0]!;
+    // The default ACTIVE filter hides the archived course with the same name.
+    const row = await screen.findByRole('row', {
+      name: '객체지향 프로그래밍 강좌 상세 보기',
+    });
     expect(within(row).getByText('운영 중')).toBeInTheDocument();
     expect(within(row).getByText('2학기')).toBeInTheDocument();
     expect(
@@ -174,6 +172,24 @@ describe('AdminCoursesPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('운영 중 강좌를 기본으로 표시하고 전체 조회에서는 최신 학기부터 정렬한다', async () => {
+    const user = userEvent.setup();
+    renderAt('/admin/sections');
+
+    expect(await screen.findByText('객체지향 프로그래밍')).toBeInTheDocument();
+    expect(screen.queryByText('웹 프로그래밍')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('combobox', { name: '상태' }));
+    await user.click(screen.getByRole('option', { name: '전체 상태' }));
+
+    const rows = await screen.findAllByRole('row', {
+      name: /강좌 상세 보기/,
+    });
+    expect(within(rows[0]!).getByText('웹 프로그래밍')).toBeInTheDocument();
+    expect(within(rows[0]!).getByText('2027')).toBeInTheDocument();
+    expect(within(rows[1]!).getByText('2026')).toBeInTheDocument();
+  });
+
   it('강좌를 등록한다', async () => {
     const user = userEvent.setup();
     renderAt('/admin/sections');
@@ -185,6 +201,9 @@ describe('AdminCoursesPage', () => {
       within(dialog).getByRole('textbox', { name: /강좌명/ }),
       '알고리즘',
     );
+    const year = within(dialog).getByRole('textbox', { name: /연도/ });
+    await user.clear(year);
+    await user.type(year, '2027');
     await user.click(within(dialog).getByRole('button', { name: '등록' }));
 
     expect(await screen.findByText('알고리즘')).toBeInTheDocument();
@@ -620,15 +639,16 @@ describe('AdminCourseDetailPage', () => {
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/admin/sections'),
     );
+    expect(await screen.findByText('표시할 강좌가 없습니다.')).toBeVisible();
+    await user.click(screen.getByRole('combobox', { name: '상태' }));
+    await user.click(screen.getByRole('option', { name: '전체 상태' }));
     await screen.findByRole('row', { name: '웹 프로그래밍 강좌 상세 보기' });
     // Only the 2025 archived course of the same name remains.
-    await waitFor(() =>
-      expect(
-        screen.getAllByRole('row', {
-          name: '객체지향 프로그래밍 강좌 상세 보기',
-        }),
-      ).toHaveLength(1),
-    );
+    expect(
+      screen.getAllByRole('row', {
+        name: '객체지향 프로그래밍 강좌 상세 보기',
+      }),
+    ).toHaveLength(1);
   });
 });
 

@@ -260,10 +260,12 @@ export function CourseFormDialog({
   courseId,
   isOpen,
   onClose,
+  onCreated,
 }: {
   courseId: number | null;
   isOpen: boolean;
   onClose: () => void;
+  onCreated?: () => void;
 }) {
   const toast = useToast();
   const courseQuery = useAdminOopCourseQuery(courseId ?? undefined);
@@ -322,6 +324,7 @@ export function CourseFormDialog({
       submitMutation.mutate(normalizedInput, {
         onSuccess: () => {
           toast({ body: '강좌를 등록했어요.' });
+          onCreated?.();
           onClose();
         },
       });

@@ -379,7 +379,6 @@ export default function DocumentEditorPage<
           <Button
             isDisabled={
               isLocked ||
-              (saveMode === 'manual' && editor.isDirty) ||
               completion.isBlockCompleted(block) ||
               completion.completing
             }
@@ -391,9 +390,7 @@ export default function DocumentEditorPage<
             tooltip={
               isLocked
                 ? '읽기 전용 상태에서는 완료 처리할 수 없어요.'
-                : saveMode === 'manual' && editor.isDirty
-                  ? '변경 내용을 저장한 뒤 완료 처리할 수 있어요.'
-                  : '내용을 확인한 뒤 이 작성 영역을 완료 처리해요.'
+                : '변경 내용이 있으면 저장한 뒤 이 작성 영역을 완료 처리해요.'
             }
             variant='secondary'
           />

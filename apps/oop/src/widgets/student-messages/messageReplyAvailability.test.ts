@@ -62,6 +62,31 @@ describe('messageReplyAvailability', () => {
     expect(availability()).toEqual({ canReply: true });
   });
 
+  it('문서 피드백 사이클이 완료되면 기간이 남아도 답장을 차단한다', () => {
+    expect(
+      messageReplyAvailability({
+        isDemo: false,
+        isFeedbackCycleCompleted: true,
+        isMilestoneListError: false,
+        isMilestoneListPending: false,
+        milestones: [milestone],
+        now,
+        relatedType: 'PROPOSAL',
+        submissions: [
+          {
+            data: { ...submission, status: 'NOT_SUBMITTED' },
+            isError: false,
+            isPending: false,
+            isSuccess: true,
+          },
+        ],
+      }),
+    ).toEqual({
+      canReply: false,
+      reason: '이미 완료된 단계에는 답장할 수 없습니다.',
+    });
+  });
+
   it('서버가 현재 발송을 허용하지 않으면 답장을 차단한다', () => {
     expect(
       availability({ result: { ...submission, canSubmitNow: false } }),

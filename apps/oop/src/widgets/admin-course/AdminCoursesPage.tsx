@@ -37,6 +37,13 @@ type CourseTablePlugin = NonNullable<
   TableProps<AdminOopCourseDto>['plugins']
 >[string];
 
+const SEMESTER_RECENCY = {
+  SPRING: 1,
+  SUMMER: 2,
+  FALL: 3,
+  WINTER: 4,
+} as const;
+
 /**
  * 강좌 목록. Each row opens the course detail where sections and roster
  * uploads for that course live; creation stays here.
@@ -46,7 +53,7 @@ export default function AdminCoursesPage() {
   const coursesQuery = useAdminOopCoursesQuery();
   const [yearFilter, setYearFilter] = useState('ALL');
   const [semesterFilter, setSemesterFilter] = useState('ALL');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ACTIVE');
   const [page, setPage] = useState(0);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const courses = useMemo(
@@ -58,12 +65,20 @@ export default function AdminCoursesPage() {
   );
   const filteredCourses = useMemo(
     () =>
-      courses.filter(
-        course =>
-          (yearFilter === 'ALL' || String(course.year) === yearFilter) &&
-          (semesterFilter === 'ALL' || course.semester === semesterFilter) &&
-          (statusFilter === 'ALL' || course.status === statusFilter),
-      ),
+      courses
+        .filter(
+          course =>
+            (yearFilter === 'ALL' || String(course.year) === yearFilter) &&
+            (semesterFilter === 'ALL' || course.semester === semesterFilter) &&
+            (statusFilter === 'ALL' || course.status === statusFilter),
+        )
+        .sort(
+          (left, right) =>
+            right.year - left.year ||
+            SEMESTER_RECENCY[right.semester] -
+              SEMESTER_RECENCY[left.semester] ||
+            right.id - left.id,
+        ),
     [courses, semesterFilter, statusFilter, yearFilter],
   );
   const paged = paginate(filteredCourses, page);
@@ -239,6 +254,12 @@ export default function AdminCoursesPage() {
         courseId={null}
         isOpen={isCreateOpen}
         onClose={() => setIsCreateOpen(false)}
+        onCreated={() => {
+          setYearFilter('ALL');
+          setSemesterFilter('ALL');
+          setStatusFilter('ALL');
+          setPage(0);
+        }}
       />
     </div>
   );

@@ -22,6 +22,9 @@ type SubmissionState = {
 };
 
 type MessageReplyAvailabilityInput = {
+  isFeedbackCycleCompleted?: boolean;
+  isFeedbackCycleError?: boolean;
+  isFeedbackCyclePending?: boolean;
   isDemo: boolean;
   isMilestoneListError: boolean;
   isMilestoneListPending: boolean;
@@ -38,6 +41,9 @@ export type MessageReplyAvailability = {
 
 /** Keep document-feedback replies inside the same server-backed milestone window. */
 export function messageReplyAvailability({
+  isFeedbackCycleCompleted = false,
+  isFeedbackCycleError = false,
+  isFeedbackCyclePending = false,
   isDemo,
   isMilestoneListError,
   isMilestoneListPending,
@@ -48,6 +54,28 @@ export function messageReplyAvailability({
 }: MessageReplyAvailabilityInput): MessageReplyAvailability {
   const milestoneType = milestoneTypeByRelatedType[relatedType];
   if (isDemo || !milestoneType) return { canReply: true };
+
+  if (isFeedbackCyclePending) {
+    return {
+      canReply: false,
+      reason: '피드백 단계 완료 상태를 확인하고 있어요.',
+    };
+  }
+
+  if (isFeedbackCycleError) {
+    return {
+      canReply: false,
+      reason:
+        '피드백 단계 완료 상태를 확인하지 못했습니다. 새로고침 후 다시 시도해 주세요.',
+    };
+  }
+
+  if (isFeedbackCycleCompleted) {
+    return {
+      canReply: false,
+      reason: '이미 완료된 단계에는 답장할 수 없습니다.',
+    };
+  }
 
   if (isMilestoneListPending) {
     return {

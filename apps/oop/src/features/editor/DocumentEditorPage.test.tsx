@@ -288,6 +288,50 @@ describe('DocumentEditorPage 자동 저장', () => {
     );
   });
 
+  it('수동 저장 모드에서 작성 완료를 누르면 변경 내용을 저장한 뒤 완료한다', async () => {
+    const savedDocument = createDocument(2, '저장 후 완료');
+    const completedDocument = createDocument(3, '저장 후 완료');
+    const saveBlock = vi.fn(async () => savedDocument);
+    const completeBlock = vi.fn(async () => completedDocument);
+
+    renderWithRouter(
+      <DocumentEditorPage
+        copy={copy}
+        completion={{
+          completeBlock,
+          completeError: null,
+          completing: false,
+          isBlockCompleted: () => false,
+          isDocumentSubmitted: () => false,
+        }}
+        docId='mid-review'
+        documentQuery={query(createDocument())}
+        editLockTargetType={null}
+        saveBlock={saveBlock}
+        saveMode='manual'
+        saveState={{ error: null, saving: false }}
+        section='topic'
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('주제 이름'), {
+      target: { value: '저장 후 완료' },
+    });
+    expect(screen.getByRole('button', { name: '작성 완료' })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: '작성 완료' }));
+
+    await waitFor(() => expect(completeBlock).toHaveBeenCalledTimes(1));
+    expect(saveBlock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fields: [expect.objectContaining({ value: '저장 후 완료' })],
+      }),
+    );
+    expect(completeBlock).toHaveBeenCalledWith(
+      expect.objectContaining({ version: 2 }),
+    );
+  });
+
   it('수동 저장 초안은 이동 전에 제안서와 같은 확인을 표시한다', async () => {
     const saveBlock = vi.fn(async () => createDocument());
     renderWithRouter(

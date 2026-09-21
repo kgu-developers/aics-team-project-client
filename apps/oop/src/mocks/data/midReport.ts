@@ -3,7 +3,6 @@ import type { MidReport, MidReportBlock } from '@aics/core';
 import {
   areDocumentFieldsComplete,
   completeDocumentSessionBlock,
-  hasRequiredDocumentRevisionChanges,
   hasRequiredTextValues,
   hasResubmittedDocumentRevision,
   requestDocumentSessionRevision,
@@ -222,7 +221,13 @@ export function completeMidReportBlock(
 }
 
 export function submitCurrentMidReport(version: number, submitterName: string) {
-  const submitted = submitDocumentSession(midReport, version, submitterName);
+  // A confirmed revision may be resubmitted without a textual diff.
+  const submitted = submitDocumentSession(
+    midReport,
+    version,
+    submitterName,
+    false,
+  );
   if (submitted) midReport = submitted;
   return submitted;
 }
@@ -291,10 +296,6 @@ export function ensureMidReportFeedbackRevisionResubmitted() {
 
   submitCurrentMidReport(completed.version, requested.teamLeaderName);
   return midReport;
-}
-
-export function hasRequiredMidReportRevisionChanges() {
-  return hasRequiredDocumentRevisionChanges(midReport);
 }
 
 export function hasResubmittedMidReportRevision() {

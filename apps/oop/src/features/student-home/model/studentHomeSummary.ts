@@ -77,7 +77,10 @@ export function homeAssignedActions(
   if (!studentNumber) return [];
 
   return [...actions]
-    .filter(action => action.assignee?.userId === studentNumber)
+    .filter(
+      action =>
+        action.assignee?.userId === studentNumber && action.status !== 'DONE',
+    )
     .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
     .slice(0, HOME_LIMIT)
     .map(action => ({
