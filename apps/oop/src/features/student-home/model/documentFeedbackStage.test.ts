@@ -64,7 +64,17 @@ it('중간보고서는 학생 메시지가 먼저 필요하다', () => {
     }),
   ).toBe('feedback-arrived');
 });
-it('교수 피드백 뒤 새 완료 시각이 생기면 재제출 완료로 본다', () => {
+it('중간보고서는 메시지가 있는 상태에서 새 제출 시각이 생기면 완료로 본다', () => {
+  expect(
+    midReportFeedbackStage({
+      submittedAt: '2026-09-10 10:00',
+      messages: [message('20260001', '2026-09-09 09:00', 701)],
+      relatedId: 701,
+      teamMemberIds,
+    }),
+  ).toBe('completed');
+});
+it('현재 제안서 피드백이 있는 상태에서 새 완료 시각이 생기면 재제출 완료로 본다', () => {
   expect(
     proposalFeedbackStage({
       submittedAt: '2026-09-10 10:00',

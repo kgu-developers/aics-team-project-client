@@ -59,33 +59,43 @@ export function proposalFeedbackStage({
       !teamMemberIds.includes(message.senderId) &&
       (relatedId === undefined || message.relatedId === relatedId),
   );
-  if (staffMessages.some(message => after(message, submittedAt))) {
-    return 'feedback-arrived';
-  }
-
-  // Reopening clears proposalCompletedAt. Once the team resubmits, the new
-  // completion timestamp is later than the feedback that caused the reopen.
-  // This is the durable client-visible evidence that the one-shot cycle ended.
-  const resubmitted = staffMessages.some(message => {
-    const sent = seoulInstant(message.createdAt);
-    const submitted = seoulInstant(submittedAt);
+  const submitted = seoulInstant(submittedAt);
+  const submittedAfterFeedback = staffMessages.some(message => {
+    const feedbackSent = seoulInstant(message.createdAt);
     return (
-      Number.isFinite(sent) && Number.isFinite(submitted) && sent < submitted
+      Number.isFinite(feedbackSent) &&
+      Number.isFinite(submitted) &&
+      feedbackSent < submitted
     );
   });
-  return resubmitted ? 'completed' : 'awaiting-feedback';
+  if (submittedAfterFeedback) return 'completed';
+
+  return staffMessages.some(message => after(message, submittedAt))
+    ? 'feedback-arrived'
+    : 'awaiting-feedback';
 }
 
 /** 중간보고서: 학생이 먼저 팀 메시지를 보내면 피드백 단계가 시작된다. */
 export function midReportFeedbackStage({
   submittedAt,
   messages,
+  relatedId,
   teamMemberIds,
   isMessagesReady = true,
 }: Input): DocumentFeedbackStage {
   if (!submittedAt) return 'not-submitted';
   if (!teamMemberIds || !isMessagesReady) return 'unknown';
-  const studentMessage = (messages ?? []).some(
+  const relevantMessages = (messages ?? []).filter(
+    message => relatedId === undefined || message.relatedId === relatedId,
+  );
+  const submitted = seoulInstant(submittedAt);
+  const submittedAfterMessage = relevantMessages.some(message => {
+    const sent = seoulInstant(message.createdAt);
+    return Number.isFinite(sent) && Number.isFinite(submitted) && sent < submitted;
+  });
+  if (submittedAfterMessage) return 'completed';
+
+  const studentMessage = relevantMessages.some(
     message =>
       teamMemberIds.includes(message.senderId) && after(message, submittedAt),
   );

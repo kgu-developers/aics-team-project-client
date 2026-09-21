@@ -15,9 +15,14 @@ export function useMidReportFeedbackQuery(body: MidReportFeedbackBody) {
   const currentUser = useAuthStore(state => state.currentUser);
   const teamId = body.teamId ?? currentUser?.teamId ?? undefined;
   const query = useTeamMessagesQuery(teamId, 'MID_REPORT');
+  const messages = query.data?.filter(
+    message =>
+      body.submissionId === undefined ||
+      String(message.relatedId) === body.submissionId,
+  );
   const hasSubmittedFeedback = Boolean(
     currentUser &&
-    query.data?.some(message => message.senderId === currentUser.studentNumber),
+    messages?.some(message => message.senderId === currentUser.studentNumber),
   );
   return {
     ...body,
@@ -26,7 +31,7 @@ export function useMidReportFeedbackQuery(body: MidReportFeedbackBody) {
       : body.feedbackStage,
     teamId,
     feedback: query.isSuccess
-      ? query.data.map(message => ({
+      ? (messages ?? []).map(message => ({
           id: String(message.id),
           title: `${message.senderName?.trim() || message.senderId} (${formatSeoulDateTime(message.createdAt)})`,
           content: message.message,

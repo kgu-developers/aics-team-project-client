@@ -213,11 +213,14 @@ export default function StudentHomePage() {
       const midReportStage = midReportFeedbackStage({
         submittedAt: midReport.data?.submittedAt,
         messages: midReportMessages.data,
+        relatedId:
+          midReport.data?.id === undefined ? undefined : Number(midReport.data.id),
         teamMemberIds: home.teamMemberIds,
         isMessagesReady: midReportMessages.isSuccess,
       });
       const isFeedbackCycleCompleted =
-        submission?.isSuccess && submission.data.status === 'COMPLETED';
+        (submission?.isSuccess && submission.data.status === 'COMPLETED') ||
+        midReportStage === 'completed';
       if (isFeedbackCycleCompleted) {
         summary.status = 'completed';
         summary.statusLabel = '단계 완료';
@@ -225,11 +228,17 @@ export default function StudentHomePage() {
       summary.body = {
         kind: 'mid-review-feedback',
         teamId: home.teamId,
+        submissionId:
+          midReport.data?.id === undefined ? undefined : String(midReport.data.id),
         feedbackStage: isFeedbackCycleCompleted
           ? 'completed'
           : midReportFeedbackRoomStage({
               submittedAt: midReport.data?.submittedAt,
               messages: midReportMessages.data,
+              relatedId:
+                midReport.data?.id === undefined
+                  ? undefined
+                  : Number(midReport.data.id),
               teamMemberIds: home.teamMemberIds,
               isMessagesReady: midReportMessages.isSuccess,
             }),

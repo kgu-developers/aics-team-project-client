@@ -156,6 +156,17 @@ describe('AdminStudentTeamManagement', () => {
     ).toHaveTextContent('OOP-02');
   });
 
+  it('직접 전달된 분반이 담당 목록에 없으면 다른 분반으로 대체하지 않는다', async () => {
+    renderPage(demoAdmin, '999');
+
+    expect(
+      await screen.findByText('분반 정보를 불러오지 못했습니다.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: /팀 구성/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it('로그인한 관리자의 분반 목록을 분반 선택 UI에 표시한다', async () => {
     renderPage();
 

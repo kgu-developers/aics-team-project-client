@@ -102,8 +102,7 @@ export default function AdminStudentTeamManagement({
 
   const selectedSection =
     sections.find(section => section.id === selectedSectionId) ??
-    sections[0] ??
-    null;
+    (initialSectionId === undefined ? sections[0] : null);
   const sectionId = selectedSection?.id ?? '';
   const enrollmentsQuery = useAdminSectionEnrollmentsQuery(sectionId);
   const teamsQuery = useAdminSectionTeamsQuery(sectionId);
