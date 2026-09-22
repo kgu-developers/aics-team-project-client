@@ -18,13 +18,14 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminStudentTeamManagement from './AdminStudentTeamManagement';
 
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import {
   adminStudentTeamHandlers,
   resetAdminStudentTeamMockState,
 } from '~/mocks/handlers/adminStudentTeams';
 import { renderWithRouter } from '~/test/renderWithRouter';
 
-const server = setupServer(...adminStudentTeamHandlers);
+const server = setupServer(...adminCourseHandlers, ...adminStudentTeamHandlers);
 const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
   'close',
@@ -105,6 +106,43 @@ function renderPage(currentUser = demoAdmin, initialSectionId?: string) {
 }
 
 describe('AdminStudentTeamManagement', () => {
+  it('운영 분반을 확인하는 동안 분반 정보 오류를 표시하지 않는다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`, async () => {
+        await delay(1_000);
+        return HttpResponse.json({ contents: [] });
+      }),
+    );
+
+    renderPage();
+
+    expect(
+      await screen.findByText('운영 중인 분반을 불러오는 중입니다.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('분반 정보를 불러오지 못했습니다.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('운영 분반 조회 실패를 빈 분반 선택과 구분한다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`, () =>
+        HttpResponse.json({ code: 'INTERNAL_SERVER_ERROR' }, { status: 500 }),
+      ),
+    );
+
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        '운영 중인 분반을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('분반 정보를 불러오지 못했습니다.'),
+    ).not.toBeInTheDocument();
+  });
+
   it('로그인한 관리자가 맡은 여러 분반을 표시하고 선택을 전환한다', async () => {
     const user = userEvent.setup();
 
@@ -113,6 +151,7 @@ describe('AdminStudentTeamManagement', () => {
       sections: [
         ...demoAdmin.sections,
         {
+          ...demoAdmin.sections[0]!,
           id: 'oop-2026-2-02',
           code: 'OOP-02',
           name: '객체지향프로그래밍 02분반',
@@ -124,7 +163,7 @@ describe('AdminStudentTeamManagement', () => {
     const sectionSelect = await screen.findByRole('combobox', {
       name: '분반',
     });
-    expect(sectionSelect).toHaveTextContent('OOP-01');
+    await waitFor(() => expect(sectionSelect).toHaveTextContent('OOP-01'));
 
     await user.click(sectionSelect);
     await user.click(await screen.findByRole('option', { name: 'OOP-02' }));
@@ -151,9 +190,11 @@ describe('AdminStudentTeamManagement', () => {
       '2',
     );
 
-    expect(
-      await screen.findByRole('combobox', { name: '분반' }),
-    ).toHaveTextContent('OOP-02');
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: '분반' })).toHaveTextContent(
+        'OOP-02',
+      ),
+    );
   });
 
   it('직접 전달된 분반이 담당 목록에 없으면 다른 분반으로 대체하지 않는다', async () => {
@@ -170,9 +211,11 @@ describe('AdminStudentTeamManagement', () => {
   it('로그인한 관리자의 분반 목록을 분반 선택 UI에 표시한다', async () => {
     renderPage();
 
-    expect(
-      await screen.findByRole('combobox', { name: '분반' }),
-    ).toHaveTextContent('OOP-01');
+    await waitFor(() =>
+      expect(screen.getByRole('combobox', { name: '분반' })).toHaveTextContent(
+        'OOP-01',
+      ),
+    );
     expect(screen.queryByText('1151 (월6)')).not.toBeInTheDocument();
   });
 

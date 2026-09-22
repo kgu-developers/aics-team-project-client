@@ -1,5 +1,5 @@
 import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
-import type { AdminMessagePage } from '@aics/core';
+import type { AdminMessagePage, CurrentUser } from '@aics/core';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -20,9 +20,11 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminMessagesPage from './AdminMessagesPage';
 
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 
 // Section teams feed the dependent team filter; the list itself is enough here.
 const server = setupServer(
+  ...adminCourseHandlers,
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS(':sectionId')}`,
     () =>
@@ -50,24 +52,26 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function setup() {
+const defaultSections: CurrentUser['sections'] = [
+  {
+    ...demoAdmin.sections[0]!,
+    code: '현재 분반 하나',
+    id: '1',
+    name: '과거 분반 하나',
+  },
+  {
+    ...demoAdmin.sections[0]!,
+    code: '현재 분반 둘',
+    id: '2',
+    name: '과거 분반 둘',
+  },
+];
+
+function setup(sections = defaultSections) {
   useAuthStore.getState().setAccessToken(demoAdminAccessToken);
   useAuthStore.getState().setCurrentUser({
     ...demoAdmin,
-    sections: [
-      {
-        ...demoAdmin.sections[0]!,
-        code: '현재 분반 하나',
-        id: '1',
-        name: '과거 분반 하나',
-      },
-      {
-        ...demoAdmin.sections[0]!,
-        code: '현재 분반 둘',
-        id: '2',
-        name: '과거 분반 둘',
-      },
-    ],
+    sections,
   });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -128,6 +132,53 @@ function messagePage(
 function paginationButtons() {
   return within(screen.getByRole('navigation')).getAllByRole('button');
 }
+
+it('운영 분반 조회 실패 중에는 독립적으로 조회된 쪽지함을 노출하지 않는다', async () => {
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`, () =>
+      HttpResponse.json({ code: 'INTERNAL_SERVER_ERROR' }, { status: 500 }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>
+      HttpResponse.json(messagePage(0, 10, 1)),
+    ),
+  );
+
+  setup();
+
+  expect(
+    await screen.findByText('운영 중인 분반을 불러오지 못했습니다.'),
+  ).toBeInTheDocument();
+  expect(screen.queryByText('all 쪽지 1')).not.toBeInTheDocument();
+  expect(screen.queryByText('미확인 1건')).not.toBeInTheDocument();
+});
+
+it('분반 필터에서 보관 강좌의 운영 분반을 제외한다', async () => {
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>
+      HttpResponse.json(messagePage(0, 10, 0)),
+    ),
+  );
+  setup([
+    defaultSections[0]!,
+    {
+      ...defaultSections[1]!,
+      code: '보관 강좌 분반',
+      courseId: 3,
+      status: 'ACTIVE',
+    },
+  ]);
+
+  const sectionFilter = await screen.findByRole('combobox', { name: '분반' });
+  await waitFor(() => expect(sectionFilter).toBeEnabled());
+  await userEvent.click(sectionFilter);
+
+  expect(
+    await screen.findByRole('option', { name: '현재 분반 하나' }),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('option', { name: '보관 강좌 분반' }),
+  ).not.toBeInTheDocument();
+});
 
 it('reaches item 11, keeps page caches separate, and resets pages on section/all filters', async () => {
   const requests: Array<{ section: string; page: number; size: number }> = [];

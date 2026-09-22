@@ -1,4 +1,5 @@
 import type { AdminSectionMilestoneDto } from '@aics/api-client';
+import type { CurrentUser } from '@aics/core';
 import { AstryxThemeProvider } from '@aics/design-system';
 import {
   RouterProvider,
@@ -18,6 +19,7 @@ import AdminHomeDashboard from './AdminHomeDashboard';
 import { demoAdmin } from '~/mocks/data/users';
 
 const dashboardState = vi.hoisted(() => ({
+  activeSections: [] as CurrentUser['sections'],
   meetingContent: '',
   meetingRecords: [] as {
     authorId: string;
@@ -56,6 +58,7 @@ const dashboardState = vi.hoisted(() => ({
   }[],
 }));
 beforeEach(() => {
+  dashboardState.activeSections = [];
   dashboardState.meetingContent = '발표 자료의 핵심 흐름과 역할을 확정한다.';
   dashboardState.meetingRecords = [
     {
@@ -100,6 +103,14 @@ beforeEach(() => {
   ];
 });
 afterEach(() => useAuthStore.setState({ currentUser: null }));
+
+vi.mock('~/features/admin-course/queries', () => ({
+  useActiveAdminSections: () => ({
+    data: dashboardState.activeSections,
+    isError: false,
+    isPending: false,
+  }),
+}));
 
 vi.mock('~/features/admin-meeting/queries', () => ({
   useAdminMeetingRecordListQuery: () => ({
@@ -157,7 +168,11 @@ vi.mock('~/features/admin-notices/queries', () => ({
   }),
 }));
 
-function renderPage(user = demoAdmin) {
+function renderPage(
+  user = demoAdmin,
+  activeSections = user.sections.filter(section => section.status === 'ACTIVE'),
+) {
+  dashboardState.activeSections = activeSections;
   const rootRoute = createRootRoute();
   const homeRoute = createRoute({
     component: () => (
@@ -271,23 +286,28 @@ describe('AdminHomeDashboard', () => {
     ).toBe('midterm');
   });
 
-  it('운영 중인 분반만 일정에 표시하고 분반 항목을 상세로 연결한다', async () => {
+  it('운영 강좌의 운영 중인 분반만 일정에 표시하고 분반 항목을 상세로 연결한다', async () => {
     const user = userEvent.setup();
 
-    renderPage({
+    const activeSection = {
+      ...demoAdmin.sections[0]!,
+      courseId: 1,
+      status: 'ACTIVE' as const,
+    };
+    const archivedCourseSection = {
+      ...demoAdmin.sections[0]!,
+      code: 'OOP-02',
+      courseId: 2,
+      id: '2',
+      name: 'OOP-02',
+      status: 'ACTIVE' as const,
+    };
+    const userWithArchivedCourse = {
       ...demoAdmin,
-      sections: [
-        { ...demoAdmin.sections[0]!, courseId: 1, status: 'ACTIVE' },
-        {
-          ...demoAdmin.sections[0]!,
-          code: 'OOP-02',
-          courseId: 2,
-          id: '2',
-          name: 'OOP-02',
-          status: 'ARCHIVED',
-        },
-      ],
-    });
+      sections: [activeSection, archivedCourseSection],
+    };
+
+    renderPage(userWithArchivedCourse, [activeSection]);
 
     const activeSectionLink = await screen.findByRole('link', {
       name: 'OOP-01',

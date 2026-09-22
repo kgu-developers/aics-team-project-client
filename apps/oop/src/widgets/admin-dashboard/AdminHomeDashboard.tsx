@@ -11,6 +11,7 @@ import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { getSectionDisplayLabel } from '~/shared/lib/getSectionDisplayLabel';
 import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 
+import { useActiveAdminSections } from '~/features/admin-course/queries';
 import { getRichTextPlainText } from '~/features/admin-meeting/model/getRichTextPlainText';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
@@ -249,9 +250,8 @@ export default function AdminHomeDashboard() {
   const meetingReadState = useAdminMeetingReadState(currentUser?.id);
   const accessibleSections = currentUser?.sections ?? [];
   const accessibleSectionIds = accessibleSections.map(section => section.id);
-  const activeScheduleSections = accessibleSections.filter(
-    section => section.status === 'ACTIVE',
-  );
+  const activeSectionsQuery = useActiveAdminSections();
+  const activeScheduleSections = activeSectionsQuery.data;
   const activeScheduleSectionIds = activeScheduleSections.map(
     section => section.id,
   );
@@ -286,12 +286,12 @@ export default function AdminHomeDashboard() {
       ),
     ).values(),
   ].sort((left, right) => left.dueAt.localeCompare(right.dueAt));
-  const isMilestoneSchedulePending = milestoneQueries.some(
-    query => query.isPending,
-  );
-  const hasMilestoneScheduleError = milestoneQueries.some(
-    query => query.isError,
-  );
+  const isMilestoneSchedulePending =
+    activeSectionsQuery.isPending ||
+    milestoneQueries.some(query => query.isPending);
+  const hasMilestoneScheduleError =
+    activeSectionsQuery.isError ||
+    milestoneQueries.some(query => query.isError);
   const meetingItems: DashboardListItem[] = (
     meetingRecordsQuery.data?.contents ?? []
   )
@@ -379,11 +379,7 @@ export default function AdminHomeDashboard() {
           />
         </div>
         <div className={styles.tableWrap}>
-          {activeScheduleSectionIds.length === 0 ? (
-            <p className={styles.scheduleState}>
-              운영 중인 담당 분반이 없어 진행 일정을 표시할 수 없습니다.
-            </p>
-          ) : isMilestoneSchedulePending ? (
+          {isMilestoneSchedulePending ? (
             <p
               aria-live='polite'
               className={styles.scheduleState}
@@ -395,6 +391,10 @@ export default function AdminHomeDashboard() {
             <p className={styles.scheduleState}>
               분반별 진행 일정을 불러오지 못했습니다. 잠시 후 다시 시도해
               주세요.
+            </p>
+          ) : activeScheduleSectionIds.length === 0 ? (
+            <p className={styles.scheduleState}>
+              운영 중인 담당 분반이 없어 진행 일정을 표시할 수 없습니다.
             </p>
           ) : scheduleSections.length === 0 ? (
             <p className={styles.scheduleState}>

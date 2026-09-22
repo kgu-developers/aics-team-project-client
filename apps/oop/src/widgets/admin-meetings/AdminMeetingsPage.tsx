@@ -15,6 +15,7 @@ import { ROUTES } from '~/app/constants/routes';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 
+import { useActiveAdminSections } from '~/features/admin-course/queries';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
 import { useAdminSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
@@ -45,7 +46,8 @@ export default function AdminMeetingsPage() {
     teamId?: number | string;
     milestoneId?: number | string;
   };
-  const accessibleSections = currentUser?.sections ?? [];
+  const activeSectionsQuery = useActiveAdminSections();
+  const accessibleSections = activeSectionsQuery.data;
   const accessibleSectionIds = accessibleSections.map(section => section.id);
   const requestedSectionId =
     search.sectionId === undefined ? undefined : String(search.sectionId);
@@ -153,9 +155,18 @@ export default function AdminMeetingsPage() {
         ) : null}
       </AdminSectionTeamFilter>
 
-      {accessibleSectionIds.length === 0 ? (
+      {activeSectionsQuery.isPending ? (
+        <Text aria-live='polite' role='status'>
+          운영 중인 분반을 불러오는 중입니다.
+        </Text>
+      ) : activeSectionsQuery.isError ? (
         <EmptyState
-          description='담당 분반이 없어 회의록을 조회할 수 없습니다.'
+          description='잠시 후 다시 시도해 주세요.'
+          title='운영 중인 분반을 불러오지 못했습니다.'
+        />
+      ) : accessibleSectionIds.length === 0 ? (
+        <EmptyState
+          description='운영 중인 담당 분반이 없어 회의록을 조회할 수 없습니다.'
           title='표시할 회의록이 없습니다.'
         />
       ) : query.isPending ? (

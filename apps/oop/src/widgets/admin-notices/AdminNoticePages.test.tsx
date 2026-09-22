@@ -43,6 +43,7 @@ import {
   demoNoticeProfessor,
   demoNoticeProfessorAccessToken,
 } from '~/mocks/data/users';
+import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import {
   resetSectionAnnouncements,
   studentNoticeHandlers,
@@ -73,7 +74,7 @@ vi.mock('~/shared/ui/RichTextEditor', () => ({
   ),
 }));
 
-const server = setupServer(...studentNoticeHandlers);
+const server = setupServer(...adminCourseHandlers, ...studentNoticeHandlers);
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
@@ -151,6 +152,25 @@ function renderPage(path: string) {
   render(<RouterProvider router={router} />);
   return { client, router };
 }
+it('운영 분반 조회 실패를 접근 가능한 분반 없음으로 표시하지 않는다', async () => {
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`, () =>
+      HttpResponse.json({ code: 'INTERNAL_SERVER_ERROR' }, { status: 500 }),
+    ),
+  );
+
+  renderPage('/admin/notices');
+
+  expect(
+    await screen.findByText('운영 중인 분반을 불러오지 못했습니다.'),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText(
+      '접근 가능한 분반이 없어 공지사항을 관리할 수 없습니다.',
+    ),
+  ).not.toBeInTheDocument();
+});
+
 async function fill() {
   const user = userEvent.setup();
   await user.type(
@@ -466,7 +486,7 @@ it('비활성 담당 분반에서는 유효한 제목과 본문이 있어도 게
   expect(post).not.toHaveBeenCalled();
 });
 
-it('전체 분반 목록은 기본값이며 비활성 분반도 목록에서 조회하고 필터를 바꿀 수 있다', async () => {
+it('전체 분반 목록에서도 운영 중인 분반만 조회하고 필터에 표시한다', async () => {
   useAuthStore.setState({
     currentUser: {
       ...demoNoticeProfessor,
@@ -501,26 +521,19 @@ it('전체 분반 목록은 기본값이며 비활성 분반도 목록에서 조
       },
     ),
   );
-  const { router } = renderPage('/admin/notices');
+  renderPage('/admin/notices');
   const user = userEvent.setup();
   expect(
     await screen.findByRole('row', { name: /분반 1 공지 공지사항 보기/ }),
   ).toHaveAttribute('tabindex', '0');
   expect(
-    await screen.findByRole('row', { name: /분반 2 공지 공지사항 보기/ }),
-  ).toHaveAttribute('tabindex', '0');
-  expect(get.mock.calls.map(([id]) => id).sort()).toEqual(['1', '2']);
-  await user.click(screen.getByRole('combobox', { name: '분반' }));
-  await user.click(screen.getByRole('option', { name: '보관 분반' }));
-  await waitFor(() =>
-    expect(router.state.location.href).toBe('/admin/notices?sectionId=2'),
-  );
-  expect(
-    screen.queryByRole('row', { name: /분반 1 공지 공지사항 보기/ }),
+    screen.queryByRole('row', { name: /분반 2 공지 공지사항 보기/ }),
   ).not.toBeInTheDocument();
+  expect(get.mock.calls.map(([id]) => id)).toEqual(['1']);
+  await user.click(screen.getByRole('combobox', { name: '분반' }));
   expect(
-    screen.getByRole('row', { name: /분반 2 공지 공지사항 보기/ }),
-  ).toBeInTheDocument();
+    screen.queryByRole('option', { name: '보관 분반' }),
+  ).not.toBeInTheDocument();
 });
 
 it('전체 분반의 부분 실패는 성공 목록과 오류 안내를 함께 표시한다', async () => {

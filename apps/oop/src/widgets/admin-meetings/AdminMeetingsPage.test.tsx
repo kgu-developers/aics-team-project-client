@@ -19,10 +19,12 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminMeetingsPage from './AdminMeetingsPage';
 
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 
 const server = setupServer(
+  ...adminCourseHandlers,
   ...adminMeetingHandlers,
   ...adminSectionMilestoneHandlers,
   http.get(

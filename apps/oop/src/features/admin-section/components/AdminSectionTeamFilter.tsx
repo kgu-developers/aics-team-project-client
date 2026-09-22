@@ -1,17 +1,13 @@
-import type { CurrentUser } from '@aics/core';
 import { Selector, SelectorOption } from '@aics/design-system';
 import type { ReactNode } from 'react';
 
+import { useActiveAdminSections } from '~/features/admin-course/queries';
 import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
-import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminSectionTeamFilter.css';
 
 export const ALL_SECTIONS = 'all';
 export const ALL_TEAMS = '';
-
-// A selector must return a stable reference; `?? []` per call would re-render forever.
-const noSections: CurrentUser['sections'] = [];
 
 type AdminSectionTeamFilterProps = {
   /** Offer an "전체 분반" option; otherwise the first section is expected to be selected. */
@@ -42,9 +38,8 @@ export default function AdminSectionTeamFilter({
   sectionId,
   teamId,
 }: AdminSectionTeamFilterProps) {
-  const sections = useAuthStore(
-    state => state.currentUser?.sections ?? noSections,
-  );
+  const sectionsQuery = useActiveAdminSections();
+  const sections = sectionsQuery.data;
   const hasTeamFilter = onTeamChange !== undefined;
   const isSectionSelected = sectionId !== ALL_SECTIONS;
   const teamsQuery = useAdminSectionTeamsQuery(
@@ -54,6 +49,7 @@ export default function AdminSectionTeamFilter({
   return (
     <div aria-label={label} className={styles.root} role='group'>
       <Selector
+        isDisabled={sectionsQuery.isPending || sectionsQuery.isError}
         label='분반'
         onChange={onSectionChange}
         options={[

@@ -17,6 +17,7 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 
+import { useActiveAdminSections } from '~/features/admin-course/queries';
 import AdminSectionTeamFilter from '~/features/admin-section/components/AdminSectionTeamFilter';
 import {
   useAdminSectionEnrollmentsQuery,
@@ -28,7 +29,6 @@ import {
   useUpdateAdminTeamMemberRoleMutation,
   useWithdrawAdminSectionEnrollmentMutation,
 } from '~/features/admin-student-team/queries';
-import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminStudentTeamManagement.css';
 import AdminStudentDetailDialog from '../../features/admin-student-team/components/AdminStudentDetailDialog';
@@ -83,7 +83,7 @@ export default function AdminStudentTeamManagement({
 }: {
   initialSectionId?: string;
 }) {
-  const currentUser = useAuthStore(state => state.currentUser);
+  const activeSectionsQuery = useActiveAdminSections();
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
     initialSectionId ?? null,
   );
@@ -94,7 +94,7 @@ export default function AdminStudentTeamManagement({
   const [actionMenuStudentNumber, setActionMenuStudentNumber] = useState<
     string | null
   >(null);
-  const sections = currentUser?.sections ?? [];
+  const sections = activeSectionsQuery.data;
 
   useEffect(() => {
     setSelectedSectionId(initialSectionId ?? null);
@@ -249,7 +249,17 @@ export default function AdminStudentTeamManagement({
         sectionId={sectionId}
       />
 
-      {!sectionId ? (
+      {activeSectionsQuery.isPending ? (
+        <section className={styles.statePanel}>
+          <p role='status'>운영 중인 분반을 불러오는 중입니다.</p>
+        </section>
+      ) : activeSectionsQuery.isError ? (
+        <section className={styles.statePanel}>
+          <p role='alert'>
+            운영 중인 분반을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+          </p>
+        </section>
+      ) : !sectionId ? (
         <section className={styles.statePanel}>
           <p>분반 정보를 불러오지 못했습니다.</p>
         </section>

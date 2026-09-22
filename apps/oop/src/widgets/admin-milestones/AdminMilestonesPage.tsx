@@ -15,6 +15,7 @@ import { ROUTES } from '~/app/constants/routes';
 import { paginate } from '~/shared/lib/pagination';
 import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
+import { useActiveAdminSections } from '~/features/admin-course/queries';
 import {
   formatAdminMilestoneDate,
   getAdminMilestoneStatusLabel,
@@ -24,7 +25,6 @@ import {
   useUpdateAdminSectionMilestoneStatusMutation,
 } from '~/features/admin-milestone-review/queries';
 import AdminSectionTeamFilter from '~/features/admin-section/components/AdminSectionTeamFilter';
-import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMilestonesPage.css';
 
@@ -72,7 +72,6 @@ function handleRowNavigation(
 }
 
 export default function AdminMilestonesPage() {
-  const currentUser = useAuthStore(state => state.currentUser);
   const navigate = useNavigate();
   const rawSearch = useSearch({ from: '/admin/milestones/' }) as {
     sectionId?: string | number;
@@ -84,7 +83,8 @@ export default function AdminMilestonesPage() {
         ? undefined
         : String(rawSearch.sectionId),
   };
-  const accessibleSections = currentUser?.sections ?? [];
+  const activeSectionsQuery = useActiveAdminSections();
+  const accessibleSections = activeSectionsQuery.data;
   const accessibleSectionIds = accessibleSections.map(section => section.id);
   const selectedSectionId =
     search.sectionId && accessibleSectionIds.includes(search.sectionId)
@@ -175,9 +175,18 @@ export default function AdminMilestonesPage() {
         />
       </div>
 
-      {accessibleSectionIds.length === 0 ? (
+      {activeSectionsQuery.isPending ? (
+        <Text aria-live='polite' role='status'>
+          운영 중인 분반을 불러오는 중입니다.
+        </Text>
+      ) : activeSectionsQuery.isError ? (
         <EmptyState
-          description='담당 분반이 없어 마일스톤을 조회할 수 없습니다.'
+          description='잠시 후 다시 시도해 주세요.'
+          title='운영 중인 분반을 불러오지 못했습니다.'
+        />
+      ) : accessibleSectionIds.length === 0 ? (
+        <EmptyState
+          description='운영 중인 담당 분반이 없어 마일스톤을 조회할 수 없습니다.'
           title='표시할 마일스톤이 없습니다.'
         />
       ) : isLoading && !hasSuccessfulQuery ? (

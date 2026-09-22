@@ -16,7 +16,7 @@ import {
   within,
 } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import {
   afterAll,
@@ -35,6 +35,7 @@ import AdminMilestoneSetupPage from './AdminMilestoneSetupPage';
 
 import { getAdminSectionMilestoneFixture } from '~/mocks/data/adminSectionMilestones';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminRequiredArtifactHandlers } from '~/mocks/handlers/adminRequiredArtifacts';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 
@@ -60,6 +61,7 @@ vi.mock('@aics/design-system', async importOriginal => ({
 }));
 
 const server = setupServer(
+  ...adminCourseHandlers,
   ...adminSectionMilestoneHandlers,
   ...adminRequiredArtifactHandlers,
 );
@@ -136,6 +138,41 @@ function renderPage(
 
   return router;
 }
+
+it('운영 분반을 확인하는 동안 수정 권한 오류를 먼저 표시하지 않는다', async () => {
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`, async () => {
+      await delay(1_000);
+      return HttpResponse.json({ contents: [] });
+    }),
+  );
+
+  renderPage(true);
+
+  expect(
+    await screen.findByText('운영 중인 분반을 불러오는 중입니다.'),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText('수정할 수 없는 분반입니다.'),
+  ).not.toBeInTheDocument();
+});
+
+it('운영 분반 조회 실패를 수정 권한 오류와 구분한다', async () => {
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`, () =>
+      HttpResponse.json({ code: 'INTERNAL_SERVER_ERROR' }, { status: 500 }),
+    ),
+  );
+
+  renderPage(true);
+
+  expect(
+    await screen.findByText('운영 중인 분반을 불러오지 못했습니다.'),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText('수정할 수 없는 분반입니다.'),
+  ).not.toBeInTheDocument();
+});
 
 function trackWrites() {
   const writes: string[] = [];
