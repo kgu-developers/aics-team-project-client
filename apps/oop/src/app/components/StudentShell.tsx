@@ -5,6 +5,7 @@ import { ROUTES } from '~/app/constants/routes';
 import { getStudentRouteDestination } from '~/app/studentRouteDestination';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
+import { contactWindowInstant } from '~/shared/lib/contactWindowDateTime';
 
 import {
   selectHasAuthenticatedSession,
@@ -12,7 +13,7 @@ import {
 } from '~/features/auth/authStore';
 import { safeRedirectPath } from '~/features/auth/safeRedirectPath';
 import { useStudentContext } from '~/features/section/useStudentContext';
-import { resolveContactVisibility } from '~/features/team-assignment/liveTeamAssignment';
+import { toTeamResultReleaseAt } from '~/features/team-assignment/liveTeamAssignment';
 import { useTeamKickoffQuery } from '~/features/team-assignment/queries';
 
 import StudentContactLink from '~/widgets/student-contact-link/StudentContactLink';
@@ -35,10 +36,16 @@ export default function StudentShell() {
   const currentPathname = useRouterState({
     select: state => state.location.pathname,
   });
+  const teamResultReleaseAt = toTeamResultReleaseAt(
+    context.section?.contactVisibleFrom ?? null,
+  );
+  const teamResultReleaseInstant = contactWindowInstant(teamResultReleaseAt);
   const shouldVerifyOnboarding =
     !isDemo &&
     context.status === 'ready' &&
-    resolveContactVisibility(context.section ?? {}) !== 'upcoming';
+    (teamResultReleaseAt === undefined ||
+      (Number.isFinite(teamResultReleaseInstant) &&
+        Date.now() >= teamResultReleaseInstant));
   const kickoff = useTeamKickoffQuery(
     shouldVerifyOnboarding ? context.teamId : undefined,
   );

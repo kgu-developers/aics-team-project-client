@@ -50,6 +50,7 @@ const queryClients: QueryClient[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllEnvs();
   server.resetHandlers();
   queryClients.splice(0).forEach(client => client.clear());
@@ -653,6 +654,66 @@ it('redirects an assigned live student without a confirmed leader back to onboar
     expect(router.state.location.pathname).toBe('/onboarding/team'),
   );
   expect(kickoffRequests).toBe(1);
+});
+
+it('verifies the leader from result-release midnight before allowing direct home entry', async () => {
+  vi.stubEnv('VITE_ENABLE_MSW', 'false');
+  vi.spyOn(Date, 'now').mockReturnValue(
+    Date.parse('2099-09-10T00:00:00+09:00'),
+  );
+  const section = {
+    id: 2,
+    code: 'OOP-02',
+    name: '테스트 분반',
+    classTime: '',
+    capacity: 40,
+    contactVisibleFrom: '2099-09-10T10:00:00+09:00',
+    contactVisibleUntil: null,
+    courseId: 1,
+    courseName: 'OOP',
+    year: 2099,
+    semester: 'FALL',
+    status: 'ACTIVE',
+  };
+  let kickoffRequests = 0;
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+      HttpResponse.json({
+        ...demoStudent,
+        globalRole: 'USER',
+        sections: [section],
+        teamId: 7,
+      }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.SECTION.MY_SECTIONS}`, () =>
+      HttpResponse.json({ contents: [section] }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF('7')}`, () => {
+      kickoffRequests++;
+      return HttpResponse.json({
+        id: 7,
+        name: '자정 공개 팀',
+        members: [
+          {
+            id: 1,
+            isLeader: false,
+            name: '팀원',
+            studentNumber: '20260002',
+          },
+        ],
+      });
+    }),
+  );
+
+  const { router } = renderHeader('/student', {
+    ...demoStudent,
+    teamId: '7',
+  });
+
+  await waitFor(() =>
+    expect(router.state.location.pathname).toBe('/onboarding/team'),
+  );
+  await waitFor(() => expect(kickoffRequests).toBe(1));
 });
 
 it('shows neutral profile copy without requesting kickoff before contact release', async () => {
