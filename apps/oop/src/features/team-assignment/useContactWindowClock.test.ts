@@ -25,6 +25,18 @@ it('열린 화면에서 시작 시각과 종료 직후에 연락처 공개 상�
   expect(vi.getTimerCount()).toBe(0);
 });
 
+it('팀원 공개 시각이 먼저 오면 해당 경계에서 화면을 갱신한다', () => {
+  const resultRelease = '2026-09-10T00:00:00+09:00';
+  vi.setSystemTime(Date.parse(resultRelease) - 1);
+  const { result, unmount } = renderHook(() =>
+    useContactWindowClock(start, end, resultRelease),
+  );
+
+  act(() => vi.advanceTimersByTime(1));
+  expect(result.current).toBe(Date.parse(resultRelease));
+  unmount();
+});
+
 it('백그라운드에서 복귀하면 오래된 시각 대신 현재 시각을 사용한다', () => {
   vi.setSystemTime(Date.parse(start));
   const { result, unmount } = renderHook(() =>

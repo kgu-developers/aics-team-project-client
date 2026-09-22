@@ -343,7 +343,7 @@ describe('AdminProfilePage', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('20260001')).toBeInTheDocument();
     expect(screen.getByText('검수 학생')).toBeInTheDocument();
-    expect(screen.getByText('BACKEND, PM')).toBeInTheDocument();
+    expect(screen.getByText('개발, 팀장(프로젝트 매니저)')).toBeInTheDocument();
     expect(
       screen.getByText('20231234 (김민준) - 상대가 수락'),
     ).toBeInTheDocument();

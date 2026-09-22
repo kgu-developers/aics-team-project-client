@@ -23,16 +23,10 @@ import { SurveyFlow, SurveyQuestion } from '~/shared/ui/SurveyFlow';
 
 import { useSubmitTeamAssignmentSurveyMutation } from '../queries';
 import * as styles from '../TeamAssignmentFlow.css';
+import { teamRolePreferenceOptions } from '../teamRolePreferences';
 import { LivePartnerRequestPanel } from './LivePartnerRequestPanel';
 import { PartnerRequestPanel } from './PartnerRequestPanel';
 
-const roleOptions: Array<{ label: string; value: TeamRolePreference }> = [
-  { label: '팀장(프로젝트 매니저)', value: 'TEAM_LEADER' },
-  { label: '개발', value: 'DEVELOPMENT' },
-  { label: '자료수집', value: 'RESEARCH' },
-  { label: '디자인', value: 'DESIGN' },
-  { label: '문서 작성 및 발표', value: 'DOCUMENTATION_PRESENTATION' },
-];
 const stepLabels = ['소개', '역할과 팀원', '주제와 의견'];
 
 type SurveyFormProps = {
@@ -208,7 +202,7 @@ export function SurveyForm({
                 }
                 value={survey.rolePreferences}
               >
-                {roleOptions.map(option => (
+                {teamRolePreferenceOptions.map(option => (
                   <CheckboxListItem
                     key={option.value}
                     label={option.label}

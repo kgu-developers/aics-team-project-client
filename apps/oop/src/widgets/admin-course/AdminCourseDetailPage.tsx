@@ -318,7 +318,7 @@ export default function AdminCourseDetailPage() {
               분반
             </Heading>
             <Text color='secondary' type='supporting'>
-              행을 선택하면 분반 정보와 연락처 공개 기간을 수정할 수 있습니다.
+              행을 선택하면 분반 정보와 온보딩 기간을 수정할 수 있습니다.
             </Text>
           </div>
           <Button
@@ -367,7 +367,7 @@ export default function AdminCourseDetailPage() {
                 },
                 {
                   align: 'start',
-                  header: '연락처 공개',
+                  header: '온보딩 기간',
                   key: 'contactVisibleFrom',
                   renderCell: section => {
                     const status = contactVisibilityStatus(

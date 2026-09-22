@@ -369,6 +369,15 @@ describe('AdminCourseDetailPage', () => {
     const settingsDialog = await screen.findByRole('dialog', {
       name: '분반 정보 수정',
     });
+    expect(
+      within(settingsDialog).getByRole('heading', { name: '온보딩 기간' }),
+    ).toBeInTheDocument();
+    expect(
+      within(settingsDialog).getByText(
+        '시작일 00:00부터 팀원이 공개되고, 설정한 시작 시각부터 연락처 공개와 팀장 선정을 진행할 수 있습니다.',
+      ),
+    ).toBeInTheDocument();
+    expect(within(settingsDialog).queryByText(/선택/)).not.toBeInTheDocument();
     await user.click(
       within(settingsDialog).getByRole('button', { name: '취소' }),
     );
@@ -418,22 +427,22 @@ describe('AdminCourseDetailPage', () => {
     ).toBeDisabled();
     expect(
       within(settingsDialog).getByRole('combobox', {
-        name: '공개 시작 날짜',
+        name: '온보딩 시작 날짜',
       }),
     ).toBeDisabled();
     expect(
       within(settingsDialog).getByRole('textbox', {
-        name: '공개 시작 시간',
+        name: '온보딩 시작 시간',
       }),
     ).toBeDisabled();
     expect(
       within(settingsDialog).getByRole('combobox', {
-        name: '공개 종료 날짜',
+        name: '온보딩 종료 날짜',
       }),
     ).toBeDisabled();
     expect(
       within(settingsDialog).getByRole('textbox', {
-        name: '공개 종료 시간',
+        name: '온보딩 종료 시간',
       }),
     ).toBeDisabled();
 

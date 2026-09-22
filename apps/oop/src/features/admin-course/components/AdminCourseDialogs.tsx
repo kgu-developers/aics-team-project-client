@@ -651,10 +651,11 @@ export function SectionSettingsDialog({
           >
             <VStack gap={1}>
               <Heading id='contact-visibility-heading' level={3}>
-                연락처 공개 기간 (선택)
+                온보딩 기간
               </Heading>
               <Text color='secondary' type='supporting'>
-                설정한 기간에만 학생에게 연락처가 공개됩니다.
+                시작일 00:00부터 팀원이 공개되고, 설정한 시작 시각부터 연락처
+                공개와 팀장 선정을 진행할 수 있습니다.
               </Text>
             </VStack>
             <Text className={styles.optionalSettingsStatus} type='supporting'>
@@ -664,8 +665,8 @@ export function SectionSettingsDialog({
           <div className={styles.visibilityFields}>
             {(
               [
-                ['공개 시작', visibleFrom, setVisibleFrom],
-                ['공개 종료', visibleUntil, setVisibleUntil],
+                ['온보딩 시작', visibleFrom, setVisibleFrom],
+                ['온보딩 종료', visibleUntil, setVisibleUntil],
               ] as const
             ).map(([label, value, setValue]) => {
               const draft = toDateTimeDraft(value);
@@ -706,7 +707,7 @@ export function SectionSettingsDialog({
           {visibleFrom || visibleUntil ? (
             <Button
               isDisabled={isPending}
-              label='공개 기간 해제'
+              label='온보딩 기간 해제'
               onClick={() => {
                 setVisibleFrom('');
                 setVisibleUntil('');
@@ -725,11 +726,10 @@ export function SectionSettingsDialog({
         {saveError === 'visibility' ? (
           <VStack gap={2}>
             <Text className={styles.error} role='alert'>
-              분반 기본 정보는 저장됐지만 연락처 공개 기간을 저장하지
-              못했습니다.
+              분반 기본 정보는 저장됐지만 온보딩 기간을 저장하지 못했습니다.
             </Text>
             <Button
-              label='공개 기간 다시 저장'
+              label='온보딩 기간 다시 저장'
               onClick={saveVisibility}
               size='sm'
               type='button'

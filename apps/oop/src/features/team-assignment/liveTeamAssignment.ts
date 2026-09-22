@@ -23,9 +23,13 @@ function timestamp(value?: string | null) {
 }
 
 export function toTeamResultReleaseAt(contactVisibleFrom: string | null) {
-  return timestamp(contactVisibleFrom) === undefined
-    ? undefined
-    : (contactVisibleFrom ?? undefined);
+  const contactRelease = timestamp(contactVisibleFrom);
+  if (contactRelease === undefined) return undefined;
+
+  const seoulDate = new Date(contactRelease + 9 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  return `${seoulDate}T00:00:00+09:00`;
 }
 
 export function resolveContactVisibility(

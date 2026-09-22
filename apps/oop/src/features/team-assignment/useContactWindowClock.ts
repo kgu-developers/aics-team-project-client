@@ -5,6 +5,7 @@ import { contactWindowInstant } from '~/shared/lib/contactWindowDateTime';
 export function useContactWindowClock(
   contactVisibleFrom?: string | null,
   contactVisibleUntil?: string | null,
+  teamResultVisibleFrom?: string,
 ) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -12,6 +13,7 @@ export function useContactWindowClock(
     const update = () => setNow(Date.now());
     const currentTime = Date.now();
     const boundaries = [
+      contactWindowInstant(teamResultVisibleFrom),
       contactWindowInstant(contactVisibleFrom),
       // The server includes the end timestamp; hide contacts immediately after it.
       contactWindowInstant(contactVisibleUntil) + 1,
@@ -33,7 +35,7 @@ export function useContactWindowClock(
       window.removeEventListener('focus', update);
       document.removeEventListener('visibilitychange', update);
     };
-  }, [contactVisibleFrom, contactVisibleUntil, now]);
+  }, [contactVisibleFrom, contactVisibleUntil, now, teamResultVisibleFrom]);
 
   return Math.max(now, Date.now());
 }
