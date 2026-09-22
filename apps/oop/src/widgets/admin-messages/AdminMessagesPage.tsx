@@ -67,7 +67,11 @@ export default function AdminMessagesPage() {
       <div>
         <Heading level={1}>쪽지함</Heading>
         <Text>담당 분반의 팀 메시지를 확인하고 관리합니다.</Text>
-        {query.data ? <Text>미확인 {query.data.unreadCount}건</Text> : null}
+        {!activeSectionsQuery.isPending &&
+        !activeSectionsQuery.isError &&
+        query.data ? (
+          <Text>미확인 {query.data.unreadCount}건</Text>
+        ) : null}
       </div>
       <AdminSectionTeamFilter
         onSectionChange={next =>
@@ -77,7 +81,16 @@ export default function AdminMessagesPage() {
         sectionId={sectionId ?? ALL_SECTIONS}
         teamId={teamId}
       />
-      {query.isLoading || page !== boundedPage ? (
+      {activeSectionsQuery.isPending ? (
+        <Text aria-live='polite' role='status'>
+          운영 중인 분반을 불러오는 중입니다.
+        </Text>
+      ) : activeSectionsQuery.isError ? (
+        <EmptyState
+          description='잠시 후 다시 시도해 주세요.'
+          title='운영 중인 분반을 불러오지 못했습니다.'
+        />
+      ) : query.isLoading || page !== boundedPage ? (
         <Text>불러오는 중...</Text>
       ) : query.isError ? (
         <Card className={styles.tableCard}>
@@ -136,7 +149,10 @@ export default function AdminMessagesPage() {
           )}
         </Card>
       )}
-      {pagination && pagination.totalPages > 1 ? (
+      {!activeSectionsQuery.isPending &&
+      !activeSectionsQuery.isError &&
+      pagination &&
+      pagination.totalPages > 1 ? (
         <Pagination
           className={styles.pagination}
           isDisabled={query.isFetching}

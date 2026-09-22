@@ -152,6 +152,25 @@ function renderPage(path: string) {
   render(<RouterProvider router={router} />);
   return { client, router };
 }
+it('운영 분반 조회 실패를 접근 가능한 분반 없음으로 표시하지 않는다', async () => {
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`, () =>
+      HttpResponse.json({ code: 'INTERNAL_SERVER_ERROR' }, { status: 500 }),
+    ),
+  );
+
+  renderPage('/admin/notices');
+
+  expect(
+    await screen.findByText('운영 중인 분반을 불러오지 못했습니다.'),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText(
+      '접근 가능한 분반이 없어 공지사항을 관리할 수 없습니다.',
+    ),
+  ).not.toBeInTheDocument();
+});
+
 async function fill() {
   const user = userEvent.setup();
   await user.type(

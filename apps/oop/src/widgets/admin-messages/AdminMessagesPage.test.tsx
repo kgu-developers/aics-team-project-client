@@ -133,6 +133,25 @@ function paginationButtons() {
   return within(screen.getByRole('navigation')).getAllByRole('button');
 }
 
+it('운영 분반 조회 실패 중에는 독립적으로 조회된 쪽지함을 노출하지 않는다', async () => {
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`, () =>
+      HttpResponse.json({ code: 'INTERNAL_SERVER_ERROR' }, { status: 500 }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>
+      HttpResponse.json(messagePage(0, 10, 1)),
+    ),
+  );
+
+  setup();
+
+  expect(
+    await screen.findByText('운영 중인 분반을 불러오지 못했습니다.'),
+  ).toBeInTheDocument();
+  expect(screen.queryByText('all 쪽지 1')).not.toBeInTheDocument();
+  expect(screen.queryByText('미확인 1건')).not.toBeInTheDocument();
+});
+
 it('분반 필터에서 보관 강좌의 운영 분반을 제외한다', async () => {
   server.use(
     http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>

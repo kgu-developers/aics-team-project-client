@@ -133,7 +133,7 @@ function SectionSelect({
 
 export function AdminNoticeListPage() {
   const navigate = useNavigate();
-  const { sectionId, section, user } = useNoticeScope();
+  const { activeSectionsQuery, sectionId, section, user } = useNoticeScope();
   const selectedSectionId = section ? sectionId : undefined;
   const sectionQuery = useAdminNoticesQuery(selectedSectionId);
   const allSectionsQuery = useAdminAllNoticesQuery(
@@ -149,6 +149,28 @@ export function AdminNoticeListPage() {
   const hasSections = user?.sections.some(
     section => noticeId(section.id) !== undefined,
   );
+
+  if (activeSectionsQuery.isPending) {
+    return (
+      <div className={styles.page}>
+        <Text aria-live='polite' role='status'>
+          운영 중인 분반을 불러오는 중입니다.
+        </Text>
+      </div>
+    );
+  }
+
+  if (activeSectionsQuery.isError) {
+    return (
+      <div className={styles.page}>
+        <EmptyState
+          description='잠시 후 다시 시도해 주세요.'
+          title='운영 중인 분반을 불러오지 못했습니다.'
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={styles.page}>
       <Heading level={1}>공지사항</Heading>

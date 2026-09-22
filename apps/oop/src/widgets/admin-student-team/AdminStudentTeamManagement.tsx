@@ -249,7 +249,17 @@ export default function AdminStudentTeamManagement({
         sectionId={sectionId}
       />
 
-      {!sectionId ? (
+      {activeSectionsQuery.isPending ? (
+        <section className={styles.statePanel}>
+          <p role='status'>운영 중인 분반을 불러오는 중입니다.</p>
+        </section>
+      ) : activeSectionsQuery.isError ? (
+        <section className={styles.statePanel}>
+          <p role='alert'>
+            운영 중인 분반을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+          </p>
+        </section>
+      ) : !sectionId ? (
         <section className={styles.statePanel}>
           <p>분반 정보를 불러오지 못했습니다.</p>
         </section>

@@ -609,7 +609,16 @@ export default function AdminSubmissionsPage() {
           id={`submission-panel-${activeTab.id}`}
           role='tabpanel'
         >
-          {activeMilestoneId === 'presentation-evaluate' ? (
+          {activeSectionsQuery.isPending ? (
+            <Text aria-live='polite' role='status'>
+              운영 중인 분반을 불러오는 중입니다.
+            </Text>
+          ) : activeSectionsQuery.isError ? (
+            <EmptyState
+              description='잠시 후 다시 시도해 주세요.'
+              title='운영 중인 분반을 불러오지 못했습니다.'
+            />
+          ) : activeMilestoneId === 'presentation-evaluate' ? (
             !isAccessibleSection ? (
               <EmptyState
                 description='담당 분반만 제출물을 조회할 수 있습니다.'

@@ -968,6 +968,27 @@ export default function AdminMilestoneSetupPage() {
     return section ? `${section.code} · ${section.name}` : sectionId;
   };
 
+  if (activeSectionsQuery.isPending) {
+    return (
+      <div className={styles.page}>
+        <Text aria-live='polite' role='status'>
+          운영 중인 분반을 불러오는 중입니다.
+        </Text>
+      </div>
+    );
+  }
+
+  if (activeSectionsQuery.isError) {
+    return (
+      <div className={styles.page}>
+        <EmptyState
+          description='잠시 후 다시 시도해 주세요.'
+          title='운영 중인 분반을 불러오지 못했습니다.'
+        />
+      </div>
+    );
+  }
+
   if (editingMilestoneId && !editingSectionId) {
     return (
       <div className={styles.page}>

@@ -106,6 +106,43 @@ function renderPage(currentUser = demoAdmin, initialSectionId?: string) {
 }
 
 describe('AdminStudentTeamManagement', () => {
+  it('운영 분반을 확인하는 동안 분반 정보 오류를 표시하지 않는다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`, async () => {
+        await delay(1_000);
+        return HttpResponse.json({ contents: [] });
+      }),
+    );
+
+    renderPage();
+
+    expect(
+      await screen.findByText('운영 중인 분반을 불러오는 중입니다.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('분반 정보를 불러오지 못했습니다.'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('운영 분반 조회 실패를 빈 분반 선택과 구분한다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`, () =>
+        HttpResponse.json({ code: 'INTERNAL_SERVER_ERROR' }, { status: 500 }),
+      ),
+    );
+
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        '운영 중인 분반을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('분반 정보를 불러오지 못했습니다.'),
+    ).not.toBeInTheDocument();
+  });
+
   it('로그인한 관리자가 맡은 여러 분반을 표시하고 선택을 전환한다', async () => {
     const user = userEvent.setup();
 

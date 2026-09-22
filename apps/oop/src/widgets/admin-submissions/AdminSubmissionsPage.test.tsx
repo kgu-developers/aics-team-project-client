@@ -131,6 +131,23 @@ function renderPage(initialEntry = '/admin/submissions?sectionId=1') {
 }
 
 describe('AdminSubmissionsPage', () => {
+  it('운영 분반 조회 실패를 제출물 접근 거부로 표시하지 않는다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`, () =>
+        HttpResponse.json({ code: 'INTERNAL_SERVER_ERROR' }, { status: 500 }),
+      ),
+    );
+
+    renderPage('/admin/submissions?milestoneId=proposal&sectionId=1');
+
+    expect(
+      await screen.findByText('운영 중인 분반을 불러오지 못했습니다.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('접근할 수 없는 분반입니다.'),
+    ).not.toBeInTheDocument();
+  });
+
   it.each(['2026-09-13T10:00:00'])(
     '제출 완료된 제안서는 일반 제출 버전 없이도 프로젝트 문서·이미지를 조회하며 전송 실패 시 입력을 유지한다 (%s)',
     async completedAt => {
