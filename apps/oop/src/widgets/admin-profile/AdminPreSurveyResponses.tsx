@@ -20,6 +20,7 @@ import {
   useAdminPreSurveyResponsesQuery,
 } from '~/features/admin-profile/queries';
 import { useAdminSectionEnrollmentsQuery } from '~/features/admin-student-team/queries';
+import { formatTeamRolePreferences } from '~/features/team-assignment/teamRolePreferences';
 
 import * as styles from './AdminPreSurveyResponses.css';
 
@@ -38,16 +39,6 @@ type PreSurveyTableRow = {
   userId: string;
   userName: string;
 };
-
-function formatPreferredRoles(roles: unknown) {
-  if (!Array.isArray(roles)) return '';
-
-  const values = roles.filter(
-    (role): role is string => typeof role === 'string',
-  );
-
-  return values.length > 0 ? values.join(', ') : '';
-}
 
 function formatPreferredPeer(
   userId: string | null | undefined,
@@ -239,7 +230,7 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
                         header: '희망 역할',
                         key: 'preferredRoles',
                         renderCell: response =>
-                          formatPreferredRoles(response.preferredRoles),
+                          formatTeamRolePreferences(response.preferredRoles),
                         width: proportional(1.1, { minWidth: 180 }),
                       },
                       {

@@ -191,9 +191,12 @@ it('연락처는 시작·종료 경계를 포함하고 잘못된 종료값은 �
   ).toBe('closed');
 });
 
-it('팀원 공개 시각은 과거 자정으로 바꾸지 않고 실제 연락처 공개 시각을 사용한다', () => {
-  expect(toTeamResultReleaseAt('2026-09-10T10:00:00+09:00')).toBe(
-    '2026-09-10T10:00:00+09:00',
+it('팀원은 온보딩 시작일의 서울 자정부터 공개한다', () => {
+  expect(toTeamResultReleaseAt('2026-09-22T14:00:00+09:00')).toBe(
+    '2026-09-22T00:00:00+09:00',
+  );
+  expect(toTeamResultReleaseAt('2026-09-22T05:00:00')).toBe(
+    '2026-09-22T00:00:00+09:00',
   );
   expect(toTeamResultReleaseAt(null)).toBeUndefined();
   expect(toTeamResultReleaseAt('invalid')).toBeUndefined();

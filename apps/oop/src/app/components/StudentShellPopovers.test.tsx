@@ -50,6 +50,7 @@ const queryClients: QueryClient[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllEnvs();
   server.resetHandlers();
   queryClients.splice(0).forEach(client => client.clear());
@@ -598,6 +599,123 @@ it('redirects an assigned live student before contact release without requesting
   expect(screen.queryByText('공개 전 팀원')).not.toBeInTheDocument();
 });
 
+it('redirects an assigned live student without a confirmed leader back to onboarding', async () => {
+  vi.stubEnv('VITE_ENABLE_MSW', 'false');
+  const section = {
+    id: 2,
+    code: 'OOP-02',
+    name: '테스트 분반',
+    classTime: '',
+    capacity: 40,
+    contactVisibleFrom: '2020-01-01T00:00:00+09:00',
+    contactVisibleUntil: null,
+    courseId: 1,
+    courseName: 'OOP',
+    year: 2026,
+    semester: 'FALL',
+    status: 'ACTIVE',
+  };
+  let kickoffRequests = 0;
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+      HttpResponse.json({
+        ...demoStudent,
+        globalRole: 'USER',
+        sections: [section],
+        teamId: 7,
+      }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.SECTION.MY_SECTIONS}`, () =>
+      HttpResponse.json({ contents: [section] }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF('7')}`, () => {
+      kickoffRequests++;
+      return HttpResponse.json({
+        id: 7,
+        name: '팀장 미확정 팀',
+        members: [
+          {
+            id: 1,
+            isLeader: false,
+            name: '팀원',
+            studentNumber: '20260002',
+          },
+        ],
+      });
+    }),
+  );
+
+  const { router } = renderHeader('/student', {
+    ...demoStudent,
+    teamId: '7',
+  });
+
+  await waitFor(() =>
+    expect(router.state.location.pathname).toBe('/onboarding/team'),
+  );
+  expect(kickoffRequests).toBe(1);
+});
+
+it('verifies the leader from result-release midnight before allowing direct home entry', async () => {
+  vi.stubEnv('VITE_ENABLE_MSW', 'false');
+  vi.spyOn(Date, 'now').mockReturnValue(
+    Date.parse('2099-09-10T00:00:00+09:00'),
+  );
+  const section = {
+    id: 2,
+    code: 'OOP-02',
+    name: '테스트 분반',
+    classTime: '',
+    capacity: 40,
+    contactVisibleFrom: '2099-09-10T10:00:00+09:00',
+    contactVisibleUntil: null,
+    courseId: 1,
+    courseName: 'OOP',
+    year: 2099,
+    semester: 'FALL',
+    status: 'ACTIVE',
+  };
+  let kickoffRequests = 0;
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+      HttpResponse.json({
+        ...demoStudent,
+        globalRole: 'USER',
+        sections: [section],
+        teamId: 7,
+      }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.SECTION.MY_SECTIONS}`, () =>
+      HttpResponse.json({ contents: [section] }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF('7')}`, () => {
+      kickoffRequests++;
+      return HttpResponse.json({
+        id: 7,
+        name: '자정 공개 팀',
+        members: [
+          {
+            id: 1,
+            isLeader: false,
+            name: '팀원',
+            studentNumber: '20260002',
+          },
+        ],
+      });
+    }),
+  );
+
+  const { router } = renderHeader('/student', {
+    ...demoStudent,
+    teamId: '7',
+  });
+
+  await waitFor(() =>
+    expect(router.state.location.pathname).toBe('/onboarding/team'),
+  );
+  await waitFor(() => expect(kickoffRequests).toBe(1));
+});
+
 it('shows neutral profile copy without requesting kickoff before contact release', async () => {
   vi.stubEnv('VITE_ENABLE_MSW', 'false');
   const section = {
@@ -699,10 +817,11 @@ it('keeps an assigned student route and kickoff identity when contact release is
   });
 
   await waitFor(() => expect(router.state.location.pathname).toBe('/student'));
+  await waitFor(() => expect(kickoffRequests).toBe(1));
   await userEvent.click(screen.getByRole('button', { name: '내 프로필 열기' }));
   expect(await screen.findByText('미설정 팀 이름')).toBeVisible();
   expect(screen.getByText('미설정 팀원 (20260002)')).toBeVisible();
-  expect(kickoffRequests).toBe(1);
+  expect(kickoffRequests).toBe(2);
 });
 
 it('uses the selected live section in shell and profile, with no unattributed team request', async () => {

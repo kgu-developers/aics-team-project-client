@@ -5,6 +5,7 @@ import { ROUTES } from '~/app/constants/routes';
 import { getStudentRouteDestination } from '~/app/studentRouteDestination';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
+import { contactWindowInstant } from '~/shared/lib/contactWindowDateTime';
 
 import {
   selectHasAuthenticatedSession,
@@ -12,6 +13,8 @@ import {
 } from '~/features/auth/authStore';
 import { safeRedirectPath } from '~/features/auth/safeRedirectPath';
 import { useStudentContext } from '~/features/section/useStudentContext';
+import { toTeamResultReleaseAt } from '~/features/team-assignment/liveTeamAssignment';
+import { useTeamKickoffQuery } from '~/features/team-assignment/queries';
 
 import StudentContactLink from '~/widgets/student-contact-link/StudentContactLink';
 
@@ -33,6 +36,19 @@ export default function StudentShell() {
   const currentPathname = useRouterState({
     select: state => state.location.pathname,
   });
+  const teamResultReleaseAt = toTeamResultReleaseAt(
+    context.section?.contactVisibleFrom ?? null,
+  );
+  const teamResultReleaseInstant = contactWindowInstant(teamResultReleaseAt);
+  const shouldVerifyOnboarding =
+    !isDemo &&
+    context.status === 'ready' &&
+    (teamResultReleaseAt === undefined ||
+      (Number.isFinite(teamResultReleaseInstant) &&
+        Date.now() >= teamResultReleaseInstant));
+  const kickoff = useTeamKickoffQuery(
+    shouldVerifyOnboarding ? context.teamId : undefined,
+  );
 
   if (!hasSession || !currentUser) {
     // `safeRedirectPath` drops /login itself, so a router that keeps this
@@ -57,6 +73,23 @@ export default function StudentShell() {
   );
   if (guardedDestination) {
     return <Navigate replace to={guardedDestination} />;
+  }
+
+  if (shouldVerifyOnboarding && kickoff.isPending) {
+    return (
+      <Text aria-live='polite' role='status'>
+        팀 온보딩 완료 여부를 확인하는 중입니다.
+      </Text>
+    );
+  }
+  if (
+    shouldVerifyOnboarding &&
+    (kickoff.isError ||
+      !kickoff.data ||
+      String(kickoff.data.id) !== context.teamId ||
+      !kickoff.data.members.some(member => member.isLeader))
+  ) {
+    return <Navigate replace to={ROUTES.ONBOARDING.TEAM} />;
   }
 
   const section =

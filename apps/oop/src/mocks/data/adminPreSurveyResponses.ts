@@ -16,7 +16,7 @@ const oopPreSurveyResponses: AdminPreSurveyResponsePreview[] = [
   {
     etcOpinion: '금요일 오후에는 회의가 어렵습니다.',
     id: 1,
-    preferredRoles: ['BACKEND', 'PM'],
+    preferredRoles: ['DEVELOPMENT', 'TEAM_LEADER'],
     preferredPeerUserId: '20231234',
     preferredPeerName: '김민준',
     preferredPeerStatus: 'ACCEPTED',

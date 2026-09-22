@@ -8,7 +8,7 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -147,9 +147,11 @@ it('formats an ISO rollover in Seoul and saves a local read record', async () =>
   );
   renderPage();
   await screen.findByText('2026-09-02/08:30');
-  expect(
-    localStorage.getItem(`aics:admin-meetings:read:${demoAdmin.id}`),
-  ).toContain('1');
+  await waitFor(() =>
+    expect(
+      localStorage.getItem(`aics:admin-meetings:read:${demoAdmin.id}`),
+    ).toContain('1'),
+  );
   expect(
     localStorage.getItem('aics:admin:read:another-admin:1:meetings'),
   ).toBeNull();

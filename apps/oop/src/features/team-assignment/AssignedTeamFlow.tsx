@@ -5,6 +5,8 @@ import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { contactWindowInstant } from '~/shared/lib/contactWindowDateTime';
+
 import {
   resolveContactVisibility,
   resolveLiveTeamAssignmentStage,
@@ -26,18 +28,17 @@ export default function AssignedTeamFlow({
   teamId: string;
   teamOnly: boolean;
 }) {
+  const resultReleasesAt = toTeamResultReleaseAt(section.contactVisibleFrom);
   const now = useContactWindowClock(
     section.contactVisibleFrom,
     section.contactVisibleUntil,
+    resultReleasesAt,
   );
   const contactVisibility = resolveContactVisibility(section, now);
+  const resultReleaseInstant = contactWindowInstant(resultReleasesAt);
 
-  if (contactVisibility === 'upcoming') {
-    return (
-      <ResultWaiting
-        resultReleasesAt={toTeamResultReleaseAt(section.contactVisibleFrom)}
-      />
-    );
+  if (Number.isFinite(resultReleaseInstant) && now < resultReleaseInstant) {
+    return <ResultWaiting resultReleasesAt={resultReleasesAt} />;
   }
 
   return (

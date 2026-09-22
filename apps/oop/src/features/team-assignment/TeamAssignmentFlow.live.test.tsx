@@ -171,7 +171,7 @@ describe('TeamAssignmentFlow live API mode', () => {
       }),
     ).toBeVisible();
     expect(
-      screen.getByText('팀 선정 결과는 2099-09-10/10:00에 공개됩니다.'),
+      screen.getByText('팀 선정 결과는 2099-09-10/00:00에 공개됩니다.'),
     ).toBeVisible();
     expect(screen.queryByRole('button', { name: '시작하기' })).toBeNull();
     expect(mockLiveProjectionQuery).toHaveBeenCalledWith(

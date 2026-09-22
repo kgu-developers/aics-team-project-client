@@ -254,24 +254,24 @@ it('연락처 공개 일정이 미설정이어도 내 팀 화면에서 identity�
   expect(claimRequests).not.toHaveBeenCalled();
 });
 
-it('온보딩 시작 시각이 되면 팀원 확인 화면의 다음만 활성화하고 클릭 후 연락처를 표시한다', async () => {
+it('시작일 00시부터 팀원을 공개하고 설정 시각부터 연락처·팀장 선정을 연다', async () => {
   const start = Date.parse('2026-09-10T10:00:00+09:00');
   const now = vi.spyOn(Date, 'now').mockReturnValue(start - 60_000);
   activeSection.contactVisibleFrom = '2026-09-10T10:00:00+09:00';
   renderFlow();
-  expect(
-    await screen.findByRole('heading', {
-      name: '설문에 응답해 주셔서 감사합니다.',
-    }),
-  ).toBeVisible();
-  expect(kickoffRequests).not.toHaveBeenCalled();
+
+  await viewTeam();
+  expect(screen.getByText('한가온')).toBeVisible();
+  expect(screen.getByText('20260001')).toBeVisible();
+  expect(screen.getByRole('button', { name: '다음' })).toBeDisabled();
+  expect(kickoffRequests).toHaveBeenCalledOnce();
+  expect(contactRequests).not.toHaveBeenCalled();
+
   act(() => {
     now.mockReturnValue(start);
     window.dispatchEvent(new Event('focus'));
   });
-  await viewTeam();
   expect(screen.getByRole('button', { name: '다음' })).toBeEnabled();
-  expect(contactRequests).not.toHaveBeenCalled();
   expect(screen.queryByRole('button', { name: '내가 팀장입니다' })).toBeNull();
   await userEvent.setup().click(screen.getByRole('button', { name: '다음' }));
   expect(
