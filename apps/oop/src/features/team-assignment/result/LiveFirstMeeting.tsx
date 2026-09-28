@@ -25,6 +25,7 @@ import { TeamMemberTable } from './TeamMemberTable';
 type FirstMeetingProps = {
   projection: TeamAssignmentProjection;
   contactVisibility?: ContactVisibility;
+  onCheckLeader: () => Promise<boolean>;
 };
 
 const contactMessages: Record<Exclude<ContactVisibility, 'open'>, string> = {
@@ -36,6 +37,7 @@ const contactMessages: Record<Exclude<ContactVisibility, 'open'>, string> = {
 export default function LiveFirstMeeting({
   projection,
   contactVisibility = 'open',
+  onCheckLeader,
 }: FirstMeetingProps) {
   const confirmTeamLeader = useClaimTeamLeaderMutation();
   const navigate = useNavigate();
@@ -43,6 +45,8 @@ export default function LiveFirstMeeting({
   const contactsVisible = contactVisibility === 'open';
   const teamContacts = useTeamMemberContactsQuery(team?.id, contactsVisible);
   const [confirming, setConfirming] = useState(false);
+  const [leaderRequired, setLeaderRequired] = useState(false);
+  const [checkingLeader, setCheckingLeader] = useState(false);
   const [requestError, setRequestError] = useState<string>();
   const leaderActionAvailable =
     projection.leaderConfirmation?.isActionAvailable ?? false;
@@ -99,6 +103,25 @@ export default function LiveFirstMeeting({
     }
   }
 
+  async function continueAsMember() {
+    if (checkingLeader) return;
+    setCheckingLeader(true);
+    setRequestError(undefined);
+    try {
+      if (await onCheckLeader()) {
+        await navigate({ to: ROUTES.STUDENT.HOME, replace: true });
+      } else {
+        setLeaderRequired(true);
+      }
+    } catch {
+      setRequestError(
+        '팀장 선정 상태를 확인하지 못했어요. 다시 시도해 주세요.',
+      );
+    } finally {
+      setCheckingLeader(false);
+    }
+  }
+
   return (
     <section className={styles.page} aria-labelledby='first-meeting-heading'>
       <div className={styles.resultContent}>
@@ -137,7 +160,8 @@ export default function LiveFirstMeeting({
           <div className={`${styles.actions} ${styles.centeredActions}`}>
             <Button
               label='팀원이에요'
-              onClick={() => void navigate({ to: ROUTES.STUDENT.HOME })}
+              isLoading={checkingLeader}
+              onClick={() => void continueAsMember()}
               variant='secondary'
             />
             <Button
@@ -158,6 +182,29 @@ export default function LiveFirstMeeting({
         )}
       </div>
       {requestError ? <p role='alert'>{requestError}</p> : null}
+      <Dialog
+        aria-label='팀장 선정 필요'
+        isOpen={leaderRequired}
+        onOpenChange={setLeaderRequired}
+        purpose='info'
+      >
+        <VStack gap={4}>
+          <VStack gap={2}>
+            <Heading level={2}>팀장을 먼저 선정해야 합니다</Heading>
+            <Text color='secondary'>
+              아직 팀장이 확정되지 않았어요. 팀원 중 한 명이 팀장 선정 단계를
+              진행한 뒤 다시 확인해 주세요.
+            </Text>
+          </VStack>
+          <HStack gap={2} justify='end'>
+            <Button
+              label='확인'
+              onClick={() => setLeaderRequired(false)}
+              variant='primary'
+            />
+          </HStack>
+        </VStack>
+      </Dialog>
       <Dialog
         aria-label='팀장 확정 확인'
         isOpen={confirming}

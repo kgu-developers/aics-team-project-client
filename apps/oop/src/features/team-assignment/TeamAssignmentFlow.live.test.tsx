@@ -320,4 +320,40 @@ describe('TeamAssignmentFlow live API mode', () => {
     renderFlow();
     expect(screen.getByText('이동: /student')).toBeVisible();
   });
+
+  it('팀원 선택 시 캐시가 아닌 최신 kickoff의 팀장 상태를 확인한다', async () => {
+    const user = userEvent.setup();
+    const kickoff = {
+      id: 4,
+      name: '7조',
+      members: [
+        { id: 10, studentNumber: student.studentNumber, isLeader: false },
+      ],
+    };
+    const refetch = vi.fn().mockResolvedValue({
+      data: kickoff,
+      isError: false,
+    });
+    mockCurrentUserQuery.mockReturnValue(
+      queryResult({ ...student, teamId: '4' }),
+    );
+    mockSectionsQuery.mockReturnValue(
+      queryResult([
+        { ...section, contactVisibleFrom: '2020-09-10T10:00:00+09:00' },
+      ]),
+    );
+    mockSurveyQuery.mockReturnValue(queryResult());
+    mockKickoffQuery.mockReturnValue({ ...queryResult(kickoff), refetch });
+
+    renderFlow();
+    await user.click(screen.getByRole('button', { name: '우리 팀 확인하기' }));
+    await user.click(screen.getByRole('button', { name: '다음' }));
+    await user.click(screen.getByRole('button', { name: '팀원이에요' }));
+
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(
+      await screen.findByRole('dialog', { name: '팀장 선정 필요' }),
+    ).toBeVisible();
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
 });
