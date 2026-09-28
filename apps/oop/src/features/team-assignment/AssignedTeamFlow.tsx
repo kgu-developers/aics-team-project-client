@@ -110,6 +110,17 @@ function VisibleAssignedTeamFlow({
     <LiveFirstMeeting
       projection={projection}
       contactVisibility={contactVisibility}
+      onCheckLeader={async () => {
+        const latest = await query.refetch();
+        if (
+          latest.isError ||
+          !latest.data ||
+          String(latest.data.id) !== teamId
+        ) {
+          throw new Error('팀장 선정 상태를 확인하지 못했습니다.');
+        }
+        return latest.data.members.some(member => member.isLeader);
+      }}
     />
   );
 }

@@ -15,6 +15,7 @@ import { renderWithRouter } from '~/test/renderWithRouter';
 const mockNavigate = vi.hoisted(() => vi.fn());
 const mockContactsQuery = vi.hoisted(() => vi.fn());
 const mockLeaderMutation = vi.hoisted(() => vi.fn());
+const mockCheckLeader = vi.hoisted(() => vi.fn());
 
 vi.mock('@tanstack/react-router', async importOriginal => {
   const actual =
@@ -70,7 +71,10 @@ function createProjection(teamId = '4'): TeamAssignmentProjection {
 function renderFirstMeeting(projection = createProjection()) {
   return renderWithRouter(
     <AstryxThemeProvider>
-      <LiveFirstMeeting projection={projection} />
+      <LiveFirstMeeting
+        projection={projection}
+        onCheckLeader={mockCheckLeader}
+      />
     </AstryxThemeProvider>,
   );
 }
@@ -80,6 +84,8 @@ beforeEach(() => {
   mockNavigate.mockReset();
   mockContactsQuery.mockReset();
   mockLeaderMutation.mockReset();
+  mockCheckLeader.mockReset();
+  mockCheckLeader.mockResolvedValue(false);
   mockContactsQuery.mockReturnValue({
     data: contacts,
     isError: false,
@@ -93,6 +99,48 @@ beforeEach(() => {
 });
 
 describe('FirstMeeting', () => {
+  it('팀원 선택 시 팀장이 없으면 선정 안내를 표시하고 이동하지 않는다', async () => {
+    const user = userEvent.setup();
+    renderFirstMeeting();
+
+    await user.click(screen.getByRole('button', { name: '팀원이에요' }));
+
+    expect(mockCheckLeader).toHaveBeenCalledOnce();
+    expect(
+      await screen.findByRole('dialog', { name: '팀장 선정 필요' }),
+    ).toHaveTextContent('팀장을 먼저 선정해야 합니다');
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('팀원이 재조회한 팀에 팀장이 있으면 모달 없이 홈으로 이동한다', async () => {
+    mockCheckLeader.mockResolvedValue(true);
+    const user = userEvent.setup();
+    renderFirstMeeting();
+
+    await user.click(screen.getByRole('button', { name: '팀원이에요' }));
+
+    await vi.waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: '/student',
+        replace: true,
+      }),
+    );
+    expect(screen.queryByRole('dialog', { name: '팀장 선정 필요' })).toBeNull();
+  });
+
+  it('팀장 선정 상태 재조회 실패 시 홈으로 이동하지 않고 재시도를 안내한다', async () => {
+    mockCheckLeader.mockRejectedValue(new Error('network error'));
+    const user = userEvent.setup();
+    renderFirstMeeting();
+
+    await user.click(screen.getByRole('button', { name: '팀원이에요' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '팀장 선정 상태를 확인하지 못했어요. 다시 시도해 주세요.',
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
   it('연락처 응답을 학번으로 병합하고 projection의 기존 전화번호는 노출하지 않는다', () => {
     renderFirstMeeting();
 
@@ -189,6 +237,7 @@ describe('FirstMeeting', () => {
         <LiveFirstMeeting
           projection={createProjection()}
           contactVisibility='closed'
+          onCheckLeader={mockCheckLeader}
         />
       </AstryxThemeProvider>,
     );
