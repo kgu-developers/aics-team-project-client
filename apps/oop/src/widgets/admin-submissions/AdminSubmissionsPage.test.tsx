@@ -85,7 +85,10 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderPage(initialEntry = '/admin/submissions?sectionId=1') {
+function renderPage(
+  initialEntry = '/admin/submissions?sectionId=1',
+  currentUser = demoAdmin,
+) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
@@ -124,7 +127,7 @@ function renderPage(initialEntry = '/admin/submissions?sectionId=1') {
   setApiAccessToken(demoAdminAccessToken);
   useAuthStore.setState({
     accessToken: demoAdminAccessToken,
-    currentUser: demoAdmin,
+    currentUser,
   });
 
   return render(<RouterProvider router={router} />);
@@ -240,25 +243,29 @@ describe('AdminSubmissionsPage', () => {
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
     const open = await screen.findByRole('button', {
-      name: '발표 순서·평가 항목 설정',
+      name: '평가 설정',
     });
     await waitFor(() => expect(open).toBeEnabled());
     await user.click(open);
-    await user.click(screen.getByRole('combobox', { name: '1팀 발표 순서' }));
-    await user.click(screen.getByRole('option', { name: '2번' }));
-    await user.click(screen.getByRole('combobox', { name: '2팀 발표 순서' }));
-    await user.click(screen.getByRole('option', { name: '1번' }));
+    const first = screen.getByRole('spinbutton', { name: '1팀 발표 순서' });
+    const second = screen.getByRole('spinbutton', { name: '2팀 발표 순서' });
+    await user.clear(first);
+    await user.type(first, '2');
+    await user.clear(second);
+    await user.type(second, '1');
     await user.click(screen.getByRole('button', { name: '발표 순서 저장' }));
     await waitFor(() =>
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
     );
     await user.click(open);
-    expect(
-      screen.getByRole('combobox', { name: '1팀 발표 순서' }),
-    ).toHaveTextContent('2번');
-    expect(
-      screen.getByRole('combobox', { name: '2팀 발표 순서' }),
-    ).toHaveTextContent('1번');
+    const reopenedFirst = screen.getByRole('spinbutton', {
+      name: '1팀 발표 순서',
+    });
+    const reopenedSecond = screen.getByRole('spinbutton', {
+      name: '2팀 발표 순서',
+    });
+    expect(reopenedFirst).toHaveValue(2);
+    expect(reopenedSecond).toHaveValue(1);
   });
 
   it('발표 평가 결과 Excel 다운로드 버튼을 표시하지 않는다', async () => {
@@ -783,14 +790,22 @@ describe('AdminSubmissionsPage', () => {
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
 
     const settingsButton = await screen.findByRole('button', {
-      name: '발표 순서·평가 항목 설정',
+      name: '평가 설정',
     });
     await waitFor(() => expect(settingsButton).toBeEnabled());
     expect(screen.getByText('설정 완료')).toBeVisible();
 
-    await user.click(
-      screen.getByRole('button', { name: '발표 순서·평가 항목 설정' }),
-    );
+    const startButton = screen.getByRole('button', {
+      name: '발표 평가 시작',
+    });
+    expect(startButton).toBeEnabled();
+    await user.click(startButton);
+    expect(
+      await screen.findByRole('heading', { name: '발표 평가 시작' }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '취소' }));
+
+    await user.click(screen.getByRole('button', { name: '평가 설정' }));
     expect(
       await screen.findByRole('heading', { name: '발표 순서·평가 항목 설정' }),
     ).toBeInTheDocument();
@@ -833,7 +848,12 @@ describe('AdminSubmissionsPage', () => {
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
 
     expect(await screen.findByText('설정 필요')).toBeVisible();
-    const warning = screen.getByRole('alert');
+    const warning = screen
+      .getByText(
+        '발표 평가 설정이 완료되지 않았습니다. 평가 시작 전에 확인해 주세요.',
+      )
+      .closest('[role="alert"]');
+    expect(warning).not.toBeNull();
     expect(warning).toHaveTextContent(
       '발표 평가 설정이 완료되지 않았습니다. 평가 시작 전에 확인해 주세요.',
     );
@@ -863,15 +883,23 @@ describe('AdminSubmissionsPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('발표 평가 기간이 없으면 발표 마일스톤 상세로 안내한다', async () => {
+  it('평가 기간이 없는 단일 발표 마일스톤도 제출물 화면에서 시작을 준비한다', async () => {
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`,
         () =>
           HttpResponse.json({
-            content: getAdminSectionMilestonesFixture('1')!.content.filter(
-              milestone => milestone.id !== 103,
-            ),
+            content: getAdminSectionMilestonesFixture('1')!
+              .content.filter(milestone => milestone.id === 103)
+              .map(milestone => ({
+                ...milestone,
+                schedule: {
+                  ...milestone.schedule,
+                  dueAt: '2020-01-01T09:00:00+09:00',
+                  evaluationClosesAt: null,
+                  evaluationOpensAt: null,
+                },
+              })),
           }),
       ),
     );
@@ -879,15 +907,252 @@ describe('AdminSubmissionsPage', () => {
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
 
+    const startButton = await screen.findByRole('button', {
+      name: '발표 평가 시작',
+    });
+    expect(startButton).toBeEnabled();
+    await user.click(startButton);
     expect(
-      await screen.findByText('발표 평가 기간이 설정되지 않았습니다.'),
+      await screen.findByRole('heading', { name: '발표 평가 시작' }),
     ).toBeInTheDocument();
+    expect(screen.getByLabelText('평가 진행 시간(분)')).toHaveValue(60);
+  });
+
+  it('평가가 종료된 뒤에도 순서와 평가 항목을 읽기 전용으로 확인할 수 있다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`,
+        () =>
+          HttpResponse.json({
+            content: getAdminSectionMilestonesFixture('1')!.content.map(
+              milestone =>
+                milestone.id === 103
+                  ? {
+                      ...milestone,
+                      schedule: {
+                        ...milestone.schedule,
+                        evaluationClosesAt: '2020-01-01T10:00:00+09:00',
+                        evaluationOpensAt: '2020-01-01T09:00:00+09:00',
+                      },
+                    }
+                  : milestone,
+            ),
+          }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage(undefined, { ...demoAdmin, globalRole: 'PROFESSOR' });
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    expect(await screen.findByText('평가 종료')).toBeVisible();
     expect(
-      screen.getByRole('button', { name: '발표 마일스톤에서 평가 기간 설정' }),
+      screen.getByRole('button', { name: '발표 기록 보기' }),
+    ).toBeEnabled();
+    expect(
+      screen.queryByRole('button', { name: '발표 진행 화면 열기' }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '평가 설정 보기' }));
+
+    await screen.findByRole('heading', { name: '발표 순서·평가 항목 설정' });
+    expect(
+      screen.getByRole('spinbutton', { name: '1팀 발표 순서' }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: '발표 순서 저장' }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: '평가 항목 추가' }),
+    ).toBeDisabled();
+  });
+
+  it('진행 중인 발표 평가는 기존 시작 시각을 유지한 채 조기 종료한다', async () => {
+    const milestones = getAdminSectionMilestonesFixture('1')!.content.map(
+      milestone =>
+        milestone.id === 103
+          ? {
+              ...milestone,
+              schedule: {
+                ...milestone.schedule,
+                dueAt: '2026-09-01T09:00:00+09:00',
+                evaluationClosesAt: '2026-12-01T10:00:00+09:00',
+                evaluationOpensAt: '2026-09-15T09:00:00+09:00',
+              },
+            }
+          : milestone,
+    );
+    const requestBodies: {
+      evaluationClosesAt: string;
+      evaluationOpensAt: string;
+    }[] = [];
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`,
+        () => HttpResponse.json({ content: milestones }),
+      ),
+      http.patch(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_EVALUATION_WINDOW('1', '103')}`,
+        async ({ request }) => {
+          const requestBody =
+            (await request.json()) as (typeof requestBodies)[number];
+          requestBodies.push(requestBody);
+          const presentationMilestone = milestones.find(
+            milestone => milestone.id === 103,
+          )!;
+          presentationMilestone.schedule = {
+            ...presentationMilestone.schedule,
+            ...requestBody,
+          };
+          return new HttpResponse(null, { status: 204 });
+        },
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    expect(await screen.findByText('평가 진행 중')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: '평가 조기 종료' }));
+    const dialog = await screen.findByRole('dialog', {
+      name: '발표 평가 조기 종료',
+    });
+    await user.click(within(dialog).getByRole('button', { name: '평가 종료' }));
+
+    await waitFor(() => expect(requestBodies).toHaveLength(1));
+    expect(requestBodies[0]).toMatchObject({
+      evaluationClosesAt: expect.any(String),
+      evaluationOpensAt: '2026-09-15T09:00:00+09:00',
+    });
+    expect(await screen.findByText('평가 종료')).toBeVisible();
+  });
+
+  it('종료된 발표 평가는 기존 시작 시각을 유지한 채 재개하고, 실패하면 종료 상태를 유지한다', async () => {
+    const milestones = getAdminSectionMilestonesFixture('1')!.content.map(
+      milestone =>
+        milestone.id === 103
+          ? {
+              ...milestone,
+              schedule: {
+                ...milestone.schedule,
+                dueAt: '2026-09-01T09:00:00+09:00',
+                evaluationClosesAt: '2026-09-20T10:00:00+09:00',
+                evaluationOpensAt: '2026-09-15T09:00:00+09:00',
+              },
+            }
+          : milestone,
+    );
+    let shouldFail = true;
+    const requestBodies: {
+      evaluationClosesAt: string;
+      evaluationOpensAt: string;
+    }[] = [];
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`,
+        () => HttpResponse.json({ content: milestones }),
+      ),
+      http.patch(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_EVALUATION_WINDOW('1', '103')}`,
+        async ({ request }) => {
+          const requestBody =
+            (await request.json()) as (typeof requestBodies)[number];
+          requestBodies.push(requestBody);
+          if (shouldFail) {
+            return HttpResponse.json(
+              { code: 'INVALID_MILESTONE_REQUEST' },
+              { status: 400 },
+            );
+          }
+          const presentationMilestone = milestones.find(
+            milestone => milestone.id === 103,
+          )!;
+          presentationMilestone.schedule = {
+            ...presentationMilestone.schedule,
+            ...requestBody,
+          };
+          return new HttpResponse(null, { status: 204 });
+        },
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    expect(await screen.findByText('평가 종료')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: '평가 재개' }));
+    let dialog = await screen.findByRole('dialog', {
+      name: '발표 평가 재개',
+    });
+    await user.clear(within(dialog).getByLabelText('평가 진행 시간(분)'));
+    await user.type(within(dialog).getByLabelText('평가 진행 시간(분)'), '30');
+    await user.click(within(dialog).getByRole('button', { name: '평가 재개' }));
+
+    expect(await screen.findByText(/HTTP 400/)).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: '발표 평가 재개' }),
     ).toBeVisible();
+    expect(screen.getByText('평가 종료')).toBeVisible();
+
+    await user.click(within(dialog).getByRole('button', { name: '취소' }));
     expect(
-      screen.getByRole('button', { name: '발표 순서·평가 항목 설정' }),
-    ).toHaveAttribute('aria-disabled', 'true');
+      screen.queryByRole('dialog', { name: '발표 평가 재개' }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '평가 재개' }));
+    dialog = await screen.findByRole('dialog', { name: '발표 평가 재개' });
+    expect(within(dialog).queryByText(/HTTP 400/)).not.toBeInTheDocument();
+
+    shouldFail = false;
+    await user.click(within(dialog).getByRole('button', { name: '평가 재개' }));
+    await waitFor(() => expect(requestBodies).toHaveLength(2));
+    expect(requestBodies[1]).toMatchObject({
+      evaluationClosesAt: expect.any(String),
+      evaluationOpensAt: '2026-09-15T09:00:00+09:00',
+    });
+    expect(await screen.findByText('평가 진행 중')).toBeVisible();
+  });
+
+  it('설정 완료 상태에서 평가 시작은 전용 기간 API에 현재 시작 시각과 종료 시각을 보낸다', async () => {
+    const requests: unknown[] = [];
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`,
+        () =>
+          HttpResponse.json({
+            content: getAdminSectionMilestonesFixture('1')!
+              .content.filter(milestone => milestone.id === 103)
+              .map(milestone => ({
+                ...milestone,
+                schedule: {
+                  ...milestone.schedule,
+                  dueAt: '2020-01-01T09:00:00+09:00',
+                  evaluationClosesAt: null,
+                  evaluationOpensAt: null,
+                },
+              })),
+          }),
+      ),
+      http.patch(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_EVALUATION_WINDOW('1', '103')}`,
+        async ({ request }) => {
+          requests.push(await request.json());
+          return new HttpResponse(null, { status: 204 });
+        },
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+    await user.click(
+      await screen.findByRole('button', { name: '발표 평가 시작' }),
+    );
+    await user.clear(screen.getByLabelText('평가 진행 시간(분)'));
+    await user.type(screen.getByLabelText('평가 진행 시간(분)'), '90');
+    await user.click(screen.getByRole('button', { name: '평가 시작' }));
+
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0]).toMatchObject({
+      evaluationClosesAt: expect.any(String),
+      evaluationOpensAt: expect.any(String),
+    });
   });
 
   it('발표 평가 설정에서 분반별 평가 항목을 조회하고 생성한다', async () => {
@@ -932,9 +1197,7 @@ describe('AdminSubmissionsPage', () => {
 
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
-    await user.click(
-      await screen.findByRole('button', { name: '발표 순서·평가 항목 설정' }),
-    );
+    await user.click(await screen.findByRole('button', { name: '평가 설정' }));
 
     expect(
       await screen.findByText(/프로젝트 완성도 · 5점/),

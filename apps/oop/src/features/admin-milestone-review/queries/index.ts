@@ -30,6 +30,7 @@ export { useAdminProposalFeedbacksQuery } from './useAdminProposalFeedbacksQuery
 export { useSubmitAdminProposalFeedbackMutation } from './useSubmitAdminProposalFeedbackMutation';
 export { useAdminPresentationEvaluationsQuery } from './useAdminPresentationEvaluationsQuery';
 export { useAdminPresentationEvaluationTeamQuery } from './useAdminPresentationEvaluationTeamQuery';
+export { useAdminMilestonePresentationsQuery } from './useAdminMilestonePresentationsQuery';
 export { useUpdatePresentationOrderMutation } from './useUpdatePresentationOrderMutation';
 export { adminTeamEvaluationCriteriaKeys } from './adminTeamEvaluationCriteriaKeys';
 export { useAdminTeamEvaluationCriteriaQuery } from './useAdminTeamEvaluationCriteriaQuery';

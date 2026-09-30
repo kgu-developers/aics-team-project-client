@@ -1,0 +1,214 @@
+import type { AdminSectionMilestoneDto } from '@aics/api-client';
+import {
+  Button,
+  Dialog,
+  Heading,
+  HStack,
+  NumberInput,
+  Text,
+  VStack,
+} from '@aics/design-system';
+import { useEffect, useMemo, useState } from 'react';
+
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+
+import {
+  assertAdminMilestoneScheduleOrder,
+  formatAdminMilestoneRequestError,
+  toAdminMilestoneRequestError,
+} from '~/features/admin-milestone-review/model';
+import { useUpdateAdminSectionMilestoneEvaluationWindowMutation } from '~/features/admin-milestone-review/queries';
+
+import * as styles from './AdminPresentationEvaluationStartDialog.css';
+import {
+  createEvaluationResumeWindow,
+  createEvaluationWindowFromNow,
+} from './adminPresentationEvaluationWindow';
+
+const previewClockRefreshInterval = 30_000;
+
+export function AdminPresentationEvaluationStartDialog({
+  criteriaCount,
+  isOpen,
+  milestone,
+  mode = 'start',
+  onClose,
+  onWindowUpdated,
+  sectionId,
+  teams,
+}: {
+  criteriaCount: number;
+  isOpen: boolean;
+  milestone: AdminSectionMilestoneDto;
+  mode?: 'resume' | 'start';
+  onClose: () => void;
+  onWindowUpdated: () => void;
+  sectionId: string;
+  teams: ReadonlyArray<{ presentationOrder: number | null; teamName: string }>;
+}) {
+  const mutation = useUpdateAdminSectionMilestoneEvaluationWindowMutation();
+  const [durationMinutes, setDurationMinutes] = useState<number | null>(60);
+  const [formError, setFormError] = useState<string>();
+  const [previewClock, setPreviewClock] = useState(() => Date.now());
+  const isResume = mode === 'resume';
+
+  useEffect(() => {
+    if (!isOpen) {
+      setFormError(undefined);
+      return;
+    }
+
+    setPreviewClock(Date.now());
+    const timer = window.setInterval(
+      () => setPreviewClock(Date.now()),
+      previewClockRefreshInterval,
+    );
+    return () => window.clearInterval(timer);
+  }, [isOpen]);
+
+  const previewWindow = useMemo(
+    () =>
+      durationMinutes &&
+      Number.isInteger(durationMinutes) &&
+      durationMinutes > 0
+        ? isResume
+          ? milestone.schedule.evaluationOpensAt
+            ? createEvaluationResumeWindow(
+                milestone.schedule.evaluationOpensAt,
+                durationMinutes,
+                previewClock,
+              )
+            : null
+          : createEvaluationWindowFromNow(durationMinutes, previewClock)
+        : null,
+    [
+      durationMinutes,
+      isResume,
+      milestone.schedule.evaluationOpensAt,
+      previewClock,
+    ],
+  );
+
+  function handleClose() {
+    setFormError(undefined);
+    onClose();
+  }
+
+  if (!isOpen) return null;
+
+  async function handleSubmit() {
+    if (
+      durationMinutes === null ||
+      !Number.isInteger(durationMinutes) ||
+      durationMinutes < 1
+    ) {
+      setFormError('평가 진행 시간은 1분 이상의 정수로 입력해 주세요.');
+      return;
+    }
+
+    const evaluationOpensAt = milestone.schedule.evaluationOpensAt;
+    if (isResume && !evaluationOpensAt) {
+      setFormError('기존 평가 시작 시각을 찾을 수 없어 재개할 수 없습니다.');
+      return;
+    }
+
+    const window = isResume
+      ? createEvaluationResumeWindow(evaluationOpensAt!, durationMinutes)
+      : createEvaluationWindowFromNow(durationMinutes);
+    try {
+      assertAdminMilestoneScheduleOrder({
+        dueAt: milestone.schedule.dueAt ?? '',
+        evaluationClosesAt: window.evaluationClosesAt,
+        evaluationOpensAt: window.evaluationOpensAt,
+        lateSubmissionUntil:
+          milestone.schedule.lateSubmissionUntil ?? undefined,
+        revisionUntil: milestone.schedule.revisionUntil ?? undefined,
+      });
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : '평가 시작 가능 여부를 확인해 주세요.',
+      );
+      return;
+    }
+
+    setFormError(undefined);
+    try {
+      await mutation.mutateAsync({
+        input: window,
+        milestoneId: String(milestone.id),
+        sectionId,
+      });
+      onWindowUpdated();
+      onClose();
+    } catch (error) {
+      setFormError(
+        formatAdminMilestoneRequestError(toAdminMilestoneRequestError(error)),
+      );
+    }
+  }
+
+  return (
+    <Dialog
+      aria-label={isResume ? '발표 평가 재개' : '발표 평가 시작'}
+      isOpen
+      onOpenChange={nextIsOpen => {
+        if (!nextIsOpen) handleClose();
+      }}
+      purpose='form'
+      width={560}
+    >
+      <VStack className={styles.content} gap={4}>
+        <Heading level={2}>
+          {isResume ? '발표 평가 재개' : '발표 평가 시작'}
+        </Heading>
+        <Text color='secondary' type='supporting'>
+          {isResume
+            ? '재개하면 학생이 기존 발표 평가 점수를 다시 수정할 수 있습니다.'
+            : '시작을 확정하면 학생 발표 평가가 바로 열립니다. 평가 항목과 모든 팀의 발표 순서를 확인한 뒤 시작해 주세요.'}
+        </Text>
+        <div className={styles.summary}>
+          <Text>평가 항목: {criteriaCount}개</Text>
+          <Text>발표 대상: {teams.length}팀</Text>
+          <Text>발표 순서: {teams.map(team => team.teamName).join(' → ')}</Text>
+        </div>
+        <NumberInput
+          isIntegerOnly
+          label='평가 진행 시간(분)'
+          onChange={setDurationMinutes}
+          status={
+            formError
+              ? {
+                  message: formError,
+                  type: 'error',
+                }
+              : undefined
+          }
+          value={durationMinutes}
+          width='100%'
+        />
+        {previewWindow ? (
+          <Text color='secondary' type='supporting'>
+            {isResume ? '지금 재개' : '지금 시작'} · 종료 예정{' '}
+            {formatSeoulDateTime(previewWindow.evaluationClosesAt)}
+          </Text>
+        ) : null}
+        <HStack gap={2} justify='end'>
+          <Button
+            isDisabled={mutation.isPending}
+            label='취소'
+            onClick={handleClose}
+            variant='secondary'
+          />
+          <Button
+            isDisabled={mutation.isPending}
+            isLoading={mutation.isPending}
+            label={isResume ? '평가 재개' : '평가 시작'}
+            onClick={() => void handleSubmit()}
+          />
+        </HStack>
+      </VStack>
+    </Dialog>
+  );
+}
