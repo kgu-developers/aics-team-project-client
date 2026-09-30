@@ -1020,7 +1020,7 @@ describe('AdminSubmissionsPage', () => {
     await waitFor(() => expect(requestBodies).toHaveLength(1));
     expect(requestBodies[0]).toMatchObject({
       evaluationClosesAt: expect.any(String),
-      evaluationOpensAt: '2026-09-15T09:00:00+09:00',
+      evaluationOpensAt: '2026-09-15T09:00:00',
     });
     expect(await screen.findByText('평가 종료')).toBeVisible();
   });
@@ -1105,7 +1105,7 @@ describe('AdminSubmissionsPage', () => {
     await waitFor(() => expect(requestBodies).toHaveLength(2));
     expect(requestBodies[1]).toMatchObject({
       evaluationClosesAt: expect.any(String),
-      evaluationOpensAt: '2026-09-15T09:00:00+09:00',
+      evaluationOpensAt: '2026-09-15T09:00:00',
     });
     expect(await screen.findByText('평가 진행 중')).toBeVisible();
   });

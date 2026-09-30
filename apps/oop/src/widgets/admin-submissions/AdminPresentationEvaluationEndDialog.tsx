@@ -17,7 +17,10 @@ import {
 import { useUpdateAdminSectionMilestoneEvaluationWindowMutation } from '~/features/admin-milestone-review/queries';
 
 import * as styles from './AdminPresentationEvaluationEndDialog.css';
-import { createEvaluationEndWindow } from './adminPresentationEvaluationWindow';
+import {
+  createEvaluationEndWindow,
+  normalizeEvaluationOpensAt,
+} from './adminPresentationEvaluationWindow';
 
 export function AdminPresentationEvaluationEndDialog({
   isOpen,
@@ -47,7 +50,9 @@ export function AdminPresentationEvaluationEndDialog({
   if (!isOpen) return null;
 
   async function handleEnd() {
-    const evaluationOpensAt = milestone.schedule.evaluationOpensAt;
+    const evaluationOpensAt = milestone.schedule.evaluationOpensAt
+      ? normalizeEvaluationOpensAt(milestone.schedule.evaluationOpensAt)
+      : null;
     if (!evaluationOpensAt) {
       setFormError('기존 평가 시작 시각을 찾을 수 없어 종료할 수 없습니다.');
       return;

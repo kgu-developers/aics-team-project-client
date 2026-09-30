@@ -21,8 +21,11 @@ import { useUpdateAdminSectionMilestoneEvaluationWindowMutation } from '~/featur
 
 import * as styles from './AdminPresentationEvaluationStartDialog.css';
 import {
+  MAX_EVALUATION_DURATION_MINUTES,
   createEvaluationResumeWindow,
   createEvaluationWindowFromNow,
+  isValidEvaluationDurationMinutes,
+  normalizeEvaluationOpensAt,
 } from './adminPresentationEvaluationWindow';
 
 const previewClockRefreshInterval = 30_000;
@@ -51,6 +54,9 @@ export function AdminPresentationEvaluationStartDialog({
   const [formError, setFormError] = useState<string>();
   const [previewClock, setPreviewClock] = useState(() => Date.now());
   const isResume = mode === 'resume';
+  const normalizedEvaluationOpensAt = milestone.schedule.evaluationOpensAt
+    ? normalizeEvaluationOpensAt(milestone.schedule.evaluationOpensAt)
+    : null;
 
   useEffect(() => {
     if (!isOpen) {
@@ -68,25 +74,18 @@ export function AdminPresentationEvaluationStartDialog({
 
   const previewWindow = useMemo(
     () =>
-      durationMinutes &&
-      Number.isInteger(durationMinutes) &&
-      durationMinutes > 0
+      isValidEvaluationDurationMinutes(durationMinutes)
         ? isResume
-          ? milestone.schedule.evaluationOpensAt
+          ? normalizedEvaluationOpensAt
             ? createEvaluationResumeWindow(
-                milestone.schedule.evaluationOpensAt,
+                normalizedEvaluationOpensAt,
                 durationMinutes,
                 previewClock,
               )
             : null
           : createEvaluationWindowFromNow(durationMinutes, previewClock)
         : null,
-    [
-      durationMinutes,
-      isResume,
-      milestone.schedule.evaluationOpensAt,
-      previewClock,
-    ],
+    [durationMinutes, isResume, normalizedEvaluationOpensAt, previewClock],
   );
 
   function handleClose() {
@@ -97,23 +96,23 @@ export function AdminPresentationEvaluationStartDialog({
   if (!isOpen) return null;
 
   async function handleSubmit() {
-    if (
-      durationMinutes === null ||
-      !Number.isInteger(durationMinutes) ||
-      durationMinutes < 1
-    ) {
-      setFormError('평가 진행 시간은 1분 이상의 정수로 입력해 주세요.');
+    if (!isValidEvaluationDurationMinutes(durationMinutes)) {
+      setFormError(
+        `평가 진행 시간은 1분 이상 ${MAX_EVALUATION_DURATION_MINUTES.toLocaleString()}분 이하의 정수로 입력해 주세요.`,
+      );
       return;
     }
 
-    const evaluationOpensAt = milestone.schedule.evaluationOpensAt;
-    if (isResume && !evaluationOpensAt) {
+    if (isResume && !normalizedEvaluationOpensAt) {
       setFormError('기존 평가 시작 시각을 찾을 수 없어 재개할 수 없습니다.');
       return;
     }
 
     const window = isResume
-      ? createEvaluationResumeWindow(evaluationOpensAt!, durationMinutes)
+      ? createEvaluationResumeWindow(
+          normalizedEvaluationOpensAt!,
+          durationMinutes,
+        )
       : createEvaluationWindowFromNow(durationMinutes);
     try {
       assertAdminMilestoneScheduleOrder({
@@ -176,6 +175,8 @@ export function AdminPresentationEvaluationStartDialog({
         <NumberInput
           isIntegerOnly
           label='평가 진행 시간(분)'
+          max={MAX_EVALUATION_DURATION_MINUTES}
+          min={1}
           onChange={setDurationMinutes}
           status={
             formError
