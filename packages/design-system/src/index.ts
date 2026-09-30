@@ -81,6 +81,8 @@ export { TextArea } from '@astryxdesign/core/TextArea';
 export type { TextAreaProps } from '@astryxdesign/core/TextArea';
 export { TextInput } from '@astryxdesign/core/TextInput';
 export type { TextInputProps } from '@astryxdesign/core/TextInput';
+export { NumberInput } from '@astryxdesign/core/NumberInput';
+export type { NumberInputProps } from '@astryxdesign/core/NumberInput';
 export { DateInput } from '@astryxdesign/core/DateInput';
 export type { DateInputProps } from '@astryxdesign/core/DateInput';
 export { DateTimeInput } from '@astryxdesign/core/DateTimeInput';
