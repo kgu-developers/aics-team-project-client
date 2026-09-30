@@ -90,6 +90,47 @@ function requireEvaluationResourceScope(student: { sectionId: string }) {
       );
 }
 
+/** Mirrors the published presentation-material contract: active students in
+ * the section and the responsible professor can read, but assistants cannot. */
+function requirePresentationViewer(request: Request) {
+  const token = getMockAccessToken(request);
+  const account = getDemoUserAccount(token);
+  if (!account)
+    return {
+      response: error(
+        'UNAUTHORIZED',
+        '로그인 후 발표 자료를 확인해 주세요.',
+        401,
+      ),
+    };
+
+  if (account.user.globalRole === 'STUDENT') {
+    const student = requireEvaluationStudent(request);
+    if ('response' in student) return student;
+    const scopeError = requireEvaluationResourceScope(student);
+    return scopeError
+      ? { response: scopeError }
+      : { sectionId: student.sectionId };
+  }
+
+  const isResponsibleProfessor =
+    account.user.globalRole === 'PROFESSOR' &&
+    account.user.sections.some(
+      section =>
+        section.id === evaluationSectionId && section.role === 'PROFESSOR',
+    );
+  if (!isResponsibleProfessor)
+    return {
+      response: error(
+        'EVALUATION_ACCESS_DENIED',
+        '담당 교수만 발표 자료를 확인할 수 있어요.',
+        403,
+      ),
+    };
+
+  return { sectionId: evaluationSectionId };
+}
+
 async function parseBody<T>(request: Request): Promise<T | null> {
   try {
     return (await request.json()) as T;
@@ -211,10 +252,8 @@ export const evaluationHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MILESTONE_PRESENTATIONS(':milestoneId')}`,
     ({ params, request }) => {
-      const student = requireEvaluationStudent(request);
-      if ('response' in student) return student.response;
-      const scopeError = requireEvaluationResourceScope(student);
-      if (scopeError) return scopeError;
+      const viewer = requirePresentationViewer(request);
+      if ('response' in viewer) return viewer.response;
       if (params.milestoneId !== presentationEvaluationMilestoneId)
         return error(
           'MILESTONE_NOT_FOUND',

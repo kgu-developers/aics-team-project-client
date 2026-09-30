@@ -165,6 +165,16 @@ export const demoNoticeProfessor: CurrentUser = {
   sections: [{ ...demoAdmin.sections[0]!, id: '1', role: 'PROFESSOR' }],
 };
 export const demoNoticeProfessorAccessToken = 'msw-oop-notice-professor-token';
+export const demoPresentationProfessor: CurrentUser = {
+  ...demoNoticeProfessor,
+  id: 'professor-presentation',
+  studentNumber: '20260098',
+  name: '발표 데모 교수',
+  email: 'professor-presentation@example.test',
+  sections: [{ ...demoStudentSection, role: 'PROFESSOR' }],
+};
+export const demoPresentationProfessorAccessToken =
+  'msw-oop-presentation-professor-token';
 
 export const demoUserAccounts = [
   {
@@ -205,6 +215,15 @@ export const demoUserAccounts = [
     },
     refreshToken: 'msw-oop-notice-professor-refresh-token',
     user: demoNoticeProfessor,
+  },
+  {
+    accessToken: demoPresentationProfessorAccessToken,
+    credentials: {
+      studentNumber: demoPresentationProfessor.studentNumber,
+      password: 'oop-presentation-professor',
+    },
+    refreshToken: 'msw-oop-presentation-professor-refresh-token',
+    user: demoPresentationProfessor,
   },
 ] as const;
 export function getDemoUserAccount(accessToken: string | null) {

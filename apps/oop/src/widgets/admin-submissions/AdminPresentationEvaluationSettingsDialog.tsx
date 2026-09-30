@@ -3,8 +3,7 @@ import {
   Dialog,
   Heading,
   HStack,
-  Selector,
-  SelectorOption,
+  NumberInput,
   Text,
   TextInput,
   VStack,
@@ -64,6 +63,7 @@ export function AdminPresentationEvaluationSettingsDialog({
   const [criterionMaxScore, setCriterionMaxScore] = useState('');
   const [criterionError, setCriterionError] = useState<string | null>(null);
   const [evaluationClock, setEvaluationClock] = useState(() => Date.now());
+  const orderInputContextKey = `${sectionId}:${milestoneId}`;
   const initializedContext = useRef<{
     sectionId: string;
     milestoneId: string;
@@ -119,10 +119,19 @@ export function AdminPresentationEvaluationSettingsDialog({
 
   if (!isOpen) return null;
 
-  const orderOptions = teams.map((_, index) => ({
-    label: `${index + 1}번`,
-    value: String(index + 1),
-  }));
+  const orderValidation = validatePresentationOrders(teams, orders);
+
+  function getOrderError(teamId: number) {
+    const order = orders[teamId];
+    if (order == null) return '발표 순서를 입력해 주세요.';
+    if (!Number.isInteger(order) || order < 1 || order > teams.length) {
+      return `1부터 ${teams.length} 사이의 번호를 입력해 주세요.`;
+    }
+    const isDuplicated = teams.some(
+      team => team.teamId !== teamId && orders[team.teamId] === order,
+    );
+    return isDuplicated ? '이미 사용 중인 발표 순서입니다.' : undefined;
+  }
 
   function handleSave() {
     // Recheck real time in the event handler because background tabs may delay
@@ -214,7 +223,8 @@ export function AdminPresentationEvaluationSettingsDialog({
         <Heading level={2}>발표 순서·평가 항목 설정</Heading>
         <Text color='secondary' type='supporting'>
           팀별 발표 순서와 학생이 채점할 평가 항목을 여기에서 관리합니다. 평가
-          기간은 발표 마일스톤 상세에서 수정합니다.
+          시작은 이 화면의 발표 평가 시작 버튼에서 진행 시간을 정한 뒤
+          확정합니다.
         </Text>
         <VStack gap={3}>
           {isEvaluationLocked ? (
@@ -233,25 +243,29 @@ export function AdminPresentationEvaluationSettingsDialog({
                 key={team.teamId}
               >
                 <Text className={styles.teamName}>{team.teamName}</Text>
-                <Selector
+                <NumberInput
                   aria-label={`${team.teamName} 발표 순서`}
+                  hasClear
                   isDisabled={isEvaluationLocked || saveMutation.isPending}
+                  isIntegerOnly
+                  key={`${orderInputContextKey}:${team.teamId}`}
                   label='발표 순서'
                   onChange={value =>
                     setOrders(current => ({
                       ...current,
-                      [team.teamId]: Number(value),
+                      [team.teamId]: value,
                     }))
                   }
-                  options={orderOptions}
-                  renderOption={option => (
-                    <SelectorOption label={option.label ?? option.value} />
-                  )}
-                  value={
-                    orders[team.teamId] == null
-                      ? ''
-                      : String(orders[team.teamId])
+                  placeholder={`1~${teams.length}`}
+                  status={
+                    getOrderError(team.teamId)
+                      ? {
+                          message: getOrderError(team.teamId),
+                          type: 'error',
+                        }
+                      : undefined
                   }
+                  value={orders[team.teamId]}
                   width={120}
                 />
               </HStack>
@@ -259,13 +273,23 @@ export function AdminPresentationEvaluationSettingsDialog({
           ) : (
             <Text color='secondary'>발표 순서를 설정할 팀이 없습니다.</Text>
           )}
-          {error ? <Text className={styles.errorText}>{error}</Text> : null}
+          {!orderValidation.ok ? (
+            <Text className={styles.errorText} role='alert'>
+              {orderValidation.error}
+            </Text>
+          ) : null}
+          {error ? (
+            <Text className={styles.errorText} role='alert'>
+              {error}
+            </Text>
+          ) : null}
           <HStack justify='end'>
             <Button
               isDisabled={
                 isEvaluationLocked ||
                 saveMutation.isPending ||
-                teams.length === 0
+                teams.length === 0 ||
+                !orderValidation.ok
               }
               label={saveMutation.isPending ? '저장 중...' : '발표 순서 저장'}
               onClick={handleSave}

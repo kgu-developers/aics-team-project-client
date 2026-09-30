@@ -26,10 +26,12 @@ import {
   setEvaluationWindowStates,
 } from '../data/evaluation';
 import {
+  demoAdminAccessToken,
   demoAccessToken,
   demoOtherSectionAccessToken,
   demoOtherSectionStudent,
   demoPartnerAccessToken,
+  demoPresentationProfessorAccessToken,
   demoStudent,
 } from '../data/users';
 
@@ -269,6 +271,29 @@ describe('evaluationHandlers', () => {
     expect(body.contents[0].artifacts[0]).toMatchObject({
       type: 'FILE',
       mimeType: 'application/pdf',
+    });
+  });
+
+  it('발표 자료는 해당 분반 학생과 담당 교수만 조회할 수 있다', async () => {
+    const professor = await request(
+      ENDPOINTS.SUBMISSION.MILESTONE_PRESENTATIONS(
+        presentationEvaluationMilestoneId,
+      ),
+      {},
+      demoPresentationProfessorAccessToken,
+    );
+    const assistant = await request(
+      ENDPOINTS.SUBMISSION.MILESTONE_PRESENTATIONS(
+        presentationEvaluationMilestoneId,
+      ),
+      {},
+      demoAdminAccessToken,
+    );
+
+    expect(professor.status).toBe(200);
+    expect(assistant.status).toBe(403);
+    await expect(assistant.json()).resolves.toMatchObject({
+      code: 'EVALUATION_ACCESS_DENIED',
     });
   });
 

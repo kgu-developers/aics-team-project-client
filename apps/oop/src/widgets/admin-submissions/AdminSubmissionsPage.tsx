@@ -29,6 +29,7 @@ import { ROUTES } from '~/app/constants/routes';
 import { cx } from '~/shared/lib/cx';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { paginate } from '~/shared/lib/pagination';
+import { seoulInstant } from '~/shared/lib/seoulInstant';
 import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
@@ -57,7 +58,9 @@ import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries
 import { useAdminSubmissionReadState } from '~/features/admin-submission-read/useAdminSubmissionReadState';
 import { useAuthStore } from '~/features/auth/authStore';
 
+import { AdminPresentationEvaluationEndDialog } from './AdminPresentationEvaluationEndDialog';
 import { AdminPresentationEvaluationSettingsDialog } from './AdminPresentationEvaluationSettingsDialog';
+import { AdminPresentationEvaluationStartDialog } from './AdminPresentationEvaluationStartDialog';
 import { getPresentationEvaluationSetupStatus } from './adminPresentationOrder';
 import * as styles from './AdminSubmissionsPage.css';
 
@@ -126,7 +129,18 @@ function findMilestoneForTab(
   tabId: MilestoneTabId,
 ) {
   if (tabId === 'presentation-evaluate') {
-    return milestones?.find(isPresentationEvaluationMilestone);
+    const presentationMilestones = milestones?.filter(
+      milestone => milestone.type === 'PRESENTATION',
+    );
+    const configuredEvaluationMilestones = presentationMilestones?.filter(
+      isPresentationEvaluationMilestone,
+    );
+    if (configuredEvaluationMilestones?.length === 1) {
+      return configuredEvaluationMilestones[0];
+    }
+    return presentationMilestones?.length === 1
+      ? presentationMilestones[0]
+      : undefined;
   }
 
   if (tabId === 'presentation-submit') {
@@ -240,6 +254,9 @@ export default function AdminSubmissionsPage() {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [isEvaluationSettingsOpen, setIsEvaluationSettingsOpen] =
     useState(false);
+  const [isEvaluationStartOpen, setIsEvaluationStartOpen] = useState(false);
+  const [isEvaluationEndOpen, setIsEvaluationEndOpen] = useState(false);
+  const [isEvaluationResumeOpen, setIsEvaluationResumeOpen] = useState(false);
   const [presentationReadinessClock, setPresentationReadinessClock] = useState(
     () => Date.now(),
   );
@@ -383,9 +400,40 @@ export default function AdminSubmissionsPage() {
           teams: presentationOrderTeams,
         })
       : null;
+  const presentationEvaluationStartsAt =
+    presentationEvaluationMilestone?.schedule.evaluationOpensAt ?? null;
+  const presentationEvaluationStartsAtInstant = seoulInstant(
+    presentationEvaluationStartsAt,
+  );
+  const isPresentationEvaluationStarted =
+    !Number.isNaN(presentationEvaluationStartsAtInstant) &&
+    presentationReadinessClock >= presentationEvaluationStartsAtInstant;
+  const presentationEvaluationClosesAtInstant = seoulInstant(
+    presentationEvaluationMilestone?.schedule.evaluationClosesAt ?? null,
+  );
+  const isPresentationEvaluationEnded =
+    !Number.isNaN(presentationEvaluationClosesAtInstant) &&
+    presentationReadinessClock >= presentationEvaluationClosesAtInstant;
+  const hasPresentationEvaluationWindow = Boolean(
+    presentationEvaluationMilestone?.schedule.evaluationOpensAt &&
+    presentationEvaluationMilestone?.schedule.evaluationClosesAt,
+  );
+  const presentationMilestoneCandidates =
+    sectionMilestonesQuery.data?.content.filter(
+      milestone => milestone.type === 'PRESENTATION',
+    ) ?? [];
+  const hasAmbiguousPresentationMilestone =
+    !presentationEvaluationMilestone &&
+    presentationMilestoneCandidates.length > 0;
+  const isPresentationRecordAvailable =
+    currentUser?.globalRole === 'PROFESSOR' &&
+    isPresentationEvaluationStarted &&
+    presentationEvaluationMilestone !== undefined &&
+    effectiveSectionId !== undefined;
 
   useEffect(() => {
     if (activeMilestoneId !== 'presentation-evaluate') return;
+    setPresentationReadinessClock(Date.now());
     const timer = window.setInterval(
       () => setPresentationReadinessClock(Date.now()),
       60_000,
@@ -645,45 +693,118 @@ export default function AdminSubmissionsPage() {
                     ) : null}
                   </div>
                   <div className={styles.evaluationActions}>
-                    <Button
-                      isDisabled={
-                        isPresentationMilestoneLoading ||
-                        isPresentationMilestoneError ||
-                        isPresentationMilestoneMissing ||
-                        presentationEvaluationsQuery.isPending ||
-                        presentationEvaluationsQuery.isError ||
-                        !presentationEvaluationsQuery.data ||
-                        presentationTeamsQuery.isPending ||
-                        presentationTeamsQuery.isError ||
-                        !presentationTeamsQuery.data ||
-                        presentationOrdersQuery.isPending ||
-                        presentationOrdersQuery.isError ||
-                        !presentationOrdersQuery.data
-                      }
-                      label='발표 순서·평가 항목 설정'
-                      onClick={() => setIsEvaluationSettingsOpen(true)}
-                      tooltip={
-                        isPresentationMilestoneLoading
-                          ? '발표 평가 마일스톤을 불러오는 중입니다.'
-                          : isPresentationMilestoneError
-                            ? '발표 평가 마일스톤을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
-                            : isPresentationMilestoneMissing
-                              ? '발표 마일스톤에 발표 평가 기간을 먼저 설정해 주세요.'
-                              : presentationEvaluationsQuery.isPending
-                                ? '발표 평가 결과를 불러오는 중입니다.'
-                                : presentationEvaluationsQuery.isError
-                                  ? '발표 평가 결과를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
-                                  : presentationTeamsQuery.isPending
-                                    ? '분반 팀을 불러오는 중입니다.'
-                                    : presentationTeamsQuery.isError
-                                      ? '분반 팀을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
-                                      : presentationOrdersQuery.isPending
-                                        ? '발표 순서를 불러오는 중입니다.'
-                                        : presentationOrdersQuery.isError
-                                          ? '발표 순서를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
-                                          : undefined
-                      }
-                    />
+                    {!isPresentationEvaluationStarted ? (
+                      <>
+                        <Button
+                          isDisabled={!presentationSetupStatus?.isComplete}
+                          label='발표 평가 시작'
+                          onClick={() => setIsEvaluationStartOpen(true)}
+                          tooltip={
+                            presentationSetupStatus?.isComplete
+                              ? hasPresentationEvaluationWindow
+                                ? '기존 시작 예정 시각 대신 지금부터 평가를 시작합니다.'
+                                : '평가 진행 시간을 정한 뒤 학생 발표 평가를 시작합니다.'
+                              : '평가 항목과 모든 팀의 발표 순서를 먼저 설정해 주세요.'
+                          }
+                        />
+                        <Button
+                          isDisabled={
+                            isPresentationMilestoneLoading ||
+                            isPresentationMilestoneError ||
+                            isPresentationMilestoneMissing ||
+                            presentationEvaluationsQuery.isPending ||
+                            presentationEvaluationsQuery.isError ||
+                            !presentationEvaluationsQuery.data ||
+                            presentationTeamsQuery.isPending ||
+                            presentationTeamsQuery.isError ||
+                            !presentationTeamsQuery.data ||
+                            presentationOrdersQuery.isPending ||
+                            presentationOrdersQuery.isError ||
+                            !presentationOrdersQuery.data
+                          }
+                          label='평가 설정'
+                          onClick={() => setIsEvaluationSettingsOpen(true)}
+                          tooltip={
+                            isPresentationMilestoneLoading
+                              ? '발표 평가 마일스톤을 불러오는 중입니다.'
+                              : isPresentationMilestoneError
+                                ? '발표 평가 마일스톤을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+                                : isPresentationMilestoneMissing
+                                  ? '발표 마일스톤을 먼저 만들어 주세요.'
+                                  : presentationEvaluationsQuery.isPending
+                                    ? '발표 평가 결과를 불러오는 중입니다.'
+                                    : presentationEvaluationsQuery.isError
+                                      ? '발표 평가 결과를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+                                      : presentationTeamsQuery.isPending
+                                        ? '분반 팀을 불러오는 중입니다.'
+                                        : presentationTeamsQuery.isError
+                                          ? '분반 팀을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+                                          : presentationOrdersQuery.isPending
+                                            ? '발표 순서를 불러오는 중입니다.'
+                                            : presentationOrdersQuery.isError
+                                              ? '발표 순서를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'
+                                              : undefined
+                          }
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <Badge
+                          label={
+                            isPresentationEvaluationEnded
+                              ? '평가 종료'
+                              : '평가 진행 중'
+                          }
+                          variant={
+                            isPresentationEvaluationEnded
+                              ? 'neutral'
+                              : 'success'
+                          }
+                        />
+                        <Button
+                          label='평가 설정 보기'
+                          onClick={() => setIsEvaluationSettingsOpen(true)}
+                          variant='secondary'
+                        />
+                        <Button
+                          label={
+                            isPresentationEvaluationEnded
+                              ? '평가 재개'
+                              : '평가 조기 종료'
+                          }
+                          onClick={() =>
+                            isPresentationEvaluationEnded
+                              ? setIsEvaluationResumeOpen(true)
+                              : setIsEvaluationEndOpen(true)
+                          }
+                          variant={
+                            isPresentationEvaluationEnded
+                              ? 'secondary'
+                              : 'destructive'
+                          }
+                        />
+                        {isPresentationRecordAvailable ? (
+                          <Button
+                            label={
+                              isPresentationEvaluationEnded
+                                ? '발표 기록 보기'
+                                : '발표 진행 화면 열기'
+                            }
+                            onClick={() =>
+                              void navigate({
+                                search: {
+                                  milestoneId: String(
+                                    presentationEvaluationMilestone.id,
+                                  ),
+                                  sectionId: effectiveSectionId,
+                                },
+                                to: ROUTES.ADMIN_PRESENTATION_PROGRESS,
+                              })
+                            }
+                          />
+                        ) : null}
+                      </>
+                    )}
                   </div>
                 </div>
                 {presentationSetupStatus &&
@@ -711,7 +832,12 @@ export default function AdminSubmissionsPage() {
                     </div>
                   </div>
                 ) : null}
-                {isPresentationMilestoneMissing ? (
+                {hasAmbiguousPresentationMilestone ? (
+                  <EmptyState
+                    description='발표 자료 제출과 평가 기간을 하나의 발표 마일스톤으로 관리합니다. 기존 발표 마일스톤 구성을 확인해 주세요.'
+                    title='발표 마일스톤을 하나로 확인할 수 없습니다.'
+                  />
+                ) : isPresentationMilestoneMissing ? (
                   <EmptyState
                     actions={
                       presentationSubmissionMilestone && effectiveSectionId ? (
@@ -746,12 +872,8 @@ export default function AdminSubmissionsPage() {
                         />
                       )
                     }
-                    description={
-                      presentationSubmissionMilestone
-                        ? '발표 평가는 별도 마일스톤이 아니라 발표 마일스톤의 평가 기간으로 동작합니다. 발표 마일스톤 상세에서 발표 평가 기간을 설정해 주세요.'
-                        : '발표 마일스톤을 만들고 발표 평가 기간까지 설정하면 이 탭이 열립니다.'
-                    }
-                    title='발표 평가 기간이 설정되지 않았습니다.'
+                    description='발표 마일스톤을 만들면 이 탭에서 발표 순서와 평가 항목을 설정하고 평가를 시작할 수 있습니다.'
+                    title='발표 마일스톤이 없습니다.'
                   />
                 ) : presentationEvaluationsQuery.isPending ? (
                   <Text aria-live='polite' role='status'>
@@ -771,8 +893,8 @@ export default function AdminSubmissionsPage() {
                           0
                             ? '이 분반에는 발표 평가 항목이 없습니다. 학생 발표 평가 화면에 평가할 항목이 나타나지 않으니, 평가 시작 전에 항목을 등록해 주세요.'
                             : '이 분반의 발표 평가 항목이 1개뿐입니다. 학생에게는 이 항목만 보이니, 의도한 구성인지 확인해 주세요.'}{' '}
-                          평가 항목은 분반별로 관리자가 등록하며, 위 '발표
-                          순서·평가 항목 설정'에서 추가할 수 있습니다.
+                          평가 항목은 분반별로 관리자가 등록하며, 위 '평가
+                          설정'에서 추가할 수 있습니다.
                         </Text>
                       </Card>
                     ) : null}
@@ -835,17 +957,65 @@ export default function AdminSubmissionsPage() {
                       />
                     </Card>
                     {effectiveSectionId && presentationEvaluationMilestone ? (
-                      <AdminPresentationEvaluationSettingsDialog
-                        evaluationStartsAt={
-                          presentationEvaluationMilestone.schedule
-                            .evaluationOpensAt ?? null
-                        }
-                        isOpen={isEvaluationSettingsOpen}
-                        milestoneId={String(presentationEvaluationMilestone.id)}
-                        sectionId={effectiveSectionId}
-                        onClose={() => setIsEvaluationSettingsOpen(false)}
-                        teams={presentationOrderTeams}
-                      />
+                      <>
+                        <AdminPresentationEvaluationSettingsDialog
+                          evaluationStartsAt={
+                            presentationEvaluationMilestone.schedule
+                              .evaluationOpensAt ?? null
+                          }
+                          isOpen={isEvaluationSettingsOpen}
+                          milestoneId={String(
+                            presentationEvaluationMilestone.id,
+                          )}
+                          sectionId={effectiveSectionId}
+                          onClose={() => setIsEvaluationSettingsOpen(false)}
+                          teams={presentationOrderTeams}
+                        />
+                        <AdminPresentationEvaluationStartDialog
+                          criteriaCount={
+                            presentationEvaluationsQuery.data.criteria.length
+                          }
+                          isOpen={isEvaluationStartOpen}
+                          milestone={presentationEvaluationMilestone}
+                          onClose={() => setIsEvaluationStartOpen(false)}
+                          onWindowUpdated={() =>
+                            setPresentationReadinessClock(Date.now())
+                          }
+                          sectionId={effectiveSectionId}
+                          teams={[...presentationOrderTeams].sort(
+                            (left, right) =>
+                              (left.presentationOrder ?? 0) -
+                              (right.presentationOrder ?? 0),
+                          )}
+                        />
+                        <AdminPresentationEvaluationStartDialog
+                          criteriaCount={
+                            presentationEvaluationsQuery.data.criteria.length
+                          }
+                          isOpen={isEvaluationResumeOpen}
+                          milestone={presentationEvaluationMilestone}
+                          mode='resume'
+                          onClose={() => setIsEvaluationResumeOpen(false)}
+                          onWindowUpdated={() =>
+                            setPresentationReadinessClock(Date.now())
+                          }
+                          sectionId={effectiveSectionId}
+                          teams={[...presentationOrderTeams].sort(
+                            (left, right) =>
+                              (left.presentationOrder ?? 0) -
+                              (right.presentationOrder ?? 0),
+                          )}
+                        />
+                        <AdminPresentationEvaluationEndDialog
+                          isOpen={isEvaluationEndOpen}
+                          milestone={presentationEvaluationMilestone}
+                          onClose={() => setIsEvaluationEndOpen(false)}
+                          onWindowUpdated={() =>
+                            setPresentationReadinessClock(Date.now())
+                          }
+                          sectionId={effectiveSectionId}
+                        />
+                      </>
                     ) : null}
                   </>
                 ) : null}

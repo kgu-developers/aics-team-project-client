@@ -44,7 +44,6 @@ import {
   isSupportedMilestoneCreationTemplate,
   milestoneTemplates,
   syncAdminMilestoneSectionScheduleDrafts,
-  toAdminMilestoneDateTime,
   toAdminMilestoneRequestError,
   type AdminMilestoneSectionScheduleDraft,
   type AdminRequiredArtifactDraft,
@@ -59,7 +58,6 @@ import {
   useAdminSectionMilestonesQuery,
   useAdminTeamEvaluationCriteriaQuery,
   useUpdateAdminSectionMilestoneMutation,
-  useUpdateAdminSectionMilestoneEvaluationWindowMutation,
   type SubmitAdminSectionMilestonesInput,
   type SubmitAdminSectionMilestonesResult,
 } from '~/features/admin-milestone-review/queries';
@@ -335,16 +333,8 @@ export default function AdminMilestoneSetupPage() {
   const [peerEvaluationFormInputs, setPeerEvaluationFormInputs] = useState<
     Readonly<Record<string, AdminPeerEvaluationFormCreateInput>>
   >({});
-  const [
-    presentationEvaluationWindowFailures,
-    setPresentationEvaluationWindowFailures,
-  ] = useState<ReadonlySet<string>>();
   const [isSubmittingPeerEvaluationForms, setIsSubmittingPeerEvaluationForms] =
     useState(false);
-  const [
-    isSubmittingPresentationEvaluationWindows,
-    setIsSubmittingPresentationEvaluationWindows,
-  ] = useState(false);
   const [peerEvaluationAnonymous, setPeerEvaluationAnonymous] = useState(true);
   const [requiredArtifactDrafts, setRequiredArtifactDrafts] = useState<
     AdminRequiredArtifactDraft[]
@@ -364,8 +354,6 @@ export default function AdminMilestoneSetupPage() {
   const submitRequiredArtifactsMutation =
     useSubmitAdminRequiredArtifactsMutation();
   const updateMilestoneMutation = useUpdateAdminSectionMilestoneMutation();
-  const updateEvaluationWindowMutation =
-    useUpdateAdminSectionMilestoneEvaluationWindowMutation();
   const createPeerEvaluationFormMutation =
     useCreateAdminPeerEvaluationFormMutation();
   const milestoneQuery = useAdminSectionMilestoneQuery(
@@ -398,14 +386,10 @@ export default function AdminMilestoneSetupPage() {
   const hasRetryablePeerEvaluationForm = Boolean(
     peerEvaluationFormFailures?.size,
   );
-  const hasRetryablePresentationEvaluationWindow = Boolean(
-    presentationEvaluationWindowFailures?.size,
-  );
   const hasNonRetryableFollowUpFailure = Boolean(
     submissionResults &&
     !hasFailedMilestoneCreation &&
     !hasRetryablePeerEvaluationForm &&
-    !hasRetryablePresentationEvaluationWindow &&
     (artifactSubmissionFailures?.size ||
       submissionResults.some(result => result.status === 'publish-failed')),
   );
@@ -778,62 +762,6 @@ export default function AdminMilestoneSetupPage() {
                 peerEvaluationFormFailures?.has(result.sectionId) === true),
           )
         : [];
-      const presentationMilestones = isPresentation
-        ? results.filter(
-            (
-              result,
-            ): result is Exclude<
-              (typeof results)[number],
-              { status: 'create-failed' }
-            > =>
-              result.status !== 'create-failed' &&
-              Boolean(
-                sectionSchedules[result.sectionId]?.evaluationOpensAt.date &&
-                sectionSchedules[result.sectionId]?.evaluationOpensAt.time &&
-                sectionSchedules[result.sectionId]?.evaluationClosesAt.date &&
-                sectionSchedules[result.sectionId]?.evaluationClosesAt.time,
-              ) &&
-              (newResults.some(
-                newResult => newResult.sectionId === result.sectionId,
-              ) ||
-                presentationEvaluationWindowFailures?.has(result.sectionId) ===
-                  true),
-          )
-        : [];
-      const presentationEvaluationWindowResults = isPresentation
-        ? await Promise.all(
-            presentationMilestones.map(async result => {
-              const schedule = sectionSchedules[result.sectionId];
-              const opensAtDraft = schedule
-                ? toAdminMilestoneDateTime(schedule.evaluationOpensAt)
-                : undefined;
-              const closesAtDraft = schedule
-                ? toAdminMilestoneDateTime(schedule.evaluationClosesAt)
-                : undefined;
-              const evaluationOpensAt = opensAtDraft;
-              const evaluationClosesAt = closesAtDraft;
-
-              if (
-                !evaluationOpensAt ||
-                !evaluationClosesAt ||
-                result.milestoneId === undefined
-              )
-                return { sectionId: result.sectionId };
-
-              try {
-                setIsSubmittingPresentationEvaluationWindows(true);
-                await updateEvaluationWindowMutation.mutateAsync({
-                  input: { evaluationClosesAt, evaluationOpensAt },
-                  milestoneId: String(result.milestoneId),
-                  sectionId: result.sectionId,
-                });
-                return { sectionId: result.sectionId, succeeded: true };
-              } catch {
-                return { sectionId: result.sectionId };
-              }
-            }),
-          )
-        : [];
       const peerEvaluationFormResults = isPeerEvaluation
         ? await Promise.all(
             peerEvaluationMilestones.map(async result => {
@@ -912,24 +840,10 @@ export default function AdminMilestoneSetupPage() {
           delete nextPeerEvaluationFormInputs[result.sectionId];
         } else nextPeerEvaluationFormFailures.add(result.sectionId);
       });
-      const nextPresentationEvaluationWindowFailures = new Set(
-        presentationEvaluationWindowFailures,
-      );
-      presentationEvaluationWindowResults.forEach(result => {
-        if (result.succeeded)
-          nextPresentationEvaluationWindowFailures.delete(result.sectionId);
-        else nextPresentationEvaluationWindowFailures.add(result.sectionId);
-      });
       setSubmissionResults(results);
       setArtifactSubmissionFailures(nextArtifactSubmissionFailures);
       setPeerEvaluationFormFailures(nextPeerEvaluationFormFailures);
       setPeerEvaluationFormInputs(nextPeerEvaluationFormInputs);
-      setPresentationEvaluationWindowFailures(
-        nextPresentationEvaluationWindowFailures,
-      );
-      if (nextPresentationEvaluationWindowFailures.size > 0) {
-        setFormError('마일스톤을 저장하지 못했습니다.');
-      }
 
       const createdWithoutFollowUpFailure =
         results.length > 0 &&
@@ -940,9 +854,7 @@ export default function AdminMilestoneSetupPage() {
         artifactResults.every(result => result.failedCount === 0) &&
         nextArtifactSubmissionFailures.size === 0 &&
         peerEvaluationFormResults.every(result => result.succeeded) &&
-        nextPeerEvaluationFormFailures.size === 0 &&
-        presentationEvaluationWindowResults.every(result => result.succeeded) &&
-        nextPresentationEvaluationWindowFailures.size === 0;
+        nextPeerEvaluationFormFailures.size === 0;
 
       if (createdWithoutFollowUpFailure) {
         await navigate({
@@ -959,7 +871,6 @@ export default function AdminMilestoneSetupPage() {
       );
     } finally {
       setIsSubmittingPeerEvaluationForms(false);
-      setIsSubmittingPresentationEvaluationWindows(false);
     }
   };
 
@@ -1097,10 +1008,8 @@ export default function AdminMilestoneSetupPage() {
                   width='100%'
                 />
                 <Text color='secondary' type='supporting'>
-                  {isPresentation || isPeerEvaluation
-                    ? isPresentation
-                      ? '선택한 분반마다 발표 자료 제출·평가 기간과 공개 상태를 따로 설정합니다.'
-                      : '선택한 분반마다 상호 평가 기간과 공개 상태를 따로 설정합니다.'
+                  {isPeerEvaluation
+                    ? '선택한 분반마다 상호 평가 기간과 공개 상태를 따로 설정합니다.'
                     : '선택한 분반마다 공개 일정과 공개 상태를 따로 설정합니다.'}{' '}
                   저장하면 선택한 분반별로 독립된 요청이 전송됩니다.
                 </Text>
@@ -1262,24 +1171,18 @@ export default function AdminMilestoneSetupPage() {
                           </div>
                         ) : null}
                       </div>
-                      {isPresentation || isPeerEvaluation ? (
+                      {isPeerEvaluation ? (
                         <div className={styles.scheduleField}>
-                          <Text weight='medium'>
-                            {isPresentation
-                              ? '발표 평가 기간'
-                              : '상호 평가 기간'}
-                          </Text>
+                          <Text weight='medium'>상호 평가 기간</Text>
                           <Text color='secondary' type='supporting'>
-                            {isPresentation
-                              ? '학생이 다른 팀의 발표를 평가할 수 있는 기간입니다. 자료 제출 마감 이후로 설정해야 하며, 비워 두면 발표 평가 탭과 학생 발표 평가가 열리지 않습니다. 팀별 발표 순서와 평가 항목은 제출물 관리 화면에서 설정합니다.'
-                              : '학생이 팀원을 평가할 수 있는 기간입니다.'}
+                            학생이 팀원을 평가할 수 있는 기간입니다.
                           </Text>
                           <div className={styles.scheduleGrid}>
                             <div className={styles.scheduleField}>
                               <div className={styles.scheduleInputs}>
                                 <DateInput
                                   hasClear
-                                  label={`${section.code} ${isPresentation ? '발표 평가' : '상호 평가'} 시작일`}
+                                  label={`${section.code} 상호 평가 시작일`}
                                   onChange={date =>
                                     updateSectionSchedule(
                                       section.id,
@@ -1323,7 +1226,7 @@ export default function AdminMilestoneSetupPage() {
                               <div className={styles.scheduleInputs}>
                                 <DateInput
                                   hasClear
-                                  label={`${section.code} ${isPresentation ? '발표 평가' : '상호 평가'} 종료일`}
+                                  label={`${section.code} 상호 평가 종료일`}
                                   onChange={date =>
                                     updateSectionSchedule(
                                       section.id,
@@ -1625,7 +1528,6 @@ export default function AdminMilestoneSetupPage() {
                 submitMilestonesMutation.isPending ||
                 submitRequiredArtifactsMutation.isPending ||
                 isSubmittingPeerEvaluationForms ||
-                isSubmittingPresentationEvaluationWindows ||
                 updateMilestoneMutation.isPending ||
                 hasNonRetryableFollowUpFailure ||
                 (!isEditing &&
@@ -1637,13 +1539,10 @@ export default function AdminMilestoneSetupPage() {
                 submitMilestonesMutation.isPending ||
                 submitRequiredArtifactsMutation.isPending ||
                 isSubmittingPeerEvaluationForms ||
-                isSubmittingPresentationEvaluationWindows ||
                 updateMilestoneMutation.isPending
               }
               label={
-                hasFailedMilestoneCreation ||
-                hasRetryablePeerEvaluationForm ||
-                hasRetryablePresentationEvaluationWindow
+                hasFailedMilestoneCreation || hasRetryablePeerEvaluationForm
                   ? '실패한 작업 다시 시도'
                   : '저장'
               }

@@ -619,20 +619,12 @@ it('reconciles a committed peer form after a lost response and retries with the 
 
 it('creates a presentation and patches its evaluation window with Seoul LocalDateTime values', async () => {
   const milestoneBodies: unknown[] = [];
-  const evaluationWindowBodies: unknown[] = [];
   server.use(
     http.post(
       `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`,
       async ({ request }) => {
         milestoneBodies.push(await request.json());
         return HttpResponse.json({ id: 903 }, { status: 201 });
-      },
-    ),
-    http.patch(
-      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_EVALUATION_WINDOW('1', '903')}`,
-      async ({ request }) => {
-        evaluationWindowBodies.push(await request.json());
-        return new HttpResponse(null, { status: 204 });
       },
     ),
   );
@@ -647,35 +639,30 @@ it('creates a presentation and patches its evaluation window with Seoul LocalDat
   for (const [label, value] of [
     ['OOP-01 제출 마감일', '2026-09-21'],
     ['OOP-01 제출 마감 시간', '12:00'],
-    ['OOP-01 발표 평가 시작일', '2026-09-21'],
-    ['OOP-01 평가 시작 시간', '18:00'],
-    ['OOP-01 발표 평가 종료일', '2026-09-21'],
-    ['OOP-01 평가 종료 시간', '20:00'],
   ]) {
     fireEvent.change(screen.getByLabelText(label!), { target: { value } });
   }
   await user.click(screen.getByRole('button', { name: '저장' }));
 
-  await waitFor(() => expect(evaluationWindowBodies).toHaveLength(1));
+  await waitFor(() => expect(milestoneBodies).toHaveLength(1));
   expect(milestoneBodies).toEqual([
     expect.objectContaining({
       schedule: {
         dueAt: '2026-09-21T12:00:00',
-        evaluationClosesAt: '2026-09-21T20:00:00',
-        evaluationOpensAt: '2026-09-21T18:00:00',
       },
       type: 'PRESENTATION',
     }),
   ]);
-  expect(evaluationWindowBodies).toEqual([
-    {
-      evaluationClosesAt: '2026-09-21T20:00:00',
-      evaluationOpensAt: '2026-09-21T18:00:00',
-    },
-  ]);
+  expect(milestoneBodies[0]).not.toEqual(
+    expect.objectContaining({
+      schedule: expect.objectContaining({
+        evaluationClosesAt: expect.anything(),
+      }),
+    }),
+  );
 });
 
-it('still edits a presentation milestone and persists its visible evaluation window', async () => {
+it('편집 화면에서는 기존 발표 평가 기간을 유지하고 제출 기간만 수정한다', async () => {
   const milestone = getAdminSectionMilestoneFixture('1', '101')!;
   const bodies: unknown[] = [];
   server.use(
@@ -702,15 +689,18 @@ it('still edits a presentation milestone and persists its visible evaluation win
     ),
   );
   renderPage(true);
-  const starts = await screen.findByLabelText('OOP-01 발표 평가 시작일');
-  await waitFor(() => expect(starts).toHaveValue('2026-10-16'));
-  fireEvent.change(starts, { target: { value: '2026-10-17' } });
+  expect(
+    await screen.findByLabelText('OOP-01 제출 마감일'),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByLabelText('OOP-01 발표 평가 시작일'),
+  ).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: '저장' }));
   await waitFor(() => expect(bodies).toHaveLength(1));
   expect(bodies[0]).toMatchObject({
     type: 'PRESENTATION',
     schedule: {
-      evaluationOpensAt: '2026-10-17T09:00:00',
+      evaluationOpensAt: '2026-10-16T09:00:00',
       evaluationClosesAt: '2026-10-20T23:59:00',
     },
   });

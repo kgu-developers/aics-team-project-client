@@ -223,7 +223,7 @@ it('locks presentation orders and criteria after the evaluation period starts', 
 
   await screen.findByText('등록된 평가 항목이 없습니다.');
   expect(
-    screen.getByRole('combobox', { name: '7팀 발표 순서' }),
+    screen.getByRole('spinbutton', { name: '7팀 발표 순서' }),
   ).toBeDisabled();
   expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
   expect(screen.getByRole('textbox', { name: /평가 항목명/ })).toBeDisabled();
@@ -246,7 +246,7 @@ it('locks presentation order while the settings dialog remains open', () => {
   setup(teams, AdminPresentationEvaluationSettingsDialog).rerender({
     evaluationStartsAt: '2026-09-22T09:00:01+09:00',
   });
-  const order = screen.getByRole('combobox', { name: '7팀 발표 순서' });
+  const order = screen.getByRole('spinbutton', { name: '7팀 발표 순서' });
   expect(order).toBeEnabled();
 
   act(() => vi.advanceTimersByTime(1_025));
@@ -278,7 +278,7 @@ it('locks settings immediately when the dialog opens after evaluation starts', (
   });
 
   expect(
-    screen.getByRole('combobox', { name: '7팀 발표 순서' }),
+    screen.getByRole('spinbutton', { name: '7팀 발표 순서' }),
   ).toBeDisabled();
   expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
   expect(screen.getByRole('button', { name: '평가 항목 추가' })).toBeDisabled();
@@ -333,14 +333,16 @@ it('preserves unsaved orders through criterion creation and teams refetch, then 
   );
   const { client, close } = setup(teams, QueryBackedDialog);
   const user = userEvent.setup();
-  const first = await screen.findByRole('combobox', { name: '7팀 발표 순서' });
-  const second = screen.getByRole('combobox', { name: '9팀 발표 순서' });
-  await user.click(first);
-  await user.click(screen.getByRole('option', { name: '2번' }));
-  await user.click(second);
-  await user.click(screen.getByRole('option', { name: '1번' }));
-  expect(first).toHaveTextContent('2번');
-  expect(second).toHaveTextContent('1번');
+  const first = await screen.findByRole('spinbutton', {
+    name: '7팀 발표 순서',
+  });
+  const second = screen.getByRole('spinbutton', { name: '9팀 발표 순서' });
+  await user.clear(first);
+  await user.type(first, '2');
+  await user.clear(second);
+  await user.type(second, '1');
+  expect(first).toHaveValue(2);
+  expect(second).toHaveValue(1);
   const beforeRefetch = client.getQueryData(
     adminPresentationEvaluationKeys.list('1'),
   );
@@ -363,8 +365,8 @@ it('preserves unsaved orders through criterion creation and teams refetch, then 
   expect(criterionBodies).toEqual([
     { title: '새 항목', maxScore: 5, displayOrder: 0 },
   ]);
-  expect(first).toHaveTextContent('2번');
-  expect(second).toHaveTextContent('1번');
+  expect(first).toHaveValue(2);
+  expect(second).toHaveValue(1);
   expect(orderBodies).toEqual([]);
   expect(close).not.toHaveBeenCalled();
   await user.click(screen.getByRole('button', { name: '발표 순서 저장' }));
@@ -395,16 +397,22 @@ it.each([
     );
     const { rerender } = setup();
     const user = userEvent.setup();
-    const first = screen.getByRole('combobox', { name: '7팀 발표 순서' });
-    await user.click(first);
-    await user.click(screen.getByRole('option', { name: '1번' }));
-    expect(first).toHaveTextContent('1번');
+    const first = screen.getByRole('spinbutton', {
+      name: '7팀 발표 순서',
+    });
+    await user.clear(first);
+    await user.type(first, '1');
+    expect(first).toHaveValue(1);
     // Keep the same teams reference so the context change alone must reset drafts.
     rerender(context);
-    expect(first).toHaveTextContent('2번');
+    await waitFor(() =>
+      expect(
+        screen.getByRole('spinbutton', { name: '7팀 발표 순서' }),
+      ).toHaveValue(2),
+    );
     expect(
-      screen.getByRole('combobox', { name: '9팀 발표 순서' }),
-    ).toHaveTextContent('1번');
+      screen.getByRole('spinbutton', { name: '9팀 발표 순서' }),
+    ).toHaveValue(1);
   },
 );
 
@@ -417,8 +425,9 @@ it('discards unsaved orders on close and initializes from current teams on reope
   );
   const { close, rerender } = setup();
   const user = userEvent.setup();
-  await user.click(screen.getByRole('combobox', { name: '7팀 발표 순서' }));
-  await user.click(screen.getByRole('option', { name: '1번' }));
+  const first = screen.getByRole('spinbutton', { name: '7팀 발표 순서' });
+  await user.clear(first);
+  await user.type(first, '1');
   await user.click(screen.getByRole('button', { name: '취소' }));
   expect(close).toHaveBeenCalledOnce();
   rerender({ isOpen: false });
@@ -426,9 +435,13 @@ it('discards unsaved orders on close and initializes from current teams on reope
     screen.queryByRole('dialog', { name: '발표 순서·평가 항목 설정' }),
   ).not.toBeInTheDocument();
   rerender({ isOpen: true });
-  expect(
-    screen.getByRole('combobox', { name: '7팀 발표 순서' }),
-  ).toHaveTextContent('2번');
+  let reopenedFirst = screen.getByRole('spinbutton', {
+    name: '7팀 발표 순서',
+  });
+  let reopenedSecond = screen.getByRole('spinbutton', {
+    name: '9팀 발표 순서',
+  });
+  expect(reopenedFirst).toHaveValue(2);
   await user.click(screen.getByRole('button', { name: '취소' }));
   rerender({ isOpen: false });
   const unassignedTeams = teams.map(team => ({
@@ -437,10 +450,40 @@ it('discards unsaved orders on close and initializes from current teams on reope
   }));
   rerender({ isOpen: false, teams: unassignedTeams });
   rerender({ isOpen: true, teams: unassignedTeams });
+  reopenedFirst = screen.getByRole('spinbutton', { name: '7팀 발표 순서' });
+  reopenedSecond = screen.getByRole('spinbutton', { name: '9팀 발표 순서' });
+  expect(reopenedFirst).toHaveValue(null);
+  expect(reopenedSecond).toHaveValue(null);
+});
+
+it('shows immediate errors and disables saving for missing, duplicated, or out-of-range orders', async () => {
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA('1')}`,
+      () => HttpResponse.json({ contents: [] }),
+    ),
+  );
+  setup(teams.map(team => ({ ...team, presentationOrder: null })));
+  const user = userEvent.setup();
+  const first = screen.getByRole('spinbutton', { name: '7팀 발표 순서' });
+  const second = screen.getByRole('spinbutton', { name: '9팀 발표 순서' });
+
+  expect(screen.getAllByText('발표 순서를 입력해 주세요.')).toHaveLength(2);
+  expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
+
+  await user.type(first, '1');
+  await user.type(second, '1');
+
+  expect(screen.getAllByText('이미 사용 중인 발표 순서입니다.')).toHaveLength(
+    2,
+  );
+  expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
+
+  await user.clear(second);
+  await user.type(second, '3');
+
   expect(
-    screen.getByRole('combobox', { name: '7팀 발표 순서' }),
-  ).not.toHaveTextContent('2번');
-  expect(
-    screen.getByRole('combobox', { name: '9팀 발표 순서' }),
-  ).not.toHaveTextContent('1번');
+    screen.getByText('1부터 2 사이의 번호를 입력해 주세요.'),
+  ).toBeVisible();
+  expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
 });
