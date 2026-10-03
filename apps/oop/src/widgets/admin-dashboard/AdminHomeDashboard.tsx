@@ -426,6 +426,7 @@ export default function AdminHomeDashboard() {
                         <Link
                           className={styles.sectionLink}
                           params={{ courseId: String(section.courseId) }}
+                          search={{ sectionId: Number(section.sectionId) }}
                           to={ROUTES.ADMIN_COURSE_DETAIL}
                         >
                           {section.sectionLabel}
