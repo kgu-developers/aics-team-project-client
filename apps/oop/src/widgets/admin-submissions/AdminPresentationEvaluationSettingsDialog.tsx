@@ -223,7 +223,7 @@ export function AdminPresentationEvaluationSettingsDialog({
         <Heading level={2}>발표 순서·평가 항목 설정</Heading>
         <Text color='secondary' type='supporting'>
           팀별 발표 순서와 학생이 채점할 평가 항목을 여기에서 관리합니다. 평가
-          시작은 이 화면의 발표 평가 시작 버튼에서 진행 시간을 정한 뒤
+          시작은 발표 평가 목록의 발표 평가 시작 버튼에서 진행 시간을 정한 뒤
           확정합니다.
         </Text>
         <VStack gap={3}>
@@ -378,7 +378,7 @@ export function AdminPresentationEvaluationSettingsDialog({
         </VStack>
         <HStack justify='end' gap={2}>
           <Button
-            label='취소'
+            label='닫기'
             onClick={onClose}
             type='button'
             variant='secondary'

@@ -1,6 +1,7 @@
 import type { AdminSectionMilestoneDto } from '@aics/api-client';
 import {
   Button,
+  Card,
   Dialog,
   Heading,
   HStack,
@@ -172,6 +173,17 @@ export function AdminPresentationEvaluationStartDialog({
           <Text>발표 대상: {teams.length}팀</Text>
           <Text>발표 순서: {teams.map(team => team.teamName).join(' → ')}</Text>
         </div>
+        {!isResume && criteriaCount === 1 ? (
+          <Card padding={3} variant='muted'>
+            <VStack gap={1}>
+              <Text weight='medium'>시작 전 확인</Text>
+              <Text>
+                현재 학생에게는 발표 평가 항목 1개만 표시됩니다. 의도한 구성인지
+                확인한 뒤 평가를 시작해 주세요.
+              </Text>
+            </VStack>
+          </Card>
+        ) : null}
         <NumberInput
           isIntegerOnly
           label='평가 진행 시간(분)'
