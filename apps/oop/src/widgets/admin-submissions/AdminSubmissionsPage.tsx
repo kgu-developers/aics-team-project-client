@@ -788,7 +788,7 @@ export default function AdminSubmissionsPage() {
                             label={
                               isPresentationEvaluationEnded
                                 ? '발표 기록 보기'
-                                : '발표 진행 화면 열기'
+                                : '발표 자료 보기·평가'
                             }
                             onClick={() =>
                               void navigate({
@@ -886,15 +886,13 @@ export default function AdminSubmissionsPage() {
                   />
                 ) : presentationEvaluationsQuery.data ? (
                   <>
-                    {presentationEvaluationsQuery.data.criteria.length < 2 ? (
+                    {presentationEvaluationsQuery.data.criteria.length === 0 ? (
                       <Card className={styles.criteriaNotice} variant='muted'>
                         <Text role='status'>
-                          {presentationEvaluationsQuery.data.criteria.length ===
-                          0
-                            ? '이 분반에는 발표 평가 항목이 없습니다. 학생 발표 평가 화면에 평가할 항목이 나타나지 않으니, 평가 시작 전에 항목을 등록해 주세요.'
-                            : '이 분반의 발표 평가 항목이 1개뿐입니다. 학생에게는 이 항목만 보이니, 의도한 구성인지 확인해 주세요.'}{' '}
-                          평가 항목은 분반별로 관리자가 등록하며, 위 '평가
-                          설정'에서 추가할 수 있습니다.
+                          이 분반에는 발표 평가 항목이 없습니다. 학생 발표 평가
+                          화면에 평가할 항목이 나타나지 않으니, 평가 시작 전에
+                          항목을 등록해 주세요. 평가 항목은 분반별로 관리자가
+                          등록하며, 위 '평가 설정'에서 추가할 수 있습니다.
                         </Text>
                       </Card>
                     ) : null}

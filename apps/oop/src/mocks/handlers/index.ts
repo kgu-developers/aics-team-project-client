@@ -11,6 +11,7 @@ import { adminProfileHandlers } from './adminProfile';
 import { adminProjectProposalHandlers } from './adminProjectProposal';
 import { adminProposalFeedbackHandlers } from './adminProposalFeedbacks';
 import { adminRequiredArtifactHandlers } from './adminRequiredArtifacts';
+import { adminSectionArtifactHandlers } from './adminSectionArtifacts';
 import { adminSectionMilestoneHandlers } from './adminSectionMilestones';
 import { adminSectionHandlers } from './adminSections';
 import { adminStudentTeamHandlers } from './adminStudentTeams';
@@ -44,6 +45,7 @@ export const handlers = [
   ...adminCourseHandlers,
   ...adminEvaluationResultHandlers,
   ...adminSectionHandlers,
+  ...adminSectionArtifactHandlers,
   ...adminMilestoneScheduleHandlers,
   ...adminSectionMilestoneHandlers,
   ...adminRequiredArtifactHandlers,

@@ -186,6 +186,26 @@ export function getAdminSectionsByCourseId(courseId: number) {
     }));
 }
 
+export function getAdminSection(sectionId: number) {
+  const section = sections.find(candidate => candidate.id === sectionId);
+  if (!section) return undefined;
+
+  const course = getAdminCourse(section.courseId);
+  if (!course) return undefined;
+
+  return {
+    capacity: section.capacity,
+    classTime: section.classTime,
+    code: section.code,
+    contactVisibleFrom: section.contactVisibleFrom,
+    contactVisibleUntil: section.contactVisibleUntil,
+    course,
+    id: section.id,
+    name: section.name,
+    professor: section.professor,
+  };
+}
+
 export function createAdminSection(input: AdminOopSectionInput) {
   const course = getAdminCourse(input.courseId);
   if (!course) return null;

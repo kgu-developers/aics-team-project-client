@@ -65,13 +65,28 @@ function formatPreferredPeer(
   return displayStatus ? `${preferredPeer} - ${displayStatus}` : preferredPeer;
 }
 
-export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
+export function AdminPreSurveyResponses({
+  initialSectionId,
+  sections,
+}: {
+  initialSectionId?: string;
+  sections: Section[];
+}) {
   const toast = useToast();
-  const [sectionId, setSectionId] = useState(sections[0]?.id ?? '');
+  const [sectionId, setSectionId] = useState(() =>
+    sections.some(section => section.id === initialSectionId)
+      ? initialSectionId!
+      : (sections[0]?.id ?? ''),
+  );
   const firstSectionId = sections[0]?.id ?? '';
   const sectionIds = sections.map(section => section.id).join('|');
 
   useEffect(() => {
+    if (initialSectionId && sectionIds.split('|').includes(initialSectionId)) {
+      setSectionId(initialSectionId);
+      return;
+    }
+
     setSectionId(currentSectionId => {
       const isCurrentSectionAvailable = sectionIds
         .split('|')
@@ -79,7 +94,7 @@ export function AdminPreSurveyResponses({ sections }: { sections: Section[] }) {
 
       return isCurrentSectionAvailable ? currentSectionId : firstSectionId;
     });
-  }, [firstSectionId, sectionIds]);
+  }, [firstSectionId, initialSectionId, sectionIds]);
 
   const responsesQuery = useAdminPreSurveyResponsesQuery(
     sectionId || undefined,

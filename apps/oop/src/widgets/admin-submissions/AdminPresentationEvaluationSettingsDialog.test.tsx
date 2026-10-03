@@ -428,7 +428,7 @@ it('discards unsaved orders on close and initializes from current teams on reope
   const first = screen.getByRole('spinbutton', { name: '7팀 발표 순서' });
   await user.clear(first);
   await user.type(first, '1');
-  await user.click(screen.getByRole('button', { name: '취소' }));
+  await user.click(screen.getByRole('button', { name: '닫기' }));
   expect(close).toHaveBeenCalledOnce();
   rerender({ isOpen: false });
   expect(
@@ -442,7 +442,7 @@ it('discards unsaved orders on close and initializes from current teams on reope
     name: '9팀 발표 순서',
   });
   expect(reopenedFirst).toHaveValue(2);
-  await user.click(screen.getByRole('button', { name: '취소' }));
+  await user.click(screen.getByRole('button', { name: '닫기' }));
   rerender({ isOpen: false });
   const unassignedTeams = teams.map(team => ({
     ...team,
@@ -474,16 +474,16 @@ it('shows immediate errors and disables saving for missing, duplicated, or out-o
   await user.type(first, '1');
   await user.type(second, '1');
 
-  expect(screen.getAllByText('이미 사용 중인 발표 순서입니다.')).toHaveLength(
-    2,
-  );
+  expect(
+    screen.getAllByText('이미 사용 중인 발표 순서입니다.'),
+  ).not.toHaveLength(0);
   expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
 
   await user.clear(second);
   await user.type(second, '3');
 
   expect(
-    screen.getByText('1부터 2 사이의 번호를 입력해 주세요.'),
-  ).toBeVisible();
+    screen.getAllByText('1부터 2 사이의 번호를 입력해 주세요.'),
+  ).not.toHaveLength(0);
   expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
 });

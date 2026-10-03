@@ -87,7 +87,7 @@ it('담당 교수는 발표 순서에 따라 제안서와 제출 자료를 확�
 
   renderPage();
 
-  await screen.findByRole('heading', { name: '발표 진행' });
+  await screen.findByRole('heading', { name: '발표 자료 보기·평가' });
   expect(screen.getByText('1번째 발표')).toBeVisible();
   expect(screen.getByText(/CineFlow \(7팀\)/)).toBeVisible();
   expect(screen.getByRole('link', { name: /presentation/i })).toBeVisible();
