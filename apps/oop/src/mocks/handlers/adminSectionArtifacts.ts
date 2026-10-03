@@ -139,11 +139,12 @@ export const adminSectionArtifactHandlers = [
       }
       const asOf = getAsOf(request);
       const workbook = await createArtifactWorkbook(sectionId, asOf);
+      const encodedSectionCode = encodeURIComponent(section.code);
 
       return HttpResponse.arrayBuffer(workbook, {
         headers: {
           'Cache-Control': 'no-store',
-          'Content-Disposition': `attachment; filename*=UTF-8''OOP-01-%EC%82%B0%EC%B6%9C%EB%AC%BC-${asOf}.xlsx`,
+          'Content-Disposition': `attachment; filename*=UTF-8''${encodedSectionCode}-%EC%82%B0%EC%B6%9C%EB%AC%BC-${asOf}.xlsx`,
           'Content-Type':
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         },

@@ -12,7 +12,7 @@ import {
   useToast,
   VStack,
 } from '@aics/design-system';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { saveDownload } from '~/shared/lib/saveDownload';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
@@ -59,10 +59,20 @@ export function AdminSectionArtifactSummary({
   const today = useMemo(getSeoulTodayDate, []);
   const firstSectionId = sections[0]?.id ?? '';
   const sectionIds = sections.map(section => section.id).join('|');
+  const appliedInitialSectionId = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    if (initialSectionId && sectionIds.split('|').includes(initialSectionId)) {
+    const hasInitialSection =
+      initialSectionId !== undefined &&
+      sectionIds.split('|').includes(initialSectionId);
+
+    if (
+      hasInitialSection &&
+      initialSectionId !== undefined &&
+      appliedInitialSectionId.current !== initialSectionId
+    ) {
       setSectionId(initialSectionId);
+      appliedInitialSectionId.current = initialSectionId;
       return;
     }
 

@@ -40,6 +40,7 @@ import {
   createAdminSection,
   getAdminSectionsByCourseId,
   resetAdminSectionsMockData,
+  updateAdminSectionFixture,
 } from '~/mocks/data/adminSections';
 import {
   demoAdmin,
@@ -859,6 +860,19 @@ describe('admin section API contract', () => {
     expect(
       workbook.getWorksheet('단계별 제출 현황')?.getCell(1, 13).value,
     ).toBe('전체 파일 용량');
+  });
+
+  it('산출물 다운로드 파일명은 요청한 분반 코드를 사용한다', async () => {
+    updateAdminSectionFixture(1, { code: 'OOP-99' });
+    const response = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ARTIFACT_DOWNLOAD('1')}?asOf=2026-09-15`,
+      { headers: { Authorization: `Bearer ${demoAdminAccessToken}` } },
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-disposition')).toContain(
+      "filename*=UTF-8''OOP-99-%EC%82%B0%EC%B6%9C%EB%AC%BC-2026-09-15.xlsx",
+    );
   });
 
   it('담당하지 않는 분반의 산출물 조회는 403으로 처리한다', async () => {
