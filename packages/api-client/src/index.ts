@@ -157,6 +157,15 @@ export {
   type AdminPreSurveyResponsesResponse,
 } from './adminPreSurvey';
 export {
+  downloadAdminSectionArtifactsExcel,
+  fetchAdminSectionArtifactSummary,
+  type AdminSectionArtifactMemberDto,
+  type AdminSectionArtifactsExcelDownload,
+  type AdminSectionArtifactSummaryDto,
+  type AdminSectionArtifactSummaryResponse,
+  type AdminSectionArtifactsInput,
+} from './adminSectionArtifact';
+export {
   fetchAdminMeetingRecord,
   fetchAdminMeetingRecords,
   type AdminMeetingRecordDetailDto,
