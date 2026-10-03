@@ -67,7 +67,15 @@ export const tabPanel = style({
 export const evaluationHeader = style({
   alignItems: 'center',
   display: 'flex',
+  flexWrap: 'wrap',
+  gap: 12,
   justifyContent: 'space-between',
+  '@media': {
+    'screen and (max-width: 640px)': {
+      alignItems: 'stretch',
+      flexDirection: 'column',
+    },
+  },
 });
 
 export const evaluationTitle = style({
@@ -101,7 +109,14 @@ export const setupWarningList = style({
 export const evaluationActions = style({
   alignItems: 'center',
   display: 'flex',
+  flexWrap: 'wrap',
   gap: 8,
+  justifyContent: 'flex-end',
+  '@media': {
+    'screen and (max-width: 640px)': {
+      justifyContent: 'flex-start',
+    },
+  },
 });
 
 export const list = style({

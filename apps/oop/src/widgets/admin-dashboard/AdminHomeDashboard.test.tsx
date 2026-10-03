@@ -313,7 +313,10 @@ describe('AdminHomeDashboard', () => {
       name: 'OOP-01',
     });
     expect(dashboardState.milestoneSectionIds).toEqual(['1']);
-    expect(activeSectionLink).toHaveAttribute('href', '/admin/sections/1');
+    expect(activeSectionLink).toHaveAttribute(
+      'href',
+      '/admin/sections/1?sectionId=1',
+    );
     expect(screen.queryByText('OOP-02')).not.toBeInTheDocument();
 
     await user.click(activeSectionLink);

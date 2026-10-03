@@ -860,7 +860,7 @@ describe('AdminSubmissionsPage', () => {
     expect(warning).toHaveTextContent('평가 항목을 1개 이상 추가해 주세요.');
   });
 
-  it('발표 평가 항목이 1개뿐이면 학생에게 그 항목만 보인다고 안내한다', async () => {
+  it('발표 평가 항목이 1개여도 목록에서는 완료 상태만 표시한다', async () => {
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRESENTATION_EVALUATIONS('1')}`,
@@ -879,8 +879,16 @@ describe('AdminSubmissionsPage', () => {
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
 
     expect(
-      await screen.findByText(/발표 평가 항목이 1개뿐입니다/),
-    ).toBeInTheDocument();
+      screen.queryByText(/발표 평가 항목이 1개뿐입니다/),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('항목 수 확인 필요')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '발표 평가 시작' }));
+    expect(
+      await screen.findByText(
+        '현재 학생에게는 발표 평가 항목 1개만 표시됩니다. 의도한 구성인지 확인한 뒤 평가를 시작해 주세요.',
+      ),
+    ).toBeVisible();
   });
 
   it('평가 기간이 없는 단일 발표 마일스톤도 제출물 화면에서 시작을 준비한다', async () => {
@@ -949,7 +957,7 @@ describe('AdminSubmissionsPage', () => {
       screen.getByRole('button', { name: '발표 기록 보기' }),
     ).toBeEnabled();
     expect(
-      screen.queryByRole('button', { name: '발표 진행 화면 열기' }),
+      screen.queryByRole('button', { name: '발표 자료 보기·평가' }),
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '평가 설정 보기' }));
 

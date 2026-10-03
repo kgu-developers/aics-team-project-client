@@ -83,6 +83,10 @@ export const ENDPOINTS = {
       `/api/v1/admin/sections/${sectionId}/pre-survey-responses`,
     OOP_PRE_SURVEY_RESPONSES_DOWNLOAD: (sectionId: string) =>
       `/api/v1/admin/sections/${sectionId}/pre-survey-responses/download`,
+    SECTION_ARTIFACT_SUMMARY: (sectionId: string) =>
+      `/api/v1/admin/sections/${sectionId}/artifacts/summary`,
+    SECTION_ARTIFACT_DOWNLOAD: (sectionId: string) =>
+      `/api/v1/admin/sections/${sectionId}/artifacts/download`,
     MEETING_RECORDS: '/api/v1/admin/meeting-records',
     MEETING_RECORDS_LIST: '/api/v1/admin/meeting-records',
     MEETING_RECORD_DETAIL: (meetingId: string | number) =>

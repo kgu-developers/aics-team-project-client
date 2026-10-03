@@ -11,7 +11,8 @@ import {
 } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import ExcelJS from 'exceljs';
+import { delay, http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import {
   afterAll,
@@ -34,15 +35,23 @@ import {
 } from '~/mocks/authSession';
 import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
 import { resetAdminProfileMockData } from '~/mocks/data/adminProfile';
-import { resetAdminSectionsMockData } from '~/mocks/data/adminSections';
+import { appliedAdminRosterImportStatusFixture } from '~/mocks/data/adminRosterImportStatus';
+import {
+  createAdminSection,
+  getAdminSectionsByCourseId,
+  resetAdminSectionsMockData,
+  updateAdminSectionFixture,
+} from '~/mocks/data/adminSections';
 import {
   demoAdmin,
   demoAdminAccessToken,
   demoAccessToken,
+  demoPresentationProfessorAccessToken,
   demoUserAccounts,
 } from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminProfileHandlers } from '~/mocks/handlers/adminProfile';
+import { adminSectionArtifactHandlers } from '~/mocks/handlers/adminSectionArtifacts';
 import { adminSectionHandlers } from '~/mocks/handlers/adminSections';
 import {
   adminStudentTeamHandlers,
@@ -54,6 +63,7 @@ import { sectionHandlers } from '~/mocks/handlers/section';
 const server = setupServer(
   ...adminCourseHandlers,
   ...adminSectionHandlers,
+  ...adminSectionArtifactHandlers,
   ...adminStudentTeamHandlers,
   ...adminProfileHandlers,
   ...authHandlers,
@@ -170,6 +180,9 @@ describe('AdminCoursesPage', () => {
         name: '객체지향 프로그래밍',
       }),
     ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(router.state.location.search).toMatchObject({ sectionId: 1 }),
+    );
   });
 
   it('운영 중 강좌를 기본으로 표시하고 전체 조회에서는 최신 학기부터 정렬한다', async () => {
@@ -227,6 +240,147 @@ describe('AdminCoursesPage', () => {
 });
 
 describe('AdminCourseDetailPage', () => {
+  it('여러 분반 강좌는 기준 분반을 선택하기 전 첫 분반의 운영 현황을 표시하지 않는다', async () => {
+    const user = userEvent.setup();
+    createAdminSection({
+      capacity: 35,
+      classTime: '화요일 3-4교시',
+      code: 'OOP-02',
+      courseId: 1,
+      professorId: demoAdmin.studentNumber,
+    });
+
+    const router = renderAt('/admin/sections/1');
+
+    const selector = await screen.findByRole('combobox', {
+      name: '화면 기준 분반',
+    });
+    expect(selector).toHaveValue('');
+    expect(
+      screen.getByText('분반을 선택하면 해당 분반의 운영 현황을 표시합니다.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: '분반 산출물 현황' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: '데이터 업로드' }),
+    ).not.toBeInTheDocument();
+
+    await user.click(selector);
+    await user.click(screen.getByRole('option', { name: 'OOP-02 (OOP-02)' }));
+
+    expect(
+      await screen.findByRole('heading', { name: '데이터 업로드' }),
+    ).toBeInTheDocument();
+    expect(router.state.location.search).toMatchObject({ sectionId: 3 });
+  });
+
+  it('분반 목록을 불러오는 동안에는 운영 패널의 빈 상태를 보여 주지 않는다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_SECTIONS}`, async () => {
+        await delay(500);
+        return HttpResponse.json({ contents: getAdminSectionsByCourseId(1) });
+      }),
+    );
+
+    renderAt('/admin/sections/1');
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: '객체지향 프로그래밍',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('연결된 분반을 불러오는 중입니다.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: '데이터 업로드' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: '분반 산출물 현황' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('명단 업로드 상태를 불러오지 못해도 미업로드로 판단해 영역 순서를 바꾸지 않는다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ROSTER_IMPORT_STATUS('1')}`,
+        () => HttpResponse.json({ code: 'INTERNAL_ERROR' }, { status: 500 }),
+      ),
+    );
+
+    renderAt('/admin/sections/1');
+
+    expect(
+      await screen.findByText(
+        '명단 업로드 상태를 확인하지 못했습니다. 기본 영역 순서로 표시되며, 잠시 후 다시 확인해 주세요.',
+      ),
+    ).toBeInTheDocument();
+
+    const operationHeadings = screen
+      .getAllByRole('heading', { level: 2 })
+      .map(heading => heading.textContent);
+    expect(operationHeadings).toEqual([
+      '분반',
+      '사전 정보 내역',
+      '데이터 업로드',
+      '분반 산출물 현황',
+    ]);
+  });
+
+  it('기준 분반에 학생·팀 명단이 모두 적용되면 산출물 현황을 먼저 보여 준다', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ROSTER_IMPORT_STATUS(1)}`,
+        () => HttpResponse.json(appliedAdminRosterImportStatusFixture),
+      ),
+    );
+
+    renderAt('/admin/sections/1');
+
+    expect(
+      await screen.findByText(
+        appliedAdminRosterImportStatusFixture.studentRoster.fileName,
+        { exact: false },
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        appliedAdminRosterImportStatusFixture.teamRoster.fileName,
+        { exact: false },
+      ),
+    ).toBeInTheDocument();
+
+    await waitFor(() => {
+      const operationHeadings = screen
+        .getAllByRole('heading', { level: 2 })
+        .map(heading => heading.textContent);
+
+      expect(operationHeadings).toEqual([
+        '분반',
+        '분반 산출물 현황',
+        '사전 정보 내역',
+        '데이터 업로드',
+      ]);
+    });
+
+    const preSurveyToggle = await screen.findByRole('button', {
+      name: '사전 정보 펼치기',
+    });
+    expect(preSurveyToggle).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(preSurveyToggle);
+
+    expect(
+      screen.getByRole('button', { name: '사전 정보 접기' }),
+    ).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      screen.getByRole('button', { name: '사전 정보 다운로드' }),
+    ).toBeEnabled();
+  });
+
   it('강좌 정보와 연결된 분반을 표로 보여 준다', async () => {
     renderAt('/admin/sections/1');
 
@@ -249,6 +403,31 @@ describe('AdminCourseDetailPage', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: '사전 정보 다운로드' }),
+    ).toBeEnabled();
+    expect(
+      await screen.findByRole('heading', { name: '분반 산출물 현황' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('combobox', { name: '산출물 분반' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('combobox', { name: /집계 기준일/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Excel의 단계별 제출 현황에서 상태는 선택한 기준일의 상태가 아니라 다운로드 시점의 최신 상태입니다.',
+      ),
+    ).toBeInTheDocument();
+    const artifactTable = await screen.findByRole('table', {
+      name: '분반 산출물 현황',
+    });
+    expect(
+      within(artifactTable).getByRole('row', {
+        name: /1팀.*20260001 김가가.*6.*4.*3.*1/,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '산출물 현황 다운로드' }),
     ).toBeEnabled();
   });
 
@@ -662,6 +841,68 @@ describe('AdminCourseDetailPage', () => {
 });
 
 describe('admin section API contract', () => {
+  it('산출물 요약은 선택한 기준일을 쿼리로 전달한다', async () => {
+    const response = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ARTIFACT_SUMMARY('1')}?asOf=2026-09-15`,
+      { headers: { Authorization: `Bearer ${demoAdminAccessToken}` } },
+    );
+    const body = (await response.json()) as {
+      asOf: string;
+      contents: Array<{ teamName: string }>;
+    };
+
+    expect(response.status).toBe(200);
+    expect(body.asOf).toBe('2026-09-15');
+    expect(body.contents).toEqual(
+      expect.arrayContaining([expect.objectContaining({ teamName: '1팀' })]),
+    );
+  });
+
+  it('산출물 다운로드는 두 시트가 담긴 Excel 파일을 반환한다', async () => {
+    const response = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ARTIFACT_DOWNLOAD('1')}?asOf=2026-09-15`,
+      { headers: { Authorization: `Bearer ${demoAdminAccessToken}` } },
+    );
+    const workbook = new ExcelJS.Workbook();
+
+    await workbook.xlsx.load(await response.arrayBuffer());
+
+    expect(response.status).toBe(200);
+    expect(workbook.worksheets.map(sheet => sheet.name)).toEqual([
+      '팀별 요약',
+      '단계별 제출 현황',
+    ]);
+    expect(
+      workbook.getWorksheet('단계별 제출 현황')?.getCell(1, 13).value,
+    ).toBe('전체 파일 용량');
+  });
+
+  it('산출물 다운로드 파일명은 요청한 분반 코드를 사용한다', async () => {
+    updateAdminSectionFixture(1, { code: 'OOP-99' });
+    const response = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ARTIFACT_DOWNLOAD('1')}?asOf=2026-09-15`,
+      { headers: { Authorization: `Bearer ${demoAdminAccessToken}` } },
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-disposition')).toContain(
+      "filename*=UTF-8''OOP-99-%EC%82%B0%EC%B6%9C%EB%AC%BC-2026-09-15.xlsx",
+    );
+  });
+
+  it('담당하지 않는 분반의 산출물 조회는 403으로 처리한다', async () => {
+    const response = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ARTIFACT_SUMMARY('1')}?asOf=2026-09-15`,
+      {
+        headers: {
+          Authorization: `Bearer ${demoPresentationProfessorAccessToken}`,
+        },
+      },
+    );
+
+    expect(response.status).toBe(403);
+  });
+
   it('분반 PATCH의 잘못된 body를 400으로 처리한다', async () => {
     const response = await fetch(
       `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_SECTION(1)}`,

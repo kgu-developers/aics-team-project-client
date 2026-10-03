@@ -5,6 +5,7 @@ export { useAdminSectionEnrollmentsQuery } from './useAdminSectionEnrollmentsQue
 export { useAdminSectionTeamsQuery } from './useAdminSectionTeamsQuery';
 export { useAdminTeamDetailsQueries } from './useAdminTeamDetailsQueries';
 export { useAdminUserQuery } from './useAdminUserQuery';
+export { useAdminRosterImportStatusQuery } from './useAdminRosterImportStatusQuery';
 export { useAdminRosterImportStatusQueries } from './useAdminRosterImportStatusQueries';
 export { useApplyAdminEnrollmentImportMutation } from './useApplyAdminEnrollmentImportMutation';
 export { useFinalizeAdminSectionTeamsMutation } from './useFinalizeAdminSectionTeamsMutation';

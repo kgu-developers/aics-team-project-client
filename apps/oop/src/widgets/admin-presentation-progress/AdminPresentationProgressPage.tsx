@@ -206,7 +206,7 @@ export default function AdminPresentationProgressPage({
     <main className={styles.page}>
       <div className={styles.titleRow}>
         <div>
-          <Heading level={1}>발표 진행</Heading>
+          <Heading level={1}>발표 자료 보기·평가</Heading>
           <Text color='secondary' type='supporting'>
             발표 순서에 따라 팀의 제안서와 제출 자료를 확인합니다.
           </Text>

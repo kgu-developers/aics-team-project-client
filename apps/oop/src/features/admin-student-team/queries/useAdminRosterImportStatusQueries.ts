@@ -14,8 +14,5 @@ export function useAdminRosterImportStatusQueries(
     })),
   });
 
-  return uniqueSectionIds.map((sectionId, index) => ({
-    query: queries[index],
-    sectionId,
-  }));
+  return queries;
 }
