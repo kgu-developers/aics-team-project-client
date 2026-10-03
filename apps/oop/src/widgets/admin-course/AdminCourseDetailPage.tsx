@@ -210,6 +210,10 @@ function CourseOperationPanels({
       preSurvey: (
         <AdminPreSurveyResponses
           initialSectionId={initialSectionId}
+          isRosterStatusResolved={rosterStatusQuery.isSuccess}
+          isTeamRosterImported={Boolean(
+            rosterStatusQuery.data?.teamRoster?.fileName,
+          )}
           sections={operationSections}
         />
       ),

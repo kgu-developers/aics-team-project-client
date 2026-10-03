@@ -1,6 +1,7 @@
 import {
-  Card,
   Button,
+  Card,
+  Collapsible,
   Heading,
   proportional,
   Selector,
@@ -10,7 +11,7 @@ import {
   useToast,
   VStack,
 } from '@aics/design-system';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { saveDownload } from '~/shared/lib/saveDownload';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
@@ -67,12 +68,17 @@ function formatPreferredPeer(
 
 export function AdminPreSurveyResponses({
   initialSectionId,
+  isRosterStatusResolved = false,
+  isTeamRosterImported = false,
   sections,
 }: {
   initialSectionId?: string;
+  isRosterStatusResolved?: boolean;
+  isTeamRosterImported?: boolean;
   sections: Section[];
 }) {
   const toast = useToast();
+  const [isOpen, setIsOpen] = useState(true);
   const [sectionId, setSectionId] = useState(() =>
     sections.some(section => section.id === initialSectionId)
       ? initialSectionId!
@@ -80,6 +86,8 @@ export function AdminPreSurveyResponses({
   );
   const firstSectionId = sections[0]?.id ?? '';
   const sectionIds = sections.map(section => section.id).join('|');
+  const visibilityScopeKey = `${initialSectionId ?? ''}|${sectionIds}`;
+  const initializedVisibilityScopeRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (initialSectionId && sectionIds.split('|').includes(initialSectionId)) {
@@ -95,6 +103,17 @@ export function AdminPreSurveyResponses({
       return isCurrentSectionAvailable ? currentSectionId : firstSectionId;
     });
   }, [firstSectionId, initialSectionId, sectionIds]);
+
+  useEffect(() => {
+    if (
+      !isRosterStatusResolved ||
+      initializedVisibilityScopeRef.current === visibilityScopeKey
+    )
+      return;
+
+    setIsOpen(!isTeamRosterImported);
+    initializedVisibilityScopeRef.current = visibilityScopeKey;
+  }, [isRosterStatusResolved, isTeamRosterImported, visibilityScopeKey]);
 
   const responsesQuery = useAdminPreSurveyResponsesQuery(
     sectionId || undefined,
@@ -161,128 +180,136 @@ export function AdminPreSurveyResponses({
           </Text>
         </header>
 
-        {sections.length === 0 ? (
-          <Text color='secondary' role='status'>
-            담당 분반이 없어 사전 정보를 조회할 수 없습니다.
-          </Text>
-        ) : (
-          <>
-            <div className={styles.controls}>
-              <div className={styles.sectionSelector}>
-                <Selector
-                  label='분반'
-                  onChange={setSectionId}
-                  options={sections.map(section => ({
-                    label: `${section.code} (${section.name})`,
-                    value: section.id,
-                  }))}
-                  renderOption={option => (
-                    <SelectorOption label={option.label ?? option.value} />
-                  )}
-                  value={sectionId}
-                  width='100%'
-                />
-              </div>
-              <Button
-                isDisabled={!sectionId || downloadMutation.isPending}
-                isLoading={downloadMutation.isPending}
-                label='사전 정보 다운로드'
-                onClick={handleExcelDownload}
-                variant='secondary'
-              />
-            </div>
-
-            {responsesQuery.isPending || enrollmentsQuery.isPending ? (
-              <Text color='secondary' role='status'>
-                사전 정보를 불러오는 중입니다.
-              </Text>
-            ) : responsesQuery.isError ? (
-              <Text role='alert'>
-                사전 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
-              </Text>
-            ) : enrollmentsQuery.isError ? (
-              <Text role='alert'>
-                수강생 목록을 불러오지 못해 미제출 여부를 확인할 수 없습니다.
-                잠시 후 다시 시도해 주세요.
-              </Text>
-            ) : (
-              <>
-                <Text color='secondary' role='status' type='supporting'>
-                  전체 {tableRows.length}명 · 제출 {submittedCount}명 · 미제출{' '}
-                  {tableRows.length - submittedCount}명
-                </Text>
-
-                <div className={styles.table}>
-                  <Table
-                    columns={[
-                      {
-                        align: 'start',
-                        header: '학번',
-                        key: 'userId',
-                        width: proportional(0.7, { minWidth: 120 }),
-                      },
-                      {
-                        align: 'start',
-                        header: '이름',
-                        key: 'userName',
-                        width: proportional(0.6, { minWidth: 100 }),
-                      },
-                      {
-                        align: 'start',
-                        header: '희망 조원',
-                        key: 'preferredPeerUserId',
-                        renderCell: response =>
-                          formatPreferredPeer(
-                            response.preferredPeerUserId,
-                            response.preferredPeerName,
-                            response.preferredPeerStatus,
-                            response.mutual,
-                          ),
-                        width: proportional(1.5, { minWidth: 260 }),
-                      },
-                      {
-                        align: 'start',
-                        header: '희망 역할',
-                        key: 'preferredRoles',
-                        renderCell: response =>
-                          formatTeamRolePreferences(response.preferredRoles),
-                        width: proportional(1.1, { minWidth: 180 }),
-                      },
-                      {
-                        align: 'start',
-                        header: '주제 의견',
-                        key: 'topicOpinion',
-                        renderCell: response => response.topicOpinion ?? '',
-                        width: proportional(1.4, { minWidth: 220 }),
-                      },
-                      {
-                        align: 'start',
-                        header: '기타 의견',
-                        key: 'etcOpinion',
-                        renderCell: response => response.etcOpinion ?? '',
-                        width: proportional(1.4, { minWidth: 220 }),
-                      },
-                      {
-                        align: 'start',
-                        header: '제출일',
-                        key: 'submittedAt',
-                        width: proportional(0.9, { minWidth: 160 }),
-                      },
-                    ]}
-                    data={tableRows}
-                    density='balanced'
-                    dividers='rows'
-                    emptyState={<span>등록된 수강생이 없습니다.</span>}
-                    idKey='id'
-                    plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
-                    textOverflow='wrap'
-                    verticalAlign='middle'
+        <Collapsible
+          isOpen={isOpen}
+          onOpenChange={setIsOpen}
+          trigger={isOpen ? '사전 정보 접기' : '사전 정보 펼치기'}
+        >
+          {sections.length === 0 ? (
+            <Text color='secondary' role='status'>
+              담당 분반이 없어 사전 정보를 조회할 수 없습니다.
+            </Text>
+          ) : (
+            <>
+              <div className={styles.controls}>
+                <div className={styles.sectionSelector}>
+                  <Selector
+                    label='분반'
+                    onChange={setSectionId}
+                    options={sections.map(section => ({
+                      label: `${section.code} (${section.name})`,
+                      value: section.id,
+                    }))}
+                    renderOption={option => (
+                      <SelectorOption label={option.label ?? option.value} />
+                    )}
+                    value={sectionId}
+                    width='100%'
                   />
                 </div>
-              </>
-            )}
-          </>
-        )}
+                <Button
+                  isDisabled={!sectionId || downloadMutation.isPending}
+                  isLoading={downloadMutation.isPending}
+                  label='사전 정보 다운로드'
+                  onClick={handleExcelDownload}
+                  variant='secondary'
+                />
+              </div>
+
+              {responsesQuery.isPending || enrollmentsQuery.isPending ? (
+                <Text color='secondary' role='status'>
+                  사전 정보를 불러오는 중입니다.
+                </Text>
+              ) : responsesQuery.isError ? (
+                <Text role='alert'>
+                  사전 정보를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.
+                </Text>
+              ) : enrollmentsQuery.isError ? (
+                <Text role='alert'>
+                  수강생 목록을 불러오지 못해 미제출 여부를 확인할 수 없습니다.
+                  잠시 후 다시 시도해 주세요.
+                </Text>
+              ) : (
+                <>
+                  <Text color='secondary' role='status' type='supporting'>
+                    전체 {tableRows.length}명 · 제출 {submittedCount}명 · 미제출{' '}
+                    {tableRows.length - submittedCount}명
+                  </Text>
+
+                  <div className={styles.table}>
+                    <Table
+                      columns={[
+                        {
+                          align: 'start',
+                          header: '학번',
+                          key: 'userId',
+                          width: proportional(0.7, { minWidth: 120 }),
+                        },
+                        {
+                          align: 'start',
+                          header: '이름',
+                          key: 'userName',
+                          width: proportional(0.6, { minWidth: 100 }),
+                        },
+                        {
+                          align: 'start',
+                          header: '희망 조원',
+                          key: 'preferredPeerUserId',
+                          renderCell: response =>
+                            formatPreferredPeer(
+                              response.preferredPeerUserId,
+                              response.preferredPeerName,
+                              response.preferredPeerStatus,
+                              response.mutual,
+                            ),
+                          width: proportional(1.5, { minWidth: 260 }),
+                        },
+                        {
+                          align: 'start',
+                          header: '희망 역할',
+                          key: 'preferredRoles',
+                          renderCell: response =>
+                            formatTeamRolePreferences(response.preferredRoles),
+                          width: proportional(1.1, { minWidth: 180 }),
+                        },
+                        {
+                          align: 'start',
+                          header: '주제 의견',
+                          key: 'topicOpinion',
+                          renderCell: response => response.topicOpinion ?? '',
+                          width: proportional(1.4, { minWidth: 220 }),
+                        },
+                        {
+                          align: 'start',
+                          header: '기타 의견',
+                          key: 'etcOpinion',
+                          renderCell: response => response.etcOpinion ?? '',
+                          width: proportional(1.4, { minWidth: 220 }),
+                        },
+                        {
+                          align: 'start',
+                          header: '제출일',
+                          key: 'submittedAt',
+                          width: proportional(0.9, { minWidth: 160 }),
+                        },
+                      ]}
+                      data={tableRows}
+                      density='balanced'
+                      dividers='rows'
+                      emptyState={<span>등록된 수강생이 없습니다.</span>}
+                      idKey='id'
+                      plugins={{
+                        scrollWrapperLayout: tableScrollWrapperPlugin,
+                      }}
+                      textOverflow='wrap'
+                      verticalAlign='middle'
+                    />
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </Collapsible>
       </VStack>
     </Card>
   );

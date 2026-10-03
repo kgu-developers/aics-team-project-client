@@ -330,6 +330,7 @@ describe('AdminCourseDetailPage', () => {
   });
 
   it('기준 분반에 학생·팀 명단이 모두 적용되면 산출물 현황을 먼저 보여 준다', async () => {
+    const user = userEvent.setup();
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ROSTER_IMPORT_STATUS(1)}`,
@@ -364,6 +365,20 @@ describe('AdminCourseDetailPage', () => {
         '데이터 업로드',
       ]);
     });
+
+    const preSurveyToggle = await screen.findByRole('button', {
+      name: '사전 정보 펼치기',
+    });
+    expect(preSurveyToggle).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(preSurveyToggle);
+
+    expect(
+      screen.getByRole('button', { name: '사전 정보 접기' }),
+    ).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      screen.getByRole('button', { name: '사전 정보 다운로드' }),
+    ).toBeEnabled();
   });
 
   it('강좌 정보와 연결된 분반을 표로 보여 준다', async () => {
