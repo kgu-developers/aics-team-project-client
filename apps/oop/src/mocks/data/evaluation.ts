@@ -414,7 +414,10 @@ export function getMilestonePresentations(): MilestonePresentation[] {
             studentNumber: memberUserId,
             name: evaluationMembersByUserId[memberUserId]?.name ?? null,
             isLeader: index === 0,
-            projectRole: evaluationMembersByUserId[memberUserId]?.role ?? null,
+            projectRole:
+              evaluationMembersByUserId[memberUserId]?.role
+                .replace(/^팀장\s*(?:·|-|\/)?\s*/, '')
+                .trim() || null,
           })),
         },
       },
@@ -439,6 +442,55 @@ export function getMilestonePresentations(): MilestonePresentation[] {
       ],
     };
   });
+}
+
+/**
+ * The admin presentation milestone fixture uses the same numeric team IDs as
+ * the admin section-team and presentation-order fixtures. It intentionally
+ * remains separate from the student evaluation fixture above, whose team IDs
+ * are used by the student evaluation contract.
+ */
+export function getAdminMilestonePresentations(): MilestonePresentation[] {
+  return getMilestonePresentations()
+    .slice(0, 2)
+    .map((team, index) => {
+      const teamId = index + 1;
+      const teamName = `OOP-01 - ${teamId}팀`;
+
+      return {
+        ...team,
+        artifacts:
+          index === 0
+            ? [
+                ...team.artifacts,
+                {
+                  type: 'TEXT' as const,
+                  requiredArtifactId: 3,
+                  content:
+                    '발표 핵심 흐름: 문제 정의 → 해결 방식 → 시연 → 회고',
+                },
+              ]
+            : team.artifacts,
+        presentationOrder: teamId,
+        submissionId: 1008 + index,
+        teamId,
+        teamName,
+        project: team.project
+          ? {
+              ...team.project,
+              id: teamId,
+              teamId,
+              teamOperation: team.project.teamOperation
+                ? {
+                    ...team.project.teamOperation,
+                    id: teamId,
+                    name: teamName,
+                  }
+                : null,
+            }
+          : null,
+      };
+    });
 }
 
 /** Swagger: GET /milestones/{milestoneId}/team-evaluations/me */

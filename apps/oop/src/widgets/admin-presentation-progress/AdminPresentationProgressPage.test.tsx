@@ -19,15 +19,18 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminPresentationProgressPage from './AdminPresentationProgressPage';
 
 import { resetMockSessionState } from '~/mocks/authSession';
-import { presentationEvaluationMilestoneId } from '~/mocks/data/evaluation';
 import {
   demoAdmin,
   demoPresentationProfessor,
   demoPresentationProfessorAccessToken,
 } from '~/mocks/data/users';
+import { adminPresentationEvaluationHandlers } from '~/mocks/handlers/adminPresentationEvaluations';
 import { evaluationHandlers } from '~/mocks/handlers/evaluation';
 
-const server = setupServer(...evaluationHandlers);
+const server = setupServer(
+  ...evaluationHandlers,
+  ...adminPresentationEvaluationHandlers,
+);
 const queryClients: QueryClient[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -48,10 +51,7 @@ function renderPage() {
   const rootRoute = createRootRoute({ component: Outlet });
   const progressRoute = createRoute({
     component: () => (
-      <AdminPresentationProgressPage
-        milestoneId={presentationEvaluationMilestoneId}
-        sectionId='oop-2026-2-01'
-      />
+      <AdminPresentationProgressPage milestoneId='103' sectionId='1' />
     ),
     getParentRoute: () => rootRoute,
     path: '/admin/presentation-progress',
@@ -89,8 +89,11 @@ it('담당 교수는 발표 순서에 따라 제안서와 제출 자료를 확�
 
   await screen.findByRole('heading', { name: '발표 자료 보기·평가' });
   expect(screen.getByText('1번째 발표')).toBeVisible();
-  expect(screen.getByText(/CineFlow \(7팀\)/)).toBeVisible();
+  expect(screen.getByText(/OOP-01 - 1팀/)).toBeVisible();
   expect(screen.getByRole('link', { name: /presentation/i })).toBeVisible();
+  expect(
+    screen.getByText('발표 핵심 흐름: 문제 정의 → 해결 방식 → 시연 → 회고'),
+  ).toBeVisible();
   expect(screen.getByRole('button', { name: '이전 팀' })).toBeDisabled();
 
   await user.click(screen.getByRole('button', { name: '다음 팀' }));

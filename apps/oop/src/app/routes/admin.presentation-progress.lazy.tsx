@@ -7,7 +7,7 @@ export const Route = createLazyFileRoute('/admin/presentation-progress')({
 });
 
 function AdminPresentationProgressRoutePage() {
-  const { milestoneId, sectionId } = useSearch({
+  const { milestoneId, sectionId, teamId } = useSearch({
     from: '/admin/presentation-progress',
   });
 
@@ -15,6 +15,7 @@ function AdminPresentationProgressRoutePage() {
     <AdminPresentationProgressPage
       milestoneId={milestoneId}
       sectionId={sectionId}
+      teamId={teamId}
     />
   );
 }
