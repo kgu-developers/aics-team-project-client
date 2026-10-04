@@ -136,6 +136,16 @@ function isEvaluationOpen() {
   return Date.parse(period.startsAt) <= now && now < Date.parse(period.endsAt);
 }
 
+/** Matches the server rule: criteria remain locked after the first evaluation start. */
+function isCriterionLocked() {
+  const period = getPresentationEvaluationPeriod();
+  const startsAt = period.startsAt ? Date.parse(period.startsAt) : Number.NaN;
+  return (
+    (Number.isFinite(startsAt) && Date.now() >= startsAt) ||
+    professorEvaluations.size > 0
+  );
+}
+
 function professorEvaluationResponse(milestoneId: string, teamId: string) {
   const evaluation = professorEvaluations.get(
     getProfessorEvaluationKey(milestoneId, teamId),
@@ -246,7 +256,7 @@ export const adminPresentationEvaluationHandlers = [
         );
       }
 
-      if (isEvaluationOpen() || professorEvaluations.size > 0) {
+      if (isCriterionLocked()) {
         return HttpResponse.json(
           { code: 'TEAM_EVALUATION_CRITERION_LOCKED' },
           { status: 409 },
@@ -280,7 +290,7 @@ export const adminPresentationEvaluationHandlers = [
           { code: 'TEAM_EVALUATION_CRITERION_NOT_FOUND' },
           { status: 404 },
         );
-      if (isEvaluationOpen() || professorEvaluations.size > 0) {
+      if (isCriterionLocked()) {
         return HttpResponse.json(
           { code: 'TEAM_EVALUATION_CRITERION_LOCKED' },
           { status: 409 },
@@ -315,7 +325,7 @@ export const adminPresentationEvaluationHandlers = [
           { code: 'TEAM_EVALUATION_CRITERION_NOT_FOUND' },
           { status: 404 },
         );
-      if (isEvaluationOpen() || professorEvaluations.size > 0) {
+      if (isCriterionLocked()) {
         return HttpResponse.json(
           { code: 'TEAM_EVALUATION_CRITERION_LOCKED' },
           { status: 409 },
