@@ -22,6 +22,8 @@ import * as styles from './AdminPresentationEvaluationEndDialog.css';
 
 export function AdminPresentationEvaluationEndDialog({
   isOpen,
+  isTeamListError,
+  isTeamListReady,
   milestone,
   onClose,
   onWindowUpdated,
@@ -31,6 +33,8 @@ export function AdminPresentationEvaluationEndDialog({
 }: {
   canViewProfessorEvaluations: boolean;
   isOpen: boolean;
+  isTeamListError: boolean;
+  isTeamListReady: boolean;
   milestone: AdminSectionMilestoneDto;
   onClose: () => void;
   onWindowUpdated: () => void;
@@ -47,7 +51,7 @@ export function AdminPresentationEvaluationEndDialog({
       sectionId,
       String(milestone.id),
       teams,
-      isOpen && canViewProfessorEvaluations,
+      isOpen && canViewProfessorEvaluations && isTeamListReady,
     );
   const [formError, setFormError] = useState<string>();
 
@@ -85,7 +89,8 @@ export function AdminPresentationEvaluationEndDialog({
     } catch (error) {
       const requestError = toAdminMilestoneRequestError(error);
       setFormError(
-        requestError.code === 'MILESTONE_EVALUATION_WINDOW_CONFLICT'
+        requestError.status === 409 ||
+          requestError.code === 'MILESTONE_EVALUATION_WINDOW_CONFLICT'
           ? '평가가 이미 종료되었거나 아직 시작되지 않았습니다. 최신 상태를 확인해 주세요.'
           : formatAdminMilestoneRequestError(requestError),
       );
@@ -106,11 +111,20 @@ export function AdminPresentationEvaluationEndDialog({
         <Heading level={2}>발표 평가를 지금 종료할까요?</Heading>
         <Text color='secondary' type='supporting'>
           종료하면 학생은 발표 평가를 새로 제출하거나 기존 점수를 수정할 수
-          없습니다. 종료 뒤에도 발표 기록과 평가 설정은 읽기 전용으로 확인할 수
-          있습니다.
+          없습니다. 종료 뒤에도 발표 기록과 평가 항목은 읽기 전용으로 확인할 수
+          있습니다. 발표 순서는 변경할 수 있습니다.
         </Text>
         {canViewProfessorEvaluations ? (
-          professorEvaluationStatuses.isPending ? (
+          !isTeamListReady && !isTeamListError ? (
+            <Text aria-live='polite' role='status'>
+              발표 대상 팀을 불러오는 중입니다.
+            </Text>
+          ) : !isTeamListReady ? (
+            <Text role='alert'>
+              발표 대상 팀을 불러오지 못했습니다. 미평가 팀 현황 없이 종료할 수
+              있습니다.
+            </Text>
+          ) : professorEvaluationStatuses.isPending ? (
             <Text aria-live='polite' role='status'>
               교수자 평가 현황을 확인하는 중입니다.
             </Text>
@@ -159,7 +173,8 @@ export function AdminPresentationEvaluationEndDialog({
             isDisabled={
               mutation.isPending ||
               (canViewProfessorEvaluations &&
-                professorEvaluationStatuses.isPending)
+                ((!isTeamListReady && !isTeamListError) ||
+                  (isTeamListReady && professorEvaluationStatuses.isPending)))
             }
             isLoading={mutation.isPending}
             label='평가 종료'

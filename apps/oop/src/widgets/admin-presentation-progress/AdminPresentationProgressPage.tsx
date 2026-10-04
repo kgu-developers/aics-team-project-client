@@ -4,6 +4,7 @@ import type {
   StudentSubmissionArtifact,
 } from '@aics/core';
 import {
+  AlertDialog,
   Badge,
   Button,
   Card,
@@ -201,6 +202,19 @@ export default function AdminPresentationProgressPage({
     string | null
   >(null);
   const [materialRefreshVersion, setMaterialRefreshVersion] = useState(0);
+  const [pendingTeamId, setPendingTeamId] = useState<number | null>(null);
+
+  const hasUnsavedProfessorEvaluation = useMemo(() => {
+    const evaluation = professorEvaluationQuery.data;
+    if (!evaluation?.editable) return false;
+
+    return (
+      professorMemo !== (evaluation.memo ?? '') ||
+      evaluation.scores.some(
+        score => (professorScores[score.criterionId] ?? null) !== score.score,
+      )
+    );
+  }, [professorEvaluationQuery.data, professorMemo, professorScores]);
 
   async function refreshPresentationMaterials() {
     const result = await presentationsQuery.refetch();
@@ -244,7 +258,23 @@ export default function AdminPresentationProgressPage({
   useEffect(() => {
     setProfessorEvaluationSavedAt(null);
     setProfessorEvaluationError(null);
+    setPendingTeamId(null);
   }, [selectedTeamId]);
+
+  function requestTeamChange(nextTeamId: number) {
+    if (nextTeamId === selectedTeamId) return;
+    if (hasUnsavedProfessorEvaluation) {
+      setPendingTeamId(nextTeamId);
+      return;
+    }
+    setSelectedTeamId(nextTeamId);
+  }
+
+  function confirmTeamChange() {
+    if (pendingTeamId === null) return;
+    setSelectedTeamId(pendingTeamId);
+    setPendingTeamId(null);
+  }
 
   const selectedIndex = Math.max(
     0,
@@ -380,19 +410,19 @@ export default function AdminPresentationProgressPage({
         </HStack>
         <HStack gap={2}>
           <Button
-            isDisabled={isFirst}
+            isDisabled={isFirst || saveProfessorEvaluationMutation.isPending}
             label='이전 팀'
             onClick={() =>
-              setSelectedTeamId(presentations[selectedIndex - 1]!.teamId)
+              requestTeamChange(presentations[selectedIndex - 1]!.teamId)
             }
             type='button'
             variant='secondary'
           />
           <Button
-            isDisabled={isLast}
+            isDisabled={isLast || saveProfessorEvaluationMutation.isPending}
             label='다음 팀'
             onClick={() =>
-              setSelectedTeamId(presentations[selectedIndex + 1]!.teamId)
+              requestTeamChange(presentations[selectedIndex + 1]!.teamId)
             }
             type='button'
           />
@@ -659,6 +689,18 @@ export default function AdminPresentationProgressPage({
           />
         </VStack>
       </div>
+      <AlertDialog
+        actionLabel='저장하지 않고 이동'
+        actionVariant='destructive'
+        cancelLabel='계속 작성'
+        description='입력한 교수자 점수와 메모는 저장되지 않습니다. 저장한 뒤 이동하거나, 저장하지 않고 다음 팀으로 이동할 수 있습니다.'
+        isOpen={pendingTeamId !== null}
+        onAction={confirmTeamChange}
+        onOpenChange={nextIsOpen => {
+          if (!nextIsOpen) setPendingTeamId(null);
+        }}
+        title='저장하지 않은 교수자 평가가 있습니다'
+      />
     </main>
   );
 }

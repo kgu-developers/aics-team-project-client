@@ -142,7 +142,8 @@ export function AdminPresentationEvaluationStartDialog({
     } catch (error) {
       const requestError = toAdminMilestoneRequestError(error);
       setFormError(
-        requestError.code === 'MILESTONE_EVALUATION_WINDOW_CONFLICT'
+        requestError.status === 409 ||
+          requestError.code === 'MILESTONE_EVALUATION_WINDOW_CONFLICT'
           ? '평가 상태가 변경되었습니다. 최신 상태를 확인한 뒤 다시 시도해 주세요.'
           : formatAdminMilestoneRequestError(requestError),
       );

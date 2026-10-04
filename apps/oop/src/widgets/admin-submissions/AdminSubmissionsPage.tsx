@@ -437,6 +437,10 @@ export default function AdminSubmissionsPage() {
     isPresentationEvaluationStarted &&
     presentationEvaluationMilestone !== undefined &&
     effectiveSectionId !== undefined;
+  const isPresentationTeamListReady =
+    presentationTeamsQuery.isSuccess && presentationOrdersQuery.isSuccess;
+  const isPresentationTeamListError =
+    presentationTeamsQuery.isError || presentationOrdersQuery.isError;
 
   useEffect(() => {
     if (activeMilestoneId !== 'presentation-evaluate') return;
@@ -1034,6 +1038,8 @@ export default function AdminSubmissionsPage() {
                             currentUser?.globalRole === 'PROFESSOR'
                           }
                           isOpen={isEvaluationEndOpen}
+                          isTeamListError={isPresentationTeamListError}
+                          isTeamListReady={isPresentationTeamListReady}
                           milestone={presentationEvaluationMilestone}
                           onClose={() => setIsEvaluationEndOpen(false)}
                           onWindowUpdated={() =>
