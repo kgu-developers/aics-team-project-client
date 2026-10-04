@@ -571,6 +571,9 @@ export function AdminPresentationEvaluationSettingsDialog({
                       variant='secondary'
                     />
                     <Button
+                      isDisabled={
+                        isEvaluationLocked || removeCriterionMutation.isPending
+                      }
                       isLoading={removeCriterionMutation.isPending}
                       label='삭제 확정'
                       onClick={handleRemoveCriterion}

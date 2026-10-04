@@ -19,7 +19,7 @@ import {
 } from '@aics/design-system';
 import { Link } from '@tanstack/react-router';
 import { RotateCw } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -201,6 +201,7 @@ export default function AdminPresentationProgressPage({
   const [professorEvaluationSavedAt, setProfessorEvaluationSavedAt] = useState<
     string | null
   >(null);
+  const hydratedProfessorEvaluationTeamIdRef = useRef<number | null>(null);
   const [materialRefreshVersion, setMaterialRefreshVersion] = useState(0);
   const [pendingTeamId, setPendingTeamId] = useState<number | null>(null);
 
@@ -242,18 +243,23 @@ export default function AdminPresentationProgressPage({
   }, [presentations, requestedTeamId, selectedTeamId]);
 
   useEffect(() => {
-    if (!professorEvaluationQuery.data) return;
+    const evaluation = professorEvaluationQuery.data;
+    if (
+      !evaluation ||
+      evaluation.teamId !== selectedTeamId ||
+      hydratedProfessorEvaluationTeamIdRef.current === evaluation.teamId
+    )
+      return;
+
     setProfessorScores(
       Object.fromEntries(
-        professorEvaluationQuery.data.scores.map(score => [
-          score.criterionId,
-          score.score,
-        ]),
+        evaluation.scores.map(score => [score.criterionId, score.score]),
       ),
     );
-    setProfessorMemo(professorEvaluationQuery.data.memo ?? '');
+    setProfessorMemo(evaluation.memo ?? '');
     setProfessorEvaluationError(null);
-  }, [professorEvaluationQuery.data]);
+    hydratedProfessorEvaluationTeamIdRef.current = evaluation.teamId;
+  }, [professorEvaluationQuery.data, selectedTeamId]);
 
   useEffect(() => {
     setProfessorEvaluationSavedAt(null);
@@ -662,6 +668,17 @@ export default function AdminPresentationProgressPage({
                 },
                 {
                   onSuccess: evaluation => {
+                    setProfessorScores(
+                      Object.fromEntries(
+                        evaluation.scores.map(score => [
+                          score.criterionId,
+                          score.score,
+                        ]),
+                      ),
+                    );
+                    setProfessorMemo(evaluation.memo ?? '');
+                    hydratedProfessorEvaluationTeamIdRef.current =
+                      evaluation.teamId;
                     setProfessorEvaluationSavedAt(evaluation.submittedAt);
                   },
                   onError: requestError => {
