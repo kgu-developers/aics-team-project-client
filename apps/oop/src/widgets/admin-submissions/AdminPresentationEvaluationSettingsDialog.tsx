@@ -1,4 +1,5 @@
 import {
+  AlertDialog,
   Button,
   Dialog,
   Heading,
@@ -16,6 +17,8 @@ import { seoulInstant } from '~/shared/lib/seoulInstant';
 import {
   useAdminTeamEvaluationCriteriaQuery,
   useCreateAdminTeamEvaluationCriterionMutation,
+  useRemoveAdminTeamEvaluationCriterionMutation,
+  useUpdateAdminTeamEvaluationCriterionMutation,
   useUpdatePresentationOrderMutation,
 } from '~/features/admin-milestone-review/queries';
 import { adminPresentationEvaluationKeys } from '~/features/admin-milestone-review/queries/adminPresentationEvaluationKeys';
@@ -49,6 +52,10 @@ export function AdminPresentationEvaluationSettingsDialog({
   const criteriaQuery = useAdminTeamEvaluationCriteriaQuery(sectionId);
   const createCriterionMutation =
     useCreateAdminTeamEvaluationCriterionMutation();
+  const updateCriterionMutation =
+    useUpdateAdminTeamEvaluationCriterionMutation();
+  const removeCriterionMutation =
+    useRemoveAdminTeamEvaluationCriterionMutation();
   const initialOrders = useMemo(
     () =>
       Object.fromEntries(
@@ -62,7 +69,17 @@ export function AdminPresentationEvaluationSettingsDialog({
   const [criterionTitle, setCriterionTitle] = useState('');
   const [criterionMaxScore, setCriterionMaxScore] = useState('');
   const [criterionError, setCriterionError] = useState<string | null>(null);
+  const [editingCriterionId, setEditingCriterionId] = useState<number | null>(
+    null,
+  );
+  const [editingCriterionTitle, setEditingCriterionTitle] = useState('');
+  const [editingCriterionMaxScore, setEditingCriterionMaxScore] = useState('');
+  const [deleteCandidateId, setDeleteCandidateId] = useState<number | null>(
+    null,
+  );
   const [evaluationClock, setEvaluationClock] = useState(() => Date.now());
+  const [isOrderChangeConfirmationOpen, setIsOrderChangeConfirmationOpen] =
+    useState(false);
   const orderInputContextKey = `${sectionId}:${milestoneId}`;
   const initializedContext = useRef<{
     sectionId: string;
@@ -79,6 +96,11 @@ export function AdminPresentationEvaluationSettingsDialog({
     (!Number.isNaN(evaluationStartsAtInstant) &&
       instant >= evaluationStartsAtInstant);
   const isEvaluationLocked = isEvaluationLockedAt(evaluationClock);
+  const hasEvaluationStartedAt = (instant: number) =>
+    !hasInvalidEvaluationStart &&
+    !Number.isNaN(evaluationStartsAtInstant) &&
+    instant >= evaluationStartsAtInstant;
+  const hasEvaluationStarted = hasEvaluationStartedAt(evaluationClock);
 
   useEffect(() => {
     if (!isOpen || Number.isNaN(evaluationStartsAtInstant)) return;
@@ -115,6 +137,9 @@ export function AdminPresentationEvaluationSettingsDialog({
     setOrders(initialOrders);
     setError(null);
     setCriterionError(null);
+    setEditingCriterionId(null);
+    setDeleteCandidateId(null);
+    setIsOrderChangeConfirmationOpen(false);
   }, [initialOrders, isOpen, milestoneId, sectionId]);
 
   if (!isOpen) return null;
@@ -133,32 +158,55 @@ export function AdminPresentationEvaluationSettingsDialog({
     return isDuplicated ? '이미 사용 중인 발표 순서입니다.' : undefined;
   }
 
-  function handleSave() {
-    // Recheck real time in the event handler because background tabs may delay
-    // the render timer past the evaluation start instant.
-    if (isEvaluationLockedAt(Date.now()) || saveMutation.isPending) return;
-    const result = validatePresentationOrders(teams, orders);
-    if (!result.ok) {
-      setError(result.error);
-      return;
-    }
+  function savePresentationOrders(
+    teamOrders: Array<{ teamId: number; order: number }>,
+  ) {
     setError(null);
     saveMutation.mutate(
       {
         milestoneId,
         sectionId,
-        teamOrders: result.teamOrders,
+        teamOrders,
       },
       {
         onSuccess: async () => {
           await queryClient.invalidateQueries({
             queryKey: adminPresentationEvaluationKeys.list(sectionId),
           });
+          setIsOrderChangeConfirmationOpen(false);
           onClose();
         },
-        onError: () => setError('저장하지 못했습니다. 다시 시도해 주세요.'),
+        onError: () => {
+          setIsOrderChangeConfirmationOpen(false);
+          setError('저장하지 못했습니다. 다시 시도해 주세요.');
+        },
       },
     );
+  }
+
+  function handleSave() {
+    if (saveMutation.isPending) return;
+    const result = validatePresentationOrders(teams, orders);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    if (hasEvaluationStartedAt(Date.now())) {
+      setIsOrderChangeConfirmationOpen(true);
+      return;
+    }
+    savePresentationOrders(result.teamOrders);
+  }
+
+  function handleConfirmOrderChange() {
+    if (saveMutation.isPending) return;
+    const result = validatePresentationOrders(teams, orders);
+    if (!result.ok) {
+      setIsOrderChangeConfirmationOpen(false);
+      setError(result.error);
+      return;
+    }
+    savePresentationOrders(result.teamOrders);
   }
 
   function handleCreateCriterion() {
@@ -209,12 +257,105 @@ export function AdminPresentationEvaluationSettingsDialog({
     );
   }
 
+  function beginCriterionEdit(criterion: {
+    id: number;
+    maxScore: number;
+    title: string;
+  }) {
+    setEditingCriterionId(criterion.id);
+    setEditingCriterionTitle(criterion.title);
+    setEditingCriterionMaxScore(String(criterion.maxScore));
+    setDeleteCandidateId(null);
+    setCriterionError(null);
+  }
+
+  function handleUpdateCriterion() {
+    if (
+      editingCriterionId === null ||
+      isEvaluationLockedAt(Date.now()) ||
+      updateCriterionMutation.isPending ||
+      !criteriaQuery.data
+    )
+      return;
+
+    const title = editingCriterionTitle.trim();
+    const maxScore = Number(editingCriterionMaxScore);
+    const criterion = criteriaQuery.data.contents.find(
+      item => item.id === editingCriterionId,
+    );
+    if (!title) {
+      setCriterionError('평가 항목명을 입력해 주세요.');
+      return;
+    }
+    if (!Number.isInteger(maxScore) || maxScore <= 0) {
+      setCriterionError('배점은 1 이상의 정수로 입력해 주세요.');
+      return;
+    }
+    if (!criterion) {
+      setCriterionError('평가 항목을 다시 불러온 뒤 시도해 주세요.');
+      return;
+    }
+
+    setCriterionError(null);
+    updateCriterionMutation.mutate(
+      {
+        criterionId: editingCriterionId,
+        displayOrder: criterion.displayOrder,
+        maxScore,
+        sectionId,
+        title,
+      },
+      {
+        onError: () =>
+          setCriterionError(
+            '평가가 시작되었거나 점수가 저장되어 항목을 수정할 수 없습니다. 목록을 다시 확인해 주세요.',
+          ),
+        onSuccess: () => {
+          setEditingCriterionId(null);
+          setEditingCriterionTitle('');
+          setEditingCriterionMaxScore('');
+        },
+      },
+    );
+  }
+
+  function handleRemoveCriterion() {
+    if (
+      deleteCandidateId === null ||
+      isEvaluationLockedAt(Date.now()) ||
+      removeCriterionMutation.isPending
+    )
+      return;
+
+    setCriterionError(null);
+    removeCriterionMutation.mutate(
+      { criterionId: deleteCandidateId, sectionId },
+      {
+        onError: () =>
+          setCriterionError(
+            '평가가 시작되었거나 점수가 저장되어 항목을 삭제할 수 없습니다. 목록을 다시 확인해 주세요.',
+          ),
+        onSuccess: () => {
+          if (editingCriterionId === deleteCandidateId) {
+            setEditingCriterionId(null);
+            setEditingCriterionTitle('');
+            setEditingCriterionMaxScore('');
+          }
+          setDeleteCandidateId(null);
+        },
+      },
+    );
+  }
+
   return (
     <Dialog
       aria-label='발표 순서·평가 항목 설정'
       isOpen={isOpen}
       onOpenChange={nextIsOpen => {
-        if (!nextIsOpen) onClose();
+        if (!nextIsOpen) {
+          setIsOrderChangeConfirmationOpen(false);
+          onClose();
+        }
       }}
       purpose='info'
       width={560}
@@ -227,11 +368,10 @@ export function AdminPresentationEvaluationSettingsDialog({
           확정합니다.
         </Text>
         <VStack gap={3}>
-          {isEvaluationLocked ? (
+          {hasEvaluationStarted ? (
             <Text color='secondary' role='status' type='supporting'>
-              {hasInvalidEvaluationStart
-                ? '평가 시작 시각을 확인할 수 없어 발표 순서를 변경할 수 없습니다.'
-                : '평가 기간이 시작되어 발표 순서를 변경할 수 없습니다.'}
+              평가 진행 중에도 발표 순서를 변경할 수 있습니다. 저장하면 학생에게
+              보이는 발표 순서도 변경됩니다.
             </Text>
           ) : null}
           {teams.length ? (
@@ -246,7 +386,7 @@ export function AdminPresentationEvaluationSettingsDialog({
                 <NumberInput
                   aria-label={`${team.teamName} 발표 순서`}
                   hasClear
-                  isDisabled={isEvaluationLocked || saveMutation.isPending}
+                  isDisabled={saveMutation.isPending}
                   isIntegerOnly
                   key={`${orderInputContextKey}:${team.teamId}`}
                   label='발표 순서'
@@ -286,7 +426,6 @@ export function AdminPresentationEvaluationSettingsDialog({
           <HStack justify='end'>
             <Button
               isDisabled={
-                isEvaluationLocked ||
                 saveMutation.isPending ||
                 teams.length === 0 ||
                 !orderValidation.ok
@@ -324,17 +463,128 @@ export function AdminPresentationEvaluationSettingsDialog({
               />
             </VStack>
           ) : criteriaQuery.data?.contents.length ? (
-            <VStack gap={1}>
+            <VStack gap={2}>
               {criteriaQuery.data.contents.map(criterion => (
-                <Text key={criterion.id}>
-                  {criterion.displayOrder + 1}. {criterion.title} ·{' '}
-                  {criterion.maxScore}점
-                </Text>
+                <HStack
+                  align='center'
+                  gap={2}
+                  key={criterion.id}
+                  justify='between'
+                >
+                  <Text>
+                    {criterion.displayOrder + 1}. {criterion.title} ·{' '}
+                    {criterion.maxScore}점
+                  </Text>
+                  <Button
+                    isDisabled={
+                      isEvaluationLocked ||
+                      updateCriterionMutation.isPending ||
+                      removeCriterionMutation.isPending
+                    }
+                    label='수정'
+                    onClick={() => beginCriterionEdit(criterion)}
+                    type='button'
+                    variant='secondary'
+                  />
+                </HStack>
               ))}
             </VStack>
           ) : (
             <Text color='secondary'>등록된 평가 항목이 없습니다.</Text>
           )}
+          {editingCriterionId !== null ? (
+            <VStack gap={2}>
+              <Heading level={4}>평가 항목 수정</Heading>
+              <TextInput
+                isDisabled={
+                  isEvaluationLocked ||
+                  updateCriterionMutation.isPending ||
+                  removeCriterionMutation.isPending
+                }
+                label='평가 항목명'
+                onChange={setEditingCriterionTitle}
+                value={editingCriterionTitle}
+                width='100%'
+              />
+              <NumberInput
+                isDisabled={
+                  isEvaluationLocked ||
+                  updateCriterionMutation.isPending ||
+                  removeCriterionMutation.isPending
+                }
+                isIntegerOnly
+                label='배점'
+                min={1}
+                onChange={value =>
+                  setEditingCriterionMaxScore(String(value ?? ''))
+                }
+                value={
+                  editingCriterionMaxScore === ''
+                    ? null
+                    : Number(editingCriterionMaxScore)
+                }
+                width={160}
+              />
+              <HStack gap={2} justify='end'>
+                <Button
+                  isDisabled={updateCriterionMutation.isPending}
+                  label='취소'
+                  onClick={() => {
+                    setEditingCriterionId(null);
+                    setEditingCriterionTitle('');
+                    setEditingCriterionMaxScore('');
+                    setDeleteCandidateId(null);
+                  }}
+                  type='button'
+                  variant='secondary'
+                />
+                <Button
+                  isDisabled={
+                    isEvaluationLocked || updateCriterionMutation.isPending
+                  }
+                  isLoading={updateCriterionMutation.isPending}
+                  label='수정 저장'
+                  onClick={handleUpdateCriterion}
+                  type='button'
+                />
+                <Button
+                  isDisabled={
+                    isEvaluationLocked || removeCriterionMutation.isPending
+                  }
+                  label='삭제'
+                  onClick={() => setDeleteCandidateId(editingCriterionId)}
+                  type='button'
+                  variant='destructive'
+                />
+              </HStack>
+              {deleteCandidateId === editingCriterionId ? (
+                <VStack gap={2}>
+                  <Text role='alert'>
+                    이 평가 항목을 삭제할까요? 되돌릴 수 없습니다.
+                  </Text>
+                  <HStack gap={2} justify='end'>
+                    <Button
+                      isDisabled={removeCriterionMutation.isPending}
+                      label='삭제 취소'
+                      onClick={() => setDeleteCandidateId(null)}
+                      type='button'
+                      variant='secondary'
+                    />
+                    <Button
+                      isDisabled={
+                        isEvaluationLocked || removeCriterionMutation.isPending
+                      }
+                      isLoading={removeCriterionMutation.isPending}
+                      label='삭제 확정'
+                      onClick={handleRemoveCriterion}
+                      type='button'
+                      variant='destructive'
+                    />
+                  </HStack>
+                </VStack>
+              ) : null}
+            </VStack>
+          ) : null}
           <TextInput
             isDisabled={isEvaluationLocked || createCriterionMutation.isPending}
             isRequired
@@ -343,19 +593,15 @@ export function AdminPresentationEvaluationSettingsDialog({
             value={criterionTitle}
             width='100%'
           />
-          <label>
-            <Text weight='medium'>배점</Text>
-            <input
-              aria-label='배점'
-              className={styles.timeInput}
-              disabled={isEvaluationLocked || createCriterionMutation.isPending}
-              min='1'
-              onChange={event => setCriterionMaxScore(event.target.value)}
-              step='1'
-              type='number'
-              value={criterionMaxScore}
-            />
-          </label>
+          <NumberInput
+            isDisabled={isEvaluationLocked || createCriterionMutation.isPending}
+            isIntegerOnly
+            label='배점'
+            min={1}
+            onChange={value => setCriterionMaxScore(String(value ?? ''))}
+            value={criterionMaxScore === '' ? null : Number(criterionMaxScore)}
+            width={160}
+          />
           {criterionError ? (
             <Text className={styles.errorText} role='alert'>
               {criterionError}
@@ -379,12 +625,28 @@ export function AdminPresentationEvaluationSettingsDialog({
         <HStack justify='end' gap={2}>
           <Button
             label='닫기'
-            onClick={onClose}
+            onClick={() => {
+              setIsOrderChangeConfirmationOpen(false);
+              onClose();
+            }}
             type='button'
             variant='secondary'
           />
         </HStack>
       </VStack>
+      <AlertDialog
+        actionLabel='순서 변경'
+        actionVariant='primary'
+        cancelLabel='취소'
+        description='평가가 진행 중입니다. 저장하면 학생이 보는 발표 순서도 즉시 변경됩니다. 이미 저장된 학생·교수자 평가는 유지됩니다.'
+        isActionLoading={saveMutation.isPending}
+        isOpen={isOrderChangeConfirmationOpen}
+        onAction={handleConfirmOrderChange}
+        onOpenChange={nextIsOpen => {
+          if (!nextIsOpen) setIsOrderChangeConfirmationOpen(false);
+        }}
+        title='발표 순서를 변경할까요?'
+      />
     </Dialog>
   );
 }

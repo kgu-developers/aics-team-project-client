@@ -865,7 +865,14 @@ export const adminStudentTeamHandlers = [
       const account = getMockAuthenticatedAccount(request);
       const sectionId = params.sectionId;
 
-      if (account?.user.id !== demoAdmin.id) {
+      const isResponsibleProfessor =
+        account?.user.globalRole === 'PROFESSOR' &&
+        account.user.sections.some(
+          section =>
+            String(section.id) === String(sectionId) &&
+            section.role === 'PROFESSOR',
+        );
+      if (account?.user.id !== demoAdmin.id && !isResponsibleProfessor) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },

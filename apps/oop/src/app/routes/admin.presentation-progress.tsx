@@ -10,8 +10,9 @@ function positiveId(value: unknown) {
 export const Route = createFileRoute('/admin/presentation-progress')({
   validateSearch: (
     search: Record<string, unknown>,
-  ): { milestoneId?: string; sectionId?: string } => ({
+  ): { milestoneId?: string; sectionId?: string; teamId?: string } => ({
     milestoneId: positiveId(search.milestoneId),
     sectionId: positiveId(search.sectionId),
+    teamId: positiveId(search.teamId),
   }),
 });

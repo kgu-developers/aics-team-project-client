@@ -62,6 +62,7 @@ import { AdminPresentationEvaluationEndDialog } from './AdminPresentationEvaluat
 import { AdminPresentationEvaluationSettingsDialog } from './AdminPresentationEvaluationSettingsDialog';
 import { AdminPresentationEvaluationStartDialog } from './AdminPresentationEvaluationStartDialog';
 import { getPresentationEvaluationSetupStatus } from './adminPresentationOrder';
+import { AdminPresentationUnevaluatedTeams } from './AdminPresentationUnevaluatedTeams';
 import * as styles from './AdminSubmissionsPage.css';
 
 const MILESTONE_TABS = [
@@ -387,6 +388,10 @@ export default function AdminSubmissionsPage() {
     presentationOrdersQuery.data?.submissions,
     presentationTeamsQuery.data?.contents,
   ]);
+  const presentationEvaluationStartsAt =
+    presentationEvaluationMilestone?.schedule.evaluationOpensAt ?? null;
+  const isPresentationMilestonePublished =
+    presentationEvaluationMilestone?.status === 'PUBLISHED';
   const presentationSetupStatus =
     presentationEvaluationMilestone &&
     presentationEvaluationsQuery.data &&
@@ -394,24 +399,25 @@ export default function AdminSubmissionsPage() {
     presentationOrdersQuery.data
       ? getPresentationEvaluationSetupStatus({
           criteriaCount: presentationEvaluationsQuery.data.criteria.length,
-          evaluationStartsAt:
-            presentationEvaluationMilestone.schedule.evaluationOpensAt,
+          evaluationStartsAt: isPresentationMilestonePublished
+            ? presentationEvaluationStartsAt
+            : null,
           now: presentationReadinessClock,
           teams: presentationOrderTeams,
         })
       : null;
-  const presentationEvaluationStartsAt =
-    presentationEvaluationMilestone?.schedule.evaluationOpensAt ?? null;
   const presentationEvaluationStartsAtInstant = seoulInstant(
     presentationEvaluationStartsAt,
   );
   const isPresentationEvaluationStarted =
+    isPresentationMilestonePublished &&
     !Number.isNaN(presentationEvaluationStartsAtInstant) &&
     presentationReadinessClock >= presentationEvaluationStartsAtInstant;
   const presentationEvaluationClosesAtInstant = seoulInstant(
     presentationEvaluationMilestone?.schedule.evaluationClosesAt ?? null,
   );
   const isPresentationEvaluationEnded =
+    isPresentationEvaluationStarted &&
     !Number.isNaN(presentationEvaluationClosesAtInstant) &&
     presentationReadinessClock >= presentationEvaluationClosesAtInstant;
   const hasPresentationEvaluationWindow = Boolean(
@@ -427,9 +433,14 @@ export default function AdminSubmissionsPage() {
     presentationMilestoneCandidates.length > 0;
   const isPresentationRecordAvailable =
     currentUser?.globalRole === 'PROFESSOR' &&
+    isPresentationMilestonePublished &&
     isPresentationEvaluationStarted &&
     presentationEvaluationMilestone !== undefined &&
     effectiveSectionId !== undefined;
+  const isPresentationTeamListReady =
+    presentationTeamsQuery.isSuccess && presentationOrdersQuery.isSuccess;
+  const isPresentationTeamListError =
+    presentationTeamsQuery.isError || presentationOrdersQuery.isError;
 
   useEffect(() => {
     if (activeMilestoneId !== 'presentation-evaluate') return;
@@ -691,20 +702,37 @@ export default function AdminSubmissionsPage() {
                         }
                       />
                     ) : null}
+                    {isPresentationEvaluationStarted ? (
+                      <Badge
+                        label={
+                          isPresentationEvaluationEnded
+                            ? '평가 종료'
+                            : '평가 진행 중'
+                        }
+                        variant={
+                          isPresentationEvaluationEnded ? 'neutral' : 'success'
+                        }
+                      />
+                    ) : null}
                   </div>
                   <div className={styles.evaluationActions}>
                     {!isPresentationEvaluationStarted ? (
                       <>
                         <Button
-                          isDisabled={!presentationSetupStatus?.isComplete}
+                          isDisabled={
+                            !presentationSetupStatus?.isComplete ||
+                            !isPresentationMilestonePublished
+                          }
                           label='발표 평가 시작'
                           onClick={() => setIsEvaluationStartOpen(true)}
                           tooltip={
-                            presentationSetupStatus?.isComplete
-                              ? hasPresentationEvaluationWindow
-                                ? '기존 시작 예정 시각 대신 지금부터 평가를 시작합니다.'
-                                : '평가 진행 시간을 정한 뒤 학생 발표 평가를 시작합니다.'
-                              : '평가 항목과 모든 팀의 발표 순서를 먼저 설정해 주세요.'
+                            !isPresentationMilestonePublished
+                              ? '발표 마일스톤을 공개한 뒤 평가를 시작할 수 있습니다.'
+                              : presentationSetupStatus?.isComplete
+                                ? hasPresentationEvaluationWindow
+                                  ? '기존 시작 예정 시각 대신 지금부터 평가를 시작합니다.'
+                                  : '평가 진행 시간을 정한 뒤 학생 발표 평가를 시작합니다.'
+                                : '평가 항목과 모든 팀의 발표 순서를 먼저 설정해 주세요.'
                           }
                         />
                         <Button
@@ -749,18 +777,6 @@ export default function AdminSubmissionsPage() {
                       </>
                     ) : (
                       <>
-                        <Badge
-                          label={
-                            isPresentationEvaluationEnded
-                              ? '평가 종료'
-                              : '평가 진행 중'
-                          }
-                          variant={
-                            isPresentationEvaluationEnded
-                              ? 'neutral'
-                              : 'success'
-                          }
-                        />
                         <Button
                           label='평가 설정 보기'
                           onClick={() => setIsEvaluationSettingsOpen(true)}
@@ -954,12 +970,25 @@ export default function AdminSubmissionsPage() {
                         verticalAlign='middle'
                       />
                     </Card>
+                    {isPresentationRecordAvailable &&
+                    effectiveSectionId &&
+                    presentationEvaluationMilestone &&
+                    presentationTeamsQuery.data &&
+                    presentationOrdersQuery.data ? (
+                      <AdminPresentationUnevaluatedTeams
+                        milestoneId={String(presentationEvaluationMilestone.id)}
+                        sectionId={effectiveSectionId}
+                        teams={presentationOrderTeams}
+                      />
+                    ) : null}
                     {effectiveSectionId && presentationEvaluationMilestone ? (
                       <>
                         <AdminPresentationEvaluationSettingsDialog
                           evaluationStartsAt={
-                            presentationEvaluationMilestone.schedule
-                              .evaluationOpensAt ?? null
+                            isPresentationMilestonePublished
+                              ? (presentationEvaluationMilestone.schedule
+                                  .evaluationOpensAt ?? null)
+                              : null
                           }
                           isOpen={isEvaluationSettingsOpen}
                           milestoneId={String(
@@ -1005,13 +1034,19 @@ export default function AdminSubmissionsPage() {
                           )}
                         />
                         <AdminPresentationEvaluationEndDialog
+                          canViewProfessorEvaluations={
+                            currentUser?.globalRole === 'PROFESSOR'
+                          }
                           isOpen={isEvaluationEndOpen}
+                          isTeamListError={isPresentationTeamListError}
+                          isTeamListReady={isPresentationTeamListReady}
                           milestone={presentationEvaluationMilestone}
                           onClose={() => setIsEvaluationEndOpen(false)}
                           onWindowUpdated={() =>
                             setPresentationReadinessClock(Date.now())
                           }
                           sectionId={effectiveSectionId}
+                          teams={presentationOrderTeams}
                         />
                       </>
                     ) : null}

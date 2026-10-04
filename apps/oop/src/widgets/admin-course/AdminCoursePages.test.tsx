@@ -892,7 +892,7 @@ describe('admin section API contract', () => {
 
   it('담당하지 않는 분반의 산출물 조회는 403으로 처리한다', async () => {
     const response = await fetch(
-      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ARTIFACT_SUMMARY('1')}?asOf=2026-09-15`,
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ARTIFACT_SUMMARY('2')}?asOf=2026-09-15`,
       {
         headers: {
           Authorization: `Bearer ${demoPresentationProfessorAccessToken}`,

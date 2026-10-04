@@ -14,11 +14,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import {
-  assertAdminMilestoneScheduleOrder,
   formatAdminMilestoneRequestError,
   toAdminMilestoneRequestError,
 } from '~/features/admin-milestone-review/model';
-import { useUpdateAdminSectionMilestoneEvaluationWindowMutation } from '~/features/admin-milestone-review/queries';
+import {
+  useReopenAdminPresentationEvaluationMutation,
+  useUpdateAdminSectionMilestoneEvaluationWindowMutation,
+} from '~/features/admin-milestone-review/queries';
 
 import * as styles from './AdminPresentationEvaluationStartDialog.css';
 import {
@@ -50,11 +52,14 @@ export function AdminPresentationEvaluationStartDialog({
   sectionId: string;
   teams: ReadonlyArray<{ presentationOrder: number | null; teamName: string }>;
 }) {
-  const mutation = useUpdateAdminSectionMilestoneEvaluationWindowMutation();
+  const startMutation =
+    useUpdateAdminSectionMilestoneEvaluationWindowMutation();
+  const reopenMutation = useReopenAdminPresentationEvaluationMutation();
   const [durationMinutes, setDurationMinutes] = useState<number | null>(60);
   const [formError, setFormError] = useState<string>();
   const [previewClock, setPreviewClock] = useState(() => Date.now());
   const isResume = mode === 'resume';
+  const isPending = startMutation.isPending || reopenMutation.isPending;
   const normalizedEvaluationOpensAt = milestone.schedule.evaluationOpensAt
     ? normalizeEvaluationOpensAt(milestone.schedule.evaluationOpensAt)
     : null;
@@ -97,6 +102,8 @@ export function AdminPresentationEvaluationStartDialog({
   if (!isOpen) return null;
 
   async function handleSubmit() {
+    if (isPending) return;
+
     if (!isValidEvaluationDurationMinutes(durationMinutes)) {
       setFormError(
         `평가 진행 시간은 1분 이상 ${MAX_EVALUATION_DURATION_MINUTES.toLocaleString()}분 이하의 정수로 입력해 주세요.`,
@@ -115,36 +122,30 @@ export function AdminPresentationEvaluationStartDialog({
           durationMinutes,
         )
       : createEvaluationWindowFromNow(durationMinutes);
-    try {
-      assertAdminMilestoneScheduleOrder({
-        dueAt: milestone.schedule.dueAt ?? '',
-        evaluationClosesAt: window.evaluationClosesAt,
-        evaluationOpensAt: window.evaluationOpensAt,
-        lateSubmissionUntil:
-          milestone.schedule.lateSubmissionUntil ?? undefined,
-        revisionUntil: milestone.schedule.revisionUntil ?? undefined,
-      });
-    } catch (error) {
-      setFormError(
-        error instanceof Error
-          ? error.message
-          : '평가 시작 가능 여부를 확인해 주세요.',
-      );
-      return;
-    }
-
     setFormError(undefined);
     try {
-      await mutation.mutateAsync({
-        input: window,
-        milestoneId: String(milestone.id),
-        sectionId,
-      });
+      if (isResume) {
+        await reopenMutation.mutateAsync({
+          evaluationClosesAt: window.evaluationClosesAt,
+          milestoneId: String(milestone.id),
+          sectionId,
+        });
+      } else {
+        await startMutation.mutateAsync({
+          input: window,
+          milestoneId: String(milestone.id),
+          sectionId,
+        });
+      }
       onWindowUpdated();
       onClose();
     } catch (error) {
+      const requestError = toAdminMilestoneRequestError(error);
       setFormError(
-        formatAdminMilestoneRequestError(toAdminMilestoneRequestError(error)),
+        requestError.status === 409 ||
+          requestError.code === 'MILESTONE_EVALUATION_WINDOW_CONFLICT'
+          ? '평가 상태가 변경되었습니다. 최신 상태를 확인한 뒤 다시 시도해 주세요.'
+          : formatAdminMilestoneRequestError(requestError),
       );
     }
   }
@@ -209,14 +210,14 @@ export function AdminPresentationEvaluationStartDialog({
         ) : null}
         <HStack gap={2} justify='end'>
           <Button
-            isDisabled={mutation.isPending}
+            isDisabled={isPending}
             label='취소'
             onClick={handleClose}
             variant='secondary'
           />
           <Button
-            isDisabled={mutation.isPending}
-            isLoading={mutation.isPending}
+            isDisabled={isPending}
+            isLoading={isPending}
             label={isResume ? '평가 재개' : '평가 시작'}
             onClick={() => void handleSubmit()}
           />

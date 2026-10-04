@@ -101,6 +101,17 @@ export const item = style({
   paddingBottom: 8,
 });
 
+export const artifactTextContent = style({
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
+});
+
+export const scoreRow = style({
+  alignItems: 'center',
+  borderBottom: `1px solid ${tokens.color.border.base}`,
+  paddingBottom: 8,
+});
+
 export const link = style({
   color: tokens.color.text.accent,
   textDecoration: 'underline',

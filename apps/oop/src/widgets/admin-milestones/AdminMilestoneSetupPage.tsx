@@ -1333,7 +1333,11 @@ export default function AdminMilestoneSetupPage() {
                               value='allow-submission-edit-before-due-at'
                             />
                             <CheckboxListItem
-                              description='제출 마감 이후에도 지각 상태로 제출할 수 있습니다.'
+                              description={
+                                isPresentation
+                                  ? '제출 마감 이후에도 지각 상태로 최초 제출과 자료 교체가 가능합니다. 발표 평가 중 자료 교체가 필요하면 평가 종료 시각 이후로 설정해 주세요.'
+                                  : '제출 마감 이후에도 지각 상태로 최초 제출과 재제출이 가능합니다.'
+                              }
                               label='지각 제출 허용'
                               value='allow-late-submission'
                             />

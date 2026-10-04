@@ -181,7 +181,7 @@ describe('adminMilestoneEdit', () => {
     },
   );
 
-  it('발표 평가 시작이 자료 제출 마감보다 빠르면 서버에 보내기 전에 막는다', () => {
+  it('발표 평가는 자료 제출 마감 전에도 독립적으로 설정할 수 있다', () => {
     const schedule = createAdminMilestoneSectionScheduleDraftFromDto(
       {
         dueAt: '2026-09-10T23:59:00',
@@ -192,17 +192,21 @@ describe('adminMilestoneEdit', () => {
       false,
       'PRESENTATION',
     );
-    expect(() =>
+    expect(
       createAdminMilestoneUpdateInput({
         description: '',
         schedule,
         title: '발표',
         type: 'PRESENTATION',
-      }),
-    ).toThrow('평가 시작 일시는 제출 마감 일시 이후여야 합니다');
+      }).schedule,
+    ).toMatchObject({
+      dueAt: '2026-09-10T23:59:00',
+      evaluationClosesAt: '2026-09-12T23:59:00',
+      evaluationOpensAt: '2026-09-09T09:00:00',
+    });
   });
 
-  it('발표 평가 시작이 지각 제출 마감보다 빠르면 막는다', () => {
+  it('발표 평가는 지각 제출 가능 기간과 겹쳐도 독립적으로 설정할 수 있다', () => {
     const schedule = createAdminMilestoneSectionScheduleDraftFromDto(
       {
         dueAt: '2026-09-10T23:59:00',
@@ -214,14 +218,19 @@ describe('adminMilestoneEdit', () => {
       false,
       'PRESENTATION',
     );
-    expect(() =>
+    expect(
       createAdminMilestoneUpdateInput({
         description: '',
         schedule,
         title: '발표',
         type: 'PRESENTATION',
-      }),
-    ).toThrow('지각 제출·수정 마감 일시 이후여야 합니다');
+      }).schedule,
+    ).toMatchObject({
+      dueAt: '2026-09-10T23:59:00',
+      evaluationClosesAt: '2026-09-13T23:59:00',
+      evaluationOpensAt: '2026-09-11T09:00:00',
+      lateSubmissionUntil: '2026-09-11T23:59:00',
+    });
   });
 
   it('수정 요청에는 주차 없이 변경 가능한 내용과 일정을 보낸다', () => {
@@ -342,7 +351,7 @@ describe('adminMilestoneEdit', () => {
     });
   });
 
-  it('명시적 오프셋 수정 마감과 서울 평가 시작은 실제 시각으로 비교한다', () => {
+  it('발표 평가는 명시적 오프셋 수정 마감과 독립적으로 저장한다', () => {
     const schedule = createAdminMilestoneSectionScheduleDraftFromDto(
       {
         dueAt: '2026-09-21T18:00:00',
@@ -355,13 +364,16 @@ describe('adminMilestoneEdit', () => {
       'PRESENTATION',
     );
 
-    expect(() =>
+    expect(
       createAdminMilestoneUpdateInput({
         description: '',
         schedule,
         title: '발표',
         type: 'PRESENTATION',
-      }),
-    ).toThrow('지각 제출·수정 마감 일시 이후여야 합니다');
+      }).schedule,
+    ).toMatchObject({
+      evaluationOpensAt: '2026-09-21T19:00:00',
+      revisionUntil: '2026-09-21T10:30:00Z',
+    });
   });
 });

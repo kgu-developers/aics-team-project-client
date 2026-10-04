@@ -12,6 +12,7 @@ import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import {
@@ -19,6 +20,7 @@ import {
   useAdminPresentationEvaluationTeamDetailQuery,
 } from '~/features/admin-evaluation/queries';
 import { AdminLinkedMeetingsTable } from '~/features/admin-meeting/components';
+import { useAdminProfessorPresentationEvaluationQuery } from '~/features/admin-milestone-review/queries';
 import AdminStudentDetailDialog from '~/features/admin-student-team/components/AdminStudentDetailDialog';
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -31,6 +33,10 @@ function asOptionalPositiveInteger(value: string | number | undefined) {
 
 function formatDateTime(value: string | null) {
   return value ? formatSeoulDateTime(value) : '-';
+}
+
+function formatProfessorSavedAt(value: string | null) {
+  return value ? formatCourseScheduleDateTime(value) : '-';
 }
 
 function EvaluationTitle({
@@ -232,10 +238,23 @@ function PresentationDetail({
   const [selectedEvaluatorId, setSelectedEvaluatorId] = useState<string | null>(
     null,
   );
+  const currentUser = useAuthStore(state => state.currentUser);
+  const canViewProfessorEvaluation =
+    currentUser?.globalRole === 'PROFESSOR' &&
+    currentUser.sections.some(
+      section =>
+        String(section.id) === sectionId && section.role === 'PROFESSOR',
+    );
   const query = useAdminPresentationEvaluationTeamDetailQuery(
     sectionId,
     teamId,
     { milestoneId },
+  );
+  const professorEvaluationQuery = useAdminProfessorPresentationEvaluationQuery(
+    sectionId,
+    milestoneId?.toString(),
+    teamId.toString(),
+    Boolean(milestoneId && canViewProfessorEvaluation),
   );
   if (query.isPending)
     return <Text role='status'>발표평가 결과를 불러오는 중입니다.</Text>;
@@ -334,6 +353,53 @@ function PresentationDetail({
               dividers='rows'
               verticalAlign='middle'
             />
+          </Card>
+        )}
+      </section>
+      <section className={styles.section}>
+        <Heading level={2}>교수자 평가</Heading>
+        <Text className={styles.muted} type='supporting'>
+          교수자 점수는 학생 평가 평균에 포함되지 않으며, 교수자 메모는 학생에게
+          공개되지 않습니다.
+        </Text>
+        {!canViewProfessorEvaluation ? (
+          <Text className={styles.muted}>
+            교수자 평가와 메모는 담당 교수만 조회할 수 있습니다.
+          </Text>
+        ) : !milestoneId ? (
+          <Text className={styles.muted}>
+            발표 마일스톤 정보가 없어 교수자 평가를 조회할 수 없습니다.
+          </Text>
+        ) : professorEvaluationQuery.isPending ? (
+          <Text role='status'>교수자 평가를 불러오는 중입니다.</Text>
+        ) : professorEvaluationQuery.isError ||
+          !professorEvaluationQuery.data ? (
+          <Text role='alert'>교수자 평가를 불러오지 못했습니다.</Text>
+        ) : (
+          <Card className={styles.evaluationCard}>
+            <div className={styles.responseGrid}>
+              <Text className={styles.responseTitle}>평가자</Text>
+              <Text>담당 교수</Text>
+              {professorEvaluationQuery.data.scores.map(score => (
+                <div
+                  className={styles.peerResponseGroup}
+                  key={score.criterionId}
+                >
+                  <Text className={styles.responseTitle}>{score.title}</Text>
+                  <Text>
+                    {score.score ?? '-'} / {score.maxScore}
+                  </Text>
+                </div>
+              ))}
+              <Text className={styles.responseTitle}>교수자 메모</Text>
+              <Text>{professorEvaluationQuery.data.memo ?? '-'}</Text>
+              <Text className={styles.responseTitle}>저장 시각</Text>
+              <Text>
+                {formatProfessorSavedAt(
+                  professorEvaluationQuery.data.submittedAt,
+                )}
+              </Text>
+            </div>
           </Card>
         )}
       </section>

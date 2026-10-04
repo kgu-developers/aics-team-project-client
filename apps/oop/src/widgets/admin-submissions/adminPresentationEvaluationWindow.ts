@@ -54,10 +54,3 @@ export function createEvaluationResumeWindow(
     evaluationOpensAt,
   };
 }
-
-export function createEvaluationEndWindow(evaluationOpensAt: string) {
-  return {
-    evaluationClosesAt: formatSeoulDateTimeWithoutOffset(Date.now()),
-    evaluationOpensAt,
-  };
-}

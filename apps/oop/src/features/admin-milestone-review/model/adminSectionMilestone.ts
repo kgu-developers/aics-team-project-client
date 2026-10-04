@@ -11,8 +11,8 @@ const milestoneTypeLabels: Record<AdminMilestoneType, string> = {
   GENERAL: '일반',
   MID_REPORT: '중간 점검',
   PEER_EVALUATION: '상호 평가',
-  // `PRESENTATION` 하나가 자료 제출과 평가 기간을 함께 가진다.
-  // 평가만을 뜻하는 유형으로 보이면 안 된다.
+  // `PRESENTATION` owns both material submission and evaluation, but their
+  // time windows are intentionally independent.
   PRESENTATION: '발표',
   PROPOSAL: '제안서',
 };
@@ -35,8 +35,8 @@ export function getAdminMilestoneTypeLabel(type: AdminMilestoneType) {
 }
 
 /**
- * `PRESENTATION` is shared by material submission and presentation evaluation.
- * The API contract distinguishes evaluation by its configured evaluation window.
+ * `PRESENTATION` owns both material submission and presentation evaluation.
+ * The API contract distinguishes their independent time windows.
  */
 export function isPresentationEvaluationMilestone(
   milestone: AdminSectionMilestoneDto,

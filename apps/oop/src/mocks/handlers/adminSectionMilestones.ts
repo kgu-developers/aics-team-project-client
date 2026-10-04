@@ -9,8 +9,10 @@ import { http, HttpResponse } from 'msw';
 import { getMockAuthenticatedAccount } from '../authSession';
 import {
   createAdminSectionMilestoneFixture,
+  closeAdminPresentationEvaluationFixture,
   getAdminSectionMilestoneFixture,
   getAdminSectionMilestonesFixture,
+  reopenAdminPresentationEvaluationFixture,
   updateAdminSectionMilestoneFixture,
   updateAdminSectionMilestoneFixtureEvaluationWindow,
   updateAdminSectionMilestoneFixtureStatus,
@@ -18,8 +20,18 @@ import {
 } from '../data/adminSectionMilestones';
 import { demoAdmin } from '../data/users';
 
-function isAdminRequest(request: Request) {
-  return getMockAuthenticatedAccount(request)?.user.id === demoAdmin.id;
+function isAuthorizedSectionManager(request: Request, sectionId: string) {
+  const account = getMockAuthenticatedAccount(request);
+  if (!account) return false;
+  if (account.user.id === demoAdmin.id) return true;
+
+  return (
+    account.user.globalRole === 'PROFESSOR' &&
+    account.user.sections.some(
+      section =>
+        String(section.id) === sectionId && section.role === 'PROFESSOR',
+    )
+  );
 }
 
 function isCoherentPeerEvaluationSchedule(
@@ -40,7 +52,7 @@ export const adminSectionMilestoneHandlers = [
   http.post(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES(':sectionId')}`,
     async ({ params, request }) => {
-      if (!isAdminRequest(request)) {
+      if (!isAuthorizedSectionManager(request, String(params.sectionId))) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },
@@ -75,7 +87,7 @@ export const adminSectionMilestoneHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES(':sectionId')}`,
     ({ params, request }) => {
-      if (!isAdminRequest(request)) {
+      if (!isAuthorizedSectionManager(request, String(params.sectionId))) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },
@@ -96,7 +108,7 @@ export const adminSectionMilestoneHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE(':sectionId', ':milestoneId')}`,
     ({ params, request }) => {
-      if (!isAdminRequest(request)) {
+      if (!isAuthorizedSectionManager(request, String(params.sectionId))) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },
@@ -121,7 +133,7 @@ export const adminSectionMilestoneHandlers = [
   http.put(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_WEEK_NUMBERS(':sectionId')}`,
     async ({ params, request }) => {
-      if (!isAdminRequest(request)) {
+      if (!isAuthorizedSectionManager(request, String(params.sectionId))) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },
@@ -157,7 +169,7 @@ export const adminSectionMilestoneHandlers = [
   http.put(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE(':sectionId', ':milestoneId')}`,
     async ({ params, request }) => {
-      if (!isAdminRequest(request)) {
+      if (!isAuthorizedSectionManager(request, String(params.sectionId))) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },
@@ -197,7 +209,7 @@ export const adminSectionMilestoneHandlers = [
   http.patch(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_EVALUATION_WINDOW(':sectionId', ':milestoneId')}`,
     async ({ params, request }) => {
-      if (!isAdminRequest(request)) {
+      if (!isAuthorizedSectionManager(request, String(params.sectionId))) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },
@@ -217,7 +229,54 @@ export const adminSectionMilestoneHandlers = [
         // Like the deployed server, the body carries only a code.
         return HttpResponse.json(
           { code: result.error },
-          { status: result.error === 'MILESTONE_NOT_FOUND' ? 404 : 400 },
+          {
+            status:
+              result.error === 'MILESTONE_NOT_FOUND'
+                ? 404
+                : result.error === 'MILESTONE_EVALUATION_WINDOW_CONFLICT'
+                  ? 409
+                  : 400,
+          },
+        );
+      }
+      return new HttpResponse(null, { status: 204 });
+    },
+  ),
+  http.patch(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_EVALUATION_WINDOW_CLOSE(':sectionId', ':milestoneId')}`,
+    ({ params, request }) => {
+      if (!isAuthorizedSectionManager(request, String(params.sectionId))) {
+        return HttpResponse.json({ code: 'UNAUTHORIZED' }, { status: 401 });
+      }
+      const result = closeAdminPresentationEvaluationFixture(
+        String(params.sectionId),
+        String(params.milestoneId),
+      );
+      if ('error' in result) {
+        return HttpResponse.json(
+          { code: result.error },
+          { status: result.error === 'MILESTONE_NOT_FOUND' ? 404 : 409 },
+        );
+      }
+      return new HttpResponse(null, { status: 204 });
+    },
+  ),
+  http.patch(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_EVALUATION_WINDOW_REOPEN(':sectionId', ':milestoneId')}`,
+    async ({ params, request }) => {
+      if (!isAuthorizedSectionManager(request, String(params.sectionId))) {
+        return HttpResponse.json({ code: 'UNAUTHORIZED' }, { status: 401 });
+      }
+      const body = (await request.json()) as { evaluationClosesAt?: string };
+      const result = reopenAdminPresentationEvaluationFixture(
+        String(params.sectionId),
+        String(params.milestoneId),
+        body.evaluationClosesAt,
+      );
+      if ('error' in result) {
+        return HttpResponse.json(
+          { code: result.error },
+          { status: result.error === 'MILESTONE_NOT_FOUND' ? 404 : 409 },
         );
       }
       return new HttpResponse(null, { status: 204 });
@@ -226,7 +285,7 @@ export const adminSectionMilestoneHandlers = [
   http.patch(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_STATUS(':sectionId', ':milestoneId')}`,
     async ({ params, request }) => {
-      if (!isAdminRequest(request)) {
+      if (!isAuthorizedSectionManager(request, String(params.sectionId))) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },

@@ -10,6 +10,7 @@ import { http, HttpResponse } from 'msw';
 import { getMockAccessToken } from '../authSession';
 import {
   evaluationSectionId,
+  getAdminMilestonePresentations,
   getEvaluationMembership,
   getMilestonePresentations,
   getMyTeamEvaluations,
@@ -117,7 +118,8 @@ function requirePresentationViewer(request: Request) {
     account.user.globalRole === 'PROFESSOR' &&
     account.user.sections.some(
       section =>
-        section.id === evaluationSectionId && section.role === 'PROFESSOR',
+        (section.id === evaluationSectionId || section.id === '1') &&
+        section.role === 'PROFESSOR',
     );
   if (!isResponsibleProfessor)
     return {
@@ -254,13 +256,21 @@ export const evaluationHandlers = [
     ({ params, request }) => {
       const viewer = requirePresentationViewer(request);
       if ('response' in viewer) return viewer.response;
-      if (params.milestoneId !== presentationEvaluationMilestoneId)
+      if (
+        params.milestoneId !== presentationEvaluationMilestoneId &&
+        params.milestoneId !== '103'
+      )
         return error(
           'MILESTONE_NOT_FOUND',
           '발표 마일스톤을 찾을 수 없어요.',
           404,
         );
-      return HttpResponse.json({ contents: getMilestonePresentations() });
+      return HttpResponse.json({
+        contents:
+          params.milestoneId === '103'
+            ? getAdminMilestonePresentations()
+            : getMilestonePresentations(),
+      });
     },
   ),
   http.get(

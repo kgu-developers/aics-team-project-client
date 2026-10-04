@@ -108,6 +108,30 @@ describe('createAdminMilestoneCreateInput', () => {
     });
   });
 
+  it('발표 평가는 자료 제출과 지각 제출 가능 기간 중에도 시작할 수 있다', () => {
+    const schedule = createAdminMilestoneSectionScheduleDraft();
+    schedule.dueAt = { date: '2026-09-12', time: '23:59' };
+    schedule.allowLateSubmission = true;
+    schedule.lateSubmissionUntil = { date: '2026-09-20', time: '23:59' };
+    schedule.evaluationOpensAt = { date: '2026-09-10', time: '09:00' };
+    schedule.evaluationClosesAt = { date: '2026-09-10', time: '11:00' };
+
+    expect(
+      createAdminMilestoneCreateInput({
+        description: '',
+        schedule,
+        templateId: 'presentation-submit',
+        title: '발표',
+        weekNumber: 2,
+      }).schedule,
+    ).toEqual({
+      dueAt: '2026-09-12T23:59:00',
+      evaluationClosesAt: '2026-09-10T11:00:00',
+      evaluationOpensAt: '2026-09-10T09:00:00',
+      lateSubmissionUntil: '2026-09-20T23:59:00',
+    });
+  });
+
   it('상호평가 생성은 같은 시작·종료 별칭과 종료 dueAt을 보낸다', () => {
     const schedule = createAdminMilestoneSectionScheduleDraft();
     schedule.evaluationOpensAt = { date: '2026-12-08', time: '09:00' };

@@ -106,6 +106,7 @@ export function createAdminMilestoneCreateInput({
     dueAt,
     evaluationClosesAt: evaluationClosesAtDraft,
     evaluationOpensAt: evaluationOpensAtDraft,
+    hasIndependentEvaluationWindow: templateId === 'presentation-submit',
     lateSubmissionUntil,
     opensAt,
   });
