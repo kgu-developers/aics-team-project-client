@@ -9,6 +9,11 @@ export { fetchAdminSectionMilestones } from './fetchAdminSectionMilestones';
 export { submitAdminSectionMilestone } from './submitAdminSectionMilestone';
 export { updateAdminSectionMilestone } from './updateAdminSectionMilestone';
 export { updateAdminSectionMilestoneEvaluationWindow } from './updateAdminSectionMilestoneEvaluationWindow';
+export { closeAdminPresentationEvaluation } from './closeAdminPresentationEvaluation';
+export {
+  reopenAdminPresentationEvaluation,
+  type ReopenAdminPresentationEvaluationInput,
+} from './reopenAdminPresentationEvaluation';
 export { updateAdminSectionMilestoneStatus } from './updateAdminSectionMilestoneStatus';
 export { updateAdminSectionMilestoneWeekNumbers } from './updateAdminSectionMilestoneWeekNumbers';
 export type {

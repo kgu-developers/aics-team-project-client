@@ -9,6 +9,16 @@ export {
   type AdminTeamEvaluationCriterionPersistResponse,
 } from './createAdminTeamEvaluationCriterion';
 export {
+  updateAdminTeamEvaluationCriterion,
+  type AdminTeamEvaluationCriterionUpdateInput,
+} from './updateAdminTeamEvaluationCriterion';
+export { removeAdminTeamEvaluationCriterion } from './removeAdminTeamEvaluationCriterion';
+export { fetchAdminProfessorPresentationEvaluation } from './fetchAdminProfessorPresentationEvaluation';
+export {
+  updateAdminProfessorPresentationEvaluation,
+  type AdminProfessorPresentationEvaluationInput,
+} from './updateAdminProfessorPresentationEvaluation';
+export {
   fetchAdminTeamEvaluationCriteria,
   type AdminTeamEvaluationCriteriaResponse,
   type AdminTeamEvaluationCriterionDto,
@@ -36,4 +46,6 @@ export type {
   AdminPresentationEvaluationTeamDetailInput,
   AdminPresentationEvaluationTeamDetailResponse,
   AdminPresentationEvaluationTeamSummaryDto,
+  AdminProfessorPresentationEvaluationDto,
+  AdminProfessorPresentationEvaluationScoreDto,
 } from './types';

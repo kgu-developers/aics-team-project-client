@@ -117,6 +117,7 @@ export function createAdminMilestoneUpdateInput({
     dueAt,
     evaluationClosesAt: evaluationClosesAtDraft,
     evaluationOpensAt: evaluationOpensAtDraft,
+    hasIndependentEvaluationWindow: type === 'PRESENTATION',
     lateSubmissionUntil,
     opensAt,
     revisionUntil,

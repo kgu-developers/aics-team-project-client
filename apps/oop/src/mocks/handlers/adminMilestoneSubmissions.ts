@@ -5,13 +5,24 @@ import { getMockAuthenticatedAccount } from '../authSession';
 import { getAdminMilestoneSubmissionsFixture } from '../data/adminMilestoneSubmissions';
 import { demoAdmin } from '../data/users';
 
+function isAuthorizedMilestoneViewer(request: Request) {
+  const account = getMockAuthenticatedAccount(request);
+  if (!account) return false;
+  if (account.user.id === demoAdmin.id) return true;
+
+  return (
+    account.user.globalRole === 'PROFESSOR' &&
+    account.user.sections.some(
+      section => String(section.id) === '1' && section.role === 'PROFESSOR',
+    )
+  );
+}
+
 export const adminMilestoneSubmissionsHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS(':milestoneId')}`,
     ({ params, request }) => {
-      const account = getMockAuthenticatedAccount(request);
-
-      if (account?.user.id !== demoAdmin.id) {
+      if (!isAuthorizedMilestoneViewer(request)) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },

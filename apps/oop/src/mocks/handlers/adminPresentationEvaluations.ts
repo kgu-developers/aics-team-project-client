@@ -15,6 +15,7 @@ import {
   getAdminSectionMilestoneFixture,
   resetAdminSectionMilestonesFixture,
 } from '../data/adminSectionMilestones';
+import { evaluationSectionId } from '../data/evaluation';
 import { demoAdmin } from '../data/users';
 
 type TeamEvaluationCriterionRequest = {
@@ -23,12 +24,21 @@ type TeamEvaluationCriterionRequest = {
   title: string;
 };
 
+type ProfessorEvaluationRequest = {
+  memo?: string | null;
+  scores: Array<{ criterionId: number; score: number }>;
+};
+
 const initialCriteria = [
   { displayOrder: 0, id: 1, maxScore: 5, title: '프로젝트 완성도' },
   { displayOrder: 1, id: 2, maxScore: 5, title: '기능 구성과 구현' },
   { displayOrder: 2, id: 3, maxScore: 5, title: '발표 전달력' },
 ];
 let criteria = structuredClone(initialCriteria);
+const professorEvaluations = new Map<
+  string,
+  { memo: string | null; scores: Map<number, number>; submittedAt: string }
+>();
 
 function getTeamCriterionScore(
   team: (typeof adminPresentationEvaluationsFixture.teams)[number],
@@ -49,6 +59,100 @@ function resetPresentationEvaluationScenario() {
   resetAdminPresentationEvaluationsFixture();
   resetAdminSectionMilestonesFixture();
   criteria = structuredClone(initialCriteria);
+  professorEvaluations.clear();
+}
+
+function isPresentationSectionId(
+  sectionId: string | readonly string[] | undefined,
+) {
+  return (
+    sectionId === adminPresentationEvaluationsFixture.section.id ||
+    sectionId === evaluationSectionId ||
+    sectionId === '1'
+  );
+}
+
+function isPresentationSectionManager(
+  request: Request,
+  sectionId: string | readonly string[] | undefined,
+) {
+  const account = getMockAuthenticatedAccount(request);
+  if (!account || !isPresentationSectionId(sectionId)) return false;
+  if (account.user.id === demoAdmin.id) return true;
+
+  return (
+    account.user.globalRole === 'PROFESSOR' &&
+    account.user.sections.some(
+      section =>
+        String(section.id) === String(sectionId) &&
+        section.role === 'PROFESSOR',
+    )
+  );
+}
+
+function isResponsiblePresentationProfessor(
+  request: Request,
+  sectionId: string | readonly string[] | undefined,
+) {
+  const account = getMockAuthenticatedAccount(request);
+  return (
+    account?.user.globalRole === 'PROFESSOR' &&
+    account.user.sections.some(
+      section =>
+        String(section.id) === String(sectionId) &&
+        section.role === 'PROFESSOR',
+    )
+  );
+}
+
+function isValidProfessorEvaluationRequest(
+  value: unknown,
+): value is ProfessorEvaluationRequest {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const request = value as Record<string, unknown>;
+  return (
+    (request.memo === undefined ||
+      request.memo === null ||
+      typeof request.memo === 'string') &&
+    Array.isArray(request.scores) &&
+    request.scores.every(
+      score =>
+        score &&
+        typeof score === 'object' &&
+        Number.isInteger((score as { criterionId?: unknown }).criterionId) &&
+        Number.isInteger((score as { score?: unknown }).score),
+    )
+  );
+}
+
+function getProfessorEvaluationKey(milestoneId: string, teamId: string) {
+  return `${milestoneId}:${teamId}`;
+}
+
+function isEvaluationOpen() {
+  const period = getPresentationEvaluationPeriod();
+  if (!period.startsAt || !period.endsAt) return false;
+  const now = Date.now();
+  return Date.parse(period.startsAt) <= now && now < Date.parse(period.endsAt);
+}
+
+function professorEvaluationResponse(milestoneId: string, teamId: string) {
+  const evaluation = professorEvaluations.get(
+    getProfessorEvaluationKey(milestoneId, teamId),
+  );
+  return {
+    editable: isEvaluationOpen(),
+    memo: evaluation?.memo ?? null,
+    milestoneId: Number(milestoneId),
+    scores: criteria.map(criterion => ({
+      criterionId: criterion.id,
+      maxScore: criterion.maxScore,
+      score: evaluation?.scores.get(criterion.id) ?? null,
+      title: criterion.title,
+    })),
+    submittedAt: evaluation?.submittedAt ?? null,
+    teamId: Number(teamId),
+  };
 }
 
 function isTeamEvaluationCriterionRequest(
@@ -109,15 +213,9 @@ export const adminPresentationEvaluationHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA(':sectionId')}`,
     ({ params, request }) => {
-      if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
+      if (!isPresentationSectionManager(request, params.sectionId)) {
         return HttpResponse.json(
-          { message: '관리자 로그인이 필요합니다.' },
-          { status: 401 },
-        );
-      }
-      if (params.sectionId !== adminPresentationEvaluationsFixture.section.id) {
-        return HttpResponse.json(
-          { message: '담당 분반만 조회할 수 있습니다.' },
+          { message: '담당 분반 관리자 로그인이 필요합니다.' },
           { status: 403 },
         );
       }
@@ -128,13 +226,7 @@ export const adminPresentationEvaluationHandlers = [
   http.post(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERIA(':sectionId')}`,
     async ({ params, request }) => {
-      if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
-        return HttpResponse.json(
-          { message: '관리자 로그인이 필요합니다.' },
-          { status: 401 },
-        );
-      }
-      if (params.sectionId !== adminPresentationEvaluationsFixture.section.id) {
+      if (!isPresentationSectionManager(request, params.sectionId)) {
         return HttpResponse.json(
           { message: '담당 분반만 생성할 수 있습니다.' },
           { status: 403 },
@@ -154,6 +246,12 @@ export const adminPresentationEvaluationHandlers = [
         );
       }
 
+      if (isEvaluationOpen() || professorEvaluations.size > 0) {
+        return HttpResponse.json(
+          { code: 'TEAM_EVALUATION_CRITERION_LOCKED' },
+          { status: 409 },
+        );
+      }
       const criterion = {
         ...body,
         id: Math.max(0, ...criteria.map(item => item.id)) + 1,
@@ -165,16 +263,162 @@ export const adminPresentationEvaluationHandlers = [
       return HttpResponse.json({ id: criterion.id }, { status: 201 });
     },
   ),
+  http.patch(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERION(':sectionId', ':criterionId')}`,
+    async ({ params, request }) => {
+      if (!isPresentationSectionManager(request, params.sectionId)) {
+        return HttpResponse.json(
+          { message: '담당 분반만 수정할 수 있습니다.' },
+          { status: 403 },
+        );
+      }
+      const criterion = criteria.find(
+        item => String(item.id) === params.criterionId,
+      );
+      if (!criterion)
+        return HttpResponse.json(
+          { code: 'TEAM_EVALUATION_CRITERION_NOT_FOUND' },
+          { status: 404 },
+        );
+      if (isEvaluationOpen() || professorEvaluations.size > 0) {
+        return HttpResponse.json(
+          { code: 'TEAM_EVALUATION_CRITERION_LOCKED' },
+          { status: 409 },
+        );
+      }
+      const body = await request.json().catch(() => undefined);
+      if (!isTeamEvaluationCriterionRequest(body)) {
+        return HttpResponse.json(
+          { message: '평가 항목 입력값이 올바르지 않습니다.' },
+          { status: 400 },
+        );
+      }
+      Object.assign(criterion, body);
+      criteria.sort((left, right) => left.displayOrder - right.displayOrder);
+      return new HttpResponse(null, { status: 204 });
+    },
+  ),
+  http.delete(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_TEAM_EVALUATION_CRITERION(':sectionId', ':criterionId')}`,
+    ({ params, request }) => {
+      if (!isPresentationSectionManager(request, params.sectionId)) {
+        return HttpResponse.json(
+          { message: '담당 분반만 삭제할 수 있습니다.' },
+          { status: 403 },
+        );
+      }
+      const index = criteria.findIndex(
+        item => String(item.id) === params.criterionId,
+      );
+      if (index < 0)
+        return HttpResponse.json(
+          { code: 'TEAM_EVALUATION_CRITERION_NOT_FOUND' },
+          { status: 404 },
+        );
+      if (isEvaluationOpen() || professorEvaluations.size > 0) {
+        return HttpResponse.json(
+          { code: 'TEAM_EVALUATION_CRITERION_LOCKED' },
+          { status: 409 },
+        );
+      }
+      criteria.splice(index, 1);
+      return new HttpResponse(null, { status: 204 });
+    },
+  ),
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRESENTATION_EVALUATION_PROFESSOR(':sectionId', ':milestoneId', ':teamId')}`,
+    ({ params, request }) => {
+      if (!isResponsiblePresentationProfessor(request, params.sectionId)) {
+        return HttpResponse.json(
+          { message: '담당 교수 로그인이 필요합니다.' },
+          { status: 403 },
+        );
+      }
+      if (!isPresentationSectionId(params.sectionId)) {
+        return HttpResponse.json(
+          { message: '담당 분반만 조회할 수 있습니다.' },
+          { status: 403 },
+        );
+      }
+      return HttpResponse.json(
+        professorEvaluationResponse(
+          String(params.milestoneId),
+          String(params.teamId),
+        ),
+      );
+    },
+  ),
+  http.put(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRESENTATION_EVALUATION_PROFESSOR(':sectionId', ':milestoneId', ':teamId')}`,
+    async ({ params, request }) => {
+      if (!isResponsiblePresentationProfessor(request, params.sectionId)) {
+        return HttpResponse.json(
+          { message: '담당 교수 로그인이 필요합니다.' },
+          { status: 403 },
+        );
+      }
+      if (!isPresentationSectionId(params.sectionId)) {
+        return HttpResponse.json(
+          { message: '담당 분반만 저장할 수 있습니다.' },
+          { status: 403 },
+        );
+      }
+      if (!isEvaluationOpen()) {
+        return HttpResponse.json(
+          { code: 'TEAM_EVALUATION_CLOSED' },
+          { status: 403 },
+        );
+      }
+      const body = await request.json().catch(() => undefined);
+      if (!isValidProfessorEvaluationRequest(body)) {
+        return HttpResponse.json(
+          { code: 'INVALID_PROFESSOR_PRESENTATION_EVALUATION' },
+          { status: 400 },
+        );
+      }
+      const requestedIds = new Set(body.scores.map(score => score.criterionId));
+      if (
+        requestedIds.size !== criteria.length ||
+        !criteria.every(criterion => requestedIds.has(criterion.id)) ||
+        body.scores.some(score => {
+          const criterion = criteria.find(
+            item => item.id === score.criterionId,
+          );
+          return (
+            !criterion || score.score < 0 || score.score > criterion.maxScore
+          );
+        })
+      ) {
+        return HttpResponse.json(
+          { code: 'INVALID_PROFESSOR_PRESENTATION_EVALUATION' },
+          { status: 400 },
+        );
+      }
+      professorEvaluations.set(
+        getProfessorEvaluationKey(
+          String(params.milestoneId),
+          String(params.teamId),
+        ),
+        {
+          memo: body.memo?.trim() || null,
+          scores: new Map(
+            body.scores.map(score => [score.criterionId, score.score]),
+          ),
+          submittedAt: new Date().toISOString(),
+        },
+      );
+      return HttpResponse.json(
+        professorEvaluationResponse(
+          String(params.milestoneId),
+          String(params.teamId),
+        ),
+      );
+    },
+  ),
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_PRESENTATION_EVALUATION_TEAM(':sectionId', ':teamId')}`,
     ({ params, request }) => {
-      if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
-        return HttpResponse.json(
-          { message: '관리자 로그인이 필요합니다.' },
-          { status: 401 },
-        );
-      }
-      if (params.sectionId !== adminPresentationEvaluationsFixture.section.id) {
+      if (!isPresentationSectionManager(request, params.sectionId)) {
         return HttpResponse.json(
           { message: '담당 분반만 조회할 수 있습니다.' },
           { status: 403 },
@@ -241,13 +485,7 @@ export const adminPresentationEvaluationHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_PRESENTATION_EVALUATIONS(':sectionId')}`,
     ({ params, request }) => {
-      if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
-        return HttpResponse.json(
-          { message: '관리자 로그인이 필요합니다.' },
-          { status: 401 },
-        );
-      }
-      if (params.sectionId !== adminPresentationEvaluationsFixture.section.id) {
+      if (!isPresentationSectionManager(request, params.sectionId)) {
         return HttpResponse.json(
           { message: '담당 분반만 조회할 수 있습니다.' },
           { status: 403 },
@@ -266,10 +504,17 @@ export const adminPresentationEvaluationHandlers = [
   http.patch(
     `${API_BASE_URL}${ENDPOINTS.SUBMISSION.PRESENTATION_ORDER(':milestoneId')}`,
     async ({ params, request }) => {
-      if (getMockAuthenticatedAccount(request)?.user.id !== demoAdmin.id) {
+      const account = getMockAuthenticatedAccount(request);
+      const canManageOrders =
+        account?.user.id === demoAdmin.id ||
+        (account?.user.globalRole === 'PROFESSOR' &&
+          account.user.sections.some(
+            section => section.id === '1' && section.role === 'PROFESSOR',
+          ));
+      if (!canManageOrders) {
         return HttpResponse.json(
-          { message: '관리자 로그인이 필요합니다.' },
-          { status: 401 },
+          { message: '담당 분반만 수정할 수 있습니다.' },
+          { status: 403 },
         );
       }
       if (params.milestoneId !== '103') {

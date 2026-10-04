@@ -73,6 +73,7 @@ export function assertAdminMilestoneScheduleOrder({
   dueAt,
   evaluationClosesAt,
   evaluationOpensAt,
+  hasIndependentEvaluationWindow,
   lateSubmissionUntil,
   opensAt,
   revisionUntil,
@@ -80,6 +81,8 @@ export function assertAdminMilestoneScheduleOrder({
   dueAt: string;
   evaluationClosesAt?: string;
   evaluationOpensAt?: string;
+  /** PRESENTATION evaluates independently from its material-submission window. */
+  hasIndependentEvaluationWindow?: boolean;
   lateSubmissionUntil?: string;
   opensAt?: string;
   revisionUntil?: string;
@@ -144,6 +147,10 @@ export function assertAdminMilestoneScheduleOrder({
   ) {
     throw new Error('평가 종료 일시는 평가 시작 일시보다 늦어야 합니다.');
   }
+  // PRESENTATION evaluation is intentionally independent from material
+  // submission dates. Other milestone types retain the legacy ordering rule.
+  if (hasIndependentEvaluationWindow) return;
+
   // Mirrors the server's MilestoneSchedule rules so the form explains a
   // rejection instead of a bare 400.
   if (

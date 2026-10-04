@@ -10,17 +10,15 @@ import {
 import { useEffect, useState } from 'react';
 
 import {
-  assertAdminMilestoneScheduleOrder,
   formatAdminMilestoneRequestError,
   toAdminMilestoneRequestError,
 } from '~/features/admin-milestone-review/model';
-import { useUpdateAdminSectionMilestoneEvaluationWindowMutation } from '~/features/admin-milestone-review/queries';
+import {
+  useAdminProfessorPresentationEvaluationStatusesQuery,
+  useCloseAdminPresentationEvaluationMutation,
+} from '~/features/admin-milestone-review/queries';
 
 import * as styles from './AdminPresentationEvaluationEndDialog.css';
-import {
-  createEvaluationEndWindow,
-  normalizeEvaluationOpensAt,
-} from './adminPresentationEvaluationWindow';
 
 export function AdminPresentationEvaluationEndDialog({
   isOpen,
@@ -28,15 +26,39 @@ export function AdminPresentationEvaluationEndDialog({
   onClose,
   onWindowUpdated,
   sectionId,
+  teams,
+  canViewProfessorEvaluations,
 }: {
+  canViewProfessorEvaluations: boolean;
   isOpen: boolean;
   milestone: AdminSectionMilestoneDto;
   onClose: () => void;
   onWindowUpdated: () => void;
   sectionId: string;
+  teams: Array<{
+    presentationOrder: number | null;
+    teamId: number;
+    teamName: string;
+  }>;
 }) {
-  const mutation = useUpdateAdminSectionMilestoneEvaluationWindowMutation();
+  const mutation = useCloseAdminPresentationEvaluationMutation();
+  const professorEvaluationStatuses =
+    useAdminProfessorPresentationEvaluationStatusesQuery(
+      sectionId,
+      String(milestone.id),
+      teams,
+      isOpen && canViewProfessorEvaluations,
+    );
   const [formError, setFormError] = useState<string>();
+
+  const unevaluatedTeams = professorEvaluationStatuses.data
+    .filter(team => team.submittedAt === null)
+    .sort(
+      (left, right) =>
+        (left.presentationOrder ?? Number.POSITIVE_INFINITY) -
+          (right.presentationOrder ?? Number.POSITIVE_INFINITY) ||
+        left.teamName.localeCompare(right.teamName, 'ko'),
+    );
 
   useEffect(() => {
     if (!isOpen) setFormError(undefined);
@@ -50,45 +72,22 @@ export function AdminPresentationEvaluationEndDialog({
   if (!isOpen) return null;
 
   async function handleEnd() {
-    const evaluationOpensAt = milestone.schedule.evaluationOpensAt
-      ? normalizeEvaluationOpensAt(milestone.schedule.evaluationOpensAt)
-      : null;
-    if (!evaluationOpensAt) {
-      setFormError('기존 평가 시작 시각을 찾을 수 없어 종료할 수 없습니다.');
-      return;
-    }
-
-    const window = createEvaluationEndWindow(evaluationOpensAt);
-    try {
-      assertAdminMilestoneScheduleOrder({
-        dueAt: milestone.schedule.dueAt ?? '',
-        evaluationClosesAt: window.evaluationClosesAt,
-        evaluationOpensAt: window.evaluationOpensAt,
-        lateSubmissionUntil:
-          milestone.schedule.lateSubmissionUntil ?? undefined,
-        revisionUntil: milestone.schedule.revisionUntil ?? undefined,
-      });
-    } catch (error) {
-      setFormError(
-        error instanceof Error
-          ? error.message
-          : '평가 종료 가능 여부를 확인해 주세요.',
-      );
-      return;
-    }
+    if (mutation.isPending) return;
 
     setFormError(undefined);
     try {
       await mutation.mutateAsync({
-        input: window,
         milestoneId: String(milestone.id),
         sectionId,
       });
       onWindowUpdated();
       onClose();
     } catch (error) {
+      const requestError = toAdminMilestoneRequestError(error);
       setFormError(
-        formatAdminMilestoneRequestError(toAdminMilestoneRequestError(error)),
+        requestError.code === 'MILESTONE_EVALUATION_WINDOW_CONFLICT'
+          ? '평가가 이미 종료되었거나 아직 시작되지 않았습니다. 최신 상태를 확인해 주세요.'
+          : formatAdminMilestoneRequestError(requestError),
       );
     }
   }
@@ -110,6 +109,44 @@ export function AdminPresentationEvaluationEndDialog({
           없습니다. 종료 뒤에도 발표 기록과 평가 설정은 읽기 전용으로 확인할 수
           있습니다.
         </Text>
+        {canViewProfessorEvaluations ? (
+          professorEvaluationStatuses.isPending ? (
+            <Text aria-live='polite' role='status'>
+              교수자 평가 현황을 확인하는 중입니다.
+            </Text>
+          ) : professorEvaluationStatuses.isError ? (
+            <Text role='alert'>
+              미평가 팀을 확인하지 못했습니다. 종료 전 발표 자료 보기·평가
+              화면에서 평가 현황을 확인해 주세요.
+            </Text>
+          ) : unevaluatedTeams.length > 0 ? (
+            <VStack gap={2}>
+              <Text weight='medium'>
+                교수자 평가 미저장 {unevaluatedTeams.length}팀
+              </Text>
+              <ul className={styles.unevaluatedTeams}>
+                {unevaluatedTeams.map(team => (
+                  <li key={team.teamId}>
+                    {team.presentationOrder
+                      ? `${team.presentationOrder}번째 · `
+                      : ''}
+                    {team.teamName}
+                  </li>
+                ))}
+              </ul>
+              <Text color='secondary' type='supporting'>
+                지금 종료해도 저장된 평가 내용은 유지됩니다. 이 팀들을
+                평가하려면 종료 후 평가를 재개해야 합니다.
+              </Text>
+            </VStack>
+          ) : (
+            <Text role='status'>모든 팀의 교수자 평가가 저장되었습니다.</Text>
+          )
+        ) : (
+          <Text color='secondary' type='supporting'>
+            교수자 평가 현황은 담당 교수 계정에서 확인할 수 있습니다.
+          </Text>
+        )}
         {formError ? <Text role='alert'>{formError}</Text> : null}
         <HStack gap={2} justify='end'>
           <Button
@@ -119,7 +156,11 @@ export function AdminPresentationEvaluationEndDialog({
             variant='secondary'
           />
           <Button
-            isDisabled={mutation.isPending}
+            isDisabled={
+              mutation.isPending ||
+              (canViewProfessorEvaluations &&
+                professorEvaluationStatuses.isPending)
+            }
             isLoading={mutation.isPending}
             label='평가 종료'
             onClick={() => void handleEnd()}

@@ -193,7 +193,7 @@ it('shows an empty-team message and prevents an empty presentation-order request
   expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
 });
 
-it('locks presentation orders and criteria after the evaluation period starts', async () => {
+it('allows a confirmed presentation-order change but locks criteria after evaluation starts', async () => {
   const orderRequests: unknown[] = [];
   const criterionRequests: unknown[] = [];
   server.use(
@@ -224,16 +224,21 @@ it('locks presentation orders and criteria after the evaluation period starts', 
   await screen.findByText('등록된 평가 항목이 없습니다.');
   expect(
     screen.getByRole('spinbutton', { name: '7팀 발표 순서' }),
-  ).toBeDisabled();
-  expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
+  ).toBeEnabled();
+  expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeEnabled();
   expect(screen.getByRole('textbox', { name: /평가 항목명/ })).toBeDisabled();
   expect(screen.getByRole('spinbutton', { name: '배점' })).toBeDisabled();
   expect(screen.getByRole('button', { name: '평가 항목 추가' })).toBeDisabled();
-  expect(orderRequests).toEqual([]);
+  await userEvent.click(screen.getByRole('button', { name: '발표 순서 저장' }));
+  expect(
+    screen.getByRole('alertdialog', { name: '발표 순서를 변경할까요?' }),
+  ).toBeVisible();
+  await userEvent.click(screen.getByRole('button', { name: '순서 변경' }));
+  await waitFor(() => expect(orderRequests).toHaveLength(1));
   expect(criterionRequests).toEqual([]);
 });
 
-it('locks presentation order while the settings dialog remains open', () => {
+it('keeps presentation orders editable while the settings dialog remains open after evaluation starts', () => {
   vi.useFakeTimers();
   vi.setSystemTime('2026-09-22T09:00:00+09:00');
   server.use(
@@ -251,11 +256,12 @@ it('locks presentation order while the settings dialog remains open', () => {
 
   act(() => vi.advanceTimersByTime(1_025));
 
-  expect(order).toBeDisabled();
-  expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
+  expect(order).toBeEnabled();
+  expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: '평가 항목 추가' })).toBeDisabled();
 });
 
-it('locks settings immediately when the dialog opens after evaluation starts', () => {
+it('keeps presentation orders editable but locks criteria when the dialog opens after evaluation starts', () => {
   vi.useFakeTimers();
   vi.setSystemTime('2026-09-22T09:00:00+09:00');
   server.use(
@@ -279,8 +285,8 @@ it('locks settings immediately when the dialog opens after evaluation starts', (
 
   expect(
     screen.getByRole('spinbutton', { name: '7팀 발표 순서' }),
-  ).toBeDisabled();
-  expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
+  ).toBeEnabled();
+  expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeEnabled();
   expect(screen.getByRole('button', { name: '평가 항목 추가' })).toBeDisabled();
 });
 

@@ -138,3 +138,20 @@ export type AdminPresentationEvaluationTeamDetailResponse = {
   teamId: number;
   teamName: string;
 };
+
+/** A professor-only score sheet. Its totals are deliberately separate from student averages. */
+export type AdminProfessorPresentationEvaluationScoreDto = {
+  criterionId: number;
+  maxScore: number;
+  score: number | null;
+  title: string;
+};
+
+export type AdminProfessorPresentationEvaluationDto = {
+  editable: boolean;
+  memo: string | null;
+  milestoneId: number;
+  scores: AdminProfessorPresentationEvaluationScoreDto[];
+  submittedAt: string | null;
+  teamId: number;
+};

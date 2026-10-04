@@ -926,7 +926,7 @@ describe('AdminSubmissionsPage', () => {
     expect(screen.getByLabelText('평가 진행 시간(분)')).toHaveValue(60);
   });
 
-  it('평가가 종료된 뒤에도 순서와 평가 항목을 읽기 전용으로 확인할 수 있다', async () => {
+  it('평가가 종료된 뒤에도 순서는 변경하고 평가 항목은 읽기 전용으로 확인할 수 있다', async () => {
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`,
@@ -964,10 +964,10 @@ describe('AdminSubmissionsPage', () => {
     await screen.findByRole('heading', { name: '발표 순서·평가 항목 설정' });
     expect(
       screen.getByRole('spinbutton', { name: '1팀 발표 순서' }),
-    ).toBeDisabled();
+    ).toBeEnabled();
     expect(
       screen.getByRole('button', { name: '발표 순서 저장' }),
-    ).toBeDisabled();
+    ).toBeEnabled();
     expect(
       screen.getByRole('button', { name: '평가 항목 추가' }),
     ).toBeDisabled();
@@ -988,27 +988,22 @@ describe('AdminSubmissionsPage', () => {
             }
           : milestone,
     );
-    const requestBodies: {
-      evaluationClosesAt: string;
-      evaluationOpensAt: string;
-    }[] = [];
+    let closeRequestCount = 0;
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`,
         () => HttpResponse.json({ content: milestones }),
       ),
       http.patch(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_EVALUATION_WINDOW('1', '103')}`,
-        async ({ request }) => {
-          const requestBody =
-            (await request.json()) as (typeof requestBodies)[number];
-          requestBodies.push(requestBody);
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_EVALUATION_WINDOW_CLOSE('1', '103')}`,
+        () => {
+          closeRequestCount += 1;
           const presentationMilestone = milestones.find(
             milestone => milestone.id === 103,
           )!;
           presentationMilestone.schedule = {
             ...presentationMilestone.schedule,
-            ...requestBody,
+            evaluationClosesAt: '2020-01-01T10:00:00',
           };
           return new HttpResponse(null, { status: 204 });
         },
@@ -1025,11 +1020,11 @@ describe('AdminSubmissionsPage', () => {
     });
     await user.click(within(dialog).getByRole('button', { name: '평가 종료' }));
 
-    await waitFor(() => expect(requestBodies).toHaveLength(1));
-    expect(requestBodies[0]).toMatchObject({
-      evaluationClosesAt: expect.any(String),
-      evaluationOpensAt: '2026-09-15T09:00:00',
-    });
+    await waitFor(() => expect(closeRequestCount).toBe(1));
+    expect(
+      milestones.find(milestone => milestone.id === 103)?.schedule
+        .evaluationOpensAt,
+    ).toBe('2026-09-15T09:00:00+09:00');
     expect(await screen.findByText('평가 종료')).toBeVisible();
   });
 
@@ -1049,17 +1044,14 @@ describe('AdminSubmissionsPage', () => {
           : milestone,
     );
     let shouldFail = true;
-    const requestBodies: {
-      evaluationClosesAt: string;
-      evaluationOpensAt: string;
-    }[] = [];
+    const requestBodies: { evaluationClosesAt: string }[] = [];
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`,
         () => HttpResponse.json({ content: milestones }),
       ),
       http.patch(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_EVALUATION_WINDOW('1', '103')}`,
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE_EVALUATION_WINDOW_REOPEN('1', '103')}`,
         async ({ request }) => {
           const requestBody =
             (await request.json()) as (typeof requestBodies)[number];
@@ -1075,7 +1067,7 @@ describe('AdminSubmissionsPage', () => {
           )!;
           presentationMilestone.schedule = {
             ...presentationMilestone.schedule,
-            ...requestBody,
+            evaluationClosesAt: requestBody.evaluationClosesAt,
           };
           return new HttpResponse(null, { status: 204 });
         },
@@ -1113,8 +1105,11 @@ describe('AdminSubmissionsPage', () => {
     await waitFor(() => expect(requestBodies).toHaveLength(2));
     expect(requestBodies[1]).toMatchObject({
       evaluationClosesAt: expect.any(String),
-      evaluationOpensAt: '2026-09-15T09:00:00',
     });
+    expect(
+      milestones.find(milestone => milestone.id === 103)?.schedule
+        .evaluationOpensAt,
+    ).toBe('2026-09-15T09:00:00+09:00');
     expect(await screen.findByText('평가 진행 중')).toBeVisible();
   });
 

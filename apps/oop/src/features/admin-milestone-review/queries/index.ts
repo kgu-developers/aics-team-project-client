@@ -14,6 +14,8 @@ export {
 } from './useUpdateAdminSectionMilestoneMutation';
 export { useUpdateAdminSectionMilestoneStatusMutation } from './useUpdateAdminSectionMilestoneStatusMutation';
 export { useUpdateAdminSectionMilestoneEvaluationWindowMutation } from './useUpdateAdminSectionMilestoneEvaluationWindowMutation';
+export { useCloseAdminPresentationEvaluationMutation } from './useCloseAdminPresentationEvaluationMutation';
+export { useReopenAdminPresentationEvaluationMutation } from './useReopenAdminPresentationEvaluationMutation';
 export { useAdminMilestoneSubmissionDetailQuery } from './useAdminMilestoneSubmissionDetailQuery';
 export { useAdminSubmissionVersionQuery } from './useAdminSubmissionVersionQuery';
 export { useAdminSubmissionVersionDetailsQueries } from './useAdminSubmissionVersionDetailsQueries';
@@ -35,6 +37,11 @@ export { useUpdatePresentationOrderMutation } from './useUpdatePresentationOrder
 export { adminTeamEvaluationCriteriaKeys } from './adminTeamEvaluationCriteriaKeys';
 export { useAdminTeamEvaluationCriteriaQuery } from './useAdminTeamEvaluationCriteriaQuery';
 export { useCreateAdminTeamEvaluationCriterionMutation } from './useCreateAdminTeamEvaluationCriterionMutation';
+export { useUpdateAdminTeamEvaluationCriterionMutation } from './useUpdateAdminTeamEvaluationCriterionMutation';
+export { useRemoveAdminTeamEvaluationCriterionMutation } from './useRemoveAdminTeamEvaluationCriterionMutation';
+export { useAdminProfessorPresentationEvaluationQuery } from './useAdminProfessorPresentationEvaluationQuery';
+export { useAdminProfessorPresentationEvaluationStatusesQuery } from './useAdminProfessorPresentationEvaluationStatusesQuery';
+export { useUpdateAdminProfessorPresentationEvaluationMutation } from './useUpdateAdminProfessorPresentationEvaluationMutation';
 export { adminRequiredArtifactKeys } from './adminRequiredArtifactKeys';
 export { useAdminRequiredArtifactsQuery } from './useAdminRequiredArtifactsQuery';
 export { useRemoveRequiredArtifactMutation } from './useRemoveRequiredArtifactMutation';

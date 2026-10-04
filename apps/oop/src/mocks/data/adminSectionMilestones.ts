@@ -278,7 +278,7 @@ export function createAdminPeerEvaluationFormFixture(
   return { form: milestone.peerEvaluationForm } as const;
 }
 
-/** Mirrors the server's MilestoneSchedule ordering rules for the window. */
+/** Mirrors the server's independent PRESENTATION evaluation-window rules. */
 export function updateAdminSectionMilestoneFixtureEvaluationWindow(
   sectionId: string,
   milestoneId: string,
@@ -292,6 +292,19 @@ export function updateAdminSectionMilestoneFixtureEvaluationWindow(
     candidate => candidate.id === Number(milestoneId),
   );
   if (!milestone) return { error: 'MILESTONE_NOT_FOUND' };
+  const currentOpensAt = milestone.schedule.evaluationOpensAt;
+  const hasStarted =
+    milestone.type === 'PRESENTATION' &&
+    Number.isFinite(Date.parse(currentOpensAt ?? '')) &&
+    Date.now() >= Date.parse(currentOpensAt!);
+  if (
+    hasStarted &&
+    (input.clearEvaluationWindow ||
+      input.evaluationOpensAt === undefined ||
+      input.evaluationOpensAt !== currentOpensAt)
+  ) {
+    return { error: 'MILESTONE_EVALUATION_WINDOW_CONFLICT' };
+  }
   if (input.clearEvaluationWindow) {
     milestone.schedule = {
       ...milestone.schedule,
@@ -303,15 +316,7 @@ export function updateAdminSectionMilestoneFixtureEvaluationWindow(
   const { evaluationClosesAt, evaluationOpensAt } = input;
   if (!evaluationOpensAt || !evaluationClosesAt)
     return { error: 'INVALID_MILESTONE_REQUEST' };
-  const dueAt = milestone.schedule.dueAt ?? '';
-  const submissionOrRevisionUntil =
-    milestone.schedule.revisionUntil ?? milestone.schedule.lateSubmissionUntil;
-  if (
-    evaluationOpensAt < dueAt ||
-    (submissionOrRevisionUntil &&
-      evaluationOpensAt < submissionOrRevisionUntil) ||
-    evaluationOpensAt >= evaluationClosesAt
-  )
+  if (evaluationOpensAt >= evaluationClosesAt)
     return { error: 'INVALID_MILESTONE_REQUEST' };
   milestone.schedule = {
     ...milestone.schedule,
@@ -319,6 +324,66 @@ export function updateAdminSectionMilestoneFixtureEvaluationWindow(
     evaluationOpensAt,
   };
   return { milestone };
+}
+
+function formatMockSeoulDateTime(instant = Date.now()) {
+  return new Date(instant + 9 * 60 * 60 * 1000).toISOString().slice(0, 19);
+}
+
+export function closeAdminPresentationEvaluationFixture(
+  sectionId: string,
+  milestoneId: string,
+) {
+  const milestone = getAdminSectionMilestoneFixture(sectionId, milestoneId);
+  if (!milestone) return { error: 'MILESTONE_NOT_FOUND' } as const;
+  const now = Date.now();
+  const opensAt = Date.parse(milestone.schedule.evaluationOpensAt ?? '');
+  const closesAt = Date.parse(milestone.schedule.evaluationClosesAt ?? '');
+  if (
+    milestone.type !== 'PRESENTATION' ||
+    !Number.isFinite(opensAt) ||
+    !Number.isFinite(closesAt) ||
+    now <= opensAt ||
+    now >= closesAt
+  ) {
+    return { error: 'MILESTONE_EVALUATION_WINDOW_CONFLICT' } as const;
+  }
+  milestone.schedule = {
+    ...milestone.schedule,
+    evaluationClosesAt: formatMockSeoulDateTime(now),
+  };
+  return { milestone } as const;
+}
+
+export function reopenAdminPresentationEvaluationFixture(
+  sectionId: string,
+  milestoneId: string,
+  evaluationClosesAt: string | undefined,
+) {
+  const milestone = getAdminSectionMilestoneFixture(sectionId, milestoneId);
+  if (!milestone) return { error: 'MILESTONE_NOT_FOUND' } as const;
+  const now = Date.now();
+  const opensAt = Date.parse(milestone.schedule.evaluationOpensAt ?? '');
+  const previousClosesAt = Date.parse(
+    milestone.schedule.evaluationClosesAt ?? '',
+  );
+  const nextClosesAt = Date.parse(evaluationClosesAt ?? '');
+  if (
+    milestone.type !== 'PRESENTATION' ||
+    !Number.isFinite(opensAt) ||
+    !Number.isFinite(previousClosesAt) ||
+    !Number.isFinite(nextClosesAt) ||
+    now < opensAt ||
+    now < previousClosesAt ||
+    nextClosesAt <= now
+  ) {
+    return { error: 'MILESTONE_EVALUATION_WINDOW_CONFLICT' } as const;
+  }
+  milestone.schedule = {
+    ...milestone.schedule,
+    evaluationClosesAt: evaluationClosesAt!,
+  };
+  return { milestone } as const;
 }
 
 export function updateAdminSectionMilestoneFixtureWeekNumbers(
