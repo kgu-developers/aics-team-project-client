@@ -347,7 +347,7 @@ describe('AdminHomeDashboard', () => {
       await screen.findByText('발표 자료의 핵심 흐름과 역할을 확정한다.'),
     ).toBeInTheDocument();
     expect(screen.getByText('OOP-01 · 2팀')).toBeInTheDocument();
-    expect(screen.getByText('2026-10-08/09:00')).toBeInTheDocument();
+    expect(screen.getByText('2026-10-08/00:00')).toBeInTheDocument();
     expect(
       screen.getByRole('link', {
         name: '발표 자료의 핵심 흐름과 역할을 확정한다.',

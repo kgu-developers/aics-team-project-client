@@ -98,6 +98,10 @@ export const ENDPOINTS = {
       `/api/v1/admin/sections/${sectionId}/artifacts/summary`,
     SECTION_ARTIFACT_DOWNLOAD: (sectionId: string) =>
       `/api/v1/admin/sections/${sectionId}/artifacts/download`,
+    SECTION_MEETING_ACTIONS: (sectionId: string | number) =>
+      `/api/v1/admin/sections/${sectionId}/meeting-actions`,
+    SECTION_MEETING_RECORD_LOGS: (sectionId: string | number) =>
+      `/api/v1/admin/sections/${sectionId}/meeting-records/logs`,
     MEETING_RECORDS: '/api/v1/admin/meeting-records',
     MEETING_RECORDS_LIST: '/api/v1/admin/meeting-records',
     MEETING_RECORD_DETAIL: (meetingId: string | number) =>

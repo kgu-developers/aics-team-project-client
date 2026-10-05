@@ -122,6 +122,37 @@ describe('AdminMeetingDetailPage', () => {
 
     expect(await screen.findByText('컴퓨터공학과')).toBeInTheDocument();
   });
+
+  it('회의록에 등록된 액션플랜만 표시하고 전체 목록으로 연결한다', async () => {
+    renderPage();
+
+    expect(
+      await screen.findByRole('heading', { name: '액션플랜' }),
+    ).toBeInTheDocument();
+    expect(await screen.findByText('도메인 모델 초안 작성')).toBeVisible();
+    expect(screen.queryByText('발표 자료 역할별 초안 작성')).toBeNull();
+    expect(
+      screen.getByRole('link', { name: '전체 액션플랜 보기' }),
+    ).toHaveAttribute('href', '/admin/meeting-actions?sectionId=1');
+  });
+
+  it('현재 회의록의 수정 이력만 표시한다', async () => {
+    renderPage();
+
+    expect(
+      await screen.findByRole('heading', { name: '수정 이력' }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        '프로젝트 역할 분담 내용 중 누락된 담당 업무를 회의 결과에 맞게 추가했습니다.',
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(
+        '발표 자료의 구성 순서가 회의에서 합의한 흐름과 달라 결정 사항에 맞게 수정했습니다.',
+      ),
+    ).not.toBeInTheDocument();
+  });
 });
 
 it('formats an ISO rollover in Seoul and saves a local read record', async () => {

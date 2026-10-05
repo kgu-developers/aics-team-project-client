@@ -140,6 +140,9 @@ describe('AdminMeetingsPage', () => {
       await screen.findByRole('option', { name: '3주차 · 제안서' }),
     );
     expect(
+      await screen.findByText(/마일스톤 필터는 회의록 목록에만 적용됩니다/),
+    ).toBeVisible();
+    expect(
       await screen.findByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
     ).toBeInTheDocument();
     await waitFor(() =>
@@ -157,6 +160,24 @@ describe('AdminMeetingsPage', () => {
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('선택한 분반과 팀 기준의 회의록 수정 이력을 목록 아래에 표시한다', async () => {
+    renderPage('/admin/meetings/?sectionId=1&teamId=1');
+
+    expect(
+      await screen.findByRole('heading', { name: '회의록 수정 이력' }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        '중간 점검 피드백 반영 담당자가 실제 논의 내용과 달라 역할 분담을 바로잡았습니다.',
+      ),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(
+        '발표 자료의 구성 순서가 회의에서 합의한 흐름과 달라 결정 사항에 맞게 수정했습니다.',
+      ),
     ).not.toBeInTheDocument();
   });
 

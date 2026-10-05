@@ -58,3 +58,38 @@ export const teamLink = style({
   color: tokens.color.text.primary,
   textDecoration: 'none',
 });
+
+export const actionsSection = style({
+  display: 'grid',
+  gap: tokens.spacing[3],
+});
+
+export const editLogsSection = style({
+  display: 'grid',
+  gap: tokens.spacing[3],
+});
+
+export const actionsTitleRow = style({
+  alignItems: 'end',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: tokens.spacing[3],
+  justifyContent: 'space-between',
+});
+
+export const actionsCard = style({
+  minWidth: 0,
+  padding: tokens.spacing[4],
+});
+
+export const actionsError = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: tokens.spacing[3],
+  justifyContent: 'space-between',
+});
+
+export const actionsPagination = style({
+  justifySelf: 'end',
+});

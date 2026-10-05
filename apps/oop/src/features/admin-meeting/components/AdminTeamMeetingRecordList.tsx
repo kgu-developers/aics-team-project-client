@@ -4,9 +4,9 @@ import { Link } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 
+import { formatAdminMeetingDateTime } from '~/features/admin-meeting/model';
 import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -79,7 +79,7 @@ export function AdminTeamMeetingRecordList({
                 <Text className={styles.title}>{record.title}</Text>
               </div>
               <Text className={styles.date}>
-                {formatSeoulDateTime(record.createdAt)}
+                {formatAdminMeetingDateTime(record.createdAt)}
               </Text>
             </Link>
           ))}

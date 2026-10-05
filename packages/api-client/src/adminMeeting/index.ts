@@ -18,3 +18,15 @@ export {
   fetchAdminMeetingRecordDetail,
   type AdminMeetingRecordDetailResponse,
 } from './fetchAdminMeetingRecordDetail';
+export {
+  fetchAdminSectionMeetingActions,
+  type AdminSectionMeetingAction,
+  type AdminSectionMeetingActionsFilter,
+  type AdminSectionMeetingActionsResponse,
+} from './fetchAdminSectionMeetingActions';
+export {
+  fetchAdminSectionMeetingRecordLogs,
+  type AdminSectionMeetingRecordEditLog,
+  type AdminSectionMeetingRecordEditLogsFilter,
+  type AdminSectionMeetingRecordEditLogsResponse,
+} from './fetchAdminSectionMeetingRecordLogs';
