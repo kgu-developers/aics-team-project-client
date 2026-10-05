@@ -12,6 +12,7 @@ import { ROUTES } from '~/app/constants/routes';
 import {
   formatAdminMilestoneDate,
   formatAdminPresentationEvaluationDate,
+  formatRequiredArtifactFileSize,
   getAdminMilestoneStatusLabel,
   getAdminMilestoneTypeLabel,
 } from '~/features/admin-milestone-review/model';
@@ -284,8 +285,8 @@ export default function AdminMilestoneDetailPage() {
                     <Text color='secondary' type='supporting'>
                       허용 확장자:{' '}
                       {artifact.allowedExtensions?.join(', ') || '제한 없음'}
-                      {' · '}최대 용량: {artifact.maxFileSizeMb ?? '제한 없음'}
-                      {artifact.maxFileSizeMb === undefined ? '' : 'MB'}
+                      {' · '}
+                      {formatRequiredArtifactFileSize(artifact.maxFileSizeMb)}
                     </Text>
                   ) : null}
                 </article>

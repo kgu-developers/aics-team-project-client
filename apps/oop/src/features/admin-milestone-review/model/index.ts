@@ -39,6 +39,11 @@ export {
   type AdminRequiredArtifactDraft,
 } from './adminRequiredArtifactDraft';
 export {
+  formatRequiredArtifactFileSize,
+  MAX_REQUIRED_ARTIFACT_FILE_SIZE_MB,
+  requiredArtifactUploadLimitDescription,
+} from './requiredArtifactFileSize';
+export {
   createAdminMilestoneSectionScheduleDraftFromDto,
   createAdminMilestoneUpdateInput,
 } from './adminMilestoneEdit';
