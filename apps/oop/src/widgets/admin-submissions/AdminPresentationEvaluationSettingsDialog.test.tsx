@@ -347,8 +347,8 @@ it('preserves unsaved orders through criterion creation and teams refetch, then 
   await user.type(first, '2');
   await user.clear(second);
   await user.type(second, '1');
-  expect(first).toHaveValue(2);
-  expect(second).toHaveValue(1);
+  expect(first).toHaveValue('2');
+  expect(second).toHaveValue('1');
   const beforeRefetch = client.getQueryData(
     adminPresentationEvaluationKeys.list('1'),
   );
@@ -371,8 +371,8 @@ it('preserves unsaved orders through criterion creation and teams refetch, then 
   expect(criterionBodies).toEqual([
     { title: '새 항목', maxScore: 5, displayOrder: 0 },
   ]);
-  expect(first).toHaveValue(2);
-  expect(second).toHaveValue(1);
+  expect(first).toHaveValue('2');
+  expect(second).toHaveValue('1');
   expect(orderBodies).toEqual([]);
   expect(close).not.toHaveBeenCalled();
   await user.click(screen.getByRole('button', { name: '발표 순서 저장' }));
@@ -408,17 +408,17 @@ it.each([
     });
     await user.clear(first);
     await user.type(first, '1');
-    expect(first).toHaveValue(1);
+    expect(first).toHaveValue('1');
     // Keep the same teams reference so the context change alone must reset drafts.
     rerender(context);
     await waitFor(() =>
       expect(
         screen.getByRole('spinbutton', { name: '7팀 발표 순서' }),
-      ).toHaveValue(2),
+      ).toHaveValue('2'),
     );
     expect(
       screen.getByRole('spinbutton', { name: '9팀 발표 순서' }),
-    ).toHaveValue(1);
+    ).toHaveValue('1');
   },
 );
 
@@ -447,7 +447,7 @@ it('discards unsaved orders on close and initializes from current teams on reope
   let reopenedSecond = screen.getByRole('spinbutton', {
     name: '9팀 발표 순서',
   });
-  expect(reopenedFirst).toHaveValue(2);
+  expect(reopenedFirst).toHaveValue('2');
   await user.click(screen.getByRole('button', { name: '닫기' }));
   rerender({ isOpen: false });
   const unassignedTeams = teams.map(team => ({
@@ -458,8 +458,8 @@ it('discards unsaved orders on close and initializes from current teams on reope
   rerender({ isOpen: true, teams: unassignedTeams });
   reopenedFirst = screen.getByRole('spinbutton', { name: '7팀 발표 순서' });
   reopenedSecond = screen.getByRole('spinbutton', { name: '9팀 발표 순서' });
-  expect(reopenedFirst).toHaveValue(null);
-  expect(reopenedSecond).toHaveValue(null);
+  expect(reopenedFirst).toHaveValue('');
+  expect(reopenedSecond).toHaveValue('');
 });
 
 it('shows immediate errors and disables saving for missing, duplicated, or out-of-range orders', async () => {
@@ -479,17 +479,23 @@ it('shows immediate errors and disables saving for missing, duplicated, or out-o
 
   await user.type(first, '1');
   await user.type(second, '1');
+  await user.tab();
 
-  expect(
-    screen.getAllByText('이미 사용 중인 발표 순서입니다.'),
-  ).not.toHaveLength(0);
+  await waitFor(() =>
+    expect(
+      screen.getAllByText('이미 사용 중인 발표 순서입니다.'),
+    ).not.toHaveLength(0),
+  );
   expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
 
   await user.clear(second);
   await user.type(second, '3');
+  await user.tab();
 
-  expect(
-    screen.getAllByText('1부터 2 사이의 번호를 입력해 주세요.'),
-  ).not.toHaveLength(0);
+  await waitFor(() =>
+    expect(
+      screen.getAllByText('1부터 2 사이의 번호를 입력해 주세요.'),
+    ).not.toHaveLength(0),
+  );
   expect(screen.getByRole('button', { name: '발표 순서 저장' })).toBeDisabled();
 });

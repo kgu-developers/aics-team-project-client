@@ -4,6 +4,7 @@ export {
   type AdminMidReportResponse,
   type AdminMidReportRevisionDto,
 } from './fetchAdminMidReport';
+export { completeAdminMidReportFeedback } from './completeAdminMidReportFeedback';
 export {
   fetchAdminMidReportFeedbacks,
   type AdminMidReportFeedbackDto,

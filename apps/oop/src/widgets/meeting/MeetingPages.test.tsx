@@ -1,4 +1,4 @@
-import type { MeetingRecord } from '@aics/core';
+import type { MeetingRecord, MeetingRecordChangeLogDto } from '@aics/core';
 import { AstryxThemeProvider, ToastViewport } from '@aics/design-system';
 import {
   fireEvent,
@@ -51,6 +51,7 @@ const mutations = vi.hoisted(() => ({
 const queries = vi.hoisted(() => ({
   meetingRecord: null as MeetingRecord | null,
   meetingRecords: [] as MeetingRecord[],
+  changeLogs: [] as MeetingRecordChangeLogDto[],
 }));
 const meetingRecord: MeetingRecord = {
   id: 'meeting-1',
@@ -152,6 +153,15 @@ vi.mock('~/features/meeting/queries', () => ({
     data: queries.meetingRecord,
     isError: false,
     isPending: false,
+  }),
+  useMeetingChangeLogsQuery: () => ({
+    data: {
+      pages: [{ contents: queries.changeLogs, pageable: { isEnd: true } }],
+    },
+    isError: false,
+    isPending: false,
+    isSuccess: true,
+    hasNextPage: false,
   }),
   useStudentMeetingListQuery: () => ({
     teamId: useAuthStore.getState().currentUser?.currentTeam?.id,
@@ -267,6 +277,18 @@ describe('MeetingNewPage', () => {
     useAuthStore.getState().clearSession();
   });
 
+  async function confirmEditSave() {
+    fireEvent.click(screen.getByRole('button', { name: '저장' }));
+    const reason = await screen.findByRole('textbox', { name: /수정 사유/ });
+    fireEvent.change(reason, {
+      target: {
+        value:
+          '회의록에 반영한 변경 사항을 팀원과 재확인하고 수정 이유를 상세히 기록합니다.',
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: '최종 저장' }));
+  }
+
   it('액션 플랜을 단일 반응형 테이블 행으로 추가하고 삭제한다', () => {
     renderWithRouter(<MeetingNewPage />);
 
@@ -351,6 +373,9 @@ describe('MeetingNewPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '삭제' }));
     fireEvent.click(screen.getByRole('button', { name: '저장' }));
+    expect(
+      screen.queryByRole('dialog', { name: '회의록 수정 확인' }),
+    ).not.toBeInTheDocument();
 
     await waitFor(() => {
       expect(mutations.updateRecord).toHaveBeenCalledWith(
@@ -405,7 +430,10 @@ describe('MeetingNewPage', () => {
       expect(screen.getByText('두 번째 회의 내용')).toBeInTheDocument();
       expect(screen.queryByText('첫 번째 회의 내용')).not.toBeInTheDocument();
     });
-    fireEvent.click(screen.getByRole('button', { name: '저장' }));
+    fireEvent.change(screen.getByRole('textbox', { name: /회의 제목/ }), {
+      target: { value: '두 번째 회의 수정' },
+    });
+    await confirmEditSave();
 
     await waitFor(() => {
       expect(mutations.updateRecord).toHaveBeenCalledWith(
@@ -442,6 +470,7 @@ function MeetingDeleteDialogHarness({ onConfirm }: { onConfirm: () => void }) {
 describe('MeetingDetailPage', () => {
   afterEach(() => {
     queries.meetingRecord = null;
+    queries.changeLogs = [];
     mutations.removeRecord.mockReset();
     mockNavigate.mockReset();
     useAuthStore.getState().clearSession();
@@ -523,6 +552,9 @@ describe('MeetingDetailPage', () => {
     const metadata = screen.getByText(/최초 작성/);
     const editButton = screen.getByRole('button', { name: '회의록 수정' });
     expect(metadata.closest('footer')).toContainElement(editButton);
+    expect(
+      within(metadata.closest('footer')!).getByText(/최종 수정/),
+    ).toBeInTheDocument();
     expect(screen.getByText('작성된 회의 내용이 없어요.')).toBeInTheDocument();
     expect(screen.getAllByRole('table')).toHaveLength(1);
     expect(
@@ -530,6 +562,53 @@ describe('MeetingDetailPage', () => {
         name: /도메인 모델 초안 작성/,
       }),
     ).toBeInTheDocument();
+  });
+
+  it('이전 수정 로그의 수정자·시각·사유를 보여준다', async () => {
+    queries.meetingRecord = meetingRecord;
+    queries.changeLogs = [
+      {
+        id: 2,
+        meetingRecordId: 1,
+        editorId: 'student-a',
+        editorName: 'OOP 데모 학생 A',
+        createdAt: '2026-10-02 10:00',
+        reason: '제목을 회의 주제에 맞춰 수정했습니다.',
+      },
+      {
+        id: 1,
+        meetingRecordId: 1,
+        editorId: 'student-a',
+        editorName: 'OOP 데모 학생 A',
+        createdAt: '2026-10-01 20:00',
+        reason: '회의 내용에 확정된 역할을 기록했습니다.',
+      },
+    ];
+    useAuthStore.getState().setCurrentUser(demoStudent);
+
+    renderWithRouter(<MeetingDetailPage meetingId={meetingRecord.id} />);
+    expect(
+      screen.getByRole('button', {
+        name: /최종 수정 2026-10-02\/10:00/,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/최초 작성.*최종 수정 2026-10-02\/10:00/),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /최종 수정/ }));
+
+    const dialog = screen.getByRole('dialog', { name: '회의록 수정 로그' });
+    expect(
+      within(dialog).getByRole('list', { name: '수정 로그 목록' }),
+    ).toHaveProperty('childElementCount', 2);
+    expect(
+      within(dialog).getByText('제목을 회의 주제에 맞춰 수정했습니다.'),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText('회의 내용에 확정된 역할을 기록했습니다.'),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText(/2026-10-02\/10:00/)).toBeInTheDocument();
+    expect(within(dialog).queryByText('확정된 역할')).not.toBeInTheDocument();
   });
 
   it('회의록 삭제 성공을 toast로 알리고 목록으로 이동한다', async () => {

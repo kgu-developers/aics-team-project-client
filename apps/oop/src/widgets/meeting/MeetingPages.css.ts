@@ -342,6 +342,34 @@ export const meetingContent = style({
   gap: 'var(--spacing-4)',
   paddingTop: 'var(--spacing-4)',
 });
+export const changeLogLink = style({
+  alignSelf: 'start',
+  justifySelf: 'start',
+  background: 'none',
+  border: 0,
+  color: 'var(--color-text-accent)',
+  cursor: 'pointer',
+  padding: 0,
+  textDecoration: 'underline',
+  textUnderlineOffset: '3px',
+  ':focus-visible': { outline: '2px solid var(--color-accent)' },
+});
+export const changeLogEntry = style({
+  borderTop: '1px solid var(--color-border)',
+  display: 'grid',
+  gap: 'var(--spacing-3)',
+  paddingTop: 'var(--spacing-4)',
+});
+export const changeLogList = style({
+  display: 'grid',
+  gap: 'var(--spacing-3)',
+  flexShrink: 1,
+  maxHeight: 'min(58vh, 520px)',
+  minHeight: 0,
+  overflowY: 'auto',
+  overscrollBehavior: 'contain',
+  paddingRight: 'var(--spacing-2)',
+});
 export const error = style({ color: 'var(--color-text-error)', margin: 0 });
 export const editNotice = style([
   error,
@@ -351,6 +379,15 @@ export const dialogContent = style({
   display: 'grid',
   gap: 'var(--spacing-4)',
 });
+export const boundedDialogContent = style([
+  dialogContent,
+  {
+    display: 'flex',
+    flexDirection: 'column',
+    maxHeight: 'calc(75vh - 32px)',
+    minHeight: 0,
+  },
+]);
 export const deletePreview = style({
   display: 'grid',
   gap: 'var(--spacing-2)',

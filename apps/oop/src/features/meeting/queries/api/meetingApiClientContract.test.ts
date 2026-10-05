@@ -159,6 +159,8 @@ describe('meeting API client contract', () => {
     const updated = await updateMeetingRecordApi('7', {
       content: '수정된 진행 상황',
       phase: 'FINAL',
+      reason:
+        '회의에서 최종 단계와 진행 상황을 다시 확인해 변경 내용을 반영했습니다.',
     });
     await removeMeetingRecordApi('7');
 
@@ -170,7 +172,12 @@ describe('meeting API client contract', () => {
         content: '진행 상황 공유',
         participantIds: ['202600001', '202600002'],
       },
-      { content: '수정된 진행 상황', phase: 'FINAL' },
+      {
+        content: '수정된 진행 상황',
+        phase: 'FINAL',
+        reason:
+          '회의에서 최종 단계와 진행 상황을 다시 확인해 변경 내용을 반영했습니다.',
+      },
     ]);
     expect(created).toEqual({
       ...meetingRecordPersistDto,
@@ -268,7 +275,12 @@ describe('meeting API contract boundaries', () => {
   });
 
   it('PATCH의 빈 참석자 목록과 명시적인 해제 플래그를 생략하지 않는다', async () => {
-    await updateMeetingRecordApi('7', { participantIds: [], location: '' });
+    await updateMeetingRecordApi('7', {
+      participantIds: [],
+      location: '',
+      reason:
+        '참석자와 장소가 변경되어 실제 회의 진행 내역에 맞게 수정했습니다.',
+    });
     await updateMeetingActionApi('11', {
       clearAssignee: true,
       clearDueAt: false,
@@ -276,7 +288,12 @@ describe('meeting API contract boundaries', () => {
     });
 
     expect(requestBodies).toEqual([
-      { participantIds: [], location: '' },
+      {
+        participantIds: [],
+        location: '',
+        reason:
+          '참석자와 장소가 변경되어 실제 회의 진행 내역에 맞게 수정했습니다.',
+      },
       { clearAssignee: true, clearDueAt: false, dueAt: '2026-08-29T12:00:00' },
     ]);
   });
@@ -296,7 +313,14 @@ describe('meeting API contract boundaries', () => {
           content: '회의 내용',
         }),
     ],
-    ['회의록 수정', () => updateMeetingRecordApi('7', { content: '수정' })],
+    [
+      '회의록 수정',
+      () =>
+        updateMeetingRecordApi('7', {
+          content: '수정',
+          reason: '회의에서 다시 확인한 내용을 회의록에 정확하게 반영했습니다.',
+        }),
+    ],
     ['회의록 삭제', () => removeMeetingRecordApi('7')],
     ['액션 생성', () => submitMeetingActionApi('7', { content: '작업' })],
     ['액션 수정', () => updateMeetingActionApi('11', { status: 'TODO' })],

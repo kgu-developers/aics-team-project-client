@@ -16,6 +16,8 @@ export type AdminMidReportRevisionDto = {
   changedBlockKeys: string[];
   requestedAt: string | null;
   resubmittedAt: string | null;
+  completedAt: string | null;
+  completedBy: string | null;
 } | null;
 
 export type AdminMidReportResponse = {

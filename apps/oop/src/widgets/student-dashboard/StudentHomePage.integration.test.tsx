@@ -887,7 +887,15 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
       configuredEvaluationWindow: true,
       milestoneStatus: 'PUBLISHED',
       presentationStatus: '진행 중',
-      finalReportLocked: true,
+      presentationCanSubmit: false,
+    },
+    {
+      name: '평가 기간 중 제출 재개방',
+      now: '2026-09-17T12:00:00+09:00',
+      configuredEvaluationWindow: true,
+      milestoneStatus: 'PUBLISHED',
+      presentationStatus: '진행 중',
+      presentationCanSubmit: true,
     },
     {
       name: '평가 마감 시각',
@@ -895,7 +903,15 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
       configuredEvaluationWindow: true,
       milestoneStatus: 'PUBLISHED',
       presentationStatus: '완료',
-      finalReportLocked: false,
+      presentationCanSubmit: false,
+    },
+    {
+      name: '평가 마감 후 제출 재개방',
+      now: '2026-09-18T00:00:00+09:00',
+      configuredEvaluationWindow: true,
+      milestoneStatus: 'PUBLISHED',
+      presentationStatus: '완료',
+      presentationCanSubmit: true,
     },
     {
       name: '평가 시작 전 서버 마감',
@@ -903,7 +919,7 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
       configuredEvaluationWindow: true,
       milestoneStatus: 'CLOSED',
       presentationStatus: '완료',
-      finalReportLocked: false,
+      presentationCanSubmit: false,
     },
     {
       name: '평가 일정 없이 서버 마감',
@@ -911,16 +927,16 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
       configuredEvaluationWindow: false,
       milestoneStatus: 'CLOSED',
       presentationStatus: '완료',
-      finalReportLocked: false,
+      presentationCanSubmit: false,
     },
   ])(
-    '발표 $name에는 제출 완료 처리 없이 최종보고서 잠금을 결정한다',
+    '발표 $name에는 제출 완료 처리 없이 최종보고서를 독립적으로 연다',
     async ({
       now,
       configuredEvaluationWindow,
       milestoneStatus,
       presentationStatus,
-      finalReportLocked,
+      presentationCanSubmit,
     }) => {
       vi.spyOn(Date, 'now').mockReturnValue(Date.parse(now));
       const presentation = {
@@ -961,7 +977,10 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
                   ? 'SUBMITTED'
                   : 'NOT_SUBMITTED',
               currentVersion: Number(params.id) === presentation.id ? 1 : 0,
-              canSubmitNow: Number(params.id) === finalReport.id,
+              canSubmitNow:
+                Number(params.id) === presentation.id
+                  ? presentationCanSubmit
+                  : true,
               hasPendingReview: false,
             }),
         ),
@@ -978,13 +997,29 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
               teamId: 7,
               status: 'SUBMITTED',
               currentVersion: 1,
-              canSubmitNow: false,
+              canSubmitNow: presentationCanSubmit,
               hasPendingReview: false,
             }),
         ),
         http.get(
           `${API_BASE_URL}${ENDPOINTS.SUBMISSION.VERSIONS(String(9000 + presentation.id))}`,
           () => HttpResponse.json({ contents: [] }),
+        ),
+        http.get(
+          `${API_BASE_URL}/api/v1/sections/2/milestones/${presentation.id}/required-artifacts`,
+          () =>
+            HttpResponse.json({
+              contents: [
+                {
+                  id: 101,
+                  type: 'FILE',
+                  label: '발표 자료 PDF',
+                  required: true,
+                  allowedExtensions: ['pdf'],
+                  maxFileSizeMb: 20,
+                },
+              ],
+            }),
         ),
         http.get(
           `${API_BASE_URL}${ENDPOINTS.SUBMISSION.DETAIL(String(9000 + finalReport.id))}`,
@@ -1015,20 +1050,76 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
         ),
       );
       const presentationCard = document.getElementById(presentationCardId)!;
+      const finalReportCard = document.getElementById(finalReportCardId)!;
+      if (configuredEvaluationWindow) {
+        expect(presentationCard).toHaveTextContent('평가 기간 :');
+      }
+      const presentationTrigger = presentationCard.querySelector(
+        'button[aria-expanded]',
+      );
+      const finalReportTrigger = finalReportCard.querySelector(
+        'button[aria-expanded]',
+      );
+      if (presentationStatus === '진행 중') {
+        await waitFor(() =>
+          expect(presentationTrigger).toHaveAttribute('aria-expanded', 'true'),
+        );
+        expect(finalReportTrigger).toHaveAttribute('aria-expanded', 'false');
+        expect(
+          screen.getByRole('heading', {
+            name: '발표 진행 상태를 확인해 주세요.',
+          }),
+        ).toBeVisible();
+      } else {
+        await waitFor(() =>
+          expect(finalReportTrigger).toHaveAttribute('aria-expanded', 'true'),
+        );
+        expect(presentationTrigger).toHaveAttribute('aria-expanded', 'false');
+        expect(
+          screen.getByRole('heading', {
+            name: '최종보고서 진행 상태를 확인해 주세요.',
+          }),
+        ).toBeVisible();
+        if (presentationCanSubmit) {
+          expect(presentationCard).toHaveTextContent('발표 자료 재제출 가능');
+        }
+      }
       if (configuredEvaluationWindow) {
         expect(presentationCard).toHaveTextContent('발표 평가');
+        expect(presentationCard).toHaveTextContent('내 발표 자료');
+        expect(presentationCard).toHaveTextContent('v1 제출됨');
+        expect(
+          within(presentationCard).getByRole('button', {
+            name: presentationCanSubmit ? '파일 재제출' : '제출 내역',
+          }),
+        ).toBeEnabled();
+        expect(presentationCard).not.toHaveTextContent('발표 순서');
+        await userEvent.click(
+          within(presentationCard).getByRole('button', {
+            name: presentationCanSubmit ? '파일 재제출' : '제출 내역',
+          }),
+        );
+        const dialog = await screen.findByRole('dialog', {
+          name: '발표 자료 제출',
+        });
+        expect(dialog).toBeVisible();
+        const uploadAction = await within(dialog).findByRole('button', {
+          name: '파일 재제출',
+        });
+        if (presentationCanSubmit) {
+          expect(uploadAction).toBeEnabled();
+        } else {
+          expect(screen.getByText('지금은 제출할 수 없어요.')).toBeVisible();
+          expect(uploadAction).toBeDisabled();
+        }
       } else {
         expect(presentationCard).toHaveTextContent('발표 자료 제출');
         expect(presentationCard).not.toHaveTextContent('평가 기간');
       }
       await waitFor(() => {
         const finalReportCard = document.getElementById(finalReportCardId);
-        if (finalReportLocked) {
-          expect(finalReportCard).toHaveTextContent('이전 단계 완료 필요');
-        } else {
-          expect(finalReportCard).toHaveTextContent('진행 중');
-          expect(finalReportCard).not.toHaveTextContent('이전 단계 완료 필요');
-        }
+        expect(finalReportCard).toHaveTextContent('진행 중');
+        expect(finalReportCard).not.toHaveTextContent('이전 단계 완료 필요');
       });
       expect(
         within(document.getElementById(presentationCardId)!).queryByRole(
@@ -1045,6 +1136,105 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
       ).toBe(false);
     },
   );
+
+  it('제출 응답의 팀이 맞지 않으면 발표 재제출 동작을 노출하지 않는다', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(
+      Date.parse('2026-09-17T12:00:00+09:00'),
+    );
+    const presentation = {
+      ...studentMilestoneFixtures(2)[2]!,
+      schedule: {
+        dueAt: '2026-09-10T23:59:00+09:00',
+        evaluationOpensAt: '2026-09-15T00:00:00+09:00',
+        evaluationClosesAt: '2026-09-18T00:00:00+09:00',
+      },
+    };
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`, () =>
+        HttpResponse.json({ contents: [presentation] }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION(':id')}`,
+        () =>
+          HttpResponse.json({
+            id: 9000 + presentation.id,
+            milestoneId: presentation.id,
+            teamId: 999,
+            status: 'SUBMITTED',
+            currentVersion: 1,
+            canSubmitNow: true,
+            hasPendingReview: false,
+          }),
+      ),
+    );
+
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    const card = await waitFor(() => {
+      const current = document.getElementById(
+        `student-milestone-${presentation.id}`,
+      );
+      expect(current).toHaveTextContent('제출 상태 조회 실패');
+      return current!;
+    });
+    expect(
+      within(card).queryByRole('button', { name: /파일 (재)?제출/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('발표 자료가 미제출이고 제출 권한이 닫혀 있으면 빈 제출 내역 버튼을 숨긴다', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(
+      Date.parse('2026-09-17T12:00:00+09:00'),
+    );
+    const presentation = {
+      ...studentMilestoneFixtures(2)[2]!,
+      schedule: {
+        dueAt: '2026-09-10T23:59:00+09:00',
+        evaluationOpensAt: '2026-09-15T00:00:00+09:00',
+        evaluationClosesAt: '2026-09-18T00:00:00+09:00',
+      },
+    };
+    const submissionId = 9000 + presentation.id;
+    const submission = {
+      id: submissionId,
+      milestoneId: presentation.id,
+      teamId: 7,
+      status: 'NOT_SUBMITTED',
+      currentVersion: 0,
+      canSubmitNow: false,
+      hasPendingReview: false,
+    };
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.LIST('2')}`, () =>
+        HttpResponse.json({ contents: [presentation] }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION(':id')}`,
+        () => HttpResponse.json(submission),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.SUBMISSION.DETAIL(String(submissionId))}`,
+        () => HttpResponse.json(submission),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.SUBMISSION.VERSIONS(String(submissionId))}`,
+        () => HttpResponse.json({ contents: [] }),
+      ),
+    );
+
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    const card = await waitFor(() => {
+      const current = document.getElementById(
+        `student-milestone-${presentation.id}`,
+      );
+      expect(current).toHaveTextContent('미제출 · 현재 제출 불가');
+      return current!;
+    });
+    expect(
+      within(card).queryByRole('button', { name: '제출 내역' }),
+    ).not.toBeInTheDocument();
+  });
 
   it('빈 목록은 조회 실패와 구분한다', async () => {
     server.use(
@@ -1199,9 +1389,9 @@ describe('학생 홈의 개인 상호평가 연결', () => {
     );
     render(<StudentHomePage />, { wrapper: Wrapper });
     await waitFor(() =>
-      expect(screen.getAllByText('상태 확인 필요')).toHaveLength(1),
+      expect(screen.getAllByText('상태 확인 필요')).toHaveLength(2),
     );
-    expect(screen.getByText('이전 단계 완료 필요')).toBeInTheDocument();
+    expect(screen.queryByText('이전 단계 완료 필요')).not.toBeInTheDocument();
     expect(screen.queryByText('제출 완료')).not.toBeInTheDocument();
     expect(
       screen.getAllByRole('button', { name: '상호평가 확인' }),
@@ -1404,7 +1594,7 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
     expect(
       screen.queryByRole('textbox', { name: /피드백 반영 답변/ }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText('이전 단계 완료 필요')).toBeInTheDocument();
+    expect(screen.queryByText('이전 단계 완료 필요')).not.toBeInTheDocument();
   });
 
   it('피드백 반영 재제출이 완료된 제안서는 대기 상태로 돌아가지 않는다', async () => {
@@ -1608,13 +1798,62 @@ describe('제안서 작성 영역 상태와 팀장 제출', () => {
 });
 
 describe('중간보고서 작성 영역 상태와 팀장 제출', () => {
-  it('반영 방향 뒤 재제출이 완료되면 다시 반영 방향을 요구하지 않는다', async () => {
+  it('피드백 요청 없이 제출 완료된 보고서는 교수자 확인 완료로 오인하지 않는다', async () => {
     server.use(
       http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
         HttpResponse.json({
           ...midReportFixture(undefined, 'SUBMITTED'),
           submittedAt: '2026-09-12T10:00:00',
           submittedBy: liveHomeUser.studentNumber,
+          revision: null,
+        }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION(String(list[1]!.id))}`,
+        () =>
+          HttpResponse.json({
+            id: 9000 + list[1]!.id,
+            milestoneId: list[1]!.id,
+            teamId: 7,
+            status: 'COMPLETED',
+            currentVersion: 1,
+            canSubmitNow: false,
+            hasPendingReview: false,
+            completedAt: '2026-09-12T10:00:00',
+          }),
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    const midReportCard = (
+      await screen.findAllByText('중간보고서')
+    )[0]!.closest('article');
+    if (!midReportCard) throw new Error('중간 점검 카드를 찾을 수 없습니다.');
+    await waitFor(() =>
+      expect(
+        within(midReportCard).getByRole('img', { name: '완료' }),
+      ).toBeInTheDocument(),
+    );
+    expect(
+      within(midReportCard).queryByText('교수자 최종 확인 완료'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('중간보고서를 재제출해도 교수자 확인 전에는 완료로 표시하지 않는다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+        HttpResponse.json({
+          ...midReportFixture(undefined, 'SUBMITTED'),
+          submittedAt: '2026-09-12T10:00:00',
+          submittedBy: liveHomeUser.studentNumber,
+          revision: {
+            affectedBlockKeys: [],
+            changedBlockKeys: [],
+            requestedAt: '2026-09-11T10:00:00',
+            resubmittedAt: '2026-09-12T10:00:00',
+            completedAt: null,
+            completedBy: null,
+          },
         }),
       ),
       http.get(
@@ -1635,10 +1874,52 @@ describe('중간보고서 작성 영역 상태와 팀장 제출', () => {
     render(<StudentHomePage />, { wrapper: Wrapper });
 
     expect(
-      await screen.findByText('피드백 반영 및 재제출 완료'),
+      await screen.findByText('피드백 반영 제출 완료 · 교수자 최종 확인 대기'),
     ).toBeInTheDocument();
+    expect(screen.queryByText('교수자 최종 확인 완료')).not.toBeInTheDocument();
     expect(
       screen.queryByText(/반영 방향을 보내 주세요/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('교수자 최종 확인 시각이 오면 학생에게 확인 완료를 표시한다', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+        HttpResponse.json({
+          ...midReportFixture(undefined, 'SUBMITTED'),
+          submittedAt: '2026-09-12T10:00:00',
+          submittedBy: liveHomeUser.studentNumber,
+          revision: {
+            affectedBlockKeys: [],
+            changedBlockKeys: [],
+            requestedAt: '2026-09-11T10:00:00',
+            resubmittedAt: '2026-09-12T10:00:00',
+            completedAt: '2026-09-13T10:00:00',
+            completedBy: 'test-professor',
+          },
+        }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION(String(list[1]!.id))}`,
+        () =>
+          HttpResponse.json({
+            id: 9000 + list[1]!.id,
+            milestoneId: list[1]!.id,
+            teamId: 7,
+            status: 'NOT_SUBMITTED',
+            currentVersion: 0,
+            canSubmitNow: false,
+            hasPendingReview: false,
+          }),
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    expect(
+      await screen.findByText('교수자 최종 확인 완료'),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText('피드백 반영 제출 완료 · 교수자 최종 확인 대기'),
     ).not.toBeInTheDocument();
   });
 

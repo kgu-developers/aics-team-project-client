@@ -39,6 +39,26 @@ export type MeetingRecordDetailResponseDto = {
   updatedAt: string;
 };
 
+export type MeetingRecordChangeLogDto = {
+  id: number;
+  meetingRecordId: number;
+  editorId: string;
+  editorName: string | null;
+  reason: string;
+  createdAt: string;
+};
+
+export type MeetingRecordChangeLogListResponseDto = {
+  contents: MeetingRecordChangeLogDto[];
+  pageable: {
+    page: number;
+    size: number;
+    totalPages: number;
+    totalElements: number;
+    isEnd: boolean;
+  };
+};
+
 export type MeetingRecordPersistResponseDto = {
   title: string | null;
   id: number;
@@ -124,6 +144,7 @@ export type MeetingRecordUpdateRequest = {
   phase?: MeetingPhase;
   content?: string;
   participantIds?: string[];
+  reason: string;
 };
 
 export type MeetingActionEntry = {

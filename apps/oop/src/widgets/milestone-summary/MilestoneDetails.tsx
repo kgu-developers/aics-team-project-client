@@ -1,5 +1,4 @@
 import type {
-  MilestonePresentation,
   ProposalFeedbackResponse,
   StudentHomeFeedbackMessage,
   StudentHomeFile,
@@ -20,13 +19,9 @@ import { Link } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
 import { type FormEvent, type ReactNode, useState } from 'react';
 
-import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
-import { useAuthStore } from '~/features/auth/authStore';
-import { useMilestonePresentationsQuery } from '~/features/evaluation/queries';
 import ProjectTopicBoard from '~/features/project-topic/ProjectTopicBoard';
-import { useStudentContext } from '~/features/section/useStudentContext';
 import {
   useProposalFeedbackQuery,
   useMidReportFeedbackQuery,
@@ -34,7 +29,6 @@ import {
   useSubmitProposalFeedbackResponseMutation,
 } from '~/features/student-feedback/queries';
 import { documentFeedbackStageCopy } from '~/features/student-home/model/documentFeedbackStage';
-import { safeSubmissionUrl } from '~/features/submission/submissionUploadInput';
 
 import * as styles from './MilestoneDetails.css';
 import StudentSubmissionMaterials from './StudentSubmissionMaterials';
@@ -351,92 +345,6 @@ function SectionStatusList({
   );
 }
 
-export function PresentationTeamDetails({
-  myTeamId,
-  presentations,
-}: {
-  myTeamId: string | null;
-  presentations: MilestonePresentation[];
-}) {
-  const teams = [...presentations].sort(
-    (left, right) =>
-      (left.presentationOrder ?? Number.MAX_SAFE_INTEGER) -
-        (right.presentationOrder ?? Number.MAX_SAFE_INTEGER) ||
-      left.teamId - right.teamId,
-  );
-
-  return (
-    <>
-      {teams.map(team => {
-        const project = team.project;
-        const isMyTeam = String(team.teamId) === myTeamId;
-        const materials = (isMyTeam ? team.artifacts : []).flatMap(
-          (artifact, index) => {
-            if (artifact.type !== 'FILE' && artifact.type !== 'LINK') return [];
-            const value = artifact.fileName ?? artifact.url ?? undefined;
-            return [
-              {
-                extension:
-                  artifact.type === 'FILE'
-                    ? (artifact.fileName?.split('.').pop()?.toUpperCase() ??
-                      'FILE')
-                    : 'LINK',
-                href: safeSubmissionUrl(
-                  artifact.type === 'FILE'
-                    ? artifact.downloadUrl
-                    : artifact.url,
-                ),
-                id: `${team.submissionId}:${index}`,
-                kind: artifact.type,
-                label: artifact.type === 'FILE' ? '제출 파일' : '제출 링크',
-                value,
-              },
-            ];
-          },
-        );
-        return (
-          <section className={styles.feedbackList} key={team.teamId}>
-            <SectionBanner
-              title={
-                team.presentationOrder == null
-                  ? `${team.teamName ?? `${team.teamId}팀`} · 발표 순서 미정`
-                  : `${team.presentationOrder}번 발표 · ${team.teamName ?? `${team.teamId}팀`}`
-              }
-            />
-            <ProjectSummary
-              description={
-                project?.description ??
-                project?.goal ??
-                '프로젝트 설명이 등록되지 않았어요.'
-              }
-              title={project?.title ?? '프로젝트 제목이 등록되지 않았어요.'}
-            />
-            {project?.goal && project.goal !== project.description ? (
-              <p className={styles.guide}>목표: {project.goal}</p>
-            ) : null}
-            {safeSubmissionUrl(project?.repositoryUrl) ? (
-              <a
-                className={styles.sectionLink}
-                href={safeSubmissionUrl(project?.repositoryUrl)}
-                rel='noreferrer'
-                target='_blank'
-              >
-                프로젝트 저장소 열기
-              </a>
-            ) : null}
-            {isMyTeam ? (
-              <SubmissionMaterials
-                materials={materials}
-                showMetadataTitle={false}
-              />
-            ) : null}
-          </section>
-        );
-      })}
-    </>
-  );
-}
-
 function FileRow({ file }: { file: StudentHomeFile }) {
   return (
     <div className={styles.fileRow}>
@@ -638,40 +546,15 @@ function PresentationMaterialBody({
   );
 }
 
-function PresentationEvaluationBody({
-  body,
-  milestoneId,
-}: {
-  body: Extract<StudentHomeMilestoneBody, { kind: 'presentation-evaluation' }>;
-  milestoneId?: string;
-}) {
-  const isDemo = isMockDevelopmentMode(
-    import.meta.env.DEV,
-    import.meta.env.VITE_ENABLE_MSW,
-  );
-  const currentUser = useAuthStore(state => state.currentUser);
-  const context = useStudentContext(!isDemo);
-  const myTeamId = (isDemo ? currentUser?.teamId : context.teamId) ?? null;
-  const presentationsQuery = useMilestonePresentationsQuery(milestoneId ?? '');
+function PresentationEvaluationBody({ milestoneId }: { milestoneId?: string }) {
   return (
     <div className={styles.root}>
-      {presentationsQuery.isPending ? (
-        <p className={styles.guide}>발표 팀 정보를 불러오는 중이에요.</p>
-      ) : null}
-      {presentationsQuery.isSuccess ? (
-        presentationsQuery.data.length ? (
-          <PresentationTeamDetails
-            myTeamId={myTeamId}
-            presentations={presentationsQuery.data}
-          />
-        ) : (
-          <p className={styles.guide}>제출된 발표 자료가 아직 없어요.</p>
-        )
-      ) : null}
-      {presentationsQuery.isError ? (
-        <p className={styles.guide}>발표 팀 정보를 불러오지 못했어요.</p>
-      ) : null}
-      <p className={styles.guide}>{body.timeGuide}</p>
+      <SectionBanner title='내 발표 제출 내역' />
+      {milestoneId && /^\d+$/.test(milestoneId) ? (
+        <StudentSubmissionMaterials milestoneId={milestoneId} />
+      ) : (
+        <p className={styles.guide}>제출 내역을 불러올 수 없어요.</p>
+      )}
     </div>
   );
 }
@@ -733,9 +616,7 @@ export default function MilestoneDetails({
     case 'presentation-material':
       return <PresentationMaterialBody body={body} milestoneId={milestoneId} />;
     case 'presentation-evaluation':
-      return (
-        <PresentationEvaluationBody body={body} milestoneId={milestoneId} />
-      );
+      return <PresentationEvaluationBody milestoneId={milestoneId} />;
     case 'final-report':
       return <FinalReportBody body={body} milestoneId={milestoneId} />;
     case 'peer-evaluation':

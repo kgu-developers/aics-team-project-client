@@ -27,6 +27,7 @@ export { adminMidReportKeys } from './adminMidReportKeys';
 export { useAdminMidReportQuery } from './useAdminMidReportQuery';
 export { useAdminMidReportFeedbacksQuery } from './useAdminMidReportFeedbacksQuery';
 export { useSubmitAdminMidReportFeedbackMutation } from './useSubmitAdminMidReportFeedbackMutation';
+export { useCompleteAdminMidReportFeedbackMutation } from './useCompleteAdminMidReportFeedbackMutation';
 export { adminProposalFeedbackKeys } from './adminProposalFeedbackKeys';
 export { useAdminProposalFeedbacksQuery } from './useAdminProposalFeedbacksQuery';
 export { useSubmitAdminProposalFeedbackMutation } from './useSubmitAdminProposalFeedbackMutation';

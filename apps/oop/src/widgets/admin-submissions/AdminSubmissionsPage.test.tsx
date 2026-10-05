@@ -264,8 +264,8 @@ describe('AdminSubmissionsPage', () => {
     const reopenedSecond = screen.getByRole('spinbutton', {
       name: '2팀 발표 순서',
     });
-    expect(reopenedFirst).toHaveValue(2);
-    expect(reopenedSecond).toHaveValue(1);
+    expect(reopenedFirst).toHaveValue('2');
+    expect(reopenedSecond).toHaveValue('1');
   });
 
   it('발표 평가 결과 Excel 다운로드 버튼을 표시하지 않는다', async () => {
@@ -468,6 +468,60 @@ describe('AdminSubmissionsPage', () => {
         message: '중간보고서 수정 요청을 전송합니다.',
       }),
     );
+  });
+
+  it('중간보고서 피드백 최종 확인 후 확인 시각을 보여준다', async () => {
+    const user = userEvent.setup();
+    const base = `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT('1', '1')}`;
+    const feedback = await fetch(`${base}/feedback`, {
+      body: JSON.stringify({ message: '학생 반영 내용을 확인해 주세요.' }),
+      headers: {
+        Authorization: `Bearer ${demoAdminAccessToken}`,
+        'Content-Type': 'application/json',
+      },
+      method: 'POST',
+    });
+    expect(feedback.status).toBe(200);
+
+    renderPage('/admin/submissions?sectionId=1');
+    await user.click(await screen.findByRole('tab', { name: '중간 점검' }));
+    const detailLinks = await screen.findAllByRole('link', {
+      name: '상세보기',
+    });
+    await user.click(detailLinks[0]!);
+
+    const complete = await screen.findByRole('button', {
+      name: '피드백 반영 최종 확인',
+    });
+    await user.click(complete);
+
+    const confirmation = await screen.findByRole('alertdialog', {
+      name: '중간보고서 피드백 최종 확인',
+    });
+    expect(screen.queryByText(/교수자 최종 확인:/)).not.toBeInTheDocument();
+    await user.click(
+      within(confirmation).getByRole('button', { name: '취소' }),
+    );
+    expect(
+      screen.queryByRole('alertdialog', {
+        name: '중간보고서 피드백 최종 확인',
+      }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/교수자 최종 확인:/)).not.toBeInTheDocument();
+
+    await user.click(complete);
+    await user.click(
+      within(
+        await screen.findByRole('alertdialog', {
+          name: '중간보고서 피드백 최종 확인',
+        }),
+      ).getByRole('button', { name: '최종 확인' }),
+    );
+
+    expect(await screen.findByText(/교수자 최종 확인:/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '피드백 반영 최종 확인' }),
+    ).not.toBeInTheDocument();
   });
 
   it('연결된 회의록이 여러 페이지면 다음 페이지를 조회한다', async () => {
@@ -923,7 +977,7 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('heading', { name: '발표 평가 시작' }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText('평가 진행 시간(분)')).toHaveValue(60);
+    expect(screen.getByLabelText('평가 진행 시간(분)')).toHaveValue('60');
   });
 
   it('평가가 종료된 뒤에도 순서는 변경하고 평가 항목은 읽기 전용으로 확인할 수 있다', async () => {

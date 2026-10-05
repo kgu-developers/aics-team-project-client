@@ -19,6 +19,7 @@ import {
   Selector,
   Table,
   Text,
+  TextArea,
   TextInput,
   TimeInput,
   type TimeInputProps,
@@ -32,6 +33,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
+import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import RichTextEditor from '~/shared/ui/RichTextEditor';
 import RichTextViewer from '~/shared/ui/RichTextViewer';
@@ -59,6 +61,7 @@ import {
   useUpdateMeetingRecordMutation,
   useMeetingTeamQuery,
   useMeetingEditLock,
+  useMeetingChangeLogsQuery,
   type MeetingEditLock,
 } from '~/features/meeting/queries';
 import StudentContextState from '~/features/section/StudentContextState';
@@ -367,7 +370,6 @@ export function MeetingForm({
   editLock?: MeetingEditLock;
   recordError?: boolean;
 }) {
-  // Keep the opened version as the PATCH baseline while queries refetch.
   const [record] = useState(loadedRecord);
   const navigate = useNavigate();
   const toast = useToast();
@@ -407,6 +409,12 @@ export function MeetingForm({
   const [actions, setActions] = useState<DraftAction[]>(
     record?.actions.map(toDraftAction) ?? [],
   );
+  const actionsDirty = Boolean(
+    record &&
+    canEditActions &&
+    JSON.stringify(record.actions.map(toDraftAction)) !==
+      JSON.stringify(actions),
+  );
   const creation = useCreateMeetingWithActions();
   const updateMutation = useUpdateMeetingRecordMutation();
   const pending = record ? updateMutation.isPending : creation.isPending;
@@ -417,6 +425,8 @@ export function MeetingForm({
     JSON.stringify(record?.content ?? emptyDoc),
   );
   const [contentDirty, setContentDirty] = useState(false);
+  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [changeReason, setChangeReason] = useState('');
   const changeContent = (next: RichTextJson) => {
     setContent(next);
     setContentDirty(JSON.stringify(next) !== originalContentJson);
@@ -440,7 +450,9 @@ export function MeetingForm({
       ).length > 0
     );
   }, [record, title, heldAt, meetingTime, location, participants, phase]);
-  const dirty = Boolean(record && (metadataDirty || contentDirty));
+  const dirty = Boolean(
+    record && (metadataDirty || contentDirty || actionsDirty),
+  );
   const blocker = useBlocker({
     disabled: !liveEdit,
     withResolver: true,
@@ -475,7 +487,36 @@ export function MeetingForm({
         />
       </div>
     );
-  const submit = async () => {
+  const currentInput = (): CreateMeetingRecordInput => ({
+    title,
+    heldAt: `${heldAt}T${meetingTime || '00:00'}:00`,
+    location: location || null,
+    content,
+    participantUserIds: participants,
+    actions: (canEditActions ? actions : []).map(action => ({
+      id: action.id,
+      content: action.content,
+      assigneeUserId: action.assigneeUserId || null,
+      dueDate: action.dueDate || null,
+    })),
+  });
+  const prepareSave = () => {
+    if (!record) {
+      void submit();
+      return;
+    }
+    setSaveError(null);
+    if (!metadataDirty && !contentDirty) {
+      if (actionsDirty) {
+        void submit(true);
+        return;
+      }
+      toast({ body: '변경된 회의록 내용이 없어요.' });
+      return;
+    }
+    setIsConfirmationOpen(true);
+  };
+  const submit = async (actionsOnly = false) => {
     if (
       !title.trim() ||
       !heldAt ||
@@ -486,19 +527,16 @@ export function MeetingForm({
       submitBusy.current
     )
       return;
-    const input: CreateMeetingRecordInput = {
-      title,
-      heldAt: `${heldAt}T${meetingTime || '00:00'}:00`,
-      location: location || null,
-      content,
-      participantUserIds: participants,
-      actions: (canEditActions ? actions : []).map(action => ({
-        id: action.id,
-        content: action.content,
-        assigneeUserId: action.assigneeUserId || null,
-        dueDate: action.dueDate || null,
-      })),
-    };
+    if (
+      record &&
+      !actionsOnly &&
+      (changeReason.trim().length < 30 ||
+        changeReason.trim().length > 500 ||
+        !isConfirmationOpen)
+    )
+      return;
+    const input = currentInput();
+    if (actionsOnly && record) input.content = record.content;
     try {
       submitBusy.current = true;
       setSaveError(null);
@@ -510,6 +548,7 @@ export function MeetingForm({
             original: record,
             phase,
             confirmOwnership: editLock?.confirmOwnership,
+            changeReason: changeReason.trim(),
           })
         : await creation.save({ input, teamId: team.id, phase });
       if (!savedRecord || !mounted.current) return;
@@ -535,6 +574,12 @@ export function MeetingForm({
         error instanceof MeetingEditLockError
       ) {
         setSaveError(error);
+        if (
+          error instanceof MeetingUpdateValidationError ||
+          error instanceof MeetingEditLockError ||
+          (error instanceof MeetingUpdateError && error.blocksRetry)
+        )
+          setIsConfirmationOpen(false);
       }
       toast({
         body:
@@ -754,10 +799,65 @@ export function MeetingForm({
             label={
               record ? '저장' : creation.meetingId ? '남은 액션 저장' : '등록'
             }
-            onClick={() => void submit()}
+            onClick={prepareSave}
             variant='primary'
           />
         </div>
+        <Dialog
+          aria-label='회의록 수정 확인'
+          isOpen={isConfirmationOpen}
+          onOpenChange={open => {
+            if (!open && !pending) setIsConfirmationOpen(false);
+          }}
+          purpose='info'
+          width={720}
+        >
+          <div className={styles.boundedDialogContent}>
+            <Heading level={2}>수정 사유를 입력해 주세요</Heading>
+            <Text color='secondary'>
+              수정 사유와 수정자·시각이 로그에 남아요.
+            </Text>
+            <TextArea
+              label='수정 사유'
+              isRequired
+              isDisabled={pending}
+              onChange={setChangeReason}
+              value={changeReason}
+              width='100%'
+            />
+            <Text color='secondary' type='supporting'>
+              {changeReason.trim().length} / 30~500자
+            </Text>
+            {isConfirmationOpen &&
+            saveError &&
+            !(
+              saveError instanceof MeetingUpdateError && saveError.blocksRetry
+            ) ? (
+              <Text role='alert' className={styles.error}>
+                {saveError.message}
+              </Text>
+            ) : null}
+            <div className={styles.dialogActions}>
+              <Button
+                label='계속 수정'
+                isDisabled={pending}
+                onClick={() => setIsConfirmationOpen(false)}
+                variant='secondary'
+              />
+              <Button
+                label='최종 저장'
+                isDisabled={
+                  changeReason.trim().length < 30 ||
+                  changeReason.trim().length > 500 ||
+                  pending
+                }
+                isLoading={pending}
+                onClick={() => void submit()}
+                variant='primary'
+              />
+            </div>
+          </div>
+        </Dialog>
         {creation.meetingId ? (
           <div role='status'>
             <Text>
@@ -785,7 +885,7 @@ export function MeetingForm({
             ) : null}
           </div>
         ) : null}
-        {updateMutation.isError ? (
+        {updateMutation.isError && !isConfirmationOpen ? (
           <div className={styles.error} role='alert'>
             <p>{saveError?.message ?? requestErrorMessage}</p>
             {record &&
@@ -1064,7 +1164,13 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
   const toast = useToast();
   const query = useMeetingRecordQuery(meetingId);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isLogDialogOpen, setIsLogDialogOpen] = useState(false);
   const context = useMeetingTeamQuery();
+  const logsQuery = useMeetingChangeLogsQuery(
+    meetingId,
+    Boolean(query.teamId && query.data && !query.isError),
+  );
+  const changeLogs = logsQuery.data?.pages.flatMap(page => page.contents) ?? [];
   const teamId = context.teamId;
   const removeMutation = useRemoveMeetingRecordMutation();
   if (
@@ -1107,6 +1213,18 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
       </div>
     );
   const record = query.data;
+  const latestLog = changeLogs[0];
+  let changeLogLabel = '수정 로그 보기 · 아직 수정 내역 없음';
+  let footerRevisionLabel = `최종 수정 ${formatCourseScheduleDateTime(record.updatedAt)}`;
+  if (logsQuery.isPending) {
+    changeLogLabel = '수정 로그 불러오는 중';
+  } else if (logsQuery.isError) {
+    changeLogLabel = '수정 로그 보기 · 불러오기 실패';
+  } else if (latestLog) {
+    const modifiedAt = formatCourseScheduleDateTime(latestLog.createdAt);
+    changeLogLabel = `최종 수정 ${modifiedAt} · ${latestLog.editorName ?? latestLog.editorId}`;
+    footerRevisionLabel = `최종 수정 ${modifiedAt}`;
+  }
   const canDelete =
     record.teamId === teamId &&
     context.canDeleteRecord(record.createdBy.userId);
@@ -1156,6 +1274,13 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
             <Text color='secondary'>작성된 회의 내용이 없어요.</Text>
           )}
         </section>
+        <Button
+          aria-haspopup='dialog'
+          className={styles.changeLogLink}
+          label={changeLogLabel}
+          onClick={() => setIsLogDialogOpen(true)}
+          variant='secondary'
+        />
         <MeetingRecordActions
           key={record.teamId + ':' + record.id}
           actions={record.actions}
@@ -1167,8 +1292,7 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
         />
         <footer className={styles.detailFooter}>
           <Text color='secondary' type='supporting'>
-            최초 작성 {record.createdBy.name} · 최종 수정{' '}
-            {formatSeoulDateTime(record.updatedAt)}
+            최초 작성 {record.createdBy.name} · {footerRevisionLabel}
           </Text>
           <div className={`${styles.actions} ${styles.detailActions}`}>
             {context.canEditRecord ? (
@@ -1195,6 +1319,67 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
           </div>
         </footer>
       </Card>
+      <Dialog
+        aria-label='회의록 수정 로그'
+        isOpen={isLogDialogOpen}
+        onOpenChange={setIsLogDialogOpen}
+        purpose='info'
+        width={720}
+      >
+        <div className={styles.boundedDialogContent}>
+          <Heading level={2}>회의록 수정 로그</Heading>
+          {logsQuery.isPending ? (
+            <Text>수정 로그를 불러오는 중이에요.</Text>
+          ) : null}
+          {logsQuery.isError ? (
+            <div>
+              <Text role='alert'>수정 로그를 불러오지 못했어요.</Text>
+              <Button
+                label='로그 다시 시도'
+                onClick={() => void logsQuery.refetch()}
+                variant='secondary'
+              />
+            </div>
+          ) : null}
+          {logsQuery.isSuccess && !changeLogs.length ? (
+            <Text>남아 있는 수정 로그가 없어요.</Text>
+          ) : null}
+          <div
+            aria-label='수정 로그 목록'
+            className={styles.changeLogList}
+            role='list'
+          >
+            {changeLogs.map((log, index) => (
+              <section
+                className={styles.changeLogEntry}
+                key={log.id}
+                role='listitem'
+              >
+                <Text weight='medium'>
+                  {index + 1}. {log.editorName ?? log.editorId} ·{' '}
+                  {formatCourseScheduleDateTime(log.createdAt)}
+                </Text>
+                <Text>{log.reason}</Text>
+              </section>
+            ))}
+          </div>
+          {logsQuery.hasNextPage ? (
+            <Button
+              label='이전 수정 로그 더 보기'
+              isDisabled={logsQuery.isFetchingNextPage}
+              onClick={() => void logsQuery.fetchNextPage()}
+              variant='secondary'
+            />
+          ) : null}
+          <div className={styles.dialogActions}>
+            <Button
+              label='닫기'
+              onClick={() => setIsLogDialogOpen(false)}
+              variant='secondary'
+            />
+          </div>
+        </div>
+      </Dialog>
       <MeetingDeleteDialog
         isError={removeMutation.isError}
         isOpen={isDeleteDialogOpen}

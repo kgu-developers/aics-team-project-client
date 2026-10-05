@@ -59,3 +59,45 @@ it('중간점검 피드백 후 상세와 제출물 목록 모두 수정 요청 �
     }),
   );
 });
+
+it('교수자가 현재 버전으로 최종 확인하면 완료 시각을 반환하고, 새 수정 요청은 확인을 다시 연다', async () => {
+  const base = `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT('1', '1')}`;
+  const jsonHeaders = { ...headers, 'Content-Type': 'application/json' };
+  await fetch(`${base}/feedback`, {
+    body: JSON.stringify({ message: '반영 내용을 확인해 주세요.' }),
+    headers: jsonHeaders,
+    method: 'POST',
+  });
+
+  const conflict = await fetch(`${base}/feedback/complete`, {
+    body: JSON.stringify({ version: 99 }),
+    headers: jsonHeaders,
+    method: 'PATCH',
+  });
+  expect(conflict.status).toBe(409);
+
+  const completed = await fetch(`${base}/feedback/complete`, {
+    body: JSON.stringify({ version: 1 }),
+    headers: jsonHeaders,
+    method: 'PATCH',
+  });
+  expect(completed.status).toBe(200);
+  await expect(completed.json()).resolves.toMatchObject({
+    status: 'SUBMITTED',
+    revision: {
+      completedAt: expect.any(String),
+      completedBy: expect.any(String),
+    },
+  });
+
+  await fetch(`${base}/feedback`, {
+    body: JSON.stringify({ message: '추가 수정 요청입니다.' }),
+    headers: jsonHeaders,
+    method: 'POST',
+  });
+  const reopened = await fetch(base, { headers });
+  await expect(reopened.json()).resolves.toMatchObject({
+    status: 'REVISION_REQUESTED',
+    revision: { completedAt: null },
+  });
+});

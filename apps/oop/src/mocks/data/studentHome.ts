@@ -787,13 +787,6 @@ function createPreviewBody(
     case 'presentation-evaluation':
       return {
         kind: 'presentation-evaluation',
-        project: previewProject,
-        orderGuide: '발표 순서 : CineFlow(7팀) > 어플명(1팀) > 이름(3팀)',
-        teams: [
-          { id: 'team-07', label: 'CineFlow (7팀)', isMine: true },
-          { id: 'team-01', label: '어플명 (1팀)', isMine: false },
-        ],
-        timeGuide: '평가는 금일 강의 시간 중에만 가능합니다.',
       };
     case 'final-report':
       return {

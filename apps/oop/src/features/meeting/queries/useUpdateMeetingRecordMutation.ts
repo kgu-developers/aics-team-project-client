@@ -34,6 +34,7 @@ export function useUpdateMeetingRecordMutation() {
       original,
       phase,
       confirmOwnership,
+      changeReason,
     }: {
       input: UpdateMeetingRecordInput;
       meetingId: string;
@@ -41,6 +42,7 @@ export function useUpdateMeetingRecordMutation() {
       original?: StudentMeetingRecord;
       phase?: MeetingPhase;
       confirmOwnership?: () => Promise<boolean>;
+      changeReason?: string;
     }) => {
       if (!teamId || !meetingId)
         throw new MeetingUpdateValidationError(
@@ -48,7 +50,10 @@ export function useUpdateMeetingRecordMutation() {
         );
       if (isDemo) {
         try {
-          return await updateMeetingRecord(meetingId, input);
+          return await updateMeetingRecord(meetingId, {
+            ...input,
+            changeReason,
+          });
         } catch (error) {
           throw new MeetingUpdateError(error);
         }
@@ -68,6 +73,15 @@ export function useUpdateMeetingRecordMutation() {
       const patch = meetingUpdateRequest(original, input, phase);
       if (Object.keys(patch).length === 0) return { id: meetingId };
       if (
+        !changeReason ||
+        changeReason.trim().length < 30 ||
+        changeReason.trim().length > 500
+      )
+        throw new MeetingUpdateValidationError(
+          '수정 사유를 앞뒤 공백을 제외하고 30~500자로 입력해 주세요.',
+        );
+      const request = { ...patch, reason: changeReason.trim() };
+      if (
         useAuthStore.getState() !== session ||
         !confirmOwnership ||
         !(await confirmOwnership()) ||
@@ -75,7 +89,7 @@ export function useUpdateMeetingRecordMutation() {
       )
         throw new MeetingEditLockError();
       try {
-        const result = await updateMeetingRecordApi(meetingId, patch);
+        const result = await updateMeetingRecordApi(meetingId, request);
         if (useAuthStore.getState() !== session)
           throw new MeetingEditLockError();
         return result;
@@ -98,6 +112,7 @@ export function useUpdateMeetingRecordMutation() {
         meetingKeys.actions(teamId),
         meetingApiKeys.list(teamId),
         meetingApiKeys.detail(meetingId),
+        meetingApiKeys.changeLogs(meetingId),
         meetingApiKeys.teamActions(teamId),
         studentHomeKeys.dashboards(),
       ])

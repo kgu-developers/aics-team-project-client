@@ -185,6 +185,23 @@ export const feedbackSubmitAction = style({
   justifyContent: 'flex-end',
 });
 
+export const confirmationDialogContent = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['4'],
+});
+
+export const confirmationDialogDescription = style({
+  overflowWrap: 'anywhere',
+  wordBreak: 'keep-all',
+});
+
+export const confirmationDialogActions = style({
+  display: 'flex',
+  gap: tokens.spacing['2'],
+  justifyContent: 'flex-end',
+});
+
 export const feedbackPagination = style({
   alignSelf: 'flex-end',
 });

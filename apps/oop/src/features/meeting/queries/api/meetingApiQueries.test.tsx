@@ -277,7 +277,10 @@ it('수정 후 상세와 해당 팀의 모든 단계 목록을 무효화한다',
     result.current.mutateAsync({
       teamId: '10',
       meetingId: '7',
-      input: { phase: 'FINAL' },
+      input: {
+        phase: 'FINAL',
+        reason: '회의 단계가 변경되어 최종 결과를 회의록에 반영했습니다.',
+      },
     }),
   );
   expectInvalidated(client, keys, [
@@ -387,7 +390,11 @@ it('저장과 삭제가 실패하면 기존 캐시를 지우거나 무효화하�
       result.current.update.mutateAsync({
         teamId: '10',
         meetingId: '7',
-        input: { content: '내용' },
+        input: {
+          content: '내용',
+          reason:
+            '회의에서 확인한 내용을 반영하여 본문을 정확하게 수정했습니다.',
+        },
       }),
       result.current.remove.mutateAsync({ teamId: '10', meetingId: '7' }),
       result.current.createAction.mutateAsync({

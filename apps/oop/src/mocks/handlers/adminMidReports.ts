@@ -29,6 +29,8 @@ type MidReport = {
     changedBlockKeys: string[];
     requestedAt: string | null;
     resubmittedAt: string | null;
+    completedAt: string | null;
+    completedBy: string | null;
   } | null;
   status: string;
   submittedAt: string | null;
@@ -82,6 +84,7 @@ function persistFeedbacks() {
 }
 
 let feedbacks = loadFeedbacks();
+let completedTeams = new Map<number, { at: string; by: string }>();
 
 function getMidReport(teamId: string): MidReport | undefined {
   if (!['1', '2'].includes(teamId)) return undefined;
@@ -92,6 +95,7 @@ function getMidReport(teamId: string): MidReport | undefined {
     102,
     normalizedTeamId,
   );
+  const completion = completedTeams.get(normalizedTeamId);
 
   return {
     blocks: [
@@ -185,9 +189,12 @@ function getMidReport(teamId: string): MidReport | undefined {
           changedBlockKeys: [],
           requestedAt: '2026-09-13T16:00:00',
           resubmittedAt: null,
+          completedAt: completion?.at ?? null,
+          completedBy: completion?.by ?? null,
         }
       : null,
-    status: isRevisionRequested ? 'REVISION_REQUESTED' : 'SUBMITTED',
+    status:
+      isRevisionRequested && !completion ? 'REVISION_REQUESTED' : 'SUBMITTED',
     submittedAt: '2026-09-10T11:00:00',
     submittedBy: normalizedTeamId === 1 ? '20230001' : '20230002',
     submittedByName: normalizedTeamId === 1 ? '테스트학생1' : '테스트학생2',
@@ -204,6 +211,7 @@ function isAdmin(request: Request) {
 
 export function resetAdminMidReportScenario() {
   feedbacks = structuredClone(initialFeedbacks);
+  completedTeams = new Map();
   resetAdminMidReportReopenState();
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem(feedbackStorageKey);
@@ -211,6 +219,38 @@ export function resetAdminMidReportScenario() {
 }
 
 export const adminMidReportHandlers = [
+  http.patch(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT_FEEDBACK_COMPLETE(':sectionId', ':teamId')}`,
+    async ({ params, request }) => {
+      if (!isAdmin(request))
+        return HttpResponse.json({ code: 'FORBIDDEN' }, { status: 403 });
+      const report = getMidReport(String(params.teamId));
+      if (!['1', 'oop-2026-2-01'].includes(String(params.sectionId)) || !report)
+        return HttpResponse.json({ code: 'FORBIDDEN' }, { status: 403 });
+      const body = (await request.json()) as { version?: unknown };
+      if (!Number.isSafeInteger(body.version) || Number(body.version) < 0)
+        return HttpResponse.json({ code: 'INVALID_REQUEST' }, { status: 400 });
+      if (body.version !== report.version || !report.revision)
+        return HttpResponse.json(
+          { code: 'MID_REPORT_VERSION_CONFLICT' },
+          { status: 409 },
+        );
+      if (!completedTeams.has(report.teamId)) {
+        const at = new Date().toISOString();
+        completedTeams.set(report.teamId, { at, by: demoAdmin.id });
+        appendPersistentMockFeedbackTeamMessage({
+          createdAt: at,
+          message: '중간보고서 피드백 반영을 완료 처리했습니다.',
+          relatedId: report.id,
+          relatedType: 'MID_REPORT',
+          senderId: demoAdmin.id,
+          senderName: demoAdmin.name,
+          teamId: report.teamId,
+        });
+      }
+      return HttpResponse.json(getMidReport(String(params.teamId)));
+    },
+  ),
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT(':sectionId', ':teamId')}`,
     ({ params, request }) => {
@@ -291,6 +331,7 @@ export const adminMidReportHandlers = [
       feedbacks = [feedback, ...feedbacks];
       persistFeedbacks();
       reopenAdminMidReportSubmission(102, feedback.teamId);
+      completedTeams.delete(feedback.teamId);
       appendPersistentMockFeedbackTeamMessage({
         createdAt: feedback.createdAt,
         message: feedback.message,

@@ -257,8 +257,9 @@ export default function MilestoneCard({
                         ? () => setTopicCandidateDialogOpen(true)
                         : row.id === 'final-report-submission'
                           ? handleFinalReportAction
-                          : milestone.body?.kind === 'presentation-material' &&
-                              row.id === 'presentation-material'
+                          : row.id === 'presentation-material' &&
+                              submissionTargets[milestone.id]?.type ===
+                                'PRESENTATION'
                             ? () =>
                                 openSubmissionDialog(
                                   'presentation',

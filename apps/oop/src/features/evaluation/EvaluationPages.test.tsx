@@ -77,12 +77,55 @@ function renderPage(element: ReactElement) {
   return render(element, { wrapper: Wrapper });
 }
 
-function renderPresentationPage() {
+async function renderPresentationPage() {
   useAuthStore.getState().setCurrentUser({ ...demoStudent, teamId: '7' });
-  return renderPage(<PresentationEvaluationPage />);
+  const result = renderPage(<PresentationEvaluationPage />);
+  await userEvent.click(
+    await screen.findByRole('button', { name: '평가하기' }),
+  );
+  return result;
 }
 
 describe('KD3-92 학생 평가 화면', () => {
+  it('발표 평가 패널은 명시적으로 열리고 Escape로 닫힌 뒤 열기 버튼으로 초점이 돌아온다', async () => {
+    const user = userEvent.setup();
+    useAuthStore.getState().setCurrentUser({ ...demoStudent, teamId: '7' });
+    renderPage(<PresentationEvaluationPage />);
+    const trigger = await screen.findByRole('button', { name: '평가하기' });
+    const footerNavigation = screen.getByRole('navigation', {
+      name: '발표 팀 이동',
+    });
+    expect(within(footerNavigation).getAllByRole('button')).toHaveLength(2);
+    expect(
+      within(footerNavigation).queryByRole('button', { name: '평가하기' }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole('region', { name: /평가 입력/ }),
+    ).not.toBeInTheDocument();
+
+    await user.click(trigger);
+    const sheet = screen.getByRole('dialog', { name: /평가 입력/ });
+    expect(sheet).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: /평가 입력/ }),
+      ).not.toBeInTheDocument(),
+    );
+    await waitFor(() => expect(trigger).toHaveFocus());
+
+    await user.click(screen.getByRole('button', { name: '다음 팀' }));
+    await user.click(trigger);
+    const score = screen.getAllByRole('radio', { name: '5점' })[0]!;
+    await user.click(score);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(trigger).toHaveFocus());
+    await user.click(trigger);
+    expect(screen.getAllByRole('radio', { name: '5점' })[0]).toBeChecked();
+    await user.click(screen.getByRole('button', { name: '닫기' }));
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
   it('시작 전에는 입력을 잠그고 초안 저장 요청을 보내지 않는다', async () => {
     const user = userEvent.setup();
     setEvaluationWindowStates('OPEN', 'UPCOMING');
@@ -353,8 +396,8 @@ describe('KD3-92 학생 평가 화면', () => {
     );
 
     expect(
-      await screen.findByText('상호평가를 제출했어요.'),
-    ).toBeInTheDocument();
+      await screen.findAllByText('상호평가를 제출했어요.'),
+    ).not.toHaveLength(0);
     expect(mockNavigate).toHaveBeenCalledWith({ to: '/student' });
     expect(screen.queryByText('내 응답 제출 완료')).not.toBeInTheDocument();
   }, 15_000);
@@ -424,7 +467,7 @@ describe('KD3-92 학생 평가 화면', () => {
   });
 
   it('우리 팀 발표는 자료만 보여 주고 평가 입력을 잠근다', async () => {
-    renderPresentationPage();
+    await renderPresentationPage();
 
     expect(
       await screen.findByRole('heading', {
@@ -456,7 +499,7 @@ describe('KD3-92 학생 평가 화면', () => {
       ),
     );
 
-    renderPresentationPage();
+    await renderPresentationPage();
 
     expect(
       await screen.findByText('2026-11-10/14:00 ~ 2026-11-10/16:00'),
@@ -466,7 +509,7 @@ describe('KD3-92 학생 평가 화면', () => {
 
   it('다른 팀 발표 자료를 확인하고 평가를 제출한다', async () => {
     const user = userEvent.setup();
-    renderPresentationPage();
+    await renderPresentationPage();
 
     await screen.findByRole('heading', { level: 1, name: '발표 평가' });
     await user.click(screen.getByRole('button', { name: '다음 팀' }));
@@ -504,10 +547,18 @@ describe('KD3-92 학생 평가 화면', () => {
         '제출한 평가예요. 기간 안에는 다시 제출해 점수를 고칠 수 있어요.',
       ),
     ).toBeInTheDocument();
+    const teamNavigation = screen.getByRole('navigation', {
+      name: '팀 발표 빠른 탐색',
+    });
+    await waitFor(() =>
+      expect(
+        within(teamNavigation).getByRole('img', { name: '평가 완료' }),
+      ).toBeInTheDocument(),
+    );
   });
 
   it('프로젝트 화면 구성과 데이터·팀원 정보를 함께 보여 준다', async () => {
-    renderPresentationPage();
+    await renderPresentationPage();
 
     await screen.findByRole('heading', { level: 1, name: '발표 평가' });
     const screens = screen.getByRole('article', {
@@ -564,7 +615,7 @@ describe('KD3-92 학생 평가 화면', () => {
       ),
     );
 
-    renderPresentationPage();
+    await renderPresentationPage();
 
     expect(await screen.findByAltText('상대 경로 화면')).toHaveAttribute(
       'src',
@@ -605,7 +656,7 @@ describe('KD3-92 학생 평가 화면', () => {
         },
       ),
     );
-    renderPresentationPage();
+    await renderPresentationPage();
     await user.click(await screen.findByRole('button', { name: '다음 팀' }));
 
     const score = screen.getByRole('textbox', {
@@ -652,7 +703,7 @@ describe('KD3-92 학생 평가 화면', () => {
           }),
       ),
     );
-    renderPresentationPage();
+    await renderPresentationPage();
 
     await screen.findByRole('heading', { level: 1, name: '발표 평가' });
     await user.click(screen.getByRole('button', { name: '다음 팀' }));
@@ -703,7 +754,7 @@ describe('KD3-92 학생 평가 화면', () => {
         },
       ),
     );
-    renderPresentationPage();
+    await renderPresentationPage();
     await user.click(await screen.findByRole('button', { name: '다음 팀' }));
     const score = (await screen.findAllByRole('radio', { name: '4점' }))[0]!;
 
@@ -711,6 +762,18 @@ describe('KD3-92 학생 평가 화면', () => {
     expect(submit).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: '계속 수정' }));
     expect(score).toBeChecked();
+    expect(submit).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: '평가 다시 제출' }));
+    await user.keyboard('{Escape}');
+    expect(
+      screen.queryByRole('alertdialog', {
+        name: '발표 평가 다시 제출 확인',
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('dialog', { name: /평가 입력/ }),
+    ).toBeInTheDocument();
     expect(submit).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('button', { name: '평가 다시 제출' }));
@@ -735,7 +798,7 @@ describe('KD3-92 학생 평가 화면', () => {
         },
       ),
     );
-    renderPresentationPage();
+    await renderPresentationPage();
 
     await screen.findByRole('heading', { level: 1, name: '발표 평가' });
     await user.click(screen.getByRole('button', { name: '다음 팀' }));
@@ -765,7 +828,7 @@ describe('KD3-92 학생 평가 화면', () => {
           }),
       ),
     );
-    renderPresentationPage();
+    await renderPresentationPage();
 
     await screen.findByRole('heading', { level: 1, name: '발표 평가' });
     await waitFor(() =>
@@ -777,7 +840,7 @@ describe('KD3-92 학생 평가 화면', () => {
   it('평가 기간 전에는 자료만 보여 주고 제출을 막는다', async () => {
     const user = userEvent.setup();
     setEvaluationWindowStates('UPCOMING', 'OPEN');
-    renderPresentationPage();
+    await renderPresentationPage();
 
     await screen.findByRole('heading', { level: 1, name: '발표 평가' });
     await user.click(screen.getByRole('button', { name: '다음 팀' }));

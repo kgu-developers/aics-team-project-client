@@ -22,6 +22,8 @@ import {
   isMeetingMemberId,
   updateMeetingAction,
   updateMeetingRecord,
+  addMeetingMockChangeLog,
+  getMeetingMockChangeLogs,
 } from '../data/meeting';
 import { getDemoStudentAccount } from '../data/users';
 
@@ -118,6 +120,25 @@ export const meetingHandlers = [
     },
   ),
   http.get(
+    `${API_BASE_URL}${ENDPOINTS.MEETING.RECORD_CHANGE_LOGS(':meetingId')}`,
+    ({ params, request }) => {
+      const result = owned(request, String(params.meetingId));
+      return 'response' in result
+        ? result.response
+        : HttpResponse.json({
+            contents: getMeetingMockChangeLogs(String(params.meetingId)),
+            pageable: {
+              page: 0,
+              size: 20,
+              totalPages: 1,
+              totalElements: getMeetingMockChangeLogs(String(params.meetingId))
+                .length,
+              isEnd: true,
+            },
+          });
+    },
+  ),
+  http.get(
     `${API_BASE_URL}${ENDPOINTS.MEETING.RECORD(':meetingId')}`,
     ({ params, request }) => {
       const result = owned(request, String(params.meetingId));
@@ -135,7 +156,20 @@ export const meetingHandlers = [
       const record = (result as { record: MeetingRecord }).record;
       if (!validRecord(input, record))
         return error('INVALID_MEETING_RECORD', 400);
-      return HttpResponse.json(updateMeetingRecord(record.id, input));
+      if (
+        input.changeReason &&
+        (input.changeReason.trim().length < 30 ||
+          input.changeReason.trim().length > 500)
+      )
+        return error('MEETING_RECORD_INVALID_CHANGE_REASON', 400);
+      const updated = updateMeetingRecord(record.id, input);
+      addMeetingMockChangeLog(
+        record.id,
+        result.userId,
+        result.author.name,
+        input,
+      );
+      return HttpResponse.json(updated);
     },
   ),
   http.delete(

@@ -11,7 +11,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@astryxdesign/core": "0.2.0",
+    "@astryxdesign/core": "0.6.3",
     "@stylexjs/stylex": "0.19.0",
     "@vanilla-extract/css": "^1.17.1",
     "react": "catalog:react19"

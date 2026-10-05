@@ -147,7 +147,10 @@ it('같은 영역이 서버에서 변경되면 덮어쓰지 않고 입력을 유
     http.put(projectUrl, put),
   );
   await userEvent.click(screen.getByRole('button', { name: '저장' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('다른 편집 내용');
+  expect(await screen.findByText(/다른 편집 내용/)).toHaveAttribute(
+    'role',
+    'alert',
+  );
   expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue(
     '팀 프로젝트 내 초안',
   );
@@ -170,7 +173,10 @@ it('잠금 만료 뒤 저장하지 않고 초안을 보존한다', async () => {
     ),
   );
   await userEvent.click(screen.getByRole('button', { name: '저장' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('잠금이 만료');
+  expect(await screen.findByText(/잠금이 만료/)).toHaveAttribute(
+    'role',
+    'alert',
+  );
   expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue(
     '팀 프로젝트 초안',
   );
@@ -191,7 +197,13 @@ it('저장과 후속 조회가 실패해도 폼을 제거하지 않는다', asyn
     }),
   );
   await userEvent.click(screen.getByRole('button', { name: '저장' }));
-  await screen.findByRole('alert');
+  await waitFor(() =>
+    expect(
+      screen
+        .queryAllByRole('alert')
+        .some(element => !element.hasAttribute('data-astryx-live-region')),
+    ).toBe(true),
+  );
   await waitFor(() => expect(client.isFetching()).toBe(0));
   expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue(
     '팀 프로젝트 초안',
@@ -459,7 +471,13 @@ it('담당자 기록이 실패하면 오류를 알리고 입력을 유지한다'
   await userEvent.type(screen.getByLabelText(/프로젝트 제목/), '실패한 저장');
   await userEvent.click(screen.getByRole('button', { name: '저장' }));
 
-  expect(await screen.findByRole('alert')).toBeVisible();
+  await waitFor(() =>
+    expect(
+      screen
+        .queryAllByRole('alert')
+        .some(element => !element.hasAttribute('data-astryx-live-region')),
+    ).toBe(true),
+  );
   expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue('실패한 저장');
   expect(screen.getByRole('button', { name: '저장' })).toBeEnabled();
   expect((await fetchProjectProposal('19'))?.title).toBe('팀 프로젝트');
