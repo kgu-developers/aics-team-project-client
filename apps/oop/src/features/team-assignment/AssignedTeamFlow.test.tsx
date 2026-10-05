@@ -302,9 +302,9 @@ it.each([401, 403, 404, 500])(
       ),
     );
     renderFlow();
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      '배정된 팀 정보를 확인하지 못했어요.',
-    );
+    expect(
+      await screen.findByText('배정된 팀 정보를 확인하지 못했어요.'),
+    ).toHaveAttribute('role', 'alert');
     expect(contactRequests).not.toHaveBeenCalled();
     server.resetHandlers();
     await userEvent
@@ -326,9 +326,9 @@ it('연락처 조회 실패는 팀장 선정을 막지 않고 연락처만 재�
   );
   renderFlow();
   await enterFirstMeeting();
-  expect(await screen.findByRole('alert')).toHaveTextContent(
-    '팀원 연락처를 불러오지 못했습니다.',
-  );
+  expect(
+    await screen.findByText('팀원 연락처를 불러오지 못했습니다.'),
+  ).toHaveAttribute('role', 'alert');
   expect(screen.getByRole('button', { name: '내가 팀장입니다' })).toBeEnabled();
   server.resetHandlers();
   await userEvent

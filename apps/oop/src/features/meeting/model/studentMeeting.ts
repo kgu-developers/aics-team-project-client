@@ -15,7 +15,10 @@ export const meetingPhaseLabels: Record<MeetingPhase, string> = {
   FINAL: '최종',
 };
 
-export type StudentMeetingRecord = MeetingRecord & { phase?: MeetingPhase };
+export type StudentMeetingRecord = MeetingRecord & {
+  phase?: MeetingPhase;
+  version?: number;
+};
 export function meetingTitle(title: string | null, phase: MeetingPhase) {
   return title?.trim() || `${meetingPhaseLabels[phase]} 회의록`;
 }

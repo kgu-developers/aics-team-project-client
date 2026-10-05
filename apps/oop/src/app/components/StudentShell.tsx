@@ -18,8 +18,6 @@ import { useTeamKickoffQuery } from '~/features/team-assignment/queries';
 
 import StudentContactLink from '~/widgets/student-contact-link/StudentContactLink';
 
-import { oopCourseConfig } from '~/course/config';
-
 import * as styles from './StudentShell.css';
 import { StudentHeaderActions } from './StudentShellPopovers';
 
@@ -103,7 +101,7 @@ export default function StudentShell() {
       <div className={styles.shellPage}>
         <header className={styles.shellHeader}>
           <Link
-            aria-label={`${oopCourseConfig.title} 홈`}
+            aria-label='OOPTeamPlay 홈'
             className={styles.shellBrand}
             to={ROUTES.STUDENT.HOME}
           >
@@ -113,7 +111,7 @@ export default function StudentShell() {
               type='large'
               weight='bold'
             >
-              OOP
+              OOPTP
             </Text>
             <Text
               aria-hidden='true'
@@ -121,7 +119,7 @@ export default function StudentShell() {
               type='body'
               weight='medium'
             >
-              {oopCourseConfig.title}
+              OOPTeamPlay
             </Text>
             {sectionCode ? (
               <Text

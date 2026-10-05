@@ -11,11 +11,11 @@ export function meetingUpdateRequest(
   original: StudentMeetingRecord,
   input: UpdateMeetingRecordInput,
   phase: MeetingPhase,
-): MeetingRecordUpdateRequest {
-  const patch: MeetingRecordUpdateRequest = {};
+): Omit<MeetingRecordUpdateRequest, 'reason'> {
+  const patch: Omit<MeetingRecordUpdateRequest, 'reason'> = {};
   const title = input.title.trim();
   if (title !== original.title) patch.title = title;
-  if (phase !== original.phase) patch.phase = phase;
+  if (original.phase && phase !== original.phase) patch.phase = phase;
   // The form edits minutes; omit unchanged dates to retain seconds/precision.
   if (
     input.heldAt.replace(' ', 'T').slice(0, 16) !==

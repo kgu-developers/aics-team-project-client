@@ -868,7 +868,7 @@ it('uses the selected live section in shell and profile, with no unattributed te
   expect(screen.queryByText(/SELECTED-01/)).not.toBeInTheDocument();
   act(() => result.current.selectSection(2));
   expect(
-    screen.getByRole('link', { name: '객체지향프로그래밍 팀 프로젝트 홈' }),
+    screen.getByRole('link', { name: 'OOPTeamPlay 홈' }),
   ).toHaveTextContent('/SELECTED-02');
   await userEvent.click(screen.getByRole('button', { name: '내 프로필 열기' }));
   expect(await screen.findByText('SELECTED-02')).toBeVisible();

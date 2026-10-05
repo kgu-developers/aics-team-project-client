@@ -42,6 +42,7 @@ export type MeetingRecord = {
   createdBy: MeetingParticipant;
   createdAt: string;
   updatedAt: string;
+  version?: number;
 };
 
 export type CreateMeetingRecordInput = {
@@ -60,6 +61,7 @@ export type UpdateMeetingRecordInput = {
   content: RichTextJson;
   participantUserIds: string[];
   actions: SaveMeetingActionInput[];
+  changeReason?: string;
 };
 
 export type CreateMeetingActionInput = {

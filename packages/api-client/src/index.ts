@@ -26,6 +26,7 @@ export {
   type SubmitAdminProposalFeedbackInput,
 } from './adminProposal';
 export {
+  completeAdminMidReportFeedback,
   fetchAdminMidReport,
   fetchAdminMidReportFeedbacks,
   submitAdminMidReportFeedback,
@@ -277,6 +278,7 @@ export {
   updateMeetingRecord,
   fetchMeetingRecordSummaries,
   fetchMeetingRecordDetail,
+  fetchMeetingRecordChangeLogs,
   submitMeetingRecordApi,
   updateMeetingRecordApi,
   fetchMeetingActionEntries,

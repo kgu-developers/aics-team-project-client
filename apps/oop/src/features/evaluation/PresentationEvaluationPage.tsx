@@ -5,6 +5,7 @@ import type {
   TeamEvaluationDto,
 } from '@aics/core';
 import {
+  BottomSheet,
   Button,
   Card,
   Dialog,
@@ -14,6 +15,7 @@ import {
   HStack,
   RadioList,
   RadioListItem,
+  StatusDot,
   Text,
   TextInput,
   useToast,
@@ -326,6 +328,7 @@ function PresentationViewer({
 }
 
 function EvaluationForm({
+  compact,
   criteria,
   evaluation,
   isMyTeam,
@@ -333,6 +336,7 @@ function EvaluationForm({
   onSubmit,
   windowState,
 }: {
+  compact: boolean;
   criteria: TeamEvaluationCriterionDto[];
   evaluation?: TeamEvaluationDto;
   isMyTeam: boolean;
@@ -368,151 +372,204 @@ function EvaluationForm({
   });
 
   return (
-    <Card padding={5} width='100%'>
-      <section aria-label='발표 평가 입력' className={styles.form}>
-        <div className={styles.section}>
-          <h3 className={styles.sectionTitle}>발표 평가</h3>
+    <section aria-label='발표 평가 입력' className={styles.form}>
+      <div className={styles.section}>
+        {isMyTeam || !compact ? (
           <p className={styles.helper}>
             {isMyTeam
               ? '우리 팀 발표는 평가 대상이 아니에요.'
               : windowCopy[windowState]}
           </p>
-          {evaluation?.submittedAt ? (
-            <p className={styles.helper}>
-              제출한 평가예요. 기간 안에는 다시 제출해 점수를 고칠 수 있어요.
-            </p>
-          ) : null}
-        </div>
-        {criteria.map(criterion =>
-          criterion.maxScore > 5 ? (
-            <TextInput
-              description={`1~${criterion.maxScore} 사이의 정수를 입력해 주세요.`}
-              isDisabled={!editable}
-              isRequired
-              key={criterion.id}
-              label={`${criterion.title} (최대 ${criterion.maxScore}점)`}
-              onChange={value => {
-                setNumericScoreInputs(current => ({
-                  ...current,
-                  [criterion.id]: value,
-                }));
-                setScores(current => {
-                  const score = Number(value);
-                  if (
-                    !/^\d+$/.test(value) ||
-                    !Number.isInteger(score) ||
-                    score < 1 ||
-                    score > criterion.maxScore
-                  ) {
-                    const next = { ...current };
-                    delete next[criterion.id];
-                    return next;
-                  }
-                  return { ...current, [criterion.id]: score };
-                });
-              }}
-              placeholder={`1~${criterion.maxScore}`}
-              status={
-                (numericScoreInputs[criterion.id] ?? '').trim() &&
-                scores[criterion.id] == null
-                  ? {
-                      message: `1~${criterion.maxScore} 사이의 정수를 입력해 주세요.`,
-                      type: 'error',
-                    }
-                  : undefined
-              }
-              value={
-                numericScoreInputs[criterion.id] ??
-                (scores[criterion.id] == null
-                  ? ''
-                  : String(scores[criterion.id]))
-              }
-              width='100%'
-            />
-          ) : (
-            <RadioList
-              className={styles.scoreList}
-              isDisabled={!editable}
-              isRequired
-              key={criterion.id}
-              label={`${criterion.title} (최대 ${criterion.maxScore}점)`}
-              onChange={value =>
-                setScores(current => ({
-                  ...current,
-                  [criterion.id]: Number(value),
-                }))
-              }
-              orientation='horizontal'
-              value={
-                scores[criterion.id] == null ? '' : String(scores[criterion.id])
-              }
-            >
-              {Array.from(
-                { length: criterion.maxScore },
-                (_, index) => index + 1,
-              ).map(score => (
-                <RadioListItem
-                  key={score}
-                  label={`${score}점`}
-                  value={String(score)}
-                />
-              ))}
-            </RadioList>
-          ),
-        )}
-        {editable ? (
-          <Button
-            isDisabled={isSubmitting || invalid.length > 0}
-            isLoading={isSubmitting}
-            label={evaluation?.submittedAt ? '평가 다시 제출' : '평가 제출'}
-            onClick={() => {
-              if (evaluation?.submittedAt) {
-                setIsResubmitConfirmationOpen(true);
-                return;
-              }
-              if (!invalid.length) onSubmit(scores);
-            }}
-            tooltip={
-              invalid.length
-                ? `${invalid.map(criterion => criterion.title).join(', ')} 항목에 유효한 점수를 입력해 주세요.`
-                : undefined
-            }
-          />
         ) : null}
-        <Dialog
-          aria-label='발표 평가 다시 제출 확인'
-          isOpen={isResubmitConfirmationOpen}
-          onOpenChange={setIsResubmitConfirmationOpen}
-          purpose='info'
-          role='alertdialog'
+        {evaluation?.submittedAt && !compact ? (
+          <p className={styles.helper}>
+            제출한 평가예요. 기간 안에는 다시 제출해 점수를 고칠 수 있어요.
+          </p>
+        ) : null}
+      </div>
+      <div className={styles.scoreTableScroll}>
+        <table className={styles.scoreTable}>
+          <thead>
+            <tr>
+              <th scope='col'>평가 항목</th>
+              <th scope='col'>점수</th>
+            </tr>
+          </thead>
+          <tbody>
+            {criteria.map(criterion => (
+              <tr key={criterion.id}>
+                <th scope='row'>
+                  {criterion.title}
+                  <span className={styles.scoreMax}>
+                    최대 {criterion.maxScore}점
+                  </span>
+                </th>
+                <td>
+                  {criterion.maxScore > 5 ? (
+                    <TextInput
+                      description={`1~${criterion.maxScore} 사이의 정수를 입력해 주세요.`}
+                      isDisabled={!editable}
+                      isLabelHidden
+                      isRequired
+                      label={`${criterion.title} (최대 ${criterion.maxScore}점)`}
+                      onChange={value => {
+                        setNumericScoreInputs(current => ({
+                          ...current,
+                          [criterion.id]: value,
+                        }));
+                        setScores(current => {
+                          const score = Number(value);
+                          if (
+                            !/^\d+$/.test(value) ||
+                            !Number.isInteger(score) ||
+                            score < 1 ||
+                            score > criterion.maxScore
+                          ) {
+                            const next = { ...current };
+                            delete next[criterion.id];
+                            return next;
+                          }
+                          return { ...current, [criterion.id]: score };
+                        });
+                      }}
+                      placeholder={`1~${criterion.maxScore}`}
+                      status={
+                        (numericScoreInputs[criterion.id] ?? '').trim() &&
+                        scores[criterion.id] == null
+                          ? {
+                              message: `1~${criterion.maxScore} 사이의 정수를 입력해 주세요.`,
+                              type: 'error',
+                            }
+                          : undefined
+                      }
+                      value={
+                        numericScoreInputs[criterion.id] ??
+                        (scores[criterion.id] == null
+                          ? ''
+                          : String(scores[criterion.id]))
+                      }
+                      width='100%'
+                    />
+                  ) : (
+                    <RadioList
+                      className={styles.scoreList}
+                      isDisabled={!editable}
+                      isLabelHidden
+                      isRequired
+                      label={`${criterion.title} (최대 ${criterion.maxScore}점)`}
+                      onChange={value =>
+                        setScores(current => ({
+                          ...current,
+                          [criterion.id]: Number(value),
+                        }))
+                      }
+                      orientation='horizontal'
+                      value={
+                        scores[criterion.id] == null
+                          ? ''
+                          : String(scores[criterion.id])
+                      }
+                    >
+                      {Array.from(
+                        { length: criterion.maxScore },
+                        (_, index) => index + 1,
+                      ).map(score => (
+                        <RadioListItem
+                          aria-label={`${score}점`}
+                          key={score}
+                          label={String(score)}
+                          value={String(score)}
+                        />
+                      ))}
+                    </RadioList>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {editable ? (
+        <Button
+          isDisabled={isSubmitting || invalid.length > 0}
+          isLoading={isSubmitting}
+          label={evaluation?.submittedAt ? '평가 다시 제출' : '평가 제출'}
+          onClick={() => {
+            if (evaluation?.submittedAt) {
+              setIsResubmitConfirmationOpen(true);
+              return;
+            }
+            if (!invalid.length) onSubmit(scores);
+          }}
+          tooltip={
+            invalid.length
+              ? `${invalid.map(criterion => criterion.title).join(', ')} 항목에 유효한 점수를 입력해 주세요.`
+              : undefined
+          }
+        />
+      ) : null}
+      <Dialog
+        aria-label='발표 평가 다시 제출 확인'
+        isOpen={isResubmitConfirmationOpen}
+        onOpenChange={setIsResubmitConfirmationOpen}
+        purpose='info'
+        role='alertdialog'
+      >
+        <div
+          className={styles.confirmationDialog}
+          onKeyDown={event => {
+            if (
+              event.key === 'Escape' &&
+              isResubmitConfirmationOpen &&
+              !isSubmitting
+            ) {
+              event.stopPropagation();
+              setIsResubmitConfirmationOpen(false);
+            }
+          }}
         >
-          <div className={styles.confirmationDialog}>
-            <Heading level={2}>평가를 다시 제출할까요?</Heading>
-            <Text>기존에 제출한 점수가 현재 입력한 점수로 바뀝니다.</Text>
-            <HStack gap={2} justify='end'>
-              <Button
-                data-autofocus='true'
-                label='계속 수정'
-                onClick={() => setIsResubmitConfirmationOpen(false)}
-                variant='secondary'
-              />
-              <Button
-                isDisabled={isSubmitting}
-                isLoading={isSubmitting}
-                label='다시 제출'
-                onClick={() => {
-                  if (isSubmitting) return;
-                  setIsResubmitConfirmationOpen(false);
-                  if (!invalid.length) onSubmit(scores);
-                }}
-                variant='primary'
-              />
-            </HStack>
-          </div>
-        </Dialog>
-      </section>
-    </Card>
+          <Heading level={2}>평가를 다시 제출할까요?</Heading>
+          <Text>기존에 제출한 점수가 현재 입력한 점수로 바뀝니다.</Text>
+          <HStack gap={2} justify='end'>
+            <Button
+              data-autofocus='true'
+              label='계속 수정'
+              onClick={() => setIsResubmitConfirmationOpen(false)}
+              variant='secondary'
+            />
+            <Button
+              isDisabled={isSubmitting}
+              isLoading={isSubmitting}
+              label='다시 제출'
+              onClick={() => {
+                if (isSubmitting) return;
+                setIsResubmitConfirmationOpen(false);
+                if (!invalid.length) onSubmit(scores);
+              }}
+              variant='primary'
+            />
+          </HStack>
+        </div>
+      </Dialog>
+    </section>
   );
+}
+
+function useDesktopEvaluationLayout() {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window.matchMedia === 'function'
+      ? window.matchMedia('(min-width: 1024px)').matches
+      : false,
+  );
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const media = window.matchMedia('(min-width: 1024px)');
+    const update = () => setIsDesktop(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+  return isDesktop;
 }
 
 function PresentationEvaluationContent({
@@ -541,6 +598,10 @@ function PresentationEvaluationContent({
       left.teamId - right.teamId,
   );
   const [selectedTeamId, setSelectedTeamId] = useState(teams[0]?.teamId);
+  const [isEvaluationOpen, setIsEvaluationOpen] = useState(false);
+  const isDesktop = useDesktopEvaluationLayout();
+  const evaluationPanelRef = useRef<HTMLDivElement>(null);
+  const evaluationTriggerRef = useRef<HTMLButtonElement>(null);
   const selectedIndex = teams.findIndex(team => team.teamId === selectedTeamId);
   const selectedTeam = teams[selectedIndex] ?? teams[0];
   if (!selectedTeam) return null;
@@ -556,6 +617,32 @@ function PresentationEvaluationContent({
   const evaluation = evaluations.evaluations.find(
     item => item.teamId === selectedTeam.teamId,
   );
+
+  const closeEvaluation = () => {
+    setIsEvaluationOpen(false);
+  };
+  const submitScores = (scores: Record<number, number>) => {
+    submitMutation.mutate(
+      {
+        teamId: String(selectedTeam.teamId),
+        input: {
+          scores: criteria.map(criterion => ({
+            criterionId: criterion.id,
+            score: scores[criterion.id] ?? 0,
+          })),
+        },
+      },
+      {
+        onError: error =>
+          toast({ body: getEvaluationErrorMessage(error), type: 'error' }),
+        onSuccess: () => {
+          if (evaluationPanelRef.current)
+            evaluationPanelRef.current.scrollTop = 0;
+          toast({ body: `${teamLabel} 평가를 제출했어요.` });
+        },
+      },
+    );
+  };
 
   return (
     <div className={styles.root}>
@@ -591,6 +678,121 @@ function PresentationEvaluationContent({
           </div>
         </Card>
       </header>
+      <aside aria-label='발표 평가 탐색과 입력' className={styles.sidebar}>
+        <div className={styles.sidebarHeading}>
+          <Heading level={2}>팀 발표 목록</Heading>
+          <Text color='secondary' type='supporting'>
+            {evaluations.evaluations.filter(item => item.submittedAt).length} /{' '}
+            {teams.filter(team => String(team.teamId) !== myTeamId).length}팀
+            평가 완료
+          </Text>
+        </div>
+        <nav aria-label='팀 발표 빠른 탐색' className={styles.teamNavigation}>
+          {teams.map((team, index) => {
+            const isMyTeam = String(team.teamId) === myTeamId;
+            const isEvaluated = Boolean(
+              evaluations.evaluations.find(item => item.teamId === team.teamId)
+                ?.submittedAt,
+            );
+            const statusLabel = isMyTeam
+              ? '우리 팀'
+              : isEvaluated
+                ? '평가 완료'
+                : '평가 전';
+            const isSelected = team.teamId === selectedTeam.teamId;
+            return (
+              <div className={styles.teamNavigationItem} key={team.teamId}>
+                <span className={styles.teamStatusDot}>
+                  <StatusDot
+                    label={statusLabel}
+                    variant={isEvaluated ? 'success' : 'neutral'}
+                  />
+                </span>
+                <Button
+                  aria-current={isSelected ? 'true' : undefined}
+                  className={styles.teamNavigationButton}
+                  label={`${team.presentationOrder ?? index + 1}번 · ${team.teamName ?? `${team.teamId}팀`}`}
+                  onClick={() => setSelectedTeamId(team.teamId)}
+                  variant='secondary'
+                >
+                  <span
+                    className={isSelected ? styles.selectedOrder : styles.order}
+                  >
+                    {team.presentationOrder ?? index + 1}번
+                  </span>
+                  {' · '}
+                  {team.teamName ?? `${team.teamId}팀`}
+                </Button>
+              </div>
+            );
+          })}
+        </nav>
+        {isDesktop ? (
+          <div
+            aria-label={`${teamLabel} 평가 입력`}
+            className={styles.evaluationPanel}
+            id='presentation-evaluation-panel'
+            ref={evaluationPanelRef}
+            role='region'
+          >
+            <div className={styles.panelHeading}>
+              <Heading level={3}>{teamLabel} 평가</Heading>
+            </div>
+            <EvaluationForm
+              compact
+              key={selectedTeam.teamId}
+              criteria={criteria}
+              evaluation={evaluation}
+              isMyTeam={String(selectedTeam.teamId) === myTeamId}
+              isSubmitting={submitMutation.isPending}
+              onSubmit={submitScores}
+              windowState={evaluations.windowState}
+            />
+          </div>
+        ) : null}
+      </aside>
+      {!isDesktop ? (
+        <BottomSheet
+          finalFocusRef={evaluationTriggerRef}
+          height='tall'
+          isOpen={isEvaluationOpen}
+          label={`${teamLabel} 평가 입력`}
+          onOpenChange={setIsEvaluationOpen}
+          purpose='form'
+        >
+          <div className={styles.mobileSheetContent}>
+            <div className={styles.panelHeading}>
+              <Heading level={3}>{teamLabel} 평가</Heading>
+              <Button
+                label='닫기'
+                onClick={closeEvaluation}
+                variant='secondary'
+              />
+            </div>
+            <EvaluationForm
+              compact={false}
+              key={selectedTeam.teamId}
+              criteria={criteria}
+              evaluation={evaluation}
+              isMyTeam={String(selectedTeam.teamId) === myTeamId}
+              isSubmitting={submitMutation.isPending}
+              onSubmit={submitScores}
+              windowState={evaluations.windowState}
+            />
+          </div>
+        </BottomSheet>
+      ) : null}
+      <div className={styles.mobileEvaluationTrigger}>
+        <Button
+          aria-expanded={isEvaluationOpen}
+          label={isEvaluationOpen ? '평가 접기' : '평가하기'}
+          onClick={() =>
+            isEvaluationOpen ? closeEvaluation() : setIsEvaluationOpen(true)
+          }
+          ref={evaluationTriggerRef}
+          variant='primary'
+        />
+      </div>
       <section
         aria-labelledby={`presentation-team-title-${selectedTeam.teamId}`}
         className={styles.dynamicContent}
@@ -598,15 +800,32 @@ function PresentationEvaluationContent({
       >
         <div aria-live='polite' className={styles.teamHeader}>
           <p className={styles.teamEyebrow}>
-            {presentationLabel} · 발표 {selectedIndex + 1} / {teams.length}
+            발표 {selectedIndex + 1} / {teams.length}
           </p>
-          <h2
-            className={styles.teamTitle}
-            id={`presentation-team-title-${selectedTeam.teamId}`}
-          >
-            {selectedTeam.project?.title ?? teamLabel}
-          </h2>
-          <p className={styles.meta}>{teamLabel}</p>
+          <div className={styles.teamIdentity}>
+            <span
+              aria-label={
+                selectedTeam.presentationOrder == null
+                  ? '발표 순서 미정'
+                  : `발표 순서 ${selectedTeam.presentationOrder}번`
+              }
+              className={styles.orderBadge}
+              role='img'
+            >
+              {selectedTeam.presentationOrder ?? '–'}
+            </span>
+            <div>
+              <p className={styles.teamName}>
+                {teamLabel} · {presentationLabel}
+              </p>
+              <h2
+                className={styles.teamTitle}
+                id={`presentation-team-title-${selectedTeam.teamId}`}
+              >
+                {selectedTeam.project?.title ?? teamLabel}
+              </h2>
+            </div>
+          </div>
         </div>
         <Divider className={styles.contentDivider} />
         <div className={styles.contentGrid}>
@@ -614,41 +833,12 @@ function PresentationEvaluationContent({
             onReloadMaterials={onReloadMaterials}
             team={selectedTeam}
           />
-          <EvaluationForm
-            criteria={criteria}
-            evaluation={evaluation}
-            isMyTeam={String(selectedTeam.teamId) === myTeamId}
-            isSubmitting={submitMutation.isPending}
-            onSubmit={scores =>
-              submitMutation.mutate(
-                {
-                  teamId: String(selectedTeam.teamId),
-                  input: {
-                    scores: criteria.map(criterion => ({
-                      criterionId: criterion.id,
-                      score: scores[criterion.id] ?? 0,
-                    })),
-                  },
-                },
-                {
-                  onError: error =>
-                    toast({
-                      body: getEvaluationErrorMessage(error),
-                      type: 'error',
-                    }),
-                  onSuccess: () =>
-                    toast({ body: `${teamLabel} 평가를 제출했어요.` }),
-                },
-              )
-            }
-            windowState={evaluations.windowState}
-          />
         </div>
       </section>
-      <footer aria-label='발표 팀 이동'>
+      <footer aria-label='발표 팀 이동' className={styles.stickyFooter}>
         <Card
           className={styles.actionFooter}
-          padding={4}
+          padding={2}
           variant='muted'
           width='100%'
         >
@@ -662,7 +852,8 @@ function PresentationEvaluationContent({
               variant='secondary'
             />
             <p className={`${styles.helper} ${styles.navigationStatus}`}>
-              발표 {selectedIndex + 1} / {teams.length}
+              {presentationLabel} · {teamLabel} · {selectedIndex + 1} /{' '}
+              {teams.length}
             </p>
             <Button
               isDisabled={selectedIndex >= teams.length - 1}

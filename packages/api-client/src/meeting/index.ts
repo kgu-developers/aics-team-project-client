@@ -9,6 +9,7 @@ export { updateMeetingRecord } from './updateMeetingRecord';
 
 export { fetchMeetingRecordSummaries } from './fetchMeetingRecordSummaries';
 export { fetchMeetingRecordDetail } from './fetchMeetingRecordDetail';
+export { fetchMeetingRecordChangeLogs } from './fetchMeetingRecordChangeLogs';
 export { submitMeetingRecordApi } from './submitMeetingRecordApi';
 export { updateMeetingRecordApi } from './updateMeetingRecordApi';
 export { fetchMeetingActionEntries } from './fetchMeetingActionEntries';

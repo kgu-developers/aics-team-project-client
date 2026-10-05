@@ -1,6 +1,7 @@
 import {
   Button,
   Card,
+  Dialog,
   EmptyState,
   Heading,
   Pagination,
@@ -9,6 +10,7 @@ import {
   Text,
   TextArea,
 } from '@aics/design-system';
+import { isAxiosError } from 'axios';
 import { useState } from 'react';
 
 import { cx } from '~/shared/lib/cx';
@@ -18,6 +20,7 @@ import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 import { AdminLinkedMeetingsTable } from '~/features/admin-meeting/components';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import {
+  useCompleteAdminMidReportFeedbackMutation,
   useAdminMidReportFeedbacksQuery,
   useAdminMidReportQuery,
   useSubmitAdminMidReportFeedbackMutation,
@@ -172,6 +175,9 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
     feedbackPage,
   );
   const submitFeedbackMutation = useSubmitAdminMidReportFeedbackMutation();
+  const completeFeedbackMutation = useCompleteAdminMidReportFeedbackMutation();
+  const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
+  const [completionError, setCompletionError] = useState<string | null>(null);
   const report = reportQuery.data;
   const relatedMeetingsQuery = useAdminMeetingRecordListQuery(
     [sectionId],
@@ -214,6 +220,17 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
           <Text className={styles.metadata}>
             상태: {report.status} · 현재 버전: {report.version}차
           </Text>
+          {report.revision?.completedAt ? (
+            <Text className={styles.metadata}>
+              교수자 최종 확인:{' '}
+              {formatSeoulDateTime(report.revision.completedAt)}
+              {report.revision.completedBy
+                ? ` · ${report.revision.completedBy}`
+                : ''}
+            </Text>
+          ) : report.revision?.requestedAt ? (
+            <Text className={styles.metadata}>교수자 최종 확인 전</Text>
+          ) : null}
         </div>
         <section className={styles.section}>
           <Heading level={3}>제출 현황</Heading>
@@ -423,6 +440,22 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
             variant='compact'
           />
         ) : null}
+        {report.revision?.requestedAt &&
+        !report.revision.completedAt &&
+        (report.status === 'REVISION_REQUESTED' ||
+          report.status === 'SUBMITTED') ? (
+          <div className={styles.feedbackSubmitAction}>
+            <Button
+              isDisabled={completeFeedbackMutation.isPending}
+              label='피드백 반영 최종 확인'
+              onClick={() => {
+                setCompletionError(null);
+                setIsCompletionDialogOpen(true);
+              }}
+              type='button'
+            />
+          </div>
+        ) : null}
         <div className={styles.feedbackComposer}>
           <TextArea
             aria-label='중간 점검 피드백 내용'
@@ -460,6 +493,58 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
           ) : null}
         </div>
       </Card>
+      <Dialog
+        aria-label='중간보고서 피드백 최종 확인'
+        isOpen={isCompletionDialogOpen}
+        onOpenChange={isOpen => {
+          if (!isOpen && !completeFeedbackMutation.isPending)
+            setIsCompletionDialogOpen(false);
+        }}
+        purpose='info'
+        role='alertdialog'
+        width={480}
+      >
+        <div className={styles.confirmationDialogContent}>
+          <Heading level={2}>피드백 반영을 최종 확인할까요?</Heading>
+          <Text
+            className={styles.confirmationDialogDescription}
+            color='secondary'
+          >
+            {report.teamName}의 반영 내용을 확인하면 피드백 절차가 완료됩니다.
+            학생에게도 교수자 최종 확인 완료로 표시돼요.
+          </Text>
+          {completionError ? <Text role='alert'>{completionError}</Text> : null}
+          <div className={styles.confirmationDialogActions}>
+            <Button
+              isDisabled={completeFeedbackMutation.isPending}
+              label='취소'
+              onClick={() => setIsCompletionDialogOpen(false)}
+              variant='secondary'
+            />
+            <Button
+              isDisabled={completeFeedbackMutation.isPending}
+              isLoading={completeFeedbackMutation.isPending}
+              label='최종 확인'
+              onClick={() => {
+                setCompletionError(null);
+                completeFeedbackMutation.mutate(
+                  { sectionId, teamId, version: report.version },
+                  {
+                    onSuccess: () => setIsCompletionDialogOpen(false),
+                    onError: error =>
+                      setCompletionError(
+                        isAxiosError(error) && error.response?.status === 409
+                          ? '보고서가 변경되었거나 완료할 피드백이 없어요. 최신 문서를 다시 확인해 주세요.'
+                          : '최종 확인을 저장하지 못했어요. 다시 시도해 주세요.',
+                      ),
+                  },
+                );
+              }}
+              variant='primary'
+            />
+          </div>
+        </div>
+      </Dialog>
       <section className={styles.relatedMeetings}>
         <Heading level={3}>연결된 회의록 ({relatedMeetings.length}건)</Heading>
         {relatedMeetingsQuery.isPending ? (

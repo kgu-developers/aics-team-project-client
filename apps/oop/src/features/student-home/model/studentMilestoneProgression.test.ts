@@ -7,7 +7,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   areAllStudentMilestonesTerminal,
-  lockStudentHomeMilestone,
   resolveStudentMilestoneProgression,
 } from './studentMilestoneProgression';
 
@@ -74,6 +73,56 @@ function submission(
 }
 
 describe('학생 마일스톤 순차 진행', () => {
+  it('일정 전이고 서버가 제출을 허용하지 않은 단계는 열지 않는다', () => {
+    const result = resolveStudentMilestoneProgression(
+      [
+        {
+          milestone: milestone(
+            2,
+            '2026-11-01T00:00:00+09:00',
+            '2026-11-30T23:59:00+09:00',
+          ),
+          submission: submission(2),
+          summary: summary(2),
+        },
+      ],
+      now,
+    );
+
+    expect([...result.unlockedIds]).toEqual([]);
+    expect(result.defaultOpenId).toBeUndefined();
+  });
+
+  it('중간보고서 제출 상태가 완료여도 교수자 확인 대기면 현재 단계로 남긴다', () => {
+    const midReportSummary: StudentHomeMilestone = {
+      ...summary(2),
+      body: {
+        kind: 'mid-review-feedback',
+        teamId: '7',
+        feedback: [],
+        canSubmitResponse: false,
+        sections: [],
+        guide: '',
+      },
+    };
+    const result = resolveStudentMilestoneProgression(
+      [
+        {
+          milestone: milestone(
+            2,
+            '2026-10-01T00:00:00+09:00',
+            '2026-10-31T23:59:00+09:00',
+          ),
+          submission: submission(2, { status: 'COMPLETED' }),
+          summary: midReportSummary,
+        },
+      ],
+      now,
+    );
+
+    expect(result.defaultOpenId).toBe('2');
+  });
+
   it('완료와 마감 상태만 남았을 때 학기 전체를 종료 상태로 판단한다', () => {
     expect(
       areAllStudentMilestonesTerminal([
@@ -90,7 +139,7 @@ describe('학생 마일스톤 순차 진행', () => {
     expect(areAllStudentMilestonesTerminal([])).toBe(false);
   });
 
-  it('이후 일정이 열려도 이전 단계가 완료되지 않으면 잠근다', () => {
+  it('이전 단계가 미완료여도 이후 일정이 열리면 접근을 허용한다', () => {
     const first = milestone(
       1,
       '2026-09-01T00:00:00+09:00',
@@ -113,8 +162,8 @@ describe('학생 마일스톤 순차 진행', () => {
       now,
     );
 
-    expect([...result.unlockedIds]).toEqual(['1']);
-    expect(result.defaultOpenId).toBeUndefined();
+    expect([...result.unlockedIds]).toEqual(['2']);
+    expect(result.defaultOpenId).toBe('2');
   });
 
   it('이전 단계가 조기 완료되면 다음 단계를 열되 일정 전에는 기본으로 펼치지 않는다', () => {
@@ -142,7 +191,7 @@ describe('학생 마일스톤 순차 진행', () => {
       now,
     );
 
-    expect([...result.unlockedIds]).toEqual(['1', '2']);
+    expect([...result.unlockedIds]).toEqual(['2']);
     expect(result.defaultOpenId).toBeUndefined();
   });
 
@@ -232,7 +281,7 @@ describe('학생 마일스톤 순차 진행', () => {
       now,
     );
 
-    expect([...result.unlockedIds]).toEqual(['1', '2']);
+    expect([...result.unlockedIds]).toEqual(['2']);
     expect(result.defaultOpenId).toBe('2');
   });
 
@@ -295,34 +344,5 @@ describe('학생 마일스톤 순차 진행', () => {
         Date.parse('2026-10-10T12:00:00+09:00'),
       ).defaultOpenId,
     ).toBe('1');
-  });
-
-  it('잠긴 단계는 내용을 숨기고 동작을 비활성화한다', () => {
-    const locked = lockStudentHomeMilestone(summary(2));
-    expect(locked.statusLabel).toBe('이전 단계 완료 필요');
-    expect(locked.isDetailAvailable).toBe(false);
-    expect(locked.body).toBeUndefined();
-    expect(locked.rows[0]).toMatchObject({
-      actionDisabled: true,
-      actionNotice: '이전 단계를 완료하면 진행할 수 있어요.',
-    });
-  });
-
-  it('시작 전 단계는 선행 단계가 미완료여도 기간 전 상태를 우선한다', () => {
-    const beforePeriod = {
-      ...summary(2),
-      status: 'before-period' as const,
-      statusLabel: '기간 전',
-    };
-    const locked = lockStudentHomeMilestone(beforePeriod);
-    expect(locked.status).toBe('before-period');
-    expect(locked.statusLabel).toBe('기간 전');
-    expect(locked.currentStepLabel).toBe('기간이 시작되면 진행할 수 있어요.');
-    expect(locked.isDetailAvailable).toBe(false);
-    expect(locked.body).toBeUndefined();
-    expect(locked.rows[0]).toMatchObject({
-      actionDisabled: true,
-      actionNotice: '기간이 시작되면 진행할 수 있어요.',
-    });
   });
 });

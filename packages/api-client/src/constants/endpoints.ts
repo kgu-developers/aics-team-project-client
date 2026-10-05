@@ -163,6 +163,11 @@ export const ENDPOINTS = {
       sectionId: string | number,
       teamId: string | number,
     ) => `/api/v1/admin/sections/${sectionId}/teams/${teamId}/mid-report`,
+    SECTION_TEAM_MID_REPORT_FEEDBACK_COMPLETE: (
+      sectionId: string | number,
+      teamId: string | number,
+    ) =>
+      `/api/v1/admin/sections/${sectionId}/teams/${teamId}/mid-report/feedback/complete`,
     SECTION_TEAM_PROPOSAL: (
       sectionId: string | number,
       teamId: string | number,
@@ -218,6 +223,8 @@ export const ENDPOINTS = {
     RECORDS: (teamId: string) => `/api/v1/teams/${teamId}/meeting-records`,
     ACTIONS: (teamId: string) => `/api/v1/teams/${teamId}/actions`,
     RECORD: (meetingId: string) => `/api/v1/meeting-records/${meetingId}`,
+    RECORD_CHANGE_LOGS: (meetingId: string) =>
+      `/api/v1/meeting-records/${meetingId}/logs`,
     RECORD_ACTIONS: (meetingId: string) =>
       `/api/v1/meeting-records/${meetingId}/actions`,
     ACTION: (actionId: string) => `/api/v1/meeting-actions/${actionId}`,

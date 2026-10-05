@@ -1,5 +1,7 @@
 export { Badge } from '@astryxdesign/core/Badge';
 export type { BadgeProps, BadgeVariant } from '@astryxdesign/core/Badge';
+export { BottomSheet } from '@astryxdesign/core/BottomSheet';
+export type { BottomSheetProps } from '@astryxdesign/core/BottomSheet';
 export { Avatar } from '@astryxdesign/core/Avatar';
 export type { AvatarProps, AvatarSize } from '@astryxdesign/core/Avatar';
 export { Button } from '@astryxdesign/core/Button';

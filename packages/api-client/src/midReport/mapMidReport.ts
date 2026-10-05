@@ -139,7 +139,11 @@ export function mapMidReport(value: unknown): MidReport {
         key => !midReportBlockKeys.includes(key),
       ) ||
       !date(revision.requestedAt) ||
-      !(revision.resubmittedAt === null || date(revision.resubmittedAt)))
+      !(revision.resubmittedAt === null || date(revision.resubmittedAt)) ||
+      !(revision.completedAt == null || date(revision.completedAt)) ||
+      !(
+        revision.completedBy == null || typeof revision.completedBy === 'string'
+      ))
   )
     return fail();
   return {

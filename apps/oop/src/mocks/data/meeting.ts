@@ -167,10 +167,36 @@ let nextMeeting = 2;
 let nextAction = 2;
 let records = clone(initialRecords);
 
+let changeLogs: import('@aics/core').MeetingRecordChangeLogDto[] = [];
+
+export function getMeetingMockChangeLogs(meetingId: string) {
+  return changeLogs
+    .filter(log => log.meetingRecordId === Number(meetingId.replace(/\D/g, '')))
+    .reverse();
+}
+
+export function addMeetingMockChangeLog(
+  meetingId: string,
+  editorId: string,
+  editorName: string,
+  input: UpdateMeetingRecordInput,
+) {
+  if (!input.changeReason) return;
+  changeLogs.push({
+    id: changeLogs.length + 1,
+    meetingRecordId: Number(meetingId.replace(/\D/g, '')),
+    editorId,
+    editorName,
+    createdAt: new Date().toISOString(),
+    reason: input.changeReason,
+  });
+}
+
 export function resetMeetingMockData() {
   nextMeeting = 2;
   nextAction = 2;
   records = clone(initialRecords);
+  changeLogs = [];
 }
 
 export const getMeetingRecords = (teamId: string) =>
@@ -237,6 +263,7 @@ export function createMeetingRecord(
     createdBy: author,
     createdAt: now,
     updatedAt: now,
+    version: 0,
   };
   records = [record, ...records];
   return clone(record);
@@ -265,6 +292,7 @@ export function updateMeetingRecord(
     participants: participants(input.participantUserIds),
     actions: buildActions(id, input.actions, record.actions),
     updatedAt: now,
+    version: (record.version ?? 0) + 1,
   };
   records[index] = next;
   return clone(next);

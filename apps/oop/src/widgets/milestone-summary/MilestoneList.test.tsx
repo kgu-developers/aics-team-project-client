@@ -1,4 +1,3 @@
-import type { MilestonePresentation } from '@aics/core';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -25,8 +24,7 @@ const {
   updateSubmissionConfirmation: vi.fn(),
   toast: vi.fn(),
 }));
-const { presentationQueryState, studentContextState } = vi.hoisted(() => ({
-  presentationQueryState: { data: [] as MilestonePresentation[] },
+const { studentContextState } = vi.hoisted(() => ({
   studentContextState: {
     current: { status: 'loading' } as { status: string; teamId?: string },
   },
@@ -69,21 +67,11 @@ vi.mock('~/features/submission/queries', () => ({
   }),
 }));
 
-vi.mock('~/features/evaluation/queries', () => ({
-  useMilestonePresentationsQuery: () => ({
-    data: presentationQueryState.data,
-    isError: false,
-    isPending: false,
-    isSuccess: true,
-  }),
-}));
-
 import { useAuthStore } from '~/features/auth/authStore';
 
-import MilestoneDetails, { PresentationTeamDetails } from './MilestoneDetails';
+import MilestoneDetails from './MilestoneDetails';
 import MilestoneList from './MilestoneList';
 
-import { getMilestonePresentations } from '~/mocks/data/evaluation';
 import { getCurrentMidReport } from '~/mocks/data/midReport';
 import { getCurrentPresentation } from '~/mocks/data/presentation';
 import {
@@ -362,7 +350,6 @@ describe('MilestoneDetails', () => {
     resetMidMutation.mockReset();
     resetProposalMutation.mockReset();
     toast.mockReset();
-    presentationQueryState.data = [];
     studentContextState.current = { status: 'loading' };
     useAuthStore.setState({ currentUser: { ...demoStudent, teamId: '7' } });
   });
@@ -586,34 +573,8 @@ describe('MilestoneDetails', () => {
     },
   );
 
-  it('발표 평가 마일스톤은 발표 순서를 모두 표시하되 우리 팀 파일만 노출한다', () => {
-    renderWithRouter(
-      <PresentationTeamDetails
-        myTeamId='7'
-        presentations={getMilestonePresentations()}
-      />,
-    );
-
-    expect(screen.getByText(/1번 발표 · CineFlow/)).toBeVisible();
-    expect(screen.getByText(/2번 발표 · BookLoop/)).toBeVisible();
-    expect(screen.getByText(/3번 발표 · CafeQueue/)).toBeVisible();
-    expect(screen.getByRole('link', { name: '다운로드' })).toHaveAttribute(
-      'href',
-      expect.stringContaining('cineflow'),
-    );
-    expect(
-      screen.queryByText('bookloop-final-presentation.pdf'),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText('cafequeue-presentation.pdf'),
-    ).not.toBeInTheDocument();
-  });
-
-  it('세션 중 팀이 배정되면 live context의 팀 ID로 우리 팀 발표 자료를 표시한다', () => {
+  it('발표 평가 아코디언에서는 발표 팀 목록을 중복해서 불러오지 않는다', () => {
     vi.stubEnv('VITE_ENABLE_MSW', 'false');
-    useAuthStore.setState({ currentUser: { ...demoStudent, teamId: null } });
-    studentContextState.current = { status: 'ready', teamId: '7' };
-    presentationQueryState.data = getMilestonePresentations();
     const body = createStudentHomeDashboardPreview(
       'presentation-evaluation',
     ).milestones.find(
@@ -625,7 +586,9 @@ describe('MilestoneDetails', () => {
 
     renderWithRouter(<MilestoneDetails body={body} milestoneId='22' />);
 
-    expect(screen.getByText('cineflow-presentation.pdf')).toBeVisible();
+    expect(screen.getByText('내 발표 제출 내역')).toBeVisible();
+    expect(screen.getByText('제출 대상을 확인할 수 없어요.')).toBeVisible();
+    expect(screen.queryByText('cineflow-presentation.pdf')).toBeNull();
     expect(screen.queryByText('bookloop-presentation.pdf')).toBeNull();
   });
 

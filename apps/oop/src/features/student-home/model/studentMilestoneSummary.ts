@@ -73,13 +73,20 @@ export function studentMilestoneSummary(
   ) {
     const closed =
       milestone.status === 'CLOSED' || now >= evaluationWindow.closesAt;
+    let dueDate = `~ ${presentationEvaluationDate(milestone.schedule.evaluationClosesAt)}`;
+    if (closed && submission?.canSubmitNow) {
+      dueDate =
+        submission.currentVersion > 0
+          ? '발표 자료 재제출 가능'
+          : '발표 자료 제출 가능';
+    }
     // Presentation evaluation is terminal when its schedule closes or the
     // server closes the milestone, without changing the shared submission.
     return {
       id: String(milestone.id),
       title: milestone.title,
       period: `평가 기간 : ${presentationEvaluationDate(milestone.schedule.evaluationOpensAt)} ~ ${presentationEvaluationDate(milestone.schedule.evaluationClosesAt)}`,
-      dueDate: `~ ${presentationEvaluationDate(milestone.schedule.evaluationClosesAt)}`,
+      dueDate,
       status: closed ? 'completed' : 'in-progress',
       statusLabel: closed ? '평가 완료' : '평가 기간 중',
       currentStepLabel: '발표 평가',
@@ -89,7 +96,7 @@ export function studentMilestoneSummary(
         {
           id: 'presentation-evaluation',
           label: '발표 평가',
-          value: '발표 자료 및 평가 확인',
+          value: closed ? '평가 기간 종료' : '평가 페이지에서 진행',
           actionLabel: closed ? undefined : '평가하기',
           actionTo: closed ? undefined : ROUTES.STUDENT.PRESENTATION_EVALUATION,
           tone: 'primary',
@@ -97,10 +104,6 @@ export function studentMilestoneSummary(
       ],
       body: {
         kind: 'presentation-evaluation',
-        project: { title: '프로젝트 정보', description: '' },
-        orderGuide: '발표 순서를 확인할 수 없어요.',
-        teams: [],
-        timeGuide: `평가 기간 : ${presentationEvaluationDate(milestone.schedule.evaluationOpensAt)} ~ ${presentationEvaluationDate(milestone.schedule.evaluationClosesAt)}`,
       },
     };
   }

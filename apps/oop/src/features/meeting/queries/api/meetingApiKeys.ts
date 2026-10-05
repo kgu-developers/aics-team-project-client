@@ -8,6 +8,8 @@ export const meetingApiKeys = {
     [...meetingApiKeys.list(teamId), { phase }] as const,
   detail: (meetingId: string | undefined) =>
     ['meeting-api', 'record', meetingId] as const,
+  changeLogs: (meetingId: string | undefined) =>
+    ['meeting-api', 'record', meetingId, 'change-logs'] as const,
   recordActions: (meetingId: string | undefined) =>
     ['meeting-api', 'record-actions', meetingId] as const,
   teamActions: (teamId: string | undefined) =>

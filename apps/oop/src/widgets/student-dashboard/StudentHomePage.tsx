@@ -27,7 +27,6 @@ import { proposalSectionStatuses } from '~/features/student-home/model/proposalS
 import { selectActiveMilestone } from '~/features/student-home/model/selectActiveMilestone';
 import {
   areAllStudentMilestonesTerminal,
-  lockStudentHomeMilestone,
   resolveStudentMilestoneProgression,
 } from '~/features/student-home/model/studentMilestoneProgression';
 import { studentMilestoneSummary } from '~/features/student-home/model/studentMilestoneSummary';
@@ -52,6 +51,30 @@ type DashboardErrorContent = {
   title: string;
   description: string;
 };
+
+function fileSubmissionActionLabel(
+  type: 'PRESENTATION' | 'FINAL_REPORT',
+  canSubmitNow: boolean,
+  currentVersion: number,
+) {
+  if (!canSubmitNow)
+    return currentVersion > 0 || type === 'FINAL_REPORT'
+      ? '제출 내역'
+      : undefined;
+  if (currentVersion === 0) return '파일 제출';
+  return type === 'PRESENTATION' ? '파일 재제출' : '파일 교체';
+}
+
+function fileSubmissionValue(
+  type: 'PRESENTATION' | 'FINAL_REPORT',
+  canSubmitNow: boolean,
+  currentVersion: number,
+) {
+  if (currentVersion > 0) return `v${currentVersion} 제출됨`;
+  return type === 'PRESENTATION' && !canSubmitNow
+    ? '미제출 · 현재 제출 불가'
+    : '미제출';
+}
 
 export function getDashboardErrorContent(
   error: unknown,
@@ -177,14 +200,55 @@ export default function StudentHomePage() {
       submission?.isSuccess ? submission.data : undefined,
       now,
     );
+    const submissionTarget =
+      (milestone.type === 'FINAL_REPORT' ||
+        milestone.type === 'PRESENTATION') &&
+      submission?.isSuccess &&
+      home.teamId &&
+      home.studentNumber &&
+      String(submission.data.milestoneId) === String(milestone.id) &&
+      String(submission.data.teamId) === home.teamId
+        ? {
+            sectionId,
+            teamId: home.teamId,
+            studentNumber: home.studentNumber,
+            milestoneId: String(milestone.id),
+            submissionId: String(submission.data.id),
+            type: milestone.type,
+            title:
+              milestone.type === 'FINAL_REPORT'
+                ? '최종 파일 제출'
+                : '발표 자료 제출',
+          }
+        : undefined;
+    if (submissionTarget) {
+      submissionTargets[String(milestone.id)] = submissionTarget;
+    }
     if (summary.body?.kind === 'presentation-evaluation') {
-      const project =
-        home.project.state.status === 'ready' ? home.project.data : undefined;
-      summary.body.project = {
-        title: project?.title || '프로젝트 정보',
-        description:
-          project?.description || '프로젝트 정보를 확인할 수 없어요.',
-      };
+      let unavailableValue = '제출 대상 확인 필요';
+      if (submission?.isPending) unavailableValue = '제출 상태 조회 중';
+      if (submission?.isError) unavailableValue = '제출 상태 조회 실패';
+      summary.rows.unshift({
+        id: 'presentation-material',
+        label: '내 발표 자료',
+        value:
+          submissionTarget && submission?.isSuccess
+            ? fileSubmissionValue(
+                'PRESENTATION',
+                submission.data.canSubmitNow,
+                submission.data.currentVersion,
+              )
+            : unavailableValue,
+        tone: submissionTarget ? 'primary' : 'muted',
+        actionLabel:
+          submissionTarget && submission?.isSuccess
+            ? fileSubmissionActionLabel(
+                'PRESENTATION',
+                submission.data.canSubmitNow,
+                submission.data.currentVersion,
+              )
+            : undefined,
+      });
       return summary;
     }
     if (milestone.type === 'PEER_EVALUATION') {
@@ -216,14 +280,35 @@ export default function StudentHomePage() {
         teamMemberIds: home.teamMemberIds,
         isMessagesReady: midReportMessages.isSuccess,
       });
-      const isFeedbackCycleCompleted =
-        (submission?.isSuccess && submission.data.status === 'COMPLETED') ||
-        (midReport.isSuccess &&
-          midReport.data.status === 'SUBMITTED' &&
-          Boolean(midReport.data.revision?.resubmittedAt));
-      if (isFeedbackCycleCompleted) {
+      const isProfessorConfirmed =
+        midReport.isSuccess &&
+        midReport.data.status === 'SUBMITTED' &&
+        Boolean(midReport.data.revision?.completedAt);
+      const isAwaitingProfessorConfirmation =
+        midReport.isSuccess &&
+        midReport.data.status === 'SUBMITTED' &&
+        Boolean(midReport.data.revision?.requestedAt) &&
+        !isProfessorConfirmed;
+      if (isProfessorConfirmed) {
         summary.status = 'completed';
-        summary.statusLabel = '단계 완료';
+        summary.statusLabel = '교수자 최종 확인 완료';
+      } else if (isAwaitingProfessorConfirmation) {
+        summary.status = 'in-progress';
+        summary.statusLabel = '교수자 확인 대기';
+      } else if (
+        summary.status === 'completed' &&
+        midReport.isSuccess &&
+        !midReport.data.revision?.requestedAt
+      ) {
+        summary.statusLabel = '제출 완료';
+      } else if (summary.status === 'completed') {
+        // A generic milestone completion does not prove document feedback approval.
+        summary.status = 'in-progress';
+        summary.statusLabel = midReport.isError
+          ? '상태 확인 실패'
+          : midReport.isPending
+            ? '상태 확인 중'
+            : '제출 완료';
       }
       summary.body = {
         kind: 'mid-review-feedback',
@@ -232,18 +317,21 @@ export default function StudentHomePage() {
           midReport.data?.id === undefined
             ? undefined
             : String(midReport.data.id),
-        feedbackStage: isFeedbackCycleCompleted
+        feedbackStage: isProfessorConfirmed
           ? 'completed'
-          : midReportFeedbackRoomStage({
-              submittedAt: midReport.data?.submittedAt,
-              messages: midReportMessages.data,
-              relatedId:
-                midReport.data?.id === undefined
-                  ? undefined
-                  : Number(midReport.data.id),
-              teamMemberIds: home.teamMemberIds,
-              isMessagesReady: midReportMessages.isSuccess,
-            }),
+          : isAwaitingProfessorConfirmation &&
+              midReport.data.revision?.resubmittedAt
+            ? 'feedback-arrived'
+            : midReportFeedbackRoomStage({
+                submittedAt: midReport.data?.submittedAt,
+                messages: midReportMessages.data,
+                relatedId:
+                  midReport.data?.id === undefined
+                    ? undefined
+                    : Number(midReport.data.id),
+                teamMemberIds: home.teamMemberIds,
+                isMessagesReady: midReportMessages.isSuccess,
+              }),
         feedback: [],
         canSubmitResponse: false,
         // The feedback room stays as main defines it; only the writing areas
@@ -266,6 +354,8 @@ export default function StudentHomePage() {
         midReport.isSuccess &&
         canSubmitMidReportDocument(midReport.data, currentUserName);
       if (
+        !isProfessorConfirmed &&
+        !isAwaitingProfessorConfirmation &&
         submission?.isSuccess &&
         submission.data?.status === 'NOT_SUBMITTED' &&
         midReport.data &&
@@ -278,81 +368,75 @@ export default function StudentHomePage() {
               ? '수정 요청'
               : '작성 중';
       }
-      summary.rows = isFeedbackCycleCompleted
+      summary.rows = isProfessorConfirmed
         ? [
             {
               id: 'mid-report-completed',
               label: '중간보고서',
-              value: '피드백 반영 및 재제출 완료',
+              value: '교수자 최종 확인 완료',
               tone: 'muted',
             },
           ]
-        : submittedReport
+        : isAwaitingProfessorConfirmation
           ? [
-              midReportStage === 'feedback-arrived'
-                ? {
-                    id: 'mid-report-revision',
-                    label: '중간보고서 재제출',
-                    value: '대면 피드백 기록을 남겼어요.',
-                    tone: 'primary',
-                    actionLabel: '재제출',
-                    actionDisabled: true,
-                    actionNotice:
-                      '재제출은 담당 교수·조교가 중간보고서를 다시 열어 준 뒤에 할 수 있어요.',
-                  }
-                : {
-                    id: 'mid-report-submitted',
-                    label: '중간보고서',
-                    value:
-                      midReportStage === 'unknown'
-                        ? midReportMessages.isError
-                          ? documentFeedbackStageCopy.midReport.checkFailed
-                          : documentFeedbackStageCopy.midReport.checking
-                        : documentFeedbackStageCopy.midReport.awaiting,
-                    tone: 'muted',
-                  },
+              {
+                id: 'mid-report-confirmation-pending',
+                label: '중간보고서',
+                value: '피드백 반영 제출 완료 · 교수자 최종 확인 대기',
+                tone: 'muted',
+              },
             ]
-          : [
-              readyToSubmit
-                ? {
-                    id: 'mid-report-submit',
-                    label: '중간보고서 제출',
-                    value: '모든 작성 영역 완료',
-                    tone: 'primary',
-                    actionLabel: '제출하기',
-                  }
-                : {
-                    id: 'mid-report-writing',
-                    label: '중간보고서 작성',
-                    value: '작성 영역을 차례로 완료해 주세요.',
-                    tone: 'primary',
-                    actionLabel: '작성하기',
-                    actionTo: editorSectionTo('mid-review', 'topic'),
-                  },
-            ];
+          : submittedReport
+            ? [
+                midReportStage === 'feedback-arrived'
+                  ? {
+                      id: 'mid-report-revision',
+                      label: '중간보고서 재제출',
+                      value: '대면 피드백 기록을 남겼어요.',
+                      tone: 'primary',
+                      actionLabel: '재제출',
+                      actionDisabled: true,
+                      actionNotice:
+                        '재제출은 담당 교수·조교가 중간보고서를 다시 열어 준 뒤에 할 수 있어요.',
+                    }
+                  : {
+                      id: 'mid-report-submitted',
+                      label: '중간보고서',
+                      value:
+                        midReportStage === 'unknown'
+                          ? midReportMessages.isError
+                            ? documentFeedbackStageCopy.midReport.checkFailed
+                            : documentFeedbackStageCopy.midReport.checking
+                          : documentFeedbackStageCopy.midReport.awaiting,
+                      tone: 'muted',
+                    },
+              ]
+            : [
+                readyToSubmit
+                  ? {
+                      id: 'mid-report-submit',
+                      label: '중간보고서 제출',
+                      value: '모든 작성 영역 완료',
+                      tone: 'primary',
+                      actionLabel: '제출하기',
+                    }
+                  : {
+                      id: 'mid-report-writing',
+                      label: '중간보고서 작성',
+                      value: '작성 영역을 차례로 완료해 주세요.',
+                      tone: 'primary',
+                      actionLabel: '작성하기',
+                      actionTo: editorSectionTo('mid-review', 'topic'),
+                    },
+              ];
       return summary;
     }
     if (
       (milestone.type === 'FINAL_REPORT' ||
         milestone.type === 'PRESENTATION') &&
-      submission?.isSuccess &&
-      home.teamId &&
-      home.studentNumber &&
-      String(submission.data.milestoneId) === String(milestone.id) &&
-      String(submission.data.teamId) === home.teamId
+      submissionTarget &&
+      submission?.isSuccess
     ) {
-      submissionTargets[String(milestone.id)] = {
-        sectionId,
-        teamId: home.teamId,
-        studentNumber: home.studentNumber,
-        milestoneId: String(milestone.id),
-        submissionId: String(submission.data.id),
-        type: milestone.type,
-        title:
-          milestone.type === 'FINAL_REPORT'
-            ? '최종 파일 제출'
-            : '발표 자료 제출',
-      };
       summary.interaction = 'collapsible';
       summary.isDetailAvailable = true;
       const isFinalReport = milestone.type === 'FINAL_REPORT';
@@ -383,15 +467,17 @@ export default function StudentHomePage() {
             ? 'final-report-submission'
             : 'presentation-material',
           label: isFinalReport ? '최종보고서 제출' : '발표 자료 제출',
-          value: submission.data.currentVersion
-            ? `v${submission.data.currentVersion} 제출됨`
-            : '미제출',
+          value: fileSubmissionValue(
+            milestone.type,
+            submission.data.canSubmitNow,
+            submission.data.currentVersion,
+          ),
           tone: 'primary',
-          actionLabel: submission.data.canSubmitNow
-            ? submission.data.currentVersion
-              ? '파일 교체'
-              : '파일 제출'
-            : '제출 내역',
+          actionLabel: fileSubmissionActionLabel(
+            milestone.type,
+            submission.data.canSubmitNow,
+            submission.data.currentVersion,
+          ),
           actionNotice: isFinalReport
             ? '파일 제출과 교체는 팀장만 할 수 있어요.'
             : undefined,
@@ -571,21 +657,33 @@ export default function StudentHomePage() {
     })),
     now,
   );
-  const milestones = summarizedMilestones.map(milestone =>
-    progression.unlockedIds.has(milestone.id)
-      ? milestone
-      : lockStudentHomeMilestone(milestone),
+  const milestones = summarizedMilestones.map(summary =>
+    progression.unlockedIds.has(summary.id) ||
+    (summary.status !== 'before-period' && summary.status !== 'unavailable')
+      ? summary
+      : {
+          ...summary,
+          isDetailAvailable: false,
+          rows: summary.rows.map(row => ({ ...row, actionDisabled: true })),
+        },
   );
-  const activeMilestone = selectActiveMilestone(
-    milestones,
-    new Set(
-      query.submissions.flatMap(item =>
-        item.isSuccess && item.data.canSubmitNow
-          ? [String(item.data.milestoneId)]
-          : [],
+  const activePresentationEvaluation = milestones.find(
+    item =>
+      item.body?.kind === 'presentation-evaluation' &&
+      item.status === 'in-progress',
+  );
+  const activeMilestone =
+    activePresentationEvaluation ??
+    selectActiveMilestone(
+      milestones,
+      new Set(
+        query.submissions.flatMap(item =>
+          item.isSuccess && item.data.canSubmitNow
+            ? [String(item.data.milestoneId)]
+            : [],
+        ),
       ),
-    ),
-  );
+    );
   const isSemesterComplete =
     areAllStudentMilestonesTerminal(summarizedMilestones);
   let heroHeading = '팀 프로젝트 진행 상태를 확인해 주세요.';

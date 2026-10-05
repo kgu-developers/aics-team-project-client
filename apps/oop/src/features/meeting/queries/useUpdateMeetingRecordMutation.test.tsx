@@ -71,6 +71,8 @@ const variables = {
   phase: 'MID_CHECK' as const,
   input,
   confirmOwnership: async () => true,
+  changeReason:
+    '회의록 제목이 실제 회의 주제와 일치하도록 팀원들과 재확인한 뒤 수정합니다.',
 };
 function setup() {
   const client = new QueryClient({
@@ -112,7 +114,12 @@ it('변경한 제목만 PATCH하고 상세·목록·팀 액션의 회의 제목�
   keys.forEach(key => client.setQueryData(key, { cached: true }));
   client.setQueryData(meetingApiKeys.list('8'), { other: true });
   await act(() => result.current.mutateAsync(variables));
-  expect(bodies).toEqual([{ title: input.title }]);
+  expect(bodies).toEqual([
+    {
+      title: input.title,
+      reason: variables.changeReason,
+    },
+  ]);
   expect(writes).toEqual(['PATCH']);
   keys.forEach(key =>
     expect(client.getQueryState(key)?.isInvalidated).toBe(true),
@@ -142,6 +149,21 @@ it('변경 사항이 없으면 PUT·PATCH 요청을 보내지 않는다', async 
       input: { ...input, title: original.title },
     }),
   );
+  expect(request).not.toHaveBeenCalled();
+});
+
+it('회의록을 변경할 때 수정 사유가 30자 미만이면 요청하지 않는다', async () => {
+  const request = vi.fn();
+  server.events.on('request:start', request);
+  const { result } = setup();
+  await act(async () => {
+    await expect(
+      result.current.mutateAsync({
+        ...variables,
+        changeReason: '짧은 수정 사유',
+      }),
+    ).rejects.toBeInstanceOf(MeetingUpdateValidationError);
+  });
   expect(request).not.toHaveBeenCalled();
 });
 
@@ -210,6 +232,7 @@ it.each([400, 401, 403, 404, 409, 503, 'network'] as const)(
 
 it('MSW PATCH는 null·누락 필드를 유지하고 장소·참석자 해제를 반영한다', async () => {
   await apiClient.patch('/api/v1/meeting-records/19', {
+    reason: variables.changeReason,
     title: null,
     content: null,
     location: null,
@@ -219,6 +242,7 @@ it('MSW PATCH는 null·누락 필드를 유지하고 장소·참석자 해제를
     location: '301호',
   });
   const result = await updateMeetingRecordApi('19', {
+    reason: variables.changeReason,
     location: '',
     participantIds: [],
   });
@@ -230,6 +254,15 @@ it('MSW PATCH는 null·누락 필드를 유지하고 장소·참석자 해제를
   });
 });
 
+it('MSW PATCH는 수정 사유가 없는 요청을 거절한다', async () => {
+  await expect(
+    apiClient.patch('/api/v1/meeting-records/19', {
+      title: '근거 없는 수정',
+    }),
+  ).rejects.toMatchObject({ response: { status: 400 } });
+  expect((await fetchMeetingRecordDetail('19')).title).toBe(original.title);
+});
+
 it.each([
   { title: '  ' },
   { phase: 'UNKNOWN' },
@@ -238,17 +271,26 @@ it.each([
   { participantIds: '20260001' },
 ])('MSW는 유효하지 않은 수정 요청을 400으로 거절한다: %j', async input => {
   await expect(
-    apiClient.patch('/api/v1/meeting-records/19', input),
+    apiClient.patch('/api/v1/meeting-records/19', {
+      ...input,
+      reason: variables.changeReason,
+    }),
   ).rejects.toMatchObject({ response: { status: 400 } });
   expect((await fetchMeetingRecordDetail('19')).title).toBe(original.title);
 });
 
 it('MSW는 인증되지 않은 수정과 존재하지 않는 회의록을 거절한다', async () => {
   await expect(
-    updateMeetingRecordApi('999', { title: '없음' }),
+    updateMeetingRecordApi('999', {
+      title: '없음',
+      reason: variables.changeReason,
+    }),
   ).rejects.toMatchObject({ response: { status: 404 } });
   delete apiClient.defaults.headers.common.Authorization;
   await expect(
-    updateMeetingRecordApi('19', { title: '익명' }),
+    updateMeetingRecordApi('19', {
+      title: '익명',
+      reason: variables.changeReason,
+    }),
   ).rejects.toMatchObject({ response: { status: 401 } });
 });

@@ -149,9 +149,9 @@ describe('운영 주제 후보 다이얼로그 계약', () => {
       );
       const user = await openAndFill();
       await user.click(screen.getByRole('button', { name: '후보 추가' }));
-      expect(await screen.findByRole('alert')).toHaveTextContent(
-        '등록 결과를 확인하지 못했어요.',
-      );
+      expect(
+        await screen.findByText(/등록 결과를 확인하지 못했어요/),
+      ).toHaveAttribute('role', 'alert');
       const check = screen.getByRole('button', { name: '결과 확인' });
       await waitFor(() => expect(check).toBeEnabled());
       const previousReads = reads;

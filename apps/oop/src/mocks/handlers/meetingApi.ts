@@ -5,6 +5,8 @@ import {
   type MeetingRecordCreateRequest,
   type MeetingRecordUpdateRequest,
   type MeetingRecordPersistResponseDto,
+  type MeetingRecordDetailResponseDto,
+  type MeetingRecordChangeLogDto,
   type MeetingActionCreateRequest,
   type MeetingActionUpdateRequest,
   type TeamMeetingActionResponseDto,
@@ -20,7 +22,10 @@ import {
 
 // Numeric server-contract fixtures coexist with the legacy demo's named IDs.
 export function createMeetingApiHandlers() {
-  let records = [structuredClone(meetingApiRecord)];
+  let records: MeetingRecordDetailResponseDto[] = [
+    structuredClone(meetingApiRecord),
+  ];
+  let changeLogs: MeetingRecordChangeLogDto[] = [];
   let actions = [structuredClone(meetingApiAction)];
   let nextRecordId = 20;
   let nextActionId = 42;
@@ -45,6 +50,7 @@ export function createMeetingApiHandlers() {
     meetingApiTeam.members.find(item => item.studentNumber === id);
   const recordPath = `${API_BASE_URL}/api/v1/meeting-records/:id(\\d+)`;
   const recordActionsPath = `${API_BASE_URL}/api/v1/meeting-records/:id(\\d+)/actions`;
+  const recordLogsPath = `${API_BASE_URL}/api/v1/meeting-records/:id(\\d+)/logs`;
   const now = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
   const validDueAt = (value: string | undefined) =>
     value === undefined || /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(value);
@@ -146,6 +152,36 @@ export function createMeetingApiHandlers() {
       const record = records.find(item => item.id === Number(params.id));
       return record ? HttpResponse.json(record) : fail(404);
     }),
+    http.get(recordLogsPath, ({ request, params }) => {
+      const denied = guard(request);
+      if (denied) return denied;
+      if (!records.some(item => item.id === Number(params.id)))
+        return fail(404);
+      const search = new URL(request.url).searchParams;
+      const page = Number(search.get('page') ?? 0);
+      const size = Number(search.get('size') ?? 20);
+      if (
+        !Number.isInteger(page) ||
+        page < 0 ||
+        !Number.isInteger(size) ||
+        size < 1 ||
+        size > 100
+      )
+        return fail(400);
+      const logs = changeLogs
+        .filter(log => Number(params.id) === Math.floor(log.id / 100000))
+        .reverse();
+      return HttpResponse.json({
+        contents: logs.slice(page * size, (page + 1) * size),
+        pageable: {
+          page,
+          size,
+          totalPages: Math.ceil(logs.length / size),
+          totalElements: logs.length,
+          isEnd: (page + 1) * size >= logs.length,
+        },
+      });
+    }),
     http.patch(recordPath, async ({ request, params }) => {
       const denied = guard(request);
       if (denied) return denied;
@@ -156,6 +192,15 @@ export function createMeetingApiHandlers() {
           { status: 404 },
         );
       const input = (await request.json()) as MeetingRecordUpdateRequest;
+      if (
+        !input.reason ||
+        input.reason.trim().length < 30 ||
+        input.reason.trim().length > 500
+      )
+        return HttpResponse.json(
+          { code: 'MEETING_RECORD_INVALID_CHANGE_REASON' },
+          { status: 400 },
+        );
       const invalidDate =
         input.meetingAt != null &&
         (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?$/.test(
@@ -177,6 +222,7 @@ export function createMeetingApiHandlers() {
         invalidDate
       )
         return HttpResponse.json({ code: 'INVALID_INPUT' }, { status: 400 });
+      const before = structuredClone(record);
       // Null/omitted fields retain their value; an empty location clears it.
       if (input.title != null) record.title = input.title;
       if (input.meetingAt != null)
@@ -186,7 +232,17 @@ export function createMeetingApiHandlers() {
       if (input.content != null) record.content = input.content;
       if (input.participantIds != null)
         record.participantIds = input.participantIds;
-      record.updatedAt = now();
+      if (JSON.stringify(before) !== JSON.stringify(record)) {
+        record.updatedAt = now();
+        changeLogs.push({
+          id: record.id * 100000 + changeLogs.length + 1,
+          meetingRecordId: record.id,
+          editorId: getMockAuthenticatedAccount(request)!.user.studentNumber,
+          editorName: getMockAuthenticatedAccount(request)!.user.name,
+          createdAt: now(),
+          reason: input.reason.trim(),
+        });
+      }
       const response: MeetingRecordPersistResponseDto = {
         id: record.id,
         title: record.title,
@@ -203,6 +259,7 @@ export function createMeetingApiHandlers() {
       const id = Number(params.id);
       if (!records.some(item => item.id === id)) return fail(404);
       records = records.filter(item => item.id !== id);
+      changeLogs = changeLogs.filter(log => Math.floor(log.id / 100000) !== id);
       actions = actions.filter(item => item.meetingRecordId !== id);
       return new HttpResponse(null, { status: 204 });
     }),

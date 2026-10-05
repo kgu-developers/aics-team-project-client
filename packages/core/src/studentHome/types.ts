@@ -152,10 +152,6 @@ export type StudentHomeMilestoneBody =
     }
   | {
       kind: 'presentation-evaluation';
-      project: StudentHomeProject;
-      orderGuide: string;
-      teams: StudentHomeTeamStatus[];
-      timeGuide: string;
     }
   | {
       kind: 'final-report';

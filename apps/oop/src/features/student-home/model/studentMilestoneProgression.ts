@@ -34,6 +34,9 @@ export function hasTerminalMilestoneCompletion({
   submission,
   summary,
 }: Pick<ProgressionItem, 'submission' | 'summary'>) {
+  // Mid-report feedback is terminal only after the professor's final check.
+  if (summary.body?.kind === 'mid-review-feedback')
+    return summary.status === 'completed';
   return Boolean(
     submission?.status === 'COMPLETED' ||
     submission?.completedAt ||
@@ -75,22 +78,20 @@ function isInScheduleWindow(
   return true;
 }
 
-/**
- * Completion unlocks the next stage. Dates only select the one initially open
- * stage; they do not unlock a stage or close an already unlocked one.
- */
+/** Stage access follows each stage's own schedule and server submission state. */
 export function resolveStudentMilestoneProgression(
   items: ProgressionItem[],
   now: number,
 ): StudentMilestoneProgression {
-  const unlockedIds = new Set<string>();
-  let prerequisitesCompleted = true;
-
-  for (const item of items) {
-    if (prerequisitesCompleted) unlockedIds.add(item.summary.id);
-    prerequisitesCompleted =
-      prerequisitesCompleted && hasTerminalMilestoneCompletion(item);
-  }
+  const unlockedIds = new Set(
+    items
+      .filter(
+        item =>
+          item.submission?.canSubmitNow ||
+          isInScheduleWindow(item.milestone, item.submission, now),
+      )
+      .map(item => item.summary.id),
+  );
 
   const defaultItem = items.find(
     item =>
@@ -101,28 +102,4 @@ export function resolveStudentMilestoneProgression(
   );
 
   return { defaultOpenId: defaultItem?.summary.id, unlockedIds };
-}
-
-export function lockStudentHomeMilestone(
-  milestone: StudentHomeMilestone,
-): StudentHomeMilestone {
-  const beforePeriod = milestone.status === 'before-period';
-  return {
-    ...milestone,
-    status: beforePeriod ? 'before-period' : 'unavailable',
-    statusLabel: beforePeriod ? '기간 전' : '이전 단계 완료 필요',
-    currentStepLabel: beforePeriod
-      ? '기간이 시작되면 진행할 수 있어요.'
-      : '이전 단계를 먼저 완료해 주세요.',
-    interaction: 'static',
-    isDetailAvailable: false,
-    body: undefined,
-    rows: milestone.rows.map(row => ({
-      ...row,
-      actionDisabled: true,
-      actionNotice: beforePeriod
-        ? '기간이 시작되면 진행할 수 있어요.'
-        : '이전 단계를 완료하면 진행할 수 있어요.',
-    })),
-  };
 }

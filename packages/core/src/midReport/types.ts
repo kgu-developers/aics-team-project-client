@@ -1,4 +1,5 @@
 import type {
+  DocumentRevision,
   DocumentSession,
   DocumentSessionBlock,
 } from '../documentSession/types';
@@ -24,7 +25,14 @@ export type MidReportBlock = DocumentSessionBlock<
   MidReportField
 >;
 
-export type MidReport = DocumentSession<MidReportBlock>;
+export type MidReport = Omit<DocumentSession<MidReportBlock>, 'revision'> & {
+  revision?:
+    | (DocumentRevision<MidReportBlockKey> & {
+        completedAt?: string | null;
+        completedBy?: string | null;
+      })
+    | null;
+};
 
 export type UpdateMidReportBlockInput = {
   version: number;

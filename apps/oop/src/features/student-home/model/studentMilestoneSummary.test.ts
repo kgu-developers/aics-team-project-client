@@ -288,10 +288,9 @@ describe('발표 자료와 평가 구분', () => {
       expect(summary.isDetailAvailable).toBe(true);
       expect(summary.body).toMatchObject({
         kind: 'presentation-evaluation',
-        teams: [],
       });
       expect(summary.rows[0]).toMatchObject({
-        value: '발표 자료 및 평가 확인',
+        value: hasCta ? '평가 페이지에서 진행' : '평가 기간 종료',
       });
       expect(summary.rows[0]?.actionLabel).toBe(
         hasCta ? '평가하기' : undefined,
@@ -313,7 +312,7 @@ describe('발표 자료와 평가 구분', () => {
     expect(summary.status).toBe('completed');
     expect(summary.statusLabel).toBe('평가 완료');
     expect(summary.rows[0]).toMatchObject({
-      value: '발표 자료 및 평가 확인',
+      value: '평가 기간 종료',
     });
     expect(summary.rows[0]?.actionLabel).toBeUndefined();
   });

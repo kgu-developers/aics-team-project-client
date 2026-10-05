@@ -1,7 +1,13 @@
 import { API_BASE_URL, fetchMeetingRecordDetail } from '@aics/api-client';
 import { AstryxThemeProvider, ToastViewport } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -118,6 +124,18 @@ function renderForm(record?: typeof original) {
   );
 }
 
+async function confirmSave() {
+  await userEvent.click(screen.getByRole('button', { name: '저장' }));
+  const reason = await screen.findByRole('textbox', { name: /수정 사유/ });
+  fireEvent.change(reason, {
+    target: {
+      value:
+        '회의록 변경 사항을 팀원과 확인하고 누락된 사실을 보완하여 다시 저장합니다.',
+    },
+  });
+  await userEvent.click(screen.getByRole('button', { name: '최종 저장' }));
+}
+
 it('제목만 변경하면 기존 본문·일시·참석자를 보존하고 상세로 돌아간다', async () => {
   const bodies: unknown[] = [];
   server.use(
@@ -142,14 +160,18 @@ it('제목만 변경하면 기존 본문·일시·참석자를 보존하고 상�
     screen.queryByRole('button', { name: '액션 추가' }),
   ).not.toBeInTheDocument();
   fireEvent.change(title, { target: { value: '제목만 수정' } });
-  await userEvent.click(screen.getByRole('button', { name: '저장' }));
+  await confirmSave();
   await waitFor(() =>
     expect(navigate).toHaveBeenCalledWith({
       to: '/student/meetings/$meetingId',
       params: { meetingId: '19' },
     }),
   );
-  expect(bodies).toEqual([{ title: '제목만 수정' }]);
+  expect(bodies[0]).toMatchObject({
+    title: '제목만 수정',
+  });
+  expect(bodies[0]).toHaveProperty('reason');
+  expect(bodies[0]).not.toHaveProperty('displayDiff');
   expect(await fetchMeetingRecordDetail('19')).toMatchObject({
     title: '제목만 수정',
     content: meetingApiRecord.content,
@@ -183,11 +205,13 @@ it('단계·일시·장소를 변경하면 화면 입력과 같은 PATCH 값을 
   fireEvent.change(screen.getByRole('textbox', { name: /장소/ }), {
     target: { value: '' },
   });
-  await user.click(screen.getByRole('button', { name: '저장' }));
+  await confirmSave();
   await waitFor(() => expect(navigate).toHaveBeenCalled());
-  expect(bodies).toEqual([
-    { phase: 'FINAL', meetingAt: '2026-09-08T00:30:00', location: '' },
-  ]);
+  expect(bodies[0]).toMatchObject({
+    phase: 'FINAL',
+    meetingAt: '2026-09-08T00:30:00',
+    location: '',
+  });
 });
 
 it('400 오류 뒤 초안을 유지하고 입력을 고쳐 재시도할 수 있다', async () => {
@@ -202,18 +226,24 @@ it('400 오류 뒤 초안을 유지하고 입력을 고쳐 재시도할 수 있�
   renderForm();
   const title = await screen.findByRole('textbox', { name: /회의 제목/ });
   fireEvent.change(title, { target: { value: '유지할 초안' } });
-  await userEvent.click(screen.getByRole('button', { name: '저장' }));
+  await confirmSave();
   expect(
-    await screen.findByText(
-      '회의록을 저장하지 못했어요. 입력 내용을 확인하고 다시 시도해 주세요.',
-      { selector: 'p' },
-    ),
-  ).toBeVisible();
+    await within(
+      screen.getByRole('dialog', { name: '회의록 수정 확인' }),
+    ).findByRole('alert'),
+  ).toHaveTextContent('회의록을 저장하지 못했어요.');
   expect(title).toHaveValue('유지할 초안');
   expect(title).toBeEnabled();
   expect(navigate).not.toHaveBeenCalled();
-  invalid = false;
+  await userEvent.click(screen.getByRole('button', { name: '계속 수정' }));
   await userEvent.click(screen.getByRole('button', { name: '저장' }));
+  expect(
+    within(
+      screen.getByRole('dialog', { name: '회의록 수정 확인' }),
+    ).queryByRole('alert'),
+  ).not.toBeInTheDocument();
+  invalid = false;
+  await userEvent.click(screen.getByRole('button', { name: '최종 저장' }));
   await waitFor(() => expect(navigate).toHaveBeenCalled());
 });
 
@@ -232,7 +262,12 @@ it.each([403, 409, 'network'] as const)(
     renderForm();
     const title = await screen.findByRole('textbox', { name: /회의 제목/ });
     fireEvent.change(title, { target: { value: '보존할 수정 초안' } });
-    await userEvent.click(screen.getByRole('button', { name: '저장' }));
+    await confirmSave();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', { name: '회의록 수정 확인' }),
+      ).not.toBeInTheDocument(),
+    );
     expect(
       await screen.findByRole('link', { name: '저장된 회의록 확인' }),
     ).toBeVisible();
@@ -262,7 +297,7 @@ it('저장 중 화면을 떠나면 늦은 응답이 상세로 이동시키지 �
   fireEvent.change(await screen.findByRole('textbox', { name: /회의 제목/ }), {
     target: { value: '늦은 저장' },
   });
-  await userEvent.click(screen.getByRole('button', { name: '저장' }));
+  await confirmSave();
   await waitFor(() => expect(requestStarted).toHaveBeenCalled());
   unmount();
   await act(async () => {
@@ -283,7 +318,7 @@ it('원본 단계가 없으면 구체적인 검증 오류를 표시하고 초안
   renderForm({ ...original, phase: undefined });
   const title = await screen.findByRole('textbox', { name: /회의 제목/ });
   fireEvent.change(title, { target: { value: '보존할 제목' } });
-  await userEvent.click(screen.getByRole('button', { name: '저장' }));
+  await confirmSave();
   expect(
     await screen.findByText(
       '유효한 팀과 회의록 원본, 회의 단계가 필요해요. 상세에서 다시 확인해 주세요.',
