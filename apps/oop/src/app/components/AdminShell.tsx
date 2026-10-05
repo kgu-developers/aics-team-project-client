@@ -1,4 +1,4 @@
-import { Divider, Text } from '@aics/design-system';
+import { Collapsible, Divider, Text } from '@aics/design-system';
 import { Link, Outlet, useRouterState } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -7,17 +7,33 @@ import { useAuthStore } from '~/features/auth/authStore';
 
 import StudentContactLink from '~/widgets/student-contact-link/StudentContactLink';
 
+import AdminProfilePopover from './AdminProfilePopover';
 import * as styles from './AdminShell.css';
 
-const menuItems = [
-  { label: '홈', to: ROUTES.ADMIN },
-  { label: '강좌·분반 관리', to: ROUTES.ADMIN_SECTIONS },
-  { label: '수강생·팀 관리', to: ROUTES.ADMIN_STUDENT_TEAM },
-  { label: '마일스톤 관리', to: ROUTES.ADMIN_MILESTONES },
-  { label: '공지사항', to: ROUTES.ADMIN_NOTICES },
-  { label: '분반별 제출물', to: ROUTES.ADMIN_SUBMISSIONS },
-  { label: '회의록', to: ROUTES.ADMIN_MEETINGS },
-  { label: '쪽지함', to: ROUTES.ADMIN_MESSAGES },
+const menuGroups = [
+  {
+    items: [
+      { label: '강좌·분반 관리', to: ROUTES.ADMIN_SECTIONS },
+      { label: '수강생·팀 관리', to: ROUTES.ADMIN_STUDENT_TEAM },
+    ],
+    label: '강좌 관리',
+  },
+  {
+    items: [
+      { label: '마일스톤 관리', to: ROUTES.ADMIN_MILESTONES },
+      { label: '분반별 제출물', to: ROUTES.ADMIN_SUBMISSIONS },
+      { label: '공지사항', to: ROUTES.ADMIN_NOTICES },
+    ],
+    label: '프로젝트 관리',
+  },
+  {
+    items: [
+      { label: '회의록', to: ROUTES.ADMIN_MEETINGS },
+      { label: '액션플랜', to: ROUTES.ADMIN_MEETING_ACTIONS },
+      { label: '쪽지함', to: ROUTES.ADMIN_MESSAGES },
+    ],
+    label: '팀 협업',
+  },
 ] as const;
 
 function isMenuItemActive(pathname: string, itemPath: string) {
@@ -46,26 +62,44 @@ export default function AdminShell() {
           <small>2026-2 · 팀 프로젝트</small>
         </div>
         <nav aria-label='관리자 메뉴' className={styles.nav}>
-          {menuItems.map(item => {
-            const isActive = isMenuItemActive(pathname, item.to);
+          <Link
+            className={
+              isMenuItemActive(pathname, ROUTES.ADMIN)
+                ? styles.activeNav
+                : styles.navItem
+            }
+            to={ROUTES.ADMIN}
+          >
+            홈
+          </Link>
+          {menuGroups.map(group => (
+            <Collapsible
+              className={styles.navGroup}
+              defaultIsOpen
+              key={group.label}
+              trigger={group.label}
+            >
+              <div className={styles.navGroupItems}>
+                {group.items.map(item => {
+                  const isActive = isMenuItemActive(pathname, item.to);
 
-            return (
-              <Link
-                className={isActive ? styles.activeNav : styles.navItem}
-                key={item.label}
-                to={item.to}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
+                  return (
+                    <Link
+                      className={
+                        isActive ? styles.activeGroupNav : styles.groupNavItem
+                      }
+                      key={item.label}
+                      to={item.to}
+                    >
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </Collapsible>
+          ))}
         </nav>
-        <Link className={styles.account} to={ROUTES.ADMIN_PROFILE}>
-          <div>
-            <strong>{currentUser?.name ?? '어드민 계정'}</strong>
-            <span>{currentUser?.studentNumber ?? '로그인 정보'} · 프로필</span>
-          </div>
-        </Link>
+        {currentUser ? <AdminProfilePopover currentUser={currentUser} /> : null}
       </aside>
       <main className={styles.main}>
         <div className={styles.content}>

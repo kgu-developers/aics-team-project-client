@@ -1,7 +1,11 @@
-import { createLazyFileRoute } from '@tanstack/react-router';
+import { Navigate, createLazyFileRoute } from '@tanstack/react-router';
 
-import AdminProfilePage from '~/widgets/admin-profile/AdminProfilePage';
+import { ROUTES } from '~/app/constants/routes';
 
 export const Route = createLazyFileRoute('/admin/profile')({
-  component: AdminProfilePage,
+  component: AdminProfileRedirect,
 });
+
+function AdminProfileRedirect() {
+  return <Navigate to={ROUTES.ADMIN} />;
+}
