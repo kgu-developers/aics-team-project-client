@@ -193,6 +193,18 @@ export {
   fetchAdminMeetingRecordDetail,
   type AdminMeetingRecordDetailResponse,
 } from './adminMeeting';
+export {
+  fetchAdminSectionMeetingActions,
+  type AdminSectionMeetingAction,
+  type AdminSectionMeetingActionsFilter,
+  type AdminSectionMeetingActionsResponse,
+} from './adminMeeting';
+export {
+  fetchAdminSectionMeetingRecordLogs,
+  type AdminSectionMeetingRecordEditLog,
+  type AdminSectionMeetingRecordEditLogsFilter,
+  type AdminSectionMeetingRecordEditLogsResponse,
+} from './adminMeeting';
 export { acquireEditLock, fetchEditLock, removeEditLock } from './editLock';
 export {
   fetchEvaluationContext,

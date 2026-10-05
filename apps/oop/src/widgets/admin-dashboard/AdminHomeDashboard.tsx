@@ -12,7 +12,10 @@ import { getSectionDisplayLabel } from '~/shared/lib/getSectionDisplayLabel';
 import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
-import { getRichTextPlainText } from '~/features/admin-meeting/model/getRichTextPlainText';
+import {
+  formatAdminMeetingDateTime,
+  getRichTextPlainText,
+} from '~/features/admin-meeting/model';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
 import {
@@ -297,7 +300,7 @@ export default function AdminHomeDashboard() {
   )
     .slice(0, 3)
     .map(record => ({
-      date: formatSeoulDateTime(record.meetingAt),
+      date: formatAdminMeetingDateTime(record.meetingAt),
       meetingId: String(record.id),
       section: `${getSectionDisplayLabel(
         accessibleSections,

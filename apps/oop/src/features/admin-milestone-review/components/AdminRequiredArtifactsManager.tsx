@@ -20,6 +20,11 @@ import { useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 
 import {
+  formatRequiredArtifactFileSize,
+  MAX_REQUIRED_ARTIFACT_FILE_SIZE_MB,
+  requiredArtifactUploadLimitDescription,
+} from '../model';
+import {
   useAdminRequiredArtifactsQuery,
   useRemoveRequiredArtifactMutation,
   useSubmitRequiredArtifactMutation,
@@ -68,9 +73,11 @@ function createArtifactInput(form: ArtifactForm): RequiredArtifactInput {
 
   if (
     maxFileSizeMb !== undefined &&
-    (!Number.isInteger(maxFileSizeMb) || maxFileSizeMb < 0)
+    (!Number.isInteger(maxFileSizeMb) ||
+      maxFileSizeMb < 1 ||
+      maxFileSizeMb > MAX_REQUIRED_ARTIFACT_FILE_SIZE_MB)
   ) {
-    throw new Error('최대 파일 용량은 0 이상의 정수(MB)로 입력해주세요.');
+    throw new Error('최대 파일 용량은 1~100 사이의 정수(MB)로 입력해주세요.');
   }
 
   return {
@@ -87,9 +94,7 @@ function toArtifactForm(artifact: RequiredArtifactDto): ArtifactForm {
     allowedExtensions: artifact.allowedExtensions?.join(', ') ?? '',
     label: artifact.label ?? '',
     maxFileSizeMb:
-      artifact.maxFileSizeMb === undefined
-        ? ''
-        : String(artifact.maxFileSizeMb),
+      artifact.maxFileSizeMb == null ? '' : String(artifact.maxFileSizeMb),
     required: artifact.required ?? false,
     type: artifact.type ?? 'FILE',
   };
@@ -273,8 +278,8 @@ export default function AdminRequiredArtifactsManager({
                 <Text color='secondary' type='supporting'>
                   허용 확장자:{' '}
                   {artifact.allowedExtensions?.join(', ') || '제한 없음'}
-                  {' · '}최대 용량: {artifact.maxFileSizeMb ?? '제한 없음'}
-                  {artifact.maxFileSizeMb === undefined ? '' : 'MB'}
+                  {' · '}
+                  {formatRequiredArtifactFileSize(artifact.maxFileSizeMb)}
                 </Text>
               ) : null}
             </Card>
@@ -293,7 +298,7 @@ export default function AdminRequiredArtifactsManager({
           purpose='info'
           width={680}
         >
-          <form className={styles.dialogForm} onSubmit={submitForm}>
+          <form className={styles.dialogForm} noValidate onSubmit={submitForm}>
             <Heading level={2}>
               {editingArtifact ? '필수 산출물 수정' : '필수 산출물 추가'}
             </Heading>
@@ -360,11 +365,15 @@ export default function AdminRequiredArtifactsManager({
                 />
                 <label>
                   <Text weight='medium'>최대 파일 용량(MB)</Text>
+                  <Text color='secondary' type='supporting'>
+                    {requiredArtifactUploadLimitDescription}
+                  </Text>
                   <input
                     aria-label='최대 파일 용량(MB)'
                     className={styles.numberInput}
                     disabled={isPending}
-                    min='0'
+                    max={MAX_REQUIRED_ARTIFACT_FILE_SIZE_MB}
+                    min='1'
                     onChange={event =>
                       setForm(current => ({
                         ...current,

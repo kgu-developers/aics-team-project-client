@@ -36,7 +36,7 @@ export const brand = style({
 export const nav = style({
   display: 'flex',
   flexDirection: 'column',
-  gap: 4,
+  gap: tokens.spacing['3'],
   marginTop: 58,
 });
 const navBase = {
@@ -59,6 +59,50 @@ export const activeNav = style({
   ...navBase,
   background: 'rgba(255, 255, 255, 0.06)',
 });
+export const navGroup = style({
+  display: 'block',
+});
+globalStyle(`${navGroup} .astryx-collapsible-trigger`, {
+  alignItems: 'center',
+  background: 'transparent',
+  border: 0,
+  color: tokens.color.background.surface,
+  cursor: 'pointer',
+  display: 'flex',
+  font: 'inherit',
+  fontSize: 16,
+  fontWeight: 400,
+  justifyContent: 'space-between',
+  minHeight: 36,
+  padding: '0 12px',
+  textAlign: 'left',
+  width: '100%',
+});
+globalStyle(`${navGroup} .astryx-collapsible-trigger:focus-visible`, {
+  outline: `2px solid ${tokens.color.accent}`,
+  outlineOffset: 2,
+});
+globalStyle(`${navGroup} .astryx-collapsible-trigger > span:last-child`, {
+  color: tokens.color.background.surface,
+});
+globalStyle(`${navGroup} .astryx-collapsible-content`, {
+  paddingBlockStart: tokens.spacing['1'],
+});
+export const navGroupItems = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 2,
+});
+const groupNavBase = {
+  ...navBase,
+  minHeight: 38,
+  padding: '0 12px 0 24px',
+};
+export const groupNavItem = style(groupNavBase);
+export const activeGroupNav = style({
+  ...groupNavBase,
+  background: 'rgba(255, 255, 255, 0.06)',
+});
 globalStyle(navItem + ':disabled', {
   color: tokens.color.text.disabled,
   cursor: 'not-allowed',
@@ -76,17 +120,6 @@ export const count = style({
 });
 globalStyle(navItem + ':disabled ' + count, {
   opacity: 0.6,
-});
-export const account = style({
-  alignItems: 'center',
-  background: 'rgba(255, 255, 255, 0.08)',
-  borderRadius: tokens.radius.container,
-  color: tokens.color.background.surface,
-  display: 'flex',
-  gap: 10,
-  marginTop: 'auto',
-  padding: 12,
-  textDecoration: 'none',
 });
 export const main = style({
   display: 'flex',
@@ -153,7 +186,7 @@ export const universityLogo = style({
   height: 'auto',
   width: '100%',
 });
-globalStyle(brand + ' span, ' + account + ' span', {
+globalStyle(brand + ' span', {
   color: tokens.color.text.disabled,
   fontSize: 12,
 });
@@ -161,9 +194,4 @@ globalStyle(brand + ' small', {
   color: tokens.color.text.disabled,
   fontSize: 11,
   marginTop: 8,
-});
-globalStyle(account + ' div', {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 2,
 });

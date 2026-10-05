@@ -36,4 +36,46 @@ export const adminMeetingKeys = {
       filter?.page ?? 0,
       filter?.size ?? 20,
     ] as const,
+  sectionActions: (
+    accessibleSectionIds: readonly string[],
+    sectionId: string,
+    filter?: {
+      meetingRecordId?: number | string;
+      page?: number;
+      size?: number;
+      status?: string;
+      teamId?: number | string;
+    },
+  ) =>
+    [
+      ...adminMeetingKeys.all,
+      'section-actions',
+      [...accessibleSectionIds].sort(),
+      sectionId,
+      filter?.teamId ?? null,
+      filter?.meetingRecordId ?? null,
+      filter?.status ?? null,
+      filter?.page ?? 0,
+      filter?.size ?? 20,
+    ] as const,
+  sectionEditLogs: (
+    accessibleSectionIds: readonly string[],
+    sectionId: string,
+    filter?: {
+      meetingRecordId?: number | string;
+      page?: number;
+      size?: number;
+      teamId?: number | string;
+    },
+  ) =>
+    [
+      ...adminMeetingKeys.all,
+      'section-edit-logs',
+      [...accessibleSectionIds].sort(),
+      sectionId,
+      filter?.teamId ?? null,
+      filter?.meetingRecordId ?? null,
+      filter?.page ?? 0,
+      filter?.size ?? 20,
+    ] as const,
 };

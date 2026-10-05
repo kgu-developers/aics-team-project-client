@@ -9,9 +9,9 @@ import { useMemo } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 
+import { formatAdminMeetingDateTime } from '~/features/admin-meeting/model';
 import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -98,7 +98,7 @@ export function AdminLinkedMeetingsTable({
             align: 'center',
             header: '회의 일시',
             key: 'meetingAt',
-            renderCell: record => formatSeoulDateTime(record.meetingAt),
+            renderCell: record => formatAdminMeetingDateTime(record.meetingAt),
             width: proportional(1.4, { minWidth: 170 }),
           },
           {

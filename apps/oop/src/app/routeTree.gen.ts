@@ -40,6 +40,9 @@ const AdminSectionsLazyRouteImport = createFileRoute('/admin/sections')()
 const AdminProfileLazyRouteImport = createFileRoute('/admin/profile')()
 const AdminMessagesLazyRouteImport = createFileRoute('/admin/messages')()
 const AdminMeetingsLazyRouteImport = createFileRoute('/admin/meetings')()
+const AdminMeetingActionsLazyRouteImport = createFileRoute(
+  '/admin/meeting-actions',
+)()
 const StudentNoticesIndexLazyRouteImport =
   createFileRoute('/student/notices/')()
 const StudentMeetingsIndexLazyRouteImport =
@@ -231,6 +234,13 @@ const AdminMeetingsLazyRoute = AdminMeetingsLazyRouteImport.update({
   getParentRoute: () => AdminLazyRoute,
 } as any).lazy(() =>
   import('./routes/admin.meetings.lazy').then((d) => d.Route),
+)
+const AdminMeetingActionsLazyRoute = AdminMeetingActionsLazyRouteImport.update({
+  id: '/meeting-actions',
+  path: '/meeting-actions',
+  getParentRoute: () => AdminLazyRoute,
+} as any).lazy(() =>
+  import('./routes/admin.meeting-actions.lazy').then((d) => d.Route),
 )
 const AdminStudentTeamRoute = AdminStudentTeamRouteImport.update({
   id: '/student-team',
@@ -538,6 +548,7 @@ export interface FileRoutesByFullPath {
   '/admin/notices': typeof AdminNoticesRouteWithChildren
   '/admin/presentation-progress': typeof AdminPresentationProgressRoute
   '/admin/student-team': typeof AdminStudentTeamRoute
+  '/admin/meeting-actions': typeof AdminMeetingActionsLazyRoute
   '/admin/meetings': typeof AdminMeetingsLazyRouteWithChildren
   '/admin/messages': typeof AdminMessagesLazyRouteWithChildren
   '/admin/profile': typeof AdminProfileLazyRoute
@@ -592,6 +603,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/admin/presentation-progress': typeof AdminPresentationProgressRoute
   '/admin/student-team': typeof AdminStudentTeamRoute
+  '/admin/meeting-actions': typeof AdminMeetingActionsLazyRoute
   '/admin/profile': typeof AdminProfileLazyRoute
   '/student/messages': typeof StudentMessagesLazyRoute
   '/student/peer-review': typeof StudentPeerReviewLazyRoute
@@ -640,6 +652,7 @@ export interface FileRoutesById {
   '/admin/notices': typeof AdminNoticesRouteWithChildren
   '/admin/presentation-progress': typeof AdminPresentationProgressRoute
   '/admin/student-team': typeof AdminStudentTeamRoute
+  '/admin/meeting-actions': typeof AdminMeetingActionsLazyRoute
   '/admin/meetings': typeof AdminMeetingsLazyRouteWithChildren
   '/admin/messages': typeof AdminMessagesLazyRouteWithChildren
   '/admin/profile': typeof AdminProfileLazyRoute
@@ -699,6 +712,7 @@ export interface FileRouteTypes {
     | '/admin/notices'
     | '/admin/presentation-progress'
     | '/admin/student-team'
+    | '/admin/meeting-actions'
     | '/admin/meetings'
     | '/admin/messages'
     | '/admin/profile'
@@ -753,6 +767,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/admin/presentation-progress'
     | '/admin/student-team'
+    | '/admin/meeting-actions'
     | '/admin/profile'
     | '/student/messages'
     | '/student/peer-review'
@@ -800,6 +815,7 @@ export interface FileRouteTypes {
     | '/admin/notices'
     | '/admin/presentation-progress'
     | '/admin/student-team'
+    | '/admin/meeting-actions'
     | '/admin/meetings'
     | '/admin/messages'
     | '/admin/profile'
@@ -984,6 +1000,13 @@ declare module '@tanstack/react-router' {
       path: '/meetings'
       fullPath: '/admin/meetings'
       preLoaderRoute: typeof AdminMeetingsLazyRouteImport
+      parentRoute: typeof AdminLazyRoute
+    }
+    '/admin/meeting-actions': {
+      id: '/admin/meeting-actions'
+      path: '/meeting-actions'
+      fullPath: '/admin/meeting-actions'
+      preLoaderRoute: typeof AdminMeetingActionsLazyRouteImport
       parentRoute: typeof AdminLazyRoute
     }
     '/admin/student-team': {
@@ -1336,6 +1359,7 @@ interface AdminLazyRouteChildren {
   AdminNoticesRoute: typeof AdminNoticesRouteWithChildren
   AdminPresentationProgressRoute: typeof AdminPresentationProgressRoute
   AdminStudentTeamRoute: typeof AdminStudentTeamRoute
+  AdminMeetingActionsLazyRoute: typeof AdminMeetingActionsLazyRoute
   AdminMeetingsLazyRoute: typeof AdminMeetingsLazyRouteWithChildren
   AdminMessagesLazyRoute: typeof AdminMessagesLazyRouteWithChildren
   AdminProfileLazyRoute: typeof AdminProfileLazyRoute
@@ -1353,6 +1377,7 @@ const AdminLazyRouteChildren: AdminLazyRouteChildren = {
   AdminNoticesRoute: AdminNoticesRouteWithChildren,
   AdminPresentationProgressRoute: AdminPresentationProgressRoute,
   AdminStudentTeamRoute: AdminStudentTeamRoute,
+  AdminMeetingActionsLazyRoute: AdminMeetingActionsLazyRoute,
   AdminMeetingsLazyRoute: AdminMeetingsLazyRouteWithChildren,
   AdminMessagesLazyRoute: AdminMessagesLazyRouteWithChildren,
   AdminProfileLazyRoute: AdminProfileLazyRoute,

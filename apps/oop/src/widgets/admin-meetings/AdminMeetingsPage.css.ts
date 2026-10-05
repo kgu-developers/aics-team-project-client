@@ -13,6 +13,21 @@ export const page = style({
 
 export const pagination = style({ alignSelf: 'flex-end' });
 
+export const editLogsSection = style({
+  display: 'grid',
+  gap: tokens.spacing[3],
+});
+
+export const editLogsHeading = style({
+  display: 'flex',
+  justifyContent: 'space-between',
+});
+
+export const editLogsCard = style({
+  minWidth: 0,
+  padding: tokens.spacing[4],
+});
+
 export const tableCard = style({
   overflowX: 'auto',
   padding: 0,

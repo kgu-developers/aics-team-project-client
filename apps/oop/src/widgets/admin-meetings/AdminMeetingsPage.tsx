@@ -1,4 +1,5 @@
 import {
+  Button,
   Card,
   EmptyState,
   Heading,
@@ -8,15 +9,19 @@ import {
   Text,
 } from '@aics/design-system';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import type { KeyboardEvent } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
-import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
+import { AdminMeetingEditLogTable } from '~/features/admin-meeting/components';
+import { formatAdminMeetingDateTime } from '~/features/admin-meeting/model';
+import {
+  useAdminMeetingRecordListQuery,
+  useAdminSectionMeetingRecordLogsQuery,
+} from '~/features/admin-meeting/queries';
 import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
 import { useAdminSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
 import AdminSectionTeamFilter, {
@@ -37,6 +42,7 @@ function handleRowNavigation(
 }
 
 export default function AdminMeetingsPage() {
+  const [editLogPage, setEditLogPage] = useState(0);
   const currentUser = useAuthStore(state => state.currentUser);
   const { isRead } = useAdminMeetingReadState(currentUser?.id);
   const navigate = useNavigate();
@@ -77,7 +83,34 @@ export default function AdminMeetingsPage() {
     milestoneId: selectedMilestoneId,
     size: 10,
   });
+  const editLogsQuery = useAdminSectionMeetingRecordLogsQuery(
+    accessibleSectionIds,
+    selectedSectionId === ALL_SECTIONS ? undefined : selectedSectionId,
+    {
+      page: editLogPage,
+      size: 20,
+      teamId: selectedTeamId,
+    },
+  );
   const records = query.data?.contents ?? [];
+  const editLogs = editLogsQuery.data?.contents ?? [];
+  const editLogPagination = editLogsQuery.data?.pageable;
+  const boundedEditLogPage = editLogPagination
+    ? Math.max(
+        0,
+        Math.min(editLogPagination.page, editLogPagination.totalPages - 1),
+      )
+    : editLogPage;
+
+  useEffect(() => {
+    setEditLogPage(0);
+  }, [selectedSectionId, selectedTeamId]);
+
+  useEffect(() => {
+    if (!editLogsQuery.isSuccess || editLogPage === boundedEditLogPage) return;
+
+    setEditLogPage(boundedEditLogPage);
+  }, [boundedEditLogPage, editLogPage, editLogsQuery.isSuccess]);
 
   function selectSection(sectionId: string) {
     void navigate({
@@ -216,7 +249,7 @@ export default function AdminMeetingsPage() {
                   >
                     <td>
                       {!isRead(record.id) ? <AdminUnreadDot /> : null}
-                      {formatSeoulDateTime(record.meetingAt)}
+                      {formatAdminMeetingDateTime(record.meetingAt)}
                     </td>
                     <td>{record.sectionName}</td>
                     <td>{record.teamName}</td>
@@ -240,6 +273,55 @@ export default function AdminMeetingsPage() {
           totalPages={query.data.pageable.totalPages}
           variant='compact'
         />
+      ) : null}
+      {selectedSectionId !== ALL_SECTIONS ? (
+        <section className={styles.editLogsSection}>
+          <div className={styles.editLogsHeading}>
+            <div>
+              <Heading level={2}>회의록 수정 이력</Heading>
+              <Text color='secondary'>
+                선택한 분반과 팀 기준의 수정 사유를 최신순으로 확인합니다.
+                {selectedMilestoneId
+                  ? ' 마일스톤 필터는 회의록 목록에만 적용됩니다.'
+                  : ''}
+              </Text>
+            </div>
+          </div>
+          {editLogsQuery.isPending || editLogPage !== boundedEditLogPage ? (
+            <Text aria-live='polite' role='status'>
+              수정 이력을 불러오는 중입니다.
+            </Text>
+          ) : editLogsQuery.isError ? (
+            <EmptyState
+              actions={
+                <Button
+                  label='다시 시도'
+                  onClick={() => void editLogsQuery.refetch()}
+                />
+              }
+              description='담당 분반의 회의록 수정 이력만 조회할 수 있습니다.'
+              title='수정 이력을 불러오지 못했습니다.'
+            />
+          ) : (
+            <Card className={styles.editLogsCard}>
+              <AdminMeetingEditLogTable
+                emptyMessage='조건에 맞는 회의록 수정 이력이 없습니다.'
+                logs={editLogs}
+              />
+            </Card>
+          )}
+          {editLogPagination && editLogPagination.totalPages > 1 ? (
+            <Pagination
+              className={styles.pagination}
+              isDisabled={editLogsQuery.isFetching}
+              onChange={page => setEditLogPage(page - 1)}
+              page={boundedEditLogPage + 1}
+              pageSize={editLogPagination.size}
+              totalPages={editLogPagination.totalPages}
+              variant='compact'
+            />
+          ) : null}
+        </section>
       ) : null}
     </div>
   );

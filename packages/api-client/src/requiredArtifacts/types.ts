@@ -4,7 +4,7 @@ export type RequiredArtifactDto = {
   allowedExtensions?: string[];
   id: number;
   label?: string;
-  maxFileSizeMb?: number;
+  maxFileSizeMb?: number | null;
   required?: boolean;
   type?: RequiredArtifactType;
 };

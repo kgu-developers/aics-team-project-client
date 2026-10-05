@@ -14,7 +14,12 @@ import {
 import { useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 
-import type { AdminRequiredArtifactDraft } from '../model';
+import {
+  formatRequiredArtifactFileSize,
+  MAX_REQUIRED_ARTIFACT_FILE_SIZE_MB,
+  requiredArtifactUploadLimitDescription,
+  type AdminRequiredArtifactDraft,
+} from '../model';
 import * as styles from './AdminRequiredArtifactDraftEditor.css';
 
 type ArtifactForm = {
@@ -79,9 +84,11 @@ function toDraft(form: ArtifactForm): AdminRequiredArtifactDraft {
 
   if (
     maxFileSizeMb !== undefined &&
-    (!Number.isInteger(maxFileSizeMb) || maxFileSizeMb < 0)
+    (!Number.isInteger(maxFileSizeMb) ||
+      maxFileSizeMb < 1 ||
+      maxFileSizeMb > MAX_REQUIRED_ARTIFACT_FILE_SIZE_MB)
   ) {
-    throw new Error('최대 파일 용량은 0 이상의 정수(MB)로 입력해주세요.');
+    throw new Error('최대 파일 용량은 1~100 사이의 정수(MB)로 입력해주세요.');
   }
 
   return {
@@ -186,8 +193,8 @@ export default function AdminRequiredArtifactDraftEditor({
                     <>
                       {' · '}허용 확장자:{' '}
                       {draft.allowedExtensions?.join(', ') || '제한 없음'}
-                      {' · '}최대 용량: {draft.maxFileSizeMb ?? '제한 없음'}
-                      {draft.maxFileSizeMb === undefined ? '' : 'MB'}
+                      {' · '}
+                      {formatRequiredArtifactFileSize(draft.maxFileSizeMb)}
                     </>
                   ) : null}
                 </Text>
@@ -227,7 +234,11 @@ export default function AdminRequiredArtifactDraftEditor({
           width={680}
         >
           {form ? (
-            <form className={styles.dialogForm} onSubmit={submitForm}>
+            <form
+              className={styles.dialogForm}
+              noValidate
+              onSubmit={submitForm}
+            >
               <Heading level={2}>
                 {editingId ? '산출물 초안 수정' : '산출물 초안 추가'}
               </Heading>
@@ -296,10 +307,14 @@ export default function AdminRequiredArtifactDraftEditor({
                   />
                   <label>
                     <Text weight='medium'>최대 파일 용량(MB)</Text>
+                    <Text color='secondary' type='supporting'>
+                      {requiredArtifactUploadLimitDescription}
+                    </Text>
                     <input
                       aria-label='최대 파일 용량(MB)'
                       className={styles.numberInput}
-                      min='0'
+                      max={MAX_REQUIRED_ARTIFACT_FILE_SIZE_MB}
+                      min='1'
                       onChange={event =>
                         setForm(current =>
                           current

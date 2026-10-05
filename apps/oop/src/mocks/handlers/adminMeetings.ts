@@ -3,8 +3,14 @@ import { http, HttpResponse } from 'msw';
 
 import { getRichTextPlainText } from '../../features/admin-meeting/model';
 import { getMockAuthenticatedAccount } from '../authSession';
-import { adminMeetingRecordsFixture } from '../data/adminMeetings';
-import { adminStudentsFixture } from '../data/adminStudentTeams';
+import {
+  adminMeetingEditLogsFixture,
+  adminMeetingRecordsFixture,
+} from '../data/adminMeetings';
+import {
+  adminStudentsFixture,
+  adminTeamsFixture,
+} from '../data/adminStudentTeams';
 
 function getAccessibleSectionIds(request: Request) {
   const account = getMockAuthenticatedAccount(request);
@@ -47,7 +53,300 @@ function matchesRequestedSection(
   );
 }
 
+function getAdminMeetingActionId(actionId: string) {
+  const match = /^admin-meeting-action-(\d+)$/.exec(actionId);
+
+  if (!match) {
+    throw new Error(
+      `관리자 액션플랜 fixture ID 형식이 올바르지 않습니다: ${actionId}`,
+    );
+  }
+
+  return Number(match[1]);
+}
+
+function getAdminTeamId(teamId: string) {
+  const match = /^team-\d+-(\d+)$/.exec(teamId);
+
+  if (!match) {
+    throw new Error(`관리자 팀 fixture ID 형식이 올바르지 않습니다: ${teamId}`);
+  }
+
+  return Number(match[1]);
+}
+
+function formatFixtureDateTime(value: string | null) {
+  return value ? value.slice(0, 16).replace('T', ' ') : null;
+}
+
+function invalidRequest(message: string) {
+  return HttpResponse.json(
+    { code: 'INVALID_REQUEST', message },
+    { status: 400 },
+  );
+}
+
 export const adminMeetingHandlers = [
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MEETING_RECORD_LOGS(':sectionId')}`,
+    ({ params, request }) => {
+      const accessibleSectionIds = getAccessibleSectionIds(request);
+
+      if (!accessibleSectionIds) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+
+      const sectionId = String(params.sectionId);
+      if (!accessibleSectionIds.includes(sectionId)) {
+        return HttpResponse.json(
+          {
+            code: 'MEETING_RECORD_EDIT_LOG_ACCESS_DENIED',
+            message: '담당 분반의 회의록 수정 이력만 조회할 수 있습니다.',
+          },
+          { status: 403 },
+        );
+      }
+
+      const searchParams = new URL(request.url).searchParams;
+      const requestedTeamId = searchParams.get('teamId');
+      const requestedMeetingRecordId = searchParams.get('meetingRecordId');
+      const page = Number(searchParams.get('page') ?? 0);
+      const size = Number(searchParams.get('size') ?? 20);
+
+      if (!Number.isInteger(page) || page < 0) {
+        return invalidRequest('page는 0 이상의 정수여야 합니다.');
+      }
+      if (!Number.isInteger(size) || size < 1 || size > 100) {
+        return invalidRequest('size는 1부터 100 사이의 정수여야 합니다.');
+      }
+
+      const sectionRecords = adminMeetingRecordsFixture.filter(record =>
+        matchesRequestedSection(record, sectionId),
+      );
+      const sectionFixtureIds = new Set(
+        sectionRecords.map(record => record.sectionId),
+      );
+      const requestedTeamIsInSection =
+        !requestedTeamId ||
+        adminTeamsFixture.some(
+          team =>
+            sectionFixtureIds.has(team.sectionId) &&
+            String(getAdminTeamId(team.id)) === requestedTeamId,
+        );
+      const requestedMeetingRecordIsInSection =
+        !requestedMeetingRecordId ||
+        sectionRecords.some(
+          record =>
+            String(getAdminMeetingRecordId(record)) ===
+            requestedMeetingRecordId,
+        );
+
+      if (!requestedTeamIsInSection || !requestedMeetingRecordIsInSection) {
+        return HttpResponse.json(
+          {
+            code: 'MEETING_RECORD_EDIT_LOG_ACCESS_DENIED',
+            message: '담당 분반의 회의록 수정 이력만 조회할 수 있습니다.',
+          },
+          { status: 403 },
+        );
+      }
+
+      const recordsById = new Map(
+        sectionRecords.map(record => [record.id, record]),
+      );
+      const logs = adminMeetingEditLogsFixture
+        .map(log => ({ log, record: recordsById.get(log.meetingId) }))
+        .filter(
+          (
+            item,
+          ): item is {
+            log: (typeof adminMeetingEditLogsFixture)[number];
+            record: (typeof adminMeetingRecordsFixture)[number];
+          } => item.record !== undefined,
+        )
+        .filter(
+          ({ record }) =>
+            !requestedTeamId || String(record.apiTeamId) === requestedTeamId,
+        )
+        .filter(
+          ({ record }) =>
+            !requestedMeetingRecordId ||
+            String(getAdminMeetingRecordId(record)) ===
+              requestedMeetingRecordId,
+        )
+        .sort((left, right) => {
+          const createdAtComparison = right.log.createdAt.localeCompare(
+            left.log.createdAt,
+          );
+
+          return createdAtComparison || right.log.id - left.log.id;
+        });
+      const start = page * size;
+
+      return HttpResponse.json({
+        contents: logs.slice(start, start + size).map(({ log, record }) => ({
+          createdAt: formatFixtureDateTime(log.createdAt),
+          editorId: log.editorId,
+          editorName: log.editorName,
+          id: log.id,
+          meetingRecordId: getAdminMeetingRecordId(record),
+          meetingRecordTitle: record.title,
+          reason: log.reason,
+          teamId: record.apiTeamId,
+          teamName: record.teamLabel,
+        })),
+        pageable: {
+          isEnd: start + size >= logs.length,
+          page,
+          size,
+          totalElements: logs.length,
+          totalPages: Math.ceil(logs.length / size),
+        },
+      });
+    },
+  ),
+  http.get(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MEETING_ACTIONS(':sectionId')}`,
+    ({ params, request }) => {
+      const accessibleSectionIds = getAccessibleSectionIds(request);
+
+      if (!accessibleSectionIds) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+
+      const sectionId = String(params.sectionId);
+      if (!accessibleSectionIds.includes(sectionId)) {
+        return HttpResponse.json(
+          {
+            code: 'SECTION_ACTION_ACCESS_DENIED',
+            message: '담당 분반의 액션플랜만 조회할 수 있습니다.',
+          },
+          { status: 403 },
+        );
+      }
+
+      const searchParams = new URL(request.url).searchParams;
+      const requestedTeamId = searchParams.get('teamId');
+      const requestedMeetingRecordId = searchParams.get('meetingRecordId');
+      const requestedStatus = searchParams.get('status');
+      const page = Number(searchParams.get('page') ?? 0);
+      const size = Number(searchParams.get('size') ?? 20);
+
+      if (!Number.isInteger(page) || page < 0) {
+        return invalidRequest('page는 0 이상의 정수여야 합니다.');
+      }
+      if (!Number.isInteger(size) || size < 1 || size > 100) {
+        return invalidRequest('size는 1부터 100 사이의 정수여야 합니다.');
+      }
+      if (
+        requestedStatus &&
+        !['TODO', 'IN_PROGRESS', 'DONE'].includes(requestedStatus)
+      ) {
+        return invalidRequest('status 값이 올바르지 않습니다.');
+      }
+
+      const sectionRecords = adminMeetingRecordsFixture.filter(record =>
+        matchesRequestedSection(record, sectionId),
+      );
+      const sectionFixtureIds = new Set(
+        sectionRecords.map(record => record.sectionId),
+      );
+      const hasRequestedTeam =
+        !requestedTeamId ||
+        adminTeamsFixture.some(
+          team =>
+            sectionFixtureIds.has(team.sectionId) &&
+            String(getAdminTeamId(team.id)) === requestedTeamId,
+        );
+      const hasRequestedMeetingRecord =
+        !requestedMeetingRecordId ||
+        sectionRecords.some(
+          record =>
+            String(getAdminMeetingRecordId(record)) ===
+            requestedMeetingRecordId,
+        );
+
+      if (!hasRequestedTeam || !hasRequestedMeetingRecord) {
+        return HttpResponse.json(
+          {
+            code: 'SECTION_ACTION_ACCESS_DENIED',
+            message: '담당 분반의 액션플랜만 조회할 수 있습니다.',
+          },
+          { status: 403 },
+        );
+      }
+
+      const actions = sectionRecords
+        .flatMap(record => record.actions.map(action => ({ action, record })))
+        .filter(
+          ({ record }) =>
+            !requestedTeamId || String(record.apiTeamId) === requestedTeamId,
+        )
+        .filter(
+          ({ record }) =>
+            !requestedMeetingRecordId ||
+            String(getAdminMeetingRecordId(record)) ===
+              requestedMeetingRecordId,
+        )
+        .filter(
+          ({ action }) => !requestedStatus || action.status === requestedStatus,
+        )
+        .sort((left, right) => {
+          const createdAtComparison = right.action.createdAt.localeCompare(
+            left.action.createdAt,
+          );
+
+          return (
+            createdAtComparison ||
+            getAdminMeetingActionId(right.action.id) -
+              getAdminMeetingActionId(left.action.id)
+          );
+        });
+      const start = page * size;
+
+      return HttpResponse.json({
+        contents: actions
+          .slice(start, start + size)
+          .map(({ action, record }) => {
+            const assignee = action.assignee
+              ? adminStudentsFixture.find(
+                  student => student.id === action.assignee?.userId,
+                )
+              : undefined;
+
+            return {
+              assigneeId:
+                assignee?.studentNumber ?? action.assignee?.userId ?? null,
+              assigneeName: action.assignee?.name ?? null,
+              content: action.content,
+              createdAt: formatFixtureDateTime(action.createdAt),
+              dueAt: formatFixtureDateTime(action.dueDate),
+              id: getAdminMeetingActionId(action.id),
+              meetingAt: formatFixtureDateTime(record.heldAt),
+              meetingRecordId: getAdminMeetingRecordId(record),
+              meetingRecordTitle: record.title,
+              status: action.status,
+              teamId: record.apiTeamId,
+              teamName: record.teamLabel,
+              updatedAt: formatFixtureDateTime(action.updatedAt),
+            };
+          }),
+        pageable: {
+          isEnd: start + size >= actions.length,
+          page,
+          size,
+          totalElements: actions.length,
+          totalPages: Math.ceil(actions.length / size),
+        },
+      });
+    },
+  ),
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.MEETING_RECORDS_LIST}`,
     ({ request }) => {
