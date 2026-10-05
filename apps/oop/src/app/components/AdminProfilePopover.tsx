@@ -275,13 +275,12 @@ export default function AdminProfilePopover({
           variant='ghost'
           width='100%'
         />
-        {logoutMutation.isError ? (
-          <Text role='alert'>
-            로그아웃하지 못했습니다. 로그인 상태가 유지됩니다. 다시 시도해
-            주세요.
-          </Text>
-        ) : null}
       </div>
+      {logoutMutation.isError ? (
+        <Text className={styles.logoutError} role='alert'>
+          로그아웃하지 못했습니다. 로그인 상태가 유지됩니다. 다시 시도해 주세요.
+        </Text>
+      ) : null}
     </section>
   );
 

@@ -73,12 +73,25 @@ export default function AdminMeetingDetailPage() {
   }, [query.data?.id]);
 
   const editLogPagination = editLogsQuery.data?.pageable;
+  const actionPagination = actionsQuery.data?.pageable;
+  const boundedActionPage = actionPagination
+    ? Math.max(
+        0,
+        Math.min(actionPagination.page, actionPagination.totalPages - 1),
+      )
+    : actionPage;
   const boundedEditLogPage = editLogPagination
     ? Math.max(
         0,
         Math.min(editLogPagination.page, editLogPagination.totalPages - 1),
       )
     : editLogPage;
+
+  useEffect(() => {
+    if (!actionsQuery.isSuccess || actionPage === boundedActionPage) return;
+
+    setActionPage(boundedActionPage);
+  }, [actionPage, actionsQuery.isSuccess, boundedActionPage]);
 
   useEffect(() => {
     if (!editLogsQuery.isSuccess || editLogPage === boundedEditLogPage) return;
@@ -109,7 +122,6 @@ export default function AdminMeetingDetailPage() {
 
   const record = query.data;
   const actions = actionsQuery.data?.contents ?? [];
-  const actionPagination = actionsQuery.data?.pageable;
   const editLogs = editLogsQuery.data?.contents ?? [];
   const content = parseMeetingContent(record.content);
   const participants = record.participantIds.map(participantId => {
@@ -194,7 +206,7 @@ export default function AdminMeetingDetailPage() {
             전체 액션플랜 보기
           </Link>
         </div>
-        {actionsQuery.isPending ? (
+        {actionsQuery.isPending || actionPage !== boundedActionPage ? (
           <Text aria-live='polite' role='status'>
             액션플랜을 불러오는 중입니다.
           </Text>
@@ -222,7 +234,7 @@ export default function AdminMeetingDetailPage() {
             className={styles.actionsPagination}
             isDisabled={actionsQuery.isFetching}
             onChange={page => setActionPage(page - 1)}
-            page={actionPagination.page + 1}
+            page={boundedActionPage + 1}
             pageSize={actionPagination.size}
             totalPages={actionPagination.totalPages}
             variant='compact'

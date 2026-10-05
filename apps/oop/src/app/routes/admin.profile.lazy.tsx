@@ -7,5 +7,5 @@ export const Route = createLazyFileRoute('/admin/profile')({
 });
 
 function AdminProfileRedirect() {
-  return <Navigate to={ROUTES.ADMIN} />;
+  return <Navigate replace to={ROUTES.ADMIN} />;
 }

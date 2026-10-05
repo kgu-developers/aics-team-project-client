@@ -101,6 +101,11 @@ export const profileActions = style({
   paddingBlockStart: tokens.spacing['3'],
 });
 
+export const logoutError = style({
+  color: tokens.color.text.red,
+  margin: 0,
+});
+
 globalStyle(`${profileActions} > button`, {
   flex: '1 1 0',
   minWidth: 0,
