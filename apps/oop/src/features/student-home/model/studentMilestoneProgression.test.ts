@@ -73,6 +73,26 @@ function submission(
 }
 
 describe('학생 마일스톤 순차 진행', () => {
+  it('일정 전이고 서버가 제출을 허용하지 않은 단계는 열지 않는다', () => {
+    const result = resolveStudentMilestoneProgression(
+      [
+        {
+          milestone: milestone(
+            2,
+            '2026-11-01T00:00:00+09:00',
+            '2026-11-30T23:59:00+09:00',
+          ),
+          submission: submission(2),
+          summary: summary(2),
+        },
+      ],
+      now,
+    );
+
+    expect([...result.unlockedIds]).toEqual([]);
+    expect(result.defaultOpenId).toBeUndefined();
+  });
+
   it('중간보고서 제출 상태가 완료여도 교수자 확인 대기면 현재 단계로 남긴다', () => {
     const midReportSummary: StudentHomeMilestone = {
       ...summary(2),
@@ -142,7 +162,7 @@ describe('학생 마일스톤 순차 진행', () => {
       now,
     );
 
-    expect([...result.unlockedIds]).toEqual(['1', '2']);
+    expect([...result.unlockedIds]).toEqual(['2']);
     expect(result.defaultOpenId).toBe('2');
   });
 
@@ -171,7 +191,7 @@ describe('학생 마일스톤 순차 진행', () => {
       now,
     );
 
-    expect([...result.unlockedIds]).toEqual(['1', '2']);
+    expect([...result.unlockedIds]).toEqual(['2']);
     expect(result.defaultOpenId).toBeUndefined();
   });
 
@@ -261,7 +281,7 @@ describe('학생 마일스톤 순차 진행', () => {
       now,
     );
 
-    expect([...result.unlockedIds]).toEqual(['1', '2']);
+    expect([...result.unlockedIds]).toEqual(['2']);
     expect(result.defaultOpenId).toBe('2');
   });
 

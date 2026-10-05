@@ -83,7 +83,15 @@ export function resolveStudentMilestoneProgression(
   items: ProgressionItem[],
   now: number,
 ): StudentMilestoneProgression {
-  const unlockedIds = new Set(items.map(item => item.summary.id));
+  const unlockedIds = new Set(
+    items
+      .filter(
+        item =>
+          item.submission?.canSubmitNow ||
+          isInScheduleWindow(item.milestone, item.submission, now),
+      )
+      .map(item => item.summary.id),
+  );
 
   const defaultItem = items.find(
     item =>

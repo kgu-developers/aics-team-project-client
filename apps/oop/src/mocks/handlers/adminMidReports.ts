@@ -54,6 +54,53 @@ const initialFeedbacks = [
   },
 ];
 const feedbackStorageKey = 'aics.oop.msw.admin-mid-report-feedbacks';
+const completedTeamsStorageKey =
+  'aics.oop.msw.admin-mid-report-completed-teams';
+
+type CompletedTeam = { at: string; by: string };
+
+function isCompletedTeamEntry(
+  value: unknown,
+): value is [number, CompletedTeam] {
+  return (
+    Array.isArray(value) &&
+    value.length === 2 &&
+    Number.isSafeInteger(value[0]) &&
+    typeof value[1] === 'object' &&
+    value[1] !== null &&
+    typeof value[1].at === 'string' &&
+    typeof value[1].by === 'string'
+  );
+}
+
+function loadCompletedTeams() {
+  if (typeof localStorage === 'undefined')
+    return new Map<number, CompletedTeam>();
+
+  try {
+    const stored = localStorage.getItem(completedTeamsStorageKey);
+    if (!stored) return new Map<number, CompletedTeam>();
+    const parsed: unknown = JSON.parse(stored);
+    return new Map<number, CompletedTeam>(
+      Array.isArray(parsed) ? parsed.filter(isCompletedTeamEntry) : [],
+    );
+  } catch {
+    return new Map<number, CompletedTeam>();
+  }
+}
+
+function persistCompletedTeams() {
+  if (typeof localStorage === 'undefined') return;
+
+  try {
+    localStorage.setItem(
+      completedTeamsStorageKey,
+      JSON.stringify([...completedTeams]),
+    );
+  } catch {
+    // localStorage is only a development convenience for the MSW scenario.
+  }
+}
 
 function loadFeedbacks() {
   if (typeof localStorage === 'undefined') {
@@ -84,7 +131,7 @@ function persistFeedbacks() {
 }
 
 let feedbacks = loadFeedbacks();
-let completedTeams = new Map<number, { at: string; by: string }>();
+let completedTeams = loadCompletedTeams();
 
 function getMidReport(teamId: string): MidReport | undefined {
   if (!['1', '2'].includes(teamId)) return undefined;
@@ -215,6 +262,7 @@ export function resetAdminMidReportScenario() {
   resetAdminMidReportReopenState();
   if (typeof localStorage !== 'undefined') {
     localStorage.removeItem(feedbackStorageKey);
+    localStorage.removeItem(completedTeamsStorageKey);
   }
 }
 
@@ -225,8 +273,13 @@ export const adminMidReportHandlers = [
       if (!isAdmin(request))
         return HttpResponse.json({ code: 'FORBIDDEN' }, { status: 403 });
       const report = getMidReport(String(params.teamId));
-      if (!['1', 'oop-2026-2-01'].includes(String(params.sectionId)) || !report)
+      if (!['1', 'oop-2026-2-01'].includes(String(params.sectionId)))
         return HttpResponse.json({ code: 'FORBIDDEN' }, { status: 403 });
+      if (!report)
+        return HttpResponse.json(
+          { code: 'MID_REPORT_NOT_FOUND' },
+          { status: 404 },
+        );
       const body = (await request.json()) as { version?: unknown };
       if (!Number.isSafeInteger(body.version) || Number(body.version) < 0)
         return HttpResponse.json({ code: 'INVALID_REQUEST' }, { status: 400 });
@@ -238,6 +291,7 @@ export const adminMidReportHandlers = [
       if (!completedTeams.has(report.teamId)) {
         const at = new Date().toISOString();
         completedTeams.set(report.teamId, { at, by: demoAdmin.id });
+        persistCompletedTeams();
         appendPersistentMockFeedbackTeamMessage({
           createdAt: at,
           message: '중간보고서 피드백 반영을 완료 처리했습니다.',
@@ -332,6 +386,7 @@ export const adminMidReportHandlers = [
       persistFeedbacks();
       reopenAdminMidReportSubmission(102, feedback.teamId);
       completedTeams.delete(feedback.teamId);
+      persistCompletedTeams();
       appendPersistentMockFeedbackTeamMessage({
         createdAt: feedback.createdAt,
         message: feedback.message,

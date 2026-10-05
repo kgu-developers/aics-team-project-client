@@ -657,7 +657,16 @@ export default function StudentHomePage() {
     })),
     now,
   );
-  const milestones = summarizedMilestones;
+  const milestones = summarizedMilestones.map(summary =>
+    progression.unlockedIds.has(summary.id) ||
+    (summary.status !== 'before-period' && summary.status !== 'unavailable')
+      ? summary
+      : {
+          ...summary,
+          isDetailAvailable: false,
+          rows: summary.rows.map(row => ({ ...row, actionDisabled: true })),
+        },
+  );
   const activePresentationEvaluation = milestones.find(
     item =>
       item.body?.kind === 'presentation-evaluation' &&

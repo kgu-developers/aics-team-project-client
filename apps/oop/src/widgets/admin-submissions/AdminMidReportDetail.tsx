@@ -223,7 +223,7 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
           {report.revision?.completedAt ? (
             <Text className={styles.metadata}>
               교수자 최종 확인:{' '}
-              {report.revision.completedAt.replace('T', ' ').slice(0, 16)}
+              {formatSeoulDateTime(report.revision.completedAt)}
               {report.revision.completedBy
                 ? ` · ${report.revision.completedBy}`
                 : ''}

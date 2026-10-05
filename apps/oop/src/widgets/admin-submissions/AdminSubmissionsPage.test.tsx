@@ -518,7 +518,9 @@ describe('AdminSubmissionsPage', () => {
       ).getByRole('button', { name: '최종 확인' }),
     );
 
-    expect(await screen.findByText(/교수자 최종 확인:/)).toBeInTheDocument();
+    expect(await screen.findByText(/교수자 최종 확인:/)).toHaveTextContent(
+      /\d{4}-\d{2}-\d{2}\/\d{2}:\d{2}/,
+    );
     expect(
       screen.queryByRole('button', { name: '피드백 반영 최종 확인' }),
     ).not.toBeInTheDocument();

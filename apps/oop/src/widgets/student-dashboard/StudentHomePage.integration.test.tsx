@@ -790,6 +790,11 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     expect(document.getElementById(futureCardId)).not.toHaveTextContent(
       '이전 단계 완료 필요',
     );
+    const futureCard = document.getElementById(futureCardId);
+    if (!futureCard) throw new Error('미래 마일스톤 카드를 찾을 수 없습니다.');
+    expect(
+      within(futureCard).getByRole('button', { name: '작성하기' }),
+    ).toBeDisabled();
   });
 
   it('진행 중 단계가 남으면 기존 히어로와 활성 CTA를 유지한다', async () => {

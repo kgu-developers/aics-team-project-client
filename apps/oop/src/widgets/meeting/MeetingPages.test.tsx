@@ -611,6 +611,33 @@ describe('MeetingDetailPage', () => {
     expect(within(dialog).queryByText('확정된 역할')).not.toBeInTheDocument();
   });
 
+  it('로그보다 최근에 수정된 회의록은 실제 최종 수정 시각을 보여준다', () => {
+    queries.meetingRecord = {
+      ...meetingRecord,
+      updatedAt: '2026-10-03T12:00:00+09:00',
+    };
+    queries.changeLogs = [
+      {
+        id: 2,
+        meetingRecordId: 1,
+        editorId: 'student-a',
+        editorName: 'OOP 데모 학생 A',
+        createdAt: '2026-10-02 10:00',
+        reason: '이전 회의 내용 수정',
+      },
+    ];
+    useAuthStore.getState().setCurrentUser(demoStudent);
+
+    renderWithRouter(<MeetingDetailPage meetingId={meetingRecord.id} />);
+
+    expect(
+      screen.getByText(/최초 작성.*최종 수정 2026-10-03\/12:00/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /최종 수정 2026-10-02\/10:00/ }),
+    ).toBeInTheDocument();
+  });
+
   it('회의록 삭제 성공을 toast로 알리고 목록으로 이동한다', async () => {
     const user = userEvent.setup();
     queries.meetingRecord = meetingRecord;

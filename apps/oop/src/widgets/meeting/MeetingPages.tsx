@@ -35,6 +35,7 @@ import { ROUTES } from '~/app/constants/routes';
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { seoulInstant } from '~/shared/lib/seoulInstant';
 import RichTextEditor from '~/shared/ui/RichTextEditor';
 import RichTextViewer from '~/shared/ui/RichTextViewer';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
@@ -1223,7 +1224,8 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
   } else if (latestLog) {
     const modifiedAt = formatCourseScheduleDateTime(latestLog.createdAt);
     changeLogLabel = `최종 수정 ${modifiedAt} · ${latestLog.editorName ?? latestLog.editorId}`;
-    footerRevisionLabel = `최종 수정 ${modifiedAt}`;
+    if (seoulInstant(latestLog.createdAt) >= seoulInstant(record.updatedAt))
+      footerRevisionLabel = `최종 수정 ${modifiedAt}`;
   }
   const canDelete =
     record.teamId === teamId &&
