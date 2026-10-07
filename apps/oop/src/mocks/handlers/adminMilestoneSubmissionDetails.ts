@@ -7,10 +7,11 @@ import {
   getAdminSubmissionVersionFixture,
   getAdminSubmissionVersionsFixture,
 } from '../data/adminMilestoneSubmissionDetails';
-import { demoAdmin } from '../data/users';
+import { demoAdmin, demoPresentationProfessor } from '../data/users';
 
-function requireAdmin(request: Request) {
-  return getMockAuthenticatedAccount(request)?.user.id === demoAdmin.id;
+function canReadAdminSubmission(request: Request) {
+  const userId = getMockAuthenticatedAccount(request)?.user.id;
+  return userId === demoAdmin.id || userId === demoPresentationProfessor.id;
 }
 
 function notFoundResponse() {
@@ -24,7 +25,7 @@ export const adminMilestoneSubmissionDetailHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_DOWNLOAD(':submissionId')}`,
     ({ params, request }) => {
-      if (!requireAdmin(request)) {
+      if (!canReadAdminSubmission(request)) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },
@@ -45,7 +46,7 @@ export const adminMilestoneSubmissionDetailHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION(':submissionId')}`,
     ({ params, request }) => {
-      if (!requireAdmin(request)) {
+      if (!canReadAdminSubmission(request)) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },
@@ -59,7 +60,7 @@ export const adminMilestoneSubmissionDetailHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_VERSIONS(':submissionId')}`,
     ({ params, request }) => {
-      if (!requireAdmin(request)) {
+      if (!canReadAdminSubmission(request)) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },
@@ -75,7 +76,7 @@ export const adminMilestoneSubmissionDetailHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_VERSION(':submissionId', ':version')}`,
     ({ params, request }) => {
-      if (!requireAdmin(request)) {
+      if (!canReadAdminSubmission(request)) {
         return HttpResponse.json(
           { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
           { status: 401 },

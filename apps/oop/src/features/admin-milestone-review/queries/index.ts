@@ -34,6 +34,7 @@ export { useSubmitAdminProposalFeedbackMutation } from './useSubmitAdminProposal
 export { useAdminPresentationEvaluationsQuery } from './useAdminPresentationEvaluationsQuery';
 export { useAdminPresentationEvaluationTeamQuery } from './useAdminPresentationEvaluationTeamQuery';
 export { useAdminMilestonePresentationsQuery } from './useAdminMilestonePresentationsQuery';
+export { useAdminPresentationTeamMembersQuery } from './useAdminPresentationTeamMembersQuery';
 export { useUpdatePresentationOrderMutation } from './useUpdatePresentationOrderMutation';
 export { adminTeamEvaluationCriteriaKeys } from './adminTeamEvaluationCriteriaKeys';
 export { useAdminTeamEvaluationCriteriaQuery } from './useAdminTeamEvaluationCriteriaQuery';

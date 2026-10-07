@@ -58,6 +58,24 @@ describe('toAdminSubmissionVersionDetailView', () => {
     );
   });
 
+  it('제출 산출물과 현재 규칙을 연결할 수 있도록 산출물 ID를 보존한다', () => {
+    const view = toAdminSubmissionVersionDetailView({
+      artifacts: [
+        {
+          requiredArtifactId: 42,
+          type: 'LINK',
+          url: 'https://example.com/demo',
+        },
+      ],
+      late: false,
+      submittedAt: '2026-09-07T09:00:00Z',
+      submittedBy: '20230001',
+      version: 2,
+    });
+
+    expect(view.artifacts[0]?.requiredArtifactId).toBe(42);
+  });
+
   it('같은 파일명이 여러 제출 규칙에 연결되어도 고유한 렌더링 식별자를 만든다', () => {
     const view = toAdminSubmissionVersionDetailView({
       artifacts: [

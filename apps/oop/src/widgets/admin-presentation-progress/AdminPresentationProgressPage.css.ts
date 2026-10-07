@@ -106,6 +106,47 @@ export const artifactTextContent = style({
   wordBreak: 'break-word',
 });
 
+export const submissionDescription = style({
+  borderBottom: `1px solid ${tokens.color.border.base}`,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['1'],
+  paddingBottom: tokens.spacing['3'],
+});
+
+export const submissionHistoryGrid = style({
+  display: 'grid',
+  gap: 16,
+  gridTemplateColumns: 'minmax(220px, 0.75fr) minmax(0, 1.25fr)',
+  '@media': {
+    'screen and (max-width: 640px)': {
+      gridTemplateColumns: 'minmax(0, 1fr)',
+    },
+  },
+});
+
+export const submissionHistoryList = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+  maxHeight: 320,
+  overflowY: 'auto',
+  paddingRight: 4,
+});
+
+export const submissionHistoryDetail = style({
+  minWidth: 0,
+});
+
+export const submissionHistoryArtifacts = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+  listStyle: 'none',
+  margin: '8px 0 0',
+  padding: 0,
+});
+
 export const scoreRow = style({
   alignItems: 'center',
   borderBottom: `1px solid ${tokens.color.border.base}`,

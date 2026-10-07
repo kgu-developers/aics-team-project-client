@@ -456,21 +456,29 @@ export function getAdminMilestonePresentations(): MilestonePresentation[] {
     .map((team, index) => {
       const teamId = index + 1;
       const teamName = `OOP-01 - ${teamId}팀`;
+      const artifacts = team.artifacts.map(artifact => ({
+        ...artifact,
+        requiredArtifactId:
+          artifact.requiredArtifactId === 1
+            ? 1005
+            : artifact.requiredArtifactId === 2
+              ? 1006
+              : artifact.requiredArtifactId,
+      }));
 
       return {
         ...team,
         artifacts:
           index === 0
             ? [
-                ...team.artifacts,
+                ...artifacts,
                 {
                   type: 'TEXT' as const,
-                  requiredArtifactId: 3,
                   content:
                     '발표 핵심 흐름: 문제 정의 → 해결 방식 → 시연 → 회고',
                 },
               ]
-            : team.artifacts,
+            : artifacts,
         presentationOrder: teamId,
         submissionId: 1008 + index,
         teamId,

@@ -50,6 +50,7 @@ const submittedMilestone: TeamMilestoneProgress = {
         fileName: 'proposal.pdf',
         identityKey: 'FILE:no-rule:no-file:proposal.pdf:0',
         label: '파일',
+        requiredArtifactId: null,
         type: 'FILE',
         url: null,
       },
@@ -60,6 +61,7 @@ const submittedMilestone: TeamMilestoneProgress = {
         identityKey:
           'LINK:no-rule:no-file:https://github.com/kgu-developers/example:1',
         label: '링크',
+        requiredArtifactId: null,
         type: 'LINK',
         url: 'https://github.com/kgu-developers/example',
       },

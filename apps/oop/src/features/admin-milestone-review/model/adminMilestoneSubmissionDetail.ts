@@ -54,6 +54,7 @@ export type AdminSubmissionArtifactView = {
   fileName: string | null;
   identityKey: string;
   label: string;
+  requiredArtifactId: number | null;
   type: AdminSubmissionArtifactTypeDto;
   url: string | null;
 };
@@ -95,6 +96,7 @@ function toArtifactView(
       index,
     ].join(':'),
     label: artifactTypeLabels[artifact.type],
+    requiredArtifactId: artifact.requiredArtifactId ?? null,
     type: artifact.type,
     url: artifact.url ?? null,
   };
