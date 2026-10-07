@@ -35,8 +35,10 @@ function getDefaultExtensions(label: string): string[] | undefined {
 export function createAdminRequiredArtifactDrafts(
   templateId: MilestoneTemplateId,
 ): AdminRequiredArtifactDraft[] {
-  // 상호 평가는 고정 응답 양식으로 작성하므로 제출 산출물을 만들지 않는다.
-  if (templateId === 'peer-review') return [];
+  // 제안서와 중간보고서는 전용 문서 편집기에서 작성한다. 제출 산출물은
+  // 학생 제출 화면이 있는 발표 자료와 최종보고서에서만 만든다.
+  if (templateId !== 'presentation-submit' && templateId !== 'final-report')
+    return [];
 
   const template = findMilestoneTemplate(templateId);
   if (!template) return [];

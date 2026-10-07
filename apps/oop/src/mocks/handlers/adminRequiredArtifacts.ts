@@ -14,8 +14,18 @@ import {
 } from '../data/adminRequiredArtifacts';
 import { demoAdmin } from '../data/users';
 
-function isAdminRequest(request: Request) {
-  return getMockAuthenticatedAccount(request)?.user.id === demoAdmin.id;
+function isSectionManager(request: Request, sectionId: string) {
+  const account = getMockAuthenticatedAccount(request);
+  if (!account) return false;
+  if (account.user.id === demoAdmin.id) return true;
+
+  return (
+    account.user.globalRole === 'PROFESSOR' &&
+    account.user.sections.some(
+      section =>
+        String(section.id) === sectionId && section.role === 'PROFESSOR',
+    )
+  );
 }
 
 function unauthorized() {
@@ -29,7 +39,8 @@ export const adminRequiredArtifactHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.REQUIRED_ARTIFACTS(':sectionId', ':milestoneId')}`,
     ({ params, request }) => {
-      if (!isAdminRequest(request)) return unauthorized();
+      if (!isSectionManager(request, String(params.sectionId)))
+        return unauthorized();
 
       return HttpResponse.json(
         getAdminRequiredArtifactsFixture(String(params.milestoneId)),
@@ -39,7 +50,8 @@ export const adminRequiredArtifactHandlers = [
   http.post(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.REQUIRED_ARTIFACTS(':sectionId', ':milestoneId')}`,
     async ({ params, request }) => {
-      if (!isAdminRequest(request)) return unauthorized();
+      if (!isSectionManager(request, String(params.sectionId)))
+        return unauthorized();
 
       const artifact = createAdminRequiredArtifactFixture(
         String(params.milestoneId),
@@ -51,7 +63,8 @@ export const adminRequiredArtifactHandlers = [
   http.put(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.REQUIRED_ARTIFACTS(':sectionId', ':milestoneId')}/:requiredArtifactId`,
     async ({ params, request }) => {
-      if (!isAdminRequest(request)) return unauthorized();
+      if (!isSectionManager(request, String(params.sectionId)))
+        return unauthorized();
 
       const artifact = updateAdminRequiredArtifactFixture(
         String(params.milestoneId),
@@ -72,7 +85,8 @@ export const adminRequiredArtifactHandlers = [
   http.delete(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.REQUIRED_ARTIFACTS(':sectionId', ':milestoneId')}/:requiredArtifactId`,
     ({ params, request }) => {
-      if (!isAdminRequest(request)) return unauthorized();
+      if (!isSectionManager(request, String(params.sectionId)))
+        return unauthorized();
 
       return removeAdminRequiredArtifactFixture(
         String(params.milestoneId),

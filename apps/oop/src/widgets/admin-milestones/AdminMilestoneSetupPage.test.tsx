@@ -92,6 +92,9 @@ afterAll(() => server.close());
 function renderPage(
   editing: boolean,
   sections = [{ ...demoAdmin.sections[0]!, id: '1' }],
+  creationTemplate?:
+    'final-report' | 'midterm' | 'presentation-submit' | 'proposal',
+  editingMilestoneId = '101',
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -124,7 +127,13 @@ function renderPage(
     routeTree: root.addChildren([route, listRoute]),
     history: createMemoryHistory({
       initialEntries: [
-        `/admin/milestones/new?sectionId=1${editing ? '&milestoneId=101' : ''}`,
+        `/admin/milestones/new?sectionId=1${
+          editing
+            ? `&milestoneId=${editingMilestoneId}`
+            : creationTemplate
+              ? `&milestoneId=${creationTemplate}`
+              : ''
+        }`,
       ],
     }),
   });
@@ -137,6 +146,16 @@ function renderPage(
   );
 
   return router;
+}
+
+function getMilestoneSaveButton() {
+  const button = screen
+    .getAllByRole('button', { name: '저장' })
+    .find(candidate => candidate.getAttribute('type') === 'submit');
+
+  if (!button) throw new Error('마일스톤 저장 버튼을 찾을 수 없습니다.');
+
+  return button;
 }
 
 it('운영 분반을 확인하는 동안 수정 권한 오류를 먼저 표시하지 않는다', async () => {
@@ -187,6 +206,19 @@ function milestoneWrites(writes: string[]) {
   return writes.filter(write => !write.includes('required-artifacts'));
 }
 
+it.each(['presentation-submit', 'final-report'] as const)(
+  '%s 작성 화면은 선택한 프리셋 안내를 표시하지 않는다',
+  async templateId => {
+    renderPage(false, undefined, templateId);
+
+    await screen.findByLabelText('OOP-01 제출 마감일');
+
+    expect(
+      screen.queryByRole('heading', { name: '선택한 프리셋' }),
+    ).not.toBeInTheDocument();
+  },
+);
+
 describe('artifact submission isolation', () => {
   it.each(['click', 'Enter'])(
     'draft dialog %s submission keeps forms separate, supports quick time selection, and returns to the list after Save',
@@ -194,7 +226,7 @@ describe('artifact submission isolation', () => {
       const consoleError = vi.spyOn(console, 'error');
       const user = userEvent.setup();
       const writes = trackWrites();
-      renderPage(false);
+      renderPage(false, undefined, 'final-report');
       fireEvent.change(await screen.findByLabelText('OOP-01 제출 마감일'), {
         target: { value: '2026-10-15' },
       });
@@ -216,10 +248,13 @@ describe('artifact submission isolation', () => {
       if (submission === 'Enter') await user.keyboard('{Enter}');
       else
         await user.click(within(dialog).getByRole('button', { name: '추가' }));
-      await screen.findByText('검증 산출물');
+      const artifactDrafts = screen
+        .getByRole('heading', { name: '제출 산출물 초안' })
+        .closest('section')!;
+      await within(artifactDrafts).findByText('검증 산출물');
       expect(writes).toEqual([]);
-      const draft =
-        screen.getByText('검증 산출물').parentElement!.parentElement!;
+      const draftText = within(artifactDrafts).getByText('검증 산출물');
+      const draft = draftText.parentElement!.parentElement!;
       await user.click(within(draft).getByRole('button', { name: '수정' }));
       expect(document.querySelector('form form')).toBeNull();
       await user.click(
@@ -231,7 +266,7 @@ describe('artifact submission isolation', () => {
       if (submission === 'Enter') {
         await user.click(screen.getByRole('textbox', { name: '제목' }));
         await user.keyboard('{Enter}');
-      } else await user.click(screen.getByRole('button', { name: '저장' }));
+      } else await user.click(getMilestoneSaveButton());
       await waitFor(() => expect(milestoneWrites(writes)).toHaveLength(1));
       expect(milestoneWrites(writes)[0]).toMatch(/^POST /);
       await screen.findByText('마일스톤 목록');
@@ -247,11 +282,11 @@ describe('artifact submission isolation', () => {
       const writes = trackWrites();
       server.use(
         http.put(
-          `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '101')}`,
+          `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '106')}`,
           () => new HttpResponse(null, { status: 204 }),
         ),
       );
-      renderPage(true);
+      renderPage(true, undefined, undefined, '106');
       const section = await screen.findByRole('region', {
         name: '필수 산출물 관리',
       });
@@ -287,7 +322,7 @@ describe('artifact submission isolation', () => {
       if (submission === 'Enter') {
         await user.click(screen.getByRole('textbox', { name: '제목' }));
         await user.keyboard('{Enter}');
-      } else await user.click(screen.getByRole('button', { name: '저장' }));
+      } else await user.click(getMilestoneSaveButton());
       await waitFor(() => expect(milestoneWrites(writes)).toHaveLength(1));
       expect(consoleError).not.toHaveBeenCalled();
     },
@@ -331,7 +366,7 @@ it('부분 생성 실패를 재시도해도 이미 생성한 분반의 마일스
   fireEvent.change(screen.getByLabelText('OOP-02 제출 마감 시간'), {
     target: { value: '23:59' },
   });
-  await user.click(screen.getByRole('button', { name: '저장' }));
+  await user.click(getMilestoneSaveButton());
   await waitFor(() => expect(attempts).toEqual(['1', '2']));
   await user.click(
     screen.getByRole('button', { name: '실패한 작업 다시 시도' }),
@@ -356,7 +391,7 @@ it('생성 실패 시 서버 응답 상태와 코드를 원인과 함께 보여�
   fireEvent.change(screen.getByLabelText('OOP-01 제출 마감 시간'), {
     target: { value: '23:59' },
   });
-  await user.click(screen.getByRole('button', { name: '저장' }));
+  await user.click(getMilestoneSaveButton());
 
   const result = await screen.findByText(/생성에 실패했습니다\./);
   expect(result).toHaveTextContent(
@@ -421,7 +456,7 @@ it('edits peer evaluation while preserving the hidden anonymous setting', async 
   fireEvent.change(screen.getByLabelText('OOP-01 상호 평가 종료일'), {
     target: { value: '2026-10-21' },
   });
-  await user.click(screen.getByRole('button', { name: '저장' }));
+  await user.click(getMilestoneSaveButton());
 
   await waitFor(() => expect(bodies).toHaveLength(1));
   expect(bodies).toEqual([
@@ -489,7 +524,7 @@ it('creates peer evaluation with a separate form window and no presentation wind
   ]) {
     fireEvent.change(screen.getByLabelText(label!), { target: { value } });
   }
-  await user.click(screen.getByRole('button', { name: '저장' }));
+  await user.click(getMilestoneSaveButton());
   await waitFor(() => expect(formBodies).toHaveLength(1));
   expect(milestoneBodies).toEqual([
     expect.objectContaining({
@@ -588,7 +623,7 @@ it('reconciles a committed peer form after a lost response and retries with the 
   ]) {
     fireEvent.change(screen.getByLabelText(label!), { target: { value } });
   }
-  await user.click(screen.getByRole('button', { name: '저장' }));
+  await user.click(getMilestoneSaveButton());
   await screen.findByRole('button', { name: '실패한 작업 다시 시도' });
 
   fireEvent.change(screen.getByLabelText('OOP-01 상호 평가 시작일'), {
@@ -695,7 +730,7 @@ it('편집 화면에서는 기존 발표 평가 기간을 유지하고 제출 �
   expect(
     screen.queryByLabelText('OOP-01 발표 평가 시작일'),
   ).not.toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: '저장' }));
+  await userEvent.click(getMilestoneSaveButton());
   await waitFor(() => expect(bodies).toHaveLength(1));
   expect(bodies[0]).toMatchObject({
     type: 'PRESENTATION',

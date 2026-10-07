@@ -23,15 +23,30 @@ describe('createAdminRequiredArtifactDrafts', () => {
   });
 
   it('발표 프리셋은 자료 제출용 FILE과 시연 영상 LINK 초안을 제공한다', () => {
-    expect(createAdminRequiredArtifactDrafts('presentation-submit')).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ label: '프레젠테이션 자료', type: 'FILE' }),
-        expect.objectContaining({ label: '시연 영상', type: 'LINK' }),
-      ]),
-    );
+    expect(createAdminRequiredArtifactDrafts('presentation-submit')).toEqual([
+      {
+        clientId: 'presentation-submit-0',
+        label: '프레젠테이션 자료',
+        required: true,
+        type: 'FILE',
+      },
+      {
+        clientId: 'presentation-submit-1',
+        label: '시연 영상',
+        required: true,
+        type: 'LINK',
+      },
+    ]);
   });
 
   it('상호 평가 프리셋은 고정 응답 양식을 사용하므로 제출 산출물을 만들지 않는다', () => {
     expect(createAdminRequiredArtifactDrafts('peer-review')).toEqual([]);
   });
+
+  it.each(['proposal', 'midterm'] as const)(
+    '%s은 전용 문서 편집기라 제출 산출물 초안을 만들지 않는다',
+    templateId => {
+      expect(createAdminRequiredArtifactDrafts(templateId)).toEqual([]);
+    },
+  );
 });

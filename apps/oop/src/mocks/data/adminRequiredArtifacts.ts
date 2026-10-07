@@ -5,30 +5,36 @@ import type {
 } from '@aics/api-client';
 
 const initialArtifactsByMilestoneId: Record<string, RequiredArtifactDto[]> = {
-  '101': [
+  '103': [
     {
       allowedExtensions: ['pdf'],
-      id: 1001,
-      label: '프로젝트 제안서',
-      maxFileSizeMb: 20,
+      id: 1005,
+      label: '프레젠테이션 자료',
+      maxFileSizeMb: 100,
       required: true,
       type: 'FILE',
     },
     {
-      id: 1002,
-      label: '프로젝트 저장소 링크',
+      id: 1006,
+      label: '시연 영상',
       required: true,
       type: 'LINK',
     },
   ],
-  '102': [
+  '106': [
     {
       allowedExtensions: ['pdf'],
-      id: 1003,
-      label: '중간 보고서',
-      maxFileSizeMb: 20,
+      id: 1005,
+      label: '프레젠테이션 자료',
+      maxFileSizeMb: 100,
       required: true,
       type: 'FILE',
+    },
+    {
+      id: 1006,
+      label: '시연 영상',
+      required: true,
+      type: 'LINK',
     },
   ],
   '104': [
