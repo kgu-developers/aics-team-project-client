@@ -55,6 +55,8 @@ export {
   type MilestoneTemplateId,
 } from './milestoneTemplates';
 export {
+  formatAdminTotalMeetingRecordCount,
+  hasAdminTotalMeetingRecords,
   toAdminMilestoneSubmissionsView,
   type AdminMilestoneSubmissionView,
   type AdminMilestoneSubmissionsView,

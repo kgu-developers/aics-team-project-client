@@ -22,7 +22,7 @@ export type AdminMilestoneSubmissionView = {
   completedBy: string | null;
   currentVersion: number;
   hasPendingReview: boolean;
-  meetingRecordCount: number;
+  totalMeetingRecordCount: number | null;
   presentationOrder: number | null;
   projectTitle: string | null;
   status: AdminMilestoneSubmissionStatusDto;
@@ -37,6 +37,20 @@ export type AdminMilestoneSubmissionsView = {
   submissions: AdminMilestoneSubmissionView[];
 };
 
+export function formatAdminTotalMeetingRecordCount(
+  totalMeetingRecordCount: number | null,
+) {
+  return totalMeetingRecordCount == null
+    ? '팀 전체 회의록 수 확인 불가'
+    : `팀 전체 회의록 ${totalMeetingRecordCount}건`;
+}
+
+export function hasAdminTotalMeetingRecords(
+  totalMeetingRecordCount: number | null,
+) {
+  return totalMeetingRecordCount != null && totalMeetingRecordCount > 0;
+}
+
 function toSubmissionView(
   submission: AdminMilestoneSubmissionItemDto,
 ): AdminMilestoneSubmissionView {
@@ -46,7 +60,7 @@ function toSubmissionView(
     completedBy: submission.completedBy ?? null,
     currentVersion: submission.currentVersion,
     hasPendingReview: submission.hasPendingReview,
-    meetingRecordCount: submission.meetingRecordCount,
+    totalMeetingRecordCount: submission.totalMeetingRecordCount ?? null,
     presentationOrder: submission.presentationOrder ?? null,
     projectTitle: submission.projectTitle ?? null,
     status: submission.status,

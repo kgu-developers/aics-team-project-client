@@ -3,12 +3,15 @@ import type {
   AdminMilestoneSubmissionsResponse,
 } from '@aics/api-client';
 
-import { countAdminMeetingRecords } from './adminMeetings';
+import {
+  countAdminMeetingRecords,
+  countAllAdminMeetingRecords,
+} from './adminMeetings';
 import { isAdminMidReportSubmissionReopened } from './adminMidReportReopenState';
 
 type SubmissionFixture = Omit<
   AdminMilestoneSubmissionItemDto,
-  'meetingRecordCount'
+  'meetingRecordCount' | 'totalMeetingRecordCount'
 >;
 
 const submissionsByMilestoneId: Record<
@@ -202,6 +205,9 @@ export function getAdminMilestoneSubmissionsFixture(
           meetingRecordCount: countAdminMeetingRecords(
             submission.teamId,
             submission.milestoneId,
+          ),
+          totalMeetingRecordCount: countAllAdminMeetingRecords(
+            submission.teamId,
           ),
           status:
             submission.milestoneId === 102 &&

@@ -32,7 +32,7 @@ const submittedMilestone: TeamMilestoneProgress = {
     completedBy: null,
     currentVersion: 2,
     hasPendingReview: true,
-    meetingRecordCount: 2,
+    totalMeetingRecordCount: 5,
     presentationOrder: null,
     projectTitle: 'AI 기반 팀 프로젝트 운영 플랫폼',
     status: 'SUBMITTED',
@@ -121,7 +121,9 @@ describe('AdminTeamMilestoneProgress', () => {
       screen.getByText('프로젝트 주제: AI 기반 팀 프로젝트 운영 플랫폼'),
     ).toBeInTheDocument();
     expect(screen.getByText('검토 대기 중')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '회의록 2건' })).toHaveAttribute(
+    expect(
+      screen.getByRole('link', { name: '팀 전체 회의록 5건' }),
+    ).toHaveAttribute(
       'href',
       '/admin/meetings?sectionId=%221%22&teamId=%221%22',
     );
@@ -159,6 +161,23 @@ describe('AdminTeamMilestoneProgress', () => {
         name: '상세보기: 아직 제출하지 않은 마일스톤입니다.',
       }),
     ).toBeDisabled();
+  });
+
+  it('팀 전체 회의록 수가 0건이면 빈 회의록 목록으로 이동시키지 않는다', async () => {
+    renderProgress([
+      {
+        ...submittedMilestone,
+        submission: {
+          ...submittedMilestone.submission!,
+          totalMeetingRecordCount: 0,
+        },
+      },
+    ]);
+
+    expect(await screen.findByText('팀 전체 회의록 0건')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: '팀 전체 회의록 0건' }),
+    ).not.toBeInTheDocument();
   });
 
   it('제출 파일과 링크에는 순번 없이 유형만 표시한다', async () => {

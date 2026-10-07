@@ -45,6 +45,8 @@ import {
 import {
   isPresentationEvaluationMilestone,
   isPresentationSubmissionMilestone,
+  formatAdminTotalMeetingRecordCount,
+  hasAdminTotalMeetingRecords,
   type AdminMilestoneSubmissionView,
   type AdminSubmissionVersionDetailView,
 } from '~/features/admin-milestone-review/model';
@@ -1208,15 +1210,25 @@ export default function AdminSubmissionsPage() {
                       return (
                         <AdminMilestoneSubmissionCard
                           meetingCountLabel={
-                            <Link
-                              to={ROUTES.ADMIN_MEETINGS}
-                              search={{
-                                sectionId: effectiveSectionId,
-                                teamId: String(submission.teamId),
-                              }}
-                            >
-                              회의록 {submission.meetingRecordCount}건
-                            </Link>
+                            hasAdminTotalMeetingRecords(
+                              submission.totalMeetingRecordCount,
+                            ) ? (
+                              <Link
+                                to={ROUTES.ADMIN_MEETINGS}
+                                search={{
+                                  sectionId: effectiveSectionId,
+                                  teamId: String(submission.teamId),
+                                }}
+                              >
+                                {formatAdminTotalMeetingRecordCount(
+                                  submission.totalMeetingRecordCount,
+                                )}
+                              </Link>
+                            ) : (
+                              formatAdminTotalMeetingRecordCount(
+                                submission.totalMeetingRecordCount,
+                              )
+                            )
                           }
                           action={
                             activeMilestoneId === 'final-report' ||

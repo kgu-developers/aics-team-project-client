@@ -13,6 +13,7 @@ describe('toAdminSubmissionDetailView', () => {
         currentVersion: 2,
         hasPendingReview: true,
         meetingRecordCount: 0,
+        totalMeetingRecordCount: 5,
         id: 1001,
         milestoneId: 101,
         status: 'REVISION_REQUESTED',
@@ -27,6 +28,7 @@ describe('toAdminSubmissionDetailView', () => {
       statusLabel: '수정 요청',
       submissionId: '1001',
       teamId: '11',
+      totalMeetingRecordCount: 5,
     });
   });
 });

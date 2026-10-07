@@ -16,6 +16,11 @@ export type AdminMilestoneSubmissionItemDto = {
   currentVersion: number;
   hasPendingReview: boolean;
   meetingRecordCount: number;
+  /**
+   * 팀의 모든 회의록 수. 구버전 서버 응답과의 배포 순서 호환을 위해
+   * 새 필드는 선택값으로 수용한다.
+   */
+  totalMeetingRecordCount?: number;
   id: number;
   milestoneId: number;
   presentationOrder?: number | null;

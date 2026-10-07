@@ -4,10 +4,16 @@ import type {
   AdminSubmissionVersionsResponse,
 } from '@aics/api-client';
 
-import { countAdminMeetingRecords } from './adminMeetings';
+import {
+  countAdminMeetingRecords,
+  countAllAdminMeetingRecords,
+} from './adminMeetings';
 
 type SubmissionFixture = {
-  detail: Omit<AdminSubmissionResponse, 'meetingRecordCount'>;
+  detail: Omit<
+    AdminSubmissionResponse,
+    'meetingRecordCount' | 'totalMeetingRecordCount'
+  >;
   versions: AdminSubmissionVersionsResponse;
   versionDetails: Record<number, AdminSubmissionVersionResponse>;
 };
@@ -382,6 +388,7 @@ export function getAdminSubmissionFixture(
           detail.teamId,
           detail.milestoneId,
         ),
+        totalMeetingRecordCount: countAllAdminMeetingRecords(detail.teamId),
       }
     : undefined;
 }

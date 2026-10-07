@@ -31,6 +31,7 @@ export type AdminSubmissionDetailView = {
   currentVersion: number;
   hasPendingReview: boolean;
   milestoneId: string;
+  totalMeetingRecordCount: number | null;
   presentationOrder: number | null;
   status: AdminSubmissionStatusDto;
   statusLabel: string;
@@ -112,6 +113,7 @@ export function toAdminSubmissionDetailView(
     currentVersion: response.currentVersion,
     hasPendingReview: response.hasPendingReview,
     milestoneId: String(response.milestoneId),
+    totalMeetingRecordCount: response.totalMeetingRecordCount ?? null,
     presentationOrder: response.presentationOrder ?? null,
     status: response.status,
     statusLabel: submissionStatusLabels[response.status],
