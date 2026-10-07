@@ -92,8 +92,9 @@ describe('AdminMeetingsPage', () => {
       screen.queryByRole('columnheader', { name: '회의 내용' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('columnheader', { name: '단계' }),
-    ).not.toBeInTheDocument();
+      screen.getByRole('columnheader', { name: '회의 단계' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('최종')).toBeVisible();
     expect(
       container.querySelectorAll('[data-unread-indicator="true"]'),
     ).not.toHaveLength(0);

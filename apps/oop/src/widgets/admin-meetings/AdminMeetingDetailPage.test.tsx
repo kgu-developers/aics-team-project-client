@@ -123,6 +123,12 @@ describe('AdminMeetingDetailPage', () => {
     expect(await screen.findByText('컴퓨터공학과')).toBeInTheDocument();
   });
 
+  it('학생이 선택한 회의 단계를 기본 정보에 표시한다', async () => {
+    renderPage();
+
+    expect(await screen.findByText('회의 단계: 기획')).toBeInTheDocument();
+  });
+
   it('회의록에 등록된 액션플랜만 표시하고 전체 목록으로 연결한다', async () => {
     renderPage();
 
@@ -133,7 +139,7 @@ describe('AdminMeetingDetailPage', () => {
     expect(screen.queryByText('발표 자료 역할별 초안 작성')).toBeNull();
     expect(
       screen.getByRole('link', { name: '전체 액션플랜 보기' }),
-    ).toHaveAttribute('href', '/admin/meeting-actions?sectionId=1');
+    ).toHaveAttribute('href', '/admin/meeting-actions?sectionId=1&teamId=1');
   });
 
   it('현재 회의록의 수정 이력만 표시한다', async () => {
