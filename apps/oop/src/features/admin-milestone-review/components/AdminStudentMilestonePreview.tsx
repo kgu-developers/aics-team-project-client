@@ -14,6 +14,10 @@ import {
 } from '@aics/design-system';
 import { useState } from 'react';
 
+import {
+  STUDENT_DOCUMENT_SCHEMAS,
+  type StudentDocumentSection,
+} from '~/shared/config/studentDocumentSchemas';
 import { cx } from '~/shared/lib/cx';
 
 import type { MilestoneTemplateId } from '../model';
@@ -27,97 +31,34 @@ type ArtifactPreview = {
   type?: RequiredArtifactType;
 };
 
-type PreviewField = { label: string; multiline?: boolean };
 type DocumentPreviewBlock = {
-  fields: readonly PreviewField[];
+  fields: StudentDocumentSection['fields'];
   key: string;
-  kind?: 'team-info';
+  kind?: StudentDocumentSection['kind'];
   title: string;
 };
 
-const documentBlocks: Partial<
-  Record<MilestoneTemplateId, readonly DocumentPreviewBlock[]>
-> = {
-  midterm: [
-    {
-      fields: [
-        { label: '프로젝트 제목' },
-        { label: '주제 설명', multiline: true },
-      ],
-      key: 'topic',
-      title: '1. 주제',
-    },
-    {
-      fields: [{ label: '화면 GUI 목록', multiline: true }],
-      key: 'gui-design',
-      title: '2. 화면 GUI 설계',
-    },
-    {
-      fields: [
-        { label: '구현된 기능 목록', multiline: true },
-        { label: '클래스 구조와 주요 기능 설명', multiline: true },
-        { label: '입력·출력 테스트 케이스', multiline: true },
-      ],
-      key: 'engine-design',
-      title: '3. 엔진부 설계',
-    },
-    {
-      fields: [
-        { label: '완료된 내용', multiline: true },
-        { label: '진행 중인 내용', multiline: true },
-        { label: '미구현 내용', multiline: true },
-        { label: '문제점 또는 지원 필요', multiline: true },
-      ],
-      key: 'project-plan',
-      title: '4. 팀프로젝트 진행 계획',
-    },
-  ],
-  proposal: [
-    {
-      fields: [],
-      key: 'team-info',
-      kind: 'team-info',
-      title: '1. 팀 정보',
-    },
-    {
-      fields: [
-        { label: '프로젝트 제목' },
-        { label: '프로젝트 설명', multiline: true },
-        { label: '프로젝트 목표', multiline: true },
-      ],
-      key: 'topic',
-      title: '2. 주제',
-    },
-    {
-      fields: [
-        { label: '데이터 이름' },
-        { label: '데이터 설명', multiline: true },
-        { label: '예상 개수' },
-      ],
-      key: 'data-composition',
-      title: '3. 데이터 구성',
-    },
-    {
-      fields: [
-        { label: '화면 이름' },
-        { label: '화면 설명', multiline: true },
-        { label: '화면 이미지' },
-      ],
-      key: 'screen-composition',
-      title: '4. 화면 구성',
-    },
-    {
-      fields: [
-        { label: '팀 규칙', multiline: true },
-        { label: '회의 시간·빈도·방식', multiline: true },
-        { label: '진행 일정', multiline: true },
-        { label: '역할 분담', multiline: true },
-      ],
-      key: 'team-operations',
-      title: '5. 팀 운영 방식',
-    },
-  ],
-};
+type StudentPreviewTemplateId = Exclude<
+  MilestoneTemplateId,
+  'peer-review' | 'presentation-evaluate'
+>;
+
+function documentBlocksFor(
+  templateId: 'proposal' | 'midterm',
+): readonly DocumentPreviewBlock[] {
+  const schema =
+    templateId === 'proposal'
+      ? STUDENT_DOCUMENT_SCHEMAS.proposal
+      : STUDENT_DOCUMENT_SCHEMAS['mid-review'];
+  const sections: readonly StudentDocumentSection[] = schema.sections;
+
+  return sections.map((section, index) => ({
+    fields: section.fields,
+    key: section.slug,
+    kind: section.kind,
+    title: `${index + 1}. ${section.label}`,
+  }));
+}
 
 function fileAccept(artifact: ArtifactPreview) {
   return artifact.allowedExtensions?.length
@@ -416,20 +357,20 @@ export default function AdminStudentMilestonePreview({
   artifacts: readonly ArtifactPreview[];
   artifactState?: 'error' | 'loading';
   onRetryArtifacts?: () => void;
-  templateId: MilestoneTemplateId;
+  templateId: StudentPreviewTemplateId;
 }) {
-  const blocks = documentBlocks[templateId];
-
-  if (!blocks) {
+  if (templateId === 'presentation-submit' || templateId === 'final-report') {
     return (
       <SubmissionFormPreview
         artifacts={artifacts}
         artifactState={artifactState}
         onRetryArtifacts={onRetryArtifacts}
-        templateId={templateId as 'presentation-submit' | 'final-report'}
+        templateId={templateId}
       />
     );
   }
+
+  const blocks = documentBlocksFor(templateId);
 
   return (
     <section aria-labelledby='student-screen-preview' className={styles.root}>
@@ -450,10 +391,7 @@ export default function AdminStudentMilestonePreview({
         <Badge label='읽기 전용' variant='neutral' />
       </div>
 
-      <DocumentPreview
-        blocks={blocks}
-        templateId={templateId as 'midterm' | 'proposal'}
-      />
+      <DocumentPreview blocks={blocks} templateId={templateId} />
     </section>
   );
 }
