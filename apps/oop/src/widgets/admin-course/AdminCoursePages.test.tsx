@@ -577,7 +577,7 @@ describe('AdminCourseDetailPage', () => {
           await new Promise<void>(resolve => {
             resolveSectionUpdate = resolve;
           });
-          return HttpResponse.json({});
+          return HttpResponse.json(updateAdminSectionFixture(1, {})!);
         },
       ),
     );
