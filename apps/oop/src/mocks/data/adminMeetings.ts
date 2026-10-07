@@ -252,3 +252,9 @@ export function countAdminMeetingRecords(teamId: number, milestoneId: number) {
       record.apiTeamId === teamId && record.milestoneIds.includes(milestoneId),
   ).length;
 }
+
+export function countAllAdminMeetingRecords(teamId: number) {
+  return adminMeetingRecordsFixture.filter(
+    record => record.apiTeamId === teamId,
+  ).length;
+}

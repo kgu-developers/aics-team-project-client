@@ -10,18 +10,9 @@ const seoulDateTimeFormatter = new Intl.DateTimeFormat('en-CA', {
   year: 'numeric',
 });
 
-function displayInstant(value: string) {
-  const normalized = value.trim().replace(' ', 'T');
-  const offsetlessDateTime =
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/i.test(normalized);
-  return offsetlessDateTime
-    ? Date.parse(`${normalized}Z`)
-    : seoulInstant(value);
-}
-
-/** Formats server timestamps in Asia/Seoul, adding +9h to zone-less date-times. */
+/** Formats server timestamps as Asia/Seoul wall-clock time. */
 export function formatSeoulDateTime(value: string) {
-  const date = new Date(displayInstant(value));
+  const date = new Date(seoulInstant(value));
 
   if (Number.isNaN(date.getTime())) return value;
 

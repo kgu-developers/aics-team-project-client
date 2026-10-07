@@ -184,16 +184,16 @@ async function fill() {
   return user;
 }
 
-it('목록과 상세가 오프셋 없는 게시일을 호스트 TZ와 무관하게 표시한다', async () => {
+it('목록과 상세가 오프셋 없는 게시일을 한국 현지 시각으로 표시한다', async () => {
   const user = userEvent.setup();
   renderPage('/admin/notices?sectionId=1');
   const row = await screen.findByRole('row', {
     name: /이미지 자료 확인 안내 공지사항 보기/,
   });
-  expect(within(row).getByText('2026-08-28/00:00')).toBeInTheDocument();
+  expect(within(row).getByText('2026-08-27/15:00')).toBeInTheDocument();
   await user.click(row);
   expect(
-    await screen.findByText('게시일시 : 2026-08-28/00:00'),
+    await screen.findByText('게시일시 : 2026-08-27/15:00'),
   ).toBeInTheDocument();
 });
 

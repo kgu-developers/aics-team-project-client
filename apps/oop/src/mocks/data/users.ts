@@ -171,7 +171,7 @@ export const demoPresentationProfessor: CurrentUser = {
   studentNumber: '20260098',
   name: '발표 데모 교수',
   email: 'professor-presentation@example.test',
-  sections: [{ ...demoAdmin.sections[0]!, role: 'PROFESSOR' }],
+  sections: [{ ...demoAdmin.sections[0]!, id: '1', role: 'PROFESSOR' }],
 };
 export const demoPresentationProfessorAccessToken =
   'msw-oop-presentation-professor-token';

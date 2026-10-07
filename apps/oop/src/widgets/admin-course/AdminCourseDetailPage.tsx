@@ -746,13 +746,15 @@ export default function AdminCourseDetailPage({
         onCreated={refreshSectionsAndSession}
         professorId={currentUser?.studentNumber}
       />
-      <SectionSettingsDialog
-        isOpen={sectionToEdit !== null}
-        onClose={() => setSectionToEdit(null)}
-        onDeleted={refreshSectionsAndSession}
-        onSaved={refreshSectionsAndSession}
-        section={sectionToEdit}
-      />
+      {sectionToEdit ? (
+        <SectionSettingsDialog
+          isOpen
+          onClose={() => setSectionToEdit(null)}
+          onDeleted={refreshSectionsAndSession}
+          onSaved={refreshSectionsAndSession}
+          section={sectionToEdit}
+        />
+      ) : null}
       {assistantSection ? (
         <SectionAssistantManagement
           isOpen

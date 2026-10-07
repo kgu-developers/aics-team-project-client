@@ -39,7 +39,7 @@ export function useUpdateAdminOopSectionMutation() {
         queryClient.setQueryData(authKeys.currentUser(), nextUser);
       }
 
-      return queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: adminOopSectionKeys.all,
       });
     },

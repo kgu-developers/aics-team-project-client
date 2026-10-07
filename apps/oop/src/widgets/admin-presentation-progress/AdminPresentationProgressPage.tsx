@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   Card,
+  Dialog,
   EmptyState,
   Heading,
   HStack,
@@ -26,10 +27,17 @@ import { ROUTES } from '~/app/constants/routes';
 import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { PdfPreview } from '~/shared/ui/PdfPreview';
 
-import { toAdminMilestoneRequestError } from '~/features/admin-milestone-review/model';
+import {
+  toAdminMilestoneRequestError,
+  type AdminSubmissionVersionDetailView,
+} from '~/features/admin-milestone-review/model';
 import {
   useAdminMilestonePresentationsQuery,
+  useAdminPresentationTeamMembersQuery,
   useAdminProfessorPresentationEvaluationQuery,
+  useAdminRequiredArtifactsQuery,
+  useAdminSubmissionVersionQuery,
+  useAdminSubmissionVersionsQuery,
   useUpdateAdminProfessorPresentationEvaluationMutation,
 } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -54,6 +62,24 @@ type DisplayTeamMember = {
   projectRole?: string | null;
   studentNumber: string;
 };
+
+type DisplaySubmissionArtifact = Pick<
+  StudentSubmissionArtifact,
+  | 'content'
+  | 'downloadUrl'
+  | 'fileId'
+  | 'fileName'
+  | 'mimeType'
+  | 'requiredArtifactId'
+  | 'type'
+  | 'url'
+> & {
+  configuredLabel?: string;
+  identityKey?: string;
+  label?: string;
+};
+
+type RequiredArtifactLabels = ReadonlyMap<number, string>;
 
 function comparePresentations(
   left: MilestonePresentation,
@@ -89,8 +115,41 @@ function isDisplayArtifact(
   );
 }
 
-function getDisplayArtifacts(team: MilestonePresentation) {
-  return team.artifacts.filter(isDisplayArtifact);
+function configuredArtifactLabel(
+  artifact: Pick<StudentSubmissionArtifact, 'requiredArtifactId'>,
+  labels: RequiredArtifactLabels,
+) {
+  return artifact.requiredArtifactId == null
+    ? undefined
+    : labels.get(artifact.requiredArtifactId);
+}
+
+function getDisplayArtifacts(
+  team: MilestonePresentation,
+  labels: RequiredArtifactLabels,
+): DisplaySubmissionArtifact[] {
+  return team.artifacts.filter(isDisplayArtifact).map(artifact => ({
+    ...artifact,
+    configuredLabel: configuredArtifactLabel(artifact, labels),
+  }));
+}
+
+function getVersionDisplayArtifacts(
+  version: AdminSubmissionVersionDetailView,
+  labels: RequiredArtifactLabels,
+): DisplaySubmissionArtifact[] {
+  return version.artifacts.map(artifact => ({
+    content: artifact.content,
+    downloadUrl: artifact.downloadUrl,
+    fileName: artifact.fileName,
+    identityKey: artifact.identityKey,
+    label: artifact.label,
+    mimeType: null,
+    requiredArtifactId: artifact.requiredArtifactId,
+    type: artifact.type,
+    url: artifact.url,
+    configuredLabel: configuredArtifactLabel(artifact, labels),
+  }));
 }
 
 function getDisplayMembers(team: MilestonePresentation): DisplayTeamMember[] {
@@ -108,7 +167,7 @@ function getDisplayMembers(team: MilestonePresentation): DisplayTeamMember[] {
   );
 }
 
-function findPdfArtifact(artifacts: StudentSubmissionArtifact[]) {
+function findPdfArtifact(artifacts: DisplaySubmissionArtifact[]) {
   for (const artifact of artifacts) {
     if (artifact.type !== 'FILE') continue;
     const fileName = artifact.fileName ?? '';
@@ -127,26 +186,31 @@ function findPdfArtifact(artifacts: StudentSubmissionArtifact[]) {
   return null;
 }
 
-function artifactLabel(artifact: StudentSubmissionArtifact, index: number) {
-  if (artifact.type === 'TEXT') {
-    return artifact.fileName ?? `텍스트 자료 ${index + 1}`;
-  }
-  return artifact.fileName ?? artifact.url ?? `제출 자료 ${index + 1}`;
+function artifactLabel(artifact: DisplaySubmissionArtifact, index: number) {
+  if (artifact.configuredLabel) return artifact.configuredLabel;
+  return (
+    artifact.fileName ??
+    artifact.label ??
+    artifact.url ??
+    (artifact.type === 'TEXT'
+      ? `텍스트 자료 ${index + 1}`
+      : `제출 자료 ${index + 1}`)
+  );
 }
 
-function artifactTextContent(artifact: StudentSubmissionArtifact) {
+function artifactTextContent(artifact: DisplaySubmissionArtifact) {
   return artifact.type === 'TEXT' && artifact.content?.trim()
     ? artifact.content
     : null;
 }
 
-function artifactUrl(artifact: StudentSubmissionArtifact) {
+function artifactUrl(artifact: DisplaySubmissionArtifact) {
   return safeSubmissionUrl(
     artifact.type === 'FILE' ? artifact.downloadUrl : artifact.url,
   );
 }
 
-function artifactTypeLabel(artifact: StudentSubmissionArtifact) {
+function artifactTypeLabel(artifact: DisplaySubmissionArtifact) {
   switch (artifact.type) {
     case 'FILE':
       return '파일';
@@ -157,6 +221,14 @@ function artifactTypeLabel(artifact: StudentSubmissionArtifact) {
     case 'CHEERPJ_RUN':
       return '실행 자료';
   }
+}
+
+function artifactSupplementalLabel(
+  artifact: DisplaySubmissionArtifact,
+  primaryLabel: string,
+) {
+  const label = artifact.label ?? artifactTypeLabel(artifact);
+  return label === primaryLabel ? null : label;
 }
 
 function toPositiveTeamId(value: string | undefined) {
@@ -174,6 +246,19 @@ export default function AdminPresentationProgressPage({
   const presentationsQuery = useAdminMilestonePresentationsQuery(
     milestoneId,
     isProfessor && Boolean(sectionId),
+  );
+  const requiredArtifactsQuery = useAdminRequiredArtifactsQuery(
+    isProfessor ? sectionId : undefined,
+    isProfessor ? milestoneId : undefined,
+  );
+  const requiredArtifactLabels = useMemo(
+    () =>
+      new Map(
+        (requiredArtifactsQuery.data?.contents ?? []).flatMap(artifact =>
+          artifact.label ? [[artifact.id, artifact.label] as const] : [],
+        ),
+      ),
+    [requiredArtifactsQuery.data?.contents],
   );
   const presentations = useMemo(
     () => [...(presentationsQuery.data ?? [])].sort(comparePresentations),
@@ -204,6 +289,10 @@ export default function AdminPresentationProgressPage({
   const hydratedProfessorEvaluationTeamIdRef = useRef<number | null>(null);
   const [materialRefreshVersion, setMaterialRefreshVersion] = useState(0);
   const [pendingTeamId, setPendingTeamId] = useState<number | null>(null);
+  const [isSubmissionHistoryOpen, setSubmissionHistoryOpen] = useState(false);
+  const [selectedSubmissionVersion, setSelectedSubmissionVersion] = useState<
+    number | undefined
+  >();
 
   const hasUnsavedProfessorEvaluation = useMemo(() => {
     const evaluation = professorEvaluationQuery.data;
@@ -216,13 +305,6 @@ export default function AdminPresentationProgressPage({
       )
     );
   }, [professorEvaluationQuery.data, professorMemo, professorScores]);
-
-  async function refreshPresentationMaterials() {
-    const result = await presentationsQuery.refetch();
-    if (!result.isError) {
-      setMaterialRefreshVersion(current => current + 1);
-    }
-  }
 
   useEffect(() => {
     if (!presentations.length) {
@@ -287,6 +369,58 @@ export default function AdminPresentationProgressPage({
     presentations.findIndex(team => team.teamId === selectedTeamId),
   );
   const selectedTeam = presentations[selectedIndex];
+  const embeddedMembers = selectedTeam ? getDisplayMembers(selectedTeam) : [];
+  const teamMembersQuery = useAdminPresentationTeamMembersQuery(
+    selectedTeam?.teamId,
+    isProfessor && embeddedMembers.length === 0,
+  );
+  const members =
+    embeddedMembers.length > 0
+      ? embeddedMembers
+      : (teamMembersQuery.data?.members ?? []);
+  const selectedSubmissionId = selectedTeam
+    ? String(selectedTeam.submissionId)
+    : undefined;
+  const submissionVersionsQuery = useAdminSubmissionVersionsQuery(
+    selectedSubmissionId,
+    Boolean(selectedSubmissionId),
+  );
+  const availableSubmissionVersions = submissionVersionsQuery.data ?? [];
+  const latestSubmissionVersion = availableSubmissionVersions[0]?.version;
+  const latestSubmissionVersionQuery = useAdminSubmissionVersionQuery(
+    selectedSubmissionId,
+    latestSubmissionVersion,
+    Boolean(selectedSubmissionId && latestSubmissionVersion !== undefined),
+  );
+  const displayedSubmissionVersion = availableSubmissionVersions.some(
+    version => version.version === selectedSubmissionVersion,
+  )
+    ? selectedSubmissionVersion
+    : availableSubmissionVersions[0]?.version;
+  const submissionVersionQuery = useAdminSubmissionVersionQuery(
+    selectedSubmissionId,
+    displayedSubmissionVersion,
+    isSubmissionHistoryOpen,
+  );
+
+  useEffect(() => {
+    setSubmissionHistoryOpen(false);
+    setSelectedSubmissionVersion(undefined);
+  }, [selectedSubmissionId]);
+
+  async function refreshPresentationMaterials() {
+    const [presentationsResult, versionsResult] = await Promise.all([
+      presentationsQuery.refetch(),
+      submissionVersionsQuery.refetch(),
+      requiredArtifactsQuery.refetch(),
+    ]);
+    if (!presentationsResult.isError) {
+      setMaterialRefreshVersion(current => current + 1);
+    }
+    if (!versionsResult.isError && latestSubmissionVersion !== undefined) {
+      await latestSubmissionVersionQuery.refetch();
+    }
+  }
 
   if (!milestoneId) {
     return (
@@ -367,8 +501,18 @@ export default function AdminPresentationProgressPage({
   const project = selectedTeam.project;
   const teamLabel = selectedTeam.teamName ?? `${selectedTeam.teamId}팀`;
   const screens = getDisplayScreens(selectedTeam);
-  const members = getDisplayMembers(selectedTeam);
-  const artifacts = getDisplayArtifacts(selectedTeam);
+  const artifacts = latestSubmissionVersionQuery.data
+    ? getVersionDisplayArtifacts(
+        latestSubmissionVersionQuery.data,
+        requiredArtifactLabels,
+      )
+    : getDisplayArtifacts(selectedTeam, requiredArtifactLabels);
+  const selectedSubmissionArtifacts = submissionVersionQuery.data
+    ? getVersionDisplayArtifacts(
+        submissionVersionQuery.data,
+        requiredArtifactLabels,
+      )
+    : [];
   const pdf = findPdfArtifact(artifacts);
   const isFirst = selectedIndex === 0;
   const isLast = selectedIndex === presentations.length - 1;
@@ -525,37 +669,15 @@ export default function AdminPresentationProgressPage({
               </Card>
             )}
           </section>
-        </VStack>
 
-        <VStack gap={4}>
-          <section className={styles.section}>
-            <Heading level={2}>팀원 역할</Heading>
-            <Card padding={4}>
-              {members.length ? (
-                <ul className={styles.list}>
-                  {members.map(member => (
-                    <li className={styles.item} key={member.id}>
-                      <Text weight='medium'>
-                        {member.name ?? member.studentNumber}
-                        {member.isLeader ? ' · 팀장' : ''}
-                      </Text>
-                      <Text color='secondary' type='supporting'>
-                        {member.projectRole ?? '역할 미입력'}
-                      </Text>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <Text color='secondary' role='status'>
-                  팀원 역할 정보가 없습니다.
-                </Text>
-              )}
-            </Card>
-          </section>
-
-          <section className={styles.section}>
+          <section
+            aria-labelledby='presentation-materials-heading'
+            className={styles.section}
+          >
             <HStack align='center' gap={1}>
-              <Heading level={2}>발표 자료</Heading>
+              <Heading id='presentation-materials-heading' level={2}>
+                발표 자료
+              </Heading>
               <IconButton
                 icon={<RotateCw aria-hidden='true' size={18} />}
                 isLoading={presentationsQuery.isFetching}
@@ -565,18 +687,56 @@ export default function AdminPresentationProgressPage({
                 tooltip='학생이 교체한 최신 발표 자료를 불러옵니다.'
                 variant='ghost'
               />
+              <Button
+                label='제출 이력'
+                onClick={() => setSubmissionHistoryOpen(true)}
+                type='button'
+                variant='secondary'
+              />
             </HStack>
             <Card padding={4}>
+              {latestSubmissionVersionQuery.isLoading ? (
+                <Text color='secondary' role='status' type='supporting'>
+                  최신 제출 내용을 불러오는 중입니다.
+                </Text>
+              ) : null}
+              {latestSubmissionVersionQuery.isError ? (
+                <VStack align='start' gap={2}>
+                  <Text color='secondary' role='status' type='supporting'>
+                    최신 제출 내용을 불러오지 못해 발표 목록의 자료를
+                    표시합니다.
+                  </Text>
+                  <Button
+                    label='최신 제출 내용 다시 시도'
+                    onClick={() => void latestSubmissionVersionQuery.refetch()}
+                    type='button'
+                    variant='secondary'
+                  />
+                </VStack>
+              ) : null}
+              {latestSubmissionVersionQuery.data?.description ? (
+                <div className={styles.submissionDescription}>
+                  <Text weight='medium'>제출 설명</Text>
+                  <Text>{latestSubmissionVersionQuery.data.description}</Text>
+                </div>
+              ) : null}
               {artifacts.length ? (
                 <ul className={styles.list}>
                   {artifacts.map((artifact, index) => {
                     const label = artifactLabel(artifact, index);
                     const url = artifactUrl(artifact);
                     const textContent = artifactTextContent(artifact);
+                    const supplementalLabel = artifactSupplementalLabel(
+                      artifact,
+                      label,
+                    );
                     return (
                       <li
                         className={styles.item}
-                        key={`${artifact.requiredArtifactId ?? index}:${label}`}
+                        key={
+                          artifact.identityKey ??
+                          `${artifact.requiredArtifactId ?? index}:${label}`
+                        }
                       >
                         {url ? (
                           <a
@@ -590,9 +750,16 @@ export default function AdminPresentationProgressPage({
                         ) : (
                           <Text weight='medium'>{label}</Text>
                         )}
-                        <Text color='secondary' type='supporting'>
-                          {artifactTypeLabel(artifact)}
-                        </Text>
+                        {supplementalLabel ? (
+                          <Text color='secondary' type='supporting'>
+                            {supplementalLabel}
+                          </Text>
+                        ) : null}
+                        {artifact.configuredLabel && artifact.fileName ? (
+                          <Text color='secondary' type='supporting'>
+                            파일명: {artifact.fileName}
+                          </Text>
+                        ) : null}
                         {textContent ? (
                           <Text className={styles.artifactTextContent}>
                             {textContent}
@@ -617,6 +784,49 @@ export default function AdminPresentationProgressPage({
                 url={pdf.url}
               />
             ) : null}
+          </section>
+        </VStack>
+
+        <VStack gap={4}>
+          <section className={styles.section}>
+            <Heading level={2}>팀원 역할</Heading>
+            <Card padding={4}>
+              {members.length ? (
+                <ul className={styles.list}>
+                  {members.map(member => (
+                    <li className={styles.item} key={member.id}>
+                      <Text weight='medium'>
+                        {member.name ?? member.studentNumber}
+                        {member.isLeader ? ' · 팀장' : ''}
+                      </Text>
+                      <Text color='secondary' type='supporting'>
+                        {member.projectRole ?? '역할 미입력'}
+                      </Text>
+                    </li>
+                  ))}
+                </ul>
+              ) : teamMembersQuery.isLoading ? (
+                <Text color='secondary' role='status'>
+                  팀원 역할 정보를 불러오는 중입니다.
+                </Text>
+              ) : teamMembersQuery.isError ? (
+                <VStack align='start' gap={2}>
+                  <Text color='secondary' role='status'>
+                    팀원 역할 정보를 불러오지 못했습니다.
+                  </Text>
+                  <Button
+                    label='다시 시도'
+                    onClick={() => void teamMembersQuery.refetch()}
+                    type='button'
+                    variant='secondary'
+                  />
+                </VStack>
+              ) : (
+                <Text color='secondary' role='status'>
+                  팀원 역할 정보가 없습니다.
+                </Text>
+              )}
+            </Card>
           </section>
 
           <ProfessorEvaluationCard
@@ -706,6 +916,180 @@ export default function AdminPresentationProgressPage({
           />
         </VStack>
       </div>
+      <Dialog
+        aria-label='발표 자료 제출 이력'
+        isOpen={isSubmissionHistoryOpen}
+        onOpenChange={setSubmissionHistoryOpen}
+        purpose='form'
+        width={720}
+      >
+        <VStack gap={4}>
+          <div>
+            <Heading level={2}>발표 자료 제출 이력</Heading>
+            <Text color='secondary' type='supporting'>
+              {teamLabel}의 제출 버전을 최신순으로 확인합니다.
+            </Text>
+          </div>
+          {submissionVersionsQuery.isPending ? (
+            <Text aria-live='polite' role='status'>
+              제출 이력을 불러오는 중입니다.
+            </Text>
+          ) : submissionVersionsQuery.isError ? (
+            <EmptyState
+              actions={
+                <Button
+                  label='다시 시도'
+                  onClick={() => void submissionVersionsQuery.refetch()}
+                  variant='secondary'
+                />
+              }
+              description='잠시 후 다시 시도해 주세요.'
+              title='제출 이력을 불러오지 못했습니다.'
+            />
+          ) : availableSubmissionVersions.length === 0 ? (
+            <EmptyState
+              description='이 팀은 아직 제출 이력이 없습니다.'
+              title='표시할 제출 이력이 없습니다.'
+            />
+          ) : (
+            <div className={styles.submissionHistoryGrid}>
+              <div className={styles.submissionHistoryList}>
+                {availableSubmissionVersions.map(version => (
+                  <Button
+                    key={version.version}
+                    label={`v${version.version} · ${version.submittedBy} · ${formatCourseScheduleDateTime(version.submittedAt)}`}
+                    onClick={() =>
+                      setSelectedSubmissionVersion(version.version)
+                    }
+                    type='button'
+                    variant={
+                      displayedSubmissionVersion === version.version
+                        ? 'primary'
+                        : 'secondary'
+                    }
+                    width='100%'
+                  />
+                ))}
+              </div>
+              {submissionVersionQuery.isPending ? (
+                <Text aria-live='polite' role='status'>
+                  선택한 버전의 파일을 불러오는 중입니다.
+                </Text>
+              ) : submissionVersionQuery.isError ||
+                !submissionVersionQuery.data ? (
+                <EmptyState
+                  actions={
+                    <Button
+                      label='다시 시도'
+                      onClick={() => void submissionVersionQuery.refetch()}
+                      variant='secondary'
+                    />
+                  }
+                  description='선택한 버전의 제출 내용을 확인할 수 없습니다.'
+                  title='제출 버전을 불러오지 못했습니다.'
+                />
+              ) : (
+                <Card className={styles.submissionHistoryDetail} padding={3}>
+                  <VStack gap={3}>
+                    <div>
+                      <Heading level={3}>
+                        v{submissionVersionQuery.data.version} 제출 내용
+                      </Heading>
+                      <Text color='secondary' type='supporting'>
+                        {submissionVersionQuery.data.submittedBy} ·{' '}
+                        {formatCourseScheduleDateTime(
+                          submissionVersionQuery.data.submittedAt,
+                        )}
+                        {submissionVersionQuery.data.isLate
+                          ? ' · 지각 제출'
+                          : ''}
+                      </Text>
+                    </div>
+                    <div>
+                      <Text weight='medium'>제출 설명</Text>
+                      <Text color='secondary'>
+                        {submissionVersionQuery.data.description ??
+                          '제출 설명 없음'}
+                      </Text>
+                    </div>
+                    <div>
+                      <Text weight='medium'>변경 메모</Text>
+                      <Text color='secondary'>
+                        {submissionVersionQuery.data.changeNote ??
+                          '변경 메모 없음'}
+                      </Text>
+                    </div>
+                    <div>
+                      <Text weight='medium'>제출 자료</Text>
+                      {selectedSubmissionArtifacts.length ? (
+                        <ul className={styles.submissionHistoryArtifacts}>
+                          {selectedSubmissionArtifacts.map(
+                            (artifact, index) => {
+                              const url = safeSubmissionUrl(
+                                artifact.downloadUrl ?? artifact.url,
+                              );
+                              const label = artifactLabel(artifact, index);
+                              const supplementalLabel =
+                                artifactSupplementalLabel(artifact, label);
+
+                              return (
+                                <li key={artifact.identityKey}>
+                                  {url ? (
+                                    <a
+                                      className={styles.link}
+                                      href={url}
+                                      rel='noreferrer'
+                                      target='_blank'
+                                    >
+                                      {label}
+                                    </a>
+                                  ) : (
+                                    <Text>{label}</Text>
+                                  )}
+                                  {supplementalLabel ? (
+                                    <Text color='secondary' type='supporting'>
+                                      {supplementalLabel}
+                                    </Text>
+                                  ) : null}
+                                  {artifact.configuredLabel &&
+                                  artifact.fileName ? (
+                                    <Text color='secondary' type='supporting'>
+                                      파일명: {artifact.fileName}
+                                    </Text>
+                                  ) : null}
+                                  {artifact.content ? (
+                                    <Text
+                                      className={styles.artifactTextContent}
+                                    >
+                                      {artifact.content}
+                                    </Text>
+                                  ) : null}
+                                </li>
+                              );
+                            },
+                          )}
+                        </ul>
+                      ) : (
+                        <Text color='secondary'>
+                          이 버전에 등록된 제출 자료가 없습니다.
+                        </Text>
+                      )}
+                    </div>
+                  </VStack>
+                </Card>
+              )}
+            </div>
+          )}
+          <HStack justify='end'>
+            <Button
+              label='닫기'
+              onClick={() => setSubmissionHistoryOpen(false)}
+              type='button'
+              variant='secondary'
+            />
+          </HStack>
+        </VStack>
+      </Dialog>
       <AlertDialog
         actionLabel='저장하지 않고 이동'
         actionVariant='destructive'

@@ -45,6 +45,8 @@ import {
 import {
   isPresentationEvaluationMilestone,
   isPresentationSubmissionMilestone,
+  formatAdminTotalMeetingRecordCount,
+  hasAdminTotalMeetingRecords,
   type AdminMilestoneSubmissionView,
   type AdminSubmissionVersionDetailView,
 } from '~/features/admin-milestone-review/model';
@@ -1101,8 +1103,17 @@ export default function AdminSubmissionsPage() {
                           align: 'center',
                           header: '제출 현황',
                           key: 'submitted',
-                          renderCell: team =>
-                            `${team.submittedCount}/${team.totalMemberCount}`,
+                          renderCell: team => (
+                            <Badge
+                              label={`${team.submittedCount}/${team.totalMemberCount}명 제출`}
+                              variant={
+                                team.totalMemberCount > 0 &&
+                                team.submittedCount === team.totalMemberCount
+                                  ? 'success'
+                                  : 'neutral'
+                              }
+                            />
+                          ),
                           width: proportional(0.9, { minWidth: 112 }),
                         },
                         {
@@ -1199,15 +1210,25 @@ export default function AdminSubmissionsPage() {
                       return (
                         <AdminMilestoneSubmissionCard
                           meetingCountLabel={
-                            <Link
-                              to={ROUTES.ADMIN_MEETINGS}
-                              search={{
-                                sectionId: effectiveSectionId,
-                                teamId: String(submission.teamId),
-                              }}
-                            >
-                              회의록 {submission.meetingRecordCount}건
-                            </Link>
+                            hasAdminTotalMeetingRecords(
+                              submission.totalMeetingRecordCount,
+                            ) ? (
+                              <Link
+                                to={ROUTES.ADMIN_MEETINGS}
+                                search={{
+                                  sectionId: effectiveSectionId,
+                                  teamId: String(submission.teamId),
+                                }}
+                              >
+                                {formatAdminTotalMeetingRecordCount(
+                                  submission.totalMeetingRecordCount,
+                                )}
+                              </Link>
+                            ) : (
+                              formatAdminTotalMeetingRecordCount(
+                                submission.totalMeetingRecordCount,
+                              )
+                            )
                           }
                           action={
                             activeMilestoneId === 'final-report' ||

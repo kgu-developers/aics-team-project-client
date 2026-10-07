@@ -10,23 +10,52 @@ import {
 } from '@tanstack/react-router';
 import { render, screen } from '@testing-library/react';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
 import AdminMilestoneDetailPage from './AdminMilestoneDetailPage';
 
-import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import {
+  issueMockSession,
+  mockSessionResponseHeaders,
+  resetMockSessionState,
+} from '~/mocks/authSession';
+import {
+  demoAdmin,
+  demoAdminAccessToken,
+  demoUserAccounts,
+} from '~/mocks/data/users';
+import { adminPresentationEvaluationHandlers } from '~/mocks/handlers/adminPresentationEvaluations';
 import { adminRequiredArtifactHandlers } from '~/mocks/handlers/adminRequiredArtifacts';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 
 const server = setupServer(
   ...adminSectionMilestoneHandlers,
   ...adminRequiredArtifactHandlers,
+  ...adminPresentationEvaluationHandlers,
 );
 const clients: QueryClient[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => {
+  resetMockSessionState();
+  mockSessionResponseHeaders(
+    issueMockSession(
+      demoUserAccounts.find(
+        account => account.accessToken === demoAdminAccessToken,
+      )!,
+    ),
+  );
+});
 afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
   server.resetHandlers();
@@ -73,6 +102,52 @@ function renderPage(milestoneId: string) {
 }
 
 describe('AdminMilestoneDetailPage 발표 평가 안내', () => {
+  it('상호평가는 필수 산출물 대신 학생 상호평가 문항 미리보기를 보여준다', async () => {
+    renderPage('105');
+
+    expect(
+      await screen.findByRole('heading', {
+        name: '학생 상호평가 문항 · 학생 화면 미리보기',
+      }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('heading', { name: '필수 산출물' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/기여도 \(%\)/)).toBeDisabled();
+  });
+
+  it('발표 자료의 현재 산출물 설정을 학생 제출 모달 모양으로 함께 보여준다', async () => {
+    renderPage('106');
+
+    expect(
+      await screen.findByRole('region', {
+        name: '발표 자료 제출 학생 제출 모달 미리보기',
+      }),
+    ).toBeVisible();
+    expect(
+      await screen.findByRole('button', { name: '프레젠테이션 자료' }),
+    ).toBeDisabled();
+    expect(await screen.findByLabelText(/시연 영상/)).toBeDisabled();
+  });
+
+  it('발표 자료 조회에서도 현재 학생 발표 평가 문항을 보여준다', async () => {
+    renderPage('106');
+
+    const questionsHeading = await screen.findByRole('heading', {
+      name: '학생 발표 평가 문항',
+    });
+    const artifactsHeading = await screen.findByRole('heading', {
+      name: '필수 산출물',
+    });
+
+    expect(questionsHeading).toBeVisible();
+    expect(questionsHeading.compareDocumentPosition(artifactsHeading)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+    expect(screen.getByText('프로젝트 완성도 · 5점')).toBeVisible();
+    expect(screen.getByText('기능 구성과 구현 · 5점')).toBeVisible();
+  });
+
   it('발표 평가는 제출물 관리 화면에서 시작하도록 안내한다', async () => {
     renderPage('106');
 

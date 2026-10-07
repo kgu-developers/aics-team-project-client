@@ -1,3 +1,5 @@
+import { STUDENT_DOCUMENT_SCHEMAS } from '~/shared/config/studentDocumentSchemas';
+
 /**
  * 에디터 섹션 공통 정의.
  * Figma "5. 에디터"의 문서별 섹션 구성을 반영한다.
@@ -9,27 +11,8 @@
  * 이 한 곳을 참조해 서로 어긋나지 않도록 한다.
  */
 export const EDITOR_DOCS = {
-  proposal: {
-    path: '/student/editor/proposal',
-    title: '제안서',
-    sections: [
-      { slug: 'team-info', label: '팀 정보' },
-      { slug: 'topic', label: '주제' },
-      { slug: 'data-composition', label: '데이터 구성' },
-      { slug: 'screen-composition', label: '화면 구성' },
-      { slug: 'team-operations', label: '팀 운영 방식' },
-    ],
-  },
-  'mid-review': {
-    path: '/student/editor/mid-review',
-    title: '중간 보고서',
-    sections: [
-      { slug: 'topic', label: '주제' },
-      { slug: 'gui-design', label: '화면 GUI 설계' },
-      { slug: 'engine-design', label: '엔진부 설계' },
-      { slug: 'project-plan', label: '팀프로젝트 진행 계획' },
-    ],
-  },
+  proposal: STUDENT_DOCUMENT_SCHEMAS.proposal,
+  'mid-review': STUDENT_DOCUMENT_SCHEMAS['mid-review'],
   presentation: {
     path: '/student/editor/presentation',
     title: '발표 자료 제출',

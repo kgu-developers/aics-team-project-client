@@ -55,6 +55,12 @@ export {
   type MilestoneTemplateId,
 } from './milestoneTemplates';
 export {
+  getStudentMilestonePreviewTemplateId,
+  type StudentMilestonePreviewTemplateId,
+} from './studentMilestonePreviewTemplate';
+export {
+  formatAdminTotalMeetingRecordCount,
+  hasAdminTotalMeetingRecords,
   toAdminMilestoneSubmissionsView,
   type AdminMilestoneSubmissionView,
   type AdminMilestoneSubmissionsView,

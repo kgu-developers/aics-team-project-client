@@ -51,6 +51,7 @@ export const adminMilestoneSubmissionsHandlers = [
               hasPendingReview: false,
               id: milestoneId === '101' ? 1701 : 1702,
               meetingRecordCount: 0,
+              totalMeetingRecordCount: 0,
               milestoneId: Number(milestoneId),
               projectTitle: milestoneId === '101' ? '검수 프로젝트' : undefined,
               status: 'SUBMITTED',

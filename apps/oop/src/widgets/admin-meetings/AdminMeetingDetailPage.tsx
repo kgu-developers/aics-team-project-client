@@ -19,6 +19,7 @@ import {
 } from '~/features/admin-meeting/components';
 import {
   formatAdminMeetingDateTime,
+  formatAdminMeetingPhase,
   getRichTextPlainText,
 } from '~/features/admin-meeting/model';
 import {
@@ -157,6 +158,7 @@ export default function AdminMeetingDetailPage() {
               {record.teamName}
             </Link>
             <Text>{formatAdminMeetingDateTime(record.meetingAt)}</Text>
+            <Text>회의 단계: {formatAdminMeetingPhase(record.phase)}</Text>
             {record.location ? <Text>{record.location}</Text> : null}
           </div>
         </div>
@@ -200,7 +202,10 @@ export default function AdminMeetingDetailPage() {
           </div>
           <Link
             className={styles.backLink}
-            search={{ sectionId: Number(record.sectionId) }}
+            search={{
+              sectionId: Number(record.sectionId),
+              teamId: Number(record.teamId),
+            }}
             to={ROUTES.ADMIN_MEETING_ACTIONS}
           >
             전체 액션플랜 보기

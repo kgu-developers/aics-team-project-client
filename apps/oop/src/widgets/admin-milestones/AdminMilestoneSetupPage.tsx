@@ -28,8 +28,11 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
 import { useCreateAdminPeerEvaluationFormMutation } from '~/features/admin-evaluation/queries';
+import AdminPeerEvaluationStudentPreview from '~/features/admin-milestone-review/components/AdminPeerEvaluationStudentPreview';
+import AdminPresentationEvaluationQuestions from '~/features/admin-milestone-review/components/AdminPresentationEvaluationQuestions';
 import AdminRequiredArtifactDraftEditor from '~/features/admin-milestone-review/components/AdminRequiredArtifactDraftEditor';
 import AdminRequiredArtifactsManager from '~/features/admin-milestone-review/components/AdminRequiredArtifactsManager';
+import AdminStudentMilestonePreview from '~/features/admin-milestone-review/components/AdminStudentMilestonePreview';
 import {
   createAdminMilestoneSectionScheduleDraft,
   createAdminMilestoneSectionScheduleDraftFromDto,
@@ -40,6 +43,7 @@ import {
   formatAdminMilestoneRequestError,
   getAdminMilestoneTypeForTemplate,
   getAdminMilestoneTypeLabel,
+  getStudentMilestonePreviewTemplateId,
   isMilestoneTemplateId,
   isSupportedMilestoneCreationTemplate,
   milestoneTemplates,
@@ -54,18 +58,13 @@ import {
   useSubmitAdminSectionMilestonesMutation,
   useSubmitAdminRequiredArtifactsMutation,
   useAdminAccessibleSectionMilestonesQuery,
+  useAdminRequiredArtifactsQuery,
   useAdminSectionMilestoneQuery,
   useAdminSectionMilestonesQuery,
-  useAdminTeamEvaluationCriteriaQuery,
   useUpdateAdminSectionMilestoneMutation,
   type SubmitAdminSectionMilestonesInput,
   type SubmitAdminSectionMilestonesResult,
 } from '~/features/admin-milestone-review/queries';
-
-import {
-  peerEvaluationProjectQuestions,
-  peerEvaluationTeammateQuestions,
-} from '~/course/peerEvaluationQuestions';
 
 import * as styles from './AdminMilestoneSetupPage.css';
 
@@ -118,147 +117,6 @@ function ScheduleTimeInput({ label, onChange, value }: ScheduleTimeInputProps) {
         </div>
       </div>
     </div>
-  );
-}
-
-type MilestoneSection = {
-  code: string;
-  id: string;
-  name: string;
-};
-
-function PeerEvaluationQuestionsGuide() {
-  return (
-    <section
-      aria-labelledby='peer-evaluation-questions'
-      className={styles.section}
-    >
-      <Heading
-        className={styles.sectionTitle}
-        id='peer-evaluation-questions'
-        level={2}
-      >
-        학생 상호평가 문항
-      </Heading>
-      <Text color='secondary' type='supporting'>
-        상호평가는 고정 양식입니다. 아래 문항은 학생 화면에도 동일하게 표시되며,
-        이 화면에서는 변경할 수 없습니다.
-      </Text>
-      <div className={styles.sectionScheduleList}>
-        <article className={styles.sectionSchedule}>
-          <Heading level={3}>프로젝트 평가</Heading>
-          <ul className={styles.evaluationQuestionList}>
-            {peerEvaluationProjectQuestions.map(question => (
-              <li
-                className={styles.evaluationQuestionItem}
-                key={question.label}
-              >
-                <Text weight='medium'>{question.label}</Text>
-                <Text color='secondary' type='supporting'>
-                  {question.description}
-                </Text>
-              </li>
-            ))}
-          </ul>
-        </article>
-        <article className={styles.sectionSchedule}>
-          <Heading level={3}>팀원별 기여도 평가</Heading>
-          <ul className={styles.evaluationQuestionList}>
-            {peerEvaluationTeammateQuestions.map(question => (
-              <li
-                className={styles.evaluationQuestionItem}
-                key={question.label}
-              >
-                <Text weight='medium'>{question.label}</Text>
-                <Text color='secondary' type='supporting'>
-                  {question.description}
-                </Text>
-              </li>
-            ))}
-          </ul>
-        </article>
-      </div>
-    </section>
-  );
-}
-
-function PresentationEvaluationQuestionsGuide({
-  section,
-}: {
-  section: MilestoneSection;
-}) {
-  const criteriaQuery = useAdminTeamEvaluationCriteriaQuery(section.id);
-
-  return (
-    <article className={styles.sectionSchedule}>
-      <Heading level={3}>{`${section.code} · ${section.name}`}</Heading>
-      {criteriaQuery.isPending ? (
-        <Text aria-live='polite' role='status'>
-          학생 발표 평가 문항을 불러오는 중입니다.
-        </Text>
-      ) : criteriaQuery.isError ? (
-        <Text role='alert'>
-          학생 발표 평가 문항을 불러오지 못했습니다. 제출물 관리의 발표 평가
-          화면에서 다시 확인해 주세요.
-        </Text>
-      ) : (criteriaQuery.data?.contents.length ?? 0) === 0 ? (
-        <Text color='secondary' type='supporting'>
-          아직 등록된 발표 평가 문항이 없습니다. 분반별 제출물의 발표 평가에서
-          문항을 추가하면 학생 발표 평가 화면에도 표시됩니다.
-        </Text>
-      ) : (
-        <ul className={styles.resultList}>
-          {criteriaQuery.data?.contents.map(criterion => (
-            <li key={criterion.id}>
-              <Text weight='medium'>
-                {criterion.displayOrder + 1}. {criterion.title} ·{' '}
-                {criterion.maxScore}점
-              </Text>
-            </li>
-          ))}
-        </ul>
-      )}
-    </article>
-  );
-}
-
-function PresentationEvaluationQuestionsGuideSection({
-  sections,
-}: {
-  sections: MilestoneSection[];
-}) {
-  return (
-    <section
-      aria-labelledby='presentation-evaluation-questions'
-      className={styles.section}
-    >
-      <Heading
-        className={styles.sectionTitle}
-        id='presentation-evaluation-questions'
-        level={2}
-      >
-        학생 발표 평가 문항
-      </Heading>
-      <Text color='secondary' type='supporting'>
-        발표 평가 문항은 분반별 제출물의 발표 평가에서 설정할 수 있습니다. 이
-        마일스톤 화면에서는 분반별 현재 문항만 확인하며, 등록된 항목은 학생 발표
-        평가 화면에 그대로 표시됩니다.
-      </Text>
-      {sections.length === 0 ? (
-        <Text color='secondary' type='supporting'>
-          문항을 확인할 분반을 하나 이상 선택해 주세요.
-        </Text>
-      ) : (
-        <div className={styles.sectionScheduleList}>
-          {sections.map(section => (
-            <PresentationEvaluationQuestionsGuide
-              key={section.id}
-              section={section}
-            />
-          ))}
-        </div>
-      )}
-    </section>
   );
 }
 
@@ -366,6 +224,17 @@ export default function AdminMilestoneSetupPage() {
   const isPeerEvaluation = isEditing
     ? milestoneQuery.data?.type === 'PEER_EVALUATION'
     : templateId === 'peer-review';
+  const supportsRequiredArtifacts = isEditing
+    ? milestoneQuery.data?.type === 'PRESENTATION' ||
+      milestoneQuery.data?.type === 'FINAL_REPORT'
+    : templateId === 'presentation-submit' || templateId === 'final-report';
+  const requiredArtifactsQuery = useAdminRequiredArtifactsQuery(
+    isEditing && supportsRequiredArtifacts ? editingSectionId : undefined,
+    isEditing && supportsRequiredArtifacts ? editingMilestoneId : undefined,
+  );
+  const previewArtifacts = isEditing
+    ? (requiredArtifactsQuery.data?.contents ?? [])
+    : requiredArtifactDrafts;
   const sectionMilestonesQuery =
     useAdminSectionMilestonesQuery(editingSectionId);
   const selectedSectionMilestoneQueries =
@@ -394,6 +263,10 @@ export default function AdminMilestoneSetupPage() {
       submissionResults.some(result => result.status === 'publish-failed')),
   );
   const selectedMilestoneType = getAdminMilestoneTypeForTemplate(templateId);
+  const studentPreviewTemplateId = getStudentMilestonePreviewTemplateId(
+    isEditing ? milestoneQuery.data?.type : undefined,
+    templateId,
+  );
   const sectionsPendingMilestoneCreation = selectedSections.filter(section => {
     const previousResult = submissionResults?.find(
       result => result.sectionId === section.id,
@@ -734,7 +607,7 @@ export default function AdminMilestoneSetupPage() {
         });
       }
       const artifactResults =
-        isPeerEvaluation || requiredArtifactDrafts.length === 0
+        !supportsRequiredArtifacts || requiredArtifactDrafts.length === 0
           ? []
           : await submitRequiredArtifactsMutation.mutateAsync({
               submissions: newlyCreatedMilestones.map(result => ({
@@ -1403,16 +1276,14 @@ export default function AdminMilestoneSetupPage() {
             )}
           </section>
 
-          {isPeerEvaluation ? <PeerEvaluationQuestionsGuide /> : null}
+          {isPeerEvaluation ? <AdminPeerEvaluationStudentPreview /> : null}
 
           {isPresentation ? (
-            <PresentationEvaluationQuestionsGuideSection
-              sections={selectedSections}
-            />
+            <AdminPresentationEvaluationQuestions sections={selectedSections} />
           ) : null}
 
           {isEditing &&
-          !isPeerEvaluation &&
+          supportsRequiredArtifacts &&
           editingSectionId &&
           editingMilestoneId ? (
             <AdminRequiredArtifactsManager
@@ -1421,22 +1292,31 @@ export default function AdminMilestoneSetupPage() {
             />
           ) : null}
 
-          {!isEditing && !isPeerEvaluation ? (
-            <section className={styles.section}>
-              <Heading className={styles.sectionTitle} level={2}>
-                선택한 프리셋
-              </Heading>
-              <Text color='secondary' type='supporting'>
-                {getTemplate(templateId).label} 프리셋을 선택했습니다. 아래
-                산출물 초안은 저장 전까지 자유롭게 수정할 수 있습니다.
-              </Text>
-            </section>
-          ) : null}
-
-          {!isEditing && !isPeerEvaluation ? (
+          {!isEditing && supportsRequiredArtifacts ? (
             <AdminRequiredArtifactDraftEditor
               onChange={setRequiredArtifactDrafts}
               value={requiredArtifactDrafts}
+            />
+          ) : null}
+
+          {!isPeerEvaluation && studentPreviewTemplateId ? (
+            <AdminStudentMilestonePreview
+              artifacts={previewArtifacts}
+              artifactState={
+                isEditing && supportsRequiredArtifacts
+                  ? requiredArtifactsQuery.isPending
+                    ? 'loading'
+                    : requiredArtifactsQuery.isError
+                      ? 'error'
+                      : undefined
+                  : undefined
+              }
+              onRetryArtifacts={
+                isEditing && supportsRequiredArtifacts
+                  ? () => void requiredArtifactsQuery.refetch()
+                  : undefined
+              }
+              templateId={studentPreviewTemplateId}
             />
           ) : null}
 

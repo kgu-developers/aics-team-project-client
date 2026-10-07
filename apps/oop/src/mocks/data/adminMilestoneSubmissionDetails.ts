@@ -4,10 +4,16 @@ import type {
   AdminSubmissionVersionsResponse,
 } from '@aics/api-client';
 
-import { countAdminMeetingRecords } from './adminMeetings';
+import {
+  countAdminMeetingRecords,
+  countAllAdminMeetingRecords,
+} from './adminMeetings';
 
 type SubmissionFixture = {
-  detail: Omit<AdminSubmissionResponse, 'meetingRecordCount'>;
+  detail: Omit<
+    AdminSubmissionResponse,
+    'meetingRecordCount' | 'totalMeetingRecordCount'
+  >;
   versions: AdminSubmissionVersionsResponse;
   versionDetails: Record<number, AdminSubmissionVersionResponse>;
 };
@@ -177,7 +183,7 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
   '1008': {
     detail: {
       canSubmitNow: false,
-      currentVersion: 1,
+      currentVersion: 2,
       hasPendingReview: false,
       id: 1008,
       milestoneId: 103,
@@ -187,11 +193,38 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
       teamName: 'OOP-01 - 1팀',
     },
     versionDetails: {
+      2: {
+        artifacts: [
+          {
+            downloadUrl:
+              'https://files.example.com/presentation-material-v2.pdf',
+            fileName: 'presentation-material-v2.pdf',
+            requiredArtifactId: 1005,
+            type: 'FILE',
+          },
+          {
+            requiredArtifactId: 1006,
+            type: 'LINK',
+            url: 'https://demo.example.com/cineflow',
+          },
+          {
+            content: '발표 핵심 흐름: 문제 정의 → 해결 방식 → 시연 → 회고',
+            type: 'TEXT',
+          },
+        ],
+        changeNote: '데모 흐름과 화면 전환 설명을 보완했습니다.',
+        description: '발표 자료 보완본',
+        late: false,
+        submittedAt: '2026-11-06T10:30:00Z',
+        submittedBy: { name: '홍길동', userId: '20230001' },
+        version: 2,
+      },
       1: {
         artifacts: [
           {
             downloadUrl: 'https://files.example.com/presentation-material.pdf',
             fileName: 'presentation-material.pdf',
+            requiredArtifactId: 1005,
             type: 'FILE',
           },
         ],
@@ -203,6 +236,14 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
     },
     versions: {
       contents: [
+        {
+          changeNote: '데모 흐름과 화면 전환 설명을 보완했습니다.',
+          description: '발표 자료 보완본',
+          late: false,
+          submittedAt: '2026-11-06T10:30:00Z',
+          submittedBy: { name: '홍길동', userId: '20230001' },
+          version: 2,
+        },
         {
           late: false,
           submittedAt: '2026-11-06T09:00:00Z',
@@ -347,6 +388,7 @@ export function getAdminSubmissionFixture(
           detail.teamId,
           detail.milestoneId,
         ),
+        totalMeetingRecordCount: countAllAdminMeetingRecords(detail.teamId),
       }
     : undefined;
 }

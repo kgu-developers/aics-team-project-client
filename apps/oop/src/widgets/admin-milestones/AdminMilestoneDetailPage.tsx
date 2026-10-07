@@ -9,12 +9,16 @@ import {
 
 import { ROUTES } from '~/app/constants/routes';
 
+import AdminPeerEvaluationStudentPreview from '~/features/admin-milestone-review/components/AdminPeerEvaluationStudentPreview';
+import AdminPresentationEvaluationQuestions from '~/features/admin-milestone-review/components/AdminPresentationEvaluationQuestions';
+import AdminStudentMilestonePreview from '~/features/admin-milestone-review/components/AdminStudentMilestonePreview';
 import {
   formatAdminMilestoneDate,
   formatAdminPresentationEvaluationDate,
   formatRequiredArtifactFileSize,
   getAdminMilestoneStatusLabel,
   getAdminMilestoneTypeLabel,
+  getStudentMilestonePreviewTemplateId,
 } from '~/features/admin-milestone-review/model';
 import {
   useAdminRequiredArtifactsQuery,
@@ -71,9 +75,16 @@ export default function AdminMilestoneDetailPage() {
     isAccessibleSection ? milestoneId : undefined,
   );
   const milestone = milestoneQuery.data;
+  const studentPreviewTemplateId = milestone
+    ? getStudentMilestonePreviewTemplateId(milestone.type)
+    : undefined;
+  const supportsRequiredArtifacts =
+    milestone?.type === 'PRESENTATION' || milestone?.type === 'FINAL_REPORT';
   const requiredArtifactsQuery = useAdminRequiredArtifactsQuery(
-    isAccessibleSection ? search.sectionId : undefined,
-    isAccessibleSection ? milestoneId : undefined,
+    isAccessibleSection && supportsRequiredArtifacts
+      ? search.sectionId
+      : undefined,
+    isAccessibleSection && supportsRequiredArtifacts ? milestoneId : undefined,
   );
 
   if (!search.sectionId || !isAccessibleSection) {
@@ -251,49 +262,82 @@ export default function AdminMilestoneDetailPage() {
           </article>
         </section>
 
-        <section className={styles.section}>
-          <Heading className={styles.sectionTitle} level={2}>
-            필수 산출물
-          </Heading>
-          {requiredArtifactsQuery.isPending ? (
-            <Text aria-live='polite' role='status'>
-              필수 산출물을 불러오는 중입니다.
-            </Text>
-          ) : requiredArtifactsQuery.isError ? (
-            <Text color='secondary' type='supporting'>
-              필수 산출물을 불러오지 못했습니다. 수정 화면에서 다시
-              시도해주세요.
-            </Text>
-          ) : (requiredArtifactsQuery.data?.contents?.length ?? 0) === 0 ? (
-            <Text color='secondary' type='supporting'>
-              등록된 필수 산출물이 없습니다.
-            </Text>
-          ) : (
-            <div className={styles.artifactList}>
-              {requiredArtifactsQuery.data?.contents?.map(artifact => (
-                <article className={styles.artifact} key={artifact.id}>
-                  <Text weight='medium'>
-                    {artifact.label ?? '이름 없는 산출물'}
-                  </Text>
-                  <Text color='secondary' type='supporting'>
-                    유형:{' '}
-                    {artifact.type ? artifactTypeLabels[artifact.type] : '-'}
-                    {' · '}
-                    {artifact.required ? '필수 제출' : '선택 제출'}
-                  </Text>
-                  {artifact.type === 'FILE' ? (
-                    <Text color='secondary' type='supporting'>
-                      허용 확장자:{' '}
-                      {artifact.allowedExtensions?.join(', ') || '제한 없음'}
-                      {' · '}
-                      {formatRequiredArtifactFileSize(artifact.maxFileSizeMb)}
+        {milestone.type === 'PRESENTATION' ? (
+          <AdminPresentationEvaluationQuestions
+            sections={[
+              {
+                code: section.code,
+                id: section.id,
+                name: section.name,
+              },
+            ]}
+          />
+        ) : null}
+
+        {supportsRequiredArtifacts ? (
+          <section className={styles.section}>
+            <Heading className={styles.sectionTitle} level={2}>
+              필수 산출물
+            </Heading>
+            {requiredArtifactsQuery.isPending ? (
+              <Text aria-live='polite' role='status'>
+                필수 산출물을 불러오는 중입니다.
+              </Text>
+            ) : requiredArtifactsQuery.isError ? (
+              <Text color='secondary' type='supporting'>
+                필수 산출물을 불러오지 못했습니다. 수정 화면에서 다시
+                시도해주세요.
+              </Text>
+            ) : (requiredArtifactsQuery.data?.contents?.length ?? 0) === 0 ? (
+              <Text color='secondary' type='supporting'>
+                등록된 필수 산출물이 없습니다.
+              </Text>
+            ) : (
+              <div className={styles.artifactList}>
+                {requiredArtifactsQuery.data?.contents?.map(artifact => (
+                  <article className={styles.artifact} key={artifact.id}>
+                    <Text weight='medium'>
+                      {artifact.label ?? '이름 없는 산출물'}
                     </Text>
-                  ) : null}
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
+                    <Text color='secondary' type='supporting'>
+                      유형:{' '}
+                      {artifact.type ? artifactTypeLabels[artifact.type] : '-'}
+                      {' · '}
+                      {artifact.required ? '필수 제출' : '선택 제출'}
+                    </Text>
+                    {artifact.type === 'FILE' ? (
+                      <Text color='secondary' type='supporting'>
+                        허용 확장자:{' '}
+                        {artifact.allowedExtensions?.join(', ') || '제한 없음'}
+                        {' · '}
+                        {formatRequiredArtifactFileSize(artifact.maxFileSizeMb)}
+                      </Text>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        ) : null}
+
+        {studentPreviewTemplateId ? (
+          <AdminStudentMilestonePreview
+            artifacts={requiredArtifactsQuery.data?.contents ?? []}
+            artifactState={
+              requiredArtifactsQuery.isPending
+                ? 'loading'
+                : requiredArtifactsQuery.isError
+                  ? 'error'
+                  : undefined
+            }
+            onRetryArtifacts={() => void requiredArtifactsQuery.refetch()}
+            templateId={studentPreviewTemplateId}
+          />
+        ) : null}
+
+        {milestone.type === 'PEER_EVALUATION' ? (
+          <AdminPeerEvaluationStudentPreview />
+        ) : null}
 
         <div className={styles.actions}>
           <Button

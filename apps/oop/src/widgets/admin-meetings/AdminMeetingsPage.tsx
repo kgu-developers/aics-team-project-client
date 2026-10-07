@@ -17,7 +17,10 @@ import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
 import { AdminMeetingEditLogTable } from '~/features/admin-meeting/components';
-import { formatAdminMeetingDateTime } from '~/features/admin-meeting/model';
+import {
+  formatAdminMeetingDateTime,
+  formatAdminMeetingPhase,
+} from '~/features/admin-meeting/model';
 import {
   useAdminMeetingRecordListQuery,
   useAdminSectionMeetingRecordLogsQuery,
@@ -225,6 +228,7 @@ export default function AdminMeetingsPage() {
                 <th scope='col'>분반</th>
                 <th scope='col'>팀</th>
                 <th scope='col'>회의 제목</th>
+                <th scope='col'>회의 단계</th>
                 <th scope='col'>작성자</th>
                 <th scope='col'>참석</th>
               </tr>
@@ -254,6 +258,7 @@ export default function AdminMeetingsPage() {
                     <td>{record.sectionName}</td>
                     <td>{record.teamName}</td>
                     <td>{record.title}</td>
+                    <td>{formatAdminMeetingPhase(record.phase)}</td>
                     <td>{record.authorId}</td>
                     <td>{record.participantCount}명</td>
                   </tr>

@@ -15,6 +15,8 @@ import {
   AdminMilestoneSubmissionDetailAction,
 } from '~/features/admin-milestone-review/components/AdminMilestoneSubmissionDetailAction';
 import {
+  formatAdminTotalMeetingRecordCount,
+  hasAdminTotalMeetingRecords,
   type AdminMilestoneSubmissionView,
   type AdminSubmissionVersionDetailView,
 } from '~/features/admin-milestone-review/model';
@@ -248,7 +250,10 @@ export default function AdminTeamMilestoneProgress({
                 }
                 label={milestone.milestone.title}
                 meetingCountLabel={
-                  submission ? (
+                  submission &&
+                  hasAdminTotalMeetingRecords(
+                    submission.totalMeetingRecordCount,
+                  ) ? (
                     <Link
                       to={ROUTES.ADMIN_MEETINGS}
                       search={{
@@ -256,10 +261,14 @@ export default function AdminTeamMilestoneProgress({
                         teamId: String(submission.teamId),
                       }}
                     >
-                      회의록 {submission.meetingRecordCount}건
+                      {formatAdminTotalMeetingRecordCount(
+                        submission.totalMeetingRecordCount,
+                      )}
                     </Link>
                   ) : (
-                    '회의록 0건'
+                    formatAdminTotalMeetingRecordCount(
+                      submission?.totalMeetingRecordCount ?? null,
+                    )
                   )
                 }
                 secondaryLabel={submission?.statusLabel ?? '제출 정보 없음'}

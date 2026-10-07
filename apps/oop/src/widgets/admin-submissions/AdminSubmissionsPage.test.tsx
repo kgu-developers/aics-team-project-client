@@ -286,14 +286,39 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByText('프로젝트 주제: AI 기반 팀 프로젝트 관리 서비스'),
     ).toBeInTheDocument();
     expect(screen.getByText('프로젝트 주제: -')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '회의록 1건' })).toHaveAttribute(
+    expect(
+      screen.getByRole('link', { name: '팀 전체 회의록 2건' }),
+    ).toHaveAttribute(
       'href',
       '/admin/meetings?sectionId=%221%22&teamId=%221%22',
     );
-    expect(screen.getByRole('link', { name: '회의록 0건' })).toHaveAttribute(
+    expect(
+      screen.getByRole('link', { name: '팀 전체 회의록 1건' }),
+    ).toHaveAttribute(
       'href',
       '/admin/meetings?sectionId=%221%22&teamId=%222%22',
     );
+  });
+
+  it('팀 전체 회의록 수가 0건이면 빈 회의록 목록으로 이동시키지 않는다', async () => {
+    const response = getAdminMilestoneSubmissionsFixture('101')!;
+    response.contents[0] = {
+      ...response.contents[0]!,
+      totalMeetingRecordCount: 0,
+    };
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('101')}`,
+        () => HttpResponse.json(response),
+      ),
+    );
+
+    renderPage();
+
+    expect(await screen.findByText('팀 전체 회의록 0건')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: '팀 전체 회의록 0건' }),
+    ).not.toBeInTheDocument();
   });
 
   it('제안서와 중간 점검 목록은 왼쪽에 상태와 제출 정보를 표시한다', async () => {
@@ -1322,6 +1347,7 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('row', { name: /OOP-01 - 1팀 상호평가 보기/ }),
     ).toHaveAttribute('tabindex', '0');
+    expect(screen.getByText('2/2명 제출')).toBeInTheDocument();
   });
 
   it('알 수 없는 마일스톤 키는 제출 목록 fixture에서 찾지 않는다', () => {

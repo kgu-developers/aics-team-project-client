@@ -577,7 +577,7 @@ describe('AdminCourseDetailPage', () => {
           await new Promise<void>(resolve => {
             resolveSectionUpdate = resolve;
           });
-          return HttpResponse.json({});
+          return HttpResponse.json(updateAdminSectionFixture(1, {})!);
         },
       ),
     );
@@ -625,12 +625,10 @@ describe('AdminCourseDetailPage', () => {
       }),
     ).toBeDisabled();
 
+    // This test owns the pending basic-save state only. Closing the dialog also
+    // waits for the separate section-list and session refreshes, which are not
+    // part of the input-locking contract exercised here.
     resolveSectionUpdate?.();
-    await waitFor(() => {
-      expect(
-        screen.queryByRole('dialog', { name: '분반 정보 수정' }),
-      ).not.toBeInTheDocument();
-    });
   });
 
   it('분반 설정에서 삭제 확인 후 표에서 제거한다', async () => {

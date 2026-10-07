@@ -478,6 +478,7 @@ export function SectionSettingsDialog({
   const [saveError, setSaveError] = useState<
     'basic' | 'visibility' | 'refresh' | 'delete' | 'deleteRefresh' | null
   >(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [isDeleteConfirming, setIsDeleteConfirming] = useState(false);
 
   useEffect(() => {
@@ -491,6 +492,7 @@ export function SectionSettingsDialog({
     resetRemoveSectionMutation();
     resetUpdateVisibilityMutation();
     setSaveError(null);
+    setIsSaving(false);
     setIsDeleteConfirming(false);
   }, [
     isOpen,
@@ -500,10 +502,11 @@ export function SectionSettingsDialog({
     section,
   ]);
 
-  const isPending =
+  const isNetworkPending =
     updateSectionMutation.isPending ||
     removeSectionMutation.isPending ||
     updateVisibilityMutation.isPending;
+  const isPending = isSaving || isNetworkPending;
   const isVisibilityRangeValid =
     (!visibleFrom && !visibleUntil) ||
     (Boolean(visibleFrom && visibleUntil) &&
@@ -522,23 +525,48 @@ export function SectionSettingsDialog({
       : { visibleFrom: null, visibleUntil: null };
   }
 
+  function saveAfterSectionUpdate() {
+    const needsVisibilitySave = Boolean(
+      visibleFrom ||
+      visibleUntil ||
+      section?.contactVisibleFrom ||
+      section?.contactVisibleUntil,
+    );
+    if (needsVisibilitySave) {
+      saveVisibility(true);
+      return;
+    }
+
+    void finishSave();
+  }
+
   async function finishSave() {
     const refreshed = await onSaved();
     if (!refreshed) {
       setSaveError('refresh');
+      setIsSaving(false);
       return;
     }
     toast({ body: '분반 설정을 저장했어요.' });
+    setIsSaving(false);
     onClose();
   }
 
-  function saveVisibility() {
-    if (!section || !isVisibilityRangeValid || isPending) return;
+  function saveVisibility(afterSectionUpdate = false) {
+    const isVisibilitySaveBlocked =
+      removeSectionMutation.isPending ||
+      updateVisibilityMutation.isPending ||
+      (!afterSectionUpdate && updateSectionMutation.isPending);
+    if (!section || !isVisibilityRangeValid || isVisibilitySaveBlocked) return;
     setSaveError(null);
+    setIsSaving(true);
     updateVisibilityMutation.mutate(
       { sectionId: section.id, input: visibilityInput() },
       {
-        onError: () => setSaveError('visibility'),
+        onError: () => {
+          setSaveError('visibility');
+          setIsSaving(false);
+        },
         onSuccess: () => void finishSave(),
       },
     );
@@ -559,6 +587,7 @@ export function SectionSettingsDialog({
       return;
 
     setSaveError(null);
+    setIsSaving(true);
     updateSectionMutation.mutate(
       {
         sectionId: section.id,
@@ -569,8 +598,11 @@ export function SectionSettingsDialog({
         },
       },
       {
-        onError: () => setSaveError('basic'),
-        onSuccess: saveVisibility,
+        onError: () => {
+          setSaveError('basic');
+          setIsSaving(false);
+        },
+        onSuccess: saveAfterSectionUpdate,
       },
     );
   }
@@ -730,7 +762,7 @@ export function SectionSettingsDialog({
             </Text>
             <Button
               label='온보딩 기간 다시 저장'
-              onClick={saveVisibility}
+              onClick={() => saveVisibility()}
               size='sm'
               type='button'
               variant='secondary'
