@@ -1101,8 +1101,17 @@ export default function AdminSubmissionsPage() {
                           align: 'center',
                           header: '제출 현황',
                           key: 'submitted',
-                          renderCell: team =>
-                            `${team.submittedCount}/${team.totalMemberCount}`,
+                          renderCell: team => (
+                            <Badge
+                              label={`${team.submittedCount}/${team.totalMemberCount}명 제출`}
+                              variant={
+                                team.totalMemberCount > 0 &&
+                                team.submittedCount === team.totalMemberCount
+                                  ? 'success'
+                                  : 'neutral'
+                              }
+                            />
+                          ),
                           width: proportional(0.9, { minWidth: 112 }),
                         },
                         {

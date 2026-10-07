@@ -51,6 +51,10 @@ export const section = style({
   flexDirection: 'column',
   gap: 12,
 });
+export const sectionHeader = style({
+  display: 'grid',
+  gap: 4,
+});
 export const tableWrap = style({ overflowX: 'auto' });
 export const table = style({
   border: `1px solid ${tokens.color.border.base}`,
@@ -79,6 +83,52 @@ export const evaluationCard = style({
   flexDirection: 'column',
   gap: 14,
   padding: 18,
+});
+export const peerOverview = style({
+  display: 'grid',
+  gap: 16,
+  padding: 20,
+});
+export const overviewHeader = style({
+  alignItems: 'flex-start',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 12,
+  justifyContent: 'space-between',
+});
+export const eyebrow = style({
+  color: tokens.color.text.secondary,
+  fontSize: 13,
+  margin: 0,
+});
+export const memberSummaryGrid = style({
+  display: 'grid',
+  gap: 12,
+  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+});
+export const memberSummaryCard = style({
+  background: tokens.color.background.muted,
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: 10,
+  display: 'grid',
+  gap: 6,
+  padding: 16,
+});
+export const memberSummaryHeader = style({
+  alignItems: 'flex-start',
+  display: 'flex',
+  gap: 8,
+  justifyContent: 'space-between',
+});
+export const memberIdentity = style({
+  display: 'grid',
+  gap: 2,
+});
+export const averageScore = style({
+  color: tokens.color.text.primary,
+  fontSize: 20,
+  fontWeight: 700,
+  margin: 0,
 });
 export const evaluationHeader = style({
   alignItems: 'center',

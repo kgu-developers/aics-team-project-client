@@ -1,5 +1,6 @@
 import type { AdminPeerEvaluationRowDto } from '@aics/api-client';
 import {
+  Badge,
   Card,
   EmptyState,
   Heading,
@@ -98,6 +99,77 @@ function PeerEvaluationResponses({
   );
 }
 
+function PeerEvaluationOverview({
+  evaluations,
+  members,
+}: {
+  evaluations: AdminPeerEvaluationRowDto[];
+  members: Array<{
+    averageReceivedScore: number | null;
+    isLeader: boolean;
+    name: string;
+    role: string | null;
+    userId: string;
+  }>;
+}) {
+  const submittedCount = evaluations.filter(
+    evaluation => evaluation.status === 'SUBMITTED',
+  ).length;
+
+  return (
+    <Card className={styles.peerOverview}>
+      <div className={styles.overviewHeader}>
+        <div>
+          <Text className={styles.eyebrow}>상호평가 진행 현황</Text>
+          <Heading level={2}>팀원 기여도 요약</Heading>
+        </div>
+        <Badge
+          label={`${submittedCount}/${members.length}명 제출`}
+          variant={
+            members.length > 0 && submittedCount === members.length
+              ? 'success'
+              : 'neutral'
+          }
+        />
+      </div>
+      <Text className={styles.muted} type='supporting'>
+        제출한 팀원별 응답과 팀원별 받은 기여도 평균을 확인할 수 있습니다.
+      </Text>
+      <div className={styles.memberSummaryGrid}>
+        {members.map(member => (
+          <article
+            aria-label={`${member.name} 기여도 요약`}
+            className={styles.memberSummaryCard}
+            key={member.userId}
+          >
+            <div className={styles.memberSummaryHeader}>
+              <div className={styles.memberIdentity}>
+                <Text weight='semibold'>{member.name}</Text>
+                {member.role && !(member.isLeader && member.role === '팀장') ? (
+                  <Text color='secondary' type='supporting'>
+                    {member.role}
+                  </Text>
+                ) : null}
+              </div>
+              {member.isLeader ? (
+                <Badge label='팀장' variant='neutral' />
+              ) : null}
+            </div>
+            <Text color='secondary' type='supporting'>
+              받은 기여도 평균
+            </Text>
+            <Text className={styles.averageScore}>
+              {member.averageReceivedScore == null
+                ? '집계 전'
+                : `${member.averageReceivedScore}%`}
+            </Text>
+          </article>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function Meetings({
   records,
 }: {
@@ -159,7 +231,21 @@ function PeerDetail({
         </Text>
       </div>
       <section className={styles.section}>
-        <Heading level={2}>평가 결과</Heading>
+        <PeerEvaluationOverview
+          evaluations={data.evaluations}
+          members={data.members}
+        />
+      </section>
+      <section className={styles.section}>
+        <div className={styles.sectionHeader}>
+          <div>
+            <Heading level={2}>평가자별 응답</Heading>
+            <Text color='secondary' type='supporting'>
+              평가자 이름을 누르면 학생이 작성한 프로젝트 평가와 팀원 평가를
+              확인할 수 있습니다.
+            </Text>
+          </div>
+        </div>
         <Card>
           <Table
             columns={[
@@ -185,17 +271,38 @@ function PeerDetail({
                 align: 'center' as const,
                 header: member.name,
                 key: member.userId,
-                renderCell: (evaluation: (typeof data.evaluations)[number]) =>
-                  evaluation.scores.find(
+                renderCell: (evaluation: (typeof data.evaluations)[number]) => {
+                  const score = evaluation.scores.find(
                     item => item.targetUserId === member.userId,
-                  )?.contributionPercent ?? '-',
+                  )?.contributionPercent;
+                  return score == null ? '-' : `${score}%`;
+                },
                 width: proportional(1, { minWidth: 110 }),
               })),
               {
                 align: 'center',
+                header: '제출 상태',
+                key: 'status',
+                renderCell: evaluation => (
+                  <Badge
+                    label={
+                      evaluation.status === 'SUBMITTED' ? '제출 완료' : '초안'
+                    }
+                    variant={
+                      evaluation.status === 'SUBMITTED' ? 'success' : 'neutral'
+                    }
+                  />
+                ),
+                width: proportional(0.9, { minWidth: 104 }),
+              },
+              {
+                align: 'center',
                 header: '평균',
                 key: 'average',
-                renderCell: evaluation => evaluation.averageScore ?? '-',
+                renderCell: evaluation =>
+                  evaluation.averageScore == null
+                    ? '-'
+                    : `${evaluation.averageScore}%`,
                 width: proportional(0.7, { minWidth: 84 }),
               },
             ]}
