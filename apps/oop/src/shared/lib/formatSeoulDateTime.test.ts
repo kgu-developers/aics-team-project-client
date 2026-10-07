@@ -4,9 +4,9 @@ import { formatSeoulDateTime } from './formatSeoulDateTime';
 
 describe('formatSeoulDateTime', () => {
   it.each(['2026-08-27T15:00:00', '2026-08-27 15:00'])(
-    '%s 오프셋 없는 서버 시각에 서울 오프셋을 적용한다',
+    '%s 오프셋 없는 서버 시각을 서울 벽시계 시각으로 유지한다',
     value => {
-      expect(formatSeoulDateTime(value)).toBe('2026-08-28/00:00');
+      expect(formatSeoulDateTime(value)).toBe('2026-08-27/15:00');
     },
   );
 
@@ -16,6 +16,12 @@ describe('formatSeoulDateTime', () => {
 
   it('UTC 시간을 Asia/Seoul 시간으로 표시한다', () => {
     expect(formatSeoulDateTime('2026-10-10T09:00:00Z')).toBe(
+      '2026-10-10/18:00',
+    );
+  });
+
+  it('명시된 서울 오프셋을 다시 더하지 않는다', () => {
+    expect(formatSeoulDateTime('2026-10-10T18:00:00+09:00')).toBe(
       '2026-10-10/18:00',
     );
   });
