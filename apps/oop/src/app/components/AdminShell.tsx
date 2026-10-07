@@ -58,8 +58,8 @@ export default function AdminShell() {
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
         <div className={styles.brand}>
-          <strong>객체지향 프로그래밍</strong>
-          <small>2026-2 · 팀 프로젝트</small>
+          <strong>OOPTeamPlay</strong>
+          <small>2026-2 · 객체지향프로그래밍</small>
         </div>
         <nav aria-label='관리자 메뉴' className={styles.nav}>
           <Link
