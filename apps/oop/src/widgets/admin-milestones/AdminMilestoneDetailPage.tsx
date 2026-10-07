@@ -1,7 +1,4 @@
-import type {
-  AdminMilestoneType,
-  RequiredArtifactType,
-} from '@aics/api-client';
+import type { RequiredArtifactType } from '@aics/api-client';
 import { Button, Card, EmptyState, Heading, Text } from '@aics/design-system';
 import {
   Link,
@@ -21,7 +18,7 @@ import {
   formatRequiredArtifactFileSize,
   getAdminMilestoneStatusLabel,
   getAdminMilestoneTypeLabel,
-  type MilestoneTemplateId,
+  getStudentMilestonePreviewTemplateId,
 } from '~/features/admin-milestone-review/model';
 import {
   useAdminRequiredArtifactsQuery,
@@ -51,29 +48,6 @@ const artifactTypeLabels: Record<RequiredArtifactType, string> = {
   TEXT: '텍스트',
 };
 
-type StudentPreviewTemplateId = Exclude<
-  MilestoneTemplateId,
-  'peer-review' | 'presentation-evaluate'
->;
-
-function getStudentPreviewTemplateId(
-  type: AdminMilestoneType,
-): StudentPreviewTemplateId | undefined {
-  switch (type) {
-    case 'PROPOSAL':
-      return 'proposal';
-    case 'MID_REPORT':
-      return 'midterm';
-    case 'PRESENTATION':
-      return 'presentation-submit';
-    case 'FINAL_REPORT':
-      return 'final-report';
-    case 'GENERAL':
-    case 'PEER_EVALUATION':
-      return undefined;
-  }
-}
-
 export default function AdminMilestoneDetailPage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const navigate = useNavigate();
@@ -102,7 +76,7 @@ export default function AdminMilestoneDetailPage() {
   );
   const milestone = milestoneQuery.data;
   const studentPreviewTemplateId = milestone
-    ? getStudentPreviewTemplateId(milestone.type)
+    ? getStudentMilestonePreviewTemplateId(milestone.type)
     : undefined;
   const supportsRequiredArtifacts =
     milestone?.type === 'PRESENTATION' || milestone?.type === 'FINAL_REPORT';

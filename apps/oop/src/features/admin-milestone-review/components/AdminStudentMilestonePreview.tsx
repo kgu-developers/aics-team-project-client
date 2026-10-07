@@ -20,7 +20,7 @@ import {
 } from '~/shared/config/studentDocumentSchemas';
 import { cx } from '~/shared/lib/cx';
 
-import type { MilestoneTemplateId } from '../model';
+import type { StudentMilestonePreviewTemplateId } from '../model';
 import * as styles from './AdminStudentMilestonePreview.css';
 
 type ArtifactPreview = {
@@ -37,11 +37,6 @@ type DocumentPreviewBlock = {
   kind?: StudentDocumentSection['kind'];
   title: string;
 };
-
-type StudentPreviewTemplateId = Exclude<
-  MilestoneTemplateId,
-  'peer-review' | 'presentation-evaluate'
->;
 
 function documentBlocksFor(
   templateId: 'proposal' | 'midterm',
@@ -357,7 +352,7 @@ export default function AdminStudentMilestonePreview({
   artifacts: readonly ArtifactPreview[];
   artifactState?: 'error' | 'loading';
   onRetryArtifacts?: () => void;
-  templateId: StudentPreviewTemplateId;
+  templateId: StudentMilestonePreviewTemplateId;
 }) {
   if (templateId === 'presentation-submit' || templateId === 'final-report') {
     return (

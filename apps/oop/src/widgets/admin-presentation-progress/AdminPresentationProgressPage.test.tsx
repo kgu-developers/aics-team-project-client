@@ -9,7 +9,7 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -133,6 +133,7 @@ it('담당 교수는 발표 순서에 따라 제안서와 제출 자료를 확�
       '발표 핵심 흐름: 문제 정의 → 해결 방식 → 시연 → 회고',
     ),
   ).toBeVisible();
+  expect(within(materialsSection).getAllByText('텍스트')).toHaveLength(1);
   expect(
     await within(materialsSection).findByText('발표 자료 보완본'),
   ).toBeVisible();
@@ -145,6 +146,33 @@ it('담당 교수는 발표 순서에 따라 제안서와 제출 자료를 확�
 
   expect(screen.getByText('2번째 발표')).toBeVisible();
   expect(screen.getByRole('button', { name: '이전 팀' })).toBeEnabled();
+});
+
+it('제출 이력이 없으면 최신 제출 상세 조회 로딩 문구를 남기지 않는다', async () => {
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_VERSIONS('1008')}`,
+      () => HttpResponse.json({ contents: [] }),
+    ),
+  );
+  setApiAccessToken(demoPresentationProfessorAccessToken);
+  useAuthStore.setState({
+    accessToken: demoPresentationProfessorAccessToken,
+    currentUser: demoPresentationProfessor,
+  });
+
+  renderPage();
+
+  const materialsSection = await screen.findByRole('region', {
+    name: '발표 자료',
+  });
+  await waitFor(() => {
+    expect(
+      within(materialsSection).queryByText(
+        '최신 제출 내용을 불러오는 중입니다.',
+      ),
+    ).not.toBeInTheDocument();
+  });
 });
 
 it('발표 자료 응답에 역할이 없으면 킥오프 정보에서 팀원 역할을 보완한다', async () => {

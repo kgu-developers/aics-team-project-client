@@ -1,6 +1,5 @@
 import {
   fetchAdminSectionMilestone,
-  type AdminMilestoneType,
   type AdminPeerEvaluationFormCreateInput,
 } from '@aics/api-client';
 import {
@@ -44,6 +43,7 @@ import {
   formatAdminMilestoneRequestError,
   getAdminMilestoneTypeForTemplate,
   getAdminMilestoneTypeLabel,
+  getStudentMilestonePreviewTemplateId,
   isMilestoneTemplateId,
   isSupportedMilestoneCreationTemplate,
   milestoneTemplates,
@@ -76,42 +76,6 @@ function getTemplate(templateId: MilestoneTemplateId) {
   }
 
   return findMilestoneTemplate(templateId) ?? fallbackTemplate;
-}
-
-type StudentPreviewTemplateId = Exclude<
-  MilestoneTemplateId,
-  'peer-review' | 'presentation-evaluate'
->;
-
-function getStudentPreviewTemplateId(
-  templateId: MilestoneTemplateId,
-  milestoneType?: AdminMilestoneType,
-): StudentPreviewTemplateId | null {
-  if (milestoneType) {
-    switch (milestoneType) {
-      case 'PRESENTATION':
-        return 'presentation-submit';
-      case 'FINAL_REPORT':
-        return 'final-report';
-      case 'MID_REPORT':
-        return 'midterm';
-      case 'PROPOSAL':
-      case 'GENERAL':
-      case 'PEER_EVALUATION':
-        return 'proposal';
-    }
-  }
-
-  switch (templateId) {
-    case 'proposal':
-    case 'midterm':
-    case 'presentation-submit':
-    case 'final-report':
-      return templateId;
-    case 'peer-review':
-    case 'presentation-evaluate':
-      return null;
-  }
 }
 
 const quickTimeOptions = ['09:00', '12:00', '18:00', '23:59'] as const;
@@ -299,9 +263,9 @@ export default function AdminMilestoneSetupPage() {
       submissionResults.some(result => result.status === 'publish-failed')),
   );
   const selectedMilestoneType = getAdminMilestoneTypeForTemplate(templateId);
-  const studentPreviewTemplateId = getStudentPreviewTemplateId(
-    templateId,
+  const studentPreviewTemplateId = getStudentMilestonePreviewTemplateId(
     isEditing ? milestoneQuery.data?.type : undefined,
+    templateId,
   );
   const sectionsPendingMilestoneCreation = selectedSections.filter(section => {
     const previousResult = submissionResults?.find(

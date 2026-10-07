@@ -604,12 +604,12 @@ it('공지 게시 시각을 서울 기준 자정 넘김으로 표시한다', asy
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
 
-it('오프셋 없는 공지 게시 시각을 서울 현지 시각으로 표시한다', async () => {
+it('오프셋 없는 공지 게시 시각을 서버의 한국 현지 시각으로 표시한다', async () => {
   dashboardState.notices[0]!.publishedAt = '2026-08-27T15:00:00';
   renderPage();
   const link = await screen.findByRole('link', { name: '계약 공지' });
   expect(
-    within(link.closest('li')!).getByText('2026-08-28/00:00'),
+    within(link.closest('li')!).getByText('2026-08-27/15:00'),
   ).toBeInTheDocument();
 });
 

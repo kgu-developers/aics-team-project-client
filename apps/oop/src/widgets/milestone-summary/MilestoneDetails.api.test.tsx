@@ -102,13 +102,13 @@ describe('existing proposal feedback form with team messages', () => {
     });
     renderFeedback();
     expect(
-      await screen.findByText('검수 학생 (2026-09-01/19:10)'),
+      await screen.findByText('검수 학생 (2026-09-01/10:10)'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('검수 교수 (2026-09-01/19:00)'),
+      screen.getByText('검수 교수 (2026-09-01/10:00)'),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText(`${demoStudent.studentNumber} (2026-09-01/19:10)`),
+      screen.queryByText(`${demoStudent.studentNumber} (2026-09-01/10:10)`),
     ).not.toBeInTheDocument();
     expect(screen.getByText('피드백 대화')).toBeInTheDocument();
     expect(screen.queryByText('교수 피드백')).not.toBeInTheDocument();
@@ -142,7 +142,7 @@ describe('existing proposal feedback form with team messages', () => {
       renderFeedback();
       expect(
         await screen.findByText(
-          `${demoStudent.studentNumber} (2026-09-01/19:10)`,
+          `${demoStudent.studentNumber} (2026-09-01/10:10)`,
         ),
       ).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '답변 보내기' })).toBeEnabled();
@@ -415,7 +415,7 @@ describe('중간보고서 피드백 메시지', () => {
     expect(screen.getByText('피드백 대화')).toBeInTheDocument();
     expect(screen.queryByText('교수 추가 답변')).not.toBeInTheDocument();
     expect(
-      screen.getByText('검수 교수 (2026-09-10/19:10)'),
+      screen.getByText('검수 교수 (2026-09-10/10:10)'),
     ).toBeInTheDocument();
     expect(
       requests.some(

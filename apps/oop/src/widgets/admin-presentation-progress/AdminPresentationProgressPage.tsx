@@ -223,6 +223,14 @@ function artifactTypeLabel(artifact: DisplaySubmissionArtifact) {
   }
 }
 
+function artifactSupplementalLabel(
+  artifact: DisplaySubmissionArtifact,
+  primaryLabel: string,
+) {
+  const label = artifact.label ?? artifactTypeLabel(artifact);
+  return label === primaryLabel ? null : label;
+}
+
 function toPositiveTeamId(value: string | undefined) {
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
@@ -687,7 +695,7 @@ export default function AdminPresentationProgressPage({
               />
             </HStack>
             <Card padding={4}>
-              {latestSubmissionVersionQuery.isPending ? (
+              {latestSubmissionVersionQuery.isLoading ? (
                 <Text color='secondary' role='status' type='supporting'>
                   최신 제출 내용을 불러오는 중입니다.
                 </Text>
@@ -718,6 +726,10 @@ export default function AdminPresentationProgressPage({
                     const label = artifactLabel(artifact, index);
                     const url = artifactUrl(artifact);
                     const textContent = artifactTextContent(artifact);
+                    const supplementalLabel = artifactSupplementalLabel(
+                      artifact,
+                      label,
+                    );
                     return (
                       <li
                         className={styles.item}
@@ -738,9 +750,11 @@ export default function AdminPresentationProgressPage({
                         ) : (
                           <Text weight='medium'>{label}</Text>
                         )}
-                        <Text color='secondary' type='supporting'>
-                          {artifactTypeLabel(artifact)}
-                        </Text>
+                        {supplementalLabel ? (
+                          <Text color='secondary' type='supporting'>
+                            {supplementalLabel}
+                          </Text>
+                        ) : null}
                         {artifact.configuredLabel && artifact.fileName ? (
                           <Text color='secondary' type='supporting'>
                             파일명: {artifact.fileName}
@@ -791,7 +805,7 @@ export default function AdminPresentationProgressPage({
                     </li>
                   ))}
                 </ul>
-              ) : teamMembersQuery.isPending ? (
+              ) : teamMembersQuery.isLoading ? (
                 <Text color='secondary' role='status'>
                   팀원 역할 정보를 불러오는 중입니다.
                 </Text>
@@ -1015,6 +1029,8 @@ export default function AdminPresentationProgressPage({
                                 artifact.downloadUrl ?? artifact.url,
                               );
                               const label = artifactLabel(artifact, index);
+                              const supplementalLabel =
+                                artifactSupplementalLabel(artifact, label);
 
                               return (
                                 <li key={artifact.identityKey}>
@@ -1030,9 +1046,11 @@ export default function AdminPresentationProgressPage({
                                   ) : (
                                     <Text>{label}</Text>
                                   )}
-                                  <Text color='secondary' type='supporting'>
-                                    {artifact.label}
-                                  </Text>
+                                  {supplementalLabel ? (
+                                    <Text color='secondary' type='supporting'>
+                                      {supplementalLabel}
+                                    </Text>
+                                  ) : null}
                                   {artifact.configuredLabel &&
                                   artifact.fileName ? (
                                     <Text color='secondary' type='supporting'>
