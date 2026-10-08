@@ -16,6 +16,7 @@ import { ROUTES } from '~/app/constants/routes';
 import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
+import PresentationEvaluationResults from '~/features/admin-evaluation/components/PresentationEvaluationResults';
 import {
   useAdminPeerEvaluationTeamDetailQuery,
   useAdminPresentationEvaluationTeamDetailQuery,
@@ -380,9 +381,6 @@ function PresentationDetail({
       </>
     );
   const { data } = query;
-  const criteria = [...data.criteria].sort(
-    (a, b) => a.displayOrder - b.displayOrder,
-  );
   return (
     <>
       <div className={styles.titleSection}>
@@ -398,70 +396,16 @@ function PresentationDetail({
       </div>
       <section className={styles.section}>
         <Heading level={2}>평가자별 결과</Heading>
-        {data.evaluations.length === 0 ? (
-          <Text className={styles.muted}>제출된 평가가 없습니다.</Text>
-        ) : (
-          <Card>
-            <Table
-              columns={[
-                {
-                  align: 'start',
-                  header: '평가자',
-                  key: 'evaluator',
-                  renderCell: evaluation => (
-                    <button
-                      className={styles.evaluatorButton}
-                      onClick={() =>
-                        setSelectedEvaluatorId(evaluation.evaluatorId)
-                      }
-                      type='button'
-                    >
-                      {evaluation.evaluatorName}
-                    </button>
-                  ),
-                  width: proportional(1, { minWidth: 120 }),
-                },
-                {
-                  align: 'start',
-                  header: '소속 팀',
-                  key: 'teamName',
-                  renderCell: evaluation => evaluation.teamName,
-                  width: proportional(1.2, { minWidth: 140 }),
-                },
-                ...criteria.map(criterion => ({
-                  align: 'center' as const,
-                  header: `${criterion.title} (${criterion.maxScore})`,
-                  key: String(criterion.criterionId),
-                  renderCell: (evaluation: (typeof data.evaluations)[number]) =>
-                    evaluation.scores.find(
-                      score => score.criterionId === criterion.criterionId,
-                    )?.score ?? '-',
-                  width: proportional(1, { minWidth: 130 }),
-                })),
-                {
-                  align: 'center',
-                  header: '총점',
-                  key: 'total',
-                  renderCell: evaluation => evaluation.totalScore ?? '-',
-                  width: proportional(0.7, { minWidth: 80 }),
-                },
-                {
-                  align: 'center',
-                  header: '제출 상태',
-                  key: 'submitted',
-                  renderCell: evaluation =>
-                    evaluation.isSubmitted
-                      ? formatDateTime(evaluation.submittedAt)
-                      : '미제출',
-                  width: proportional(1.2, { minWidth: 160 }),
-                },
-              ]}
-              data={data.evaluations}
-              dividers='rows'
-              verticalAlign='middle'
-            />
-          </Card>
-        )}
+        <PresentationEvaluationResults
+          criteria={data.criteria}
+          evaluations={data.evaluations}
+          formatSubmissionStatus={evaluation =>
+            evaluation.isSubmitted
+              ? formatDateTime(evaluation.submittedAt)
+              : '미제출'
+          }
+          onSelectEvaluator={setSelectedEvaluatorId}
+        />
       </section>
       <section className={styles.section}>
         <Heading level={2}>교수자 평가</Heading>

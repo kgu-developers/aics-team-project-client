@@ -9,6 +9,7 @@ import {
 } from '@aics/design-system';
 import { useState } from 'react';
 
+import PresentationEvaluationResults from '~/features/admin-evaluation/components/PresentationEvaluationResults';
 import {
   useAdminPeerEvaluationTeamDetailQuery,
   useAdminPeerEvaluationsQuery,
@@ -109,75 +110,14 @@ export default function AdminTeamEvaluationTables({
             title='발표평가 결과를 불러오지 못했습니다.'
           />
         ) : (
-          <Card>
-            <Table
-              columns={[
-                {
-                  align: 'start',
-                  header: '평가자',
-                  key: 'evaluator',
-                  renderCell: evaluation => (
-                    <button
-                      className={styles.evaluatorButton}
-                      onClick={() =>
-                        setSelectedPresentationEvaluatorId(
-                          evaluation.evaluatorId,
-                        )
-                      }
-                      type='button'
-                    >
-                      {evaluation.evaluatorName}
-                    </button>
-                  ),
-                  width: proportional(1, { minWidth: 120 }),
-                },
-                {
-                  align: 'start',
-                  header: '소속 팀',
-                  key: 'teamName',
-                  renderCell: evaluation => evaluation.teamName,
-                  width: proportional(1.2, { minWidth: 140 }),
-                },
-                ...[...presentationQuery.data.criteria]
-                  .sort((a, b) => a.displayOrder - b.displayOrder)
-                  .map(criterion => ({
-                    align: 'center' as const,
-                    header: `${criterion.title} (${criterion.maxScore})`,
-                    key: String(criterion.criterionId),
-                    renderCell: (
-                      evaluation: (typeof presentationQuery.data.evaluations)[number],
-                    ) =>
-                      evaluation.scores.find(
-                        score => score.criterionId === criterion.criterionId,
-                      )?.score ?? '-',
-                    width: proportional(1, { minWidth: 130 }),
-                  })),
-                {
-                  align: 'center',
-                  header: '총점',
-                  key: 'total',
-                  renderCell: evaluation => evaluation.totalScore ?? '-',
-                  width: proportional(0.7, { minWidth: 80 }),
-                },
-                {
-                  align: 'center',
-                  header: '제출 상태',
-                  key: 'submitted',
-                  renderCell: evaluation =>
-                    evaluation.isSubmitted ? '제출' : '미제출',
-                  width: proportional(1, { minWidth: 100 }),
-                },
-              ]}
-              data={presentationQuery.data.evaluations}
-              dividers='rows'
-              emptyState={
-                <span className={styles.emptyCell}>
-                  제출된 발표평가가 없습니다.
-                </span>
-              }
-              verticalAlign='middle'
-            />
-          </Card>
+          <PresentationEvaluationResults
+            criteria={presentationQuery.data.criteria}
+            evaluations={presentationQuery.data.evaluations}
+            formatSubmissionStatus={evaluation =>
+              evaluation.isSubmitted ? '제출' : '미제출'
+            }
+            onSelectEvaluator={setSelectedPresentationEvaluatorId}
+          />
         )}
       </section>
 

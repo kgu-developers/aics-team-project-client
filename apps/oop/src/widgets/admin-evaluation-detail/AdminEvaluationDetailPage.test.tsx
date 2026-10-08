@@ -9,6 +9,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
@@ -31,7 +32,9 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderPage() {
+function renderPage(
+  initialEntry = '/admin/evaluations/peer/teams/1?sectionId=1&formId=501',
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -52,14 +55,13 @@ function renderPage() {
     path: '/admin/evaluations/$evaluationType/teams/$teamId',
     validateSearch: (search: Record<string, unknown>) => ({
       formId: search.formId ? Number(search.formId) : undefined,
+      milestoneId: search.milestoneId ? Number(search.milestoneId) : undefined,
       sectionId: search.sectionId ? String(search.sectionId) : undefined,
     }),
   });
   const router = createRouter({
     history: createMemoryHistory({
-      initialEntries: [
-        '/admin/evaluations/peer/teams/1?sectionId=1&formId=501',
-      ],
+      initialEntries: [initialEntry],
     }),
     routeTree: root.addChildren([route]),
   });
@@ -91,5 +93,34 @@ describe('AdminEvaluationDetailPage 상호평가 결과', () => {
       screen.getByRole('columnheader', { name: '제출 상태' }),
     ).toBeInTheDocument();
     expect(screen.getAllByText('제출 완료')).toHaveLength(2);
+  });
+});
+
+describe('AdminEvaluationDetailPage 발표평가 결과', () => {
+  it('제출 현황을 먼저 보여주고 평가자 표는 펼쳐서 확인한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage(
+      '/admin/evaluations/presentation/teams/1?sectionId=1&milestoneId=103',
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'OOP-01 - 1팀 발표평가 결과',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('발표 평가 대상 1명 중 1명 제출'),
+    ).toBeInTheDocument();
+
+    const trigger = screen.getByRole('button', { name: /평가자별 결과/ });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(trigger);
+
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      await screen.findByRole('button', { name: '박지훈' }),
+    ).toBeInTheDocument();
   });
 });

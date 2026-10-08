@@ -225,6 +225,9 @@ describe('AdminTeamDashboard', () => {
     expect(
       screen.getByRole('heading', { name: '발표 평가' }),
     ).toBeInTheDocument();
+    expect(
+      await screen.findByText('발표 평가 대상 1명 중 1명 제출'),
+    ).toBeInTheDocument();
     const proposalDetailLink = screen
       .getAllByRole('link', { name: '상세보기' })
       .find(link =>
@@ -304,7 +307,7 @@ describe('AdminTeamDashboard', () => {
     renderPage('2');
 
     expect(
-      await screen.findByText('제출된 발표평가가 없습니다.'),
+      await screen.findByText('발표 평가 대상자가 없습니다.'),
     ).toBeInTheDocument();
     expect(screen.getByText('제출된 상호평가가 없습니다.')).toBeInTheDocument();
     expect(
