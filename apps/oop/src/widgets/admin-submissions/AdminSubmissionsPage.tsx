@@ -1105,7 +1105,7 @@ export default function AdminSubmissionsPage() {
                           key: 'submitted',
                           renderCell: team => (
                             <Badge
-                              label={`${team.submittedCount}/${team.totalMemberCount}명 제출`}
+                              label={`${team.submittedCount}명 제출/${team.totalMemberCount}명`}
                               variant={
                                 team.totalMemberCount > 0 &&
                                 team.submittedCount === team.totalMemberCount
@@ -1128,7 +1128,7 @@ export default function AdminSubmissionsPage() {
                         },
                         {
                           align: 'center',
-                          header: '회의록',
+                          header: '전체 회의록',
                           key: 'meetingRecordCount',
                           renderCell: team => `${team.meetingRecordCount}건`,
                           width: proportional(0.7, { minWidth: 84 }),

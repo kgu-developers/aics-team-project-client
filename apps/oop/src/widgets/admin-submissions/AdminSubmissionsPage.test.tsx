@@ -1347,7 +1347,10 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('row', { name: /OOP-01 - 1팀 상호평가 보기/ }),
     ).toHaveAttribute('tabindex', '0');
-    expect(screen.getByText('2/2명 제출')).toBeInTheDocument();
+    expect(screen.getByText('2명 제출/2명')).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '전체 회의록' }),
+    ).toBeInTheDocument();
   });
 
   it('알 수 없는 마일스톤 키는 제출 목록 fixture에서 찾지 않는다', () => {
