@@ -160,6 +160,10 @@ export const response = style({
   padding: 12,
 });
 export const responseTitle = style({ fontWeight: 700 });
+export const professorMemo = style({
+  overflowWrap: 'anywhere',
+  whiteSpace: 'pre-wrap',
+});
 export const meetingLink = style({
   color: tokens.color.text.accent,
   textDecoration: 'underline',

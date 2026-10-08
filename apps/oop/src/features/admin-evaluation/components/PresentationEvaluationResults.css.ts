@@ -14,10 +14,26 @@ export const triggerCopy = style({
   gap: 2,
 });
 
+export const triggerActions = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 8,
+  justifyContent: 'flex-end',
+});
+
 export const content = style({
   display: 'grid',
   gap: 16,
+  minWidth: 0,
   paddingBlockStart: 12,
+});
+
+export const tableScrollViewport = style({
+  maxWidth: '100%',
+  overflowX: 'auto',
+  overflowY: 'hidden',
+  width: '100%',
 });
 
 export const filterRow = style({

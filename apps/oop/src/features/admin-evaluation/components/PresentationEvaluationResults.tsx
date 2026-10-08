@@ -11,6 +11,7 @@ import {
   Table,
   Text,
 } from '@aics/design-system';
+import type { TableProps } from '@aics/design-system';
 import { useMemo, useState } from 'react';
 
 import * as styles from './PresentationEvaluationResults.css';
@@ -45,6 +46,38 @@ type PresentationEvaluationResultsProps = {
   ) => string;
   onSelectEvaluator: (evaluatorId: string) => void;
 };
+
+type PresentationResultTableScrollWrapper = NonNullable<
+  TableProps<AdminPresentationEvaluationRowDto>['scrollWrapper']
+>;
+
+/**
+ * Astryx 기본 wrapper는 접힌 Collapsible에서 측정한 상태를 스크롤바로 남길 수
+ * 있다. 이 표는 측정 상태에 의존하지 않는 단일 native wrapper를 사용한다.
+ */
+const PresentationResultTableScrollWrapper: PresentationResultTableScrollWrapper =
+  // eslint-disable-next-line react/prop-types -- Astryx invokes this typed Table render callback; the rule cannot infer its generic props.
+  ({ afterTable, beforeTable, children, htmlProps, xstyle }) => {
+    // This screen does not install StyleX-based table wrapper plugins. Keep the
+    // public wrapper contract explicit rather than forwarding xstyle to the DOM.
+    void xstyle;
+    const { className, ...restHtmlProps } = htmlProps ?? {};
+
+    return (
+      <div
+        {...restHtmlProps}
+        aria-label='발표 평가 결과 표'
+        className={[className, styles.tableScrollViewport]
+          .filter(Boolean)
+          .join(' ')}
+        role='region'
+      >
+        {beforeTable}
+        {children}
+        {afterTable}
+      </div>
+    );
+  };
 
 /**
  * 두 관리자 화면에서 같은 발표 평가 대상·제출 상태 기준을 보여준다.
@@ -92,15 +125,20 @@ export default function PresentationEvaluationResults({
             <div className={styles.triggerCopy}>
               <Text weight='semibold'>평가자별 결과</Text>
               <Text color='secondary' type='supporting'>
-                발표 평가 대상 {evaluations.length}명
+                수강생 평가자 {evaluations.length}명
               </Text>
             </div>
-            <Badge
-              label={`발표 평가 대상 ${evaluations.length}명 중 ${submittedCount}명 제출`}
-              variant={
-                submittedCount === evaluations.length ? 'success' : 'neutral'
-              }
-            />
+            <div className={styles.triggerActions}>
+              <Badge
+                label={`발표 평가 대상 ${evaluations.length}명 중 ${submittedCount}명 제출`}
+                variant={
+                  submittedCount === evaluations.length ? 'success' : 'neutral'
+                }
+              />
+              <Text color='secondary' type='supporting'>
+                {isOpen ? '접기' : '펼치기'}
+              </Text>
+            </div>
           </div>
         }
       >
@@ -178,6 +216,7 @@ export default function PresentationEvaluationResults({
                 ]}
                 data={filteredEvaluations}
                 dividers='rows'
+                scrollWrapper={PresentationResultTableScrollWrapper}
                 verticalAlign='middle'
               />
             )}

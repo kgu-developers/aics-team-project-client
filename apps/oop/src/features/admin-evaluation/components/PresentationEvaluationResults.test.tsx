@@ -66,16 +66,21 @@ describe('PresentationEvaluationResults', () => {
     ).toBeInTheDocument();
     const trigger = screen.getByRole('button', { name: /평가자별 결과/ });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).toHaveTextContent('펼치기');
     expect(
       screen.queryByRole('columnheader', { name: '평가자' }),
     ).not.toBeInTheDocument();
 
     await user.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(trigger).toHaveTextContent('접기');
 
     expect(
       await screen.findByRole('button', { name: '제출 학생' }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: '발표 평가 결과 표' }),
+    ).toContainElement(screen.getByRole('table'));
     expect(
       screen.getByRole('button', { name: '미제출 학생' }),
     ).toBeInTheDocument();

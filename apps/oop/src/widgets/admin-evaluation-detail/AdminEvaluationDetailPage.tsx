@@ -443,7 +443,9 @@ function PresentationDetail({
                 </div>
               ))}
               <Text className={styles.responseTitle}>교수자 메모</Text>
-              <Text>{professorEvaluationQuery.data.memo ?? '-'}</Text>
+              <Text className={styles.professorMemo}>
+                {professorEvaluationQuery.data.memo ?? '-'}
+              </Text>
               <Text className={styles.responseTitle}>저장 시각</Text>
               <Text>
                 {formatProfessorSavedAt(
