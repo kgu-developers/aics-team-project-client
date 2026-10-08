@@ -112,6 +112,7 @@ it('담당 교수는 발표 순서에 따라 제안서와 제출 자료를 확�
   expect(
     screen.getByText('OOP-01 - 1팀 · CineFlow · 영화관 통합 관리 시스템'),
   ).toBeVisible();
+  expect(screen.getByText(/1번 발표 · OOP-01 - 1팀 · 1 \/ \d+/)).toBeVisible();
   const screenHeading = screen.getByRole('heading', { name: '화면 구성' });
   const materialsHeading = screen.getByRole('heading', { name: '발표 자료' });
   expect(screenHeading.compareDocumentPosition(materialsHeading)).toBe(
@@ -145,7 +146,64 @@ it('담당 교수는 발표 순서에 따라 제안서와 제출 자료를 확�
   await user.click(screen.getByRole('button', { name: '다음 팀' }));
 
   expect(screen.getByText('2번째 발표')).toBeVisible();
+  expect(screen.getByText(/2번 발표 · OOP-01 - 2팀 · 2 \/ \d+/)).toBeVisible();
   expect(screen.getByRole('button', { name: '이전 팀' })).toBeEnabled();
+});
+
+it('하단 팀 이동에서도 저장하지 않은 교수자 평가는 확인한 뒤 이동한다', async () => {
+  const user = userEvent.setup();
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRESENTATION_EVALUATION_PROFESSOR('1', '103', '1')}`,
+      () =>
+        HttpResponse.json({
+          editable: true,
+          memo: null,
+          milestoneId: 103,
+          scores: [
+            {
+              criterionId: 1,
+              maxScore: 5,
+              score: null,
+              title: '프로젝트 완성도',
+            },
+            {
+              criterionId: 2,
+              maxScore: 5,
+              score: null,
+              title: '기능 구성과 구현',
+            },
+            {
+              criterionId: 3,
+              maxScore: 5,
+              score: null,
+              title: '발표 전달력',
+            },
+          ],
+          submittedAt: null,
+          teamId: 1,
+        }),
+    ),
+  );
+  setApiAccessToken(demoPresentationProfessorAccessToken);
+  useAuthStore.setState({
+    accessToken: demoPresentationProfessorAccessToken,
+    currentUser: demoPresentationProfessor,
+  });
+
+  renderPage();
+
+  const memo = await screen.findByLabelText('교수자 메모');
+  expect(memo).toBeEnabled();
+  await user.type(memo, '저장 전 메모');
+  await user.click(screen.getByRole('button', { name: '다음 팀' }));
+
+  expect(
+    await screen.findByRole('alertdialog', {
+      name: '저장하지 않은 교수자 평가가 있습니다',
+    }),
+  ).toBeVisible();
+  expect(screen.getByText('1번째 발표')).toBeVisible();
 });
 
 it('제출 이력이 없으면 최신 제출 상세 조회 로딩 문구를 남기지 않는다', async () => {

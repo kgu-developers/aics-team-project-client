@@ -26,6 +26,7 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { PdfPreview } from '~/shared/ui/PdfPreview';
+import { PresentationTeamNavigator } from '~/shared/ui/PresentationTeamNavigator/PresentationTeamNavigator';
 
 import {
   toAdminMilestoneRequestError,
@@ -558,25 +559,6 @@ export default function AdminPresentationProgressPage({
             }
           />
         </HStack>
-        <HStack gap={2}>
-          <Button
-            isDisabled={isFirst || saveProfessorEvaluationMutation.isPending}
-            label='이전 팀'
-            onClick={() =>
-              requestTeamChange(presentations[selectedIndex - 1]!.teamId)
-            }
-            type='button'
-            variant='secondary'
-          />
-          <Button
-            isDisabled={isLast || saveProfessorEvaluationMutation.isPending}
-            label='다음 팀'
-            onClick={() =>
-              requestTeamChange(presentations[selectedIndex + 1]!.teamId)
-            }
-            type='button'
-          />
-        </HStack>
       </div>
 
       {presentationsQuery.isError ? (
@@ -1090,6 +1072,27 @@ export default function AdminPresentationProgressPage({
           </HStack>
         </VStack>
       </Dialog>
+      <PresentationTeamNavigator
+        currentIndex={selectedIndex}
+        isNextDisabled={isLast || saveProfessorEvaluationMutation.isPending}
+        isPreviousDisabled={
+          isFirst || saveProfessorEvaluationMutation.isPending
+        }
+        onNext={() =>
+          requestTeamChange(presentations[selectedIndex + 1]!.teamId)
+        }
+        onPrevious={() =>
+          requestTeamChange(presentations[selectedIndex - 1]!.teamId)
+        }
+        presentationLabel={
+          selectedTeam.presentationOrder == null
+            ? '발표 순서 미정'
+            : `${selectedTeam.presentationOrder}번 발표`
+        }
+        teamLabel={teamLabel}
+        total={presentations.length}
+        withAdminSidebar
+      />
       <AlertDialog
         actionLabel='저장하지 않고 이동'
         actionVariant='destructive'

@@ -7,7 +7,7 @@ export const page = style({
   gap: 20,
   margin: '0 auto',
   maxWidth: 1120,
-  padding: '28px clamp(20px, 5vw, 48px) 56px',
+  padding: '28px clamp(20px, 5vw, 48px) 96px',
   width: '100%',
 });
 
