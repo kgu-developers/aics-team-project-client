@@ -235,6 +235,28 @@ describe('AdminStudentTeamManagement', () => {
     );
   });
 
+  it('수강생 목록을 접었다가 다시 펼칠 수 있다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    const trigger = await screen.findByRole('button', {
+      name: /수강생 목록/,
+    });
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('columnheader', { name: '학번' })).toBeVisible();
+
+    await user.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      screen.queryByRole('columnheader', { name: '학번' }),
+    ).not.toBeInTheDocument();
+
+    await user.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('columnheader', { name: '학번' })).toBeVisible();
+  });
+
   it('수강생 목록의 이름을 누르면 학생 상세 모달을 연다', async () => {
     const user = userEvent.setup();
 

@@ -23,6 +23,19 @@ export const section = style({
   minWidth: 0,
 });
 
+export const studentListTrigger = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 12,
+  justifyContent: 'space-between',
+});
+
+export const studentListTriggerCopy = style({
+  display: 'grid',
+  gap: 2,
+});
+
 export const teamSectionHeader = style({
   alignItems: 'flex-start',
   display: 'flex',

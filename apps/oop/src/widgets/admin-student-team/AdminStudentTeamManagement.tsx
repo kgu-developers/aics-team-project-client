@@ -1,5 +1,6 @@
 import {
   Button,
+  Collapsible,
   Dialog,
   Heading,
   HStack,
@@ -156,6 +157,7 @@ export default function AdminStudentTeamManagement({
     sourceTeam: (typeof teams)[number];
   } | null>(null);
   const [dragOverTeamId, setDragOverTeamId] = useState<number | null>(null);
+  const [isStudentListOpen, setIsStudentListOpen] = useState(true);
 
   const targetTeams = teamMemberToMove
     ? teams.filter(
@@ -274,132 +276,156 @@ export default function AdminStudentTeamManagement({
       ) : (
         <>
           <section className={styles.section}>
-            <Heading level={2}>수강생 목록</Heading>
-            {students.length === 0 ? (
-              <div className={styles.statePanel}>
-                <p>이 분반에 등록된 수강생이 없습니다.</p>
-              </div>
-            ) : (
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th scope='col'>이름</th>
-                      <th scope='col'>학번</th>
-                      <th scope='col'>전공</th>
-                      <th scope='col'>팀</th>
-                      <th scope='col'>역할</th>
-                      <th scope='col'>관리</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {students.map(student => {
-                      const sourceTeam = teamByStudentNumber.get(
-                        student.studentNumber,
-                      );
-                      const canMove = sourceTeam
-                        ? canMoveFromTeam(sourceTeam)
-                        : false;
-                      const member = sourceTeam?.members.find(
-                        candidate =>
-                          candidate.studentNumber === student.studentNumber,
-                      );
-                      const canUpdateRole =
-                        sourceTeam?.status !== 'CONFIRMED' &&
-                        member !== undefined;
-
-                      return (
-                        <tr key={student.id}>
-                          <td>
-                            <button
-                              className={styles.memberButton}
-                              onClick={() =>
-                                setSelectedStudentNumber(student.studentNumber)
-                              }
-                              type='button'
-                            >
-                              {student.name}
-                            </button>
-                          </td>
-                          <td>{student.studentNumber}</td>
-                          <td>{student.major ?? '전공 정보 없음'}</td>
-                          <td>{sourceTeam?.name ?? '미배정'}</td>
-                          <td className={styles.projectRoleCell}>
-                            {member?.projectRole || '미지정'}
-                          </td>
-                          <td>
-                            <Popover
-                              alignment='end'
-                              content={
-                                <div className={styles.actionMenu}>
-                                  {canUpdateRole && sourceTeam && member ? (
-                                    <Button
-                                      label='역할 변경'
-                                      onClick={() => {
-                                        setActionMenuStudentNumber(null);
-                                        openTeamMemberRoleDialog(
-                                          member,
-                                          sourceTeam,
-                                        );
-                                      }}
-                                      size='sm'
-                                      variant='secondary'
-                                    />
-                                  ) : null}
-                                  {canMove && sourceTeam && member ? (
-                                    <Button
-                                      label='팀 이동'
-                                      onClick={() => {
-                                        setActionMenuStudentNumber(null);
-                                        openTeamMoveDialog(member, sourceTeam);
-                                      }}
-                                      size='sm'
-                                      variant='secondary'
-                                    />
-                                  ) : null}
-                                  <Button
-                                    label='제외'
-                                    onClick={() => {
-                                      setActionMenuStudentNumber(null);
-                                      setStudentToWithdraw(student);
-                                    }}
-                                    size='sm'
-                                    variant='destructive'
-                                  />
-                                </div>
-                              }
-                              isOpen={
-                                actionMenuStudentNumber ===
-                                student.studentNumber
-                              }
-                              key={student.studentNumber}
-                              label={`${student.name} 관리`}
-                              onOpenChange={open =>
-                                setActionMenuStudentNumber(
-                                  open ? student.studentNumber : null,
-                                )
-                              }
-                              placement='below'
-                              width={132}
-                            >
-                              {triggerProps => (
-                                <Button
-                                  {...triggerProps}
-                                  aria-label={`${student.name} 관리`}
-                                  label='관리'
-                                  size='sm'
-                                  variant='secondary'
-                                />
-                              )}
-                            </Popover>
-                          </td>
+            <Collapsible
+              isOpen={isStudentListOpen}
+              onOpenChange={setIsStudentListOpen}
+              trigger={
+                <div className={styles.studentListTrigger}>
+                  <div className={styles.studentListTriggerCopy}>
+                    <Heading level={2}>수강생 목록</Heading>
+                    <Text color='secondary' type='supporting'>
+                      수강생 {students.length}명
+                    </Text>
+                  </div>
+                  <Text color='secondary' type='supporting'>
+                    {isStudentListOpen ? '접기' : '펼치기'}
+                  </Text>
+                </div>
+              }
+            >
+              {isStudentListOpen ? (
+                students.length === 0 ? (
+                  <div className={styles.statePanel}>
+                    <p>이 분반에 등록된 수강생이 없습니다.</p>
+                  </div>
+                ) : (
+                  <div className={styles.tableWrap}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr>
+                          <th scope='col'>이름</th>
+                          <th scope='col'>학번</th>
+                          <th scope='col'>전공</th>
+                          <th scope='col'>팀</th>
+                          <th scope='col'>역할</th>
+                          <th scope='col'>관리</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                      </thead>
+                      <tbody>
+                        {students.map(student => {
+                          const sourceTeam = teamByStudentNumber.get(
+                            student.studentNumber,
+                          );
+                          const canMove = sourceTeam
+                            ? canMoveFromTeam(sourceTeam)
+                            : false;
+                          const member = sourceTeam?.members.find(
+                            candidate =>
+                              candidate.studentNumber === student.studentNumber,
+                          );
+                          const canUpdateRole =
+                            sourceTeam?.status !== 'CONFIRMED' &&
+                            member !== undefined;
+
+                          return (
+                            <tr key={student.id}>
+                              <td>
+                                <button
+                                  className={styles.memberButton}
+                                  onClick={() =>
+                                    setSelectedStudentNumber(
+                                      student.studentNumber,
+                                    )
+                                  }
+                                  type='button'
+                                >
+                                  {student.name}
+                                </button>
+                              </td>
+                              <td>{student.studentNumber}</td>
+                              <td>{student.major ?? '전공 정보 없음'}</td>
+                              <td>{sourceTeam?.name ?? '미배정'}</td>
+                              <td className={styles.projectRoleCell}>
+                                {member?.projectRole || '미지정'}
+                              </td>
+                              <td>
+                                <Popover
+                                  alignment='end'
+                                  content={
+                                    <div className={styles.actionMenu}>
+                                      {canUpdateRole && sourceTeam && member ? (
+                                        <Button
+                                          label='역할 변경'
+                                          onClick={() => {
+                                            setActionMenuStudentNumber(null);
+                                            openTeamMemberRoleDialog(
+                                              member,
+                                              sourceTeam,
+                                            );
+                                          }}
+                                          size='sm'
+                                          variant='secondary'
+                                        />
+                                      ) : null}
+                                      {canMove && sourceTeam && member ? (
+                                        <Button
+                                          label='팀 이동'
+                                          onClick={() => {
+                                            setActionMenuStudentNumber(null);
+                                            openTeamMoveDialog(
+                                              member,
+                                              sourceTeam,
+                                            );
+                                          }}
+                                          size='sm'
+                                          variant='secondary'
+                                        />
+                                      ) : null}
+                                      <Button
+                                        label='제외'
+                                        onClick={() => {
+                                          setActionMenuStudentNumber(null);
+                                          setStudentToWithdraw(student);
+                                        }}
+                                        size='sm'
+                                        variant='destructive'
+                                      />
+                                    </div>
+                                  }
+                                  isOpen={
+                                    actionMenuStudentNumber ===
+                                    student.studentNumber
+                                  }
+                                  key={student.studentNumber}
+                                  label={`${student.name} 관리`}
+                                  onOpenChange={open =>
+                                    setActionMenuStudentNumber(
+                                      open ? student.studentNumber : null,
+                                    )
+                                  }
+                                  placement='below'
+                                  width={132}
+                                >
+                                  {triggerProps => (
+                                    <Button
+                                      {...triggerProps}
+                                      aria-label={`${student.name} 관리`}
+                                      label='관리'
+                                      size='sm'
+                                      variant='secondary'
+                                    />
+                                  )}
+                                </Popover>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              ) : null}
+            </Collapsible>
           </section>
 
           <section className={styles.section}>
