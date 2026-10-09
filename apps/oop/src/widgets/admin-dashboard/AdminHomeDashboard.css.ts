@@ -100,6 +100,12 @@ export const sectionHeader = style({
   gap: 12,
   justifyContent: 'space-between',
 });
+export const sectionTitle = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: tokens.spacing['2'],
+  minWidth: 0,
+});
 export const tableWrap = style({
   background: tokens.color.background.surface,
   border: '1px solid ' + tokens.color.border.base,
@@ -172,7 +178,6 @@ export const panelState = style({
 export const list = style({
   display: 'flex',
   flexDirection: 'column',
-  gap: 10,
   listStyle: 'none',
   margin: 0,
   padding: 0,
@@ -181,13 +186,21 @@ export const item = style({
   alignItems: 'center',
   display: 'grid',
   gap: 8,
-  gridTemplateColumns: 'minmax(0, 160px) minmax(0, 1fr) auto',
-  minHeight: 22,
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  minHeight: 40,
+  padding: '6px 8px',
   transition: 'background-color var(--duration-fast) var(--ease-standard)',
+});
+export const itemContent = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: 8,
+  minWidth: 0,
 });
 export const itemMeta = style({
   alignItems: 'center',
   display: 'flex',
+  flexShrink: 0,
   gap: 6,
   minWidth: 0,
 });
@@ -203,6 +216,9 @@ export const label = style({
   whiteSpace: 'nowrap',
 });
 export const itemTitle = style({
+  color: tokens.color.text.primary,
+  flex: '1 1 auto',
+  minWidth: 0,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
@@ -223,6 +239,9 @@ export const action = style({
 });
 globalStyle(item + ':hover', {
   background: tokens.color.background.muted,
+});
+globalStyle(`${item} + ${item}`, {
+  borderTop: `1px solid ${tokens.color.border.base}`,
 });
 globalStyle(table + ' th', {
   background: tokens.color.background.card,

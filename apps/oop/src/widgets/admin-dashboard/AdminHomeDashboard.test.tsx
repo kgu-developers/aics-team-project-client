@@ -398,8 +398,9 @@ describe('AdminHomeDashboard', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('heading', { name: '쪽지함 · 미확인 1건' }),
+      await screen.findByRole('heading', { name: '쪽지함' }),
     ).toBeInTheDocument();
+    expect(screen.getByLabelText('미확인 쪽지 1건')).toHaveTextContent('1');
     const unreadLink = screen.getByRole('link', {
       name: '제안서 보완 사항을 확인해 주세요.',
     });

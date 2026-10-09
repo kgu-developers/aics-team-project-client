@@ -1,8 +1,9 @@
-import { Collapsible, Divider, Text } from '@aics/design-system';
+import { Badge, Collapsible, Divider, Text } from '@aics/design-system';
 import { Link, Outlet, useRouterState } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { useAdminMessagesQuery } from '~/features/admin-message/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import StudentContactLink from '~/widgets/student-contact-link/StudentContactLink';
@@ -53,6 +54,8 @@ function isMenuItemActive(pathname: string, itemPath: string) {
 export default function AdminShell() {
   const pathname = useRouterState({ select: state => state.location.pathname });
   const currentUser = useAuthStore(state => state.currentUser);
+  const messagesQuery = useAdminMessagesQuery();
+  const unreadMessageCount = messagesQuery.data?.unreadCount ?? 0;
 
   return (
     <div className={styles.shell}>
@@ -82,9 +85,16 @@ export default function AdminShell() {
               <div className={styles.navGroupItems}>
                 {group.items.map(item => {
                   const isActive = isMenuItemActive(pathname, item.to);
+                  const showsUnreadMessageCount =
+                    item.to === ROUTES.ADMIN_MESSAGES && unreadMessageCount > 0;
 
                   return (
                     <Link
+                      aria-label={
+                        showsUnreadMessageCount
+                          ? `${item.label}, 미확인 쪽지 ${unreadMessageCount}건`
+                          : undefined
+                      }
                       className={
                         isActive ? styles.activeGroupNav : styles.groupNavItem
                       }
@@ -92,6 +102,13 @@ export default function AdminShell() {
                       to={item.to}
                     >
                       {item.label}
+                      {showsUnreadMessageCount ? (
+                        <Badge
+                          aria-hidden
+                          label={unreadMessageCount}
+                          variant='info'
+                        />
+                      ) : null}
                     </Link>
                   );
                 })}

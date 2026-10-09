@@ -2,7 +2,7 @@ import type {
   AdminMilestoneType,
   AdminSectionMilestoneDto,
 } from '@aics/api-client';
-import { Button, Heading } from '@aics/design-system';
+import { Badge, Button, Heading } from '@aics/design-system';
 import { Link, useNavigate } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -113,50 +113,54 @@ function List({
             item.id ?? item.meetingId ?? [item.section, item.title].join('-')
           }
         >
-          <span className={styles.itemMeta}>
-            {isMeetingList &&
-            item.meetingId &&
-            !isMeetingRead?.(item.meetingId) ? (
-              <AdminUnreadDot />
-            ) : null}
-            {isMessageList && item.read === false ? <AdminUnreadDot /> : null}
-            <span className={styles.label}>{item.section}</span>
-          </span>
-          {isNoticeList && item.id ? (
-            <Link
-              className={styles.itemTitle}
-              params={{ noticeId: item.id }}
-              search={{
-                sectionId: item.sectionId ? Number(item.sectionId) : undefined,
-              }}
-              to='/admin/notices/$noticeId'
-            >
-              {item.title}
-            </Link>
-          ) : isMeetingList && item.meetingId && item.sectionId ? (
-            <Link
-              className={styles.itemTitle}
-              params={{ meetingId: item.meetingId }}
-              to={ROUTES.ADMIN_MEETING_DETAIL}
-            >
-              {item.title}
-            </Link>
-          ) : isMessageList && item.teamId ? (
-            <Link
-              className={styles.itemTitle}
-              onClick={() => {
-                if (item.id && item.read === false) {
-                  onOpenMessage?.(Number(item.id));
-                }
-              }}
-              params={{ teamId: item.teamId }}
-              to={ROUTES.ADMIN_MESSAGE_TEAM}
-            >
-              {item.title}
-            </Link>
-          ) : (
-            <span className={styles.itemTitle}>{item.title}</span>
-          )}
+          <div className={styles.itemContent}>
+            <span className={styles.itemMeta}>
+              {isMeetingList &&
+              item.meetingId &&
+              !isMeetingRead?.(item.meetingId) ? (
+                <AdminUnreadDot />
+              ) : null}
+              {isMessageList && item.read === false ? <AdminUnreadDot /> : null}
+              <span className={styles.label}>{item.section}</span>
+            </span>
+            {isNoticeList && item.id ? (
+              <Link
+                className={styles.itemTitle}
+                params={{ noticeId: item.id }}
+                search={{
+                  sectionId: item.sectionId
+                    ? Number(item.sectionId)
+                    : undefined,
+                }}
+                to='/admin/notices/$noticeId'
+              >
+                {item.title}
+              </Link>
+            ) : isMeetingList && item.meetingId && item.sectionId ? (
+              <Link
+                className={styles.itemTitle}
+                params={{ meetingId: item.meetingId }}
+                to={ROUTES.ADMIN_MEETING_DETAIL}
+              >
+                {item.title}
+              </Link>
+            ) : isMessageList && item.teamId ? (
+              <Link
+                className={styles.itemTitle}
+                onClick={() => {
+                  if (item.id && item.read === false) {
+                    onOpenMessage?.(Number(item.id));
+                  }
+                }}
+                params={{ teamId: item.teamId }}
+                to={ROUTES.ADMIN_MESSAGE_TEAM}
+              >
+                {item.title}
+              </Link>
+            ) : (
+              <span className={styles.itemTitle}>{item.title}</span>
+            )}
+          </div>
           <time className={styles.date}>{item.date}</time>
         </li>
       ))}
@@ -175,6 +179,7 @@ function Panel({
   items,
   action,
   isNoticePanel = false,
+  unreadCount,
 }: {
   emptyMessage?: string;
   partialErrorMessage?: string;
@@ -186,13 +191,23 @@ function Panel({
   items: readonly DashboardListItem[];
   action?: boolean;
   isNoticePanel?: boolean;
+  unreadCount?: number;
 }) {
   const navigate = useNavigate();
 
   return (
     <section className={styles.section}>
       <div className={styles.sectionHeader}>
-        <Heading level={2}>{title}</Heading>
+        <div className={styles.sectionTitle}>
+          <Heading level={2}>{title}</Heading>
+          {unreadCount ? (
+            <Badge
+              aria-label={`미확인 쪽지 ${unreadCount}건`}
+              label={unreadCount}
+              variant='info'
+            />
+          ) : null}
+        </div>
         {isNoticePanel ? (
           <Link className={styles.more} to={ROUTES.ADMIN_NOTICES}>
             전체보기 ›
@@ -488,23 +503,20 @@ export default function AdminHomeDashboard() {
           title='공지사항'
         />
         <Panel
-          emptyMessage={meetingEmptyMessage}
-          isMeetingPanel
-          isMeetingRead={meetingReadState.isRead}
-          items={meetingItems}
-          title='회의록'
+          emptyMessage={messageEmptyMessage}
+          isMessagePanel
+          items={messageItems}
+          onOpenMessage={messageId => messageReadMutation.mutate(messageId)}
+          title='쪽지함'
+          unreadCount={messagesQuery.data?.unreadCount}
         />
       </div>
       <Panel
-        emptyMessage={messageEmptyMessage}
-        isMessagePanel
-        items={messageItems}
-        onOpenMessage={messageId => messageReadMutation.mutate(messageId)}
-        title={
-          messagesQuery.data
-            ? `쪽지함 · 미확인 ${messagesQuery.data.unreadCount}건`
-            : '쪽지함'
-        }
+        emptyMessage={meetingEmptyMessage}
+        isMeetingPanel
+        isMeetingRead={meetingReadState.isRead}
+        items={meetingItems}
+        title='회의록'
       />
     </div>
   );

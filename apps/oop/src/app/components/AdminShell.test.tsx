@@ -8,13 +8,21 @@ import {
 } from '@tanstack/react-router';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
 import AdminShell from './AdminShell';
 
 import { demoAdmin } from '~/mocks/data/users';
+
+const unreadMessageCount = vi.hoisted(() => ({ value: 0 }));
+
+vi.mock('~/features/admin-message/queries', () => ({
+  useAdminMessagesQuery: () => ({
+    data: { unreadCount: unreadMessageCount.value },
+  }),
+}));
 
 function renderShell() {
   const rootRoute = createRootRoute();
@@ -42,6 +50,7 @@ function renderShell() {
 
 describe('AdminShell', () => {
   beforeEach(() => {
+    unreadMessageCount.value = 0;
     useAuthStore.setState({
       currentUser: demoAdmin,
       isAuthenticated: true,
@@ -74,6 +83,18 @@ describe('AdminShell', () => {
     await user.click(courseManagement);
 
     expect(courseManagement).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('미확인 쪽지가 있으면 쪽지함 탐색 항목에 숫자 배지를 표시한다', () => {
+    unreadMessageCount.value = 3;
+
+    renderShell();
+
+    const messagesLink = screen.getByRole('link', {
+      name: '쪽지함, 미확인 쪽지 3건',
+    });
+    expect(messagesLink).toHaveTextContent('쪽지함');
+    expect(messagesLink).toHaveTextContent('3');
   });
 
   it('푸터에 학생 화면과 같은 문의 링크와 카피라이트를 표시한다', () => {
