@@ -79,12 +79,13 @@ function renderPage(initialEntry = '/admin/meetings/') {
 }
 
 describe('AdminMeetingsPage', () => {
-  it('관리자 회의록 목록 행은 전체를 눌러 상세를 볼 수 있게 표시한다', async () => {
+  it('관리자 회의록 목록은 핵심 5개 열을 표시하고 행 전체를 눌러 상세를 볼 수 있게 한다', async () => {
     const { container } = renderPage();
 
+    await screen.findByRole('columnheader', { name: '회의 제목' });
     expect(
-      await screen.findByRole('columnheader', { name: '회의 제목' }),
-    ).toBeInTheDocument();
+      screen.getAllByRole('columnheader').map(header => header.textContent),
+    ).toEqual(['분반', '팀', '회의 제목', '작성 일자', '작성자']);
     expect(
       screen.getByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ }),
     ).toHaveAttribute('tabindex', '0');
@@ -92,9 +93,11 @@ describe('AdminMeetingsPage', () => {
       screen.queryByRole('columnheader', { name: '회의 내용' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole('columnheader', { name: '회의 단계' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('최종')).toBeVisible();
+      screen.queryByRole('columnheader', { name: '회의 단계' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('columnheader', { name: '참석' }),
+    ).not.toBeInTheDocument();
     expect(
       container.querySelectorAll('[data-unread-indicator="true"]'),
     ).not.toHaveLength(0);

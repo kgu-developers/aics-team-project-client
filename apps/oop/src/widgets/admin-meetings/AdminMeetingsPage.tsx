@@ -17,10 +17,7 @@ import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
 import { AdminMeetingEditLogTable } from '~/features/admin-meeting/components';
-import {
-  formatAdminMeetingDateTime,
-  formatAdminMeetingPhase,
-} from '~/features/admin-meeting/model';
+import { formatAdminMeetingDateTime } from '~/features/admin-meeting/model';
 import {
   useAdminMeetingRecordListQuery,
   useAdminSectionMeetingRecordLogsQuery,
@@ -224,13 +221,11 @@ export default function AdminMeetingsPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th scope='col'>회의 일시</th>
                 <th scope='col'>분반</th>
                 <th scope='col'>팀</th>
                 <th scope='col'>회의 제목</th>
-                <th scope='col'>회의 단계</th>
+                <th scope='col'>작성 일자</th>
                 <th scope='col'>작성자</th>
-                <th scope='col'>참석</th>
               </tr>
             </thead>
             <tbody>
@@ -251,16 +246,14 @@ export default function AdminMeetingsPage() {
                     onKeyDown={event => handleRowNavigation(event, openMeeting)}
                     tabIndex={0}
                   >
+                    <td>{record.sectionName}</td>
+                    <td>{record.teamName}</td>
+                    <td>{record.title}</td>
                     <td>
                       {!isRead(record.id) ? <AdminUnreadDot /> : null}
                       {formatAdminMeetingDateTime(record.meetingAt)}
                     </td>
-                    <td>{record.sectionName}</td>
-                    <td>{record.teamName}</td>
-                    <td>{record.title}</td>
-                    <td>{formatAdminMeetingPhase(record.phase)}</td>
                     <td>{record.authorId}</td>
-                    <td>{record.participantCount}명</td>
                   </tr>
                 );
               })}
