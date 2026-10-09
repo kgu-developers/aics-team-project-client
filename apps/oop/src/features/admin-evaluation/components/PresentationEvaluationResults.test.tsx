@@ -3,7 +3,7 @@ import type {
   AdminPresentationEvaluationRowDto,
 } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -39,13 +39,15 @@ const evaluations: AdminPresentationEvaluationRowDto[] = [
   },
 ];
 
-function renderResults() {
+function renderResults(
+  resultEvaluations: readonly AdminPresentationEvaluationRowDto[] = evaluations,
+) {
   const onSelectEvaluator = vi.fn();
   render(
     <AstryxThemeProvider>
       <PresentationEvaluationResults
         criteria={criteria}
-        evaluations={evaluations}
+        evaluations={resultEvaluations}
         formatSubmissionStatus={evaluation =>
           evaluation.isSubmitted ? '제출' : '미제출'
         }
@@ -57,30 +59,20 @@ function renderResults() {
 }
 
 describe('PresentationEvaluationResults', () => {
-  it('제출 현황을 유지한 채 평가자 표를 접고 제출 상태로 필터링한다', async () => {
+  it('제출 현황을 표시하고 평가자 표를 제출 상태로 필터링한다', async () => {
     const user = userEvent.setup();
     const { onSelectEvaluator } = renderResults();
 
     expect(
       screen.getByText('발표 평가 대상 2명 중 1명 제출'),
     ).toBeInTheDocument();
-    const trigger = screen.getByRole('button', { name: /평가자별 결과/ });
-    expect(trigger).toHaveAttribute('aria-expanded', 'false');
-    expect(trigger).toHaveTextContent('펼치기');
-    expect(
-      screen.queryByRole('columnheader', { name: '평가자' }),
-    ).not.toBeInTheDocument();
-
-    await user.click(trigger);
-    expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    expect(trigger).toHaveTextContent('접기');
-
     expect(
       await screen.findByRole('button', { name: '제출 학생' }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole('region', { name: '발표 평가 결과 표' }),
-    ).toContainElement(screen.getByRole('table'));
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Table' })).toHaveAttribute(
+      'data-aics-table-scroll-wrapper',
+    );
     expect(
       screen.getByRole('button', { name: '미제출 학생' }),
     ).toBeInTheDocument();
@@ -97,5 +89,43 @@ describe('PresentationEvaluationResults', () => {
 
     await user.click(screen.getByRole('button', { name: '제출 학생' }));
     expect(onSelectEvaluator).toHaveBeenCalledWith('20230001');
+  });
+
+  it('평가자 결과를 10명씩 나누고 필터를 바꾸면 첫 페이지를 표시한다', async () => {
+    const user = userEvent.setup();
+    const pagedEvaluations = Array.from({ length: 11 }, (_, index) => ({
+      ...evaluations[0]!,
+      evaluatorId: `20230${String(index + 1).padStart(3, '0')}`,
+      evaluatorName: `평가자 ${index + 1}`,
+    }));
+
+    renderResults(pagedEvaluations);
+
+    expect(
+      await screen.findByRole('button', { name: '평가자 1' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '평가자 11' }),
+    ).not.toBeInTheDocument();
+
+    const pagination = screen.getByRole('navigation', {
+      name: '발표 평가 결과 페이지 이동',
+    });
+    await user.click(
+      within(pagination).getByRole('button', { name: '다음 페이지' }),
+    );
+    expect(
+      await screen.findByRole('button', { name: '평가자 11' }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('combobox', { name: '제출 상태' }));
+    await user.click(await screen.findByRole('option', { name: '제출' }));
+
+    expect(
+      screen.getByRole('button', { name: '평가자 1' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '평가자 11' }),
+    ).not.toBeInTheDocument();
   });
 });

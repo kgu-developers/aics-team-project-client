@@ -1,27 +1,6 @@
 import { tokens } from '@aics/design-system';
 import { style } from '@vanilla-extract/css';
 
-export const trigger = style({
-  alignItems: 'center',
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 12,
-  justifyContent: 'space-between',
-});
-
-export const triggerCopy = style({
-  display: 'grid',
-  gap: 2,
-});
-
-export const triggerActions = style({
-  alignItems: 'center',
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 8,
-  justifyContent: 'flex-end',
-});
-
 export const content = style({
   display: 'grid',
   gap: 16,
@@ -29,16 +8,12 @@ export const content = style({
   paddingBlockStart: 12,
 });
 
-export const tableScrollViewport = style({
-  maxWidth: '100%',
-  overflowX: 'auto',
-  overflowY: 'hidden',
-  width: '100%',
-});
-
-export const filterRow = style({
+export const toolbar = style({
+  alignItems: 'end',
   display: 'flex',
-  justifyContent: 'flex-end',
+  flexWrap: 'wrap',
+  gap: 12,
+  justifyContent: 'space-between',
 });
 
 export const emptyState = style({
