@@ -23,15 +23,7 @@ export const section = style({
   minWidth: 0,
 });
 
-export const studentListTrigger = style({
-  alignItems: 'center',
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 12,
-  justifyContent: 'space-between',
-});
-
-export const studentListTriggerCopy = style({
+export const studentListHeader = style({
   display: 'grid',
   gap: 2,
 });
@@ -82,12 +74,6 @@ globalStyle(`${table} td`, {
   borderTop: `1px solid ${tokens.color.border.base}`,
   fontSize: 14,
   padding: '14px 16px',
-});
-
-export const projectRoleCell = style({
-  overflowWrap: 'anywhere',
-  whiteSpace: 'normal',
-  wordBreak: 'break-word',
 });
 
 export const teamGrid = style({
@@ -179,7 +165,7 @@ export const draggingMember = style({
 export const memberButton = style({
   background: 'transparent',
   border: 0,
-  color: 'inherit',
+  color: tokens.color.text.accent,
   cursor: 'pointer',
   font: 'inherit',
   padding: 0,
@@ -191,16 +177,6 @@ export const memberButton = style({
 globalStyle(`${member} span`, {
   color: tokens.color.text.secondary,
   fontSize: 13,
-});
-
-export const memberRole = style({
-  display: 'block',
-  maxWidth: '100%',
-  minWidth: 0,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-  width: '100%',
 });
 
 export const actionMenu = style({

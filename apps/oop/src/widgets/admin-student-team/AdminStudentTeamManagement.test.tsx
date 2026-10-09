@@ -2,6 +2,7 @@ import {
   API_BASE_URL,
   ENDPOINTS,
   fetchAdminTeam,
+  setApiAccessToken,
   updateAdminTeamMember,
 } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
@@ -11,7 +12,15 @@ import userEvent from '@testing-library/user-event';
 import { delay, HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 import type { PropsWithChildren } from 'react';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -51,9 +60,13 @@ beforeAll(() => {
     },
   });
 });
+beforeEach(() => {
+  resetAdminStudentTeamMockState();
+});
 afterEach(() => {
   server.resetHandlers();
   resetAdminStudentTeamMockState();
+  setApiAccessToken(null);
   useAuthStore.getState().clearSession();
 });
 afterAll(() => {
@@ -93,6 +106,7 @@ function createWrapper() {
 }
 
 function renderPage(currentUser = demoAdmin, initialSectionId?: string) {
+  setApiAccessToken(demoAdminAccessToken);
   useAuthStore.getState().setAccessToken(demoAdminAccessToken);
   useAuthStore.getState().setCurrentUser(currentUser);
 
@@ -227,6 +241,20 @@ describe('AdminStudentTeamManagement', () => {
     expect(
       screen.getByRole('columnheader', { name: '전공' }),
     ).toBeInTheDocument();
+    const studentList = screen
+      .getByRole('heading', { name: '수강생 목록' })
+      .closest('section');
+    expect(
+      within(studentList!)
+        .getAllByRole('columnheader')
+        .map(header => header.textContent),
+    ).toEqual(['팀', '이름', '학번', '전공', '관리']);
+    expect(
+      within(studentList!)
+        .getAllByRole('row')
+        .slice(1)
+        .map(row => within(row).getAllByRole('cell')[0]!.textContent),
+    ).toEqual(['1팀', '1팀', '2팀', '2팀', '미배정']);
     expect(screen.getByRole('heading', { name: '1팀' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '2팀' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '1팀' })).toHaveAttribute(
@@ -235,26 +263,53 @@ describe('AdminStudentTeamManagement', () => {
     );
   });
 
-  it('수강생 목록을 접었다가 다시 펼칠 수 있다', async () => {
+  it('수강생 목록을 10명씩 나누고 페이지를 전환한다', async () => {
     const user = userEvent.setup();
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ENROLLMENTS(':sectionId')}`,
+        () =>
+          HttpResponse.json({
+            contents: Array.from({ length: 11 }, (_, index) => {
+              const number = String(index + 1).padStart(2, '0');
+              return {
+                createdAt: '2026-10-08T00:00:00.000Z',
+                email: `student-${number}@example.com`,
+                id: index + 1,
+                major: '컴퓨터공학과',
+                name: `페이지 학생 ${number}`,
+                phone: '010-1234-5678',
+                role: 'STUDENT',
+                status: 'ACTIVE',
+                studentNumber: `202700${number}`,
+              };
+            }),
+          }),
+      ),
+    );
 
     renderPage();
 
-    const trigger = await screen.findByRole('button', {
-      name: /수강생 목록/,
-    });
-    expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('columnheader', { name: '학번' })).toBeVisible();
-
-    await user.click(trigger);
-    expect(trigger).toHaveAttribute('aria-expanded', 'false');
     expect(
-      screen.queryByRole('columnheader', { name: '학번' }),
+      await screen.findByRole('button', { name: '페이지 학생 01' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '페이지 학생 11' }),
     ).not.toBeInTheDocument();
 
-    await user.click(trigger);
-    expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('columnheader', { name: '학번' })).toBeVisible();
+    const pagination = screen.getByRole('navigation', {
+      name: '수강생 목록 페이지 이동',
+    });
+    await user.click(
+      within(pagination).getByRole('button', { name: '다음 페이지' }),
+    );
+
+    expect(
+      await screen.findByRole('button', { name: '페이지 학생 11' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '페이지 학생 01' }),
+    ).not.toBeInTheDocument();
   });
 
   it('수강생 목록의 이름을 누르면 학생 상세 모달을 연다', async () => {
@@ -423,7 +478,7 @@ describe('AdminStudentTeamManagement', () => {
     );
   });
 
-  it('미확정 팀원의 프로젝트 역할을 표시하고 수정한다', async () => {
+  it('미확정 팀원의 역할은 상세 모달에서만 표시하고 수정한다', async () => {
     const user = userEvent.setup();
 
     renderPage();
@@ -434,28 +489,35 @@ describe('AdminStudentTeamManagement', () => {
     await user.click(await screen.findByRole('button', { name: '역할 변경' }));
 
     const dialog = await screen.findByRole('dialog', {
-      name: '프로젝트 역할 변경',
+      name: '역할 변경',
     });
     const roleInput = within(dialog).getByRole('textbox', {
-      name: '프로젝트 역할',
+      name: '역할',
     });
     await user.type(roleInput, '백엔드');
     await user.click(within(dialog).getByRole('button', { name: '저장' }));
 
     await waitFor(() => {
-      const studentList = screen
-        .getByRole('heading', { name: '수강생 목록' })
-        .closest('section');
-      const studentRow = within(studentList!)
-        .getByRole('button', { name: '이서연' })
-        .closest('tr');
       const firstTeam = screen
         .getByRole('heading', { name: '1팀' })
         .closest('article');
 
-      expect(within(studentRow!).getByText('백엔드')).toBeInTheDocument();
-      expect(within(firstTeam!).getByText('역할: 백엔드')).toBeInTheDocument();
+      expect(screen.queryByRole('columnheader', { name: '역할' })).toBeNull();
+      expect(within(firstTeam!).queryByText('역할: 백엔드')).toBeNull();
     });
+
+    const studentList = screen
+      .getByRole('heading', { name: '수강생 목록' })
+      .closest('section');
+    await user.click(
+      within(studentList!).getByRole('button', { name: '이서연' }),
+    );
+
+    const studentDialog = await screen.findByRole('dialog', {
+      name: '이서연 수강생 정보',
+    });
+    expect(within(studentDialog).getByText('역할')).toBeInTheDocument();
+    expect(within(studentDialog).getByText('백엔드')).toBeInTheDocument();
   });
 
   it('역할 저장 중 팀이 확정되면 변경 불가 사유를 안내한다', async () => {
@@ -474,10 +536,10 @@ describe('AdminStudentTeamManagement', () => {
     );
     await user.click(await screen.findByRole('button', { name: '역할 변경' }));
     const dialog = await screen.findByRole('dialog', {
-      name: '프로젝트 역할 변경',
+      name: '역할 변경',
     });
     await user.type(
-      within(dialog).getByRole('textbox', { name: '프로젝트 역할' }),
+      within(dialog).getByRole('textbox', { name: '역할' }),
       '기획',
     );
     await user.click(within(dialog).getByRole('button', { name: '저장' }));
@@ -489,7 +551,7 @@ describe('AdminStudentTeamManagement', () => {
     ).toBeInTheDocument();
 
     await user.type(
-      within(dialog).getByRole('textbox', { name: '프로젝트 역할' }),
+      within(dialog).getByRole('textbox', { name: '역할' }),
       ' 수정',
     );
     expect(
