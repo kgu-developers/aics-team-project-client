@@ -34,6 +34,12 @@ if (typeof window !== 'undefined') {
     value: ResizeObserverMock,
   });
 
+  Object.defineProperty(window, 'scrollTo', {
+    configurable: true,
+    value: vi.fn(),
+    writable: true,
+  });
+
   if (!HTMLDialogElement.prototype.showModal) {
     Object.defineProperty(HTMLDialogElement.prototype, 'showModal', {
       configurable: true,

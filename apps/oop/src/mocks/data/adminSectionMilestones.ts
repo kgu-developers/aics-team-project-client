@@ -141,6 +141,7 @@ const milestonesBySectionId: Record<string, AdminSectionMilestoneDto[]> = {
   '1': sectionOneMilestones,
   '2': sectionTwoMilestones,
 };
+const initialMilestoneSectionIds = new Set(Object.keys(milestonesBySectionId));
 
 let nextMilestoneId = 300;
 
@@ -155,7 +156,17 @@ export function resetAdminSectionMilestonesFixture() {
     sectionTwoMilestones.length,
     ...structuredClone(initialSectionTwoMilestones),
   );
+  Object.keys(milestonesBySectionId).forEach(sectionId => {
+    if (!initialMilestoneSectionIds.has(sectionId)) {
+      delete milestonesBySectionId[sectionId];
+    }
+  });
   nextMilestoneId = 300;
+}
+
+export function ensureAdminSectionMilestonesFixture(sectionId: string) {
+  milestonesBySectionId[sectionId] ??= [];
+  return { content: [...milestonesBySectionId[sectionId]] };
 }
 
 export function getAdminSectionMilestonesFixture(

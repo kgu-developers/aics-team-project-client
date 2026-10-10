@@ -14,26 +14,18 @@ import * as styles from './AdminShell.css';
 const menuGroups = [
   {
     items: [
-      { label: '강좌·분반 관리', to: ROUTES.ADMIN_SECTIONS },
-      { label: '수강생·팀 관리', to: ROUTES.ADMIN_STUDENT_TEAM },
-    ],
-    label: '강좌 관리',
-  },
-  {
-    items: [
       { label: '마일스톤 관리', to: ROUTES.ADMIN_MILESTONES },
-      { label: '분반별 제출물', to: ROUTES.ADMIN_SUBMISSIONS },
-      { label: '공지사항', to: ROUTES.ADMIN_NOTICES },
+      { label: '제출·평가 현황', to: ROUTES.ADMIN_SUBMISSIONS },
     ],
     label: '프로젝트 관리',
   },
   {
     items: [
-      { label: '회의록', to: ROUTES.ADMIN_MEETINGS },
-      { label: '액션플랜', to: ROUTES.ADMIN_MEETING_ACTIONS },
+      { label: '공지사항', to: ROUTES.ADMIN_NOTICES },
+      { label: '회의록·액션플랜', to: ROUTES.ADMIN_MEETINGS },
       { label: '쪽지함', to: ROUTES.ADMIN_MESSAGES },
     ],
-    label: '팀 협업',
+    label: '소통',
   },
 ] as const;
 
@@ -46,6 +38,14 @@ function isMenuItemActive(pathname: string, itemPath: string) {
 
   if (itemPath === ROUTES.ADMIN_MESSAGES) {
     return pathname === itemPath || pathname.startsWith('/admin/messages/');
+  }
+
+  if (itemPath === ROUTES.ADMIN_MEETINGS) {
+    return (
+      pathname === itemPath ||
+      pathname.startsWith(`${itemPath}/`) ||
+      pathname === ROUTES.ADMIN_MEETING_ACTIONS
+    );
   }
 
   return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
@@ -74,6 +74,16 @@ export default function AdminShell() {
             to={ROUTES.ADMIN}
           >
             홈
+          </Link>
+          <Link
+            className={
+              isMenuItemActive(pathname, ROUTES.ADMIN_SECTIONS)
+                ? styles.activeNav
+                : styles.navItem
+            }
+            to={ROUTES.ADMIN_SECTIONS}
+          >
+            강좌·분반 관리
           </Link>
           {menuGroups.map(group => (
             <Collapsible

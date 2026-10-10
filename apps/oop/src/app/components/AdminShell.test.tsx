@@ -62,27 +62,24 @@ describe('AdminShell', () => {
     useAuthStore.getState().clearSession();
   });
 
-  it('관리 메뉴를 기본으로 펼쳐 두고 그룹별로 접을 수 있다', async () => {
-    const user = userEvent.setup();
-
+  it('강좌·분반 관리는 바로 노출하고 나머지 관리 메뉴는 그룹별로 접을 수 있다', () => {
     renderShell();
 
-    const courseManagement = screen.getByRole('button', {
-      name: '강좌 관리',
-    });
-    expect(courseManagement).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('link', { name: '강좌·분반 관리' })).toBeVisible();
+    expect(
+      screen.queryByRole('button', { name: '강좌 관리' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: '수강생·팀 관리' }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: '프로젝트 관리' }),
     ).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('button', { name: '팀 협업' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: '소통' })).toHaveAttribute(
       'aria-expanded',
       'true',
     );
-
-    await user.click(courseManagement);
-
-    expect(courseManagement).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('link', { name: '공지사항' })).toBeVisible();
   });
 
   it('미확인 쪽지가 있으면 쪽지함 탐색 항목에 숫자 배지를 표시한다', () => {
@@ -95,6 +92,16 @@ describe('AdminShell', () => {
     });
     expect(messagesLink).toHaveTextContent('쪽지함');
     expect(messagesLink).toHaveTextContent('3');
+  });
+
+  it('회의록과 액션플랜을 하나의 소통 탐색 항목으로 제공한다', () => {
+    renderShell();
+
+    expect(
+      screen.getByRole('link', { name: '회의록·액션플랜' }),
+    ).toHaveAttribute('href', '/admin/meetings');
+    expect(screen.queryByRole('link', { name: '회의록' })).toBeNull();
+    expect(screen.queryByRole('link', { name: '액션플랜' })).toBeNull();
   });
 
   it('푸터에 학생 화면과 같은 문의 링크와 카피라이트를 표시한다', () => {

@@ -1,9 +1,15 @@
-import type {
-  AdminMilestoneType,
-  AdminSectionMilestoneDto,
-} from '@aics/api-client';
-import { Badge, Button, Heading } from '@aics/design-system';
+import type { AdminSectionMilestoneDto } from '@aics/api-client';
+import {
+  Badge,
+  Button,
+  Card,
+  Heading,
+  Tab,
+  TabList,
+  Text,
+} from '@aics/design-system';
 import { Link, useNavigate } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -12,10 +18,7 @@ import { getSectionDisplayLabel } from '~/shared/lib/getSectionDisplayLabel';
 import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
-import {
-  formatAdminMeetingDateTime,
-  getRichTextPlainText,
-} from '~/features/admin-meeting/model';
+import { getRichTextPlainText } from '~/features/admin-meeting/model';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
 import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
 import {
@@ -23,17 +26,25 @@ import {
   useUpdateAdminMessageReadMutation,
 } from '~/features/admin-message/queries';
 import {
-  formatAdminMilestoneDate,
   isPresentationEvaluationMilestone,
   isPresentationSubmissionMilestone,
 } from '~/features/admin-milestone-review/model';
-import { useAdminAccessibleSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
+import {
+  useAdminAccessibleSectionMilestonesQuery,
+} from '~/features/admin-milestone-review/queries';
 import { noticeId } from '~/features/admin-notices/noticeScope';
 import { useAdminAccessibleNoticesQuery } from '~/features/admin-notices/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 import { parseMeetingContent } from '~/features/meeting/model/studentMeeting';
 
 import * as styles from './AdminHomeDashboard.css';
+import {
+  formatAdminHomeScheduleDate,
+  getAdminHomeDeadlineLabel,
+  getAdminHomeMilestones,
+  getAdminHomePresentationEvaluationState,
+  getAdminHomeScheduleRefreshAt,
+} from './adminHomeSchedule';
 
 type DashboardListItem = {
   date: string;
@@ -41,10 +52,45 @@ type DashboardListItem = {
   meetingId?: string;
   read?: boolean;
   teamId?: string;
+  team?: string;
   section: string;
   sectionId?: string;
   title: string;
 };
+
+type ScheduleColumnId =
+  | 'proposal'
+  | 'midterm'
+  | 'presentation-submit'
+  | 'presentation-evaluate'
+  | 'final-report'
+  | 'peer-review';
+
+type ScheduleItem = {
+  dateLabel?: string;
+  deadlineLabel: string;
+  isStudentVisible: boolean;
+  submissionTabId?: ScheduleColumnId;
+};
+
+const SCHEDULE_COLUMNS: ReadonlyArray<{
+  id: ScheduleColumnId;
+  label: string;
+}> = [
+  { id: 'proposal', label: '제안서' },
+  { id: 'midterm', label: '중간 점검' },
+  { id: 'presentation-submit', label: '발표 자료 제출' },
+  { id: 'presentation-evaluate', label: '발표 평가' },
+  { id: 'final-report', label: '최종 보고서' },
+  { id: 'peer-review', label: '상호평가' },
+];
+
+function formatDashboardDateTime(value: string) {
+  return formatSeoulDateTime(value).replace(
+    /^\d{4}-(\d{2})-(\d{2})\/(\d{2}:\d{2})$/,
+    '$1.$2 $3',
+  );
+}
 
 function getMeetingContentPreview(content: string) {
   const normalized = getRichTextPlainText(parseMeetingContent(content))
@@ -56,17 +102,9 @@ function getMeetingContentPreview(content: string) {
     : normalized || '작성된 회의 내용이 없습니다.';
 }
 
-type MilestoneColumn = {
-  dueAt: string;
-  key: string;
-  title: string;
-};
-
-function getMilestoneColumnKey(type: AdminMilestoneType, title: string) {
-  return `${type}:${title}`;
-}
-
-function getSubmissionTabId(milestone: AdminSectionMilestoneDto) {
+function getSubmissionTabId(
+  milestone: AdminSectionMilestoneDto,
+): ScheduleColumnId | undefined {
   switch (milestone.type) {
     case 'PROPOSAL':
       return 'proposal';
@@ -77,9 +115,6 @@ function getSubmissionTabId(milestone: AdminSectionMilestoneDto) {
     case 'PEER_EVALUATION':
       return 'peer-review';
     case 'PRESENTATION':
-      if (isPresentationEvaluationMilestone(milestone)) {
-        return 'presentation-evaluate';
-      }
       if (isPresentationSubmissionMilestone(milestone)) {
         return 'presentation-submit';
       }
@@ -88,6 +123,8 @@ function getSubmissionTabId(milestone: AdminSectionMilestoneDto) {
       return undefined;
   }
 }
+
+type CommunicationTab = 'message' | 'notice';
 
 function List({
   isMeetingList = false,
@@ -113,53 +150,69 @@ function List({
             item.id ?? item.meetingId ?? [item.section, item.title].join('-')
           }
         >
+          <span className={styles.itemLeading}>
+            {item.team ? (
+              <span className={styles.label} title={item.team}>
+                {item.team}
+              </span>
+            ) : (
+              <span aria-hidden='true' className={styles.noticeBullet} />
+            )}
+          </span>
           <div className={styles.itemContent}>
-            <span className={styles.itemMeta}>
+            <span className={styles.itemTitleRow}>
               {isMeetingList &&
               item.meetingId &&
               !isMeetingRead?.(item.meetingId) ? (
                 <AdminUnreadDot />
               ) : null}
               {isMessageList && item.read === false ? <AdminUnreadDot /> : null}
-              <span className={styles.label}>{item.section}</span>
+              {isNoticeList && item.id ? (
+                <Link
+                  className={styles.itemTitle}
+                  params={{ noticeId: item.id }}
+                  search={{
+                    sectionId: item.sectionId
+                      ? Number(item.sectionId)
+                      : undefined,
+                  }}
+                  to='/admin/notices/$noticeId'
+                  title={item.title}
+                >
+                  {item.title}
+                </Link>
+              ) : isMeetingList && item.meetingId && item.sectionId ? (
+                <Link
+                  className={styles.itemTitle}
+                  params={{ meetingId: item.meetingId }}
+                  to={ROUTES.ADMIN_MEETING_DETAIL}
+                  title={item.title}
+                >
+                  {item.title}
+                </Link>
+              ) : isMessageList && item.teamId ? (
+                <Link
+                  className={styles.itemTitle}
+                  onClick={() => {
+                    if (item.id && item.read === false) {
+                      onOpenMessage?.(Number(item.id));
+                    }
+                  }}
+                  params={{ teamId: item.teamId }}
+                  to={ROUTES.ADMIN_MESSAGE_TEAM}
+                  title={item.title}
+                >
+                  {item.title}
+                </Link>
+              ) : (
+                <span className={styles.itemTitle} title={item.title}>
+                  {item.title}
+                </span>
+              )}
             </span>
-            {isNoticeList && item.id ? (
-              <Link
-                className={styles.itemTitle}
-                params={{ noticeId: item.id }}
-                search={{
-                  sectionId: item.sectionId
-                    ? Number(item.sectionId)
-                    : undefined,
-                }}
-                to='/admin/notices/$noticeId'
-              >
-                {item.title}
-              </Link>
-            ) : isMeetingList && item.meetingId && item.sectionId ? (
-              <Link
-                className={styles.itemTitle}
-                params={{ meetingId: item.meetingId }}
-                to={ROUTES.ADMIN_MEETING_DETAIL}
-              >
-                {item.title}
-              </Link>
-            ) : isMessageList && item.teamId ? (
-              <Link
-                className={styles.itemTitle}
-                onClick={() => {
-                  if (item.id && item.read === false) {
-                    onOpenMessage?.(Number(item.id));
-                  }
-                }}
-                params={{ teamId: item.teamId }}
-                to={ROUTES.ADMIN_MESSAGE_TEAM}
-              >
-                {item.title}
-              </Link>
-            ) : (
-              <span className={styles.itemTitle}>{item.title}</span>
-            )}
+            <span className={styles.itemSubtitle} title={item.section}>
+              {item.section}
+            </span>
           </div>
           <time className={styles.date}>{item.date}</time>
         </li>
@@ -168,94 +221,28 @@ function List({
   );
 }
 
-function Panel({
+function MeetingPanel({
   emptyMessage,
-  partialErrorMessage,
-  isMeetingPanel = false,
-  isMessagePanel = false,
   isMeetingRead,
-  onOpenMessage,
-  title,
   items,
-  action,
-  isNoticePanel = false,
-  unreadCount,
 }: {
   emptyMessage?: string;
-  partialErrorMessage?: string;
-  isMeetingPanel?: boolean;
-  isMessagePanel?: boolean;
   isMeetingRead?: (meetingId: string) => boolean;
-  onOpenMessage?: (messageId: number) => void;
-  title: string;
   items: readonly DashboardListItem[];
-  action?: boolean;
-  isNoticePanel?: boolean;
-  unreadCount?: number;
 }) {
-  const navigate = useNavigate();
-
   return (
-    <section className={styles.section}>
-      <div className={styles.sectionHeader}>
-        <div className={styles.sectionTitle}>
-          <Heading level={2}>{title}</Heading>
-          {unreadCount ? (
-            <Badge
-              aria-label={`미확인 쪽지 ${unreadCount}건`}
-              label={unreadCount}
-              variant='info'
-            />
-          ) : null}
-        </div>
-        {isNoticePanel ? (
-          <Link className={styles.more} to={ROUTES.ADMIN_NOTICES}>
-            전체보기 ›
-          </Link>
-        ) : isMeetingPanel ? (
-          <Link className={styles.more} to={ROUTES.ADMIN_MEETINGS}>
-            전체보기 ›
-          </Link>
-        ) : isMessagePanel ? (
-          <Link className={styles.more} to={ROUTES.ADMIN_MESSAGES}>
-            전체보기 ›
-          </Link>
-        ) : (
-          <button className={styles.more} type='button'>
-            전체보기 ›
-          </button>
-        )}
+    <section className={styles.dashboardPanel}>
+      <div className={styles.dashboardPanelHeader}>
+        <Heading level={2}>회의록</Heading>
+        <Link className={styles.more} to={ROUTES.ADMIN_MEETINGS}>
+          전체보기 ›
+        </Link>
       </div>
-      <div className={styles.panel}>
-        {items.length > 0 && partialErrorMessage ? (
-          <p className={styles.panelState} role='alert'>
-            {partialErrorMessage}
-          </p>
-        ) : null}
+      <div className={styles.dashboardPanelBody}>
         {items.length > 0 ? (
-          <List
-            isMeetingList={isMeetingPanel}
-            isMessageList={isMessagePanel}
-            isMeetingRead={isMeetingRead}
-            isNoticeList={isNoticePanel}
-            onOpenMessage={onOpenMessage}
-            items={items}
-          />
+          <List isMeetingList isMeetingRead={isMeetingRead} items={items} />
         ) : emptyMessage ? (
           <p className={styles.panelState}>{emptyMessage}</p>
-        ) : null}
-        {action ? (
-          <div className={styles.action}>
-            {isNoticePanel ? (
-              <Button
-                label='작성하기'
-                onClick={() => navigate({ to: ROUTES.ADMIN_NOTICE_NEW })}
-                variant='primary'
-              />
-            ) : (
-              <Button label='작성하기' variant='primary' />
-            )}
-          </div>
         ) : null}
       </div>
     </section>
@@ -264,6 +251,9 @@ function Panel({
 
 export default function AdminHomeDashboard() {
   const navigate = useNavigate();
+  const [communicationTab, setCommunicationTab] =
+    useState<CommunicationTab>('notice');
+  const [scheduleClock, setScheduleClock] = useState(() => Date.now());
   const currentUser = useAuthStore(state => state.currentUser);
   const meetingReadState = useAdminMeetingReadState(currentUser?.id);
   const accessibleSections = currentUser?.sections ?? [];
@@ -282,28 +272,104 @@ export default function AdminHomeDashboard() {
   const messageReadMutation = useUpdateAdminMessageReadMutation();
   const noticesQuery = useAdminAccessibleNoticesQuery();
   const scheduleSections = activeScheduleSections.map((section, index) => ({
+    classTime: section.classTime,
     courseId: section.courseId,
     milestones: milestoneQueries[index]?.data?.content ?? [],
     sectionId: section.id,
     sectionLabel: section.code,
   }));
-  const milestoneColumns: MilestoneColumn[] = [
-    ...new Map(
-      scheduleSections.flatMap(section =>
-        section.milestones.map(milestone => {
-          const key = getMilestoneColumnKey(milestone.type, milestone.title);
-          return [
-            key,
-            {
-              dueAt: milestone.schedule.dueAt ?? '9999-12-31T23:59:59',
-              key,
-              title: milestone.title,
-            },
-          ] as const;
-        }),
-      ),
-    ).values(),
-  ].sort((left, right) => left.dueAt.localeCompare(right.dueAt));
+  const scheduleDeadlineKey = scheduleSections
+    .flatMap(section =>
+      getAdminHomeMilestones(section.milestones).flatMap(milestone => [
+        milestone.schedule.dueAt ?? '',
+        milestone.schedule.evaluationOpensAt ?? '',
+        milestone.schedule.evaluationClosesAt ?? '',
+      ]),
+    )
+    .join('|');
+
+  useEffect(() => {
+    const deadlineValues = scheduleDeadlineKey
+      ? scheduleDeadlineKey.split('|')
+      : [];
+    const refreshAt = getAdminHomeScheduleRefreshAt(
+      deadlineValues,
+      scheduleClock,
+    );
+    const delay = Math.max(1_000, refreshAt - Date.now() + 100);
+    const timeoutId = window.setTimeout(
+      () => setScheduleClock(Date.now()),
+      delay,
+    );
+
+    return () => window.clearTimeout(timeoutId);
+  }, [scheduleClock, scheduleDeadlineKey]);
+
+  const scheduleRows = scheduleSections.map(section => {
+    const presentationEvaluationMilestone = section.milestones.find(
+      isPresentationEvaluationMilestone,
+    );
+
+    const scheduleItems = getAdminHomeMilestones(section.milestones).flatMap(
+      milestone => {
+        const submissionTabId = getSubmissionTabId(milestone);
+        if (!submissionTabId) return [];
+
+        const submissionItem: ScheduleItem & { columnId: ScheduleColumnId } = {
+          columnId: submissionTabId,
+          dateLabel: formatAdminHomeScheduleDate(milestone.schedule.dueAt),
+          deadlineLabel: getAdminHomeDeadlineLabel(
+            milestone.schedule.dueAt,
+            scheduleClock,
+          ),
+          isStudentVisible: milestone.status === 'PUBLISHED',
+          submissionTabId,
+        };
+
+        if (milestone.type !== 'PRESENTATION') return [submissionItem];
+
+        const evaluationStartsAt =
+          presentationEvaluationMilestone?.schedule.evaluationOpensAt ??
+          milestone.schedule.evaluationOpensAt;
+        const evaluationEndsAt =
+          presentationEvaluationMilestone?.schedule.evaluationClosesAt ??
+          milestone.schedule.evaluationClosesAt;
+        const evaluationStateLabel = getAdminHomePresentationEvaluationState({
+          endsAt: evaluationEndsAt,
+          milestoneStatus:
+            presentationEvaluationMilestone?.status ?? milestone.status,
+          now: scheduleClock,
+          startsAt: evaluationStartsAt,
+        });
+
+        return [
+          submissionItem,
+          {
+            columnId: 'presentation-evaluate' as const,
+            deadlineLabel: evaluationStateLabel,
+            isStudentVisible:
+              (presentationEvaluationMilestone?.status ?? milestone.status) ===
+              'PUBLISHED',
+            submissionTabId: 'presentation-evaluate' as const,
+          },
+        ];
+      },
+    );
+    const milestoneCells: Partial<Record<ScheduleColumnId, ScheduleItem>> = {};
+    scheduleItems.forEach(item => {
+      // The fixed workflow table can show one milestone per phase. When legacy
+      // data contains duplicates, keep the earliest week/id from the sorted list.
+      milestoneCells[item.columnId] ??= item;
+    });
+
+    return {
+      classTime: section.classTime?.trim() ?? '',
+      courseId: section.courseId,
+      milestones: milestoneCells,
+      sectionId: section.sectionId,
+      sectionLabel: section.sectionLabel,
+    };
+  });
   const isMilestoneSchedulePending =
     activeSectionsQuery.isPending ||
     milestoneQueries.some(query => query.isPending);
@@ -315,14 +381,15 @@ export default function AdminHomeDashboard() {
   )
     .slice(0, 3)
     .map(record => ({
-      date: formatAdminMeetingDateTime(record.meetingAt),
+      date: formatDashboardDateTime(record.meetingAt),
       meetingId: String(record.id),
-      section: `${getSectionDisplayLabel(
+      section: getSectionDisplayLabel(
         accessibleSections,
         record.sectionId,
         record.sectionName,
-      )} · ${record.teamName}`,
+      ),
       sectionId: String(record.sectionId),
+      team: record.teamName,
       title: getMeetingContentPreview(record.content),
     }));
   const meetingEmptyMessage =
@@ -336,7 +403,7 @@ export default function AdminHomeDashboard() {
   const noticeItems: DashboardListItem[] = (noticesQuery.data ?? [])
     .slice(0, 3)
     .map(notice => ({
-      date: formatSeoulDateTime(notice.publishedAt),
+      date: formatDashboardDateTime(notice.publishedAt),
       id: String(notice.id),
       section:
         accessibleSections.find(
@@ -368,14 +435,15 @@ export default function AdminHomeDashboard() {
     .slice(0, 3)
     .map(message => ({
       id: String(message.id),
-      date: formatSeoulDateTime(message.createdAt),
-      section: `${getSectionDisplayLabel(
+      date: formatDashboardDateTime(message.createdAt),
+      section: getSectionDisplayLabel(
         accessibleSections,
         message.sectionId,
         message.sectionName,
-      )} · ${message.teamName}`,
+      ),
       read: message.read,
       teamId: String(message.teamId),
+      team: message.teamName,
       title: message.message,
     }));
   const messageEmptyMessage = messagesQuery.isPending
@@ -389,14 +457,17 @@ export default function AdminHomeDashboard() {
       <Heading level={1}>홈</Heading>
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <Heading level={2}>분반별 진행 일정 · 제출 마감일</Heading>
-          <Button
-            label='마일스톤 관리'
-            onClick={() => navigate({ to: ROUTES.ADMIN_MILESTONES })}
-            variant='primary'
-          />
+          <Heading level={2}>분반별 제출·평가 일정</Heading>
+          <div className={styles.scheduleHeaderActions}>
+            <Text type='supporting'>회색 배지: 학생 미공개 또는 마감</Text>
+            <Button
+              label='마일스톤 관리'
+              onClick={() => navigate({ to: ROUTES.ADMIN_MILESTONES })}
+              variant='primary'
+            />
+          </div>
         </div>
-        <div className={styles.tableWrap}>
+        <div>
           {isMilestoneSchedulePending ? (
             <p
               aria-live='polite'
@@ -419,105 +490,186 @@ export default function AdminHomeDashboard() {
               표시할 분반별 진행 일정이 없습니다.
             </p>
           ) : (
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th scope='col'>분반</th>
-                  {milestoneColumns.map(milestone => (
-                    <th key={milestone.key} scope='col'>
-                      <span className={styles.milestoneColumnTitle}>
-                        {milestone.title}
-                      </span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {scheduleSections.map(section => (
-                  <tr key={section.sectionId}>
-                    <td>
-                      {section.courseId === undefined ? (
-                        <span className={styles.sectionLabel}>
-                          {section.sectionLabel}
-                        </span>
-                      ) : (
-                        <Link
-                          className={styles.sectionLink}
-                          params={{ courseId: String(section.courseId) }}
-                          search={{ sectionId: Number(section.sectionId) }}
-                          to={ROUTES.ADMIN_COURSE_DETAIL}
-                        >
-                          {section.sectionLabel}
-                        </Link>
-                      )}
-                    </td>
-                    {milestoneColumns.map(milestone => {
-                      const sectionMilestone = section.milestones.find(
-                        item =>
-                          getMilestoneColumnKey(item.type, item.title) ===
-                          milestone.key,
-                      );
-                      const submissionTabId = sectionMilestone
-                        ? getSubmissionTabId(sectionMilestone)
-                        : undefined;
-
-                      return (
-                        <td key={milestone.key}>
-                          {sectionMilestone && submissionTabId ? (
-                            <Link
-                              className={styles.milestoneLink}
-                              search={{
-                                milestoneId: submissionTabId,
-                                sectionId: section.sectionId,
-                              }}
-                              to={ROUTES.ADMIN_SUBMISSIONS}
+            <Card className={styles.scheduleTableCard} padding={0}>
+              <div className={styles.scheduleTableScroll}>
+                <table
+                  aria-label='분반별 제출·평가 일정'
+                  className={styles.scheduleTable}
+                >
+                  <thead>
+                    <tr>
+                      <th scope='col'>분반</th>
+                      {SCHEDULE_COLUMNS.map(column => (
+                        <th key={column.id} scope='col'>
+                          {column.label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {scheduleRows.map(row => (
+                      <tr key={row.sectionId}>
+                        <td>
+                          <Link
+                            aria-label={`${row.sectionLabel} 분반 관리 화면 열기`}
+                            className={styles.scheduleSection}
+                            params={{ courseId: String(row.courseId) }}
+                            search={{ sectionId: Number(row.sectionId) }}
+                            to={ROUTES.ADMIN_COURSE_DETAIL}
+                          >
+                            <span className={styles.scheduleSectionLabel}>
+                              <strong title={row.sectionLabel}>
+                                {row.sectionLabel}
+                              </strong>
+                              {row.classTime ? (
+                                <span
+                                  className={styles.scheduleSectionTime}
+                                  title={row.classTime}
+                                >
+                                  {row.classTime}
+                                </span>
+                              ) : null}
+                            </span>
+                            <span
+                              aria-hidden='true'
+                              className={styles.scheduleSectionChevron}
                             >
-                              {formatAdminMilestoneDate(
-                                sectionMilestone.schedule.dueAt,
-                              )}
-                            </Link>
-                          ) : sectionMilestone ? (
-                            formatAdminMilestoneDate(
-                              sectionMilestone.schedule.dueAt,
-                            )
-                          ) : (
-                            '-'
-                          )}
+                              ›
+                            </span>
+                          </Link>
                         </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        {SCHEDULE_COLUMNS.map(column => {
+                          const item = row.milestones[column.id];
+                          const content = item ? (
+                            <>
+                              <Badge
+                                label={item.deadlineLabel}
+                                variant={
+                                  item.deadlineLabel === '진행 중'
+                                    ? 'success'
+                                    : item.isStudentVisible &&
+                                        (item.deadlineLabel === '오늘 마감' ||
+                                          item.deadlineLabel.startsWith('D-'))
+                                      ? 'info'
+                                      : 'neutral'
+                                }
+                              />
+                              {item.dateLabel ? (
+                                <span className={styles.scheduleMilestoneDate}>
+                                  {item.dateLabel}
+                                </span>
+                              ) : null}
+                            </>
+                          ) : null;
+
+                          return (
+                            <td key={column.id}>
+                              {item?.submissionTabId ? (
+                                <Link
+                                  aria-label={`${row.sectionLabel} ${column.label} 제출·평가 현황 보기`}
+                                  className={styles.scheduleMilestoneItem}
+                                  search={{
+                                    milestoneId: item.submissionTabId,
+                                    sectionId: Number(row.sectionId),
+                                  }}
+                                  to={ROUTES.ADMIN_SUBMISSIONS}
+                                >
+                                  {content}
+                                </Link>
+                              ) : (
+                                <div
+                                  aria-label={item ? undefined : '일정 없음'}
+                                  className={styles.scheduleMilestoneItem}
+                                >
+                                  {content}
+                                </div>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           )}
         </div>
       </section>
       <div className={styles.grid}>
-        <Panel
-          action
-          emptyMessage={noticeEmptyMessage}
-          partialErrorMessage={noticeWarningMessage}
-          isNoticePanel
-          items={noticeItems}
-          title='공지사항'
-        />
-        <Panel
-          emptyMessage={messageEmptyMessage}
-          isMessagePanel
-          items={messageItems}
-          onOpenMessage={messageId => messageReadMutation.mutate(messageId)}
-          title='쪽지함'
-          unreadCount={messagesQuery.data?.unreadCount}
+        <section
+          aria-label='공지사항과 쪽지함'
+          className={styles.dashboardPanel}
+        >
+          <div className={styles.dashboardPanelHeader}>
+            <div className={styles.communicationTabs}>
+              <TabList
+                aria-label='소식 목록'
+                onChange={value => {
+                  if (value === 'notice' || value === 'message') {
+                    setCommunicationTab(value);
+                  }
+                }}
+                size='sm'
+                value={communicationTab}
+              >
+                <Tab label='공지사항' value='notice' />
+                <Tab label='쪽지함' value='message' />
+              </TabList>
+              {messagesQuery.data?.unreadCount ? (
+                <Badge
+                  aria-label={`미확인 쪽지 ${messagesQuery.data.unreadCount}건`}
+                  label={messagesQuery.data.unreadCount}
+                  variant='info'
+                />
+              ) : null}
+            </div>
+            <div className={styles.sectionActions}>
+              <Link
+                className={styles.more}
+                to={
+                  communicationTab === 'notice'
+                    ? ROUTES.ADMIN_NOTICES
+                    : ROUTES.ADMIN_MESSAGES
+                }
+              >
+                전체보기 ›
+              </Link>
+            </div>
+          </div>
+          <div className={styles.dashboardPanelBody}>
+            {communicationTab === 'notice' ? (
+              noticeItems.length > 0 ? (
+                <>
+                  {noticeWarningMessage ? (
+                    <p className={styles.panelState} role='alert'>
+                      {noticeWarningMessage}
+                    </p>
+                  ) : null}
+                  <List isNoticeList items={noticeItems} />
+                </>
+              ) : (
+                <p className={styles.panelState}>{noticeEmptyMessage}</p>
+              )
+            ) : messageItems.length > 0 ? (
+              <List
+                isMessageList
+                items={messageItems}
+                onOpenMessage={messageId =>
+                  messageReadMutation.mutate(messageId)
+                }
+              />
+            ) : (
+              <p className={styles.panelState}>{messageEmptyMessage}</p>
+            )}
+          </div>
+        </section>
+        <MeetingPanel
+          emptyMessage={meetingEmptyMessage}
+          isMeetingRead={meetingReadState.isRead}
+          items={meetingItems}
         />
       </div>
-      <Panel
-        emptyMessage={meetingEmptyMessage}
-        isMeetingPanel
-        isMeetingRead={meetingReadState.isRead}
-        items={meetingItems}
-        title='회의록'
-      />
     </div>
   );
 }

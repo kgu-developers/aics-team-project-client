@@ -8,6 +8,10 @@ import {
   getAdminSectionMilestoneFixture,
   resetAdminSectionMilestonesFixture,
 } from '../data/adminSectionMilestones';
+import {
+  createAdminSection,
+  resetAdminSectionsMockData,
+} from '../data/adminSections';
 import { demoAdminAccessToken } from '../data/users';
 
 const server = setupServer(...adminSectionMilestoneHandlers);
@@ -20,13 +24,33 @@ const headers = {
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   resetMockSessionState();
+  resetAdminSectionsMockData();
   resetAdminSectionMilestonesFixture();
 });
 afterEach(() => {
   server.resetHandlers();
+  resetAdminSectionsMockData();
   resetMockSessionState();
 });
 afterAll(() => server.close());
+
+it('새로 등록한 분반은 마일스톤이 아직 없어도 빈 목록으로 응답한다', async () => {
+  const section = createAdminSection({
+    capacity: 40,
+    classTime: '수요일 3-4교시',
+    code: 'OOP-02',
+    courseId: 1,
+    professorId: '20260002',
+  });
+
+  const response = await fetch(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES(String(section!.id))}`,
+    { headers },
+  );
+
+  expect(response.status).toBe(200);
+  await expect(response.json()).resolves.toEqual({ content: [] });
+});
 
 it('상호평가 생성은 일치하는 시작·종료 별칭과 종료 dueAt을 요구한다', async () => {
   const input = {
