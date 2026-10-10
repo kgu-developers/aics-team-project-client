@@ -337,45 +337,11 @@ globalStyle(`${scoreList} [role='radiogroup']`, {
 globalStyle(`${scoreList} [role='radiogroup'] label`, {
   whiteSpace: 'nowrap',
 });
-export const navigation = style({
-  alignItems: 'center',
-  display: 'grid',
-  gap: tokens.spacing['2'],
-  gridTemplateColumns: 'auto minmax(0, 1fr) auto',
-});
-export const navigationStatus = style({
-  minWidth: 0,
-  overflow: 'hidden',
-  textAlign: 'center',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-  '@media': {
-    '(max-width: 560px)': { fontSize: 12 },
-  },
-});
-export const actionFooter = style({
-  display: 'block',
-  boxSizing: 'border-box',
-  marginInline: 'auto',
-  maxWidth: 1120,
-  width: '100%',
-  borderRadius: 0,
-});
 export const mobileEvaluationTrigger = style({
   display: 'flex',
   justifyContent: 'flex-end',
   paddingInline: tokens.spacing['2'],
   '@media': { 'screen and (min-width: 1024px)': { display: 'none' } },
-});
-export const stickyFooter = style({
-  bottom: 0,
-  left: 0,
-  position: 'fixed',
-  right: 0,
-  zIndex: 20,
-  borderTop: `1px solid ${tokens.color.border.base}`,
-  background: tokens.color.background.card,
-  boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.06)',
 });
 export const evaluationPanel = style({
   borderTop: `1px solid ${tokens.color.border.base}`,

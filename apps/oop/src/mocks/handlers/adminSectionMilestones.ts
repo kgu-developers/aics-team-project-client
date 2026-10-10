@@ -10,6 +10,7 @@ import { getMockAuthenticatedAccount } from '../authSession';
 import {
   createAdminSectionMilestoneFixture,
   closeAdminPresentationEvaluationFixture,
+  ensureAdminSectionMilestonesFixture,
   getAdminSectionMilestoneFixture,
   getAdminSectionMilestonesFixture,
   reopenAdminPresentationEvaluationFixture,
@@ -18,6 +19,7 @@ import {
   updateAdminSectionMilestoneFixtureStatus,
   updateAdminSectionMilestoneFixtureWeekNumbers,
 } from '../data/adminSectionMilestones';
+import { getAdminSection } from '../data/adminSections';
 import { demoAdmin } from '../data/users';
 
 function isAuthorizedSectionManager(request: Request, sectionId: string) {
@@ -72,10 +74,16 @@ export const adminSectionMilestoneHandlers = [
           { status: 400 },
         );
       }
-      const milestone = createAdminSectionMilestoneFixture(
-        String(params.sectionId),
-        input,
-      );
+      const sectionId = String(params.sectionId);
+      const existingFixture = getAdminSectionMilestonesFixture(sectionId);
+      if (!existingFixture && !getAdminSection(Number(sectionId))) {
+        return HttpResponse.json(
+          { code: 'SECTION_NOT_FOUND', message: '분반을 찾을 수 없습니다.' },
+          { status: 404 },
+        );
+      }
+      if (!existingFixture) ensureAdminSectionMilestonesFixture(sectionId);
+      const milestone = createAdminSectionMilestoneFixture(sectionId, input);
       return milestone
         ? HttpResponse.json({ id: milestone.id }, { status: 201 })
         : HttpResponse.json(
@@ -94,9 +102,12 @@ export const adminSectionMilestoneHandlers = [
         );
       }
 
-      const fixture = getAdminSectionMilestonesFixture(
-        String(params.sectionId),
-      );
+      const sectionId = String(params.sectionId);
+      const fixture =
+        getAdminSectionMilestonesFixture(sectionId) ??
+        (getAdminSection(Number(sectionId))
+          ? ensureAdminSectionMilestonesFixture(sectionId)
+          : undefined);
       return fixture
         ? HttpResponse.json(fixture)
         : HttpResponse.json(

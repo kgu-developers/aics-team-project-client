@@ -129,6 +129,15 @@ describe('AdminMeetingDetailPage', () => {
     expect(await screen.findByText('회의 단계: 기획')).toBeInTheDocument();
   });
 
+  it('분반 수강생 정보로 작성자의 학번과 이름을 표시한다', async () => {
+    renderPage();
+
+    expect(
+      await screen.findByText('작성자: 20231234 · 김민준'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/student-1151-1/)).not.toBeInTheDocument();
+  });
+
   it('회의록에 등록된 액션플랜만 표시하고 전체 목록으로 연결한다', async () => {
     renderPage();
 

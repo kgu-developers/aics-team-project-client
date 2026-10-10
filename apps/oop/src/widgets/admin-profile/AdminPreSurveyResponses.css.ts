@@ -5,15 +5,26 @@ export const section = style({
 });
 
 export const header = style({
+  alignItems: 'center',
   display: 'flex',
-  flexDirection: 'column',
-  gap: 6,
+  flexWrap: 'wrap',
+  gap: 12,
+  justifyContent: 'space-between',
+});
+
+export const headerActions = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 12,
 });
 
 export const controls = style({
-  alignItems: 'flex-end',
+  alignItems: 'center',
   display: 'flex',
+  flexWrap: 'wrap',
   gap: 12,
+  justifyContent: 'space-between',
   '@media': {
     '(max-width: 560px)': {
       alignItems: 'stretch',

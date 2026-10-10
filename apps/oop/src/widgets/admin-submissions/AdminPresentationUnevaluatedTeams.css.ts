@@ -1,6 +1,19 @@
 import { tokens } from '@aics/design-system';
 import { style } from '@vanilla-extract/css';
 
+export const section = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
+});
+
+export const header = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 8,
+});
+
 export const teamList = style({
   borderTop: `1px solid ${tokens.color.border.base}`,
   listStyle: 'none',
@@ -41,4 +54,6 @@ export const teamLinkAction = style({
   flexShrink: 0,
   fontSize: 13,
   fontWeight: 500,
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
 });

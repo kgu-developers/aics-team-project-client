@@ -4,6 +4,9 @@ import {
   Card,
   EmptyState,
   Heading,
+  Tab,
+  TabList,
+  Table,
   Text,
 } from '@aics/design-system';
 import { Link, useParams } from '@tanstack/react-router';
@@ -12,8 +15,14 @@ import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { AdminTeamMeetingRecordList } from '~/features/admin-meeting/components';
-import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
+import {
+  AdminMeetingActionTable,
+  AdminTeamMeetingRecordList,
+} from '~/features/admin-meeting/components';
+import {
+  useAdminMeetingRecordListQuery,
+  useAdminSectionMeetingActionsQuery,
+} from '~/features/admin-meeting/queries';
 import { isPresentationSubmissionMilestone } from '~/features/admin-milestone-review/model';
 import {
   useAdminSectionMilestonesQuery,
@@ -84,9 +93,18 @@ function getTeamDashboardErrorContent(
   }
 }
 
+function getTeamStatusLabel(status: string) {
+  if (status === 'CONFIRMED') return '확정';
+  if (status === 'FORMING') return '구성 중';
+  return status;
+}
+
 export default function AdminTeamDashboard() {
   const { teamId } = useParams({ from: '/admin/teams/$teamId' });
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<
+    'activity' | 'overview' | 'submissions'
+  >('overview');
   const currentUser = useAuthStore(state => state.currentUser);
   const accessibleSectionIds =
     currentUser?.sections.map(section => section.id) ?? [];
@@ -135,7 +153,7 @@ export default function AdminTeamDashboard() {
   );
   const versionQueries = useAdminSubmissionVersionDetailsQueries(
     versionTargets,
-    Boolean(team),
+    Boolean(team) && activeTab === 'submissions',
   );
   const versionQueryBySubmissionId = new Map(
     versionTargets.map((target, index) => [
@@ -188,7 +206,7 @@ export default function AdminTeamDashboard() {
           teamId: team.id,
         }
       : undefined,
-    Boolean(team),
+    Boolean(team) && activeTab === 'activity',
   );
   const meetingRecords = (meetingRecordsQuery.data?.contents ?? []).map(
     record => ({
@@ -201,9 +219,15 @@ export default function AdminTeamDashboard() {
       title: record.title,
     }),
   );
+  const meetingActionsQuery = useAdminSectionMeetingActionsQuery(
+    accessibleSectionIds,
+    activeTab === 'activity' ? team?.sectionId : undefined,
+    team ? { page: 0, size: 20, teamId: team.id } : undefined,
+  );
 
   useEffect(() => {
     setSelectedMemberId(null);
+    setActiveTab('overview');
   }, [teamId]);
 
   if (teamDashboardQuery.isPending) {
@@ -234,8 +258,8 @@ export default function AdminTeamDashboard() {
                   variant='primary'
                 />
               ) : null}
-              <Link className={styles.backLink} to={ROUTES.ADMIN_STUDENT_TEAM}>
-                수강생·팀 관리로
+              <Link className={styles.backLink} to={ROUTES.ADMIN_SECTIONS}>
+                강좌·분반 관리로
               </Link>
             </div>
           }
@@ -275,82 +299,188 @@ export default function AdminTeamDashboard() {
         <Heading level={1}>
           {sectionCode} - {team.name} 대시보드
         </Heading>
-        <Link className={styles.backLink} to={ROUTES.ADMIN_STUDENT_TEAM}>
-          ← 수강생·팀 관리로
-        </Link>
+        {dashboardSection?.courseId === undefined ? (
+          <Link className={styles.backLink} to={ROUTES.ADMIN_SECTIONS}>
+            ← 강좌·분반 관리로
+          </Link>
+        ) : (
+          <Link
+            className={styles.backLink}
+            params={{ courseId: String(dashboardSection.courseId) }}
+            search={{ sectionId: Number(detailSectionId), tab: 'roster' }}
+            to={ROUTES.ADMIN_COURSE_DETAIL}
+          >
+            ← 강좌·분반 관리로
+          </Link>
+        )}
       </div>
 
-      <section aria-labelledby='team-detail-heading'>
-        <Card className={styles.teamInfoCard} padding={6}>
-          <Heading id='team-detail-heading' level={2}>
-            {team.name} 상세
-          </Heading>
-          <Text>
-            프로젝트 주제:{' '}
-            <strong>
-              {proposalMilestoneIndex < 0
-                ? '제안서 마일스톤 없음'
-                : milestoneSubmissionQueries[proposalMilestoneIndex]?.isPending
-                  ? '조회 중'
-                  : (projectTopic ?? '미정')}
-            </strong>
-          </Text>
+      <TabList
+        aria-label='팀 대시보드 메뉴'
+        onChange={value => {
+          if (
+            value === 'activity' ||
+            value === 'overview' ||
+            value === 'submissions'
+          ) {
+            setActiveTab(value);
+          }
+        }}
+        value={activeTab}
+      >
+        <Tab label='개요' value='overview' />
+        <Tab label='제출·평가' value='submissions' />
+        <Tab label='회의록·액션플랜' value='activity' />
+      </TabList>
 
-          <ul className={styles.memberList}>
-            {team.members.map(member => (
-              <li key={`${member.id}-${member.studentNumber}`}>
-                <Card className={styles.memberCard} padding={4}>
-                  <button
-                    className={styles.memberButton}
-                    onClick={() => openStudentDetail(member.id)}
-                    type='button'
-                  >
-                    {member.name}
-                  </button>
-                  <span className={styles.studentNumber}>
-                    {member.studentNumber}
-                  </span>
-                  <div className={styles.memberBadges}>
-                    {member.isLeader ? (
-                      <Badge label='팀장' variant='info' />
-                    ) : null}
-                    <Badge
-                      label={member.projectRole ?? '역할 미정'}
-                      variant='neutral'
-                    />
-                  </div>
-                </Card>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      </section>
+      {activeTab === 'overview' ? (
+        <>
+          <section aria-labelledby='team-project-heading'>
+            <Card className={styles.projectSummaryCard} padding={5}>
+              <div className={styles.projectSummaryCopy}>
+                <Heading id='team-project-heading' level={2}>
+                  {proposalMilestoneIndex < 0
+                    ? '제안서 마일스톤 없음'
+                    : milestoneSubmissionQueries[proposalMilestoneIndex]
+                          ?.isPending
+                      ? '프로젝트 주제 조회 중'
+                      : (projectTopic ?? '프로젝트 주제 미정')}
+                </Heading>
+                <Text color='secondary' type='supporting'>
+                  제안서에 등록된 프로젝트 주제와 현재 팀 정보를 표시합니다.
+                </Text>
+              </div>
+              <dl className={styles.projectMetadata}>
+                <div>
+                  <dt>분반</dt>
+                  <dd>{sectionCode}</dd>
+                </div>
+                <div>
+                  <dt>팀 상태</dt>
+                  <dd>{getTeamStatusLabel(team.status)}</dd>
+                </div>
+                <div>
+                  <dt>팀원</dt>
+                  <dd>{team.members.length}명</dd>
+                </div>
+              </dl>
+            </Card>
+          </section>
 
-      <AdminTeamMilestoneProgress
-        apiSectionId={team.sectionId}
-        milestones={
-          sectionMilestonesQuery.isSuccess ? teamMilestoneProgresses : []
-        }
-        milestoneListState={
-          sectionMilestonesQuery.isError
-            ? 'error'
-            : sectionMilestonesQuery.isSuccess
-              ? 'ready'
-              : 'pending'
-        }
-        readerId={currentUser?.id}
-        sectionId={detailSectionId}
-      />
+          <section aria-labelledby='team-members-heading'>
+            <Heading id='team-members-heading' level={2}>
+              팀원 정보
+            </Heading>
+            <Card padding={0}>
+              <Table
+                aria-label='팀원 정보'
+                columns={[
+                  {
+                    align: 'start',
+                    header: '이름',
+                    key: 'name',
+                    renderCell: member => (
+                      <button
+                        className={styles.memberButton}
+                        onClick={() => openStudentDetail(member.id)}
+                        type='button'
+                      >
+                        {member.name}
+                      </button>
+                    ),
+                  },
+                  {
+                    align: 'start',
+                    header: '학번',
+                    key: 'studentNumber',
+                  },
+                  {
+                    align: 'start',
+                    header: '구분',
+                    key: 'isLeader',
+                    renderCell: member =>
+                      member.isLeader ? (
+                        <Badge label='팀장' variant='info' />
+                      ) : (
+                        '팀원'
+                      ),
+                  },
+                  {
+                    align: 'start',
+                    header: '프로젝트 역할',
+                    key: 'projectRole',
+                    renderCell: member => member.projectRole ?? '역할 미정',
+                  },
+                ]}
+                data={team.members}
+                density='balanced'
+                dividers='rows'
+                emptyState={<span>등록된 팀원이 없습니다.</span>}
+                idKey='id'
+                textOverflow='wrap'
+                verticalAlign='middle'
+              />
+            </Card>
+          </section>
+        </>
+      ) : null}
 
-      <AdminTeamEvaluationTables sectionId={team.sectionId} teamId={team.id} />
+      {activeTab === 'submissions' ? (
+        <>
+          <AdminTeamMilestoneProgress
+            apiSectionId={team.sectionId}
+            milestones={
+              sectionMilestonesQuery.isSuccess ? teamMilestoneProgresses : []
+            }
+            milestoneListState={
+              sectionMilestonesQuery.isError
+                ? 'error'
+                : sectionMilestonesQuery.isSuccess
+                  ? 'ready'
+                  : 'pending'
+            }
+            readerId={currentUser?.id}
+            sectionId={detailSectionId}
+          />
 
-      <AdminTeamMeetingRecordList
-        isError={meetingRecordsQuery.isError}
-        isPending={meetingRecordsQuery.isPending}
-        records={meetingRecords}
-        sectionId={team.sectionId}
-        teamId={team.id}
-      />
+          <AdminTeamEvaluationTables
+            sectionId={team.sectionId}
+            teamId={team.id}
+          />
+        </>
+      ) : null}
+
+      {activeTab === 'activity' ? (
+        <>
+          <AdminTeamMeetingRecordList
+            isError={meetingRecordsQuery.isError}
+            isPending={meetingRecordsQuery.isPending}
+            records={meetingRecords}
+            sectionId={team.sectionId}
+            teamId={team.id}
+          />
+          <section aria-labelledby='team-actions-heading'>
+            <Heading id='team-actions-heading' level={2}>
+              액션플랜
+            </Heading>
+            {meetingActionsQuery.isPending ? (
+              <Text aria-live='polite' role='status'>
+                액션플랜을 불러오는 중입니다.
+              </Text>
+            ) : meetingActionsQuery.isError ? (
+              <Text role='alert'>액션플랜을 불러오지 못했습니다.</Text>
+            ) : (
+              <Card padding={0}>
+                <AdminMeetingActionTable
+                  actions={meetingActionsQuery.data?.contents ?? []}
+                  emptyMessage='등록된 액션플랜이 없습니다.'
+                  showTeam={false}
+                />
+              </Card>
+            )}
+          </section>
+        </>
+      ) : null}
 
       <AdminStudentDetailDialog
         major={selectedMember?.major}

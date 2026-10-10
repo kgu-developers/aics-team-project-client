@@ -29,6 +29,7 @@ import AdminSectionTeamFilter from '~/features/admin-section/components/AdminSec
 import * as styles from './AdminMilestonesPage.css';
 
 const allSectionsValue = 'all';
+const milestonePageSize = 8;
 
 type StatusUpdateError = {
   key: string;
@@ -114,7 +115,7 @@ export default function AdminMilestonesPage() {
     }));
   });
   const [page, setPage] = useState(0);
-  const paged = paginate(allMilestones, page);
+  const paged = paginate(allMilestones, page, milestonePageSize);
   const milestones = paged.items;
 
   function selectSection(sectionId: string) {
@@ -159,9 +160,6 @@ export default function AdminMilestonesPage() {
           ← 홈으로
         </Link>
       </div>
-      <Text className={styles.description} type='supporting'>
-        담당 분반의 마일스톤 공개 일정과 제출 마감 일시를 확인하고 설정합니다.
-      </Text>
 
       <div className={styles.filterRow}>
         <AdminSectionTeamFilter

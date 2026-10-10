@@ -25,6 +25,7 @@ import { useEffect, useRef, useState } from 'react';
 import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { PdfPreview } from '~/shared/ui/PdfPreview';
+import { PresentationTeamNavigator } from '~/shared/ui/PresentationTeamNavigator/PresentationTeamNavigator';
 
 import { useAuthStore } from '~/features/auth/authStore';
 import StudentContextState from '~/features/section/StudentContextState';
@@ -835,37 +836,16 @@ function PresentationEvaluationContent({
           />
         </div>
       </section>
-      <footer aria-label='발표 팀 이동' className={styles.stickyFooter}>
-        <Card
-          className={styles.actionFooter}
-          padding={2}
-          variant='muted'
-          width='100%'
-        >
-          <nav aria-label='발표 팀 이동' className={styles.navigation}>
-            <Button
-              isDisabled={selectedIndex <= 0}
-              label='이전 팀'
-              onClick={() =>
-                setSelectedTeamId(teams[selectedIndex - 1]?.teamId)
-              }
-              variant='secondary'
-            />
-            <p className={`${styles.helper} ${styles.navigationStatus}`}>
-              {presentationLabel} · {teamLabel} · {selectedIndex + 1} /{' '}
-              {teams.length}
-            </p>
-            <Button
-              isDisabled={selectedIndex >= teams.length - 1}
-              label='다음 팀'
-              onClick={() =>
-                setSelectedTeamId(teams[selectedIndex + 1]?.teamId)
-              }
-              variant='secondary'
-            />
-          </nav>
-        </Card>
-      </footer>
+      <PresentationTeamNavigator
+        currentIndex={selectedIndex}
+        isNextDisabled={selectedIndex >= teams.length - 1}
+        isPreviousDisabled={selectedIndex <= 0}
+        onNext={() => setSelectedTeamId(teams[selectedIndex + 1]?.teamId)}
+        onPrevious={() => setSelectedTeamId(teams[selectedIndex - 1]?.teamId)}
+        presentationLabel={presentationLabel}
+        teamLabel={teamLabel}
+        total={teams.length}
+      />
     </div>
   );
 }

@@ -58,6 +58,9 @@ const dashboardState = vi.hoisted(() => ({
   }[],
 }));
 beforeEach(() => {
+  vi.spyOn(Date, 'now').mockReturnValue(
+    Date.parse('2026-10-10T10:00:00+09:00'),
+  );
   dashboardState.activeSections = [];
   dashboardState.meetingContent = '발표 자료의 핵심 흐름과 역할을 확정한다.';
   dashboardState.meetingRecords = [
@@ -102,7 +105,10 @@ beforeEach(() => {
     },
   ];
 });
-afterEach(() => useAuthStore.setState({ currentUser: null }));
+afterEach(() => {
+  vi.restoreAllMocks();
+  useAuthStore.setState({ currentUser: null });
+});
 
 vi.mock('~/features/admin-course/queries', () => ({
   useActiveAdminSections: () => ({
@@ -237,7 +243,7 @@ function renderPage(
 }
 
 describe('AdminHomeDashboard', () => {
-  it('분반별 일정에서 마일스톤 유형에 맞는 제출물 탭으로 이동한다', async () => {
+  it('분반별 일정에서 고정 단계 칼럼과 제출물 링크를 표시한다', async () => {
     dashboardState.milestones = [
       {
         allowResubmissionBeforeDueAt: false,
@@ -265,30 +271,159 @@ describe('AdminHomeDashboard', () => {
 
     renderPage();
 
-    const submissionLinks = await screen.findAllByRole('link');
-    const [proposalLink, midReportLink] = submissionLinks.filter(link =>
-      link.getAttribute('href')?.startsWith('/admin/submissions'),
+    const scheduleTable = await screen.findByRole('table', {
+      name: '분반별 제출·평가 일정',
+    });
+    const proposalLink = await screen.findByRole('link', {
+      name: /제안서 제출·평가 현황 보기/,
+    });
+    const midReportLink = screen.getByRole('link', {
+      name: /중간 점검 제출·평가 현황 보기/,
+    });
+    const proposalUrl = new URL(
+      proposalLink.getAttribute('href')!,
+      'https://aics.test',
+    );
+    const midReportUrl = new URL(
+      midReportLink.getAttribute('href')!,
+      'https://aics.test',
+    );
+    const sectionLink = screen.getByRole('link', {
+      name: 'OOP-01 분반 관리 화면 열기',
+    });
+    const sectionUrl = new URL(
+      sectionLink.getAttribute('href')!,
+      'https://aics.test',
     );
 
-    expect(proposalLink).toBeDefined();
-    expect(midReportLink).toBeDefined();
+    expect(proposalUrl.searchParams.get('milestoneId')).toBe('proposal');
+    expect(midReportUrl.searchParams.get('milestoneId')).toBe('midterm');
+    expect(proposalUrl.searchParams.get('sectionId')).toBe('1');
+    expect(midReportUrl.searchParams.get('sectionId')).toBe('1');
+    expect(sectionUrl.pathname).toBe('/admin/sections/1');
+    expect(sectionUrl.searchParams.get('sectionId')).toBe('1');
     expect(
-      new URL(
-        proposalLink!.getAttribute('href')!,
-        'https://aics.test',
-      ).searchParams.get('milestoneId'),
-    ).toBe('proposal');
+      within(scheduleTable)
+        .getAllByRole('columnheader')
+        .map(header => header.textContent),
+    ).toEqual([
+      '분반',
+      '제안서',
+      '중간 점검',
+      '발표 자료 제출',
+      '발표 평가',
+      '최종 보고서',
+      '상호평가',
+    ]);
+    expect(within(sectionLink).getByText('OOP-01').tagName).toBe('STRONG');
+    expect(within(proposalLink).getByText('~ 10.08 23:59').tagName).toBe(
+      'SPAN',
+    );
+    expect(within(proposalLink).getByText('마감')).toBeVisible();
     expect(
-      new URL(
-        midReportLink!.getAttribute('href')!,
-        'https://aics.test',
-      ).searchParams.get('milestoneId'),
-    ).toBe('midterm');
+      within(scheduleTable).queryByText('일정 미정'),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('월요일 1-2교시')).toBeInTheDocument();
+    expect(
+      screen.queryByText('OOP-01 · 월요일 1-2교시'),
+    ).not.toBeInTheDocument();
   });
 
-  it('운영 강좌의 운영 중인 분반만 일정에 표시하고 분반 항목을 상세로 연결한다', async () => {
-    const user = userEvent.setup();
+  it('발표 자료 제출과 발표 평가를 별도 일정과 탭 링크로 표시한다', async () => {
+    dashboardState.milestones = [
+      {
+        allowResubmissionBeforeDueAt: false,
+        id: 106,
+        peerEvaluationForm: null,
+        schedule: {
+          dueAt: '2026-10-20T18:00:00',
+          evaluationClosesAt: '2026-10-27T18:00:00',
+          evaluationOpensAt: '2026-10-27T15:00:00',
+        },
+        sectionId: 1,
+        status: 'PUBLISHED',
+        title: '발표',
+        type: 'PRESENTATION',
+        weekNumber: 9,
+      },
+      {
+        allowResubmissionBeforeDueAt: false,
+        id: 103,
+        peerEvaluationForm: null,
+        schedule: {
+          dueAt: '2026-10-27T18:00:00',
+          evaluationClosesAt: '2026-10-27T18:00:00',
+          evaluationOpensAt: '2026-10-27T15:00:00',
+        },
+        sectionId: 1,
+        status: 'PUBLISHED',
+        title: '발표 평가',
+        type: 'PRESENTATION',
+        weekNumber: 10,
+      },
+    ];
 
+    renderPage();
+
+    const presentationLink = await screen.findByRole('link', {
+      name: /OOP-01 발표 자료 제출 제출·평가 현황 보기/,
+    });
+    const presentationUrl = new URL(
+      presentationLink.getAttribute('href')!,
+      'https://aics.test',
+    );
+    const evaluationLink = screen.getByRole('link', {
+      name: /OOP-01 발표 평가 제출·평가 현황 보기/,
+    });
+    const evaluationUrl = new URL(
+      evaluationLink.getAttribute('href')!,
+      'https://aics.test',
+    );
+
+    expect(screen.getAllByText('발표 자료 제출')).toHaveLength(1);
+    expect(screen.getByText('발표 평가')).toBeInTheDocument();
+    expect(within(evaluationLink).getByText('시작 전')).toBeVisible();
+    expect(
+      within(evaluationLink).queryByText('10.27 15:00~18:00'),
+    ).not.toBeInTheDocument();
+    expect(presentationUrl.searchParams.get('milestoneId')).toBe(
+      'presentation-submit',
+    );
+    expect(evaluationUrl.searchParams.get('milestoneId')).toBe(
+      'presentation-evaluate',
+    );
+  });
+
+  it('발표 평가 기간이 없으면 기간 미정으로 표시한다', async () => {
+    dashboardState.milestones = [
+      {
+        allowResubmissionBeforeDueAt: false,
+        id: 106,
+        peerEvaluationForm: null,
+        schedule: {
+          dueAt: '2026-10-20T18:00:00',
+        },
+        sectionId: 1,
+        status: 'PUBLISHED',
+        title: '발표',
+        type: 'PRESENTATION',
+        weekNumber: 9,
+      },
+    ];
+
+    renderPage();
+
+    const evaluationLink = await screen.findByRole('link', {
+      name: /OOP-01 발표 평가 제출·평가 현황 보기/,
+    });
+
+    expect(within(evaluationLink).getByText('기간 미정')).toBeVisible();
+    expect(
+      within(evaluationLink).queryByText('10.27 15:00~18:00'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('운영 강좌의 운영 중인 분반만 일정 조회 대상으로 사용한다', async () => {
     const activeSection = {
       ...demoAdmin.sections[0]!,
       courseId: 1,
@@ -306,21 +441,30 @@ describe('AdminHomeDashboard', () => {
       ...demoAdmin,
       sections: [activeSection, archivedCourseSection],
     };
+    dashboardState.milestones = [
+      {
+        allowResubmissionBeforeDueAt: false,
+        id: 102,
+        peerEvaluationForm: null,
+        schedule: { dueAt: '2026-10-29T23:59:00' },
+        sectionId: 1,
+        status: 'PUBLISHED',
+        title: '중간 점검',
+        type: 'MID_REPORT',
+        weekNumber: 6,
+      },
+    ];
 
     renderPage(userWithArchivedCourse, [activeSection]);
 
     const activeSectionLink = await screen.findByRole('link', {
-      name: 'OOP-01',
+      name: /OOP-01.*중간 점검 제출·평가 현황 보기/,
     });
     expect(dashboardState.milestoneSectionIds).toEqual(['1']);
-    expect(activeSectionLink).toHaveAttribute(
-      'href',
-      '/admin/sections/1?sectionId=1',
+    expect(activeSectionLink.getAttribute('href')).toContain(
+      '/admin/submissions',
     );
     expect(screen.queryByText('OOP-02')).not.toBeInTheDocument();
-
-    await user.click(activeSectionLink);
-    expect(await screen.findByText('분반 상세')).toBeInTheDocument();
   });
 
   it('운영 중인 담당 분반이 없으면 일정 조회 대신 안내를 표시한다', async () => {
@@ -346,13 +490,14 @@ describe('AdminHomeDashboard', () => {
     expect(
       await screen.findByText('발표 자료의 핵심 흐름과 역할을 확정한다.'),
     ).toBeInTheDocument();
-    expect(screen.getByText('OOP-01 · 2팀')).toBeInTheDocument();
-    expect(screen.getByText('2026-10-08/00:00')).toBeInTheDocument();
-    expect(
-      screen.getByRole('link', {
-        name: '발표 자료의 핵심 흐름과 역할을 확정한다.',
-      }),
-    ).toHaveAttribute('href', '/admin/meetings/2');
+    const meetingLink = screen.getByRole('link', {
+      name: '발표 자료의 핵심 흐름과 역할을 확정한다.',
+    });
+    const meetingItem = meetingLink.closest('li')!;
+    expect(within(meetingItem).getByText('OOP-01')).toBeInTheDocument();
+    expect(within(meetingItem).getByText('2팀')).toBeInTheDocument();
+    expect(screen.getByText('10.08 00:00')).toBeInTheDocument();
+    expect(meetingLink).toHaveAttribute('href', '/admin/meetings/2');
     expect(
       screen
         .getAllByRole('link', { name: '전체보기 ›' })
@@ -364,6 +509,7 @@ describe('AdminHomeDashboard', () => {
   });
 
   it('홈의 회의록·쪽지함 분반 표시는 현재 분반 코드로 갱신한다', async () => {
+    const user = userEvent.setup();
     renderPage({
       ...demoAdmin,
       sections: [
@@ -376,11 +522,22 @@ describe('AdminHomeDashboard', () => {
       ],
     });
 
-    expect(await screen.findByText('변경된 분반명 · 2팀')).toBeInTheDocument();
-    expect(screen.getByText('변경된 분반명 · 1팀')).toBeInTheDocument();
-    expect(screen.queryByText('OOP-01 · 2팀')).not.toBeInTheDocument();
+    const meetingItem = (
+      await screen.findByRole('link', {
+        name: '발표 자료의 핵심 흐름과 역할을 확정한다.',
+      })
+    ).closest('li')!;
+    expect(within(meetingItem).getByText('변경된 분반명')).toBeInTheDocument();
+    expect(within(meetingItem).getByText('2팀')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '쪽지함' }));
+    const messageItem = screen
+      .getByRole('link', { name: '제안서 보완 사항을 확인해 주세요.' })
+      .closest('li')!;
+    expect(within(messageItem).getByText('변경된 분반명')).toBeInTheDocument();
+    expect(within(messageItem).getByText('1팀')).toBeInTheDocument();
+    expect(within(meetingItem).queryByText('OOP-01')).not.toBeInTheDocument();
     expect(
-      screen.queryByText('객체지향프로그래밍 · 1팀'),
+      within(messageItem).queryByText('객체지향프로그래밍'),
     ).not.toBeInTheDocument();
   });
 
@@ -397,9 +554,8 @@ describe('AdminHomeDashboard', () => {
 
     renderPage();
 
-    expect(
-      await screen.findByRole('heading', { name: '쪽지함 · 미확인 1건' }),
-    ).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: '쪽지함' }));
+    expect(screen.getByLabelText('미확인 쪽지 1건')).toHaveTextContent('1');
     const unreadLink = screen.getByRole('link', {
       name: '제안서 보완 사항을 확인해 주세요.',
     });
@@ -429,6 +585,7 @@ describe('AdminHomeDashboard', () => {
 
     renderPage();
 
+    await user.click(await screen.findByRole('button', { name: '쪽지함' }));
     const readLink = await screen.findByRole('link', {
       name: '제안서 보완 사항을 확인해 주세요.',
     });
@@ -473,20 +630,16 @@ describe('AdminHomeDashboard', () => {
 
     renderPage();
 
-    const noticePanel = (
-      await screen.findByRole('heading', {
-        name: '공지사항',
-      })
-    ).closest('section')!;
+    const user = userEvent.setup();
+    const communicationPanel = await screen.findByRole('region', {
+      name: '공지사항과 쪽지함',
+    });
     const meetingPanel = screen
       .getByRole('heading', { name: '회의록' })
       .closest('section')!;
-    const messagePanel = screen
-      .getByRole('heading', { name: /쪽지함/ })
-      .closest('section')!;
 
     expect(
-      within(noticePanel)
+      within(communicationPanel)
         .getAllByRole('listitem')
         .map(item => within(item).getByRole('link').textContent),
     ).toEqual(['공지 1', '공지 2', '공지 3']);
@@ -496,19 +649,24 @@ describe('AdminHomeDashboard', () => {
         .map(item => within(item).getByRole('link').textContent),
     ).toEqual(['회의 1', '회의 2', '회의 3']);
     expect(
-      within(messagePanel)
+      within(communicationPanel).getByRole('link', { name: '전체보기 ›' }),
+    ).toHaveAttribute('href', '/admin/notices');
+
+    await user.click(
+      within(communicationPanel).getByRole('button', { name: '쪽지함' }),
+    );
+
+    expect(
+      within(communicationPanel)
         .getAllByRole('listitem')
         .map(item => within(item).getByRole('link').textContent),
     ).toEqual(['쪽지 1', '쪽지 2', '쪽지 3']);
 
     expect(
-      within(noticePanel).getByRole('link', { name: '전체보기 ›' }),
-    ).toHaveAttribute('href', '/admin/notices');
-    expect(
       within(meetingPanel).getByRole('link', { name: '전체보기 ›' }),
     ).toHaveAttribute('href', '/admin/meetings');
     expect(
-      within(messagePanel).getByRole('link', { name: '전체보기 ›' }),
+      within(communicationPanel).getByRole('link', { name: '전체보기 ›' }),
     ).toHaveAttribute('href', '/admin/messages');
   });
 });
@@ -599,7 +757,7 @@ it('공지 게시 시각을 서울 기준 자정 넘김으로 표시한다', asy
   renderPage();
   const link = await screen.findByRole('link', { name: '계약 공지' });
   expect(
-    within(link.closest('li')!).getByText('2026-09-15/00:30'),
+    within(link.closest('li')!).getByText('09.15 00:30'),
   ).toBeInTheDocument();
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
@@ -609,7 +767,7 @@ it('오프셋 없는 공지 게시 시각을 서버의 한국 현지 시각으�
   renderPage();
   const link = await screen.findByRole('link', { name: '계약 공지' });
   expect(
-    within(link.closest('li')!).getByText('2026-08-27/15:00'),
+    within(link.closest('li')!).getByText('08.27 15:00'),
   ).toBeInTheDocument();
 });
 

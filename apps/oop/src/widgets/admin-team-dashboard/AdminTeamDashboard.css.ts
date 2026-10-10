@@ -1,5 +1,5 @@
 import { tokens } from '@aics/design-system';
-import { style } from '@vanilla-extract/css';
+import { globalStyle, style } from '@vanilla-extract/css';
 
 import { layoutTokens } from '~/app/tokens.css';
 
@@ -23,7 +23,8 @@ export const backLink = style({
   color: tokens.color.text.accent,
   flexShrink: 0,
   fontSize: 13,
-  textDecoration: 'none',
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
 });
 
 export const errorActions = style({
@@ -34,54 +35,55 @@ export const errorActions = style({
   justifyContent: 'center',
 });
 
-export const teamInfoCard = style({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 16,
-});
-
-export const memberList = style({
+export const projectSummaryCard = style({
+  alignItems: 'start',
   display: 'grid',
-  gap: 12,
-  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-  listStyle: 'none',
-  margin: 0,
-  padding: 0,
+  gap: 24,
+  gridTemplateColumns: 'minmax(0, 1fr) minmax(220px, 0.45fr)',
+  '@media': {
+    '(max-width: 720px)': { gridTemplateColumns: '1fr' },
+  },
 });
 
-export const memberCard = style({
-  alignItems: 'center',
+export const projectSummaryCopy = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 8,
-  height: '100%',
-  minWidth: 0,
+});
+
+export const projectMetadata = style({
+  display: 'grid',
+  gap: 10,
+  margin: 0,
+});
+
+globalStyle(`${projectMetadata} div`, {
+  display: 'grid',
+  gap: 12,
+  gridTemplateColumns: '72px minmax(0, 1fr)',
+});
+
+globalStyle(`${projectMetadata} dt`, {
+  color: tokens.color.text.secondary,
+});
+
+globalStyle(`${projectMetadata} dd`, {
+  margin: 0,
 });
 
 export const memberButton = style({
   background: 'transparent',
   border: 0,
-  color: tokens.color.text.primary,
+  color: tokens.color.text.accent,
   cursor: 'pointer',
   font: 'inherit',
-  fontWeight: 600,
-  padding: 2,
+  padding: 0,
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
   selectors: {
     '&:focus-visible': {
       outline: `2px solid ${tokens.color.accent}`,
       outlineOffset: 2,
     },
   },
-});
-
-export const studentNumber = style({
-  color: tokens.color.text.secondary,
-  fontSize: 13,
-});
-
-export const memberBadges = style({
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 6,
-  justifyContent: 'center',
 });

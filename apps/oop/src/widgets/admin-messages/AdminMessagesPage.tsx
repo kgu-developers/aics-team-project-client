@@ -1,17 +1,11 @@
-import {
-  Button,
-  Card,
-  EmptyState,
-  Heading,
-  Pagination,
-  Text,
-} from '@aics/design-system';
+import { Button, Card, EmptyState, Heading, Text } from '@aics/design-system';
 import { useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { getSectionDisplayLabel } from '~/shared/lib/getSectionDisplayLabel';
+import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
 import {
@@ -64,15 +58,7 @@ export default function AdminMessagesPage() {
 
   return (
     <div className={styles.page}>
-      <div>
-        <Heading level={1}>쪽지함</Heading>
-        <Text>담당 분반의 팀 메시지를 확인하고 관리합니다.</Text>
-        {!activeSectionsQuery.isPending &&
-        !activeSectionsQuery.isError &&
-        query.data ? (
-          <Text>미확인 {query.data.unreadCount}건</Text>
-        ) : null}
-      </div>
+      <Heading level={1}>쪽지함</Heading>
       <AdminSectionTeamFilter
         onSectionChange={next =>
           selectSection(next === ALL_SECTIONS ? undefined : next)
@@ -153,14 +139,12 @@ export default function AdminMessagesPage() {
       !activeSectionsQuery.isError &&
       pagination &&
       pagination.totalPages > 1 ? (
-        <Pagination
-          className={styles.pagination}
+        <ListPagination
           isDisabled={query.isFetching}
-          onChange={nextPage => setPage(nextPage - 1)}
-          page={boundedPage + 1}
-          pageSize={pagination.size}
-          totalPages={pagination.totalPages}
-          variant='compact'
+          label='쪽지함 페이지 이동'
+          onPageChange={setPage}
+          page={boundedPage}
+          pageCount={pagination.totalPages}
         />
       ) : null}
     </div>

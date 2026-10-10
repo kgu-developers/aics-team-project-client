@@ -28,6 +28,7 @@ import {
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { paginate } from '~/shared/lib/pagination';
 import {
@@ -56,6 +57,8 @@ import {
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminNoticePages.css';
+
+const noticePageSize = 8;
 
 function useNoticeScope() {
   const { sectionId } = useSearch({ from: '/admin/notices' });
@@ -114,7 +117,10 @@ function SectionSelect({
         ...(includeAll ? [{ label: '전체 분반', value: 'all' }] : []),
         ...activeSectionsQuery.data
           .filter(section => noticeId(section.id) !== undefined)
-          .map(section => ({ label: section.code, value: section.id })),
+          .map(section => ({
+            label: formatAdminSectionLabel(section),
+            value: section.id,
+          })),
       ]}
       renderOption={option => (
         <SelectorOption label={option.label ?? option.value} />
@@ -144,7 +150,7 @@ export function AdminNoticeListPage() {
   const query =
     selectedSectionId === undefined ? allSectionsQuery : sectionQuery;
   const [page, setPage] = useState(0);
-  const paged = paginate(query.data ?? [], page);
+  const paged = paginate(query.data ?? [], page, noticePageSize);
   const notices = paged.items;
   const hasSections = user?.sections.some(
     section => noticeId(section.id) !== undefined,
@@ -276,7 +282,7 @@ export function AdminNoticeListPage() {
   );
 }
 
-function NoticeReadState({
+function NoticeDetailState({
   query,
 }: {
   query: ReturnType<typeof useAdminNoticeQuery>;
@@ -312,7 +318,7 @@ export function AdminNoticeDetailPage() {
   const query = useAdminNoticeQuery(sectionId, routeId);
   const notice = query.data;
   if (!section || !notice || query.isError)
-    return <NoticeReadState query={query} />;
+    return <NoticeDetailState query={query} />;
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
@@ -524,7 +530,7 @@ export function AdminNoticeEditPage() {
   const { sectionId, section } = useNoticeScope();
   const query = useAdminNoticeQuery(sectionId, routeId);
   if (!section || !query.data || query.isError)
-    return <NoticeReadState query={query} />;
+    return <NoticeDetailState query={query} />;
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>

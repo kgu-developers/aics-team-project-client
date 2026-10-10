@@ -7,12 +7,13 @@ import {
   createRoute,
   createRouter,
   Outlet,
+  redirect,
   RouterProvider,
 } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import ExcelJS from 'exceljs';
-import { delay, http, HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import {
   afterAll,
@@ -35,10 +36,8 @@ import {
 } from '~/mocks/authSession';
 import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
 import { resetAdminProfileMockData } from '~/mocks/data/adminProfile';
-import { appliedAdminRosterImportStatusFixture } from '~/mocks/data/adminRosterImportStatus';
 import {
   createAdminSection,
-  getAdminSectionsByCourseId,
   resetAdminSectionsMockData,
   updateAdminSectionFixture,
 } from '~/mocks/data/adminSections';
@@ -52,6 +51,7 @@ import {
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminProfileHandlers } from '~/mocks/handlers/adminProfile';
 import { adminSectionArtifactHandlers } from '~/mocks/handlers/adminSectionArtifacts';
+import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 import { adminSectionHandlers } from '~/mocks/handlers/adminSections';
 import {
   adminStudentTeamHandlers,
@@ -64,6 +64,7 @@ const server = setupServer(
   ...adminCourseHandlers,
   ...adminSectionHandlers,
   ...adminSectionArtifactHandlers,
+  ...adminSectionMilestoneHandlers,
   ...adminStudentTeamHandlers,
   ...adminProfileHandlers,
   ...authHandlers,
@@ -115,10 +116,36 @@ function renderAt(initialEntry: string) {
     getParentRoute: () => sectionsRoute,
     path: '/',
   });
+  function CourseDetailRoute() {
+    const { sectionId, tab } = detailRoute.useSearch();
+    return (
+      <AdminCourseDetailPage
+        initialSectionId={
+          sectionId === undefined ? undefined : String(sectionId)
+        }
+        initialTab={tab ?? 'basic'}
+      />
+    );
+  }
   const detailRoute = createRoute({
-    component: AdminCourseDetailPage,
+    beforeLoad: ({ search }) => {
+      if (search.sectionId === undefined) {
+        throw redirect({ replace: true, to: '/admin/sections' });
+      }
+    },
+    component: CourseDetailRoute,
     getParentRoute: () => sectionsRoute,
     path: '/$courseId',
+    validateSearch: (
+      search: Record<string, unknown>,
+    ): { sectionId?: number; tab?: 'roster' | 'survey' } => ({
+      sectionId:
+        typeof search.sectionId === 'number' ? search.sectionId : undefined,
+      tab:
+        search.tab === 'roster' || search.tab === 'survey'
+          ? search.tab
+          : undefined,
+    }),
   });
   const studentTeamRoute = createRoute({
     component: () => <div>수강생·팀 관리 페이지</div>,
@@ -131,10 +158,22 @@ function renderAt(initialEntry: string) {
         typeof search.sectionId === 'number' ? search.sectionId : undefined,
     }),
   });
+  const milestoneDetailRoute = createRoute({
+    component: () => <div>마일스톤 상세</div>,
+    getParentRoute: () => root,
+    path: '/admin/milestones/$milestoneId',
+    validateSearch: (
+      search: Record<string, unknown>,
+    ): { sectionId?: number } => ({
+      sectionId:
+        typeof search.sectionId === 'number' ? search.sectionId : undefined,
+    }),
+  });
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
     routeTree: root.addChildren([
       sectionsRoute.addChildren([listRoute, detailRoute]),
+      milestoneDetailRoute,
       studentTeamRoute,
     ]),
   });
@@ -150,57 +189,80 @@ function renderAt(initialEntry: string) {
 }
 
 async function openAssistantDialog(user: UserEvent) {
-  const row = await screen.findByRole('row', { name: 'OOP-01 분반 설정' });
-  await user.click(within(row).getByRole('button', { name: '조교 관리' }));
+  const table = await screen.findByRole('table', {
+    name: '선택한 분반 기본 설정',
+  });
+  await user.click(within(table).getByRole('button', { name: '조교 관리' }));
   return screen.findByRole('dialog', { name: 'OOP-01 조교 관리' });
 }
 
 describe('AdminCoursesPage', () => {
-  it('연도·학기·상태를 표시하고 행을 누르면 강좌 상세로 이동한다', async () => {
+  it('강좌 설정과 분반 목록을 함께 표시하고 분반을 누르면 운영 화면으로 이동한다', async () => {
     const user = userEvent.setup();
     const router = renderAt('/admin/sections');
 
-    // The default ACTIVE filter hides the archived course with the same name.
-    const row = await screen.findByRole('row', {
-      name: '객체지향 프로그래밍 강좌 상세 보기',
-    });
-    expect(within(row).getByText('운영 중')).toBeInTheDocument();
-    expect(within(row).getByText('2학기')).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: '삭제' }),
+      await screen.findByRole('heading', { name: '강좌 설정' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 3, name: '객체지향 프로그래밍' }),
+    ).toBeInTheDocument();
+    const courseSummary = screen.getByRole('article', {
+      name: '객체지향 프로그래밍 강좌 요약',
+    });
+    expect(within(courseSummary).getByText('운영 중')).toBeInTheDocument();
+    expect(within(courseSummary).getByText('운영 학기')).toBeInTheDocument();
+    expect(within(courseSummary).getByText('2026년 2학기')).toBeInTheDocument();
+    expect(within(courseSummary).getByText('등록 분반')).toBeInTheDocument();
+    expect(await within(courseSummary).findByText(/\d+개/)).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('group', { name: '강좌 관리' }))
+        .getAllByRole('button')
+        .map(button => button.textContent),
+    ).toEqual(['강좌 정보 수정', '강좌 등록', '강좌 삭제']);
+    expect(screen.getByRole('combobox', { name: '강좌' })).toHaveTextContent(
+      '객체지향 프로그래밍',
+    );
+    const table = await screen.findByRole('table', {
+      name: '객체지향 프로그래밍 분반 목록',
+    });
+    const row = within(table).getByRole('row', {
+      name: 'OOP-01 분반 운영 화면 열기',
+    });
+    expect(within(row).getByText('월요일 1-2교시')).toBeInTheDocument();
+    expect(
+      within(table).queryByRole('columnheader', { name: '관리' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '산출물 현황 다운로드' }),
     ).not.toBeInTheDocument();
 
     await user.click(row);
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/admin/sections/1'),
     );
+    expect(router.state.location.search).toMatchObject({ sectionId: 1 });
     expect(
-      await screen.findByRole('heading', {
-        level: 1,
-        name: '객체지향 프로그래밍',
-      }),
+      await screen.findByRole('heading', { level: 1, name: 'OOP-01 분반' }),
     ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(router.state.location.search).toMatchObject({ sectionId: 1 }),
-    );
   });
 
-  it('운영 중 강좌를 기본으로 표시하고 전체 조회에서는 최신 학기부터 정렬한다', async () => {
+  it('운영 중 강좌를 기본 선택하고 전체 조회에서는 최신 강좌를 선택한다', async () => {
     const user = userEvent.setup();
     renderAt('/admin/sections');
 
-    expect(await screen.findByText('객체지향 프로그래밍')).toBeInTheDocument();
-    expect(screen.queryByText('웹 프로그래밍')).not.toBeInTheDocument();
+    const courseSelector = await screen.findByRole('combobox', {
+      name: '강좌',
+    });
+    expect(courseSelector).toHaveTextContent('객체지향 프로그래밍');
 
     await user.click(screen.getByRole('combobox', { name: '상태' }));
     await user.click(screen.getByRole('option', { name: '전체 상태' }));
 
-    const rows = await screen.findAllByRole('row', {
-      name: /강좌 상세 보기/,
-    });
-    expect(within(rows[0]!).getByText('웹 프로그래밍')).toBeInTheDocument();
-    expect(within(rows[0]!).getByText('2027')).toBeInTheDocument();
-    expect(within(rows[1]!).getByText('2026')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(courseSelector).toHaveTextContent('웹 프로그래밍'),
+    );
+    expect(courseSelector).toHaveTextContent('2027년');
   });
 
   it('강좌를 등록한다', async () => {
@@ -240,7 +302,7 @@ describe('AdminCoursesPage', () => {
 });
 
 describe('AdminCourseDetailPage', () => {
-  it('여러 분반 강좌는 기준 분반을 선택하기 전 첫 분반의 운영 현황을 표시하지 않는다', async () => {
+  it('분반 없는 상세 주소는 목록으로 이동하고 선택한 분반을 URL 기준으로 전환한다', async () => {
     const user = userEvent.setup();
     createAdminSection({
       capacity: 35,
@@ -252,186 +314,180 @@ describe('AdminCourseDetailPage', () => {
 
     const router = renderAt('/admin/sections/1');
 
-    const selector = await screen.findByRole('combobox', {
-      name: '화면 기준 분반',
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/admin/sections'),
+    );
+    const list = await screen.findByRole('table', {
+      name: '객체지향 프로그래밍 분반 목록',
     });
-    expect(selector).toHaveValue('');
-    expect(
-      screen.getByText('분반을 선택하면 해당 분반의 운영 현황을 표시합니다.'),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: '분반 산출물 현황' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: '데이터 업로드' }),
-    ).not.toBeInTheDocument();
+    await user.click(
+      within(list).getByRole('row', {
+        name: 'OOP-01 분반 운영 화면 열기',
+      }),
+    );
+    const selector = await screen.findByRole('combobox', {
+      name: '현재 분반',
+    });
+    expect(selector).toHaveTextContent('OOP-01');
 
     await user.click(selector);
     await user.click(screen.getByRole('option', { name: 'OOP-02 (OOP-02)' }));
 
     expect(
-      await screen.findByRole('heading', { name: '데이터 업로드' }),
+      await screen.findByRole('heading', { name: 'OOP-02 분반' }),
     ).toBeInTheDocument();
     expect(router.state.location.search).toMatchObject({ sectionId: 3 });
   });
 
-  it('분반 목록을 불러오는 동안에는 운영 패널의 빈 상태를 보여 주지 않는다', async () => {
-    server.use(
-      http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_SECTIONS}`, async () => {
-        await delay(500);
-        return HttpResponse.json({ contents: getAdminSectionsByCourseId(1) });
-      }),
+  it('기본 설정, 학생·팀 구성, 사전 정보를 한 화면의 탭으로 제공한다', async () => {
+    const user = userEvent.setup();
+    renderAt('/admin/sections/1?sectionId=1');
+
+    expect(
+      await screen.findByRole('table', { name: '선택한 분반 기본 설정' }),
+    ).toBeInTheDocument();
+    const scheduleTable = await screen.findByRole('table', {
+      name: '분반 진행 일정',
+    });
+    const milestoneLink = within(scheduleTable).getByRole('link', {
+      name: '제안서 마일스톤 상세 보기',
+    });
+    const milestoneUrl = new URL(
+      milestoneLink.getAttribute('href')!,
+      'https://aics.test',
     );
+    expect(milestoneUrl.pathname).toBe('/admin/milestones/101');
+    expect(milestoneUrl.searchParams.get('sectionId')).toBe('1');
 
-    renderAt('/admin/sections/1');
-
+    await user.click(
+      within(
+        screen.getByRole('navigation', { name: '강좌·분반 관리 메뉴' }),
+      ).getByRole('button', { name: '학생·팀 구성' }),
+    );
     expect(
-      await screen.findByRole('heading', {
-        level: 1,
-        name: '객체지향 프로그래밍',
-      }),
+      await screen.findByRole('heading', { name: '데이터 업로드' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('연결된 분반을 불러오는 중입니다.'),
+      await screen.findByRole('heading', { name: '수강생 목록' }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('heading', { name: '데이터 업로드' }),
+      screen.queryByRole('combobox', { name: '분반 선택' }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '사전 정보' }));
+    const preSurveyHeader = (
+      await screen.findByRole('heading', { name: '사전 정보 내역' })
+    ).closest('header');
+    expect(preSurveyHeader).not.toBeNull();
+    expect(
+      screen.queryByRole('combobox', { name: '분반' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('heading', { name: '분반 산출물 현황' }),
+      within(preSurveyHeader!).getByRole('button', {
+        name: '사전 정보 다운로드',
+      }),
+    ).toBeEnabled();
+    expect(
+      await within(preSurveyHeader!).findByText(
+        /전체 \d+명 · 제출 \d+명 · 미제출 \d+명/,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /사전 정보 (펼치기|접기)/ }),
     ).not.toBeInTheDocument();
   });
 
-  it('명단 업로드 상태를 불러오지 못해도 미업로드로 판단해 영역 순서를 바꾸지 않는다', async () => {
-    server.use(
-      http.get(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ROSTER_IMPORT_STATUS('1')}`,
-        () => HttpResponse.json({ code: 'INTERNAL_ERROR' }, { status: 500 }),
-      ),
-    );
-
-    renderAt('/admin/sections/1');
-
-    expect(
-      await screen.findByText(
-        '명단 업로드 상태를 확인하지 못했습니다. 기본 영역 순서로 표시되며, 잠시 후 다시 확인해 주세요.',
-      ),
-    ).toBeInTheDocument();
-
-    const operationHeadings = screen
-      .getAllByRole('heading', { level: 2 })
-      .map(heading => heading.textContent);
-    expect(operationHeadings).toEqual([
-      '분반',
-      '사전 정보 내역',
-      '데이터 업로드',
-      '분반 산출물 현황',
-    ]);
-  });
-
-  it('기준 분반에 학생·팀 명단이 모두 적용되면 산출물 현황을 먼저 보여 준다', async () => {
+  it('사전 정보 내역을 8명씩 나누고 페이지를 전환한다', async () => {
     const user = userEvent.setup();
     server.use(
       http.get(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ROSTER_IMPORT_STATUS(1)}`,
-        () => HttpResponse.json(appliedAdminRosterImportStatusFixture),
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ENROLLMENTS(':sectionId')}`,
+        () =>
+          HttpResponse.json({
+            contents: Array.from({ length: 9 }, (_, index) => {
+              const number = String(index + 1).padStart(2, '0');
+              return {
+                createdAt: '2026-10-10T00:00:00.000Z',
+                email: `survey-${number}@example.com`,
+                id: index + 1,
+                major: '컴퓨터공학과',
+                name: `사전 정보 학생 ${number}`,
+                phone: '010-1234-5678',
+                role: 'STUDENT',
+                status: 'ACTIVE',
+                studentNumber: `202700${number}`,
+              };
+            }),
+          }),
       ),
     );
 
-    renderAt('/admin/sections/1');
+    renderAt('/admin/sections/1?sectionId=1&tab=survey');
+
+    const table = await screen.findByRole('table', {
+      name: '사전 정보 내역',
+    });
+    expect(within(table).getByText('사전 정보 학생 01')).toBeInTheDocument();
+    expect(
+      within(table).queryByText('사전 정보 학생 09'),
+    ).not.toBeInTheDocument();
+
+    const pagination = screen.getByRole('navigation', {
+      name: '사전 정보 내역 페이지 이동',
+    });
+    await user.click(
+      within(pagination).getByRole('button', { name: '다음 페이지' }),
+    );
 
     expect(
-      await screen.findByText(
-        appliedAdminRosterImportStatusFixture.studentRoster.fileName,
-        { exact: false },
-      ),
+      await within(table).findByText('사전 정보 학생 09'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        appliedAdminRosterImportStatusFixture.teamRoster.fileName,
-        { exact: false },
-      ),
-    ).toBeInTheDocument();
-
-    await waitFor(() => {
-      const operationHeadings = screen
-        .getAllByRole('heading', { level: 2 })
-        .map(heading => heading.textContent);
-
-      expect(operationHeadings).toEqual([
-        '분반',
-        '분반 산출물 현황',
-        '사전 정보 내역',
-        '데이터 업로드',
-      ]);
-    });
-
-    const preSurveyToggle = await screen.findByRole('button', {
-      name: '사전 정보 펼치기',
-    });
-    expect(preSurveyToggle).toHaveAttribute('aria-expanded', 'false');
-
-    await user.click(preSurveyToggle);
-
-    expect(
-      screen.getByRole('button', { name: '사전 정보 접기' }),
-    ).toHaveAttribute('aria-expanded', 'true');
-    expect(
-      screen.getByRole('button', { name: '사전 정보 다운로드' }),
-    ).toBeEnabled();
+      within(table).queryByText('사전 정보 학생 01'),
+    ).not.toBeInTheDocument();
   });
 
-  it('강좌 정보와 연결된 분반을 표로 보여 준다', async () => {
-    renderAt('/admin/sections/1');
-
-    expect(
-      await screen.findByRole('heading', {
-        level: 1,
-        name: '객체지향 프로그래밍',
-      }),
-    ).toBeInTheDocument();
-    const table = await screen.findByRole('table', {
-      name: '연결된 분반 목록',
-    });
-    const row = within(table).getByRole('row', { name: 'OOP-01 분반 설정' });
-    expect(within(row).getByText('월요일 1-2교시')).toBeInTheDocument();
-    expect(within(row).getByText('40명')).toBeInTheDocument();
-    expect(within(row).getByText('미설정')).toBeInTheDocument();
-    expect(await within(row).findByText('없음')).toBeInTheDocument();
-    expect(
-      await screen.findByRole('heading', { name: '사전 정보 내역' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: '사전 정보 다운로드' }),
-    ).toBeEnabled();
-    expect(
-      await screen.findByRole('heading', { name: '분반 산출물 현황' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('combobox', { name: '산출물 분반' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('combobox', { name: /집계 기준일/ }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'Excel의 단계별 제출 현황에서 상태는 선택한 기준일의 상태가 아니라 다운로드 시점의 최신 상태입니다.',
+  it('학생 명단과 팀 명단이 모두 업로드되면 데이터 업로드를 학생·팀 구성 아래에 둔다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ROSTER_IMPORT_STATUS(
+          ':sectionId',
+        )}`,
+        () =>
+          HttpResponse.json({
+            studentRoster: {
+              appliedAt: '2026-10-10T10:00:00Z',
+              fileName: '학생 명단.xlsx',
+            },
+            teamRoster: {
+              appliedAt: '2026-10-10T10:10:00Z',
+              fileName: '팀 명단.xlsx',
+            },
+          }),
       ),
-    ).toBeInTheDocument();
-    const artifactTable = await screen.findByRole('table', {
-      name: '분반 산출물 현황',
+    );
+
+    renderAt('/admin/sections/1?sectionId=1&tab=roster');
+
+    await waitFor(() => {
+      const studentSection = screen
+        .getByRole('heading', { name: '수강생 목록' })
+        .closest('section');
+      const uploadSection = screen
+        .getByRole('heading', { name: '데이터 업로드' })
+        .closest('section');
+
+      expect(studentSection).not.toBeNull();
+      expect(uploadSection).not.toBeNull();
+      expect(
+        studentSection!.compareDocumentPosition(uploadSection!) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
     });
-    expect(
-      within(artifactTable).getByRole('row', {
-        name: /1팀.*20260001 김가가.*6.*4.*3.*1/,
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: '산출물 현황 다운로드' }),
-    ).toBeEnabled();
   });
 
   it('사전 정보 패널에는 현재 강좌 조회로 불러온 분반만 전달한다', async () => {
+    const user = userEvent.setup();
     useAuthStore.setState({
       currentUser: {
         ...demoAdmin,
@@ -446,40 +502,22 @@ describe('AdminCourseDetailPage', () => {
       },
     });
 
-    renderAt('/admin/sections/1');
+    renderAt('/admin/sections/1?sectionId=1');
 
-    const sectionSelector = await screen.findByRole('combobox', {
-      name: '분반',
-    });
-    expect(sectionSelector).toHaveTextContent('OOP-01');
-    expect(sectionSelector).not.toHaveTextContent('다른 강좌 분반');
-  });
+    await user.click(await screen.findByRole('button', { name: '사전 정보' }));
 
-  it('분반의 수강생 관리 동작은 해당 분반이 선택된 관리 페이지로 이동한다', async () => {
-    const user = userEvent.setup();
-    const router = renderAt('/admin/sections/1');
-    const row = await screen.findByRole('row', { name: 'OOP-01 분반 설정' });
-
-    await user.click(within(row).getByRole('button', { name: '수강생 관리' }));
-
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe('/admin/student-team');
-      expect(router.state.location.search).toEqual({ sectionId: 1 });
-    });
-    expect(screen.getByText('수강생·팀 관리 페이지')).toBeInTheDocument();
-  });
-
-  it('없는 강좌는 목록으로 돌아가는 안내를 보여 준다', async () => {
-    renderAt('/admin/sections/999');
     expect(
-      await screen.findByText('강좌를 찾을 수 없습니다.'),
+      await screen.findByRole('heading', { name: '사전 정보 내역' }),
     ).toBeInTheDocument();
+    expect(screen.queryByText('다른 강좌 분반')).not.toBeInTheDocument();
   });
 
   it('분반을 등록하면 표에 추가된다', async () => {
     const user = userEvent.setup();
-    renderAt('/admin/sections/1');
-    await screen.findByRole('row', { name: 'OOP-01 분반 설정' });
+    renderAt('/admin/sections');
+    await screen.findByRole('row', {
+      name: 'OOP-01 분반 운영 화면 열기',
+    });
 
     await user.click(screen.getByRole('button', { name: '분반 등록' }));
     const dialog = await screen.findByRole('dialog', {
@@ -496,7 +534,9 @@ describe('AdminCourseDetailPage', () => {
     await user.click(within(dialog).getByRole('button', { name: '등록' }));
 
     expect(
-      await screen.findByRole('row', { name: 'OOP-02 분반 설정' }),
+      await screen.findByRole('row', {
+        name: 'OOP-02 분반 운영 화면 열기',
+      }),
     ).toBeInTheDocument();
   });
 
@@ -512,8 +552,10 @@ describe('AdminCourseDetailPage', () => {
         HttpResponse.json({ code: 'REFRESH_FAILED' }, { status: 500 }),
       ),
     );
-    renderAt('/admin/sections/1');
-    await screen.findByRole('row', { name: 'OOP-01 분반 설정' });
+    renderAt('/admin/sections');
+    await screen.findByRole('row', {
+      name: 'OOP-01 분반 운영 화면 열기',
+    });
 
     await user.click(screen.getByRole('button', { name: '분반 등록' }));
     const dialog = await screen.findByRole('dialog', {
@@ -539,12 +581,10 @@ describe('AdminCourseDetailPage', () => {
     await waitFor(() => expect(sectionCreateRequests).toBe(1));
   });
 
-  it('행을 누르면 분반 설정을 열고 취소할 수 있다', async () => {
+  it('분반 설정 버튼으로 설정을 열고 취소할 수 있다', async () => {
     const user = userEvent.setup();
-    renderAt('/admin/sections/1');
-    await user.click(
-      await screen.findByRole('row', { name: 'OOP-01 분반 설정' }),
-    );
+    renderAt('/admin/sections/1?sectionId=1');
+    await user.click(await screen.findByRole('button', { name: '분반 설정' }));
     const settingsDialog = await screen.findByRole('dialog', {
       name: '분반 정보 수정',
     });
@@ -582,10 +622,8 @@ describe('AdminCourseDetailPage', () => {
       ),
     );
 
-    renderAt('/admin/sections/1');
-    await user.click(
-      await screen.findByRole('row', { name: 'OOP-01 분반 설정' }),
-    );
+    renderAt('/admin/sections/1?sectionId=1');
+    await user.click(await screen.findByRole('button', { name: '분반 설정' }));
 
     const settingsDialog = await screen.findByRole('dialog', {
       name: '분반 정보 수정',
@@ -633,10 +671,8 @@ describe('AdminCourseDetailPage', () => {
 
   it('분반 설정에서 삭제 확인 후 표에서 제거한다', async () => {
     const user = userEvent.setup();
-    renderAt('/admin/sections/1');
-    await user.click(
-      await screen.findByRole('row', { name: 'OOP-01 분반 설정' }),
-    );
+    renderAt('/admin/sections/1?sectionId=1');
+    await user.click(await screen.findByRole('button', { name: '분반 설정' }));
     const settingsDialog = await screen.findByRole('dialog', {
       name: '분반 정보 수정',
     });
@@ -650,14 +686,14 @@ describe('AdminCourseDetailPage', () => {
 
     await waitFor(() => {
       expect(
-        screen.queryByRole('row', { name: 'OOP-01 분반 설정' }),
+        screen.queryByRole('row', { name: 'OOP-01 분반 관리' }),
       ).not.toBeInTheDocument();
     });
   });
 
   it('조교 관리에서 조교 목록과 등록 버튼을 표시한다', async () => {
     const user = userEvent.setup();
-    renderAt('/admin/sections/1');
+    renderAt('/admin/sections/1?sectionId=1');
     const sectionDialog = await openAssistantDialog(user);
     expect(
       await within(sectionDialog).findByText('등록된 조교가 없습니다.'),
@@ -669,7 +705,7 @@ describe('AdminCourseDetailPage', () => {
 
   it('조교를 등록하고 수정한 뒤 현재 분반에서만 제외할 수 있다', async () => {
     const user = userEvent.setup();
-    renderAt('/admin/sections/1');
+    renderAt('/admin/sections/1?sectionId=1');
     const sectionDialog = await openAssistantDialog(user);
     await user.click(
       within(sectionDialog).getByRole('button', { name: '조교 등록' }),
@@ -748,7 +784,7 @@ describe('AdminCourseDetailPage', () => {
 
   it('조교 등록 비밀번호는 조합과 무관하게 8자 이상 64자 이하만 허용한다', async () => {
     const user = userEvent.setup();
-    renderAt('/admin/sections/1');
+    renderAt('/admin/sections/1?sectionId=1');
     const sectionDialog = await openAssistantDialog(user);
     await user.click(
       within(sectionDialog).getByRole('button', { name: '조교 등록' }),
@@ -789,11 +825,8 @@ describe('AdminCourseDetailPage', () => {
 
   it('강좌 정보 수정에서 운영 상태를 보관됨으로 바꾼다', async () => {
     const user = userEvent.setup();
-    renderAt('/admin/sections/1');
-    await screen.findByRole('heading', {
-      level: 1,
-      name: '객체지향 프로그래밍',
-    });
+    renderAt('/admin/sections');
+    await screen.findByRole('heading', { name: '강좌 설정' });
 
     await user.click(screen.getByRole('button', { name: '강좌 정보 수정' }));
     const dialog = await screen.findByRole('dialog', {
@@ -810,11 +843,8 @@ describe('AdminCourseDetailPage', () => {
 
   it('강좌를 삭제하면 목록으로 돌아간다', async () => {
     const user = userEvent.setup();
-    const router = renderAt('/admin/sections/1');
-    await screen.findByRole('heading', {
-      level: 1,
-      name: '객체지향 프로그래밍',
-    });
+    const router = renderAt('/admin/sections');
+    await screen.findByRole('heading', { name: '강좌 설정' });
 
     await user.click(screen.getByRole('button', { name: '강좌 삭제' }));
     const dialog = await screen.findByRole('dialog', {
@@ -828,11 +858,15 @@ describe('AdminCourseDetailPage', () => {
     expect(await screen.findByText('표시할 강좌가 없습니다.')).toBeVisible();
     await user.click(screen.getByRole('combobox', { name: '상태' }));
     await user.click(screen.getByRole('option', { name: '전체 상태' }));
-    await screen.findByRole('row', { name: '웹 프로그래밍 강좌 상세 보기' });
+    const courseSelector = await screen.findByRole('combobox', {
+      name: '강좌',
+    });
+    expect(courseSelector).toHaveTextContent('웹 프로그래밍');
+    await user.click(courseSelector);
     // Only the 2025 archived course of the same name remains.
     expect(
-      screen.getAllByRole('row', {
-        name: '객체지향 프로그래밍 강좌 상세 보기',
+      screen.getAllByRole('option', {
+        name: /객체지향 프로그래밍/,
       }),
     ).toHaveLength(1);
   });

@@ -26,6 +26,7 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { PdfPreview } from '~/shared/ui/PdfPreview';
+import { PresentationTeamNavigator } from '~/shared/ui/PresentationTeamNavigator/PresentationTeamNavigator';
 
 import {
   toAdminMilestoneRequestError,
@@ -521,7 +522,7 @@ export default function AdminPresentationProgressPage({
     <main className={styles.page}>
       <div className={styles.titleRow}>
         <div>
-          <Heading level={1}>발표 자료 보기·평가</Heading>
+          <Heading level={1}>발표 기록 보기</Heading>
           <Text color='secondary' type='supporting'>
             발표 순서에 따라 팀의 제안서와 제출 자료를 확인합니다. 자료가
             교체되면 새로 고침으로 최신 자료를 확인하세요.
@@ -556,25 +557,6 @@ export default function AdminPresentationProgressPage({
             variant={
               professorEvaluationQuery.data?.submittedAt ? 'success' : 'neutral'
             }
-          />
-        </HStack>
-        <HStack gap={2}>
-          <Button
-            isDisabled={isFirst || saveProfessorEvaluationMutation.isPending}
-            label='이전 팀'
-            onClick={() =>
-              requestTeamChange(presentations[selectedIndex - 1]!.teamId)
-            }
-            type='button'
-            variant='secondary'
-          />
-          <Button
-            isDisabled={isLast || saveProfessorEvaluationMutation.isPending}
-            label='다음 팀'
-            onClick={() =>
-              requestTeamChange(presentations[selectedIndex + 1]!.teamId)
-            }
-            type='button'
           />
         </HStack>
       </div>
@@ -1090,6 +1072,27 @@ export default function AdminPresentationProgressPage({
           </HStack>
         </VStack>
       </Dialog>
+      <PresentationTeamNavigator
+        currentIndex={selectedIndex}
+        isNextDisabled={isLast || saveProfessorEvaluationMutation.isPending}
+        isPreviousDisabled={
+          isFirst || saveProfessorEvaluationMutation.isPending
+        }
+        onNext={() =>
+          requestTeamChange(presentations[selectedIndex + 1]!.teamId)
+        }
+        onPrevious={() =>
+          requestTeamChange(presentations[selectedIndex - 1]!.teamId)
+        }
+        presentationLabel={
+          selectedTeam.presentationOrder == null
+            ? '발표 순서 미정'
+            : `${selectedTeam.presentationOrder}번 발표`
+        }
+        teamLabel={teamLabel}
+        total={presentations.length}
+        withAdminSidebar
+      />
       <AlertDialog
         actionLabel='저장하지 않고 이동'
         actionVariant='destructive'

@@ -5,11 +5,12 @@ import AdminCourseDetailPage from '~/widgets/admin-course/AdminCourseDetailPage'
 const routeApi = getRouteApi('/admin/sections/$courseId');
 
 function AdminCourseDetailRoute() {
-  const { sectionId } = routeApi.useSearch();
+  const { sectionId, tab } = routeApi.useSearch();
 
   return (
     <AdminCourseDetailPage
       initialSectionId={sectionId === undefined ? undefined : String(sectionId)}
+      initialTab={tab ?? 'basic'}
     />
   );
 }

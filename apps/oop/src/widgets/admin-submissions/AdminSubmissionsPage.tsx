@@ -27,6 +27,7 @@ import {
 import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { paginate } from '~/shared/lib/pagination';
 import { seoulInstant } from '~/shared/lib/seoulInstant';
@@ -122,6 +123,22 @@ const versionMetadataMilestoneIds = new Set<MilestoneTabId>([
   'presentation-submit',
   'proposal',
 ]);
+
+function formatPresentationEvaluationPeriod(
+  startsAt: string | null | undefined,
+  endsAt: string | null | undefined,
+) {
+  if (
+    Number.isNaN(seoulInstant(startsAt)) ||
+    Number.isNaN(seoulInstant(endsAt))
+  ) {
+    return '평가 기간 미정';
+  }
+
+  const start = formatSeoulDateTime(startsAt!).replace('/', ' ');
+  const end = formatSeoulDateTime(endsAt!).replace('/', ' ');
+  return `평가 기간 ${start} ~ ${end}`;
+}
 
 function isMilestoneTabId(value: string | undefined): value is MilestoneTabId {
   return MILESTONE_TABS.some(tab => tab.id === value);
@@ -392,6 +409,8 @@ export default function AdminSubmissionsPage() {
   ]);
   const presentationEvaluationStartsAt =
     presentationEvaluationMilestone?.schedule.evaluationOpensAt ?? null;
+  const presentationEvaluationEndsAt =
+    presentationEvaluationMilestone?.schedule.evaluationClosesAt ?? null;
   const isPresentationMilestonePublished =
     presentationEvaluationMilestone?.status === 'PUBLISHED';
   const presentationSetupStatus =
@@ -416,7 +435,7 @@ export default function AdminSubmissionsPage() {
     !Number.isNaN(presentationEvaluationStartsAtInstant) &&
     presentationReadinessClock >= presentationEvaluationStartsAtInstant;
   const presentationEvaluationClosesAtInstant = seoulInstant(
-    presentationEvaluationMilestone?.schedule.evaluationClosesAt ?? null,
+    presentationEvaluationEndsAt,
   );
   const isPresentationEvaluationEnded =
     isPresentationEvaluationStarted &&
@@ -458,7 +477,7 @@ export default function AdminSubmissionsPage() {
   const isPresentationMilestoneMissing =
     sectionMilestonesQuery.isSuccess && !presentationEvaluationMilestone;
   const sectionOptions = accessibleSections.map(section => ({
-    label: `${section.code} · ${section.name}`,
+    label: formatAdminSectionLabel(section),
     value: section.id,
   }));
   const presentationEvaluationTeams =
@@ -619,12 +638,12 @@ export default function AdminSubmissionsPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
-          <Heading level={1}>분반별 제출물</Heading>
+          <Heading level={1}>제출·평가 현황</Heading>
           {accessibleSections.length > 0 ? (
             <Selector
               aria-label='조회할 분반'
               isDisabled={activeSectionsQuery.isPending}
-              label='분반 선택'
+              label='분반'
               onChange={selectSection}
               options={sectionOptions}
               renderOption={option => (
@@ -688,34 +707,44 @@ export default function AdminSubmissionsPage() {
             ) : (
               <>
                 <div className={styles.evaluationHeader}>
-                  <div className={styles.evaluationTitle}>
-                    <Heading level={2}>발표 평가 목록</Heading>
-                    {presentationSetupStatus ? (
-                      <Badge
-                        label={
-                          presentationSetupStatus.isComplete
-                            ? '설정 완료'
-                            : '설정 필요'
-                        }
-                        variant={
-                          presentationSetupStatus.isComplete
-                            ? 'success'
-                            : 'neutral'
-                        }
-                      />
-                    ) : null}
-                    {isPresentationEvaluationStarted ? (
-                      <Badge
-                        label={
-                          isPresentationEvaluationEnded
-                            ? '평가 종료'
-                            : '평가 진행 중'
-                        }
-                        variant={
-                          isPresentationEvaluationEnded ? 'neutral' : 'success'
-                        }
-                      />
-                    ) : null}
+                  <div className={styles.evaluationHeadingGroup}>
+                    <div className={styles.evaluationTitle}>
+                      <Heading level={2}>발표 평가 목록</Heading>
+                      {presentationSetupStatus ? (
+                        <Badge
+                          label={
+                            presentationSetupStatus.isComplete
+                              ? '설정 완료'
+                              : '설정 필요'
+                          }
+                          variant={
+                            presentationSetupStatus.isComplete
+                              ? 'success'
+                              : 'neutral'
+                          }
+                        />
+                      ) : null}
+                      {isPresentationEvaluationStarted ? (
+                        <Badge
+                          label={
+                            isPresentationEvaluationEnded
+                              ? '평가 종료'
+                              : '평가 진행 중'
+                          }
+                          variant={
+                            isPresentationEvaluationEnded
+                              ? 'neutral'
+                              : 'success'
+                          }
+                        />
+                      ) : null}
+                    </div>
+                    <Text color='secondary' type='supporting'>
+                      {formatPresentationEvaluationPeriod(
+                        presentationEvaluationStartsAt,
+                        presentationEvaluationEndsAt,
+                      )}
+                    </Text>
                   </div>
                   <div className={styles.evaluationActions}>
                     {!isPresentationEvaluationStarted ? (
@@ -803,11 +832,7 @@ export default function AdminSubmissionsPage() {
                         />
                         {isPresentationRecordAvailable ? (
                           <Button
-                            label={
-                              isPresentationEvaluationEnded
-                                ? '발표 기록 보기'
-                                : '발표 자료 보기·평가'
-                            }
+                            label='발표 기록 보기'
                             onClick={() =>
                               void navigate({
                                 search: {
@@ -1074,14 +1099,7 @@ export default function AdminSubmissionsPage() {
             ) : peerEvaluationsQuery.data ? (
               <>
                 <div className={styles.evaluationHeader}>
-                  <div>
-                    <Heading level={2}>상호평가 목록</Heading>
-                    <Text>
-                      {peerEvaluationsQuery.data.formId
-                        ? `마감 ${peerEvaluationsQuery.data.closesAt ? formatSeoulDateTime(peerEvaluationsQuery.data.closesAt) : '-'}`
-                        : '설정된 상호평가 양식이 없습니다.'}
-                    </Text>
-                  </div>
+                  <Heading level={2}>상호평가 목록</Heading>
                 </div>
                 {peerEvaluationsQuery.data.teams.length === 0 ? (
                   <EmptyState
@@ -1105,7 +1123,7 @@ export default function AdminSubmissionsPage() {
                           key: 'submitted',
                           renderCell: team => (
                             <Badge
-                              label={`${team.submittedCount}/${team.totalMemberCount}명 제출`}
+                              label={`${team.submittedCount}명 제출/${team.totalMemberCount}명`}
                               variant={
                                 team.totalMemberCount > 0 &&
                                 team.submittedCount === team.totalMemberCount
@@ -1125,13 +1143,6 @@ export default function AdminSubmissionsPage() {
                               ? formatSeoulDateTime(team.lastSubmittedAt)
                               : '-',
                           width: proportional(1.3, { minWidth: 148 }),
-                        },
-                        {
-                          align: 'center',
-                          header: '회의록',
-                          key: 'meetingRecordCount',
-                          renderCell: team => `${team.meetingRecordCount}건`,
-                          width: proportional(0.7, { minWidth: 84 }),
                         },
                       ]}
                       data={peerEvaluationsQuery.data.teams}

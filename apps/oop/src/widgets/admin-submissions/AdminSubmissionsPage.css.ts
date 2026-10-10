@@ -85,6 +85,14 @@ export const evaluationTitle = style({
   gap: 8,
 });
 
+export const evaluationHeadingGroup = style({
+  alignItems: 'flex-start',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 4,
+  minWidth: 0,
+});
+
 export const setupWarning = style({
   background: tokens.color.background.muted,
   border: `1px solid ${tokens.color.border.base}`,
@@ -154,7 +162,7 @@ export const topic = style({
 });
 
 export const meetingLink = style({
-  color: tokens.color.text.primary,
+  color: tokens.color.text.accent,
   textDecoration: 'underline',
   textUnderlineOffset: 3,
   ':focus-visible': {
@@ -180,7 +188,8 @@ globalStyle(`${clickableTable} tbody tr`, {
 export const backLink = style({
   color: tokens.color.text.accent,
   fontSize: 14,
-  textDecoration: 'none',
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
   width: 'fit-content',
   ':focus-visible': {
     outline: `2px solid ${tokens.color.accent}`,

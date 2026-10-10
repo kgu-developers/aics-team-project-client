@@ -15,7 +15,10 @@ import { useEffect } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
-import { AdminMeetingActionTable } from '~/features/admin-meeting/components';
+import {
+  AdminMeetingActionTable,
+  AdminTeamActivityTabs,
+} from '~/features/admin-meeting/components';
 import { useAdminSectionMeetingActionsQuery } from '~/features/admin-meeting/queries';
 import AdminSectionTeamFilter, {
   ALL_TEAMS,
@@ -23,7 +26,7 @@ import AdminSectionTeamFilter, {
 
 import * as styles from './AdminMeetingActionsPage.css';
 
-const pageSize = 20;
+const pageSize = 10;
 
 const statusOptions = [
   { label: '전체 상태', value: '' },
@@ -169,10 +172,12 @@ export default function AdminMeetingActionsPage() {
     <div className={styles.page}>
       <div className={styles.titleArea}>
         <Heading level={1}>액션플랜</Heading>
-        <Text color='secondary'>
-          선택한 분반의 모든 팀 액션플랜을 생성 최신순으로 확인합니다.
-        </Text>
       </div>
+      <AdminTeamActivityTabs
+        activeView='actions'
+        sectionId={selectedSectionId}
+        teamId={selectedTeamId || undefined}
+      />
       <AdminSectionTeamFilter
         allowAllSections={false}
         label='액션플랜 필터'

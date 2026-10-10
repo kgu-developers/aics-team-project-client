@@ -7,7 +7,7 @@ export const page = style({
   gap: 20,
   margin: '0 auto',
   maxWidth: 1120,
-  padding: '28px clamp(20px, 5vw, 48px) 56px',
+  padding: '28px clamp(20px, 5vw, 48px) 96px',
   width: '100%',
 });
 
@@ -22,7 +22,7 @@ export const titleRow = style({
 export const backLink = style({
   color: tokens.color.text.accent,
   fontSize: 14,
-  textDecoration: 'none',
+  textDecoration: 'underline',
   textUnderlineOffset: 3,
   ':focus-visible': {
     outline: `2px solid ${tokens.color.accent}`,

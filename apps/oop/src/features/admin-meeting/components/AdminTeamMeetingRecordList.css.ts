@@ -16,7 +16,8 @@ export const header = style({
 export const allLink = style({
   color: tokens.color.text.accent,
   fontSize: 13,
-  textDecoration: 'none',
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
 });
 
 export const list = style({

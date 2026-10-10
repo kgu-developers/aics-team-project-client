@@ -21,12 +21,10 @@ import AdminMeetingsPage from './AdminMeetingsPage';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
-import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 
 const server = setupServer(
   ...adminCourseHandlers,
   ...adminMeetingHandlers,
-  ...adminSectionMilestoneHandlers,
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS(':sectionId')}`,
     () =>
@@ -79,12 +77,13 @@ function renderPage(initialEntry = '/admin/meetings/') {
 }
 
 describe('AdminMeetingsPage', () => {
-  it('관리자 회의록 목록 행은 전체를 눌러 상세를 볼 수 있게 표시한다', async () => {
+  it('관리자 회의록 목록은 핵심 5개 열을 표시하고 행 전체를 눌러 상세를 볼 수 있게 한다', async () => {
     const { container } = renderPage();
 
+    await screen.findByRole('columnheader', { name: '회의 제목' });
     expect(
-      await screen.findByRole('columnheader', { name: '회의 제목' }),
-    ).toBeInTheDocument();
+      screen.getAllByRole('columnheader').map(header => header.textContent),
+    ).toEqual(['분반', '팀', '회의 제목', '회의 일자', '작성자']);
     expect(
       screen.getByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ }),
     ).toHaveAttribute('tabindex', '0');
@@ -92,9 +91,11 @@ describe('AdminMeetingsPage', () => {
       screen.queryByRole('columnheader', { name: '회의 내용' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole('columnheader', { name: '회의 단계' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText('최종')).toBeVisible();
+      screen.queryByRole('columnheader', { name: '회의 단계' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('columnheader', { name: '참석' }),
+    ).not.toBeInTheDocument();
     expect(
       container.querySelectorAll('[data-unread-indicator="true"]'),
     ).not.toHaveLength(0);
@@ -126,31 +127,18 @@ describe('AdminMeetingsPage', () => {
     expect(requestedSize).toBe('10');
   });
 
-  it('특정 분반을 선택했을 때만 마일스톤 필터를 표시한다', async () => {
-    const user = userEvent.setup();
-    renderPage();
+  it('학생 회의 단계와 연결되지 않는 마일스톤 필터를 제공하지 않는다', async () => {
+    renderPage('/admin/meetings/?sectionId=1&milestoneId=3');
 
     expect(screen.queryByLabelText('마일스톤 필터')).not.toBeInTheDocument();
-    await user.click(await screen.findByRole('combobox', { name: '분반' }));
-    await user.click(await screen.findByRole('option', { name: 'OOP-01' }));
-    const milestoneFilter = await screen.findByLabelText('마일스톤 필터');
-    expect(milestoneFilter).toBeInTheDocument();
-
-    await user.click(milestoneFilter);
-    await user.click(
-      await screen.findByRole('option', { name: '3주차 · 제안서' }),
-    );
-    expect(
-      await screen.findByText(/마일스톤 필터는 회의록 목록에만 적용됩니다/),
-    ).toBeVisible();
     expect(
       await screen.findByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
     ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(
-        screen.queryByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ }),
-      ).not.toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByRole('row', {
+        name: /발표 자료 구성 논의 회의록 보기/,
+      }),
+    ).toBeInTheDocument();
   });
 
   it('분반과 팀 필터가 있는 URL은 해당 팀의 회의록만 표시한다', async () => {

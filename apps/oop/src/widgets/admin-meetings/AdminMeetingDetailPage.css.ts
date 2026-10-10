@@ -20,7 +20,8 @@ export const titleRow = style({
 export const backLink = style({
   color: tokens.color.text.accent,
   fontSize: 13,
-  textDecoration: 'none',
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
 });
 
 export const document = style({
@@ -46,17 +47,20 @@ export const participantList = style({
 });
 
 export const participant = style({
-  background: tokens.color.background.muted,
+  background: 'transparent',
   border: 0,
-  borderRadius: 999,
+  color: tokens.color.text.accent,
   cursor: 'pointer',
   font: 'inherit',
-  padding: '6px 10px',
+  padding: 0,
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
 });
 
 export const teamLink = style({
-  color: tokens.color.text.primary,
-  textDecoration: 'none',
+  color: tokens.color.text.accent,
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
 });
 
 export const actionsSection = style({

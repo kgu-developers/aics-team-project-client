@@ -11,6 +11,13 @@ export const page = style({
   width: '100%',
 });
 
+export const embeddedPage = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 24,
+  width: '100%',
+});
+
 export const heading = style({
   display: 'flex',
   flexDirection: 'column',
@@ -21,6 +28,14 @@ export const section = style({
   flexDirection: 'column',
   gap: 12,
   minWidth: 0,
+});
+
+export const studentListHeader = style({
+  alignItems: 'baseline',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 12,
+  justifyContent: 'space-between',
 });
 
 export const teamSectionHeader = style({
@@ -69,12 +84,6 @@ globalStyle(`${table} td`, {
   borderTop: `1px solid ${tokens.color.border.base}`,
   fontSize: 14,
   padding: '14px 16px',
-});
-
-export const projectRoleCell = style({
-  overflowWrap: 'anywhere',
-  whiteSpace: 'normal',
-  wordBreak: 'break-word',
 });
 
 export const teamGrid = style({
@@ -166,7 +175,7 @@ export const draggingMember = style({
 export const memberButton = style({
   background: 'transparent',
   border: 0,
-  color: 'inherit',
+  color: tokens.color.text.accent,
   cursor: 'pointer',
   font: 'inherit',
   padding: 0,
@@ -178,16 +187,6 @@ export const memberButton = style({
 globalStyle(`${member} span`, {
   color: tokens.color.text.secondary,
   fontSize: 13,
-});
-
-export const memberRole = style({
-  display: 'block',
-  maxWidth: '100%',
-  minWidth: 0,
-  overflow: 'hidden',
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
-  width: '100%',
 });
 
 export const actionMenu = style({

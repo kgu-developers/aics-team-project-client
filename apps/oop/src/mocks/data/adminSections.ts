@@ -54,7 +54,9 @@ const initialSections: AdminSectionFixture[] = [
   },
 ];
 
-const storageKey = 'aics:msw-admin-sections';
+// Version the browser-only fixture so stale manual QA data does not leak into
+// later MSW scenarios after the section/course fixture contract changes.
+const storageKey = 'aics:msw-admin-sections:v2';
 
 type PersistedSections = {
   nextSectionId: number;

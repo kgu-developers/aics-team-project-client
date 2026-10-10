@@ -31,7 +31,9 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderPage() {
+function renderPage(
+  initialEntry = '/admin/evaluations/peer/teams/1?sectionId=1&formId=501',
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -52,14 +54,13 @@ function renderPage() {
     path: '/admin/evaluations/$evaluationType/teams/$teamId',
     validateSearch: (search: Record<string, unknown>) => ({
       formId: search.formId ? Number(search.formId) : undefined,
+      milestoneId: search.milestoneId ? Number(search.milestoneId) : undefined,
       sectionId: search.sectionId ? String(search.sectionId) : undefined,
     }),
   });
   const router = createRouter({
     history: createMemoryHistory({
-      initialEntries: [
-        '/admin/evaluations/peer/teams/1?sectionId=1&formId=501',
-      ],
+      initialEntries: [initialEntry],
     }),
     routeTree: root.addChildren([route]),
   });
@@ -90,6 +91,33 @@ describe('AdminEvaluationDetailPage 상호평가 결과', () => {
     expect(
       screen.getByRole('columnheader', { name: '제출 상태' }),
     ).toBeInTheDocument();
+    const responseSection = screen
+      .getByRole('heading', { name: '평가자별 응답' })
+      .closest('section');
+    const headers = within(responseSection!)
+      .getAllByRole('columnheader')
+      .map(header => header.textContent);
+    expect(headers.slice(-2)).toEqual(['평균', '제출 상태']);
     expect(screen.getAllByText('제출 완료')).toHaveLength(2);
+  });
+});
+
+describe('AdminEvaluationDetailPage 발표평가 결과', () => {
+  it('제출 현황과 평가자 표를 바로 표시한다', async () => {
+    renderPage(
+      '/admin/evaluations/presentation/teams/1?sectionId=1&milestoneId=103',
+    );
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'OOP-01 - 1팀 발표평가 결과',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('발표 평가 대상 1명 중 1명 제출'),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: '박지훈' }),
+    ).toBeInTheDocument();
   });
 });

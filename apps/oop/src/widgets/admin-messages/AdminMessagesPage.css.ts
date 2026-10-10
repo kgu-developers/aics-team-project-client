@@ -11,7 +11,6 @@ export const page = style({
   width: '100%',
 });
 export const tableCard = style({ overflowX: 'auto', padding: 0 });
-export const pagination = style({ alignSelf: 'flex-end' });
 export const table = style({
   borderCollapse: 'collapse',
   minWidth: 760,

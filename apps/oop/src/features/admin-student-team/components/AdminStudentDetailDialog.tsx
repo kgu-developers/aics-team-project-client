@@ -20,6 +20,7 @@ type AdminStudentDetailDialogProps = {
   allowPasswordReset?: boolean;
   studentNumber: string | null;
   major?: string | null;
+  projectRole?: string | null;
   details?: ReactNode;
   onClose: () => void;
 };
@@ -28,6 +29,7 @@ export default function AdminStudentDetailDialog({
   allowPasswordReset = false,
   studentNumber,
   major,
+  projectRole,
   details,
   onClose,
 }: AdminStudentDetailDialogProps) {
@@ -108,6 +110,12 @@ export default function AdminStudentDetailDialog({
                   <dt>전화번호</dt>
                   <dd>{user.phone}</dd>
                 </div>
+                {projectRole !== undefined ? (
+                  <div>
+                    <dt>역할</dt>
+                    <dd>{projectRole || '미지정'}</dd>
+                  </div>
+                ) : null}
               </dl>
             ) : null}
             {details ?? null}
