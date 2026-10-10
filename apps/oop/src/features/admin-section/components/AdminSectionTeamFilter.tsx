@@ -1,6 +1,8 @@
 import { Selector, SelectorOption } from '@aics/design-system';
 import type { ReactNode } from 'react';
 
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
+
 import { useActiveAdminSections } from '~/features/admin-course/queries';
 import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 
@@ -57,7 +59,7 @@ export default function AdminSectionTeamFilter({
             ? [{ label: '전체 분반', value: ALL_SECTIONS }]
             : []),
           ...sections.map(section => ({
-            label: section.code,
+            label: formatAdminSectionLabel(section),
             value: section.id,
           })),
         ]}

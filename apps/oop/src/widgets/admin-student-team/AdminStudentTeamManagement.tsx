@@ -87,8 +87,12 @@ function getTeamMemberRoleErrorMessage(error: unknown) {
 
 export default function AdminStudentTeamManagement({
   initialSectionId,
+  isEmbedded = false,
+  showSectionFilter = true,
 }: {
   initialSectionId?: string;
+  isEmbedded?: boolean;
+  showSectionFilter?: boolean;
 }) {
   const activeSectionsQuery = useActiveAdminSections();
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
@@ -101,9 +105,6 @@ export default function AdminStudentTeamManagement({
   const [actionMenuStudentNumber, setActionMenuStudentNumber] = useState<
     string | null
   >(null);
-  const [withdrawnStudentNumbers, setWithdrawnStudentNumbers] = useState<
-    ReadonlySet<string>
-  >(new Set());
   const sections = activeSectionsQuery.data;
 
   useEffect(() => {
@@ -127,21 +128,12 @@ export default function AdminStudentTeamManagement({
   const updateTeamMemberRoleMutation = useUpdateAdminTeamMemberRoleMutation();
 
   const students = (enrollmentsQuery.data?.contents ?? []).filter(
-    student =>
-      student.status === 'ACTIVE' &&
-      !withdrawnStudentNumbers.has(student.studentNumber),
+    student => student.role === 'STUDENT' && student.status === 'ACTIVE',
   );
   const teams = teamDetailsQueries.flatMap(query => {
     if (!query.data) return [];
 
-    return [
-      {
-        ...query.data,
-        members: query.data.members.filter(
-          member => !withdrawnStudentNumbers.has(member.studentNumber),
-        ),
-      },
-    ];
+    return [query.data];
   });
   const hasTeams = (teamsQuery.data?.contents.length ?? 0) > 0;
   const isTeamAssignmentFinalized =
@@ -211,7 +203,7 @@ export default function AdminStudentTeamManagement({
   } | null>(null);
   const [dragOverTeamId, setDragOverTeamId] = useState<number | null>(null);
   const [studentListPage, setStudentListPage] = useState(0);
-  const pagedStudents = paginate(studentsSortedByTeam, studentListPage);
+  const pagedStudents = paginate(studentsSortedByTeam, studentListPage, 8);
   const withdrawingTeam = studentToWithdraw
     ? teamByStudentNumber.get(studentToWithdraw.studentNumber)
     : undefined;
@@ -306,20 +298,24 @@ export default function AdminStudentTeamManagement({
     teamDetailsQueries.find(query => query.error)?.error;
 
   return (
-    <div className={styles.page}>
-      <div className={styles.heading}>
-        <Heading level={1}>수강생·팀 관리</Heading>
-      </div>
+    <div className={isEmbedded ? styles.embeddedPage : styles.page}>
+      {!isEmbedded ? (
+        <div className={styles.heading}>
+          <Heading level={1}>수강생·팀 관리</Heading>
+        </div>
+      ) : null}
 
-      <AdminSectionTeamFilter
-        allowAllSections={false}
-        label='분반 선택'
-        onSectionChange={nextSectionId => {
-          setSelectedSectionId(nextSectionId);
-          setStudentListPage(0);
-        }}
-        sectionId={sectionId}
-      />
+      {showSectionFilter ? (
+        <AdminSectionTeamFilter
+          allowAllSections={false}
+          label='분반 선택'
+          onSectionChange={nextSectionId => {
+            setSelectedSectionId(nextSectionId);
+            setStudentListPage(0);
+          }}
+          sectionId={sectionId}
+        />
+      ) : null}
 
       {activeSectionsQuery.isPending ? (
         <section className={styles.statePanel}>
@@ -568,7 +564,7 @@ export default function AdminStudentTeamManagement({
                       <Link
                         className={styles.teamDashboardLink}
                         params={{ teamId: String(team.id) }}
-                        search={{ sectionId }}
+                        search={{ sectionId: Number(sectionId) }}
                         to={ROUTES.ADMIN_TEAM_DETAIL}
                       >
                         {team.name}
@@ -690,9 +686,6 @@ export default function AdminStudentTeamManagement({
                     },
                     {
                       onSuccess: () => {
-                        setWithdrawnStudentNumbers(current =>
-                          new Set(current).add(studentToWithdraw.studentNumber),
-                        );
                         setStudentToWithdraw(null);
                       },
                     },

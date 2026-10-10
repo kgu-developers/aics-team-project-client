@@ -16,6 +16,8 @@ import {
   proportional,
   Selector,
   SelectorOption,
+  Tab,
+  TabList,
   Table,
   Text,
   useToast,
@@ -23,13 +25,12 @@ import {
 } from '@aics/design-system';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import {
-  Fragment,
   forwardRef,
+  useCallback,
   useEffect,
   useMemo,
   useState,
   type ComponentPropsWithoutRef,
-  type ReactElement,
 } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -56,7 +57,6 @@ import EnrollmentImportDialog from '~/features/admin-student-team/components/Enr
 import TeamImportDialog from '~/features/admin-student-team/components/TeamImportDialog';
 import {
   useAdminRosterImportStatusQuery,
-  useAdminRosterImportStatusQueries,
   useAdminSectionEnrollmentsQuery,
 } from '~/features/admin-student-team/queries';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -64,18 +64,16 @@ import { fetchSessionUser } from '~/features/auth/fetchSessionUser';
 
 import { AdminPreSurveyResponses } from '~/widgets/admin-profile/AdminPreSurveyResponses';
 import { formatRosterImportAppliedAt } from '~/widgets/admin-profile/formatRosterImportAppliedAt';
+import AdminStudentTeamManagement from '~/widgets/admin-student-team/AdminStudentTeamManagement';
 
 import * as styles from './AdminCourseDetailPage.css';
-import { AdminSectionArtifactSummary } from './AdminSectionArtifactSummary';
-import {
-  getAdminCourseDetailOperationOrder,
-  type AdminCourseDetailOperationPanel,
-} from './getAdminCourseDetailOperationOrder';
+import AdminSectionScheduleTable from './AdminSectionScheduleTable';
 
 type SectionTablePlugin = NonNullable<
   TableProps<AdminOopSectionDto>['plugins']
 >[string];
 type UploadFileKind = 'studentRoster' | 'teamRoster';
+export type AdminCourseDetailTab = 'basic' | 'roster' | 'survey';
 
 const uploadCopy: Record<
   UploadFileKind,
@@ -141,7 +139,7 @@ function CourseSummary({
     <Card className={styles.summaryCard} padding={5}>
       <div className={styles.summaryHeader}>
         <div className={styles.summaryTitle}>
-          <Heading level={1}>{course.name}</Heading>
+          <Heading level={2}>강좌 정보</Heading>
           <Badge
             label={statusLabel(course.status)}
             variant={statusBadgeVariant(course.status)}
@@ -153,6 +151,7 @@ function CourseSummary({
         </div>
       </div>
       <MetadataList>
+        <MetadataListItem label='강좌명'>{course.name}</MetadataListItem>
         <MetadataListItem label='연도'>{course.year}년</MetadataListItem>
         <MetadataListItem label='학기'>
           {semesterLabel(course.semester)}
@@ -165,78 +164,12 @@ function CourseSummary({
   );
 }
 
-function CourseOperationPanels({
-  dataUploadPanel,
-  initialSectionId,
-  sections,
-}: {
-  dataUploadPanel: ReactElement;
-  initialSectionId: string | undefined;
-  sections: AdminOopSectionDto[];
-}) {
-  const rosterStatusQuery = useAdminRosterImportStatusQuery(initialSectionId);
-  const fallbackOperationOrder: readonly AdminCourseDetailOperationPanel[] = [
-    'preSurvey',
-    'dataUpload',
-    'artifactSummary',
-  ];
-  const operationOrder = rosterStatusQuery.isSuccess
-    ? getAdminCourseDetailOperationOrder({
-        hasStudentRoster: Boolean(
-          rosterStatusQuery.data.studentRoster?.fileName,
-        ),
-        hasTeamRoster: Boolean(rosterStatusQuery.data.teamRoster?.fileName),
-      })
-    : fallbackOperationOrder;
-  const rosterStatusNotice = rosterStatusQuery.isPending
-    ? '명단 업로드 상태를 확인하는 중입니다. 확인이 끝나면 상태에 따라 영역 순서를 조정합니다.'
-    : rosterStatusQuery.isError
-      ? '명단 업로드 상태를 확인하지 못했습니다. 기본 영역 순서로 표시되며, 잠시 후 다시 확인해 주세요.'
-      : null;
-  const operationSections = sections.map(section => ({
-    code: section.code,
-    id: String(section.id),
-    name: section.name,
-  }));
-  const operationPanels: Record<AdminCourseDetailOperationPanel, ReactElement> =
-    {
-      artifactSummary: (
-        <AdminSectionArtifactSummary
-          initialSectionId={initialSectionId}
-          sections={operationSections}
-        />
-      ),
-      dataUpload: dataUploadPanel,
-      preSurvey: (
-        <AdminPreSurveyResponses
-          initialSectionId={initialSectionId}
-          isRosterStatusResolved={rosterStatusQuery.isSuccess}
-          isTeamRosterImported={Boolean(
-            rosterStatusQuery.data?.teamRoster?.fileName,
-          )}
-          sections={operationSections}
-        />
-      ),
-    };
-
-  return (
-    <>
-      {rosterStatusNotice ? (
-        <Text color='secondary' role='status' type='supporting'>
-          {rosterStatusNotice}
-        </Text>
-      ) : null}
-      {operationOrder.map(panel => (
-        <Fragment key={panel}>{operationPanels[panel]}</Fragment>
-      ))}
-    </>
-  );
-}
-
 export default function AdminCourseDetailPage({
   initialSectionId,
+  initialTab = 'basic',
 }: {
   initialSectionId?: string;
+  initialTab?: AdminCourseDetailTab;
 }) {
   const navigate = useNavigate({ from: '/admin/sections/$courseId' });
   const toast = useToast();
@@ -263,80 +196,58 @@ export default function AdminCourseDetailPage({
     useState<AdminOopSectionDto | null>(null);
   const [uploadKind, setUploadKind] = useState<UploadFileKind | null>(null);
   const [uploadSectionId, setUploadSectionId] = useState('');
+  const [activeTab, setActiveTab] = useState<AdminCourseDetailTab>(initialTab);
   const [detailSectionId, setDetailSectionId] = useState<string | undefined>(
     initialSectionId,
   );
 
-  const rosterImportStatusQueries = useAdminRosterImportStatusQueries(
-    sections.map(section => String(section.id)),
-  );
-  const rosterStatusBySectionId = new Map(
-    sections.map((section, index) => [
-      String(section.id),
-      rosterImportStatusQueries[index],
-    ]),
-  );
   const sectionIds = sections.map(section => String(section.id));
   const sectionIdsKey = sectionIds.join('|');
-  const hasValidInitialSectionId =
-    initialSectionId !== undefined && sectionIds.includes(initialSectionId);
 
   useEffect(() => {
-    if (hasValidInitialSectionId) {
-      setDetailSectionId(initialSectionId);
-      return;
-    }
+    if (!sectionsQuery.isSuccess) return;
 
-    setDetailSectionId(currentSectionId => {
-      if (currentSectionId && sectionIds.includes(currentSectionId)) {
-        return currentSectionId;
-      }
+    const nextSectionId =
+      initialSectionId !== undefined && sectionIds.includes(initialSectionId)
+        ? initialSectionId
+        : undefined;
 
-      return sections.length === 1 ? sectionIds[0] : undefined;
-    });
-  }, [
-    hasValidInitialSectionId,
-    initialSectionId,
-    sectionIdsKey,
-    sections.length,
-  ]);
-
-  useEffect(() => {
-    if (
-      hasValidInitialSectionId ||
-      sections.length !== 1 ||
-      detailSectionId !== sectionIds[0]
-    )
-      return;
+    setDetailSectionId(nextSectionId);
+    if (initialSectionId === undefined || nextSectionId !== undefined) return;
 
     void navigate({
       replace: true,
       search: previous => ({
         ...previous,
-        sectionId: Number(detailSectionId),
+        sectionId: undefined,
       }),
     });
-  }, [
-    detailSectionId,
-    hasValidInitialSectionId,
-    navigate,
-    sectionIdsKey,
-    sections.length,
-  ]);
+  }, [initialSectionId, navigate, sectionIdsKey, sectionsQuery.isSuccess]);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialSectionId, initialTab]);
 
   const detailSection = detailSectionId
     ? sections.find(section => String(section.id) === detailSectionId)
     : undefined;
+  const detailRosterStatusQuery =
+    useAdminRosterImportStatusQuery(detailSectionId);
 
-  function selectDetailSection(nextSectionId: string) {
-    setDetailSectionId(nextSectionId);
-    void navigate({
-      search: previous => ({
-        ...previous,
-        sectionId: Number(nextSectionId),
-      }),
-    });
-  }
+  const selectDetailSection = useCallback(
+    (nextSectionId: string, nextTab: AdminCourseDetailTab = 'basic') => {
+      setDetailSectionId(nextSectionId);
+      setActiveTab(nextTab);
+      void navigate({
+        search: previous => ({
+          ...previous,
+          sectionId: Number(nextSectionId),
+          tab: nextTab === 'basic' ? undefined : nextTab,
+        }),
+      });
+    },
+    [navigate],
+  );
 
   async function refreshCurrentUserSections() {
     if (!sessionRole) return false;
@@ -360,12 +271,12 @@ export default function AdminCourseDetailPage({
       transformBodyRow: (rowRenderProps, section) => {
         const onClick = rowRenderProps.htmlProps.onClick;
         const onKeyDown = rowRenderProps.htmlProps.onKeyDown;
-        const open = () => setSectionToEdit(section);
+        const open = () => selectDetailSection(String(section.id));
         return {
           ...rowRenderProps,
           htmlProps: {
             ...rowRenderProps.htmlProps,
-            'aria-label': `${section.code} 분반 설정`,
+            'aria-label': `${section.code} 분반 관리`,
             className: cx(
               rowRenderProps.htmlProps.className,
               styles.clickableRow,
@@ -373,7 +284,7 @@ export default function AdminCourseDetailPage({
             onClick: event => {
               onClick?.(event);
               if (event.defaultPrevented) return;
-              // Buttons inside the row (조교 관리) own their own action.
+              // Buttons inside the row own their own action.
               if (
                 event.target instanceof Element &&
                 event.target.closest('button, a')
@@ -397,20 +308,20 @@ export default function AdminCourseDetailPage({
         };
       },
     }),
-    [],
+    [selectDetailSection],
   );
 
-  const uploadSections = sections.map(section => ({
+  const selectedCourseSections = detailSection ? [detailSection] : [];
+  const uploadSections = selectedCourseSections.map(section => ({
     code: section.code,
     id: String(section.id),
     name: section.name,
   }));
 
   function openUpload(kind: UploadFileKind) {
-    const first = sections[0];
-    if (!first) return;
+    if (!detailSection) return;
     setUploadKind(kind);
-    setUploadSectionId(String(first.id));
+    setUploadSectionId(String(detailSection.id));
   }
 
   function closeUpload() {
@@ -445,8 +356,10 @@ export default function AdminCourseDetailPage({
     );
   }
   const course = courseQuery.data;
-  const isOperationPanelReady =
-    !sectionsQuery.isPending && !sectionsQuery.isError;
+  const hasImportedBothRosters = Boolean(
+    detailRosterStatusQuery.data?.studentRoster?.fileName &&
+    detailRosterStatusQuery.data?.teamRoster?.fileName,
+  );
   const dataUploadPanel = (
     <section aria-labelledby='course-upload-title' className={styles.block}>
       <div className={styles.blockHeader}>
@@ -454,12 +367,9 @@ export default function AdminCourseDetailPage({
           <Heading id='course-upload-title' level={2}>
             데이터 업로드
           </Heading>
-          <Text color='secondary' type='supporting'>
-            학생 명단과 팀 구성 명단은 분반별 Excel 파일로 관리합니다.
-          </Text>
         </div>
       </div>
-      {sections.length === 0 ? (
+      {selectedCourseSections.length === 0 ? (
         <Text color='secondary' role='status'>
           분반을 먼저 등록하면 명단 파일을 업로드할 수 있습니다.
         </Text>
@@ -506,36 +416,28 @@ export default function AdminCourseDetailPage({
                   align: 'start',
                   header: '학생 명단',
                   key: 'classTime',
-                  renderCell: section => {
-                    const query = rosterStatusBySectionId.get(
-                      String(section.id),
-                    );
-                    return rosterImportStatusLabel(
-                      query?.data?.studentRoster,
-                      query?.isError ?? false,
-                      query?.isPending ?? false,
-                    );
-                  },
+                  renderCell: () =>
+                    rosterImportStatusLabel(
+                      detailRosterStatusQuery.data?.studentRoster,
+                      detailRosterStatusQuery.isError,
+                      detailRosterStatusQuery.isPending,
+                    ),
                   width: proportional(1.5, { minWidth: 200 }),
                 },
                 {
                   align: 'start',
                   header: '팀 구성 명단',
                   key: 'capacity',
-                  renderCell: section => {
-                    const query = rosterStatusBySectionId.get(
-                      String(section.id),
-                    );
-                    return rosterImportStatusLabel(
-                      query?.data?.teamRoster,
-                      query?.isError ?? false,
-                      query?.isPending ?? false,
-                    );
-                  },
+                  renderCell: () =>
+                    rosterImportStatusLabel(
+                      detailRosterStatusQuery.data?.teamRoster,
+                      detailRosterStatusQuery.isError,
+                      detailRosterStatusQuery.isPending,
+                    ),
                   width: proportional(1.5, { minWidth: 200 }),
                 },
               ]}
-              data={sections}
+              data={selectedCourseSections}
               dividers='rows'
               idKey='id'
               textOverflow='wrap'
@@ -552,180 +454,293 @@ export default function AdminCourseDetailPage({
         <BreadcrumbItem as={CourseBreadcrumbLink} href={ROUTES.ADMIN_SECTIONS}>
           강좌·분반 관리
         </BreadcrumbItem>
-        <BreadcrumbItem isCurrent>{course.name}</BreadcrumbItem>
+        {detailSection ? (
+          <BreadcrumbItem isCurrent>{detailSection.code} 분반</BreadcrumbItem>
+        ) : (
+          <BreadcrumbItem isCurrent>{course.name}</BreadcrumbItem>
+        )}
       </Breadcrumbs>
 
-      <CourseSummary
-        course={course}
-        onDelete={() => setIsDeleteOpen(true)}
-        onEdit={() => setIsEditOpen(true)}
-      />
+      <header className={styles.pageHeader}>
+        <div className={styles.pageTitle}>
+          <Heading level={1}>
+            {detailSection ? `${detailSection.code} 분반` : course.name}
+          </Heading>
+        </div>
+      </header>
 
-      <section aria-labelledby='course-sections-title' className={styles.block}>
-        <div className={styles.blockHeader}>
-          <div>
-            <Heading id='course-sections-title' level={2}>
-              분반
-            </Heading>
-            <Text color='secondary' type='supporting'>
-              행을 선택하면 분반 정보와 온보딩 기간을 수정할 수 있습니다.
-            </Text>
-          </div>
-          <Button
-            isDisabled={!currentUser?.studentNumber}
-            label='분반 등록'
-            onClick={() => setIsCreateSectionOpen(true)}
+      {!detailSection ? (
+        <>
+          <CourseSummary
+            course={course}
+            onDelete={() => setIsDeleteOpen(true)}
+            onEdit={() => setIsEditOpen(true)}
+          />
+
+          <section
+            aria-labelledby='course-sections-title'
+            className={styles.block}
+          >
+            <div className={styles.blockHeader}>
+              <div>
+                <Heading id='course-sections-title' level={2}>
+                  분반
+                </Heading>
+                <Text color='secondary' type='supporting'>
+                  분반을 선택하면 기본 설정과 학생·팀 구성, 사전 정보를 관리할
+                  수 있습니다.
+                </Text>
+              </div>
+              <Button
+                isDisabled={!currentUser?.studentNumber}
+                label='분반 등록'
+                onClick={() => setIsCreateSectionOpen(true)}
+              />
+            </div>
+            {sectionsQuery.isPending ? (
+              <Text aria-live='polite' role='status'>
+                연결된 분반을 불러오는 중입니다.
+              </Text>
+            ) : sectionsQuery.isError ? (
+              <EmptyState
+                description='잠시 후 다시 시도해 주세요.'
+                title='연결된 분반을 불러오지 못했습니다.'
+              />
+            ) : sections.length === 0 ? (
+              <EmptyState
+                description='분반을 등록하면 학생 명단과 팀을 관리할 수 있습니다.'
+                title='등록된 분반이 없습니다.'
+              />
+            ) : (
+              <Card padding={0}>
+                <Table
+                  aria-label='연결된 분반 목록'
+                  columns={[
+                    {
+                      align: 'start',
+                      header: '분반 코드',
+                      key: 'code',
+                      width: proportional(0.9, { minWidth: 110 }),
+                    },
+                    {
+                      align: 'start',
+                      header: '수업 시간',
+                      key: 'classTime',
+                      width: proportional(1.2, { minWidth: 140 }),
+                    },
+                    {
+                      align: 'start',
+                      header: '온보딩 기간',
+                      key: 'contactVisibleFrom',
+                      renderCell: section => {
+                        const status = contactVisibilityStatus(
+                          section.contactVisibleFrom,
+                          section.contactVisibleUntil,
+                        );
+                        return (
+                          <Badge
+                            label={status}
+                            variant={contactVisibilityBadgeVariant(status)}
+                          />
+                        );
+                      },
+                      width: proportional(0.9, { minWidth: 120 }),
+                    },
+                    {
+                      align: 'start',
+                      header: '조교',
+                      key: 'id',
+                      renderCell: section => (
+                        <span className={styles.assistantCell}>
+                          <AssistantCount sectionId={String(section.id)} />
+                          <Button
+                            label='조교 관리'
+                            onClick={() => setAssistantSection(section)}
+                            size='sm'
+                            variant='ghost'
+                          />
+                        </span>
+                      ),
+                      width: proportional(1, { minWidth: 150 }),
+                    },
+                    {
+                      align: 'start',
+                      header: '관리',
+                      key: 'name',
+                      renderCell: section => (
+                        <span className={styles.rowActions}>
+                          <Button
+                            label='분반 설정'
+                            onClick={() => setSectionToEdit(section)}
+                            size='sm'
+                            variant='ghost'
+                          />
+                          <Button
+                            label='학생·팀 구성'
+                            onClick={() =>
+                              selectDetailSection(String(section.id), 'roster')
+                            }
+                            size='sm'
+                            variant='secondary'
+                          />
+                        </span>
+                      ),
+                      width: proportional(1.2, { minWidth: 230 }),
+                    },
+                  ]}
+                  data={sections}
+                  dividers='rows'
+                  hasHover
+                  idKey='id'
+                  plugins={{ rowInteraction: sectionRowPlugin }}
+                  verticalAlign='middle'
+                />
+              </Card>
+            )}
+          </section>
+        </>
+      ) : null}
+
+      {detailSection && sections.length > 1 ? (
+        <div className={styles.sectionSelector}>
+          <Selector
+            label='현재 분반'
+            onChange={selectDetailSection}
+            options={sections.map(section => ({
+              label: `${section.code} (${section.name})`,
+              value: String(section.id),
+            }))}
+            renderOption={option => (
+              <SelectorOption label={option.label ?? option.value} />
+            )}
+            value={detailSectionId ?? ''}
+            width='100%'
           />
         </div>
-        {sectionsQuery.isPending ? (
-          <Text aria-live='polite' role='status'>
-            연결된 분반을 불러오는 중입니다.
-          </Text>
-        ) : sectionsQuery.isError ? (
-          <EmptyState
-            description='잠시 후 다시 시도해 주세요.'
-            title='연결된 분반을 불러오지 못했습니다.'
-          />
-        ) : sections.length === 0 ? (
-          <EmptyState
-            description='분반을 등록하면 학생 명단과 팀을 관리할 수 있습니다.'
-            title='등록된 분반이 없습니다.'
-          />
-        ) : (
-          <Card padding={0}>
-            <Table
-              aria-label='연결된 분반 목록'
-              columns={[
-                {
-                  align: 'start',
-                  header: '분반 코드',
-                  key: 'code',
-                  width: proportional(0.9, { minWidth: 110 }),
-                },
-                {
-                  align: 'start',
-                  header: '수업 시간',
-                  key: 'classTime',
-                  width: proportional(1.2, { minWidth: 140 }),
-                },
-                {
-                  align: 'start',
-                  header: '정원',
-                  key: 'capacity',
-                  renderCell: section => `${section.capacity}명`,
-                  width: proportional(0.6, { minWidth: 72 }),
-                },
-                {
-                  align: 'start',
-                  header: '온보딩 기간',
-                  key: 'contactVisibleFrom',
-                  renderCell: section => {
-                    const status = contactVisibilityStatus(
-                      section.contactVisibleFrom,
-                      section.contactVisibleUntil,
-                    );
-                    return (
-                      <Badge
-                        label={status}
-                        variant={contactVisibilityBadgeVariant(status)}
-                      />
-                    );
-                  },
-                  width: proportional(0.9, { minWidth: 120 }),
-                },
-                {
-                  align: 'start',
-                  header: '조교',
-                  key: 'id',
-                  renderCell: section => (
-                    <span className={styles.assistantCell}>
-                      <AssistantCount sectionId={String(section.id)} />
-                      <Button
-                        label='조교 관리'
-                        onClick={() => setAssistantSection(section)}
-                        size='sm'
-                        variant='ghost'
-                      />
-                    </span>
-                  ),
-                  width: proportional(1, { minWidth: 150 }),
-                },
-                {
-                  align: 'start',
-                  header: '수강생',
-                  key: 'name',
-                  renderCell: section => (
-                    <Button
-                      label='수강생 관리'
-                      onClick={() =>
-                        void navigate({
-                          to: ROUTES.ADMIN_STUDENT_TEAM,
-                          search: { sectionId: section.id },
-                        })
-                      }
-                      size='sm'
-                      variant='secondary'
-                    />
-                  ),
-                  width: proportional(0.8, { minWidth: 130 }),
-                },
-              ]}
-              data={sections}
-              dividers='rows'
-              hasHover
-              idKey='id'
-              plugins={{ rowInteraction: sectionRowPlugin }}
-              verticalAlign='middle'
-            />
-          </Card>
-        )}
-      </section>
+      ) : null}
 
-      {isOperationPanelReady ? (
+      {detailSection ? (
+        <TabList
+          aria-label='강좌·분반 관리 메뉴'
+          onChange={value => {
+            if (value === 'basic' || value === 'roster' || value === 'survey') {
+              setActiveTab(value);
+              void navigate({
+                search: previous => ({
+                  ...previous,
+                  tab: value === 'basic' ? undefined : value,
+                }),
+              });
+            }
+          }}
+          value={activeTab}
+        >
+          <Tab label='기본 설정' value='basic' />
+          <Tab label='학생·팀 구성' value='roster' />
+          <Tab label='사전 정보' value='survey' />
+        </TabList>
+      ) : null}
+
+      {detailSection && activeTab === 'basic' ? (
         <>
-          {sections.length > 1 ? (
-            <Card padding={3}>
-              <Selector
-                label='화면 기준 분반'
-                onChange={selectDetailSection}
-                options={sections.map(section => ({
-                  label: `${section.code} (${section.name})`,
-                  value: String(section.id),
-                }))}
-                placeholder='분반을 선택해 주세요'
-                renderOption={option => (
-                  <SelectorOption label={option.label ?? option.value} />
-                )}
-                value={detailSectionId ?? ''}
-                width='100%'
+          <section
+            aria-labelledby='section-settings-title'
+            className={styles.block}
+          >
+            <div className={styles.blockHeader}>
+              <div>
+                <Heading id='section-settings-title' level={2}>
+                  분반 기본 설정
+                </Heading>
+              </div>
+              <Button
+                label='분반 설정'
+                onClick={() => setSectionToEdit(detailSection)}
+                variant='secondary'
               />
-              <Text color='secondary' type='supporting'>
-                선택한 분반의 명단 업로드 상태를 기준으로 화면 영역 순서를
-                정합니다.
-              </Text>
+            </div>
+            <Card padding={0}>
+              <Table
+                aria-label='선택한 분반 기본 설정'
+                columns={[
+                  {
+                    align: 'start',
+                    header: '분반 코드',
+                    key: 'code',
+                    width: proportional(0.9, { minWidth: 110 }),
+                  },
+                  {
+                    align: 'start',
+                    header: '수업 시간',
+                    key: 'classTime',
+                    width: proportional(1.2, { minWidth: 140 }),
+                  },
+                  {
+                    align: 'start',
+                    header: '온보딩 기간',
+                    key: 'contactVisibleFrom',
+                    renderCell: section => {
+                      const status = contactVisibilityStatus(
+                        section.contactVisibleFrom,
+                        section.contactVisibleUntil,
+                      );
+                      return (
+                        <Badge
+                          label={status}
+                          variant={contactVisibilityBadgeVariant(status)}
+                        />
+                      );
+                    },
+                    width: proportional(0.9, { minWidth: 120 }),
+                  },
+                  {
+                    align: 'start',
+                    header: '조교',
+                    key: 'id',
+                    renderCell: section => (
+                      <span className={styles.assistantCell}>
+                        <AssistantCount sectionId={String(section.id)} />
+                        <Button
+                          label='조교 관리'
+                          onClick={() => setAssistantSection(section)}
+                          size='sm'
+                          variant='ghost'
+                        />
+                      </span>
+                    ),
+                    width: proportional(1, { minWidth: 150 }),
+                  },
+                ]}
+                data={[detailSection]}
+                dividers='rows'
+                idKey='id'
+                verticalAlign='middle'
+              />
             </Card>
-          ) : null}
+          </section>
 
-          {detailSection ? (
-            <>
-              <Text color='secondary' type='supporting'>
-                현재 영역 배치는 {detailSection.code} 분반의 명단 업로드 상태를
-                기준으로 합니다. 각 영역의 분반 선택은 조회·다운로드 대상만
-                바꿉니다.
-              </Text>
-
-              <CourseOperationPanels
-                dataUploadPanel={dataUploadPanel}
-                initialSectionId={detailSectionId}
-                sections={sections}
-              />
-            </>
-          ) : sections.length > 1 ? (
-            <Text color='secondary' role='status'>
-              분반을 선택하면 해당 분반의 운영 현황을 표시합니다.
-            </Text>
-          ) : null}
+          <AdminSectionScheduleTable sectionId={String(detailSection.id)} />
         </>
+      ) : null}
+
+      {detailSection && activeTab === 'roster' ? (
+        <>
+          {!hasImportedBothRosters ? dataUploadPanel : null}
+          <AdminStudentTeamManagement
+            initialSectionId={String(detailSection.id)}
+            isEmbedded
+            showSectionFilter={false}
+          />
+          {hasImportedBothRosters ? dataUploadPanel : null}
+        </>
+      ) : null}
+
+      {detailSection && activeTab === 'survey' ? (
+        <AdminPreSurveyResponses
+          initialSectionId={String(detailSection.id)}
+          sections={uploadSections}
+          showSectionSelector={false}
+        />
       ) : null}
 
       <CourseFormDialog

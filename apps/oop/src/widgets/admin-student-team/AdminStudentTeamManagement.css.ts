@@ -11,6 +11,13 @@ export const page = style({
   width: '100%',
 });
 
+export const embeddedPage = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 24,
+  width: '100%',
+});
+
 export const heading = style({
   display: 'flex',
   flexDirection: 'column',
@@ -24,8 +31,11 @@ export const section = style({
 });
 
 export const studentListHeader = style({
-  display: 'grid',
-  gap: 2,
+  alignItems: 'baseline',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 12,
+  justifyContent: 'space-between',
 });
 
 export const teamSectionHeader = style({

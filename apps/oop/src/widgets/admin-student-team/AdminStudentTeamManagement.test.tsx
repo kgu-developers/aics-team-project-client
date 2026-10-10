@@ -180,7 +180,11 @@ describe('AdminStudentTeamManagement', () => {
     await waitFor(() => expect(sectionSelect).toHaveTextContent('OOP-01'));
 
     await user.click(sectionSelect);
-    await user.click(await screen.findByRole('option', { name: 'OOP-02' }));
+    await user.click(
+      await screen.findByRole('option', {
+        name: 'OOP-02 · 월요일 1-2교시',
+      }),
+    );
 
     expect(
       await screen.findByRole('heading', { name: 'OOP-02 팀 구성' }),
@@ -261,29 +265,48 @@ describe('AdminStudentTeamManagement', () => {
       'href',
       expect.stringContaining('/admin/teams/1'),
     );
+    expect(
+      new URL(
+        screen.getByRole('link', { name: '1팀' }).getAttribute('href')!,
+        'https://aics.test',
+      ).searchParams.get('sectionId'),
+    ).toBe('1');
   });
 
-  it('수강생 목록을 10명씩 나누고 페이지를 전환한다', async () => {
+  it('수강생 목록을 8명씩 나누고 페이지를 전환한다', async () => {
     const user = userEvent.setup();
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ENROLLMENTS(':sectionId')}`,
         () =>
           HttpResponse.json({
-            contents: Array.from({ length: 11 }, (_, index) => {
-              const number = String(index + 1).padStart(2, '0');
-              return {
+            contents: [
+              ...Array.from({ length: 9 }, (_, index) => {
+                const number = String(index + 1).padStart(2, '0');
+                return {
+                  createdAt: '2026-10-08T00:00:00.000Z',
+                  email: `student-${number}@example.com`,
+                  id: index + 1,
+                  major: '컴퓨터공학과',
+                  name: `페이지 학생 ${number}`,
+                  phone: '010-1234-5678',
+                  role: 'STUDENT',
+                  status: 'ACTIVE',
+                  studentNumber: `202700${number}`,
+                };
+              }),
+              {
                 createdAt: '2026-10-08T00:00:00.000Z',
-                email: `student-${number}@example.com`,
-                id: index + 1,
+                email: 'assistant@example.com',
+                id: 10,
                 major: '컴퓨터공학과',
-                name: `페이지 학생 ${number}`,
+                name: '분반 조교',
                 phone: '010-1234-5678',
-                role: 'STUDENT',
+                role: 'ASSISTANT',
                 status: 'ACTIVE',
-                studentNumber: `202700${number}`,
-              };
-            }),
+                studentNumber: '20279999',
+              },
+            ],
           }),
       ),
     );
@@ -293,8 +316,10 @@ describe('AdminStudentTeamManagement', () => {
     expect(
       await screen.findByRole('button', { name: '페이지 학생 01' }),
     ).toBeInTheDocument();
+    expect(screen.getByText('수강생 9명')).toBeInTheDocument();
+    expect(screen.queryByText('분반 조교')).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: '페이지 학생 11' }),
+      screen.queryByRole('button', { name: '페이지 학생 09' }),
     ).not.toBeInTheDocument();
 
     const pagination = screen.getByRole('navigation', {
@@ -305,7 +330,7 @@ describe('AdminStudentTeamManagement', () => {
     );
 
     expect(
-      await screen.findByRole('button', { name: '페이지 학생 11' }),
+      await screen.findByRole('button', { name: '페이지 학생 09' }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: '페이지 학생 01' }),

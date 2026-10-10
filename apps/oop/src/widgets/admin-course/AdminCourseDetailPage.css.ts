@@ -11,6 +11,25 @@ export const page = style({
   width: '100%',
 });
 
+export const pageHeader = style({
+  alignItems: 'flex-start',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 16,
+  justifyContent: 'space-between',
+});
+
+export const pageTitle = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 4,
+});
+
+export const sectionSelector = style({
+  maxWidth: 360,
+  width: '100%',
+});
+
 export const summaryCard = style({
   display: 'flex',
   flexDirection: 'column',
@@ -62,6 +81,13 @@ export const clickableRow = style({
 export const assistantCell = style({
   alignItems: 'center',
   display: 'inline-flex',
+  gap: 8,
+});
+
+export const rowActions = style({
+  alignItems: 'center',
+  display: 'inline-flex',
+  flexWrap: 'wrap',
   gap: 8,
 });
 
