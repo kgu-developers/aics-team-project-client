@@ -83,7 +83,7 @@ describe('AdminMeetingsPage', () => {
     await screen.findByRole('columnheader', { name: '회의 제목' });
     expect(
       screen.getAllByRole('columnheader').map(header => header.textContent),
-    ).toEqual(['분반', '팀', '회의 제목', '작성 일자', '작성자']);
+    ).toEqual(['분반', '팀', '회의 제목', '회의 일자', '작성자']);
     expect(
       screen.getByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ }),
     ).toHaveAttribute('tabindex', '0');

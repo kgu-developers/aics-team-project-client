@@ -75,13 +75,14 @@ export const adminSectionMilestoneHandlers = [
         );
       }
       const sectionId = String(params.sectionId);
-      if (!getAdminSection(Number(sectionId))) {
+      const existingFixture = getAdminSectionMilestonesFixture(sectionId);
+      if (!existingFixture && !getAdminSection(Number(sectionId))) {
         return HttpResponse.json(
           { code: 'SECTION_NOT_FOUND', message: '분반을 찾을 수 없습니다.' },
           { status: 404 },
         );
       }
-      ensureAdminSectionMilestonesFixture(sectionId);
+      if (!existingFixture) ensureAdminSectionMilestonesFixture(sectionId);
       const milestone = createAdminSectionMilestoneFixture(sectionId, input);
       return milestone
         ? HttpResponse.json({ id: milestone.id }, { status: 201 })

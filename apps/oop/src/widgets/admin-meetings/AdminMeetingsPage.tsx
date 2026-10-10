@@ -187,7 +187,7 @@ export default function AdminMeetingsPage() {
                 <th scope='col'>분반</th>
                 <th scope='col'>팀</th>
                 <th scope='col'>회의 제목</th>
-                <th scope='col'>작성 일자</th>
+                <th scope='col'>회의 일자</th>
                 <th scope='col'>작성자</th>
               </tr>
             </thead>

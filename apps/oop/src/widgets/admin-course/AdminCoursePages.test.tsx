@@ -7,6 +7,7 @@ import {
   createRoute,
   createRouter,
   Outlet,
+  redirect,
   RouterProvider,
 } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
@@ -127,6 +128,11 @@ function renderAt(initialEntry: string) {
     );
   }
   const detailRoute = createRoute({
+    beforeLoad: ({ search }) => {
+      if (search.sectionId === undefined) {
+        throw redirect({ replace: true, to: '/admin/sections' });
+      }
+    },
     component: CourseDetailRoute,
     getParentRoute: () => sectionsRoute,
     path: '/$courseId',
@@ -183,8 +189,10 @@ function renderAt(initialEntry: string) {
 }
 
 async function openAssistantDialog(user: UserEvent) {
-  const row = await screen.findByRole('row', { name: 'OOP-01 분반 관리' });
-  await user.click(within(row).getByRole('button', { name: '조교 관리' }));
+  const table = await screen.findByRole('table', {
+    name: '선택한 분반 기본 설정',
+  });
+  await user.click(within(table).getByRole('button', { name: '조교 관리' }));
   return screen.findByRole('dialog', { name: 'OOP-01 조교 관리' });
 }
 
@@ -294,7 +302,7 @@ describe('AdminCoursesPage', () => {
 });
 
 describe('AdminCourseDetailPage', () => {
-  it('분반을 자동 선택하지 않고 선택한 분반을 URL 기준으로 전환한다', async () => {
+  it('분반 없는 상세 주소는 목록으로 이동하고 선택한 분반을 URL 기준으로 전환한다', async () => {
     const user = userEvent.setup();
     createAdminSection({
       capacity: 35,
@@ -306,15 +314,17 @@ describe('AdminCourseDetailPage', () => {
 
     const router = renderAt('/admin/sections/1');
 
-    expect(
-      await screen.findByRole('heading', {
-        level: 1,
-        name: '객체지향 프로그래밍',
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/admin/sections'),
+    );
+    const list = await screen.findByRole('table', {
+      name: '객체지향 프로그래밍 분반 목록',
+    });
+    await user.click(
+      within(list).getByRole('row', {
+        name: 'OOP-01 분반 운영 화면 열기',
       }),
-    ).toBeInTheDocument();
-    expect(router.state.location.search).not.toHaveProperty('sectionId');
-
-    await user.click(screen.getByRole('row', { name: 'OOP-01 분반 관리' }));
+    );
     const selector = await screen.findByRole('combobox', {
       name: '현재 분반',
     });
@@ -476,28 +486,6 @@ describe('AdminCourseDetailPage', () => {
     });
   });
 
-  it('강좌 정보와 연결된 분반 목록을 보여 주고 산출물 다운로드는 노출하지 않는다', async () => {
-    renderAt('/admin/sections/1');
-
-    expect(
-      await screen.findByRole('heading', {
-        level: 1,
-        name: '객체지향 프로그래밍',
-      }),
-    ).toBeInTheDocument();
-    const table = await screen.findByRole('table', {
-      name: '연결된 분반 목록',
-    });
-    const row = within(table).getByRole('row', { name: 'OOP-01 분반 관리' });
-    expect(within(row).getByText('월요일 1-2교시')).toBeInTheDocument();
-    expect(within(row).queryByText('40명')).not.toBeInTheDocument();
-    expect(within(row).getByText('미설정')).toBeInTheDocument();
-    expect(await within(row).findByText('없음')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: '산출물 현황 다운로드' }),
-    ).not.toBeInTheDocument();
-  });
-
   it('사전 정보 패널에는 현재 강좌 조회로 불러온 분반만 전달한다', async () => {
     const user = userEvent.setup();
     useAuthStore.setState({
@@ -524,34 +512,12 @@ describe('AdminCourseDetailPage', () => {
     expect(screen.queryByText('다른 강좌 분반')).not.toBeInTheDocument();
   });
 
-  it('분반의 학생·팀 구성 동작은 같은 화면의 관리 탭을 연다', async () => {
-    const user = userEvent.setup();
-    const router = renderAt('/admin/sections/1');
-    const row = await screen.findByRole('row', { name: 'OOP-01 분반 관리' });
-
-    await user.click(within(row).getByRole('button', { name: '학생·팀 구성' }));
-
-    expect(router.state.location.pathname).toBe('/admin/sections/1');
-    expect(router.state.location.search).toMatchObject({
-      sectionId: 1,
-      tab: 'roster',
-    });
-    expect(
-      await screen.findByRole('heading', { name: '수강생 목록' }),
-    ).toBeInTheDocument();
-  });
-
-  it('없는 강좌는 목록으로 돌아가는 안내를 보여 준다', async () => {
-    renderAt('/admin/sections/999');
-    expect(
-      await screen.findByText('강좌를 찾을 수 없습니다.'),
-    ).toBeInTheDocument();
-  });
-
   it('분반을 등록하면 표에 추가된다', async () => {
     const user = userEvent.setup();
-    renderAt('/admin/sections/1');
-    await screen.findByRole('row', { name: 'OOP-01 분반 관리' });
+    renderAt('/admin/sections');
+    await screen.findByRole('row', {
+      name: 'OOP-01 분반 운영 화면 열기',
+    });
 
     await user.click(screen.getByRole('button', { name: '분반 등록' }));
     const dialog = await screen.findByRole('dialog', {
@@ -568,7 +534,9 @@ describe('AdminCourseDetailPage', () => {
     await user.click(within(dialog).getByRole('button', { name: '등록' }));
 
     expect(
-      await screen.findByRole('row', { name: 'OOP-02 분반 관리' }),
+      await screen.findByRole('row', {
+        name: 'OOP-02 분반 운영 화면 열기',
+      }),
     ).toBeInTheDocument();
   });
 
@@ -584,8 +552,10 @@ describe('AdminCourseDetailPage', () => {
         HttpResponse.json({ code: 'REFRESH_FAILED' }, { status: 500 }),
       ),
     );
-    renderAt('/admin/sections/1');
-    await screen.findByRole('row', { name: 'OOP-01 분반 관리' });
+    renderAt('/admin/sections');
+    await screen.findByRole('row', {
+      name: 'OOP-01 분반 운영 화면 열기',
+    });
 
     await user.click(screen.getByRole('button', { name: '분반 등록' }));
     const dialog = await screen.findByRole('dialog', {
@@ -613,9 +583,8 @@ describe('AdminCourseDetailPage', () => {
 
   it('분반 설정 버튼으로 설정을 열고 취소할 수 있다', async () => {
     const user = userEvent.setup();
-    renderAt('/admin/sections/1');
-    const row = await screen.findByRole('row', { name: 'OOP-01 분반 관리' });
-    await user.click(within(row).getByRole('button', { name: '분반 설정' }));
+    renderAt('/admin/sections/1?sectionId=1');
+    await user.click(await screen.findByRole('button', { name: '분반 설정' }));
     const settingsDialog = await screen.findByRole('dialog', {
       name: '분반 정보 수정',
     });
@@ -653,9 +622,8 @@ describe('AdminCourseDetailPage', () => {
       ),
     );
 
-    renderAt('/admin/sections/1');
-    const row = await screen.findByRole('row', { name: 'OOP-01 분반 관리' });
-    await user.click(within(row).getByRole('button', { name: '분반 설정' }));
+    renderAt('/admin/sections/1?sectionId=1');
+    await user.click(await screen.findByRole('button', { name: '분반 설정' }));
 
     const settingsDialog = await screen.findByRole('dialog', {
       name: '분반 정보 수정',
@@ -703,9 +671,8 @@ describe('AdminCourseDetailPage', () => {
 
   it('분반 설정에서 삭제 확인 후 표에서 제거한다', async () => {
     const user = userEvent.setup();
-    renderAt('/admin/sections/1');
-    const row = await screen.findByRole('row', { name: 'OOP-01 분반 관리' });
-    await user.click(within(row).getByRole('button', { name: '분반 설정' }));
+    renderAt('/admin/sections/1?sectionId=1');
+    await user.click(await screen.findByRole('button', { name: '분반 설정' }));
     const settingsDialog = await screen.findByRole('dialog', {
       name: '분반 정보 수정',
     });
@@ -726,7 +693,7 @@ describe('AdminCourseDetailPage', () => {
 
   it('조교 관리에서 조교 목록과 등록 버튼을 표시한다', async () => {
     const user = userEvent.setup();
-    renderAt('/admin/sections/1');
+    renderAt('/admin/sections/1?sectionId=1');
     const sectionDialog = await openAssistantDialog(user);
     expect(
       await within(sectionDialog).findByText('등록된 조교가 없습니다.'),
@@ -738,7 +705,7 @@ describe('AdminCourseDetailPage', () => {
 
   it('조교를 등록하고 수정한 뒤 현재 분반에서만 제외할 수 있다', async () => {
     const user = userEvent.setup();
-    renderAt('/admin/sections/1');
+    renderAt('/admin/sections/1?sectionId=1');
     const sectionDialog = await openAssistantDialog(user);
     await user.click(
       within(sectionDialog).getByRole('button', { name: '조교 등록' }),
@@ -817,7 +784,7 @@ describe('AdminCourseDetailPage', () => {
 
   it('조교 등록 비밀번호는 조합과 무관하게 8자 이상 64자 이하만 허용한다', async () => {
     const user = userEvent.setup();
-    renderAt('/admin/sections/1');
+    renderAt('/admin/sections/1?sectionId=1');
     const sectionDialog = await openAssistantDialog(user);
     await user.click(
       within(sectionDialog).getByRole('button', { name: '조교 등록' }),
@@ -858,11 +825,8 @@ describe('AdminCourseDetailPage', () => {
 
   it('강좌 정보 수정에서 운영 상태를 보관됨으로 바꾼다', async () => {
     const user = userEvent.setup();
-    renderAt('/admin/sections/1');
-    await screen.findByRole('heading', {
-      level: 1,
-      name: '객체지향 프로그래밍',
-    });
+    renderAt('/admin/sections');
+    await screen.findByRole('heading', { name: '강좌 설정' });
 
     await user.click(screen.getByRole('button', { name: '강좌 정보 수정' }));
     const dialog = await screen.findByRole('dialog', {
@@ -879,11 +843,8 @@ describe('AdminCourseDetailPage', () => {
 
   it('강좌를 삭제하면 목록으로 돌아간다', async () => {
     const user = userEvent.setup();
-    const router = renderAt('/admin/sections/1');
-    await screen.findByRole('heading', {
-      level: 1,
-      name: '객체지향 프로그래밍',
-    });
+    const router = renderAt('/admin/sections');
+    await screen.findByRole('heading', { name: '강좌 설정' });
 
     await user.click(screen.getByRole('button', { name: '강좌 삭제' }));
     const dialog = await screen.findByRole('dialog', {

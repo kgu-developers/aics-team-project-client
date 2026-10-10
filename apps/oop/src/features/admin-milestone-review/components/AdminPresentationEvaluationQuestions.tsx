@@ -27,7 +27,7 @@ function PresentationEvaluationCriteriaList({
         </Text>
       ) : criteriaQuery.isError ? (
         <Text role='alert'>
-          학생 발표 평가 문항을 불러오지 못했습니다. 제출물 관리의 발표 평가
+          학생 발표 평가 문항을 불러오지 못했습니다. 제출·평가 현황의 발표 평가
           화면에서 다시 확인해 주세요.
         </Text>
       ) : (criteriaQuery.data?.contents.length ?? 0) === 0 ? (
