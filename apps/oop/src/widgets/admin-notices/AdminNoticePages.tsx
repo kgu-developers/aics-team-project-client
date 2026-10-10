@@ -282,7 +282,7 @@ export function AdminNoticeListPage() {
   );
 }
 
-function NoticeReadState({
+function NoticeDetailState({
   query,
 }: {
   query: ReturnType<typeof useAdminNoticeQuery>;
@@ -318,7 +318,7 @@ export function AdminNoticeDetailPage() {
   const query = useAdminNoticeQuery(sectionId, routeId);
   const notice = query.data;
   if (!section || !notice || query.isError)
-    return <NoticeReadState query={query} />;
+    return <NoticeDetailState query={query} />;
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
@@ -530,7 +530,7 @@ export function AdminNoticeEditPage() {
   const { sectionId, section } = useNoticeScope();
   const query = useAdminNoticeQuery(sectionId, routeId);
   if (!section || !query.data || query.isError)
-    return <NoticeReadState query={query} />;
+    return <NoticeDetailState query={query} />;
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>

@@ -477,7 +477,6 @@ describe('AdminCourseDetailPage', () => {
   });
 
   it('강좌 정보와 연결된 분반 목록을 보여 주고 산출물 다운로드는 노출하지 않는다', async () => {
-
     renderAt('/admin/sections/1');
 
     expect(

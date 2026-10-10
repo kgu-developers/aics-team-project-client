@@ -301,6 +301,14 @@ export const item = style({
     },
   },
 });
+export const noticeItem = style({
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  '@media': {
+    '(max-width: 480px)': {
+      gridTemplateColumns: 'minmax(0, 1fr) auto',
+    },
+  },
+});
 export const itemLeading = style({
   alignItems: 'center',
   display: 'flex',
@@ -330,12 +338,6 @@ export const label = style({
   padding: '5px 10px',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
-});
-export const noticeBullet = style({
-  background: tokens.color.accent,
-  borderRadius: 999,
-  height: 8,
-  width: 8,
 });
 export const itemTitle = style({
   color: tokens.color.text.primary,

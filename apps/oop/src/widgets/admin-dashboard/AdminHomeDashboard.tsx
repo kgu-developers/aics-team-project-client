@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { cx } from '~/shared/lib/cx';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { getSectionDisplayLabel } from '~/shared/lib/getSectionDisplayLabel';
 import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
@@ -29,9 +30,7 @@ import {
   isPresentationEvaluationMilestone,
   isPresentationSubmissionMilestone,
 } from '~/features/admin-milestone-review/model';
-import {
-  useAdminAccessibleSectionMilestonesQuery,
-} from '~/features/admin-milestone-review/queries';
+import { useAdminAccessibleSectionMilestonesQuery } from '~/features/admin-milestone-review/queries';
 import { noticeId } from '~/features/admin-notices/noticeScope';
 import { useAdminAccessibleNoticesQuery } from '~/features/admin-notices/queries';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -145,20 +144,20 @@ function List({
     <ul className={styles.list}>
       {items.map(item => (
         <li
-          className={styles.item}
+          className={cx(styles.item, isNoticeList && styles.noticeItem)}
           key={
             item.id ?? item.meetingId ?? [item.section, item.title].join('-')
           }
         >
-          <span className={styles.itemLeading}>
-            {item.team ? (
-              <span className={styles.label} title={item.team}>
-                {item.team}
-              </span>
-            ) : (
-              <span aria-hidden='true' className={styles.noticeBullet} />
-            )}
-          </span>
+          {!isNoticeList ? (
+            <span className={styles.itemLeading}>
+              {item.team ? (
+                <span className={styles.label} title={item.team}>
+                  {item.team}
+                </span>
+              ) : null}
+            </span>
+          ) : null}
           <div className={styles.itemContent}>
             <span className={styles.itemTitleRow}>
               {isMeetingList &&
