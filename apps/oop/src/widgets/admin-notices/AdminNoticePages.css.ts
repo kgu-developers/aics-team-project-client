@@ -18,7 +18,8 @@ export const titleRow = style({
 export const backLink = style({
   color: tokens.color.text.accent,
   fontSize: 13,
-  textDecoration: 'none',
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
 });
 export const tableCard = style({ overflowX: 'auto', padding: 0 });
 export const table = style({

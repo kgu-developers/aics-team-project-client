@@ -34,6 +34,15 @@ function getAdminMeetingRecordId(
   return Number(match[1]);
 }
 
+function getAdminMeetingAuthorStudentNumber(
+  record: (typeof adminMeetingRecordsFixture)[number],
+) {
+  return (
+    adminStudentsFixture.find(student => student.id === record.createdBy.userId)
+      ?.studentNumber ?? record.createdBy.userId
+  );
+}
+
 function isAccessibleRecordSection(
   record: (typeof adminMeetingRecordsFixture)[number],
   accessibleSectionIds: string[],
@@ -388,7 +397,7 @@ export const adminMeetingHandlers = [
 
       return HttpResponse.json({
         contents: records.slice(start, start + size).map(record => ({
-          authorId: record.createdBy.userId,
+          authorId: getAdminMeetingAuthorStudentNumber(record),
           content: getRichTextPlainText(record.content),
           id: getAdminMeetingRecordId(record),
           location: record.location,
@@ -439,7 +448,7 @@ export const adminMeetingHandlers = [
       }
 
       return HttpResponse.json({
-        authorId: record.createdBy.userId,
+        authorId: getAdminMeetingAuthorStudentNumber(record),
         content: getRichTextPlainText(record.content),
         createdAt: record.createdAt.slice(0, 16).replace('T', ' '),
         id: getAdminMeetingRecordId(record),

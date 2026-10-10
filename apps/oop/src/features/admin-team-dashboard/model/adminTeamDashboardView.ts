@@ -14,6 +14,7 @@ export type AdminTeamDashboardView = {
   members: AdminTeamDashboardMemberView[];
   name: string;
   sectionId: string;
+  status: string;
 };
 
 export function toAdminTeamDashboardView(
@@ -31,5 +32,6 @@ export function toAdminTeamDashboardView(
     })),
     name: response.name,
     sectionId: String(response.sectionId),
+    status: response.status,
   };
 }

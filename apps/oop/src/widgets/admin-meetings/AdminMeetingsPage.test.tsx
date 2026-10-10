@@ -21,12 +21,10 @@ import AdminMeetingsPage from './AdminMeetingsPage';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
-import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 
 const server = setupServer(
   ...adminCourseHandlers,
   ...adminMeetingHandlers,
-  ...adminSectionMilestoneHandlers,
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS(':sectionId')}`,
     () =>
@@ -129,31 +127,18 @@ describe('AdminMeetingsPage', () => {
     expect(requestedSize).toBe('10');
   });
 
-  it('특정 분반을 선택했을 때만 마일스톤 필터를 표시한다', async () => {
-    const user = userEvent.setup();
-    renderPage();
+  it('학생 회의 단계와 연결되지 않는 마일스톤 필터를 제공하지 않는다', async () => {
+    renderPage('/admin/meetings/?sectionId=1&milestoneId=3');
 
     expect(screen.queryByLabelText('마일스톤 필터')).not.toBeInTheDocument();
-    await user.click(await screen.findByRole('combobox', { name: '분반' }));
-    await user.click(await screen.findByRole('option', { name: 'OOP-01' }));
-    const milestoneFilter = await screen.findByLabelText('마일스톤 필터');
-    expect(milestoneFilter).toBeInTheDocument();
-
-    await user.click(milestoneFilter);
-    await user.click(
-      await screen.findByRole('option', { name: '3주차 · 제안서' }),
-    );
-    expect(
-      await screen.findByText(/마일스톤 필터는 회의록 목록에만 적용됩니다/),
-    ).toBeVisible();
     expect(
       await screen.findByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
     ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(
-        screen.queryByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ }),
-      ).not.toBeInTheDocument(),
-    );
+    expect(
+      await screen.findByRole('row', {
+        name: /발표 자료 구성 논의 회의록 보기/,
+      }),
+    ).toBeInTheDocument();
   });
 
   it('분반과 팀 필터가 있는 URL은 해당 팀의 회의록만 표시한다', async () => {

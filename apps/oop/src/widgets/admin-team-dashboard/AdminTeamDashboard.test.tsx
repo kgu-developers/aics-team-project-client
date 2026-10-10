@@ -8,7 +8,7 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
@@ -124,6 +124,7 @@ function renderPage(teamId: string, sessionSectionId = '1') {
       sections: [
         {
           code: 'OOP-01',
+          courseId: 1,
           id: sessionSectionId,
           name: '객체지향프로그래밍 01분반',
           role: 'ASSISTANT',
@@ -141,6 +142,7 @@ describe('AdminTeamDashboard', () => {
 
     renderPage('1');
 
+    await user.click(await screen.findByRole('button', { name: '제출·평가' }));
     await user.click(
       await screen.findByRole(
         'button',
@@ -158,6 +160,7 @@ describe('AdminTeamDashboard', () => {
   });
 
   it('분반 마일스톤마다 teamId 필터 제출 현황과 최신 버전을 연결해 표시한다', async () => {
+    const user = userEvent.setup();
     const requests = vi.fn();
     const meetingRequests = vi.fn();
     server.use(
@@ -216,8 +219,24 @@ describe('AdminTeamDashboard', () => {
       await screen.findByRole('heading', { name: 'OOP-01 - 1팀 대시보드' }),
     ).toBeInTheDocument();
     expect(
+      screen.getByRole('link', { name: '← 강좌·분반 관리로' }),
+    ).toHaveAttribute(
+      'href',
+      expect.stringMatching(
+        /^\/admin\/sections\/1\?(?:sectionId=1&tab=roster|tab=roster&sectionId=1)$/,
+      ),
+    );
+    expect(
       await screen.findByText('AI 기반 팀 프로젝트 관리 서비스'),
     ).toBeInTheDocument();
+    expect(screen.getByText('구성 중')).toBeInTheDocument();
+    expect(screen.getByText('2명')).toBeInTheDocument();
+    expect(
+      screen.getByRole('table', { name: '팀원 정보' }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '제출·평가' }));
+
     expect(screen.getByText('수정 요청')).toBeInTheDocument();
     expect(screen.getByText('2026-09-07/18:00')).toBeInTheDocument();
     expect(screen.getByText('발표 자료 제출')).toBeInTheDocument();
@@ -242,17 +261,6 @@ describe('AdminTeamDashboard', () => {
       expect.stringContaining('apiSectionId='),
     );
     expect(
-      await screen.findByRole('link', { name: /프로젝트 킥오프/ }),
-    ).toHaveAttribute('href', expect.stringContaining('/admin/meetings/1'));
-    expect(
-      screen
-        .getByRole('region', { name: '회의록' })
-        .querySelectorAll('a[href^="/admin/meetings/"]'),
-    ).toHaveLength(1);
-    expect(
-      document.querySelectorAll('[data-unread-indicator="true"]'),
-    ).not.toHaveLength(0);
-    expect(
       screen
         .getAllByRole('link', { name: '상세보기' })
         .some(link =>
@@ -265,6 +273,23 @@ describe('AdminTeamDashboard', () => {
     expect(
       screen.queryByRole('link', { name: 'proposal-v2.pdf' }),
     ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '회의록·액션플랜' }));
+    const meetingRegion = screen.getByRole('region', { name: '회의록' });
+    expect(
+      await within(meetingRegion).findByRole('link', {
+        name: /프로젝트 킥오프/,
+      }),
+    ).toHaveAttribute('href', expect.stringContaining('/admin/meetings/1'));
+    expect(
+      meetingRegion.querySelectorAll('a[href^="/admin/meetings/"]'),
+    ).toHaveLength(1);
+    expect(
+      document.querySelectorAll('[data-unread-indicator="true"]'),
+    ).not.toHaveLength(0);
+    expect(
+      screen.getByRole('heading', { name: '액션플랜' }),
+    ).toBeInTheDocument();
 
     await waitFor(() => expect(requests).toHaveBeenCalled());
     const requestUrls = requests.mock.calls.flat().map(String);
@@ -304,8 +329,10 @@ describe('AdminTeamDashboard', () => {
   });
 
   it('2팀 대시보드에는 1팀 평가 상세 fixture를 표시하지 않는다', async () => {
+    const user = userEvent.setup();
     renderPage('2');
 
+    await user.click(await screen.findByRole('button', { name: '제출·평가' }));
     expect(
       await screen.findByText('발표 평가 대상자가 없습니다.'),
     ).toBeInTheDocument();

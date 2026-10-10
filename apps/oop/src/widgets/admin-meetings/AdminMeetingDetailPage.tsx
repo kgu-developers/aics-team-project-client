@@ -136,6 +136,13 @@ export default function AdminMeetingDetailPage() {
       name: student?.name ?? participantId,
     };
   });
+  const author = enrollmentsQuery.data?.contents.find(
+    student => student.studentNumber === record.authorId,
+  );
+  const authorLabel = author
+    ? `${author.studentNumber} · ${author.name}`
+    : record.authorId;
+
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
@@ -157,6 +164,7 @@ export default function AdminMeetingDetailPage() {
             >
               {record.teamName}
             </Link>
+            <Text>작성자: {authorLabel}</Text>
             <Text>{formatAdminMeetingDateTime(record.meetingAt)}</Text>
             <Text>회의 단계: {formatAdminMeetingPhase(record.phase)}</Text>
             {record.location ? <Text>{record.location}</Text> : null}
@@ -186,7 +194,7 @@ export default function AdminMeetingDetailPage() {
           )}
         </section>
         <Text color='secondary' type='supporting'>
-          최초 작성 {record.authorId} · 최종 수정{' '}
+          최종 수정{' '}
           {record.updatedAt
             ? formatAdminMeetingDateTime(record.updatedAt)
             : '-'}
