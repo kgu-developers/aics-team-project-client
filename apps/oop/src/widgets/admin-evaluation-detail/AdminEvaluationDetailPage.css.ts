@@ -12,7 +12,8 @@ export const page = style({
 });
 export const backLink = style({
   color: tokens.color.text.accent,
-  textDecoration: 'none',
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
   width: 'fit-content',
   ':focus-visible': {
     outline: `2px solid ${tokens.color.accent}`,
@@ -160,6 +161,15 @@ export const response = style({
   padding: 12,
 });
 export const responseTitle = style({ fontWeight: 700 });
+export const responseText = style({
+  display: 'block',
+  maxHeight: 180,
+  minWidth: 0,
+  overflowWrap: 'anywhere',
+  overflowY: 'auto',
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
+});
 export const professorMemo = style({
   overflowWrap: 'anywhere',
   whiteSpace: 'pre-wrap',

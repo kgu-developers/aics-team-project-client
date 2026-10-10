@@ -128,4 +128,61 @@ describe('PresentationEvaluationResults', () => {
       screen.queryByRole('button', { name: '평가자 11' }),
     ).not.toBeInTheDocument();
   });
+
+  it('총점 정렬 버튼으로 높은 순, 낮은 순, 기본순을 순환한다', async () => {
+    const user = userEvent.setup();
+    renderResults([
+      { ...evaluations[0]!, evaluatorName: '중간 점수', totalScore: 5 },
+      { ...evaluations[0]!, evaluatorName: '낮은 점수', totalScore: 1 },
+      { ...evaluations[0]!, evaluatorName: '높은 점수', totalScore: 9 },
+      { ...evaluations[1]!, evaluatorName: '미제출 평가자' },
+    ]);
+
+    const evaluatorNames = () =>
+      screen
+        .getAllByRole('button')
+        .map(button => button.textContent)
+        .filter(name =>
+          ['중간 점수', '낮은 점수', '높은 점수', '미제출 평가자'].includes(
+            name ?? '',
+          ),
+        );
+
+    expect(evaluatorNames()).toEqual([
+      '중간 점수',
+      '낮은 점수',
+      '높은 점수',
+      '미제출 평가자',
+    ]);
+
+    await user.click(
+      screen.getByRole('button', { name: '총점 높은 순으로 정렬' }),
+    );
+    expect(evaluatorNames()).toEqual([
+      '높은 점수',
+      '중간 점수',
+      '낮은 점수',
+      '미제출 평가자',
+    ]);
+
+    await user.click(
+      screen.getByRole('button', { name: '총점 낮은 순으로 정렬' }),
+    );
+    expect(evaluatorNames()).toEqual([
+      '낮은 점수',
+      '중간 점수',
+      '높은 점수',
+      '미제출 평가자',
+    ]);
+
+    await user.click(
+      screen.getByRole('button', { name: '총점 기본순으로 정렬' }),
+    );
+    expect(evaluatorNames()).toEqual([
+      '중간 점수',
+      '낮은 점수',
+      '높은 점수',
+      '미제출 평가자',
+    ]);
+  });
 });

@@ -32,7 +32,7 @@ function PresentationEvaluationCriteriaList({
         </Text>
       ) : (criteriaQuery.data?.contents.length ?? 0) === 0 ? (
         <Text color='secondary' type='supporting'>
-          아직 등록된 발표 평가 문항이 없습니다. 분반별 제출물의 발표 평가에서
+          아직 등록된 발표 평가 문항이 없습니다. 제출·평가 현황의 발표 평가에서
           문항을 추가하면 학생 발표 평가 화면에도 표시됩니다.
         </Text>
       ) : (
@@ -64,7 +64,7 @@ export default function AdminPresentationEvaluationQuestions({
         학생 발표 평가 문항
       </Heading>
       <Text className={styles.description} color='secondary' type='supporting'>
-        발표 평가 문항은 분반별 제출물의 발표 평가에서 설정합니다. 아래 문항은
+        발표 평가 문항은 제출·평가 현황의 발표 평가에서 설정합니다. 아래 문항은
         학생 발표 평가 화면에 동일하게 표시됩니다.
       </Text>
       {sections.length === 0 ? (

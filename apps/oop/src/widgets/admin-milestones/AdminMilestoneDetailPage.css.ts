@@ -31,7 +31,8 @@ export const backLink = style({
   color: tokens.color.text.accent,
   flex: '0 0 auto',
   fontSize: 13,
-  textDecoration: 'none',
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
 });
 
 export const detailCard = style({

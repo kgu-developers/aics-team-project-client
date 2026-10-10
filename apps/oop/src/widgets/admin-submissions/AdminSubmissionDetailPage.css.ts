@@ -14,7 +14,8 @@ export const page = style({
 export const backLink = style({
   color: tokens.color.text.accent,
   fontSize: 14,
-  textDecoration: 'none',
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
   width: 'fit-content',
   ':focus-visible': {
     outline: `2px solid ${tokens.color.accent}`,

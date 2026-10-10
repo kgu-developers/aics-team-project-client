@@ -80,19 +80,29 @@ function PeerEvaluationResponses({
   return (
     <section className={styles.responseGrid}>
       <Text className={styles.responseTitle}>본인 기여도</Text>
-      <Text>{evaluation.selfContribution ?? '-'}</Text>
+      <Text className={styles.responseText}>
+        {evaluation.selfContribution ?? '-'}
+      </Text>
       <Text className={styles.responseTitle}>프로젝트 총평</Text>
-      <Text>{evaluation.projectReviewComment ?? '-'}</Text>
+      <Text className={styles.responseText}>
+        {evaluation.projectReviewComment ?? '-'}
+      </Text>
       <Text className={styles.responseTitle}>개인 회고</Text>
-      <Text>{evaluation.reflectionComment ?? '-'}</Text>
+      <Text className={styles.responseText}>
+        {evaluation.reflectionComment ?? '-'}
+      </Text>
       {evaluation.teammateAssessments.map(assessment => (
         <div className={styles.peerResponseGroup} key={assessment.targetUserId}>
           <Text className={styles.responseTitle}>
             {assessment.targetUserName} 평가
           </Text>
           <div className={styles.peerResponseBody}>
-            <Text>기여 내용: {assessment.contributionDetail ?? '-'}</Text>
-            <Text>평가: {assessment.teammateAssessment ?? '-'}</Text>
+            <Text className={styles.responseText}>
+              기여 내용: {assessment.contributionDetail ?? '-'}
+            </Text>
+            <Text className={styles.responseText}>
+              평가: {assessment.teammateAssessment ?? '-'}
+            </Text>
           </div>
         </div>
       ))}
@@ -120,10 +130,7 @@ function PeerEvaluationOverview({
   return (
     <Card className={styles.peerOverview}>
       <div className={styles.overviewHeader}>
-        <div>
-          <Text className={styles.eyebrow}>상호평가 진행 현황</Text>
-          <Heading level={2}>팀원 기여도 요약</Heading>
-        </div>
+        <Heading level={2}>팀원 기여도 요약</Heading>
         <Badge
           label={`${submittedCount}/${members.length}명 제출`}
           variant={
@@ -133,9 +140,6 @@ function PeerEvaluationOverview({
           }
         />
       </div>
-      <Text className={styles.muted} type='supporting'>
-        제출한 팀원별 응답과 팀원별 받은 기여도 평균을 확인할 수 있습니다.
-      </Text>
       <div className={styles.memberSummaryGrid}>
         {members.map(member => (
           <article
@@ -221,16 +225,11 @@ function PeerDetail({
   const { data } = query;
   return (
     <>
-      <div className={styles.titleSection}>
-        <EvaluationTitle
-          evaluationType='peer'
-          sectionId={sectionId}
-          title={`${data.teamName} 상호평가 결과`}
-        />
-        <Text className={styles.metadata}>
-          양식 #{data.formId} · 마감 {formatDateTime(data.closesAt)}
-        </Text>
-      </div>
+      <EvaluationTitle
+        evaluationType='peer'
+        sectionId={sectionId}
+        title={`${data.teamName} 상호평가 결과`}
+      />
       <section className={styles.section}>
         <PeerEvaluationOverview
           evaluations={data.evaluations}
@@ -239,13 +238,7 @@ function PeerDetail({
       </section>
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
-          <div>
-            <Heading level={2}>평가자별 응답</Heading>
-            <Text color='secondary' type='supporting'>
-              평가자 이름을 누르면 학생이 작성한 프로젝트 평가와 팀원 평가를
-              확인할 수 있습니다.
-            </Text>
-          </div>
+          <Heading level={2}>평가자별 응답</Heading>
         </div>
         <Card>
           <Table
@@ -282,6 +275,16 @@ function PeerDetail({
               })),
               {
                 align: 'center',
+                header: '평균',
+                key: 'average',
+                renderCell: evaluation =>
+                  evaluation.averageScore == null
+                    ? '-'
+                    : `${evaluation.averageScore}%`,
+                width: proportional(0.7, { minWidth: 84 }),
+              },
+              {
+                align: 'center',
                 header: '제출 상태',
                 key: 'status',
                 renderCell: evaluation => (
@@ -295,16 +298,6 @@ function PeerDetail({
                   />
                 ),
                 width: proportional(0.9, { minWidth: 104 }),
-              },
-              {
-                align: 'center',
-                header: '평균',
-                key: 'average',
-                renderCell: evaluation =>
-                  evaluation.averageScore == null
-                    ? '-'
-                    : `${evaluation.averageScore}%`,
-                width: proportional(0.7, { minWidth: 84 }),
               },
             ]}
             data={data.evaluations}

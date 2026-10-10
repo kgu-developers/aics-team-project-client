@@ -134,6 +134,18 @@ function renderPage(
 }
 
 describe('AdminSubmissionsPage', () => {
+  it('제출·평가 현황에서는 산출물 현황 다운로드를 제공하지 않는다', async () => {
+    renderPage('/admin/submissions?sectionId=1');
+
+    expect(
+      await screen.findByRole('combobox', { name: '조회할 분반' }),
+    ).toHaveTextContent('OOP-01 · 월요일 1-2교시');
+    expect(screen.queryByText('분반 선택')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: '산출물 현황 다운로드' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('운영 분반 조회 실패를 제출물 접근 거부로 표시하지 않는다', async () => {
     server.use(
       http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`, () =>
@@ -875,6 +887,9 @@ describe('AdminSubmissionsPage', () => {
     });
     await waitFor(() => expect(settingsButton).toBeEnabled());
     expect(screen.getByText('설정 완료')).toBeVisible();
+    expect(
+      screen.getByText('평가 기간 2026-11-19 09:00 ~ 2026-11-26 09:00'),
+    ).toBeVisible();
 
     const startButton = screen.getByRole('button', {
       name: '발표 평가 시작',
@@ -1349,8 +1364,9 @@ describe('AdminSubmissionsPage', () => {
     ).toHaveAttribute('tabindex', '0');
     expect(screen.getByText('2명 제출/2명')).toBeInTheDocument();
     expect(
-      screen.getByRole('columnheader', { name: '전체 회의록' }),
-    ).toBeInTheDocument();
+      screen.queryByRole('columnheader', { name: '전체 회의록' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/^마감 /)).not.toBeInTheDocument();
   });
 
   it('알 수 없는 마일스톤 키는 제출 목록 fixture에서 찾지 않는다', () => {

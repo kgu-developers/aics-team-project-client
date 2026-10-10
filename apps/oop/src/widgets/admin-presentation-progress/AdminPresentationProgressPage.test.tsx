@@ -107,7 +107,7 @@ it('담당 교수는 발표 순서에 따라 제안서와 제출 자료를 확�
 
   renderPage();
 
-  await screen.findByRole('heading', { name: '발표 자료 보기·평가' });
+  await screen.findByRole('heading', { name: '발표 기록 보기' });
   expect(screen.getByText('1번째 발표')).toBeVisible();
   expect(
     screen.getByText('OOP-01 - 1팀 · CineFlow · 영화관 통합 관리 시스템'),
@@ -281,7 +281,7 @@ it('담당 교수는 선택한 팀의 발표 자료 제출 이력과 버전별 �
 
   renderPage();
 
-  await screen.findByRole('heading', { name: '발표 자료 보기·평가' });
+  await screen.findByRole('heading', { name: '발표 기록 보기' });
   expect(
     screen.queryByRole('heading', { name: '발표 자료 제출 이력' }),
   ).toBeNull();

@@ -91,6 +91,13 @@ describe('AdminEvaluationDetailPage 상호평가 결과', () => {
     expect(
       screen.getByRole('columnheader', { name: '제출 상태' }),
     ).toBeInTheDocument();
+    const responseSection = screen
+      .getByRole('heading', { name: '평가자별 응답' })
+      .closest('section');
+    const headers = within(responseSection!)
+      .getAllByRole('columnheader')
+      .map(header => header.textContent);
+    expect(headers.slice(-2)).toEqual(['평균', '제출 상태']);
     expect(screen.getAllByText('제출 완료')).toHaveLength(2);
   });
 });
