@@ -80,8 +80,8 @@ export default function EnrollmentImportDialog({
             반영합니다.
           </Text>
           <Text color='secondary' type='supporting'>
-            학번은 필수입니다. 전공·학과·소속은 같은 항목의 별칭이므로 한
-            파일에는 셋 중 하나만 넣어주세요.
+            학번 열은 필수입니다. 전공 정보는 ‘전공’, ‘학과’, ‘소속’ 중 한 가지
+            열 이름만 사용해 주세요.
           </Text>
           <Selector
             isDisabled={controlsLocked}

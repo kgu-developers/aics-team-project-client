@@ -1,4 +1,9 @@
-import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
+import {
+  API_BASE_URL,
+  ENDPOINTS,
+  type AdminEnrollmentImportPreviewRowDto,
+  type AdminTeamImportPreviewRowDto,
+} from '@aics/api-client';
 import type { Team } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
@@ -11,6 +16,11 @@ import {
   adminTeamsFixture,
 } from '../data/adminStudentTeams';
 import { demoAdmin, demoUserAccounts } from '../data/users';
+import {
+  findAdminRosterColumn,
+  getAdminRosterValue,
+  readAdminRosterWorkbook,
+} from '../utils/readAdminRosterWorkbook';
 
 const demoSectionId = 'oop-2026-2-01';
 const adminSectionId = 1;
@@ -30,11 +40,19 @@ const assistantEnrollmentsBySection = new Map<
 const withdrawnAssistantEnrollmentKeys = new Set<string>();
 const teamImportPreviews = new Map<
   number,
-  { fileName: string; sectionId: string }
+  {
+    fileName: string;
+    rows: readonly AdminTeamImportPreviewRowDto[];
+    sectionId: string;
+  }
 >();
 const enrollmentImportPreviews = new Map<
   number,
-  { fileName: string; sectionId: string }
+  {
+    fileName: string;
+    rows: readonly AdminEnrollmentImportPreviewRowDto[];
+    sectionId: string;
+  }
 >();
 const rosterImportStatusBySection = new Map<
   string,
@@ -45,6 +63,10 @@ const rosterImportStatusBySection = new Map<
 >();
 let nextTeamImportId = 1;
 let nextEnrollmentImportId = 1;
+let nextImportedStudentId = 20_000;
+let nextImportedTeamId = 20_000;
+const initialAdminStudents = structuredClone(adminStudentsFixture);
+const initialAdminTeams = structuredClone(adminTeamsFixture);
 
 const studentsById = new Map(
   adminStudentsFixture.map(student => [student.id, student]),
@@ -209,7 +231,7 @@ function getAssistantEnrollmentResponse(
   };
 }
 
-function getAdminSectionTeamsResponse(sectionId: string) {
+export function getAdminSectionTeamsResponse(sectionId: string) {
   const fixtureSectionId = resolveFixtureSectionId(sectionId);
 
   return {
@@ -273,6 +295,16 @@ function getAdminTeamResponse(teamId: string) {
 }
 
 export function resetAdminStudentTeamMockState() {
+  adminStudentsFixture.splice(
+    0,
+    adminStudentsFixture.length,
+    ...structuredClone(initialAdminStudents),
+  );
+  adminTeamsFixture.splice(
+    0,
+    adminTeamsFixture.length,
+    ...structuredClone(initialAdminTeams),
+  );
   withdrawnStudentNumbers.clear();
   teamLeaderStudentNumbers.clear();
   teamIdByStudentNumber.clear();
@@ -286,6 +318,8 @@ export function resetAdminStudentTeamMockState() {
   rosterImportStatusBySection.clear();
   nextTeamImportId = 1;
   nextEnrollmentImportId = 1;
+  nextImportedStudentId = 20_000;
+  nextImportedTeamId = 20_000;
 }
 
 export const adminStudentTeamHandlers = [
@@ -1003,43 +1037,134 @@ export const adminStudentTeamHandlers = [
         );
       }
 
-      const importId = nextTeamImportId++;
+      let workbook;
+      try {
+        workbook = await readAdminRosterWorkbook(file);
+      } catch (reason) {
+        return HttpResponse.json(
+          {
+            code: 'INVALID_FILE',
+            message:
+              reason instanceof Error
+                ? reason.message
+                : '엑셀 파일을 읽을 수 없습니다.',
+          },
+          { status: 400 },
+        );
+      }
+      if (
+        findAdminRosterColumn(workbook.headers, [
+          '팀명',
+          '팀',
+          'team',
+          'teamName',
+        ]).length !== 1 ||
+        findAdminRosterColumn(workbook.headers, ['학번', 'studentNumber'])
+          .length !== 1
+      ) {
+        return HttpResponse.json(
+          {
+            code: 'IMPORT_BATCH_FILE_INVALID',
+            message: '팀명과 학번 열을 각각 하나씩 넣어주세요.',
+          },
+          { status: 400 },
+        );
+      }
 
-      teamImportPreviews.set(importId, { fileName: file.name, sectionId });
+      const fixtureSectionId = resolveFixtureSectionId(sectionId);
+      const seenStudentNumbers = new Set<string>();
+      const rows: AdminTeamImportPreviewRowDto[] = workbook.rows.map(row => {
+        const teamName = getAdminRosterValue(workbook, row, [
+          '팀명',
+          '팀',
+          'team',
+          'teamName',
+        ]);
+        const studentNumber = getAdminRosterValue(workbook, row, [
+          '학번',
+          'studentNumber',
+        ]);
+        const student = adminStudentsFixture.find(
+          candidate =>
+            candidate.sectionId === fixtureSectionId &&
+            candidate.studentNumber === studentNumber,
+        );
+        const duplicateInFile = seenStudentNumbers.has(studentNumber);
+        if (studentNumber) seenStudentNumbers.add(studentNumber);
+        const leaderValue = getAdminRosterValue(workbook, row, [
+          '팀장',
+          '팀장여부',
+          'leader',
+          'isLeader',
+        ]).toLowerCase();
+        const assignedTeamId = student ? getStudentTeamId(student) : undefined;
+        const assignedTeam = assignedTeamId
+          ? adminTeamsFixture.find(team => team.id === assignedTeamId)
+          : undefined;
+        const status =
+          !teamName || !studentNumber || !student || duplicateInFile
+            ? 'INVALID'
+            : assignedTeam?.name === teamName
+              ? 'DUPLICATE'
+              : assignedTeam
+                ? 'UPDATE'
+                : 'VALID';
+        const message =
+          !teamName || !studentNumber
+            ? '팀명과 학번은 필수입니다.'
+            : duplicateInFile
+              ? '한 파일에 같은 학번이 두 번 이상 있습니다.'
+              : !student
+                ? '선택한 분반에 등록되지 않은 학번입니다.'
+                : status === 'DUPLICATE'
+                  ? '이미 같은 팀에 편성되어 있습니다.'
+                  : status === 'UPDATE'
+                    ? '기존 팀 배정을 변경합니다.'
+                    : null;
+
+        return {
+          grade: getAdminRosterValue(workbook, row, ['학년', 'grade']) || null,
+          leader: ['1', 'true', 'y', 'yes', '예', '팀장'].includes(leaderValue),
+          message,
+          name:
+            getAdminRosterValue(workbook, row, ['이름', '성명', 'name']) ||
+            student?.name ||
+            null,
+          phoneNumber:
+            getAdminRosterValue(workbook, row, [
+              '전화번호',
+              '휴대전화',
+              'phone',
+            ]) || null,
+          projectRole:
+            getAdminRosterValue(workbook, row, [
+              '역할',
+              '프로젝트역할',
+              'projectRole',
+            ]) || null,
+          rowNumber: row.rowNumber,
+          status,
+          studentNumber,
+          teamName,
+        };
+      });
+      const importId = nextTeamImportId++;
+      teamImportPreviews.set(importId, {
+        fileName: file.name,
+        rows,
+        sectionId,
+      });
 
       return HttpResponse.json({
         importId,
-        rows: adminStudentsFixture
-          .filter(
-            student => student.sectionId === resolveFixtureSectionId(sectionId),
-          )
-          .map((student, index) => ({
-            grade: null,
-            leader: student.isLeader,
-            message: '이미 같은 팀에 편성되어 있습니다.',
-            name: student.name,
-            phoneNumber: null,
-            projectRole: null,
-            rowNumber: index + 2,
-            status: 'DUPLICATE',
-            studentNumber: student.studentNumber,
-            teamName:
-              adminTeamsFixture.find(team => team.id === student.teamId)
-                ?.name ?? '',
-          })),
+        rows,
         summary: {
-          duplicate: adminStudentsFixture.filter(
-            student => student.sectionId === resolveFixtureSectionId(sectionId),
-          ).length,
-          invalid: 0,
-          teams: adminTeamsFixture.filter(
-            team => team.sectionId === resolveFixtureSectionId(sectionId),
-          ).length,
-          total: adminStudentsFixture.filter(
-            student => student.sectionId === resolveFixtureSectionId(sectionId),
-          ).length,
-          update: 0,
-          valid: 0,
+          duplicate: rows.filter(row => row.status === 'DUPLICATE').length,
+          invalid: rows.filter(row => row.status === 'INVALID').length,
+          teams: new Set(rows.map(row => row.teamName).filter(Boolean)).size,
+          total: rows.length,
+          update: rows.filter(row => row.status === 'UPDATE').length,
+          valid: rows.filter(row => row.status === 'VALID').length,
         },
       });
     },
@@ -1070,6 +1195,45 @@ export const adminStudentTeamHandlers = [
       }
 
       teamImportPreviews.delete(importId);
+      const fixtureSectionId = resolveFixtureSectionId(preview.sectionId);
+      const applicableRows = preview.rows.filter(
+        row => row.status === 'VALID' || row.status === 'UPDATE',
+      );
+      const createdTeamNames = new Set<string>();
+      for (const row of applicableRows) {
+        let team = adminTeamsFixture.find(
+          candidate =>
+            candidate.sectionId === fixtureSectionId &&
+            candidate.name === row.teamName,
+        );
+        if (!team) {
+          team = {
+            id: `team-import-${nextImportedTeamId++}`,
+            memberIds: [],
+            name: row.teamName,
+            sectionId: fixtureSectionId,
+          };
+          adminTeamsFixture.push(team);
+          createdTeamNames.add(row.teamName);
+        }
+        const student = adminStudentsFixture.find(
+          candidate =>
+            candidate.sectionId === fixtureSectionId &&
+            candidate.studentNumber === row.studentNumber,
+        );
+        if (!student) continue;
+        teamIdByStudentNumber.set(row.studentNumber, team.id);
+        if (!team.memberIds.includes(student.id))
+          team.memberIds.push(student.id);
+        if (row.leader)
+          teamLeaderStudentNumbers.set(team.id, row.studentNumber);
+        if (row.projectRole) {
+          projectRoleBySectionStudent.set(
+            getProjectRoleKey(fixtureSectionId, row.studentNumber),
+            row.projectRole,
+          );
+        }
+      }
       rosterImportStatusBySection.set(preview.sectionId, {
         ...(rosterImportStatusBySection.get(preview.sectionId) ?? {
           studentRoster: null,
@@ -1082,13 +1246,10 @@ export const adminStudentTeamHandlers = [
       });
 
       return HttpResponse.json({
-        appliedMembers: 0,
-        createdTeams: 0,
+        appliedMembers: applicableRows.length,
+        createdTeams: createdTeamNames.size,
         importId,
-        skipped: adminStudentsFixture.filter(
-          student =>
-            student.sectionId === resolveFixtureSectionId(preview.sectionId),
-        ).length,
+        skipped: preview.rows.length - applicableRows.length,
       });
     },
   ),
@@ -1134,44 +1295,131 @@ export const adminStudentTeamHandlers = [
         );
       }
 
-      if (file.name.toLowerCase().includes('duplicate-alias')) {
+      let workbook;
+      try {
+        workbook = await readAdminRosterWorkbook(file);
+      } catch (reason) {
+        return HttpResponse.json(
+          {
+            code: 'INVALID_FILE',
+            message:
+              reason instanceof Error
+                ? reason.message
+                : '엑셀 파일을 읽을 수 없습니다.',
+          },
+          { status: 400 },
+        );
+      }
+      const studentNumberColumns = findAdminRosterColumn(workbook.headers, [
+        '학번',
+        'studentNumber',
+      ]);
+      const majorColumns = findAdminRosterColumn(workbook.headers, [
+        '전공',
+        '학과',
+        '소속',
+      ]);
+      if (studentNumberColumns.length !== 1) {
         return HttpResponse.json(
           {
             code: 'IMPORT_BATCH_FILE_INVALID',
-            message: '전공, 학과, 소속 컬럼이 중복되었습니다.',
+            message: '학번 열을 하나만 넣어주세요.',
+          },
+          { status: 400 },
+        );
+      }
+      if (majorColumns.length > 1) {
+        return HttpResponse.json(
+          {
+            code: 'IMPORT_BATCH_FILE_INVALID',
+            message: '전공, 학과, 소속 열이 중복되었습니다.',
           },
           { status: 400 },
         );
       }
 
       const importId = nextEnrollmentImportId++;
-      const students = adminStudentsFixture.filter(
-        student => student.sectionId === resolveFixtureSectionId(sectionId),
+      const fixtureSectionId = resolveFixtureSectionId(sectionId);
+      const seenStudentNumbers = new Set<string>();
+      const rows: AdminEnrollmentImportPreviewRowDto[] = workbook.rows.map(
+        row => {
+          const studentNumber = getAdminRosterValue(workbook, row, [
+            '학번',
+            'studentNumber',
+          ]);
+          const duplicateInFile = seenStudentNumbers.has(studentNumber);
+          if (studentNumber) seenStudentNumbers.add(studentNumber);
+          const existingInSection = adminStudentsFixture.some(
+            student =>
+              student.sectionId === fixtureSectionId &&
+              student.studentNumber === studentNumber,
+          );
+          const existingUser =
+            createdUsers.has(studentNumber) ||
+            adminStudentsFixture.some(
+              student => student.studentNumber === studentNumber,
+            );
+          const status =
+            !studentNumber || duplicateInFile
+              ? 'INVALID'
+              : existingInSection
+                ? 'DUPLICATE'
+                : existingUser
+                  ? 'VALID'
+                  : 'NEW_USER';
+          const roleValue = getAdminRosterValue(workbook, row, [
+            '역할',
+            'role',
+          ]).toUpperCase();
+
+          return {
+            email:
+              getAdminRosterValue(workbook, row, ['이메일', 'email']) || null,
+            major:
+              getAdminRosterValue(workbook, row, ['전공', '학과', '소속']) ||
+              null,
+            message: !studentNumber
+              ? '학번은 필수입니다.'
+              : duplicateInFile
+                ? '한 파일에 같은 학번이 두 번 이상 있습니다.'
+                : existingInSection
+                  ? '이미 등록된 수강생입니다.'
+                  : null,
+            name:
+              getAdminRosterValue(workbook, row, ['이름', '성명', 'name']) ||
+              null,
+            phone:
+              getAdminRosterValue(workbook, row, [
+                '전화번호',
+                '휴대전화',
+                'phone',
+              ]) || null,
+            role:
+              roleValue === 'ASSISTANT' || roleValue === '조교'
+                ? 'ASSISTANT'
+                : 'STUDENT',
+            rowNumber: row.rowNumber,
+            status,
+            studentNumber,
+          };
+        },
       );
 
       enrollmentImportPreviews.set(importId, {
         fileName: file.name,
+        rows,
         sectionId,
       });
 
       return HttpResponse.json({
         importId,
-        rows: students.map((student, index) => ({
-          email: `${student.studentNumber}@example.com`,
-          message: '이미 등록된 수강생입니다.',
-          name: student.name,
-          phone: '010-1234-5678',
-          role: 'STUDENT',
-          rowNumber: index + 2,
-          status: 'DUPLICATE',
-          studentNumber: student.studentNumber,
-        })),
+        rows,
         summary: {
-          duplicate: students.length,
-          invalid: 0,
-          newUser: 0,
-          total: students.length,
-          valid: 0,
+          duplicate: rows.filter(row => row.status === 'DUPLICATE').length,
+          invalid: rows.filter(row => row.status === 'INVALID').length,
+          newUser: rows.filter(row => row.status === 'NEW_USER').length,
+          total: rows.length,
+          valid: rows.filter(row => row.status === 'VALID').length,
         },
       });
     },
@@ -1202,6 +1450,41 @@ export const adminStudentTeamHandlers = [
       }
 
       enrollmentImportPreviews.delete(importId);
+      const fixtureSectionId = resolveFixtureSectionId(preview.sectionId);
+      const applicableRows = preview.rows.filter(
+        row => row.status === 'VALID' || row.status === 'NEW_USER',
+      );
+      for (const row of applicableRows) {
+        if (row.status === 'NEW_USER') {
+          createdUsers.set(row.studentNumber, {
+            email: row.email ?? `${row.studentNumber}@example.com`,
+            name: row.name ?? row.studentNumber,
+            phone: row.phone ?? '',
+            studentNumber: row.studentNumber,
+          });
+        }
+        if (row.role === 'ASSISTANT') {
+          assistantEnrollmentsBySection.set(
+            `${fixtureSectionId}:${row.studentNumber}`,
+            {
+              email: row.email ?? `${row.studentNumber}@example.com`,
+              name: row.name ?? row.studentNumber,
+              phone: row.phone ?? '',
+              studentNumber: row.studentNumber,
+            },
+          );
+        } else {
+          adminStudentsFixture.push({
+            id: `student-import-${nextImportedStudentId++}`,
+            isLeader: false,
+            major: row.major ?? '',
+            name: row.name ?? row.studentNumber,
+            sectionId: fixtureSectionId,
+            studentNumber: row.studentNumber,
+            teamId: null,
+          });
+        }
+      }
       rosterImportStatusBySection.set(preview.sectionId, {
         ...(rosterImportStatusBySection.get(preview.sectionId) ?? {
           studentRoster: null,
@@ -1214,13 +1497,11 @@ export const adminStudentTeamHandlers = [
       });
 
       return HttpResponse.json({
-        applied: 0,
-        createdUsers: 0,
+        applied: applicableRows.length,
+        createdUsers: applicableRows.filter(row => row.status === 'NEW_USER')
+          .length,
         importId,
-        skipped: adminStudentsFixture.filter(
-          student =>
-            student.sectionId === resolveFixtureSectionId(preview.sectionId),
-        ).length,
+        skipped: preview.rows.length - applicableRows.length,
       });
     },
   ),
