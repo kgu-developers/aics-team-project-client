@@ -167,7 +167,7 @@ export function AdminPresentationEvaluationStartDialog({
         <Text color='secondary' type='supporting'>
           {isResume
             ? '재개하면 학생이 기존 발표 평가 점수를 다시 수정할 수 있습니다.'
-            : '시작을 확정하면 학생 발표 평가가 바로 열립니다. 평가 항목과 모든 팀의 발표 순서를 확인한 뒤 시작해 주세요.'}
+            : '시작을 확정하면 학생 발표 평가가 바로 열립니다. 평가 항목과 모든 팀의 발표 순서를 확인한 뒤 시작해 주세요. 평가 시작 후에는 평가 항목을 추가·수정·삭제할 수 없습니다.'}
         </Text>
         <div className={styles.summary}>
           <Text>평가 항목: {criteriaCount}개</Text>

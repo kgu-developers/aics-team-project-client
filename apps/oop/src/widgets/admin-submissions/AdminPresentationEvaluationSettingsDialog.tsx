@@ -444,8 +444,8 @@ export function AdminPresentationEvaluationSettingsDialog({
           {isEvaluationLocked ? (
             <Text color='secondary' role='status' type='supporting'>
               {hasInvalidEvaluationStart
-                ? '평가 시작 시각을 확인할 수 없어 평가 항목을 추가할 수 없습니다.'
-                : '평가 기간이 시작되어 평가 항목을 추가할 수 없습니다.'}
+                ? '평가 시작 시각을 확인할 수 없어 평가 항목을 추가·수정·삭제할 수 없습니다.'
+                : '평가 기간이 시작되어 평가 항목을 추가·수정·삭제할 수 없습니다.'}
             </Text>
           ) : null}
           {criteriaQuery.isPending ? (

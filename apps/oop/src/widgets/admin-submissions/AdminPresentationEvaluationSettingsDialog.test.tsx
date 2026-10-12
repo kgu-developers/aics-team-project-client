@@ -229,6 +229,11 @@ it('allows a confirmed presentation-order change but locks criteria after evalua
   expect(screen.getByRole('textbox', { name: /평가 항목명/ })).toBeDisabled();
   expect(screen.getByRole('spinbutton', { name: '배점' })).toBeDisabled();
   expect(screen.getByRole('button', { name: '평가 항목 추가' })).toBeDisabled();
+  expect(
+    screen.getByText(
+      '평가 기간이 시작되어 평가 항목을 추가·수정·삭제할 수 없습니다.',
+    ),
+  ).toBeVisible();
   await userEvent.click(screen.getByRole('button', { name: '발표 순서 저장' }));
   expect(
     screen.getByRole('alertdialog', { name: '발표 순서를 변경할까요?' }),

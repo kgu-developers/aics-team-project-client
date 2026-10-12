@@ -899,6 +899,11 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('heading', { name: '발표 평가 시작' }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /평가 시작 후에는 평가 항목을 추가·수정·삭제할 수 없습니다/,
+      ),
+    ).toBeVisible();
     await user.click(screen.getByRole('button', { name: '취소' }));
 
     await user.click(screen.getByRole('button', { name: '평가 설정' }));
@@ -1055,7 +1060,7 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.queryByRole('button', { name: '발표 자료 보기·평가' }),
     ).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '평가 설정 보기' }));
+    await user.click(screen.getByRole('button', { name: '발표 순서 관리' }));
 
     await screen.findByRole('heading', { name: '발표 순서·평가 항목 설정' });
     expect(
