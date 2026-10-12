@@ -173,12 +173,12 @@ export default function AdminMilestoneDetailPage() {
 
   return (
     <div className={styles.page}>
-        <header className={styles.titleRow}>
-          <div className={styles.titleContent}>
-            <Heading className={styles.pageTitle} level={1}>
-              {milestone.title} · {section.code}
-            </Heading>
-          </div>
+      <header className={styles.titleRow}>
+        <div className={styles.titleContent}>
+          <Heading className={styles.pageTitle} level={1}>
+            {milestone.title} · {section.code}
+          </Heading>
+        </div>
         <Link
           className={styles.backLink}
           search={{ sectionId: search.sectionId }}
