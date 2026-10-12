@@ -27,7 +27,32 @@ export const backLink = style({
 export const form = style({
   display: 'flex',
   flexDirection: 'column',
-  gap: 28,
+  gap: 16,
+});
+
+export const layout = style({
+  display: 'grid',
+  gap: 16,
+  gridTemplateColumns: 'minmax(0, 1fr)',
+  minWidth: 0,
+});
+
+export const settingsColumn = style({
+  display: 'grid',
+  gap: 16,
+  minWidth: 0,
+});
+
+export const previewColumn = style({
+  minWidth: 0,
+});
+
+export const previewCard = style({
+  minWidth: 0,
+});
+
+export const actionCard = style({
+  position: 'static',
 });
 
 export const section = style({
@@ -38,11 +63,29 @@ export const section = style({
 
 export const sectionTitle = style({ margin: 0 });
 
+export const basicGrid = style({
+  display: 'grid',
+  gap: 20,
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+  '@media': { '(max-width: 760px)': { gridTemplateColumns: '1fr' } },
+});
+
+export const fieldGroup = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+  minWidth: 0,
+});
+
+export const fullWidthField = style({
+  gridColumn: '1 / -1',
+});
+
 export const scheduleGrid = style({
   display: 'grid',
   gap: 16,
   gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  '@media': { '(max-width: 640px)': { gridTemplateColumns: '1fr' } },
+  '@media': { '(max-width: 900px)': { gridTemplateColumns: '1fr' } },
 });
 
 export const sectionScheduleList = style({
@@ -69,8 +112,8 @@ export const scheduleField = style({
 export const scheduleInputs = style({
   display: 'grid',
   gap: 12,
-  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 0.72fr)',
-  '@media': { '(max-width: 640px)': { gridTemplateColumns: '1fr' } },
+  gridTemplateColumns: 'minmax(220px, 1.4fr) minmax(150px, 0.8fr)',
+  '@media': { '(max-width: 620px)': { gridTemplateColumns: '1fr' } },
 });
 
 export const timeField = style({
@@ -105,20 +148,16 @@ export const timeInput = style({
   width: '100%',
 });
 
-export const numberInput = style([timeInput, { maxWidth: 160 }]);
-
-export const weekNumberField = style({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 8,
-});
-
 export const action = style({
   alignItems: 'center',
+  boxSizing: 'border-box',
   display: 'flex',
   flexWrap: 'wrap',
   gap: 12,
   justifyContent: 'flex-end',
+  margin: '0 auto',
+  maxWidth: 1240,
+  width: '100%',
 });
 
 export const actionNote = style({

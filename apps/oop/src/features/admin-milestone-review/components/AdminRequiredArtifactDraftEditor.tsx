@@ -184,20 +184,27 @@ export default function AdminRequiredArtifactDraftEditor({
         <div className={styles.list}>
           {value.map(draft => (
             <div className={styles.artifact} key={draft.clientId}>
-              <div>
+              <div className={styles.artifactContent}>
                 <Text weight='medium'>{draft.label}</Text>
-                <Text color='secondary' type='supporting'>
+                <Text
+                  className={styles.artifactMeta}
+                  color='secondary'
+                  type='supporting'
+                >
                   유형: {artifactTypeLabels[draft.type]} ·{' '}
                   {draft.required ? '필수 제출' : '선택 제출'}
-                  {draft.type === 'FILE' ? (
-                    <>
-                      {' · '}허용 확장자:{' '}
-                      {draft.allowedExtensions?.join(', ') || '제한 없음'}
-                      {' · '}
-                      {formatRequiredArtifactFileSize(draft.maxFileSizeMb)}
-                    </>
-                  ) : null}
                 </Text>
+                {draft.type === 'FILE' ? (
+                  <Text
+                    className={styles.artifactMeta}
+                    color='secondary'
+                    type='supporting'
+                  >
+                    허용 확장자:{' '}
+                    {draft.allowedExtensions?.join(', ') || '제한 없음'} ·{' '}
+                    {formatRequiredArtifactFileSize(draft.maxFileSizeMb)}
+                  </Text>
+                ) : null}
               </div>
               <div className={styles.artifactActions}>
                 <Button

@@ -1,5 +1,23 @@
 import type { RequiredArtifactType } from '@aics/api-client';
-import { Button, Card, EmptyState, Heading, Text } from '@aics/design-system';
+import {
+  Button,
+  Card,
+  CheckboxList,
+  CheckboxListItem,
+  DateInput,
+  EmptyState,
+  Heading,
+  MultiSelector,
+  NumberInput,
+  Selector,
+  SelectorOption,
+  Text,
+  TextArea,
+  TextInput,
+  TimeInput,
+  type DateInputProps,
+  type TimeInputProps,
+} from '@aics/design-system';
 import {
   Link,
   useNavigate,
@@ -13,8 +31,7 @@ import AdminPeerEvaluationStudentPreview from '~/features/admin-milestone-review
 import AdminPresentationEvaluationQuestions from '~/features/admin-milestone-review/components/AdminPresentationEvaluationQuestions';
 import AdminStudentMilestonePreview from '~/features/admin-milestone-review/components/AdminStudentMilestonePreview';
 import {
-  formatAdminMilestoneDate,
-  formatAdminPresentationEvaluationDate,
+  createAdminMilestoneSectionScheduleDraftFromDto,
   formatRequiredArtifactFileSize,
   getAdminMilestoneStatusLabel,
   getAdminMilestoneTypeLabel,
@@ -28,15 +45,30 @@ import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminMilestoneDetailPage.css';
 
-function ReadOnlyField({ label, value }: { label: string; value: string }) {
+function DisabledDateTimeFields({
+  dateLabel,
+  timeLabel,
+  value,
+}: {
+  dateLabel: string;
+  timeLabel: string;
+  value: { date: string; time: string };
+}) {
   return (
-    <div className={styles.readOnlyField}>
-      <Text color='secondary' type='supporting'>
-        {label}
-      </Text>
-      <Text className={styles.readOnlyValue} weight='medium'>
-        {value}
-      </Text>
+    <div className={styles.scheduleInputs}>
+      <DateInput
+        isDisabled
+        label={dateLabel}
+        value={(value.date || undefined) as DateInputProps['value']}
+        width='100%'
+      />
+      <TimeInput
+        hourFormat='24h'
+        isDisabled
+        label={timeLabel}
+        value={(value.time || undefined) as TimeInputProps['value']}
+        width='100%'
+      />
     </div>
   );
 }
@@ -86,6 +118,15 @@ export default function AdminMilestoneDetailPage() {
       : undefined,
     isAccessibleSection && supportsRequiredArtifacts ? milestoneId : undefined,
   );
+  const scheduleDraft = milestone
+    ? createAdminMilestoneSectionScheduleDraftFromDto(
+        milestone.schedule,
+        milestone.status,
+        milestone.allowResubmissionBeforeDueAt,
+        milestone.type,
+        milestone.peerEvaluationForm,
+      )
+    : undefined;
 
   if (!search.sectionId || !isAccessibleSection) {
     return (
@@ -119,7 +160,7 @@ export default function AdminMilestoneDetailPage() {
     );
   }
 
-  if (!section || !milestone) {
+  if (!section || !milestone || !scheduleDraft) {
     return (
       <div className={styles.page}>
         <EmptyState
@@ -132,15 +173,12 @@ export default function AdminMilestoneDetailPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.titleRow}>
-        <div className={styles.titleContent}>
-          <Heading className={styles.pageTitle} level={1}>
-            마일스톤 &gt; {milestone.title}
-          </Heading>
-          <Text color='secondary' type='supporting'>
-            설정된 내용을 읽기 전용으로 확인합니다.
-          </Text>
-        </div>
+        <header className={styles.titleRow}>
+          <div className={styles.titleContent}>
+            <Heading className={styles.pageTitle} level={1}>
+              {milestone.title} · {section.code}
+            </Heading>
+          </div>
         <Link
           className={styles.backLink}
           search={{ sectionId: search.sectionId }}
@@ -150,211 +188,298 @@ export default function AdminMilestoneDetailPage() {
         </Link>
       </header>
 
-      <Card className={styles.detailCard} padding={4}>
-        <section className={styles.section}>
-          <Heading className={styles.sectionTitle} level={2}>
-            기본 설정
-          </Heading>
-          <div className={styles.readOnlyGrid}>
-            <ReadOnlyField label='대상 분반' value={section.code} />
-            <ReadOnlyField
-              label='마일스톤 유형'
-              value={getAdminMilestoneTypeLabel(milestone.type)}
-            />
-            <ReadOnlyField
-              label='진행 주차'
-              value={`${milestone.weekNumber}주차`}
-            />
-          </div>
-          <ReadOnlyField label='제목' value={milestone.title} />
-          <ReadOnlyField label='설명' value={milestone.description ?? '-'} />
-        </section>
+      <div className={styles.detailStack}>
+        <Card padding={4}>
+          <section className={styles.section}>
+            <Heading className={styles.sectionTitle} level={2}>
+              기본 설정
+            </Heading>
+            <div className={styles.basicGrid}>
+              <MultiSelector
+                isDisabled
+                label='대상 분반'
+                onChange={() => undefined}
+                options={[
+                  {
+                    label: `${section.code} · ${section.name}`,
+                    value: section.id,
+                  },
+                ]}
+                triggerDisplay='labels'
+                value={[section.id]}
+                width='100%'
+              />
+              <Selector
+                isDisabled
+                label='마일스톤 유형'
+                options={[
+                  {
+                    label: getAdminMilestoneTypeLabel(milestone.type),
+                    value: milestone.type,
+                  },
+                ]}
+                renderOption={option => (
+                  <SelectorOption label={option.label ?? option.value} />
+                )}
+                value={milestone.type}
+                width='100%'
+              />
+              <TextInput
+                isDisabled
+                label='제목'
+                value={milestone.title}
+                width='100%'
+              />
+              <NumberInput
+                isDisabled
+                isIntegerOnly
+                label='진행 주차'
+                min={1}
+                onChange={() => undefined}
+                value={milestone.weekNumber}
+                width='100%'
+              />
+              <div className={styles.fullWidthField}>
+                <TextArea
+                  isDisabled
+                  label='설명'
+                  value={milestone.description ?? ''}
+                  width='100%'
+                />
+              </div>
+            </div>
+          </section>
+        </Card>
 
-        <section className={styles.section}>
-          <Heading className={styles.sectionTitle} level={2}>
-            공개 및 제출 일정
-          </Heading>
-          <article className={styles.sectionSchedule}>
-            <Heading level={3}>{section.code}</Heading>
-            <div className={styles.readOnlyGrid}>
-              <ReadOnlyField
-                label='공개 시작 일시'
-                value={formatAdminMilestoneDate(milestone.schedule.opensAt)}
-              />
-              <ReadOnlyField
-                label='제출 마감 일시'
-                value={formatAdminMilestoneDate(milestone.schedule.dueAt)}
-              />
-              <ReadOnlyField
+        <Card padding={4}>
+          <section className={styles.section}>
+            <Heading className={styles.sectionTitle} level={2}>
+              공개 및 제출 일정
+            </Heading>
+            <article className={styles.sectionSchedule}>
+              <Heading level={3}>{section.code}</Heading>
+              <div className={styles.scheduleGrid}>
+                {milestone.type === 'PEER_EVALUATION' ? (
+                  <>
+                    <DisabledDateTimeFields
+                      dateLabel='상호 평가 시작일'
+                      timeLabel='평가 시작 시간'
+                      value={scheduleDraft.evaluationOpensAt}
+                    />
+                    <DisabledDateTimeFields
+                      dateLabel='상호 평가 종료일'
+                      timeLabel='평가 종료 시간'
+                      value={scheduleDraft.evaluationClosesAt}
+                    />
+                  </>
+                ) : (
+                  <>
+                    {scheduleDraft.opensAt.date ? (
+                      <DisabledDateTimeFields
+                        dateLabel='공개 시작일'
+                        timeLabel='공개 시작 시간'
+                        value={scheduleDraft.opensAt}
+                      />
+                    ) : null}
+                    <DisabledDateTimeFields
+                      dateLabel='제출 마감일'
+                      timeLabel='제출 마감 시간'
+                      value={scheduleDraft.dueAt}
+                    />
+                  </>
+                )}
+              </div>
+              <Selector
+                isDisabled
                 label='공개 상태'
-                value={getAdminMilestoneStatusLabel(milestone.status)}
+                options={[
+                  {
+                    label: getAdminMilestoneStatusLabel(milestone.status),
+                    value: milestone.status,
+                  },
+                ]}
+                renderOption={option => (
+                  <SelectorOption label={option.label ?? option.value} />
+                )}
+                value={milestone.status}
+                width={180}
               />
-              {milestone.schedule.evaluationOpensAt ? (
-                <ReadOnlyField
-                  label='평가 시작 일시'
-                  value={
-                    milestone.type === 'PRESENTATION'
-                      ? formatAdminPresentationEvaluationDate(
-                          milestone.schedule.evaluationOpensAt,
-                        )
-                      : formatAdminMilestoneDate(
-                          milestone.schedule.evaluationOpensAt,
-                        )
-                  }
-                />
+              {milestone.type === 'PRESENTATION' ? (
+                <div className={styles.evaluationWindow}>
+                  <Text color='secondary' type='supporting'>
+                    {milestone.schedule.evaluationOpensAt &&
+                    milestone.schedule.evaluationClosesAt
+                      ? '발표 평가 기간이 설정되어 있습니다. 발표 순서, 평가 항목과 평가 시작은 제출물 관리의 발표 평가 탭에서 관리합니다.'
+                      : '발표 순서와 평가 항목을 확인한 뒤 제출물 관리의 발표 평가 탭에서 평가를 시작할 수 있습니다.'}
+                  </Text>
+                  <Button
+                    label='발표 평가 관리로 이동'
+                    onClick={() =>
+                      void navigate({
+                        search: {
+                          milestoneId: 'presentation-evaluate',
+                          sectionId: search.sectionId,
+                        },
+                        to: ROUTES.ADMIN_SUBMISSIONS,
+                      })
+                    }
+                    size='sm'
+                    variant='secondary'
+                  />
+                </div>
               ) : null}
-              {milestone.schedule.evaluationClosesAt ? (
-                <ReadOnlyField
-                  label='평가 종료 일시'
-                  value={
-                    milestone.type === 'PRESENTATION'
-                      ? formatAdminPresentationEvaluationDate(
-                          milestone.schedule.evaluationClosesAt,
-                        )
-                      : formatAdminMilestoneDate(
-                          milestone.schedule.evaluationClosesAt,
-                        )
-                  }
-                />
+              {milestone.type !== 'PEER_EVALUATION' ? (
+                <div className={styles.policyGroup}>
+                  <CheckboxList
+                    description='현재 마일스톤에 저장된 제출 정책입니다.'
+                    isDisabled
+                    label='제출 정책'
+                    onChange={() => undefined}
+                    value={[
+                      ...(scheduleDraft.allowSubmissionEditBeforeDueAt
+                        ? ['allow-submission-edit-before-due-at']
+                        : []),
+                      ...(scheduleDraft.allowLateSubmission
+                        ? ['allow-late-submission']
+                        : []),
+                    ]}
+                  >
+                    <CheckboxListItem
+                      description='제출 마감 일시 전까지 이미 제출한 내용을 수정할 수 있습니다.'
+                      isDisabled
+                      label='제출 마감 전 수정 허용'
+                      value='allow-submission-edit-before-due-at'
+                    />
+                    <CheckboxListItem
+                      description='제출 마감 이후에도 지각 상태로 제출할 수 있습니다.'
+                      isDisabled
+                      label='지각 제출 허용'
+                      value='allow-late-submission'
+                    />
+                  </CheckboxList>
+                  {scheduleDraft.allowLateSubmission &&
+                  scheduleDraft.lateSubmissionUntil.date ? (
+                    <DisabledDateTimeFields
+                      dateLabel='지각 제출 마감일'
+                      timeLabel='지각 제출 마감 시간'
+                      value={scheduleDraft.lateSubmissionUntil}
+                    />
+                  ) : null}
+                </div>
               ) : null}
-            </div>
-            {milestone.type === 'PRESENTATION' ? (
-              <div className={styles.evaluationWindow}>
-                <Text color='secondary' type='supporting'>
-                  {milestone.schedule.evaluationOpensAt &&
-                  milestone.schedule.evaluationClosesAt
-                    ? '발표 평가 기간이 설정되어 있습니다. 발표 순서, 평가 항목과 평가 시작은 제출물 관리의 발표 평가 탭에서 관리합니다.'
-                    : '발표 순서와 평가 항목을 확인한 뒤 제출물 관리의 발표 평가 탭에서 평가를 시작할 수 있습니다.'}
-                </Text>
-                <Button
-                  label='발표 평가 관리로 이동'
-                  onClick={() =>
-                    void navigate({
-                      search: {
-                        milestoneId: 'presentation-evaluate',
-                        sectionId: search.sectionId,
-                      },
-                      to: ROUTES.ADMIN_SUBMISSIONS,
-                    })
-                  }
-                  size='sm'
-                  variant='secondary'
-                />
-              </div>
-            ) : null}
-            <div>
-              <Text className={styles.policyTitle} weight='medium'>
-                제출 정책
-              </Text>
-              <div className={styles.policyList}>
-                <Text color='secondary' type='supporting'>
-                  제출 마감 전 수정:{' '}
-                  {milestone.allowResubmissionBeforeDueAt ? '허용' : '불가'}
-                </Text>
-                <Text color='secondary' type='supporting'>
-                  지각 제출 가능 기한:{' '}
-                  {formatAdminMilestoneDate(
-                    milestone.schedule.lateSubmissionUntil,
-                  )}
-                </Text>
-              </div>
-            </div>
-          </article>
-        </section>
+            </article>
+          </section>
+        </Card>
 
         {milestone.type === 'PRESENTATION' ? (
-          <AdminPresentationEvaluationQuestions
-            sections={[
-              {
-                code: section.code,
-                id: section.id,
-                name: section.name,
-              },
-            ]}
-          />
+          <Card padding={4}>
+            <AdminPresentationEvaluationQuestions
+              sections={[
+                {
+                  code: section.code,
+                  id: section.id,
+                  name: section.name,
+                },
+              ]}
+            />
+          </Card>
         ) : null}
 
         {supportsRequiredArtifacts ? (
-          <section className={styles.section}>
-            <Heading className={styles.sectionTitle} level={2}>
-              필수 산출물
-            </Heading>
-            {requiredArtifactsQuery.isPending ? (
-              <Text aria-live='polite' role='status'>
-                필수 산출물을 불러오는 중입니다.
-              </Text>
-            ) : requiredArtifactsQuery.isError ? (
-              <Text color='secondary' type='supporting'>
-                필수 산출물을 불러오지 못했습니다. 수정 화면에서 다시
-                시도해주세요.
-              </Text>
-            ) : (requiredArtifactsQuery.data?.contents?.length ?? 0) === 0 ? (
-              <Text color='secondary' type='supporting'>
-                등록된 필수 산출물이 없습니다.
-              </Text>
-            ) : (
-              <div className={styles.artifactList}>
-                {requiredArtifactsQuery.data?.contents?.map(artifact => (
-                  <article className={styles.artifact} key={artifact.id}>
-                    <Text weight='medium'>
-                      {artifact.label ?? '이름 없는 산출물'}
-                    </Text>
-                    <Text color='secondary' type='supporting'>
-                      유형:{' '}
-                      {artifact.type ? artifactTypeLabels[artifact.type] : '-'}
-                      {' · '}
-                      {artifact.required ? '필수 제출' : '선택 제출'}
-                    </Text>
-                    {artifact.type === 'FILE' ? (
-                      <Text color='secondary' type='supporting'>
-                        허용 확장자:{' '}
-                        {artifact.allowedExtensions?.join(', ') || '제한 없음'}
-                        {' · '}
-                        {formatRequiredArtifactFileSize(artifact.maxFileSizeMb)}
-                      </Text>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
+          <Card padding={4}>
+            <section className={styles.section}>
+              <Heading className={styles.sectionTitle} level={2}>
+                필수 산출물
+              </Heading>
+              {requiredArtifactsQuery.isPending ? (
+                <Text aria-live='polite' role='status'>
+                  필수 산출물을 불러오는 중입니다.
+                </Text>
+              ) : requiredArtifactsQuery.isError ? (
+                <Text color='secondary' type='supporting'>
+                  필수 산출물을 불러오지 못했습니다. 수정 화면에서 다시
+                  시도해주세요.
+                </Text>
+              ) : (requiredArtifactsQuery.data?.contents?.length ?? 0) === 0 ? (
+                <Text color='secondary' type='supporting'>
+                  등록된 필수 산출물이 없습니다.
+                </Text>
+              ) : (
+                <div className={styles.artifactList}>
+                  {requiredArtifactsQuery.data?.contents?.map(artifact => (
+                    <article className={styles.artifact} key={artifact.id}>
+                      <div className={styles.artifactContent}>
+                        <Text weight='medium'>
+                          {artifact.label ?? '이름 없는 산출물'}
+                        </Text>
+                        <Text color='secondary' type='supporting'>
+                          유형:{' '}
+                          {artifact.type
+                            ? artifactTypeLabels[artifact.type]
+                            : '-'}{' '}
+                          · {artifact.required ? '필수 제출' : '선택 제출'}
+                        </Text>
+                        {artifact.type === 'FILE' ? (
+                          <Text color='secondary' type='supporting'>
+                            허용 확장자:{' '}
+                            {artifact.allowedExtensions?.join(', ') ||
+                              '제한 없음'}{' '}
+                            ·{' '}
+                            {formatRequiredArtifactFileSize(
+                              artifact.maxFileSizeMb,
+                            )}
+                          </Text>
+                        ) : null}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          </Card>
         ) : null}
 
         {studentPreviewTemplateId ? (
-          <AdminStudentMilestonePreview
-            artifacts={requiredArtifactsQuery.data?.contents ?? []}
-            artifactState={
-              requiredArtifactsQuery.isPending
-                ? 'loading'
-                : requiredArtifactsQuery.isError
-                  ? 'error'
-                  : undefined
-            }
-            onRetryArtifacts={() => void requiredArtifactsQuery.refetch()}
-            templateId={studentPreviewTemplateId}
-          />
+          <Card padding={4}>
+            <AdminStudentMilestonePreview
+              artifacts={requiredArtifactsQuery.data?.contents ?? []}
+              artifactState={
+                requiredArtifactsQuery.isPending
+                  ? 'loading'
+                  : requiredArtifactsQuery.isError
+                    ? 'error'
+                    : undefined
+              }
+              onRetryArtifacts={() => void requiredArtifactsQuery.refetch()}
+              templateId={studentPreviewTemplateId}
+            />
+          </Card>
         ) : null}
 
         {milestone.type === 'PEER_EVALUATION' ? (
-          <AdminPeerEvaluationStudentPreview />
+          <Card padding={4}>
+            <AdminPeerEvaluationStudentPreview />
+          </Card>
         ) : null}
 
-        <div className={styles.actions}>
-          <Button
-            label='수정'
-            onClick={() =>
-              navigate({
-                search: {
-                  milestoneId,
-                  sectionId: search.sectionId,
-                },
-                to: ROUTES.ADMIN_MILESTONE_NEW,
-              })
-            }
-            variant='primary'
-          />
-        </div>
-      </Card>
+        <Card className={styles.actionCard} padding={3}>
+          <div className={styles.actions}>
+            <Button
+              label='수정'
+              onClick={() =>
+                navigate({
+                  search: {
+                    milestoneId,
+                    sectionId: search.sectionId,
+                  },
+                  to: ROUTES.ADMIN_MILESTONE_NEW,
+                })
+              }
+              variant='primary'
+            />
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

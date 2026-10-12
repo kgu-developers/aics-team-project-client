@@ -38,12 +38,19 @@ export const artifactHeader = style({
   justifyContent: 'space-between',
 });
 
-export const artifactMeta = style({
-  color: tokens.color.text.secondary,
+export const artifactContent = style({
   display: 'flex',
+  flex: 1,
   flexDirection: 'column',
   gap: tokens.spacing[1],
+  minWidth: 0,
+});
+
+export const artifactMeta = style({
+  color: tokens.color.text.secondary,
+  lineHeight: 1.5,
   margin: 0,
+  overflowWrap: 'anywhere',
 });
 
 export const actions = style({

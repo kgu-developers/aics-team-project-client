@@ -186,6 +186,12 @@ export function getAdminSectionMilestoneFixture(
   );
 }
 
+export function findAdminSectionMilestoneFixture(milestoneId: string) {
+  return Object.values(milestonesBySectionId)
+    .flat()
+    .find(milestone => milestone.id === Number(milestoneId));
+}
+
 export function createAdminSectionMilestoneFixture(
   sectionId: string,
   input: AdminMilestoneCreateInput,
