@@ -59,7 +59,47 @@ describe('AdminShell', () => {
   });
 
   afterEach(() => {
+    vi.unstubAllGlobals();
     useAuthStore.getState().clearSession();
+  });
+
+  it('사이드바를 버튼으로 접고 다시 펼친다', async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    await user.click(screen.getByRole('button', { name: '사이드바 접기' }));
+
+    expect(
+      screen.getByRole('button', { name: '사이드바 펼치기' }),
+    ).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      screen.queryByRole('navigation', { name: '관리자 메뉴' }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '사이드바 펼치기' }));
+
+    expect(
+      screen.getByRole('navigation', { name: '관리자 메뉴' }),
+    ).toBeVisible();
+  });
+
+  it('화면 폭이 좁으면 사이드바를 자동으로 접는다', async () => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        addEventListener: vi.fn(),
+        matches: true,
+        media: '(max-width: 1100px)',
+        onchange: null,
+        removeEventListener: vi.fn(),
+      }),
+    );
+
+    renderShell();
+
+    expect(
+      await screen.findByRole('button', { name: '사이드바 펼치기' }),
+    ).toHaveAttribute('aria-expanded', 'false');
   });
 
   it('강좌·분반 관리는 바로 노출하고 나머지 관리 메뉴는 그룹별로 접을 수 있다', () => {
