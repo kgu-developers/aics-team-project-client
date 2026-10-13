@@ -435,7 +435,7 @@ describe('AdminStudentTeamManagement', () => {
     expect(screen.getAllByText('이서연')).toHaveLength(2);
   });
 
-  it('팀 배정을 확정하면 확정 버튼을 비활성화한다', async () => {
+  it('팀 배정을 확정하면 확정 취소 동작을 제공한다', async () => {
     const user = userEvent.setup();
 
     renderPage();
@@ -448,11 +448,66 @@ describe('AdminStudentTeamManagement', () => {
     });
     await user.click(within(dialog).getByRole('button', { name: '확정하기' }));
 
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: '팀 배정 확정됨' }),
-      ).toBeDisabled(),
+    const unfinalizeButton = await screen.findByRole('button', {
+      name: '팀 배정 확정 취소',
+    });
+    await user.click(unfinalizeButton);
+    const unfinalizeDialog = await screen.findByRole('alertdialog', {
+      name: '팀 배정 확정 취소 확인',
+    });
+    const confirmUnfinalizeButton = within(unfinalizeDialog).getByRole(
+      'button',
+      { name: '확정 취소하기' },
     );
+    expect(confirmUnfinalizeButton).toBeDisabled();
+
+    await user.type(
+      within(unfinalizeDialog).getByLabelText('팀 배정 확정 취소 사유'),
+      '팀 배정 오류를 수정하고 학생들의 팀 구성을 다시 조정하기 위해 취소합니다.',
+    );
+    await user.click(confirmUnfinalizeButton);
+
+    expect(
+      await screen.findByRole('button', { name: '팀 배정 확정' }),
+    ).toBeEnabled();
+  });
+
+  it('일부 팀만 확정된 분반에는 전체 확정 동작만 제공한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS(':sectionId')}`,
+        () =>
+          HttpResponse.json({
+            contents: [
+              {
+                createdAt: '2026-09-08T15:15:06.656Z',
+                id: 1,
+                kickoffRule: '매주 화요일 회고',
+                meetingSchedule: '매주 목 19:00',
+                name: '1팀',
+                status: 'CONFIRMED',
+              },
+              {
+                createdAt: '2026-09-08T15:15:06.656Z',
+                id: 2,
+                kickoffRule: '매주 화요일 회고',
+                meetingSchedule: '매주 목 19:00',
+                name: '2팀',
+                status: 'FORMING',
+              },
+            ],
+          }),
+      ),
+    );
+
+    renderPage();
+
+    expect(
+      await screen.findByRole('button', { name: '팀 배정 확정' }),
+    ).toBeEnabled();
+    expect(
+      screen.queryByRole('button', { name: '팀 배정 확정 취소' }),
+    ).not.toBeInTheDocument();
   });
 
   it('확정된 팀원 관리 메뉴에서는 역할 변경과 팀 이동을 제공하지 않는다', async () => {
@@ -469,7 +524,7 @@ describe('AdminStudentTeamManagement', () => {
     await user.click(
       within(confirmation).getByRole('button', { name: '확정하기' }),
     );
-    await screen.findByRole('button', { name: '팀 배정 확정됨' });
+    await screen.findByRole('button', { name: '팀 배정 확정 취소' });
     await user.click(
       await screen.findByRole('button', { name: '이서연 관리' }),
     );
@@ -481,6 +536,59 @@ describe('AdminStudentTeamManagement', () => {
       screen.queryByRole('button', { name: '팀 이동' }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '제외' })).toBeInTheDocument();
+  });
+
+  it('완료된 최종보고서가 있으면 확정 취소 사유와 안내를 유지한다', async () => {
+    const user = userEvent.setup();
+
+    server.use(
+      http.patch(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS_UNFINALIZE(':sectionId')}`,
+        () =>
+          HttpResponse.json(
+            {
+              code: 'TEAM_UNFINALIZE_COMPLETED_FINAL_REPORT',
+              message:
+                '완료된 최종보고서를 먼저 재개한 후 팀 확정을 취소해 주세요.',
+            },
+            { status: 409 },
+          ),
+      ),
+    );
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', { name: '팀 배정 확정' }),
+    );
+    const finalizeDialog = await screen.findByRole('alertdialog', {
+      name: '팀 배정 확정 확인',
+    });
+    await user.click(
+      within(finalizeDialog).getByRole('button', { name: '확정하기' }),
+    );
+    await user.click(
+      await screen.findByRole('button', { name: '팀 배정 확정 취소' }),
+    );
+    const unfinalizeDialog = await screen.findByRole('alertdialog', {
+      name: '팀 배정 확정 취소 확인',
+    });
+    const reason =
+      '완료된 최종보고서가 있지만 팀 배정 오류를 수정하기 위해 확정을 취소합니다.';
+    const reasonInput =
+      within(unfinalizeDialog).getByLabelText('팀 배정 확정 취소 사유');
+    await user.type(reasonInput, reason);
+    await user.click(
+      within(unfinalizeDialog).getByRole('button', {
+        name: '확정 취소하기',
+      }),
+    );
+
+    expect(
+      await within(unfinalizeDialog).findByRole('alert'),
+    ).toHaveTextContent(
+      '완료된 최종보고서가 있어 확정을 취소할 수 없습니다. 최종보고서를 먼저 재개한 뒤 다시 시도해 주세요.',
+    );
+    expect(reasonInput).toHaveValue(reason);
   });
 
   it('팀장을 새 팀원으로 변경하면 팀 카드에 갱신된 팀장을 표시한다', async () => {

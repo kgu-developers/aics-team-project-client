@@ -1531,6 +1531,47 @@ export const adminStudentTeamHandlers = [
     },
   ),
 
+  http.patch(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS_UNFINALIZE(':sectionId')}`,
+    async ({ params, request }) => {
+      const account = getMockAuthenticatedAccount(request);
+      const sectionId = params.sectionId;
+
+      if (account?.user.id !== demoAdmin.id) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+
+      if (typeof sectionId !== 'string') {
+        return HttpResponse.json(
+          { code: 'SECTION_ID_REQUIRED', message: '분반 정보가 필요합니다.' },
+          { status: 400 },
+        );
+      }
+
+      const input = (await request.json().catch(() => null)) as {
+        reason?: unknown;
+      } | null;
+      const reason =
+        typeof input?.reason === 'string' ? input.reason.trim() : '';
+
+      if (reason.length < 30 || reason.length > 500) {
+        return HttpResponse.json(
+          {
+            code: 'TEAM_INVALID_UNFINALIZE_REASON',
+            message: '확정 취소 사유는 30자 이상 500자 이하여야 합니다.',
+          },
+          { status: 400 },
+        );
+      }
+
+      finalizedSectionIds.delete(resolveFixtureSectionId(sectionId));
+      return HttpResponse.json(getAdminSectionTeamsResponse(sectionId));
+    },
+  ),
+
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_STUDENTS(':sectionId')}`,
     ({ params, request }) => {
