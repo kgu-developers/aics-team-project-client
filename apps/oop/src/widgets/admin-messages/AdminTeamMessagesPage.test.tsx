@@ -20,7 +20,10 @@ import AdminTeamMessagesPage from './AdminTeamMessagesPage';
 
 import { teamMessageProfessorId } from '~/mocks/data/teamMessages';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
-import { adminMidReportHandlers } from '~/mocks/handlers/adminMidReports';
+import {
+  adminMidReportHandlers,
+  resetAdminMidReportScenario,
+} from '~/mocks/handlers/adminMidReports';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
 import { adminProjectProposalHandlers } from '~/mocks/handlers/adminProjectProposal';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
@@ -43,6 +46,7 @@ afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
   server.resetHandlers();
   server.events.removeAllListeners();
+  resetAdminMidReportScenario();
   setApiAccessToken(null);
   useAuthStore.setState({ accessToken: null, currentUser: null });
 });
@@ -89,14 +93,11 @@ function renderPage(sectionId = '1') {
 const teamPath = new URL(`${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM('1')}`)
   .pathname;
 
-it('sends mid-report feedback with the document ID and preserves the draft on conflict', async () => {
+it('uses the revision request API for mid-report feedback and preserves the draft on conflict', async () => {
   const posted: unknown[] = [];
   server.use(
-    ...adminSectionMilestoneHandlers,
-    ...adminMilestoneSubmissionsHandlers,
-    ...adminMidReportHandlers,
     http.post(
-      `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('1')}`,
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT('1', '1')}/feedback`,
       async ({ request }) => {
         posted.push(await request.json());
         return HttpResponse.json({ code: 'DATA_CONFLICT' }, { status: 409 });
@@ -109,21 +110,45 @@ it('sends mid-report feedback with the document ID and preserves the draft on co
     await screen.findByRole('button', { name: '중간 보고서 피드백' }),
   );
   const input = screen.getByRole('textbox', { name: '메시지 내용' });
+  expect(
+    screen.getByText(
+      /학생이 수정본을 재제출하기 전까지 추가 수정 요청을 보낼 수 없습니다/,
+    ),
+  ).toBeVisible();
   await user.type(input, '중간보고서 반영 내용을 확인했습니다.');
-  const send = screen.getByRole('button', { name: '메시지 보내기' });
+  const send = screen.getByRole('button', { name: '수정 요청 보내기' });
   await waitFor(() => expect(send).toBeEnabled());
   await user.click(send);
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    '메시지를 보내지 못했습니다.',
+    '수정 요청을 보내지 못했습니다.',
   );
   expect(posted).toEqual([
     {
       message: '중간보고서 반영 내용을 확인했습니다.',
-      relatedType: 'MID_REPORT',
-      relatedId: 401,
     },
   ]);
   expect(input).toHaveValue('중간보고서 반영 내용을 확인했습니다.');
+});
+
+it('locks additional mid-report revision requests until the student resubmits', async () => {
+  renderPage();
+  const user = userEvent.setup();
+  await user.click(
+    await screen.findByRole('button', { name: '중간 보고서 피드백' }),
+  );
+  const input = screen.getByRole('textbox', { name: '메시지 내용' });
+  await user.type(input, '수정할 내용을 한 번에 정리해서 전달합니다.');
+  await user.click(screen.getByRole('button', { name: '수정 요청 보내기' }));
+
+  expect(
+    await screen.findByText(
+      /수정 요청을 전달했습니다. 학생이 수정본을 재제출하기 전까지/,
+    ),
+  ).toBeVisible();
+  expect(screen.getByRole('textbox', { name: '메시지 내용' })).toBeDisabled();
+  expect(
+    screen.getByRole('button', { name: '수정 요청 보내기' }),
+  ).toBeDisabled();
 });
 
 it('filters message types and exposes each related submission link once', async () => {

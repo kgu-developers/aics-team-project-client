@@ -107,7 +107,7 @@ function createWrapper() {
 }
 
 describe('useAdminRelatedSubmissionQuery', () => {
-  it('제안서는 projectId를, 중간점검은 midReportId 계약값을 준비한다', async () => {
+  it('제안서는 projectId를, 중간 보고서는 midReportId 계약값을 준비한다', async () => {
     const { result, rerender } = renderHook(
       ({ relatedType }: { relatedType: 'PROPOSAL' | 'MID_REPORT' }) =>
         useAdminRelatedSubmissionQuery('1', '7', relatedType),
@@ -128,6 +128,7 @@ describe('useAdminRelatedSubmissionQuery', () => {
     rerender({ relatedType: 'MID_REPORT' as const });
     await waitFor(() => expect(result.current.data?.submissionId).toBe(1702));
     expect(result.current.data?.milestoneId).toBe(102);
+    expect(result.current.data?.milestoneTitle).toBe('중간 보고서');
     expect(result.current.data?.relatedId).toBe(401);
   });
 

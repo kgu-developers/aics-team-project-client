@@ -22,6 +22,7 @@ import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { useAdminRelatedSubmissionQuery } from '~/features/admin-message/queries';
+import { useSubmitAdminMidReportFeedbackMutation } from '~/features/admin-milestone-review/queries/useSubmitAdminMidReportFeedbackMutation';
 import AdminStudentDetailDialog from '~/features/admin-student-team/components/AdminStudentDetailDialog';
 import { useAdminTeamDashboardQuery } from '~/features/admin-team-dashboard/queries';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -103,6 +104,8 @@ export function AdminTeamMessagesPanel({
     : team.sectionId;
   const messagesQuery = useTeamMessagesQuery(teamId);
   const submitMutation = useSubmitTeamMessageMutation(teamId);
+  const submitMidReportFeedbackMutation =
+    useSubmitAdminMidReportFeedbackMutation();
   const [message, setMessage] = useState('');
   const [messageFilter, setMessageFilter] =
     useState<MessageFilter>(initialFilter);
@@ -134,6 +137,13 @@ export function AdminTeamMessagesPanel({
       ? midReportSubmissionQuery
       : proposalSubmissionQuery;
   const relatedSubmission = relatedSubmissionQuery.data;
+  const isMidReportFeedback = relatedType === 'MID_REPORT';
+  const isMidReportRevisionRequested =
+    isMidReportFeedback && relatedSubmission?.status === 'REVISION_REQUESTED';
+  const canRequestMidReportRevision =
+    !isMidReportFeedback || relatedSubmission?.status === 'SUBMITTED';
+  const isSubmitting =
+    submitMutation.isPending || submitMidReportFeedbackMutation.isPending;
   const filteredMessages =
     messageFilter === 'ALL'
       ? messages
@@ -282,18 +292,36 @@ export function AdminTeamMessagesPanel({
           </Text>
         ) : null}
         {relatedType === 'MID_REPORT' ? (
-          <Text className={styles.relatedNotice}>
-            {relatedSubmissionQuery.isPending
-              ? '중간 보고서 제출물을 불러오는 중입니다.'
-              : relatedSubmissionQuery.isError
-                ? '중간 보고서 제출물을 불러오지 못했습니다. 다시 시도해 주세요.'
-                : relatedSubmission
-                  ? `${relatedSubmission.milestoneTitle} 제출물 #${relatedSubmission.submissionId}에 자동 연결됩니다.`
-                  : '이 팀의 중간 보고서 제출물을 찾지 못했습니다.'}
-          </Text>
+          <>
+            <Text className={styles.relatedNotice}>
+              {relatedSubmissionQuery.isPending
+                ? '중간 보고서 제출물을 불러오는 중입니다.'
+                : relatedSubmissionQuery.isError
+                  ? '중간 보고서 제출물을 불러오지 못했습니다. 다시 시도해 주세요.'
+                  : relatedSubmission
+                    ? `${relatedSubmission.milestoneTitle} 제출물 #${relatedSubmission.submissionId}에 자동 연결됩니다.`
+                    : '이 팀의 중간 보고서 제출물을 찾지 못했습니다.'}
+            </Text>
+            {relatedSubmission?.status === 'SUBMITTED' ? (
+              <Text className={styles.relatedNotice}>
+                수정 요청을 보내면 학생이 수정본을 재제출하기 전까지 추가 수정
+                요청을 보낼 수 없습니다. 필요한 내용을 한 메시지에 작성해
+                주세요.
+              </Text>
+            ) : null}
+            {isMidReportRevisionRequested ? (
+              <Text className={styles.relatedNotice} role='status'>
+                수정 요청을 전달했습니다. 학생이 수정본을 재제출하기 전까지 추가
+                수정 요청을 보낼 수 없습니다.
+              </Text>
+            ) : null}
+          </>
         ) : null}
         <TextArea
-          isDisabled={messageFilter === 'ALL'}
+          isDisabled={
+            messageFilter === 'ALL' ||
+            (isMidReportFeedback && !canRequestMidReportRevision)
+          }
           isLabelHidden
           label='메시지 내용'
           onChange={setMessage}
@@ -306,14 +334,41 @@ export function AdminTeamMessagesPanel({
             isDisabled={
               !message.trim() ||
               messageFilter === 'ALL' ||
-              submitMutation.isPending ||
+              isSubmitting ||
+              !canRequestMidReportRevision ||
               (relatedType !== 'GENERAL' && !relatedSubmission)
             }
-            isLoading={submitMutation.isPending}
-            label='메시지 보내기'
+            isLoading={isSubmitting}
+            label={isMidReportFeedback ? '수정 요청 보내기' : '메시지 보내기'}
             onClick={() => {
               if (!message.trim() || !relatedType) return;
               setMutationError(null);
+
+              if (relatedType === 'MID_REPORT') {
+                if (!canRequestMidReportRevision) return;
+                submitMidReportFeedbackMutation.mutate(
+                  {
+                    input: { message: message.trim() },
+                    sectionId,
+                    teamId,
+                  },
+                  {
+                    onError: () =>
+                      setMutationError(
+                        '수정 요청을 보내지 못했습니다. 중간 보고서 상태를 확인한 뒤 다시 시도해 주세요.',
+                      ),
+                    onSuccess: async () => {
+                      setMessage('');
+                      await Promise.all([
+                        midReportSubmissionQuery.refetch(),
+                        messagesQuery.refetch(),
+                      ]);
+                    },
+                  },
+                );
+                return;
+              }
+
               submitMutation.mutate(
                 {
                   message,

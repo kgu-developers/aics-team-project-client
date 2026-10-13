@@ -495,6 +495,11 @@ describe('AdminSubmissionsPage', () => {
         midReportMeetingsHeading,
       ) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(
+      screen.getByText(
+        /학생이 수정본을 재제출하기 전까지 추가 수정 요청을 보낼 수 없습니다/,
+      ),
+    ).toBeVisible();
 
     await user.type(
       screen.getByRole('textbox', { name: '중간 보고서 피드백 내용' }),

@@ -475,6 +475,12 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
           />
         ) : null}
         <div className={styles.feedbackComposer}>
+          {report.status === 'SUBMITTED' ? (
+            <Text className={styles.sectionDescription}>
+              수정 요청을 보내면 학생이 수정본을 재제출하기 전까지 추가 수정
+              요청을 보낼 수 없습니다. 필요한 내용을 한 메시지에 작성해 주세요.
+            </Text>
+          ) : null}
           <TextArea
             aria-label='중간 보고서 피드백 내용'
             label='중간 보고서 피드백 작성'
