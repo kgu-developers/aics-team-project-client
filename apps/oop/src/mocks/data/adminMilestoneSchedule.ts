@@ -18,7 +18,7 @@ export const adminMilestoneScheduleFixture: AdminMilestoneScheduleResponse = {
         {
           id: 'midterm',
           isPublished: true,
-          title: '중간 점검',
+          title: '중간 보고서',
           summary: getAdminMilestoneSummary('midterm', '제출 2팀'),
         },
         {

@@ -31,9 +31,9 @@ export function AdminMidtermFeedbackPanel({
   return (
     <Card className={styles.panel}>
       <div className={styles.header}>
-        <Heading level={2}>중간 점검 피드백</Heading>
+        <Heading level={2}>중간 보고서 피드백</Heading>
         <Text className={styles.description}>
-          학생이 작성한 중간 점검 질문에 대한 답변을 작성합니다.
+          학생이 작성한 중간 보고서 질문에 대한 답변을 작성합니다.
         </Text>
       </div>
       <section className={styles.section}>
@@ -49,8 +49,8 @@ export function AdminMidtermFeedbackPanel({
           <Text>학생 답변이 없습니다.</Text>
         )}
         <TextArea
-          aria-label='중간 점검 피드백'
-          label='중간 점검 피드백'
+          aria-label='중간 보고서 피드백'
+          label='중간 보고서 피드백'
           onChange={setContent}
           value={content}
         />

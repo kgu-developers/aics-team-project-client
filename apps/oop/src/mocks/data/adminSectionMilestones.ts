@@ -69,7 +69,7 @@ const sectionOneMilestones: AdminSectionMilestoneDto[] = [
     },
     sectionId: 1,
     status: 'DRAFT',
-    title: '중간 점검',
+    title: '중간 보고서',
     type: 'MID_REPORT',
     weekNumber: 7,
   },

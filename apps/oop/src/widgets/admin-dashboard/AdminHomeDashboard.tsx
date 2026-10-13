@@ -77,7 +77,7 @@ const SCHEDULE_COLUMNS: ReadonlyArray<{
   label: string;
 }> = [
   { id: 'proposal', label: '제안서' },
-  { id: 'midterm', label: '중간 점검' },
+  { id: 'midterm', label: '중간 보고서' },
   { id: 'presentation-submit', label: '발표 자료 제출' },
   { id: 'presentation-evaluate', label: '발표 평가' },
   { id: 'final-report', label: '최종 보고서' },

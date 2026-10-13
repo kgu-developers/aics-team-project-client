@@ -263,7 +263,7 @@ describe('AdminHomeDashboard', () => {
         schedule: { dueAt: '2026-10-29T23:59:00' },
         sectionId: 1,
         status: 'PUBLISHED',
-        title: '중간 점검',
+        title: '중간 보고서',
         type: 'MID_REPORT',
         weekNumber: 6,
       },
@@ -278,7 +278,7 @@ describe('AdminHomeDashboard', () => {
       name: /제안서 제출·평가 현황 보기/,
     });
     const midReportLink = screen.getByRole('link', {
-      name: /중간 점검 제출·평가 현황 보기/,
+      name: /중간 보고서 제출·평가 현황 보기/,
     });
     const proposalUrl = new URL(
       proposalLink.getAttribute('href')!,
@@ -309,7 +309,7 @@ describe('AdminHomeDashboard', () => {
     ).toEqual([
       '분반',
       '제안서',
-      '중간 점검',
+      '중간 보고서',
       '발표 자료 제출',
       '발표 평가',
       '최종 보고서',
@@ -449,7 +449,7 @@ describe('AdminHomeDashboard', () => {
         schedule: { dueAt: '2026-10-29T23:59:00' },
         sectionId: 1,
         status: 'PUBLISHED',
-        title: '중간 점검',
+        title: '중간 보고서',
         type: 'MID_REPORT',
         weekNumber: 6,
       },
@@ -458,7 +458,7 @@ describe('AdminHomeDashboard', () => {
     renderPage(userWithArchivedCourse, [activeSection]);
 
     const activeSectionLink = await screen.findByRole('link', {
-      name: /OOP-01.*중간 점검 제출·평가 현황 보기/,
+      name: /OOP-01.*중간 보고서 제출·평가 현황 보기/,
     });
     expect(dashboardState.milestoneSectionIds).toEqual(['1']);
     expect(activeSectionLink.getAttribute('href')).toContain(
