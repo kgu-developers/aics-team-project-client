@@ -965,7 +965,9 @@ export default function AdminMilestoneSetupPage() {
                     isRequired
                     label='진행 주차'
                     min={1}
-                    onChange={value => setWeekNumber(String(value))}
+                    onChange={value =>
+                      setWeekNumber(value == null ? '' : String(value))
+                    }
                     value={
                       Number.isInteger(Number(weekNumber)) &&
                       Number(weekNumber) >= 1

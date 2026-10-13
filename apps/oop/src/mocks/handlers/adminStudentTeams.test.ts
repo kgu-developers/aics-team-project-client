@@ -10,6 +10,7 @@ import {
   resetAdminStudentTeamMockState,
 } from './adminStudentTeams';
 import { resetMockSessionState } from '../authSession';
+import { adminTeamsFixture } from '../data/adminStudentTeams';
 import { demoAdminAccessToken } from '../data/users';
 
 const server = setupServer(...adminStudentTeamHandlers);
@@ -112,4 +113,35 @@ it('반영된 수강생을 팀 엑셀에서 찾아 미리보기한다', async ()
       },
     ],
   });
+});
+
+it('팀 엑셀에서 기존 팀원을 다른 팀으로 변경하면 이전 팀의 구성원에서도 제거한다', async () => {
+  const previewResponse = await preview(
+    ENDPOINTS.ADMIN.SECTION_TEAM_IMPORT_PREVIEW('1'),
+    await workbookFile('팀 변경.xlsx', [
+      ['팀명', '학번', '팀장'],
+      ['2팀', '20231234', ''],
+    ]),
+  );
+  const previewBody = (await previewResponse.json()) as {
+    importId: number;
+    rows: Array<{ status: string }>;
+  };
+  expect(previewResponse.status, JSON.stringify(previewBody)).toBe(200);
+  expect(previewBody.rows).toEqual([
+    expect.objectContaining({ status: 'UPDATE' }),
+  ]);
+
+  const applyResponse = await fetch(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM_IMPORT_APPLY(previewBody.importId)}`,
+    { headers, method: 'POST' },
+  );
+  expect(applyResponse.status).toBe(200);
+
+  expect(
+    adminTeamsFixture.find(team => team.id === 'team-1151-1')?.memberIds,
+  ).not.toContain('student-1151-1');
+  expect(
+    adminTeamsFixture.find(team => team.id === 'team-1151-2')?.memberIds,
+  ).toContain('student-1151-1');
 });

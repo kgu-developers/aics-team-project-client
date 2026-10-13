@@ -1222,9 +1222,14 @@ export const adminStudentTeamHandlers = [
             candidate.studentNumber === row.studentNumber,
         );
         if (!student) continue;
+
+        for (const candidate of adminTeamsFixture) {
+          candidate.memberIds = candidate.memberIds.filter(
+            memberId => memberId !== student.id,
+          );
+        }
         teamIdByStudentNumber.set(row.studentNumber, team.id);
-        if (!team.memberIds.includes(student.id))
-          team.memberIds.push(student.id);
+        team.memberIds.push(student.id);
         if (row.leader)
           teamLeaderStudentNumbers.set(team.id, row.studentNumber);
         if (row.projectRole) {
