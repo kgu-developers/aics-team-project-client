@@ -10,6 +10,20 @@ export const page = style({
   padding: '28px clamp(20px, 5vw, 48px) 56px',
   width: '100%',
 });
+export const composeDialog = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['5'],
+  padding: tokens.spacing['5'],
+});
+export const composeActions = style({
+  display: 'flex',
+  gap: tokens.spacing['2'],
+  justifyContent: 'flex-end',
+});
+export const filterAction = style({
+  marginLeft: 'auto',
+});
 export const tableCard = style({ overflowX: 'auto', padding: 0 });
 export const table = style({
   borderCollapse: 'collapse',

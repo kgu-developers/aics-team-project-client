@@ -4,23 +4,24 @@ import {
   Card,
   EmptyState,
   Heading,
-  IconButton,
   Text,
   TextArea,
 } from '@aics/design-system';
-import { Link, useParams } from '@tanstack/react-router';
-import { Star } from 'lucide-react';
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearch,
+} from '@tanstack/react-router';
 import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
-import {
-  useAdminRelatedSubmissionQuery,
-  useUpdateTeamMessageImportantMutation,
-} from '~/features/admin-message/queries';
+import { useAdminRelatedSubmissionQuery } from '~/features/admin-message/queries';
 import AdminStudentDetailDialog from '~/features/admin-student-team/components/AdminStudentDetailDialog';
 import { useAdminTeamDashboardQuery } from '~/features/admin-team-dashboard/queries';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -32,15 +33,20 @@ import {
 import * as styles from './AdminTeamMessagesPage.css';
 
 type RelatedType = 'GENERAL' | 'PROPOSAL' | 'MID_REPORT';
+type MessageFilter = 'ALL' | RelatedType;
 
-const relatedTypeLabels: Record<RelatedType, string> = {
+const messageFilterLabels: Record<MessageFilter, string> = {
+  ALL: '전체 쪽지',
   GENERAL: '일반 메시지',
   PROPOSAL: '제안서 피드백',
-  MID_REPORT: '중간점검 피드백',
+  MID_REPORT: '중간 보고서 피드백',
 };
 
 export default function AdminTeamMessagesPage() {
   const { teamId } = useParams({ from: '/admin/messages/teams/$teamId' });
+  const search = useSearch({ from: '/admin/messages/teams/$teamId' }) as {
+    type?: MessageFilter;
+  };
   const currentUser = useAuthStore(state => state.currentUser);
   const teamQuery = useAdminTeamDashboardQuery(teamId);
   if (teamQuery.isPending)
@@ -70,54 +76,140 @@ export default function AdminTeamMessagesPage() {
     );
   }
   return (
-    <TeamMessages
+    <AdminTeamMessagesPanel
       key={`${currentUser.id}:${teamQuery.data.id}`}
+      initialFilter={search.type}
       team={teamQuery.data}
     />
   );
 }
 
-function TeamMessages({
+export function AdminTeamMessagesPanel({
+  embedded = false,
+  initialFilter = 'ALL',
   team,
 }: {
+  embedded?: boolean;
+  initialFilter?: MessageFilter;
   team: NonNullable<ReturnType<typeof useAdminTeamDashboardQuery>['data']>;
 }) {
   const teamId = team.id;
   const currentUser = useAuthStore(state => state.currentUser);
+  const section = currentUser?.sections.find(
+    item => String(item.id) === String(team.sectionId),
+  );
+  const sectionLabel = section
+    ? formatAdminSectionLabel(section)
+    : team.sectionId;
   const messagesQuery = useTeamMessagesQuery(teamId);
   const submitMutation = useSubmitTeamMessageMutation(teamId);
-  const importantMutation = useUpdateTeamMessageImportantMutation(teamId);
   const [message, setMessage] = useState('');
-  const [relatedType, setRelatedType] = useState<RelatedType>('GENERAL');
+  const [messageFilter, setMessageFilter] =
+    useState<MessageFilter>(initialFilter);
   const [selectedStudentNumber, setSelectedStudentNumber] = useState<
     string | null
   >(null);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const messages = messagesQuery.data ?? [];
   const sectionId = team.sectionId;
-  const feedbackType = relatedType === 'GENERAL' ? undefined : relatedType;
-  const relatedSubmissionQuery = useAdminRelatedSubmissionQuery(
-    sectionId,
-    teamId,
-    feedbackType,
+  const relatedType = messageFilter === 'ALL' ? undefined : messageFilter;
+  const needsProposalSubmission =
+    relatedType === 'PROPOSAL' ||
+    messages.some(item => item.relatedType === 'PROPOSAL');
+  const needsMidReportSubmission =
+    relatedType === 'MID_REPORT' ||
+    messages.some(item => item.relatedType === 'MID_REPORT');
+  const proposalSubmissionQuery = useAdminRelatedSubmissionQuery(
+    needsProposalSubmission ? sectionId : undefined,
+    needsProposalSubmission ? teamId : undefined,
+    'PROPOSAL',
   );
+  const midReportSubmissionQuery = useAdminRelatedSubmissionQuery(
+    needsMidReportSubmission ? sectionId : undefined,
+    needsMidReportSubmission ? teamId : undefined,
+    'MID_REPORT',
+  );
+  const relatedSubmissionQuery =
+    relatedType === 'MID_REPORT'
+      ? midReportSubmissionQuery
+      : proposalSubmissionQuery;
   const relatedSubmission = relatedSubmissionQuery.data;
-  const title = team.name;
+  const filteredMessages =
+    messageFilter === 'ALL'
+      ? messages
+      : messages.filter(item => item.relatedType === messageFilter);
+  const filteredSubmission =
+    messageFilter === 'PROPOSAL'
+      ? proposalSubmissionQuery.data
+      : messageFilter === 'MID_REPORT'
+        ? midReportSubmissionQuery.data
+        : undefined;
+  const hasMatchedSubmission = Boolean(
+    filteredSubmission &&
+    filteredMessages.some(
+      item => item.relatedId === filteredSubmission.relatedId,
+    ),
+  );
 
   return (
-    <main className={styles.page}>
+    <section className={cx(styles.page, embedded && styles.embeddedPage)}>
       <header className={styles.header}>
-        <div className={styles.headerContent}>
-          <Heading level={1}>{title} 대화</Heading>
-          <Text>팀과 주고받은 메시지와 피드백을 확인합니다.</Text>
+        <div className={styles.titleGroup}>
+          <Text className={styles.sectionContext} color='secondary'>
+            분반 {sectionLabel}
+          </Text>
+          <Heading level={embedded ? 2 : 1}>
+            <Link
+              className={styles.teamTitleLink}
+              params={{ teamId: String(team.id) }}
+              search={{ sectionId: team.sectionId }}
+              title={`${team.name} 팀 상세 보기`}
+              to={ROUTES.ADMIN_TEAM_DETAIL}
+            >
+              {team.name}
+              <span aria-hidden='true'> ↗</span>
+            </Link>{' '}
+            · {messageFilterLabels[messageFilter]}
+          </Heading>
         </div>
-        <div className={styles.headerActions}>
-          <Badge label={`메시지 ${messages.length}개`} variant='neutral' />
-          <Link className={styles.backLink} to={ROUTES.ADMIN_MESSAGES}>
-            ← 쪽지함 목록으로
+        {!embedded ? (
+          <div className={styles.headerLinks}>
+            <Link className={styles.backLink} to={ROUTES.ADMIN_MESSAGES}>
+              ← 쪽지함 목록으로
+            </Link>
+          </div>
+        ) : null}
+      </header>
+      <div aria-label='쪽지 유형' className={styles.typeActions} role='group'>
+        {(Object.keys(messageFilterLabels) as MessageFilter[]).map(type => (
+          <Button
+            aria-pressed={messageFilter === type}
+            key={type}
+            label={messageFilterLabels[type]}
+            onClick={() => setMessageFilter(type)}
+            variant={messageFilter === type ? 'primary' : 'secondary'}
+          />
+        ))}
+      </div>
+      {filteredSubmission && hasMatchedSubmission ? (
+        <div className={styles.submissionContext}>
+          <Text weight='medium'>{filteredSubmission.milestoneTitle}</Text>
+          <Link
+            className={styles.relatedSubmissionLink}
+            params={{ submissionId: String(filteredSubmission.submissionId) }}
+            search={{
+              apiSectionId: sectionId,
+              milestoneId:
+                messageFilter === 'PROPOSAL' ? 'proposal' : 'midterm',
+              sectionId,
+              teamId,
+            }}
+            to={ROUTES.ADMIN_SUBMISSION_DETAIL}
+          >
+            제출물 상세 보기 →
           </Link>
         </div>
-      </header>
+      ) : null}
       {mutationError ? <Text role='alert'>{mutationError}</Text> : null}
       <Card className={styles.thread} padding={0}>
         {messagesQuery.isPending ? (
@@ -130,10 +222,10 @@ function TeamMessages({
               onClick={() => void messagesQuery.refetch()}
             />
           </>
-        ) : messages.length === 0 ? (
-          <Text>아직 주고받은 메시지가 없습니다.</Text>
+        ) : filteredMessages.length === 0 ? (
+          <Text>이 유형의 쪽지가 없습니다.</Text>
         ) : (
-          messages.map(item => {
+          filteredMessages.map(item => {
             const isOwnMessage = item.senderId === currentUser?.studentNumber;
 
             return (
@@ -141,7 +233,6 @@ function TeamMessages({
                 className={cx(
                   styles.message,
                   isOwnMessage && styles.ownMessage,
-                  item.important && styles.importantMessage,
                 )}
                 key={item.id}
                 padding={0}
@@ -161,65 +252,23 @@ function TeamMessages({
                     )}{' '}
                     · {formatSeoulDateTime(item.createdAt)}
                   </Text>
-                  <IconButton
-                    icon={
-                      <Star
-                        aria-hidden='true'
-                        fill={item.important ? 'currentColor' : 'none'}
-                        size={16}
-                      />
-                    }
-                    label={
-                      item.important ? '중요 메시지 해제' : '중요 메시지로 표시'
-                    }
-                    onClick={() => {
-                      setMutationError(null);
-                      importantMutation.mutate(
-                        {
-                          messageId: item.id,
-                          important: !item.important,
-                        },
-                        {
-                          onError: () =>
-                            setMutationError(
-                              '중요 표시를 변경하지 못했습니다. 다시 시도해 주세요.',
-                            ),
-                        },
-                      );
-                    }}
-                    isDisabled={importantMutation.isPending}
-                    size='sm'
-                    variant='ghost'
-                  />
                 </div>
-                <Text>{item.message}</Text>
+                <Text className={styles.messageContent}>{item.message}</Text>
               </Card>
             );
           })
         )}
       </Card>
       <Card className={styles.composer} padding={0}>
-        <div>
-          <Heading level={2}>메시지 작성</Heading>
-          <Text>
-            메시지 유형을 선택하면 관련 제출물 정보가 함께 기록됩니다.
-          </Text>
-        </div>
-        <div
-          aria-label='메시지 관련 유형'
-          className={styles.typeActions}
-          role='group'
-        >
-          {(Object.keys(relatedTypeLabels) as RelatedType[]).map(type => (
-            <Button
-              aria-pressed={relatedType === type}
-              className={styles.typeButton}
-              key={type}
-              label={relatedTypeLabels[type]}
-              onClick={() => setRelatedType(type)}
-              variant={relatedType === type ? 'primary' : 'secondary'}
-            />
-          ))}
+        <div className={styles.composerType}>
+          <Badge
+            label={
+              messageFilter === 'ALL'
+                ? '유형 선택 필요'
+                : messageFilterLabels[messageFilter]
+            }
+            variant='neutral'
+          />
         </div>
         {relatedType === 'PROPOSAL' ? (
           <Text className={styles.relatedNotice}>
@@ -235,32 +284,35 @@ function TeamMessages({
         {relatedType === 'MID_REPORT' ? (
           <Text className={styles.relatedNotice}>
             {relatedSubmissionQuery.isPending
-              ? '중간점검 제출물을 불러오는 중입니다.'
+              ? '중간 보고서 제출물을 불러오는 중입니다.'
               : relatedSubmissionQuery.isError
-                ? '중간점검 제출물을 불러오지 못했습니다. 다시 시도해 주세요.'
+                ? '중간 보고서 제출물을 불러오지 못했습니다. 다시 시도해 주세요.'
                 : relatedSubmission
                   ? `${relatedSubmission.milestoneTitle} 제출물 #${relatedSubmission.submissionId}에 자동 연결됩니다.`
-                  : '이 팀의 중간점검 제출물을 찾지 못했습니다.'}
+                  : '이 팀의 중간 보고서 제출물을 찾지 못했습니다.'}
           </Text>
         ) : null}
         <TextArea
-          aria-label='메시지 내용'
-          label='내용'
+          isDisabled={messageFilter === 'ALL'}
+          isLabelHidden
+          label='메시지 내용'
           onChange={setMessage}
           placeholder='팀에 전달할 내용을 입력하세요.'
+          rows={3}
           value={message}
         />
         <div className={styles.messageActions}>
           <Button
             isDisabled={
               !message.trim() ||
+              messageFilter === 'ALL' ||
               submitMutation.isPending ||
               (relatedType !== 'GENERAL' && !relatedSubmission)
             }
             isLoading={submitMutation.isPending}
             label='메시지 보내기'
             onClick={() => {
-              if (!message.trim()) return;
+              if (!message.trim() || !relatedType) return;
               setMutationError(null);
               submitMutation.mutate(
                 {
@@ -287,6 +339,91 @@ function TeamMessages({
         onClose={() => setSelectedStudentNumber(null)}
         studentNumber={selectedStudentNumber}
       />
-    </main>
+    </section>
+  );
+}
+
+export function AdminTeamMessageList({
+  team,
+}: {
+  team: NonNullable<ReturnType<typeof useAdminTeamDashboardQuery>['data']>;
+}) {
+  const navigate = useNavigate();
+  const currentUser = useAuthStore(state => state.currentUser);
+  const messagesQuery = useTeamMessagesQuery(team.id);
+  const messages = messagesQuery.data ?? [];
+  const sectionLabel =
+    currentUser?.sections.find(section => section.id === team.sectionId)
+      ?.code ?? team.sectionId;
+
+  if (messagesQuery.isPending)
+    return <Text role='status'>쪽지 목록을 불러오는 중입니다.</Text>;
+  if (messagesQuery.isError)
+    return <Text role='alert'>쪽지 목록을 불러오지 못했습니다.</Text>;
+
+  return (
+    <section aria-label={`${team.name} 쪽지함`}>
+      <Card className={styles.listCard} padding={0}>
+        {messages.length === 0 ? (
+          <EmptyState title='이 팀의 쪽지가 없습니다.' />
+        ) : (
+          <table className={styles.messageTable}>
+            <thead>
+              <tr>
+                <th>분반</th>
+                <th>팀</th>
+                <th>발신자</th>
+                <th>내용</th>
+              </tr>
+            </thead>
+            <tbody>
+              {messages.map(item => {
+                const type: MessageFilter =
+                  item.relatedType === 'GENERAL' ||
+                  item.relatedType === 'PROPOSAL' ||
+                  item.relatedType === 'MID_REPORT'
+                    ? item.relatedType
+                    : 'ALL';
+                const openThread = () =>
+                  void navigate({
+                    params: { teamId: String(team.id) },
+                    search: { type },
+                    to: ROUTES.ADMIN_MESSAGE_TEAM,
+                  });
+
+                return (
+                  <tr
+                    aria-label={`${team.name} ${messageFilterLabels[type]} 상세 보기`}
+                    className={styles.messageRow}
+                    key={item.id}
+                    onClick={openThread}
+                    onKeyDown={event => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openThread();
+                      }
+                    }}
+                    tabIndex={0}
+                  >
+                    <td>
+                      {item.read ? null : (
+                        <span
+                          aria-label='읽지 않음'
+                          className={styles.unreadDot}
+                        />
+                      )}
+                      {sectionLabel}
+                    </td>
+                    <td>{team.name}</td>
+                    <td>{item.senderName ?? item.senderId}</td>
+                    <td>{item.message}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </Card>
+    </section>
   );
 }

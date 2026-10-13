@@ -1,5 +1,5 @@
 import { tokens } from '@aics/design-system';
-import { style } from '@vanilla-extract/css';
+import { globalStyle, style } from '@vanilla-extract/css';
 
 export const page = style({
   display: 'flex',
@@ -10,17 +10,25 @@ export const page = style({
   padding: '28px clamp(20px, 5vw, 48px) 56px',
   width: '100%',
 });
+export const embeddedPage = style({
+  margin: 0,
+  maxWidth: 'none',
+  padding: 0,
+});
 export const header = style({
   alignItems: 'center',
   display: 'flex',
   justifyContent: 'space-between',
 });
-export const headerContent = style({
+export const titleGroup = style({
   display: 'flex',
   flexDirection: 'column',
-  gap: tokens.spacing['2'],
+  gap: tokens.spacing['1'],
 });
-export const headerActions = style({
+export const sectionContext = style({
+  fontSize: 14,
+});
+export const headerLinks = style({
   alignItems: 'flex-end',
   display: 'flex',
   flexDirection: 'column',
@@ -37,11 +45,23 @@ export const backLink = style({
     outlineOffset: 2,
   },
 });
+export const teamTitleLink = style({
+  color: tokens.color.text.accent,
+  textDecoration: 'underline',
+  textDecorationColor: tokens.color.text.accent,
+  textUnderlineOffset: 4,
+  ':focus-visible': {
+    outline: `2px solid ${tokens.color.accent}`,
+    outlineOffset: 2,
+  },
+});
 export const thread = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 12,
-  minHeight: 360,
+  height: 'min(52vh, 520px)',
+  minHeight: 300,
+  overflowY: 'auto',
   padding: 20,
 });
 export const message = style({
@@ -51,11 +71,11 @@ export const message = style({
   gap: 6,
   maxWidth: '78%',
   padding: '12px 14px',
+  width: 'fit-content',
 });
 export const ownMessage = style({
   alignSelf: 'flex-end',
 });
-export const importantMessage = style({ borderColor: tokens.color.accent });
 export const messageHeader = style({
   alignItems: 'center',
   display: 'flex',
@@ -64,7 +84,33 @@ export const messageHeader = style({
 });
 export const messageMeta = style({
   color: tokens.color.text.secondary,
+  fontSize: 12,
+});
+export const messageContent = style({
+  fontSize: 15,
+  lineHeight: 1.6,
+  whiteSpace: 'pre-wrap',
+});
+export const submissionContext = style({
+  alignItems: 'center',
+  background: tokens.color.background.muted,
+  borderRadius: 8,
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: tokens.spacing['3'],
+  justifyContent: 'space-between',
+  padding: `${tokens.spacing['3']} ${tokens.spacing['4']}`,
+});
+export const relatedSubmissionLink = style({
+  color: tokens.color.text.accent,
   fontSize: 13,
+  fontWeight: 600,
+  textDecoration: 'none',
+  ':hover': { textDecoration: 'underline' },
+  ':focus-visible': {
+    outline: `2px solid ${tokens.color.accent}`,
+    outlineOffset: 2,
+  },
 });
 export const senderButton = style({
   background: 'transparent',
@@ -88,7 +134,11 @@ export const composer = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 12,
-  padding: 20,
+  padding: tokens.spacing['4'],
+});
+export const composerType = style({
+  alignItems: 'center',
+  display: 'flex',
 });
 export const typeActions = style({
   display: 'flex',
@@ -99,4 +149,47 @@ export const typeButton = style({ minWidth: 120 });
 export const relatedNotice = style({
   color: tokens.color.text.secondary,
   fontSize: 13,
+});
+
+export const listCard = style({
+  minWidth: 0,
+  overflowX: 'auto',
+});
+export const messageTable = style({
+  borderCollapse: 'collapse',
+  minWidth: 720,
+  width: '100%',
+});
+export const messageRow = style({
+  cursor: 'pointer',
+  ':hover': { background: tokens.color.background.muted },
+  ':focus-visible': {
+    outline: `2px solid ${tokens.color.accent}`,
+    outlineOffset: -2,
+  },
+});
+export const unreadDot = style({
+  background: tokens.color.accent,
+  borderRadius: '50%',
+  display: 'inline-block',
+  height: 8,
+  marginRight: tokens.spacing['2'],
+  width: 8,
+});
+
+globalStyle(`${messageTable} th`, {
+  borderBottom: `1px solid ${tokens.color.border.base}`,
+  color: tokens.color.text.secondary,
+  fontWeight: 500,
+  padding: tokens.spacing['4'],
+  textAlign: 'left',
+});
+globalStyle(`${messageTable} td`, {
+  borderBottom: `1px solid ${tokens.color.border.base}`,
+  maxWidth: 420,
+  overflowWrap: 'anywhere',
+  padding: tokens.spacing['4'],
+});
+globalStyle(`${messageTable} tbody tr:last-child td`, {
+  borderBottom: 0,
 });

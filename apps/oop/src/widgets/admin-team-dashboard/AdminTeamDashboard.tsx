@@ -9,7 +9,7 @@ import {
   Table,
   Text,
 } from '@aics/design-system';
-import { Link, useParams } from '@tanstack/react-router';
+import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
 import { useEffect, useState } from 'react';
 
@@ -39,6 +39,7 @@ import { useAuthStore } from '~/features/auth/authStore';
 import * as styles from './AdminTeamDashboard.css';
 import AdminTeamEvaluationTables from './AdminTeamEvaluationTables';
 import AdminTeamMilestoneProgress from './AdminTeamMilestoneProgress';
+import { AdminTeamMessageList } from '../admin-messages/AdminTeamMessagesPage';
 
 type TeamDashboardErrorContent = {
   title: string;
@@ -101,9 +102,10 @@ function getTeamStatusLabel(status: string) {
 
 export default function AdminTeamDashboard() {
   const { teamId } = useParams({ from: '/admin/teams/$teamId' });
+  const navigate = useNavigate();
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
-    'activity' | 'overview' | 'submissions'
+    'activity' | 'messages' | 'overview' | 'submissions'
   >('overview');
   const currentUser = useAuthStore(state => state.currentUser);
   const accessibleSectionIds =
@@ -299,20 +301,22 @@ export default function AdminTeamDashboard() {
         <Heading level={1}>
           {sectionCode} - {team.name} 대시보드
         </Heading>
-        {dashboardSection?.courseId === undefined ? (
-          <Link className={styles.backLink} to={ROUTES.ADMIN_SECTIONS}>
-            ← 강좌·분반 관리로
-          </Link>
-        ) : (
-          <Link
-            className={styles.backLink}
-            params={{ courseId: String(dashboardSection.courseId) }}
-            search={{ sectionId: Number(detailSectionId), tab: 'roster' }}
-            to={ROUTES.ADMIN_COURSE_DETAIL}
-          >
-            ← 강좌·분반 관리로
-          </Link>
-        )}
+        <div className={styles.titleActions}>
+          {dashboardSection?.courseId === undefined ? (
+            <Link className={styles.backLink} to={ROUTES.ADMIN_SECTIONS}>
+              ← 강좌·분반 관리로
+            </Link>
+          ) : (
+            <Link
+              className={styles.backLink}
+              params={{ courseId: String(dashboardSection.courseId) }}
+              search={{ sectionId: Number(detailSectionId), tab: 'roster' }}
+              to={ROUTES.ADMIN_COURSE_DETAIL}
+            >
+              ← 강좌·분반 관리로
+            </Link>
+          )}
+        </div>
       </div>
 
       <TabList
@@ -320,6 +324,7 @@ export default function AdminTeamDashboard() {
         onChange={value => {
           if (
             value === 'activity' ||
+            value === 'messages' ||
             value === 'overview' ||
             value === 'submissions'
           ) {
@@ -331,6 +336,7 @@ export default function AdminTeamDashboard() {
         <Tab label='개요' value='overview' />
         <Tab label='제출·평가' value='submissions' />
         <Tab label='회의록·액션플랜' value='activity' />
+        <Tab label='쪽지함' value='messages' />
       </TabList>
 
       {activeTab === 'overview' ? (
@@ -480,6 +486,25 @@ export default function AdminTeamDashboard() {
             )}
           </section>
         </>
+      ) : null}
+
+      {activeTab === 'messages' ? (
+        <section className={styles.messageTab}>
+          <div className={styles.messageTabHeader}>
+            <Heading level={2}>쪽지함</Heading>
+            <Button
+              label='일반 메시지 보내기'
+              onClick={() =>
+                void navigate({
+                  params: { teamId: String(team.id) },
+                  search: { type: 'GENERAL' },
+                  to: ROUTES.ADMIN_MESSAGE_TEAM,
+                })
+              }
+            />
+          </div>
+          <AdminTeamMessageList team={team} />
+        </section>
       ) : null}
 
       <AdminStudentDetailDialog

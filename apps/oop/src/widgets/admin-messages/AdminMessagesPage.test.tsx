@@ -182,6 +182,57 @@ it('분반 필터에서 보관 강좌의 운영 분반을 제외한다', async (
   ).not.toBeInTheDocument();
 });
 
+it('분반과 팀을 선택해 첫 일반 메시지를 보낸다', async () => {
+  const posted: unknown[] = [];
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>
+      HttpResponse.json(messagePage(0, 10, 0)),
+    ),
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`,
+      async ({ request }) => {
+        posted.push(await request.json());
+        return HttpResponse.json({
+          id: 99,
+          threadId: 7,
+          senderId: demoAdmin.studentNumber,
+          senderName: demoAdmin.name,
+          message: '팀 상담 일정을 확인해 주세요.',
+          relatedType: 'GENERAL',
+          relatedId: null,
+          createdAt: '2026-10-12T04:00:00Z',
+        });
+      },
+    ),
+  );
+  setup();
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+  );
+  const dialog = screen.getByRole('dialog', { name: '일반 메시지 보내기' });
+  expect(dialog).toHaveTextContent(
+    '보낸 메시지는 해당 팀의 일반 메시지 대화에 추가됩니다.',
+  );
+  await user.click(within(dialog).getByRole('combobox', { name: '팀' }));
+  await user.click(await screen.findByRole('option', { name: '7팀' }));
+  await user.type(
+    within(dialog).getByRole('textbox', { name: '일반 메시지 내용' }),
+    '팀 상담 일정을 확인해 주세요.',
+  );
+  await user.click(within(dialog).getByRole('button', { name: '보내기' }));
+
+  await waitFor(() =>
+    expect(posted).toEqual([
+      {
+        message: '팀 상담 일정을 확인해 주세요.',
+        relatedType: 'GENERAL',
+      },
+    ]),
+  );
+});
+
 it('reaches item 11, keeps page caches separate, and resets pages on section/all filters', async () => {
   const requests: Array<{ section: string; page: number; size: number }> = [];
   server.use(

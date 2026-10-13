@@ -22,12 +22,17 @@ import { teamMessageProfessorId } from '~/mocks/data/teamMessages';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminMidReportHandlers } from '~/mocks/handlers/adminMidReports';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
+import { adminProjectProposalHandlers } from '~/mocks/handlers/adminProjectProposal';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 import { adminStudentTeamHandlers } from '~/mocks/handlers/adminStudentTeams';
 import { createTeamMessageHandlers } from '~/mocks/handlers/teamMessages';
 
 const server = setupServer(
   ...adminStudentTeamHandlers,
+  ...adminSectionMilestoneHandlers,
+  ...adminMilestoneSubmissionsHandlers,
+  ...adminMidReportHandlers,
+  ...adminProjectProposalHandlers,
   ...createTeamMessageHandlers({
     getAuthenticatedUserId: () => teamMessageProfessorId,
   }),
@@ -101,7 +106,7 @@ it('sends mid-report feedback with the document ID and preserves the draft on co
   renderPage();
   const user = userEvent.setup();
   await user.click(
-    await screen.findByRole('button', { name: '중간점검 피드백' }),
+    await screen.findByRole('button', { name: '중간 보고서 피드백' }),
   );
   const input = screen.getByRole('textbox', { name: '메시지 내용' });
   await user.type(input, '중간보고서 반영 내용을 확인했습니다.');
@@ -119,6 +124,38 @@ it('sends mid-report feedback with the document ID and preserves the draft on co
     },
   ]);
   expect(input).toHaveValue('중간보고서 반영 내용을 확인했습니다.');
+});
+
+it('filters message types and exposes each related submission link once', async () => {
+  renderPage();
+  const user = userEvent.setup();
+
+  expect(
+    await screen.findByRole('heading', { name: '1팀 · 전체 쪽지' }),
+  ).toBeInTheDocument();
+  expect(screen.getByText('분반 OOP-01 · 월요일 1-2교시')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: '1팀' })).toHaveAttribute(
+    'title',
+    '1팀 팀 상세 보기',
+  );
+  await user.click(screen.getByRole('button', { name: '제안서 피드백' }));
+  expect(
+    await screen.findByRole('link', { name: '제출물 상세 보기 →' }),
+  ).toHaveAttribute('href', expect.stringContaining('milestoneId=proposal'));
+  expect(
+    screen.getByRole('heading', { name: '1팀 · 제안서 피드백' }),
+  ).toBeInTheDocument();
+
+  await user.click(screen.getByRole('button', { name: '중간 보고서 피드백' }));
+  expect(
+    await screen.findByRole('link', { name: '제출물 상세 보기 →' }),
+  ).toHaveAttribute('href', expect.stringContaining('milestoneId=midterm'));
+  expect(
+    screen.getByRole('heading', { name: '1팀 · 중간 보고서 피드백' }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getAllByRole('link', { name: '제출물 상세 보기 →' }),
+  ).toHaveLength(1);
 });
 
 describe('team message access', () => {

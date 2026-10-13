@@ -14,6 +14,8 @@ export const ALL_TEAMS = '';
 type AdminSectionTeamFilterProps = {
   /** Offer an "전체 분반" option; otherwise the first section is expected to be selected. */
   allowAllSections?: boolean;
+  /** Offer an "전체 팀" option when the team selector is rendered. */
+  allowAllTeams?: boolean;
   /** Extra filters rendered after the section/team selectors (e.g. milestone). */
   children?: ReactNode;
   /** Selected section id, or `ALL_SECTIONS`. */
@@ -33,6 +35,7 @@ type AdminSectionTeamFilterProps = {
  */
 export default function AdminSectionTeamFilter({
   allowAllSections = true,
+  allowAllTeams = true,
   children,
   label = '분반 필터',
   onSectionChange,
@@ -75,7 +78,7 @@ export default function AdminSectionTeamFilter({
           label='팀'
           onChange={onTeamChange}
           options={[
-            { label: '전체 팀', value: ALL_TEAMS },
+            ...(allowAllTeams ? [{ label: '전체 팀', value: ALL_TEAMS }] : []),
             ...(teamsQuery.data?.contents ?? []).map(team => ({
               label: team.name,
               value: String(team.id),
