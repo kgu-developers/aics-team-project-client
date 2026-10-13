@@ -68,6 +68,35 @@ export const documentLabel = style({
   fontWeight: 600,
 });
 
+export const metadataSummary = style({
+  display: 'grid',
+  gap: tokens.spacing['4'],
+  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  margin: `${tokens.spacing['2']} 0 0`,
+  '@media': {
+    'screen and (max-width: 720px)': {
+      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    },
+    'screen and (max-width: 480px)': { gridTemplateColumns: '1fr' },
+  },
+});
+
+globalStyle(`${metadataSummary} div`, {
+  display: 'grid',
+  gap: tokens.spacing['1'],
+});
+
+globalStyle(`${metadataSummary} dt`, {
+  color: tokens.color.text.secondary,
+  fontSize: 13,
+});
+
+globalStyle(`${metadataSummary} dd`, {
+  fontWeight: 600,
+  margin: 0,
+  overflowWrap: 'anywhere',
+});
+
 export const section = style({
   display: 'flex',
   flexDirection: 'column',
@@ -133,6 +162,12 @@ export const downloadLink = style({
   width: 'fit-content',
 });
 
+export const teamLink = style({
+  color: tokens.color.text.accent,
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
+});
+
 export const evaluationList = style({
   display: 'grid',
   gap: 12,
@@ -165,14 +200,60 @@ export const feedbackList = style({
   gap: tokens.spacing['3'],
 });
 
+export const feedbackPanel = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['4'],
+  padding: tokens.spacing['5'],
+});
+
+export const feedbackThread = style({
+  background: tokens.color.background.body,
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: 8,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['3'],
+  minHeight: 160,
+  padding: tokens.spacing['4'],
+});
+
+export const feedbackHeader = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: tokens.spacing['3'],
+  justifyContent: 'space-between',
+});
+
 export const feedbackMessage = style({
-  background: tokens.color.background.muted,
+  alignSelf: 'flex-start',
+  background: tokens.color.background.card,
   border: `1px solid ${tokens.color.border.base}`,
   borderRadius: 8,
   display: 'flex',
   flexDirection: 'column',
   gap: tokens.spacing['2'],
+  maxWidth: '78%',
   padding: tokens.spacing['4'],
+  '@media': {
+    'screen and (max-width: 640px)': { maxWidth: '100%' },
+  },
+});
+
+export const feedbackOwnMessage = style({
+  alignSelf: 'flex-end',
+});
+
+export const feedbackMessageMeta = style({
+  color: tokens.color.text.secondary,
+  fontSize: 12,
+});
+
+export const feedbackMessageContent = style({
+  fontSize: 15,
+  lineHeight: 1.6,
+  whiteSpace: 'pre-wrap',
 });
 
 export const feedbackComposer = style({
