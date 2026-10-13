@@ -1,6 +1,8 @@
 import { tokens } from '@aics/design-system';
 import { style } from '@vanilla-extract/css';
 
+import { layoutTokens } from '~/app/tokens.css';
+
 export const page = style({
   display: 'flex',
   flexDirection: 'column',
@@ -28,6 +30,7 @@ export const form = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 16,
+  paddingBottom: `calc(${layoutTokens.workspace['savebar-height']} + 24px)`,
 });
 
 export const layout = style({
@@ -52,7 +55,29 @@ export const previewCard = style({
 });
 
 export const actionCard = style({
-  position: 'static',
+  boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.06)',
+  maxWidth: 'calc(1240px - clamp(20px, 5vw, 48px) - clamp(20px, 5vw, 48px))',
+  pointerEvents: 'auto',
+  width: '100%',
+});
+
+export const actionDock = style({
+  bottom: 16,
+  boxSizing: 'border-box',
+  display: 'flex',
+  justifyContent: 'center',
+  left: layoutTokens.workspace['sidebar-width'],
+  paddingInline: 'clamp(20px, 5vw, 48px)',
+  pointerEvents: 'none',
+  position: 'fixed',
+  right: 0,
+  zIndex: 10,
+});
+
+export const actionFeedback = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 12,
 });
 
 export const section = style({
@@ -162,18 +187,15 @@ export const action = style({
 
 export const actionNote = style({
   color: tokens.color.text.secondary,
-  flex: '1 1 320px',
   margin: 0,
 });
 
 export const formError = style({
   color: tokens.color.text.red,
-  flex: '1 1 100%',
   margin: 0,
 });
 
 export const resultList = style({
-  flex: '1 1 100%',
   margin: 0,
   paddingLeft: 20,
 });

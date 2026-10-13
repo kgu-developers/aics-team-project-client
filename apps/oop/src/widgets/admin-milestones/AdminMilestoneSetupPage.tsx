@@ -302,6 +302,16 @@ export default function AdminMilestoneSetupPage() {
         return duplicate ? [{ milestone: duplicate, sectionId }] : [];
       })
     : [];
+  const hasActionFeedback = Boolean(
+    hasFailedMilestoneCreation ||
+    hasRetryablePeerEvaluationForm ||
+    formError ||
+    (!isEditing &&
+      (isDuplicateCheckPending ||
+        isDuplicateCheckError ||
+        duplicateMilestones.length > 0 ||
+        submissionResults)),
+  );
 
   useEffect(() => {
     if (
@@ -1390,121 +1400,130 @@ export default function AdminMilestoneSetupPage() {
           </aside>
         </div>
 
-        <Card className={styles.actionCard} padding={3}>
-          <div className={styles.action}>
-            {hasFailedMilestoneCreation || hasRetryablePeerEvaluationForm ? (
-              <Text className={styles.actionNote} type='supporting'>
-                다시 저장하면 실패한 마일스톤 생성 또는 상호평가 양식만
-                재시도합니다.
-              </Text>
-            ) : null}
-            {formError ? (
-              <Text className={styles.formError} role='alert'>
-                {formError}
-              </Text>
-            ) : null}
-            {!isEditing && isDuplicateCheckPending ? (
-              <Text aria-live='polite' color='secondary' role='status'>
-                기존 마일스톤을 확인하는 중입니다.
-              </Text>
-            ) : !isEditing && isDuplicateCheckError ? (
-              <Text className={styles.formError} role='alert'>
-                기존 마일스톤을 불러오지 못해 중복 여부를 확인할 수 없습니다.
-                잠시 후 다시 시도해주세요.
-              </Text>
-            ) : !isEditing && duplicateMilestones.length > 0 ? (
-              <Text className={styles.formError} role='alert'>
-                다음 분반에는 같은 유형의 마일스톤이 이미 있습니다. 마일스톤
-                목록에서 기존 항목을 수정해주세요:{' '}
-                {duplicateMilestones
-                  .map(
-                    ({ milestone, sectionId }) =>
-                      `${getSectionLabel(sectionId)} — ${milestone.title}`,
-                  )
-                  .join(', ')}
-              </Text>
-            ) : null}
-            {!isEditing && submissionResults ? (
-              <ul aria-live='polite' className={styles.resultList}>
-                {submissionResults.map(result => (
-                  <li key={result.sectionId}>
-                    {getSectionLabel(result.sectionId)}:{' '}
-                    {result.status === 'published'
-                      ? '생성하고 공개했습니다.'
-                      : result.status === 'created'
-                        ? '미공개 마일스톤으로 생성했습니다.'
-                        : result.status === 'publish-failed'
-                          ? `생성했지만 공개 상태 변경에 실패했습니다. 목록에서 다시 공개할 수 있습니다.${
-                              result.error
-                                ? ` (${formatAdminMilestoneRequestError(result.error)})`
-                                : ''
-                            }`
-                          : `생성에 실패했습니다.${
-                              result.failureMessage
-                                ? ` ${result.failureMessage}`
-                                : ''
-                            }${
-                              result.error
-                                ? ` ${formatAdminMilestoneRequestError(result.error)}`
-                                : ''
-                            }`}
-                    {artifactSubmissionFailures?.has(result.sectionId)
-                      ? ' 산출물 일부 등록에 실패했습니다. 마일스톤 수정 화면에서 다시 추가해주세요.'
-                      : ''}
-                    {peerEvaluationFormFailures?.has(result.sectionId)
-                      ? ' 상호평가 양식 생성에 실패했습니다. 마일스톤은 생성되었으므로 관리자에게 양식 생성 재시도 방법을 확인해주세요.'
-                      : ''}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            <Link
-              params={
-                isEditing && editingMilestoneId
-                  ? { milestoneId: editingMilestoneId }
-                  : undefined
-              }
-              search={
-                isEditing && editingSectionId
-                  ? { sectionId: editingSectionId }
-                  : undefined
-              }
-              to={
-                isEditing
-                  ? ROUTES.ADMIN_MILESTONE_DETAIL
-                  : ROUTES.ADMIN_MILESTONES
-              }
-            >
-              취소
-            </Link>
-            <Button
-              isDisabled={
-                submitMilestonesMutation.isPending ||
-                submitRequiredArtifactsMutation.isPending ||
-                isSubmittingPeerEvaluationForms ||
-                updateMilestoneMutation.isPending ||
-                hasNonRetryableFollowUpFailure ||
-                (!isEditing &&
-                  (isDuplicateCheckPending ||
-                    isDuplicateCheckError ||
-                    duplicateMilestones.length > 0))
-              }
-              isLoading={
-                submitMilestonesMutation.isPending ||
-                submitRequiredArtifactsMutation.isPending ||
-                isSubmittingPeerEvaluationForms ||
-                updateMilestoneMutation.isPending
-              }
-              label={
-                hasFailedMilestoneCreation || hasRetryablePeerEvaluationForm
-                  ? '실패한 작업 다시 시도'
-                  : '저장'
-              }
-              type='submit'
-              variant='primary'
-            />
-          </div>
-        </Card>
+        {hasActionFeedback ? (
+          <Card padding={3}>
+            <div className={styles.actionFeedback}>
+              {hasFailedMilestoneCreation || hasRetryablePeerEvaluationForm ? (
+                <Text className={styles.actionNote} type='supporting'>
+                  다시 저장하면 실패한 마일스톤 생성 또는 상호평가 양식만
+                  재시도합니다.
+                </Text>
+              ) : null}
+              {formError ? (
+                <Text className={styles.formError} role='alert'>
+                  {formError}
+                </Text>
+              ) : null}
+              {!isEditing && isDuplicateCheckPending ? (
+                <Text aria-live='polite' color='secondary' role='status'>
+                  기존 마일스톤을 확인하는 중입니다.
+                </Text>
+              ) : !isEditing && isDuplicateCheckError ? (
+                <Text className={styles.formError} role='alert'>
+                  기존 마일스톤을 불러오지 못해 중복 여부를 확인할 수 없습니다.
+                  잠시 후 다시 시도해주세요.
+                </Text>
+              ) : !isEditing && duplicateMilestones.length > 0 ? (
+                <Text className={styles.formError} role='alert'>
+                  다음 분반에는 같은 유형의 마일스톤이 이미 있습니다. 마일스톤
+                  목록에서 기존 항목을 수정해주세요:{' '}
+                  {duplicateMilestones
+                    .map(
+                      ({ milestone, sectionId }) =>
+                        `${getSectionLabel(sectionId)} — ${milestone.title}`,
+                    )
+                    .join(', ')}
+                </Text>
+              ) : null}
+              {!isEditing && submissionResults ? (
+                <ul aria-live='polite' className={styles.resultList}>
+                  {submissionResults.map(result => (
+                    <li key={result.sectionId}>
+                      {getSectionLabel(result.sectionId)}:{' '}
+                      {result.status === 'published'
+                        ? '생성하고 공개했습니다.'
+                        : result.status === 'created'
+                          ? '미공개 마일스톤으로 생성했습니다.'
+                          : result.status === 'publish-failed'
+                            ? `생성했지만 공개 상태 변경에 실패했습니다. 목록에서 다시 공개할 수 있습니다.${
+                                result.error
+                                  ? ` (${formatAdminMilestoneRequestError(result.error)})`
+                                  : ''
+                              }`
+                            : `생성에 실패했습니다.${
+                                result.failureMessage
+                                  ? ` ${result.failureMessage}`
+                                  : ''
+                              }${
+                                result.error
+                                  ? ` ${formatAdminMilestoneRequestError(result.error)}`
+                                  : ''
+                              }`}
+                      {artifactSubmissionFailures?.has(result.sectionId)
+                        ? ' 산출물 일부 등록에 실패했습니다. 마일스톤 수정 화면에서 다시 추가해주세요.'
+                        : ''}
+                      {peerEvaluationFormFailures?.has(result.sectionId)
+                        ? ' 상호평가 양식 생성에 실패했습니다. 마일스톤은 생성되었으므로 관리자에게 양식 생성 재시도 방법을 확인해주세요.'
+                        : ''}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          </Card>
+        ) : null}
+
+        <div className={styles.actionDock}>
+          <Card className={styles.actionCard} padding={3}>
+            <div className={styles.action}>
+              <Link
+                params={
+                  isEditing && editingMilestoneId
+                    ? { milestoneId: editingMilestoneId }
+                    : undefined
+                }
+                search={
+                  isEditing && editingSectionId
+                    ? { sectionId: editingSectionId }
+                    : undefined
+                }
+                to={
+                  isEditing
+                    ? ROUTES.ADMIN_MILESTONE_DETAIL
+                    : ROUTES.ADMIN_MILESTONES
+                }
+              >
+                취소
+              </Link>
+              <Button
+                isDisabled={
+                  submitMilestonesMutation.isPending ||
+                  submitRequiredArtifactsMutation.isPending ||
+                  isSubmittingPeerEvaluationForms ||
+                  updateMilestoneMutation.isPending ||
+                  hasNonRetryableFollowUpFailure ||
+                  (!isEditing &&
+                    (isDuplicateCheckPending ||
+                      isDuplicateCheckError ||
+                      duplicateMilestones.length > 0))
+                }
+                isLoading={
+                  submitMilestonesMutation.isPending ||
+                  submitRequiredArtifactsMutation.isPending ||
+                  isSubmittingPeerEvaluationForms ||
+                  updateMilestoneMutation.isPending
+                }
+                label={
+                  hasFailedMilestoneCreation || hasRetryablePeerEvaluationForm
+                    ? '실패한 작업 다시 시도'
+                    : '저장'
+                }
+                type='submit'
+                variant='primary'
+              />
+            </div>
+          </Card>
+        </div>
       </form>
     </div>
   );

@@ -101,7 +101,7 @@ export default function StudentShell() {
       <div className={styles.shellPage}>
         <header className={styles.shellHeader}>
           <Link
-            aria-label='OOPTeamPlay 홈'
+            aria-label='OOTeamPlay 홈'
             className={styles.shellBrand}
             to={ROUTES.STUDENT.HOME}
           >
@@ -119,7 +119,7 @@ export default function StudentShell() {
               type='body'
               weight='medium'
             >
-              OOPTeamPlay
+              OOTeamPlay
             </Text>
             {sectionCode ? (
               <Text

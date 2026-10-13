@@ -1,5 +1,5 @@
 import { tokens } from '@aics/design-system';
-import { style } from '@vanilla-extract/css';
+import { globalStyle, style } from '@vanilla-extract/css';
 
 export const page = style({
   display: 'flex',
@@ -64,6 +64,21 @@ export const basicGrid = style({
 
 export const fullWidthField = style({ gridColumn: '1 / -1' });
 
+export const readOnlyControl = style({
+  background: tokens.color.background.muted,
+  color: tokens.color.text.primary,
+  opacity: 1,
+});
+
+globalStyle(
+  `${readOnlyControl} input, ${readOnlyControl} textarea, ${readOnlyControl} button`,
+  {
+    color: tokens.color.text.primary,
+    opacity: 1,
+    WebkitTextFillColor: tokens.color.text.primary,
+  },
+);
+
 export const scheduleGrid = style({
   display: 'grid',
   gap: 20,
@@ -80,6 +95,10 @@ export const scheduleInputs = style({
   '@media': {
     '(max-width: 620px)': { gridTemplateColumns: '1fr' },
   },
+});
+
+globalStyle(`${scheduleInputs} label`, {
+  color: tokens.color.text.secondary,
 });
 
 export const sectionSchedule = style({

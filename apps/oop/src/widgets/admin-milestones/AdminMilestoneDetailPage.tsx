@@ -57,12 +57,14 @@ function DisabledDateTimeFields({
   return (
     <div className={styles.scheduleInputs}>
       <DateInput
+        className={styles.readOnlyControl}
         isDisabled
         label={dateLabel}
         value={(value.date || undefined) as DateInputProps['value']}
         width='100%'
       />
       <TimeInput
+        className={styles.readOnlyControl}
         hourFormat='24h'
         isDisabled
         label={timeLabel}
@@ -196,6 +198,7 @@ export default function AdminMilestoneDetailPage() {
             </Heading>
             <div className={styles.basicGrid}>
               <MultiSelector
+                className={styles.readOnlyControl}
                 isDisabled
                 label='대상 분반'
                 onChange={() => undefined}
@@ -210,6 +213,7 @@ export default function AdminMilestoneDetailPage() {
                 width='100%'
               />
               <Selector
+                className={styles.readOnlyControl}
                 isDisabled
                 label='마일스톤 유형'
                 options={[
@@ -225,14 +229,16 @@ export default function AdminMilestoneDetailPage() {
                 width='100%'
               />
               <TextInput
+                className={styles.readOnlyControl}
                 isDisabled
                 label='제목'
                 value={milestone.title}
                 width='100%'
               />
               <NumberInput
-                isDisabled
+                className={styles.readOnlyControl}
                 isIntegerOnly
+                isDisabled
                 label='진행 주차'
                 min={1}
                 onChange={() => undefined}
@@ -241,6 +247,7 @@ export default function AdminMilestoneDetailPage() {
               />
               <div className={styles.fullWidthField}>
                 <TextArea
+                  className={styles.readOnlyControl}
                   isDisabled
                   label='설명'
                   value={milestone.description ?? ''}
@@ -290,6 +297,7 @@ export default function AdminMilestoneDetailPage() {
                 )}
               </div>
               <Selector
+                className={styles.readOnlyControl}
                 isDisabled
                 label='공개 상태'
                 options={[
@@ -346,13 +354,11 @@ export default function AdminMilestoneDetailPage() {
                   >
                     <CheckboxListItem
                       description='제출 마감 일시 전까지 이미 제출한 내용을 수정할 수 있습니다.'
-                      isDisabled
                       label='제출 마감 전 수정 허용'
                       value='allow-submission-edit-before-due-at'
                     />
                     <CheckboxListItem
                       description='제출 마감 이후에도 지각 상태로 제출할 수 있습니다.'
-                      isDisabled
                       label='지각 제출 허용'
                       value='allow-late-submission'
                     />
