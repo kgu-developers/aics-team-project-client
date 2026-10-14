@@ -33,6 +33,7 @@ export const record = style({
   gap: 16,
   justifyContent: 'space-between',
   minHeight: 44,
+  minWidth: 0,
   padding: '10px 14px',
   textDecoration: 'none',
   ':hover': {
@@ -47,11 +48,13 @@ export const record = style({
 export const recordMain = style({
   alignItems: 'center',
   display: 'flex',
+  flex: '1 1 auto',
   gap: 8,
   minWidth: 0,
 });
 
 export const title = style({
+  flex: '1 1 0',
   minWidth: 0,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -70,7 +73,11 @@ export const date = style({
 
 export const team = style({
   color: tokens.color.text.secondary,
+  flex: '0 1 220px',
   fontSize: 13,
-  flexShrink: 0,
+  maxWidth: '40%',
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
 });

@@ -51,7 +51,9 @@ globalStyle(table + ' th', {
 globalStyle(table + ' td', {
   borderTop: '1px solid ' + tokens.color.border.base,
   fontSize: 14,
+  overflowWrap: 'anywhere',
   padding: '14px 16px',
+  wordBreak: 'break-word',
 });
 
 globalStyle(table + ' tbody tr:hover td', {

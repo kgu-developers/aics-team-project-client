@@ -156,25 +156,9 @@ function List({
             item.id ?? item.meetingId ?? [item.section, item.title].join('-')
           }
         >
-          {!isNoticeList ? (
-            <span
-              className={cx(
-                styles.itemLeading,
-                isMessageList && styles.messageItemLeading,
-              )}
-            >
-              {isMessageList && item.relatedType ? (
-                <span
-                  aria-label={`${formatTeamMessageRelatedType(item.relatedType)} ${
-                    item.read ? '읽음' : '읽지 않음'
-                  }`}
-                >
-                  <Badge
-                    label={formatTeamMessageRelatedType(item.relatedType)}
-                    variant={item.read ? 'neutral' : 'info'}
-                  />
-                </span>
-              ) : item.team ? (
+          {!isNoticeList && !isMessageList ? (
+            <span className={styles.itemLeading}>
+              {item.team ? (
                 <span className={styles.label} title={item.team}>
                   {item.team}
                 </span>
@@ -232,19 +216,42 @@ function List({
               )}
             </span>
             <span
-              className={styles.itemSubtitle}
+              className={cx(
+                styles.itemSubtitle,
+                isMessageList && styles.messageSubtitle,
+              )}
               title={
                 isMessageList && item.team
                   ? `${item.section} · ${item.team}`
                   : item.section
               }
             >
-              {isMessageList && item.team
-                ? `${item.section} · ${item.team}`
-                : item.section}
+              {isMessageList && item.relatedType ? (
+                <span
+                  aria-label={`${formatTeamMessageRelatedType(item.relatedType)} ${
+                    item.read ? '읽음' : '읽지 않음'
+                  }`}
+                >
+                  <Badge
+                    label={formatTeamMessageRelatedType(item.relatedType)}
+                    variant={item.read ? 'neutral' : 'info'}
+                  />
+                </span>
+              ) : null}
+              {isMessageList ? (
+                <span className={styles.messageContext}>
+                  {item.team ? `${item.section} · ${item.team}` : item.section}
+                </span>
+              ) : (
+                item.section
+              )}
             </span>
           </div>
-          <time className={styles.date}>{item.date}</time>
+          <time
+            className={cx(styles.date, isMessageList && styles.messageDate)}
+          >
+            {item.date}
+          </time>
         </li>
       ))}
     </ul>

@@ -310,10 +310,10 @@ export const noticeItem = style({
   },
 });
 export const messageItem = style({
-  gridTemplateColumns: '124px minmax(0, 1fr) auto',
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
   '@media': {
     '(max-width: 480px)': {
-      gridTemplateColumns: 'auto minmax(0, 1fr)',
+      gridTemplateColumns: 'minmax(0, 1fr) auto',
     },
   },
 });
@@ -322,14 +322,6 @@ export const itemLeading = style({
   display: 'flex',
   justifyContent: 'center',
   minWidth: 54,
-});
-export const messageItemLeading = style({
-  justifyContent: 'flex-start',
-  '@media': {
-    '(max-width: 480px)': {
-      minWidth: 0,
-    },
-  },
 });
 export const itemContent = style({
   display: 'flex',
@@ -377,6 +369,17 @@ export const itemSubtitle = style({
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
 });
+export const messageSubtitle = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: tokens.spacing['2'],
+});
+export const messageContext = style({
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+});
 export const date = style({
   color: tokens.color.text.secondary,
   flexShrink: 0,
@@ -389,6 +392,13 @@ export const date = style({
     '(max-width: 480px)': {
       gridColumn: 2,
       justifySelf: 'start',
+    },
+  },
+});
+export const messageDate = style({
+  '@media': {
+    '(max-width: 480px)': {
+      justifySelf: 'end',
     },
   },
 });
