@@ -1,4 +1,5 @@
 import type { AdminSectionMilestoneDto } from '@aics/api-client';
+import type { TeamMessageRelatedType } from '@aics/core';
 import {
   Badge,
   Button,
@@ -14,8 +15,9 @@ import { useEffect, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
-import { getSectionDisplayLabel } from '~/shared/lib/getSectionDisplayLabel';
+import { formatTeamMessageRelatedType } from '~/shared/lib/formatTeamMessageRelatedType';
 import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
@@ -50,6 +52,7 @@ type DashboardListItem = {
   id?: string;
   meetingId?: string;
   read?: boolean;
+  relatedType?: TeamMessageRelatedType;
   teamId?: string;
   team?: string;
   section: string;
@@ -144,14 +147,34 @@ function List({
     <ul className={styles.list}>
       {items.map(item => (
         <li
-          className={cx(styles.item, isNoticeList && styles.noticeItem)}
+          className={cx(
+            styles.item,
+            isMessageList && styles.messageItem,
+            isNoticeList && styles.noticeItem,
+          )}
           key={
             item.id ?? item.meetingId ?? [item.section, item.title].join('-')
           }
         >
           {!isNoticeList ? (
-            <span className={styles.itemLeading}>
-              {item.team ? (
+            <span
+              className={cx(
+                styles.itemLeading,
+                isMessageList && styles.messageItemLeading,
+              )}
+            >
+              {isMessageList && item.relatedType ? (
+                <span
+                  aria-label={`${formatTeamMessageRelatedType(item.relatedType)} ${
+                    item.read ? '읽음' : '읽지 않음'
+                  }`}
+                >
+                  <Badge
+                    label={formatTeamMessageRelatedType(item.relatedType)}
+                    variant={item.read ? 'neutral' : 'info'}
+                  />
+                </span>
+              ) : item.team ? (
                 <span className={styles.label} title={item.team}>
                   {item.team}
                 </span>
@@ -165,7 +188,6 @@ function List({
               !isMeetingRead?.(item.meetingId) ? (
                 <AdminUnreadDot />
               ) : null}
-              {isMessageList && item.read === false ? <AdminUnreadDot /> : null}
               {isNoticeList && item.id ? (
                 <Link
                   className={styles.itemTitle}
@@ -209,8 +231,17 @@ function List({
                 </span>
               )}
             </span>
-            <span className={styles.itemSubtitle} title={item.section}>
-              {item.section}
+            <span
+              className={styles.itemSubtitle}
+              title={
+                isMessageList && item.team
+                  ? `${item.section} · ${item.team}`
+                  : item.section
+              }
+            >
+              {isMessageList && item.team
+                ? `${item.section} · ${item.team}`
+                : item.section}
             </span>
           </div>
           <time className={styles.date}>{item.date}</time>
@@ -379,18 +410,22 @@ export default function AdminHomeDashboard() {
     meetingRecordsQuery.data?.contents ?? []
   )
     .slice(0, 3)
-    .map(record => ({
-      date: formatDashboardDateTime(record.meetingAt),
-      meetingId: String(record.id),
-      section: getSectionDisplayLabel(
-        accessibleSections,
-        record.sectionId,
-        record.sectionName,
-      ),
-      sectionId: String(record.sectionId),
-      team: record.teamName,
-      title: getMeetingContentPreview(record.content),
-    }));
+    .map(record => {
+      const section = accessibleSections.find(
+        item => String(item.id) === String(record.sectionId),
+      );
+
+      return {
+        date: formatDashboardDateTime(record.meetingAt),
+        meetingId: String(record.id),
+        section: section
+          ? formatAdminSectionLabel(section)
+          : record.sectionName,
+        sectionId: String(record.sectionId),
+        team: record.teamName,
+        title: getMeetingContentPreview(record.content),
+      };
+    });
   const meetingEmptyMessage =
     accessibleSectionIds.length === 0
       ? '담당 분반이 없어 회의록을 표시할 수 없습니다.'
@@ -401,16 +436,19 @@ export default function AdminHomeDashboard() {
           : '등록된 회의록이 없습니다.';
   const noticeItems: DashboardListItem[] = (noticesQuery.data ?? [])
     .slice(0, 3)
-    .map(notice => ({
-      date: formatDashboardDateTime(notice.publishedAt),
-      id: String(notice.id),
-      section:
-        accessibleSections.find(
-          section => noticeId(section.id) === notice.sectionId,
-        )?.code ?? '알 수 없는 분반',
-      sectionId: String(notice.sectionId),
-      title: notice.title,
-    }));
+    .map(notice => {
+      const section = accessibleSections.find(
+        item => noticeId(item.id) === notice.sectionId,
+      );
+
+      return {
+        date: formatDashboardDateTime(notice.publishedAt),
+        id: String(notice.id),
+        section: section ? formatAdminSectionLabel(section) : '알 수 없는 분반',
+        sectionId: String(notice.sectionId),
+        title: notice.title,
+      };
+    });
   const noticeScopeMessage =
     noticesQuery.scopeStatus === 'unknown-status'
       ? '일부 담당 분반의 운영 상태를 확인할 수 없어 해당 분반의 공지사항을 표시할 수 없습니다.'
@@ -432,19 +470,24 @@ export default function AdminHomeDashboard() {
     : noticeWarningMessage || '등록된 공지사항이 없습니다.';
   const messageItems: DashboardListItem[] = (messagesQuery.data?.contents ?? [])
     .slice(0, 3)
-    .map(message => ({
-      id: String(message.id),
-      date: formatDashboardDateTime(message.createdAt),
-      section: getSectionDisplayLabel(
-        accessibleSections,
-        message.sectionId,
-        message.sectionName,
-      ),
-      read: message.read,
-      teamId: String(message.teamId),
-      team: message.teamName,
-      title: message.message,
-    }));
+    .map(message => {
+      const section = accessibleSections.find(
+        item => String(item.id) === String(message.sectionId),
+      );
+
+      return {
+        id: String(message.id),
+        date: formatDashboardDateTime(message.createdAt),
+        section: section
+          ? formatAdminSectionLabel(section)
+          : message.sectionName,
+        read: message.read,
+        relatedType: message.relatedType,
+        teamId: String(message.teamId),
+        team: message.teamName,
+        title: message.message,
+      };
+    });
   const messageEmptyMessage = messagesQuery.isPending
     ? '쪽지함을 불러오는 중입니다.'
     : messagesQuery.isError

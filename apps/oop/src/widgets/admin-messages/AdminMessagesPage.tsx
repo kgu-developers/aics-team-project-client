@@ -1,4 +1,5 @@
 import {
+  Badge,
   Button,
   Card,
   Dialog,
@@ -12,7 +13,8 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { getSectionDisplayLabel } from '~/shared/lib/getSectionDisplayLabel';
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
+import { formatTeamMessageRelatedType } from '~/shared/lib/formatTeamMessageRelatedType';
 import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
@@ -120,45 +122,59 @@ export default function AdminMessagesPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
+                  <th>유형</th>
                   <th>분반</th>
                   <th>팀</th>
-                  <th>발신자</th>
                   <th>내용</th>
+                  <th>발신자</th>
                 </tr>
               </thead>
               <tbody>
-                {messages.map(row => (
-                  <tr
-                    aria-label={`${row.teamName} 쪽지 상세 보기`}
-                    className={styles.messageRow}
-                    key={row.id}
-                    onClick={() => openMessageThread(row)}
-                    onKeyDown={event => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault();
-                        openMessageThread(row);
-                      }
-                    }}
-                    tabIndex={0}
-                  >
-                    <td>
-                      {row.read ? null : (
+                {messages.map(row => {
+                  const section = sections.find(
+                    item => String(item.id) === String(row.sectionId),
+                  );
+                  const relatedTypeLabel = formatTeamMessageRelatedType(
+                    row.relatedType,
+                  );
+
+                  return (
+                    <tr
+                      aria-label={`${row.teamName} 쪽지 상세 보기`}
+                      className={styles.messageRow}
+                      key={row.id}
+                      onClick={() => openMessageThread(row)}
+                      onKeyDown={event => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          openMessageThread(row);
+                        }
+                      }}
+                      tabIndex={0}
+                    >
+                      <td>
                         <span
-                          aria-label='읽지 않음'
-                          className={styles.unreadDot}
-                        />
-                      )}
-                      {getSectionDisplayLabel(
-                        sections,
-                        row.sectionId,
-                        row.sectionName,
-                      )}
-                    </td>
-                    <td>{row.teamName}</td>
-                    <td>{row.senderName ?? row.senderId}</td>
-                    <td>{row.message}</td>
-                  </tr>
-                ))}
+                          aria-label={`${relatedTypeLabel} ${
+                            row.read ? '읽음' : '읽지 않음'
+                          }`}
+                        >
+                          <Badge
+                            label={relatedTypeLabel}
+                            variant={row.read ? 'neutral' : 'info'}
+                          />
+                        </span>
+                      </td>
+                      <td>
+                        {section
+                          ? formatAdminSectionLabel(section)
+                          : row.sectionName}
+                      </td>
+                      <td>{row.teamName}</td>
+                      <td>{row.message}</td>
+                      <td>{row.senderName ?? row.senderId}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}

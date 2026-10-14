@@ -27,7 +27,7 @@ export const filterAction = style({
 export const tableCard = style({ overflowX: 'auto', padding: 0 });
 export const table = style({
   borderCollapse: 'collapse',
-  minWidth: 760,
+  minWidth: 920,
   width: '100%',
 });
 globalStyle(table + ' th', {
@@ -50,13 +50,4 @@ globalStyle(table + ' tbody tr:hover td', {
 export const messageRow = style({ cursor: 'pointer' });
 globalStyle(`${table} tbody tr:focus-visible td`, {
   background: tokens.color.background.muted,
-});
-export const unreadDot = style({
-  background: tokens.color.text.accent,
-  borderRadius: tokens.radius.full,
-  display: 'inline-block',
-  height: 7,
-  marginRight: 8,
-  verticalAlign: 'middle',
-  width: 7,
 });

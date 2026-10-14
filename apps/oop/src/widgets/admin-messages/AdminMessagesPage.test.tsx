@@ -182,6 +182,43 @@ it('분반 필터에서 보관 강좌의 운영 분반을 제외한다', async (
   ).not.toBeInTheDocument();
 });
 
+it('쪽지 목록은 유형을 첫 열에 표시하고 읽음 상태를 유형 배지에 반영한다', async () => {
+  const page = messagePage(0, 10, 2);
+  const firstMessage = page.contents[0]!;
+  const secondMessage = page.contents[1]!;
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>
+      HttpResponse.json({
+        ...page,
+        contents: [
+          {
+            ...firstMessage,
+            relatedType: 'PROPOSAL',
+            read: false,
+          },
+          {
+            ...secondMessage,
+            relatedType: 'MID_REPORT',
+            read: true,
+          },
+        ],
+      }),
+    ),
+  );
+
+  setup();
+
+  await screen.findByRole('columnheader', { name: '유형' });
+  expect(
+    screen.getAllByRole('columnheader').map(header => header.textContent),
+  ).toEqual(['유형', '분반', '팀', '내용', '발신자']);
+  expect(
+    screen.getAllByText('현재 분반 하나 · 월요일 1-2교시'),
+  ).not.toHaveLength(0);
+  expect(screen.getByLabelText('제안서 피드백 읽지 않음')).toBeInTheDocument();
+  expect(screen.getByLabelText('중간 보고서 피드백 읽음')).toBeInTheDocument();
+});
+
 it('분반과 팀을 선택해 첫 일반 메시지를 보낸다', async () => {
   const posted: unknown[] = [];
   server.use(
@@ -271,7 +308,9 @@ it('reaches item 11, keeps page caches separate, and resets pages on section/all
   await waitFor(() => expect(paginationButtons()[1]).toBeEnabled());
   await user.click(paginationButtons()[1]!);
   await screen.findByText('all 쪽지 11');
-  expect(screen.getAllByText('현재 분반 하나')).not.toHaveLength(0);
+  expect(
+    screen.getAllByText('현재 분반 하나 · 월요일 1-2교시'),
+  ).not.toHaveLength(0);
   await user.click(screen.getByRole('combobox', { name: '분반' }));
   await user.click(
     await screen.findByRole('option', {

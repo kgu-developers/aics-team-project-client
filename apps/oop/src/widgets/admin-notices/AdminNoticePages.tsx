@@ -219,47 +219,53 @@ export function AdminNoticeListPage() {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th scope='col'>게시일</th>
               <th scope='col'>분반</th>
               <th scope='col'>제목</th>
+              <th scope='col'>게시일</th>
             </tr>
           </thead>
           <tbody>
             {notices.length ? (
-              notices.map(notice => (
-                <tr
-                  aria-label={`${notice.title} 공지사항 보기`}
-                  className={styles.clickableRow}
-                  key={notice.id}
-                  onClick={() =>
-                    void navigate({
-                      params: { noticeId: String(notice.id) },
-                      search: { sectionId: notice.sectionId },
-                      to: '/admin/notices/$noticeId',
-                    })
-                  }
-                  onKeyDown={event =>
-                    handleRowNavigation(
-                      event,
-                      () =>
-                        void navigate({
-                          params: { noticeId: String(notice.id) },
-                          search: { sectionId: notice.sectionId },
-                          to: '/admin/notices/$noticeId',
-                        }),
-                    )
-                  }
-                  tabIndex={0}
-                >
-                  <td>{formatSeoulDateTime(notice.publishedAt)}</td>
-                  <td>
-                    {user?.sections.find(
-                      section => noticeId(section.id) === notice.sectionId,
-                    )?.code ?? '알 수 없는 분반'}
-                  </td>
-                  <td>{notice.title}</td>
-                </tr>
-              ))
+              notices.map(notice => {
+                const section = activeSectionsQuery.data.find(
+                  item => noticeId(item.id) === notice.sectionId,
+                );
+
+                return (
+                  <tr
+                    aria-label={`${notice.title} 공지사항 보기`}
+                    className={styles.clickableRow}
+                    key={notice.id}
+                    onClick={() =>
+                      void navigate({
+                        params: { noticeId: String(notice.id) },
+                        search: { sectionId: notice.sectionId },
+                        to: '/admin/notices/$noticeId',
+                      })
+                    }
+                    onKeyDown={event =>
+                      handleRowNavigation(
+                        event,
+                        () =>
+                          void navigate({
+                            params: { noticeId: String(notice.id) },
+                            search: { sectionId: notice.sectionId },
+                            to: '/admin/notices/$noticeId',
+                          }),
+                      )
+                    }
+                    tabIndex={0}
+                  >
+                    <td>
+                      {section
+                        ? formatAdminSectionLabel(section)
+                        : '알 수 없는 분반'}
+                    </td>
+                    <td>{notice.title}</td>
+                    <td>{formatSeoulDateTime(notice.publishedAt)}</td>
+                  </tr>
+                );
+              })
             ) : !query.isPending && !query.isError && hasSections ? (
               <tr>
                 <td className={styles.emptyCell} colSpan={3}>

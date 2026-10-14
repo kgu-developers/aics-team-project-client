@@ -12,12 +12,21 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
 import AdminMeetingsPage from './AdminMeetingsPage';
 
+import { resetMockSessionState } from '~/mocks/authSession';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
@@ -38,6 +47,7 @@ const server = setupServer(
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => resetMockSessionState());
 afterEach(() => {
   window.localStorage.clear();
   server.resetHandlers();
@@ -84,6 +94,7 @@ describe('AdminMeetingsPage', () => {
     expect(
       screen.getAllByRole('columnheader').map(header => header.textContent),
     ).toEqual(['분반', '팀', '회의 제목', '회의 일자', '작성자']);
+    expect(screen.getAllByText('OOP-01 · 월요일 1-2교시')).not.toHaveLength(0);
     expect(
       screen.getByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ }),
     ).toHaveAttribute('tabindex', '0');

@@ -11,6 +11,7 @@ import { useEffect, useState, type KeyboardEvent } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
@@ -193,6 +194,9 @@ export default function AdminMeetingsPage() {
             </thead>
             <tbody>
               {records.map(record => {
+                const section = accessibleSections.find(
+                  item => String(item.id) === String(record.sectionId),
+                );
                 const openMeeting = () => {
                   void navigate({
                     params: { meetingId: String(record.id) },
@@ -209,7 +213,11 @@ export default function AdminMeetingsPage() {
                     onKeyDown={event => handleRowNavigation(event, openMeeting)}
                     tabIndex={0}
                   >
-                    <td>{record.sectionName}</td>
+                    <td>
+                      {section
+                        ? formatAdminSectionLabel(section)
+                        : record.sectionName}
+                    </td>
                     <td>{record.teamName}</td>
                     <td>{record.title}</td>
                     <td>

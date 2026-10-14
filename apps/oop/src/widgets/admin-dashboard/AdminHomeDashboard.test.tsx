@@ -1,5 +1,5 @@
 import type { AdminSectionMilestoneDto } from '@aics/api-client';
-import type { CurrentUser } from '@aics/core';
+import type { CurrentUser, TeamMessageRelatedType } from '@aics/core';
 import { AstryxThemeProvider } from '@aics/design-system';
 import {
   RouterProvider,
@@ -39,6 +39,7 @@ const dashboardState = vi.hoisted(() => ({
     id: number;
     message: string;
     read: boolean;
+    relatedType: TeamMessageRelatedType;
     sectionId: number;
     sectionName: string;
     teamId: number;
@@ -84,6 +85,7 @@ beforeEach(() => {
       id: 1,
       message: '제안서 보완 사항을 확인해 주세요.',
       read: false,
+      relatedType: 'PROPOSAL',
       sectionId: 1,
       sectionName: '객체지향프로그래밍',
       teamId: 7,
@@ -325,7 +327,7 @@ describe('AdminHomeDashboard', () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText('월요일 1-2교시')).toBeInTheDocument();
     expect(
-      screen.queryByText('OOP-01 · 월요일 1-2교시'),
+      within(scheduleTable).queryByText('OOP-01 · 월요일 1-2교시'),
     ).not.toBeInTheDocument();
   });
 
@@ -494,7 +496,9 @@ describe('AdminHomeDashboard', () => {
       name: '발표 자료의 핵심 흐름과 역할을 확정한다.',
     });
     const meetingItem = meetingLink.closest('li')!;
-    expect(within(meetingItem).getByText('OOP-01')).toBeInTheDocument();
+    expect(
+      within(meetingItem).getByText('OOP-01 · 월요일 1-2교시'),
+    ).toBeInTheDocument();
     expect(within(meetingItem).getByText('2팀')).toBeInTheDocument();
     expect(screen.getByText('10.08 00:00')).toBeInTheDocument();
     expect(meetingLink).toHaveAttribute('href', '/admin/meetings/2');
@@ -508,7 +512,7 @@ describe('AdminHomeDashboard', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('홈의 회의록·쪽지함 분반 표시는 현재 분반 코드로 갱신한다', async () => {
+  it('홈의 회의록·쪽지함 분반 표시는 현재 분반 정보로 갱신한다', async () => {
     const user = userEvent.setup();
     renderPage({
       ...demoAdmin,
@@ -527,21 +531,24 @@ describe('AdminHomeDashboard', () => {
         name: '발표 자료의 핵심 흐름과 역할을 확정한다.',
       })
     ).closest('li')!;
-    expect(within(meetingItem).getByText('변경된 분반명')).toBeInTheDocument();
+    expect(
+      within(meetingItem).getByText('변경된 분반명 · 월요일 1-2교시'),
+    ).toBeInTheDocument();
     expect(within(meetingItem).getByText('2팀')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '쪽지함' }));
     const messageItem = screen
       .getByRole('link', { name: '제안서 보완 사항을 확인해 주세요.' })
       .closest('li')!;
-    expect(within(messageItem).getByText('변경된 분반명')).toBeInTheDocument();
-    expect(within(messageItem).getByText('1팀')).toBeInTheDocument();
+    expect(
+      within(messageItem).getByText('변경된 분반명 · 월요일 1-2교시 · 1팀'),
+    ).toBeInTheDocument();
     expect(within(meetingItem).queryByText('OOP-01')).not.toBeInTheDocument();
     expect(
       within(messageItem).queryByText('객체지향프로그래밍'),
     ).not.toBeInTheDocument();
   });
 
-  it('홈 쪽지함은 메시지별 미확인 상태를 표시하고 열 때 읽음 처리한다', async () => {
+  it('홈 쪽지함은 유형 배지에 읽음 상태를 표시하고 열 때 읽음 처리한다', async () => {
     const user = userEvent.setup();
     dashboardState.messages.push({
       ...dashboardState.messages[0]!,
@@ -564,15 +571,18 @@ describe('AdminHomeDashboard', () => {
     });
     expect(unreadLink).toHaveAttribute('href', '/admin/messages/teams/7');
     expect(
-      within(unreadLink.closest('li')!).getByRole('img', {
-        name: '읽지 않음',
-      }),
+      within(unreadLink.closest('li')!).getByLabelText(
+        '제안서 피드백 읽지 않음',
+      ),
     ).toBeInTheDocument();
     expect(
-      within(readLink.closest('li')!).queryByRole('img', {
-        name: '읽지 않음',
-      }),
-    ).not.toBeInTheDocument();
+      within(readLink.closest('li')!).getByLabelText('제안서 피드백 읽음'),
+    ).toBeInTheDocument();
+    expect(
+      within(unreadLink.closest('li')!).getByText(
+        'OOP-01 · 월요일 1-2교시 · 1팀',
+      ),
+    ).toBeInTheDocument();
 
     await user.click(unreadLink);
     expect(dashboardState.markMessageRead).toHaveBeenCalledWith(1);
@@ -622,6 +632,7 @@ describe('AdminHomeDashboard', () => {
       id: index + 30,
       message: `쪽지 ${index + 1}`,
       read: false,
+      relatedType: 'GENERAL' as const,
       sectionId: 1,
       sectionName: 'OOP-01',
       teamId: index + 40,
@@ -785,10 +796,12 @@ it.each(['0x1', '1e0', ' 1 ', '2'])(
   },
 );
 
-it('정상 십진 분반 ID의 공지에는 분반명을 표시한다', async () => {
+it('정상 십진 분반 ID의 공지에는 수업시간을 포함한 분반명을 표시한다', async () => {
   renderPage();
   const link = await screen.findByRole('link', { name: '계약 공지' });
-  expect(within(link.closest('li')!).getByText('OOP-01')).toBeInTheDocument();
+  expect(
+    within(link.closest('li')!).getByText('OOP-01 · 월요일 1-2교시'),
+  ).toBeInTheDocument();
 });
 
 it('공지의 분반 표시는 응답의 이름 대신 현재 분반 코드를 사용한다', async () => {
@@ -802,7 +815,7 @@ it('공지의 분반 표시는 응답의 이름 대신 현재 분반 코드를 �
   });
   const link = await screen.findByRole('link', { name: '계약 공지' });
   expect(
-    within(link.closest('li')!).getByText('변경된 분반 코드'),
+    within(link.closest('li')!).getByText('변경된 분반 코드 · 월요일 1-2교시'),
   ).toBeInTheDocument();
   expect(
     within(link.closest('li')!).queryByText('이전 분반명'),

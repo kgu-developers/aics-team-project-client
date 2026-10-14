@@ -309,11 +309,27 @@ export const noticeItem = style({
     },
   },
 });
+export const messageItem = style({
+  gridTemplateColumns: '124px minmax(0, 1fr) auto',
+  '@media': {
+    '(max-width: 480px)': {
+      gridTemplateColumns: 'auto minmax(0, 1fr)',
+    },
+  },
+});
 export const itemLeading = style({
   alignItems: 'center',
   display: 'flex',
   justifyContent: 'center',
   minWidth: 54,
+});
+export const messageItemLeading = style({
+  justifyContent: 'flex-start',
+  '@media': {
+    '(max-width: 480px)': {
+      minWidth: 0,
+    },
+  },
 });
 export const itemContent = style({
   display: 'flex',
