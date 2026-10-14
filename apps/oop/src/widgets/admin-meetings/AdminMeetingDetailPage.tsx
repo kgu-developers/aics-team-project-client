@@ -1,4 +1,5 @@
 import {
+  Badge,
   Button,
   Card,
   EmptyState,
@@ -146,31 +147,62 @@ export default function AdminMeetingDetailPage() {
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
-        <Heading level={1}>회의록 &gt; {record.title}</Heading>
+        <Heading level={1}>회의록 상세</Heading>
         <Link className={styles.backLink} to={ROUTES.ADMIN_MEETINGS}>
           ← 회의록 목록으로
         </Link>
       </div>
       <Card className={styles.document}>
-        <div>
+        <header className={styles.documentHeader}>
+          <Text className={styles.eyebrow}>MEETING RECORD</Text>
           <Heading level={2}>{record.title}</Heading>
-          <div className={styles.metadata}>
-            <Text>{record.sectionName}</Text>
-            <Link
-              className={styles.teamLink}
-              params={{ teamId: String(record.teamId) }}
-              search={{ sectionId: String(record.sectionId) }}
-              to={ROUTES.ADMIN_TEAM_DETAIL}
-            >
-              {record.teamName}
-            </Link>
-            <Text>작성자: {authorLabel}</Text>
-            <Text>{formatAdminMeetingDateTime(record.meetingAt)}</Text>
-            <Text>회의 단계: {formatAdminMeetingPhase(record.phase)}</Text>
-            {record.location ? <Text>{record.location}</Text> : null}
+        </header>
+        <dl className={styles.metadataGrid}>
+          <div className={styles.metadataItem}>
+            <dt>분반 · 팀</dt>
+            <dd>
+              {record.sectionName} ·{' '}
+              <Link
+                className={styles.teamLink}
+                params={{ teamId: String(record.teamId) }}
+                search={{ sectionId: String(record.sectionId) }}
+                to={ROUTES.ADMIN_TEAM_DETAIL}
+              >
+                {record.teamName}
+              </Link>
+            </dd>
           </div>
-        </div>
-        <section>
+          <div className={styles.metadataItem}>
+            <dt>작성자</dt>
+            <dd>{authorLabel}</dd>
+          </div>
+          <div className={styles.metadataItem}>
+            <dt>회의 일시</dt>
+            <dd>{formatAdminMeetingDateTime(record.meetingAt)}</dd>
+          </div>
+          <div className={styles.metadataItem}>
+            <dt>회의 단계</dt>
+            <dd>
+              <Badge
+                label={formatAdminMeetingPhase(record.phase)}
+                variant='neutral'
+              />
+            </dd>
+          </div>
+          <div className={styles.metadataItem}>
+            <dt>장소</dt>
+            <dd>{record.location ?? '미입력'}</dd>
+          </div>
+          <div className={styles.metadataItem}>
+            <dt>최종 수정</dt>
+            <dd>
+              {record.updatedAt
+                ? formatAdminMeetingDateTime(record.updatedAt)
+                : '-'}
+            </dd>
+          </div>
+        </dl>
+        <section className={styles.participantsSection}>
           <Heading level={2}>참석자</Heading>
           <div className={styles.participantList}>
             {participants.map(participant => (
@@ -185,7 +217,9 @@ export default function AdminMeetingDetailPage() {
             ))}
           </div>
         </section>
-        <section>
+      </Card>
+      <Card className={styles.contentCard}>
+        <section className={styles.contentSection}>
           <Heading level={2}>회의 내용</Heading>
           {getRichTextPlainText(content).trim() ? (
             <RichTextViewer content={content} />
@@ -193,12 +227,6 @@ export default function AdminMeetingDetailPage() {
             <Text>작성된 회의 내용이 없습니다.</Text>
           )}
         </section>
-        <Text color='secondary' type='supporting'>
-          최종 수정{' '}
-          {record.updatedAt
-            ? formatAdminMeetingDateTime(record.updatedAt)
-            : '-'}
-        </Text>
       </Card>
       <section className={styles.actionsSection}>
         <div className={styles.actionsTitleRow}>

@@ -11,6 +11,7 @@ import {
   EmptyState,
   Heading,
   MultiSelector,
+  NumberInput,
   Selector,
   SelectorOption,
   Text,
@@ -301,6 +302,16 @@ export default function AdminMilestoneSetupPage() {
         return duplicate ? [{ milestone: duplicate, sectionId }] : [];
       })
     : [];
+  const hasActionFeedback = Boolean(
+    hasFailedMilestoneCreation ||
+    hasRetryablePeerEvaluationForm ||
+    formError ||
+    (!isEditing &&
+      (isDuplicateCheckPending ||
+        isDuplicateCheckError ||
+        duplicateMilestones.length > 0 ||
+        submissionResults)),
+  );
 
   useEffect(() => {
     if (
@@ -847,595 +858,675 @@ export default function AdminMilestoneSetupPage() {
         </Link>
       </header>
 
-      <Card padding={4}>
-        <form className={styles.form} onSubmit={handleSubmit}>
-          <section className={styles.section}>
-            <Heading className={styles.sectionTitle} level={2}>
-              기본 설정
-            </Heading>
-            {isEditing ? (
-              <>
-                <Text weight='medium'>대상 분반</Text>
-                <Text color='secondary' type='supporting'>
-                  {editingSectionId ? getSectionLabel(editingSectionId) : '-'}
-                </Text>
-                <Text weight='medium'>마일스톤 유형</Text>
-                <Text color='secondary' type='supporting'>
-                  {milestoneQuery.data
-                    ? getAdminMilestoneTypeLabel(milestoneQuery.data.type)
-                    : '-'}
-                </Text>
-              </>
-            ) : (
-              <>
-                <MultiSelector
-                  hasClear
-                  hasSelectAll
-                  label='대상 분반'
-                  onChange={handleSectionChange}
-                  options={sectionOptions}
-                  placeholder='분반을 선택해주세요.'
-                  selectAllLabel='전체 선택'
-                  triggerDisplay='labels'
-                  value={sectionIds}
-                  width='100%'
-                />
-                <Text color='secondary' type='supporting'>
-                  {isPeerEvaluation
-                    ? '선택한 분반마다 상호 평가 기간과 공개 상태를 따로 설정합니다.'
-                    : '선택한 분반마다 공개 일정과 공개 상태를 따로 설정합니다.'}{' '}
-                  저장하면 선택한 분반별로 독립된 요청이 전송됩니다.
-                </Text>
-                <Selector
-                  aria-label='마일스톤 기본 양식'
-                  label='마일스톤 기본 양식'
-                  onChange={handleTemplateChange}
-                  options={milestoneTemplates
-                    .filter(templateOption =>
-                      isSupportedMilestoneCreationTemplate(templateOption.id),
-                    )
-                    .map(templateOption => ({
-                      label: templateOption.label,
-                      value: templateOption.id,
-                    }))}
-                  renderOption={option => (
-                    <SelectorOption label={option.label ?? option.value} />
-                  )}
-                  value={templateId}
-                  width='100%'
-                />
-              </>
-            )}
-            <TextInput label='제목' onChange={setTitle} value={title} />
-            <label className={styles.weekNumberField}>
-              <Text weight='medium'>진행 주차</Text>
-              <input
-                aria-label='진행 주차'
-                className={styles.numberInput}
-                min='1'
-                onChange={event => setWeekNumber(event.target.value)}
-                required
-                type='number'
-                value={weekNumber}
-              />
-              {isEditing ? (
-                <Text color='secondary' type='supporting'>
-                  주차를 변경해도 공개·제출 일정은 자동으로 변경되지 않습니다.
-                  이미 사용 중인 주차는 선택할 수 없습니다.
-                </Text>
-              ) : null}
-            </label>
-            <TextArea
-              label='설명'
-              onChange={setDescription}
-              placeholder='학생에게 표시할 마일스톤 설명을 입력해주세요.'
-              value={description}
-            />
-          </section>
-
-          <section className={styles.section}>
-            <Heading className={styles.sectionTitle} level={2}>
-              공개 및 제출 일정
-            </Heading>
-            {selectedSections.length === 0 ? (
-              <Text color='secondary' type='supporting'>
-                일정을 설정할 분반을 하나 이상 선택해주세요.
-              </Text>
-            ) : (
-              <div className={styles.sectionScheduleList}>
-                {selectedSections.map(section => {
-                  const schedule =
-                    sectionSchedules[section.id] ??
-                    createAdminMilestoneSectionScheduleDraft();
-
-                  return (
-                    <article
-                      className={styles.sectionSchedule}
-                      key={section.id}
-                    >
-                      <Heading
-                        level={3}
-                      >{`${section.code} · ${section.name}`}</Heading>
-                      <div className={styles.scheduleGrid}>
-                        {!isPeerEvaluation ? (
-                          <div className={styles.scheduleField}>
-                            <div className={styles.scheduleInputs}>
-                              <DateInput
-                                hasClear
-                                label={`${section.code} 공개 시작일`}
-                                onChange={date =>
-                                  updateSectionSchedule(
-                                    section.id,
-                                    current => ({
-                                      ...current,
-                                      opensAt: {
-                                        ...current.opensAt,
-                                        date: date ?? '',
-                                      },
-                                    }),
-                                  )
-                                }
-                                placeholder='날짜 선택'
-                                value={
-                                  schedule.opensAt.date
-                                    ? (schedule.opensAt
-                                        .date as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
-                                    : undefined
-                                }
-                                width='100%'
-                              />
-                              <ScheduleTimeInput
-                                label={`${section.code} 공개 시작 시간`}
-                                onChange={time =>
-                                  updateSectionSchedule(
-                                    section.id,
-                                    current => ({
-                                      ...current,
-                                      opensAt: { ...current.opensAt, time },
-                                    }),
-                                  )
-                                }
-                                value={schedule.opensAt.time}
-                              />
-                            </div>
-                          </div>
-                        ) : null}
-                        {!isPeerEvaluation ? (
-                          <div className={styles.scheduleField}>
-                            <div className={styles.scheduleInputs}>
-                              <DateInput
-                                hasClear
-                                label={`${section.code} 제출 마감일`}
-                                onChange={date =>
-                                  updateSectionSchedule(
-                                    section.id,
-                                    current => ({
-                                      ...current,
-                                      dueAt: {
-                                        ...current.dueAt,
-                                        date: date ?? '',
-                                      },
-                                    }),
-                                  )
-                                }
-                                placeholder='날짜 선택'
-                                value={
-                                  schedule.dueAt.date
-                                    ? (schedule.dueAt
-                                        .date as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
-                                    : undefined
-                                }
-                                width='100%'
-                              />
-                              <ScheduleTimeInput
-                                label={`${section.code} 제출 마감 시간`}
-                                onChange={time =>
-                                  updateSectionSchedule(
-                                    section.id,
-                                    current => ({
-                                      ...current,
-                                      dueAt: { ...current.dueAt, time },
-                                    }),
-                                  )
-                                }
-                                value={schedule.dueAt.time}
-                              />
-                            </div>
-                          </div>
-                        ) : null}
+      <form className={styles.form} onSubmit={handleSubmit}>
+        <div className={styles.layout}>
+          <div className={styles.settingsColumn}>
+            <Card padding={4}>
+              <section className={styles.section}>
+                <Heading className={styles.sectionTitle} level={2}>
+                  기본 설정
+                </Heading>
+                <div className={styles.basicGrid}>
+                  {isEditing ? (
+                    <>
+                      <MultiSelector
+                        disabledMessage='마일스톤 생성 후에는 대상 분반을 변경할 수 없습니다.'
+                        isDisabled
+                        label='대상 분반'
+                        onChange={() => undefined}
+                        options={sectionOptions}
+                        triggerDisplay='labels'
+                        value={editingSectionId ? [editingSectionId] : []}
+                        width='100%'
+                      />
+                      <Selector
+                        disabledMessage='마일스톤 생성 후에는 유형을 변경할 수 없습니다.'
+                        isDisabled
+                        label='마일스톤 유형'
+                        options={
+                          milestoneQuery.data
+                            ? [
+                                {
+                                  label: getAdminMilestoneTypeLabel(
+                                    milestoneQuery.data.type,
+                                  ),
+                                  value: milestoneQuery.data.type,
+                                },
+                              ]
+                            : []
+                        }
+                        renderOption={option => (
+                          <SelectorOption
+                            label={option.label ?? option.value}
+                          />
+                        )}
+                        value={milestoneQuery.data?.type}
+                        width='100%'
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <div className={styles.fieldGroup}>
+                        <MultiSelector
+                          hasClear
+                          hasSelectAll
+                          label='대상 분반'
+                          onChange={handleSectionChange}
+                          options={sectionOptions}
+                          placeholder='분반을 선택해주세요.'
+                          selectAllLabel='전체 선택'
+                          triggerDisplay='labels'
+                          value={sectionIds}
+                          width='100%'
+                        />
+                        <Text color='secondary' type='supporting'>
+                          {isPeerEvaluation
+                            ? '선택한 분반마다 상호 평가 기간과 공개 상태를 따로 설정합니다.'
+                            : '선택한 분반마다 공개 일정과 공개 상태를 따로 설정합니다.'}{' '}
+                          저장하면 선택한 분반별로 독립된 요청이 전송됩니다.
+                        </Text>
                       </div>
-                      {isPeerEvaluation ? (
-                        <div className={styles.scheduleField}>
-                          <Text weight='medium'>상호 평가 기간</Text>
-                          <Text color='secondary' type='supporting'>
-                            학생이 팀원을 평가할 수 있는 기간입니다.
-                          </Text>
-                          <div className={styles.scheduleGrid}>
-                            <div className={styles.scheduleField}>
-                              <div className={styles.scheduleInputs}>
-                                <DateInput
-                                  hasClear
-                                  label={`${section.code} 상호 평가 시작일`}
-                                  onChange={date =>
-                                    updateSectionSchedule(
-                                      section.id,
-                                      current => ({
-                                        ...current,
-                                        evaluationOpensAt: {
-                                          ...current.evaluationOpensAt,
-                                          date: date ?? '',
-                                        },
-                                      }),
-                                    )
-                                  }
-                                  placeholder='날짜 선택'
-                                  value={
-                                    schedule.evaluationOpensAt.date
-                                      ? (schedule.evaluationOpensAt
-                                          .date as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
-                                      : undefined
-                                  }
-                                  width='100%'
-                                />
-                                <ScheduleTimeInput
-                                  label={`${section.code} 평가 시작 시간`}
-                                  onChange={time =>
-                                    updateSectionSchedule(
-                                      section.id,
-                                      current => ({
-                                        ...current,
-                                        evaluationOpensAt: {
-                                          ...current.evaluationOpensAt,
-                                          time,
-                                        },
-                                      }),
-                                    )
-                                  }
-                                  value={schedule.evaluationOpensAt.time}
-                                />
-                              </div>
-                            </div>
-                            <div className={styles.scheduleField}>
-                              <div className={styles.scheduleInputs}>
-                                <DateInput
-                                  hasClear
-                                  label={`${section.code} 상호 평가 종료일`}
-                                  onChange={date =>
-                                    updateSectionSchedule(
-                                      section.id,
-                                      current => ({
-                                        ...current,
-                                        evaluationClosesAt: {
-                                          ...current.evaluationClosesAt,
-                                          date: date ?? '',
-                                        },
-                                      }),
-                                    )
-                                  }
-                                  placeholder='날짜 선택'
-                                  value={
-                                    schedule.evaluationClosesAt.date
-                                      ? (schedule.evaluationClosesAt
-                                          .date as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
-                                      : undefined
-                                  }
-                                  width='100%'
-                                />
-                                <ScheduleTimeInput
-                                  label={`${section.code} 평가 종료 시간`}
-                                  onChange={time =>
-                                    updateSectionSchedule(
-                                      section.id,
-                                      current => ({
-                                        ...current,
-                                        evaluationClosesAt: {
-                                          ...current.evaluationClosesAt,
-                                          time,
-                                        },
-                                      }),
-                                    )
-                                  }
-                                  value={schedule.evaluationClosesAt.time}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ) : null}
-                      {isEditing && milestoneQuery.data?.status === 'CLOSED' ? (
-                        <div className={styles.scheduleField}>
-                          <Text weight='medium'>공개 상태</Text>
-                          <Text color='secondary' type='supporting'>
-                            마감됨 — 이 화면에서는 마감 상태를 변경하지
-                            않습니다.
-                          </Text>
-                        </div>
-                      ) : (
+                      <div className={styles.fieldGroup}>
                         <Selector
-                          aria-label={`${section.code} 공개 상태`}
-                          label='공개 상태'
-                          onChange={nextStatus =>
-                            updateSectionSchedule(section.id, current => ({
-                              ...current,
-                              isPublished: nextStatus === 'published',
-                            }))
-                          }
-                          options={[
-                            { label: '미공개', value: 'unpublished' },
-                            { label: '공개', value: 'published' },
-                          ]}
+                          aria-label='마일스톤 기본 양식'
+                          label='마일스톤 기본 양식'
+                          onChange={handleTemplateChange}
+                          options={milestoneTemplates
+                            .filter(templateOption =>
+                              isSupportedMilestoneCreationTemplate(
+                                templateOption.id,
+                              ),
+                            )
+                            .map(templateOption => ({
+                              label: templateOption.label,
+                              value: templateOption.id,
+                            }))}
                           renderOption={option => (
                             <SelectorOption
                               label={option.label ?? option.value}
                             />
                           )}
-                          value={
-                            schedule.isPublished ? 'published' : 'unpublished'
-                          }
-                          width={180}
+                          value={templateId}
+                          width='100%'
                         />
-                      )}
-                      {!isPeerEvaluation ? (
-                        <>
-                          <CheckboxList
-                            description='마감 일시와 지각 제출 정책은 선택한 분반별로 따로 설정됩니다.'
-                            label='제출 정책'
-                            onChange={values =>
-                              updateSectionSchedule(section.id, current => ({
-                                ...current,
-                                allowLateSubmission: values.includes(
-                                  'allow-late-submission',
-                                ),
-                                allowSubmissionEditBeforeDueAt: values.includes(
-                                  'allow-submission-edit-before-due-at',
-                                ),
-                              }))
-                            }
-                            value={[
-                              ...(schedule.allowSubmissionEditBeforeDueAt
-                                ? ['allow-submission-edit-before-due-at']
-                                : []),
-                              ...(schedule.allowLateSubmission
-                                ? ['allow-late-submission']
-                                : []),
-                            ]}
-                          >
-                            <CheckboxListItem
-                              description='제출 마감 일시 전까지 이미 제출한 내용을 수정할 수 있습니다.'
-                              label='제출 마감 전 수정 허용'
-                              value='allow-submission-edit-before-due-at'
-                            />
-                            <CheckboxListItem
-                              description={
-                                isPresentation
-                                  ? '제출 마감 이후에도 지각 상태로 최초 제출과 자료 교체가 가능합니다. 발표 평가 중 자료 교체가 필요하면 평가 종료 시각 이후로 설정해 주세요.'
-                                  : '제출 마감 이후에도 지각 상태로 최초 제출과 재제출이 가능합니다.'
-                              }
-                              label='지각 제출 허용'
-                              value='allow-late-submission'
-                            />
-                          </CheckboxList>
-                          {schedule.allowLateSubmission ? (
-                            <div className={styles.scheduleField}>
-                              <Text weight='medium'>지각 제출 마감 일시</Text>
-                              <div className={styles.scheduleInputs}>
-                                <DateInput
-                                  hasClear
-                                  label={`${section.code} 지각 제출 마감일`}
-                                  onChange={date =>
-                                    updateSectionSchedule(
-                                      section.id,
-                                      current => ({
-                                        ...current,
-                                        lateSubmissionUntil: {
-                                          ...current.lateSubmissionUntil,
-                                          date: date ?? '',
-                                        },
-                                      }),
-                                    )
-                                  }
-                                  placeholder='날짜 선택'
-                                  value={
-                                    schedule.lateSubmissionUntil.date
-                                      ? (schedule.lateSubmissionUntil
-                                          .date as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
-                                      : undefined
-                                  }
-                                  width='100%'
-                                />
-                                <label>
-                                  <Text type='supporting'>{`${section.code} 지각 제출 마감 시간`}</Text>
-                                  <input
-                                    aria-label={`${section.code} 지각 제출 마감 시간`}
-                                    className={styles.timeInput}
-                                    onChange={event =>
+                      </div>
+                    </>
+                  )}
+                  <div className={styles.fieldGroup}>
+                    <TextInput label='제목' onChange={setTitle} value={title} />
+                  </div>
+                  <NumberInput
+                    description={
+                      isEditing
+                        ? '주차를 변경해도 일정은 자동으로 바뀌지 않으며, 이미 사용 중인 주차는 선택할 수 없습니다.'
+                        : undefined
+                    }
+                    isIntegerOnly
+                    isRequired
+                    label='진행 주차'
+                    min={1}
+                    onChange={value =>
+                      setWeekNumber(value == null ? '' : String(value))
+                    }
+                    value={
+                      Number.isInteger(Number(weekNumber)) &&
+                      Number(weekNumber) >= 1
+                        ? Number(weekNumber)
+                        : undefined
+                    }
+                    width='100%'
+                  />
+                  <div className={styles.fullWidthField}>
+                    <TextArea
+                      label='설명'
+                      onChange={setDescription}
+                      placeholder='학생에게 표시할 마일스톤 설명을 입력해주세요.'
+                      value={description}
+                    />
+                  </div>
+                </div>
+              </section>
+            </Card>
+
+            <Card padding={4}>
+              <section className={styles.section}>
+                <Heading className={styles.sectionTitle} level={2}>
+                  공개 및 제출 일정
+                </Heading>
+                {selectedSections.length === 0 ? (
+                  <Text color='secondary' type='supporting'>
+                    일정을 설정할 분반을 하나 이상 선택해주세요.
+                  </Text>
+                ) : (
+                  <div className={styles.sectionScheduleList}>
+                    {selectedSections.map(section => {
+                      const schedule =
+                        sectionSchedules[section.id] ??
+                        createAdminMilestoneSectionScheduleDraft();
+
+                      return (
+                        <article
+                          className={styles.sectionSchedule}
+                          key={section.id}
+                        >
+                          <Heading
+                            level={3}
+                          >{`${section.code} · ${section.name}`}</Heading>
+                          <div className={styles.scheduleGrid}>
+                            {!isPeerEvaluation ? (
+                              <div className={styles.scheduleField}>
+                                <div className={styles.scheduleInputs}>
+                                  <DateInput
+                                    hasClear
+                                    label={`${section.code} 공개 시작일`}
+                                    onChange={date =>
                                       updateSectionSchedule(
                                         section.id,
                                         current => ({
                                           ...current,
-                                          lateSubmissionUntil: {
-                                            ...current.lateSubmissionUntil,
-                                            time: event.target.value,
+                                          opensAt: {
+                                            ...current.opensAt,
+                                            date: date ?? '',
                                           },
                                         }),
                                       )
                                     }
-                                    type='time'
-                                    value={schedule.lateSubmissionUntil.time}
+                                    placeholder='날짜 선택'
+                                    value={
+                                      schedule.opensAt.date
+                                        ? (schedule.opensAt
+                                            .date as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
+                                        : undefined
+                                    }
+                                    width='100%'
                                   />
-                                </label>
+                                  <ScheduleTimeInput
+                                    label={`${section.code} 공개 시작 시간`}
+                                    onChange={time =>
+                                      updateSectionSchedule(
+                                        section.id,
+                                        current => ({
+                                          ...current,
+                                          opensAt: { ...current.opensAt, time },
+                                        }),
+                                      )
+                                    }
+                                    value={schedule.opensAt.time}
+                                  />
+                                </div>
+                              </div>
+                            ) : null}
+                            {!isPeerEvaluation ? (
+                              <div className={styles.scheduleField}>
+                                <div className={styles.scheduleInputs}>
+                                  <DateInput
+                                    hasClear
+                                    label={`${section.code} 제출 마감일`}
+                                    onChange={date =>
+                                      updateSectionSchedule(
+                                        section.id,
+                                        current => ({
+                                          ...current,
+                                          dueAt: {
+                                            ...current.dueAt,
+                                            date: date ?? '',
+                                          },
+                                        }),
+                                      )
+                                    }
+                                    placeholder='날짜 선택'
+                                    value={
+                                      schedule.dueAt.date
+                                        ? (schedule.dueAt
+                                            .date as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
+                                        : undefined
+                                    }
+                                    width='100%'
+                                  />
+                                  <ScheduleTimeInput
+                                    label={`${section.code} 제출 마감 시간`}
+                                    onChange={time =>
+                                      updateSectionSchedule(
+                                        section.id,
+                                        current => ({
+                                          ...current,
+                                          dueAt: { ...current.dueAt, time },
+                                        }),
+                                      )
+                                    }
+                                    value={schedule.dueAt.time}
+                                  />
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                          {isPeerEvaluation ? (
+                            <div className={styles.scheduleField}>
+                              <Text weight='medium'>상호 평가 기간</Text>
+                              <Text color='secondary' type='supporting'>
+                                학생이 팀원을 평가할 수 있는 기간입니다.
+                              </Text>
+                              <div className={styles.scheduleGrid}>
+                                <div className={styles.scheduleField}>
+                                  <div className={styles.scheduleInputs}>
+                                    <DateInput
+                                      hasClear
+                                      label={`${section.code} 상호 평가 시작일`}
+                                      onChange={date =>
+                                        updateSectionSchedule(
+                                          section.id,
+                                          current => ({
+                                            ...current,
+                                            evaluationOpensAt: {
+                                              ...current.evaluationOpensAt,
+                                              date: date ?? '',
+                                            },
+                                          }),
+                                        )
+                                      }
+                                      placeholder='날짜 선택'
+                                      value={
+                                        schedule.evaluationOpensAt.date
+                                          ? (schedule.evaluationOpensAt
+                                              .date as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
+                                          : undefined
+                                      }
+                                      width='100%'
+                                    />
+                                    <ScheduleTimeInput
+                                      label={`${section.code} 평가 시작 시간`}
+                                      onChange={time =>
+                                        updateSectionSchedule(
+                                          section.id,
+                                          current => ({
+                                            ...current,
+                                            evaluationOpensAt: {
+                                              ...current.evaluationOpensAt,
+                                              time,
+                                            },
+                                          }),
+                                        )
+                                      }
+                                      value={schedule.evaluationOpensAt.time}
+                                    />
+                                  </div>
+                                </div>
+                                <div className={styles.scheduleField}>
+                                  <div className={styles.scheduleInputs}>
+                                    <DateInput
+                                      hasClear
+                                      label={`${section.code} 상호 평가 종료일`}
+                                      onChange={date =>
+                                        updateSectionSchedule(
+                                          section.id,
+                                          current => ({
+                                            ...current,
+                                            evaluationClosesAt: {
+                                              ...current.evaluationClosesAt,
+                                              date: date ?? '',
+                                            },
+                                          }),
+                                        )
+                                      }
+                                      placeholder='날짜 선택'
+                                      value={
+                                        schedule.evaluationClosesAt.date
+                                          ? (schedule.evaluationClosesAt
+                                              .date as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
+                                          : undefined
+                                      }
+                                      width='100%'
+                                    />
+                                    <ScheduleTimeInput
+                                      label={`${section.code} 평가 종료 시간`}
+                                      onChange={time =>
+                                        updateSectionSchedule(
+                                          section.id,
+                                          current => ({
+                                            ...current,
+                                            evaluationClosesAt: {
+                                              ...current.evaluationClosesAt,
+                                              time,
+                                            },
+                                          }),
+                                        )
+                                      }
+                                      value={schedule.evaluationClosesAt.time}
+                                    />
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           ) : null}
-                        </>
-                      ) : null}
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+                          {isEditing &&
+                          milestoneQuery.data?.status === 'CLOSED' ? (
+                            <div className={styles.scheduleField}>
+                              <Text weight='medium'>공개 상태</Text>
+                              <Text color='secondary' type='supporting'>
+                                마감됨 — 이 화면에서는 마감 상태를 변경하지
+                                않습니다.
+                              </Text>
+                            </div>
+                          ) : (
+                            <Selector
+                              aria-label={`${section.code} 공개 상태`}
+                              label='공개 상태'
+                              onChange={nextStatus =>
+                                updateSectionSchedule(section.id, current => ({
+                                  ...current,
+                                  isPublished: nextStatus === 'published',
+                                }))
+                              }
+                              options={[
+                                { label: '미공개', value: 'unpublished' },
+                                { label: '공개', value: 'published' },
+                              ]}
+                              renderOption={option => (
+                                <SelectorOption
+                                  label={option.label ?? option.value}
+                                />
+                              )}
+                              value={
+                                schedule.isPublished
+                                  ? 'published'
+                                  : 'unpublished'
+                              }
+                              width={180}
+                            />
+                          )}
+                          {!isPeerEvaluation ? (
+                            <>
+                              <CheckboxList
+                                description='마감 일시와 지각 제출 정책은 선택한 분반별로 따로 설정됩니다.'
+                                label='제출 정책'
+                                onChange={values =>
+                                  updateSectionSchedule(
+                                    section.id,
+                                    current => ({
+                                      ...current,
+                                      allowLateSubmission: values.includes(
+                                        'allow-late-submission',
+                                      ),
+                                      allowSubmissionEditBeforeDueAt:
+                                        values.includes(
+                                          'allow-submission-edit-before-due-at',
+                                        ),
+                                    }),
+                                  )
+                                }
+                                value={[
+                                  ...(schedule.allowSubmissionEditBeforeDueAt
+                                    ? ['allow-submission-edit-before-due-at']
+                                    : []),
+                                  ...(schedule.allowLateSubmission
+                                    ? ['allow-late-submission']
+                                    : []),
+                                ]}
+                              >
+                                <CheckboxListItem
+                                  description='제출 마감 일시 전까지 이미 제출한 내용을 수정할 수 있습니다.'
+                                  label='제출 마감 전 수정 허용'
+                                  value='allow-submission-edit-before-due-at'
+                                />
+                                <CheckboxListItem
+                                  description={
+                                    isPresentation
+                                      ? '제출 마감 이후에도 지각 상태로 최초 제출과 자료 교체가 가능합니다. 발표 평가 중 자료 교체가 필요하면 평가 종료 시각 이후로 설정해 주세요.'
+                                      : '제출 마감 이후에도 지각 상태로 최초 제출과 재제출이 가능합니다.'
+                                  }
+                                  label='지각 제출 허용'
+                                  value='allow-late-submission'
+                                />
+                              </CheckboxList>
+                              {schedule.allowLateSubmission ? (
+                                <div className={styles.scheduleField}>
+                                  <Text weight='medium'>
+                                    지각 제출 마감 일시
+                                  </Text>
+                                  <div className={styles.scheduleInputs}>
+                                    <DateInput
+                                      hasClear
+                                      label={`${section.code} 지각 제출 마감일`}
+                                      onChange={date =>
+                                        updateSectionSchedule(
+                                          section.id,
+                                          current => ({
+                                            ...current,
+                                            lateSubmissionUntil: {
+                                              ...current.lateSubmissionUntil,
+                                              date: date ?? '',
+                                            },
+                                          }),
+                                        )
+                                      }
+                                      placeholder='날짜 선택'
+                                      value={
+                                        schedule.lateSubmissionUntil.date
+                                          ? (schedule.lateSubmissionUntil
+                                              .date as `${number}${number}${number}${number}-${number}${number}-${number}${number}`)
+                                          : undefined
+                                      }
+                                      width='100%'
+                                    />
+                                    <label>
+                                      <Text type='supporting'>{`${section.code} 지각 제출 마감 시간`}</Text>
+                                      <input
+                                        aria-label={`${section.code} 지각 제출 마감 시간`}
+                                        className={styles.timeInput}
+                                        onChange={event =>
+                                          updateSectionSchedule(
+                                            section.id,
+                                            current => ({
+                                              ...current,
+                                              lateSubmissionUntil: {
+                                                ...current.lateSubmissionUntil,
+                                                time: event.target.value,
+                                              },
+                                            }),
+                                          )
+                                        }
+                                        type='time'
+                                        value={
+                                          schedule.lateSubmissionUntil.time
+                                        }
+                                      />
+                                    </label>
+                                  </div>
+                                </div>
+                              ) : null}
+                            </>
+                          ) : null}
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            </Card>
 
-          {isPeerEvaluation ? <AdminPeerEvaluationStudentPreview /> : null}
-
-          {isPresentation ? (
-            <AdminPresentationEvaluationQuestions sections={selectedSections} />
-          ) : null}
-
-          {isEditing &&
-          supportsRequiredArtifacts &&
-          editingSectionId &&
-          editingMilestoneId ? (
-            <AdminRequiredArtifactsManager
-              milestoneId={editingMilestoneId}
-              sectionId={editingSectionId}
-            />
-          ) : null}
-
-          {!isEditing && supportsRequiredArtifacts ? (
-            <AdminRequiredArtifactDraftEditor
-              onChange={setRequiredArtifactDrafts}
-              value={requiredArtifactDrafts}
-            />
-          ) : null}
-
-          {!isPeerEvaluation && studentPreviewTemplateId ? (
-            <AdminStudentMilestonePreview
-              artifacts={previewArtifacts}
-              artifactState={
-                isEditing && supportsRequiredArtifacts
-                  ? requiredArtifactsQuery.isPending
-                    ? 'loading'
-                    : requiredArtifactsQuery.isError
-                      ? 'error'
-                      : undefined
-                  : undefined
-              }
-              onRetryArtifacts={
-                isEditing && supportsRequiredArtifacts
-                  ? () => void requiredArtifactsQuery.refetch()
-                  : undefined
-              }
-              templateId={studentPreviewTemplateId}
-            />
-          ) : null}
-
-          <div className={styles.action}>
-            <Text className={styles.actionNote} type='supporting'>
-              {isEditing
-                ? '내용과 일정을 저장한 뒤, 변경된 경우에만 주차와 공개 상태 변경 요청을 각각 전송합니다.'
-                : hasFailedMilestoneCreation || hasRetryablePeerEvaluationForm
-                  ? '다시 저장하면 실패한 마일스톤 생성 또는 상호평가 양식만 재시도합니다.'
-                  : '공개를 선택하면 생성 후 공개 상태 변경 요청을 한 번 더 전송합니다.'}
-            </Text>
-            {formError ? (
-              <Text className={styles.formError} role='alert'>
-                {formError}
-              </Text>
+            {isPresentation ? (
+              <Card padding={4}>
+                <AdminPresentationEvaluationQuestions
+                  sections={selectedSections}
+                />
+              </Card>
             ) : null}
-            {!isEditing && isDuplicateCheckPending ? (
-              <Text aria-live='polite' color='secondary' role='status'>
-                기존 마일스톤을 확인하는 중입니다.
-              </Text>
-            ) : !isEditing && isDuplicateCheckError ? (
-              <Text className={styles.formError} role='alert'>
-                기존 마일스톤을 불러오지 못해 중복 여부를 확인할 수 없습니다.
-                잠시 후 다시 시도해주세요.
-              </Text>
-            ) : !isEditing && duplicateMilestones.length > 0 ? (
-              <Text className={styles.formError} role='alert'>
-                다음 분반에는 같은 유형의 마일스톤이 이미 있습니다. 마일스톤
-                목록에서 기존 항목을 수정해주세요:{' '}
-                {duplicateMilestones
-                  .map(
-                    ({ milestone, sectionId }) =>
-                      `${getSectionLabel(sectionId)} — ${milestone.title}`,
-                  )
-                  .join(', ')}
-              </Text>
+
+            {isEditing &&
+            supportsRequiredArtifacts &&
+            editingSectionId &&
+            editingMilestoneId ? (
+              <Card padding={4}>
+                <AdminRequiredArtifactsManager
+                  milestoneId={editingMilestoneId}
+                  sectionId={editingSectionId}
+                />
+              </Card>
             ) : null}
-            {!isEditing && submissionResults ? (
-              <ul aria-live='polite' className={styles.resultList}>
-                {submissionResults.map(result => (
-                  <li key={result.sectionId}>
-                    {getSectionLabel(result.sectionId)}:{' '}
-                    {result.status === 'published'
-                      ? '생성하고 공개했습니다.'
-                      : result.status === 'created'
-                        ? '미공개 마일스톤으로 생성했습니다.'
-                        : result.status === 'publish-failed'
-                          ? `생성했지만 공개 상태 변경에 실패했습니다. 목록에서 다시 공개할 수 있습니다.${
-                              result.error
-                                ? ` (${formatAdminMilestoneRequestError(result.error)})`
-                                : ''
-                            }`
-                          : `생성에 실패했습니다.${
-                              result.failureMessage
-                                ? ` ${result.failureMessage}`
-                                : ''
-                            }${
-                              result.error
-                                ? ` ${formatAdminMilestoneRequestError(result.error)}`
-                                : ''
-                            }`}
-                    {artifactSubmissionFailures?.has(result.sectionId)
-                      ? ' 산출물 일부 등록에 실패했습니다. 마일스톤 수정 화면에서 다시 추가해주세요.'
-                      : ''}
-                    {peerEvaluationFormFailures?.has(result.sectionId)
-                      ? ' 상호평가 양식 생성에 실패했습니다. 마일스톤은 생성되었으므로 관리자에게 양식 생성 재시도 방법을 확인해주세요.'
-                      : ''}
-                  </li>
-                ))}
-              </ul>
+
+            {!isEditing && supportsRequiredArtifacts ? (
+              <Card padding={4}>
+                <AdminRequiredArtifactDraftEditor
+                  onChange={setRequiredArtifactDrafts}
+                  value={requiredArtifactDrafts}
+                />
+              </Card>
             ) : null}
-            <Link
-              params={
-                isEditing && editingMilestoneId
-                  ? { milestoneId: editingMilestoneId }
-                  : undefined
-              }
-              search={
-                isEditing && editingSectionId
-                  ? { sectionId: editingSectionId }
-                  : undefined
-              }
-              to={
-                isEditing
-                  ? ROUTES.ADMIN_MILESTONE_DETAIL
-                  : ROUTES.ADMIN_MILESTONES
-              }
-            >
-              취소
-            </Link>
-            <Button
-              isDisabled={
-                submitMilestonesMutation.isPending ||
-                submitRequiredArtifactsMutation.isPending ||
-                isSubmittingPeerEvaluationForms ||
-                updateMilestoneMutation.isPending ||
-                hasNonRetryableFollowUpFailure ||
-                (!isEditing &&
-                  (isDuplicateCheckPending ||
-                    isDuplicateCheckError ||
-                    duplicateMilestones.length > 0))
-              }
-              isLoading={
-                submitMilestonesMutation.isPending ||
-                submitRequiredArtifactsMutation.isPending ||
-                isSubmittingPeerEvaluationForms ||
-                updateMilestoneMutation.isPending
-              }
-              label={
-                hasFailedMilestoneCreation || hasRetryablePeerEvaluationForm
-                  ? '실패한 작업 다시 시도'
-                  : '저장'
-              }
-              type='submit'
-              variant='primary'
-            />
           </div>
-        </form>
-      </Card>
+
+          <aside className={styles.previewColumn}>
+            <Card className={styles.previewCard} padding={4}>
+              {isPeerEvaluation ? (
+                <AdminPeerEvaluationStudentPreview />
+              ) : studentPreviewTemplateId ? (
+                <AdminStudentMilestonePreview
+                  artifacts={previewArtifacts}
+                  artifactState={
+                    isEditing && supportsRequiredArtifacts
+                      ? requiredArtifactsQuery.isPending
+                        ? 'loading'
+                        : requiredArtifactsQuery.isError
+                          ? 'error'
+                          : undefined
+                      : undefined
+                  }
+                  onRetryArtifacts={
+                    isEditing && supportsRequiredArtifacts
+                      ? () => void requiredArtifactsQuery.refetch()
+                      : undefined
+                  }
+                  templateId={studentPreviewTemplateId}
+                />
+              ) : null}
+            </Card>
+          </aside>
+        </div>
+
+        {hasActionFeedback ? (
+          <Card padding={3}>
+            <div className={styles.actionFeedback}>
+              {hasFailedMilestoneCreation || hasRetryablePeerEvaluationForm ? (
+                <Text className={styles.actionNote} type='supporting'>
+                  다시 저장하면 실패한 마일스톤 생성 또는 상호평가 양식만
+                  재시도합니다.
+                </Text>
+              ) : null}
+              {formError ? (
+                <Text className={styles.formError} role='alert'>
+                  {formError}
+                </Text>
+              ) : null}
+              {!isEditing && isDuplicateCheckPending ? (
+                <Text aria-live='polite' color='secondary' role='status'>
+                  기존 마일스톤을 확인하는 중입니다.
+                </Text>
+              ) : !isEditing && isDuplicateCheckError ? (
+                <Text className={styles.formError} role='alert'>
+                  기존 마일스톤을 불러오지 못해 중복 여부를 확인할 수 없습니다.
+                  잠시 후 다시 시도해주세요.
+                </Text>
+              ) : !isEditing && duplicateMilestones.length > 0 ? (
+                <Text className={styles.formError} role='alert'>
+                  다음 분반에는 같은 유형의 마일스톤이 이미 있습니다. 마일스톤
+                  목록에서 기존 항목을 수정해주세요:{' '}
+                  {duplicateMilestones
+                    .map(
+                      ({ milestone, sectionId }) =>
+                        `${getSectionLabel(sectionId)} — ${milestone.title}`,
+                    )
+                    .join(', ')}
+                </Text>
+              ) : null}
+              {!isEditing && submissionResults ? (
+                <ul aria-live='polite' className={styles.resultList}>
+                  {submissionResults.map(result => (
+                    <li key={result.sectionId}>
+                      {getSectionLabel(result.sectionId)}:{' '}
+                      {result.status === 'published'
+                        ? '생성하고 공개했습니다.'
+                        : result.status === 'created'
+                          ? '미공개 마일스톤으로 생성했습니다.'
+                          : result.status === 'publish-failed'
+                            ? `생성했지만 공개 상태 변경에 실패했습니다. 목록에서 다시 공개할 수 있습니다.${
+                                result.error
+                                  ? ` (${formatAdminMilestoneRequestError(result.error)})`
+                                  : ''
+                              }`
+                            : `생성에 실패했습니다.${
+                                result.failureMessage
+                                  ? ` ${result.failureMessage}`
+                                  : ''
+                              }${
+                                result.error
+                                  ? ` ${formatAdminMilestoneRequestError(result.error)}`
+                                  : ''
+                              }`}
+                      {artifactSubmissionFailures?.has(result.sectionId)
+                        ? ' 산출물 일부 등록에 실패했습니다. 마일스톤 수정 화면에서 다시 추가해주세요.'
+                        : ''}
+                      {peerEvaluationFormFailures?.has(result.sectionId)
+                        ? ' 상호평가 양식 생성에 실패했습니다. 마일스톤은 생성되었으므로 관리자에게 양식 생성 재시도 방법을 확인해주세요.'
+                        : ''}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          </Card>
+        ) : null}
+
+        <div className={styles.actionDock}>
+          <Card className={styles.actionCard} padding={3}>
+            <div className={styles.action}>
+              <Link
+                params={
+                  isEditing && editingMilestoneId
+                    ? { milestoneId: editingMilestoneId }
+                    : undefined
+                }
+                search={
+                  isEditing && editingSectionId
+                    ? { sectionId: editingSectionId }
+                    : undefined
+                }
+                to={
+                  isEditing
+                    ? ROUTES.ADMIN_MILESTONE_DETAIL
+                    : ROUTES.ADMIN_MILESTONES
+                }
+              >
+                취소
+              </Link>
+              <Button
+                isDisabled={
+                  submitMilestonesMutation.isPending ||
+                  submitRequiredArtifactsMutation.isPending ||
+                  isSubmittingPeerEvaluationForms ||
+                  updateMilestoneMutation.isPending ||
+                  hasNonRetryableFollowUpFailure ||
+                  (!isEditing &&
+                    (isDuplicateCheckPending ||
+                      isDuplicateCheckError ||
+                      duplicateMilestones.length > 0))
+                }
+                isLoading={
+                  submitMilestonesMutation.isPending ||
+                  submitRequiredArtifactsMutation.isPending ||
+                  isSubmittingPeerEvaluationForms ||
+                  updateMilestoneMutation.isPending
+                }
+                label={
+                  hasFailedMilestoneCreation || hasRetryablePeerEvaluationForm
+                    ? '실패한 작업 다시 시도'
+                    : '저장'
+                }
+                type='submit'
+                variant='primary'
+              />
+            </div>
+          </Card>
+        </div>
+      </form>
     </div>
   );
 }

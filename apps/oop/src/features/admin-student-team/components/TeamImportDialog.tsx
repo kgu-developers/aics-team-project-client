@@ -8,6 +8,7 @@ import {
   SelectorOption,
   Text,
 } from '@aics/design-system';
+import { isAxiosError } from 'axios';
 import { useState } from 'react';
 
 import {
@@ -15,6 +16,14 @@ import {
   usePreviewAdminTeamImportMutation,
 } from '../queries';
 import * as styles from './TeamImportDialog.css';
+
+function getPreviewErrorMessage(error: unknown) {
+  const fallback = '파일을 검증하지 못했습니다. 다시 시도해 주세요.';
+  if (!isAxiosError<{ message?: unknown }>(error)) return fallback;
+
+  const message = error.response?.data?.message;
+  return typeof message === 'string' && message.trim() ? message : fallback;
+}
 
 type TeamImportDialogProps = {
   isOpen: boolean;
@@ -106,7 +115,7 @@ export default function TeamImportDialog({
           />
           {previewMutation.isError ? (
             <Text role='alert'>
-              파일을 검증하지 못했습니다. 다시 시도해 주세요.
+              {getPreviewErrorMessage(previewMutation.error)}
             </Text>
           ) : null}
           {preview ? (

@@ -70,7 +70,7 @@ import * as styles from './AdminSubmissionsPage.css';
 
 const MILESTONE_TABS = [
   { id: 'proposal', isListAvailable: true, label: '제안서' },
-  { id: 'midterm', isListAvailable: true, label: '중간 점검' },
+  { id: 'midterm', isListAvailable: true, label: '중간 보고서' },
   {
     id: 'presentation-submit',
     isListAvailable: true,
@@ -809,7 +809,7 @@ export default function AdminSubmissionsPage() {
                     ) : (
                       <>
                         <Button
-                          label='평가 설정 보기'
+                          label='발표 순서 관리'
                           onClick={() => setIsEvaluationSettingsOpen(true)}
                           variant='secondary'
                         />

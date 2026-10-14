@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { cx } from '~/shared/lib/cx';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { AdminLinkedMeetingsTable } from '~/features/admin-meeting/components';
@@ -32,7 +33,7 @@ import * as styles from './AdminSubmissionDetailPage.css';
 
 const milestoneLabels = {
   'final-report': '최종 보고서',
-  midterm: '중간 점검',
+  midterm: '중간 보고서',
   'peer-review': '상호 평가',
   'presentation-evaluate': '발표 평가',
   'presentation-submit': '발표 자료 제출',
@@ -434,7 +435,7 @@ export default function AdminSubmissionDetailPage() {
           )}
 
           {isProposal ? (
-            <section className={styles.relatedMeetings}>
+            <Card className={styles.feedbackPanel}>
               <section className={styles.section}>
                 <Heading level={3}>{milestoneLabel} 피드백</Heading>
                 {proposalFeedbacksQuery.isPending ? (
@@ -451,19 +452,23 @@ export default function AdminSubmissionDetailPage() {
                     등록된 피드백이 없습니다.
                   </Text>
                 ) : (
-                  <div className={styles.feedbackList}>
+                  <div className={styles.feedbackThread}>
                     {proposalFeedbacksQuery.data?.contents.map(feedback => (
                       <article
-                        className={styles.feedbackMessage}
+                        className={cx(
+                          styles.feedbackMessage,
+                          feedback.senderId === currentUser?.studentNumber &&
+                            styles.feedbackOwnMessage,
+                        )}
                         key={feedback.messageId}
                       >
-                        <Text className={styles.fieldLabel}>
+                        <Text className={styles.feedbackMessageMeta}>
                           {feedback.senderName ?? feedback.senderId} ·{' '}
                           {feedback.createdAt
                             ? formatSeoulDateTime(feedback.createdAt)
                             : '-'}
                         </Text>
-                        <Text className={styles.fieldValue}>
+                        <Text className={styles.feedbackMessageContent}>
                           {feedback.message}
                         </Text>
                       </article>
@@ -544,7 +549,7 @@ export default function AdminSubmissionDetailPage() {
                   </div>
                 </div>
               </section>
-            </section>
+            </Card>
           ) : null}
           <section className={styles.relatedMeetings}>
             <section className={styles.section}>

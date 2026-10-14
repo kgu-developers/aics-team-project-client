@@ -27,6 +27,25 @@ export const backLink = style({
   textUnderlineOffset: 3,
 });
 
+export const titleActions = style({
+  alignItems: 'flex-end',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing[2],
+});
+
+export const messageTab = style({
+  display: 'grid',
+  gap: tokens.spacing[3],
+});
+
+export const messageTabHeader = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: tokens.spacing[3],
+  justifyContent: 'space-between',
+});
+
 export const errorActions = style({
   alignItems: 'center',
   display: 'flex',

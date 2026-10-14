@@ -219,6 +219,25 @@ it.each(['presentation-submit', 'final-report'] as const)(
   },
 );
 
+it('학생 화면 미리보기는 모든 설정 뒤, 하단 저장 작업 앞에 표시한다', async () => {
+  renderPage(false, undefined, 'presentation-submit');
+
+  const scheduleHeading = await screen.findByRole('heading', {
+    name: '공개 및 제출 일정',
+  });
+  const previewHeading = await screen.findByRole('heading', {
+    name: '학생 화면 미리보기',
+  });
+  const saveButton = getMilestoneSaveButton();
+
+  expect(scheduleHeading.compareDocumentPosition(previewHeading)).toBe(
+    Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+  expect(previewHeading.compareDocumentPosition(saveButton)).toBe(
+    Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+});
+
 describe('artifact submission isolation', () => {
   it.each(['click', 'Enter'])(
     'draft dialog %s submission keeps forms separate, supports quick time selection, and returns to the list after Save',

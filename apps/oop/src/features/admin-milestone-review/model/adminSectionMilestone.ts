@@ -9,7 +9,7 @@ import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleD
 const milestoneTypeLabels: Record<AdminMilestoneType, string> = {
   FINAL_REPORT: '최종 보고서',
   GENERAL: '일반',
-  MID_REPORT: '중간 점검',
+  MID_REPORT: '중간 보고서',
   PEER_EVALUATION: '상호 평가',
   // `PRESENTATION` owns both material submission and evaluation, but their
   // time windows are intentionally independent.

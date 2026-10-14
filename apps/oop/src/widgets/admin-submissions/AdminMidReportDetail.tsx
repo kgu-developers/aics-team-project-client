@@ -10,8 +10,11 @@ import {
   Text,
   TextArea,
 } from '@aics/design-system';
+import { Link } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
 import { useState } from 'react';
+
+import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
@@ -25,6 +28,7 @@ import {
   useAdminMidReportQuery,
   useSubmitAdminMidReportFeedbackMutation,
 } from '~/features/admin-milestone-review/queries';
+import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminSubmissionDetailPage.css';
 
@@ -166,6 +170,7 @@ type Props = {
 };
 
 export function AdminMidReportDetail({ sectionId, teamId }: Props) {
+  const currentUser = useAuthStore(state => state.currentUser);
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [feedbackPage, setFeedbackPage] = useState(0);
   const reportQuery = useAdminMidReportQuery(sectionId, teamId);
@@ -217,9 +222,51 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
         <div className={styles.documentHeader}>
           <Text className={styles.documentLabel}>MID REPORT / READ ONLY</Text>
           <Heading level={2}>{report.title}</Heading>
-          <Text className={styles.metadata}>
-            상태: {report.status} · 현재 버전: {report.version}차
-          </Text>
+          <dl className={styles.metadataSummary}>
+            <div>
+              <dt>상태</dt>
+              <dd>{report.status}</dd>
+            </div>
+            <div>
+              <dt>현재 버전</dt>
+              <dd>{report.version}차</dd>
+            </div>
+            <div>
+              <dt>팀</dt>
+              <dd>
+                <Link
+                  className={styles.teamLink}
+                  params={{ teamId }}
+                  search={{ sectionId }}
+                  to={ROUTES.ADMIN_TEAM_DETAIL}
+                >
+                  {report.teamName}
+                </Link>
+              </dd>
+            </div>
+            <div>
+              <dt>제출자</dt>
+              <dd>{report.submittedByName ?? report.submittedBy ?? '-'}</dd>
+            </div>
+            <div>
+              <dt>팀장</dt>
+              <dd>{report.leaderName ?? '-'}</dd>
+            </div>
+            <div>
+              <dt>제출 일시</dt>
+              <dd>
+                {report.submittedAt
+                  ? formatSeoulDateTime(report.submittedAt)
+                  : '-'}
+              </dd>
+            </div>
+            <div>
+              <dt>마감 일시</dt>
+              <dd>
+                {report.dueDate ? formatSeoulDateTime(report.dueDate) : '-'}
+              </dd>
+            </div>
+          </dl>
           {report.revision?.completedAt ? (
             <Text className={styles.metadata}>
               교수자 최종 확인:{' '}
@@ -232,41 +279,6 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
             <Text className={styles.metadata}>교수자 최종 확인 전</Text>
           ) : null}
         </div>
-        <section className={styles.section}>
-          <Heading level={3}>제출 현황</Heading>
-          <div className={styles.fieldGrid}>
-            <div className={styles.field}>
-              <Text className={styles.fieldLabel}>팀</Text>
-              <Text className={styles.fieldValue}>{report.teamName}</Text>
-            </div>
-            <div className={styles.field}>
-              <Text className={styles.fieldLabel}>제출자</Text>
-              <Text className={styles.fieldValue}>
-                {report.submittedByName ?? report.submittedBy ?? '-'}
-              </Text>
-            </div>
-            <div className={styles.field}>
-              <Text className={styles.fieldLabel}>팀장</Text>
-              <Text className={styles.fieldValue}>
-                {report.leaderName ?? '-'}
-              </Text>
-            </div>
-            <div className={styles.field}>
-              <Text className={styles.fieldLabel}>제출 일시</Text>
-              <Text className={styles.fieldValue}>
-                {report.submittedAt
-                  ? formatSeoulDateTime(report.submittedAt)
-                  : '-'}
-              </Text>
-            </div>
-            <div className={styles.field}>
-              <Text className={styles.fieldLabel}>마감 일시</Text>
-              <Text className={styles.fieldValue}>
-                {report.dueDate ? formatSeoulDateTime(report.dueDate) : '-'}
-              </Text>
-            </div>
-          </div>
-        </section>
         {report.blocks.map(block => {
           const fields = parseBlockFields(block.fields);
 
@@ -399,8 +411,24 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
           );
         })}
       </Card>
-      <Card className={styles.relatedMeetings}>
-        <Heading level={3}>중간 점검 피드백</Heading>
+      <Card className={styles.feedbackPanel}>
+        <div className={styles.feedbackHeader}>
+          <Heading level={3}>중간 보고서 피드백</Heading>
+          {report.revision?.requestedAt &&
+          !report.revision.completedAt &&
+          (report.status === 'REVISION_REQUESTED' ||
+            report.status === 'SUBMITTED') ? (
+            <Button
+              isDisabled={completeFeedbackMutation.isPending}
+              label='피드백 반영 최종 확인'
+              onClick={() => {
+                setCompletionError(null);
+                setIsCompletionDialogOpen(true);
+              }}
+              type='button'
+            />
+          ) : null}
+        </div>
         {feedbacksQuery.isPending ? (
           <Text aria-live='polite' role='status'>
             피드백을 불러오는 중입니다.
@@ -408,19 +436,25 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
         ) : feedbacksQuery.isError ? (
           <Text role='alert'>피드백을 불러오지 못했습니다.</Text>
         ) : feedbacksQuery.data?.contents.length ? (
-          <div className={styles.feedbackList}>
+          <div className={styles.feedbackThread}>
             {feedbacksQuery.data.contents.map(feedback => (
               <article
-                className={styles.feedbackMessage}
+                className={cx(
+                  styles.feedbackMessage,
+                  feedback.senderId === currentUser?.studentNumber &&
+                    styles.feedbackOwnMessage,
+                )}
                 key={feedback.messageId}
               >
-                <Text className={styles.fieldLabel}>
+                <Text className={styles.feedbackMessageMeta}>
                   {feedback.senderName ?? feedback.senderId} ·{' '}
                   {feedback.createdAt
                     ? formatSeoulDateTime(feedback.createdAt)
                     : '-'}
                 </Text>
-                <Text className={styles.fieldValue}>{feedback.message}</Text>
+                <Text className={styles.feedbackMessageContent}>
+                  {feedback.message}
+                </Text>
               </article>
             ))}
           </div>
@@ -440,26 +474,16 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
             variant='compact'
           />
         ) : null}
-        {report.revision?.requestedAt &&
-        !report.revision.completedAt &&
-        (report.status === 'REVISION_REQUESTED' ||
-          report.status === 'SUBMITTED') ? (
-          <div className={styles.feedbackSubmitAction}>
-            <Button
-              isDisabled={completeFeedbackMutation.isPending}
-              label='피드백 반영 최종 확인'
-              onClick={() => {
-                setCompletionError(null);
-                setIsCompletionDialogOpen(true);
-              }}
-              type='button'
-            />
-          </div>
-        ) : null}
         <div className={styles.feedbackComposer}>
+          {report.status === 'SUBMITTED' ? (
+            <Text className={styles.sectionDescription}>
+              수정 요청을 보내면 학생이 수정본을 재제출하기 전까지 추가 수정
+              요청을 보낼 수 없습니다. 필요한 내용을 한 메시지에 작성해 주세요.
+            </Text>
+          ) : null}
           <TextArea
-            aria-label='중간 점검 피드백 내용'
-            label='중간 점검 피드백 작성'
+            aria-label='중간 보고서 피드백 내용'
+            label='중간 보고서 피드백 작성'
             onChange={setFeedbackMessage}
             placeholder={`${report.teamName}에 전달할 피드백을 입력하세요.`}
             value={feedbackMessage}

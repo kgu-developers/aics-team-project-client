@@ -47,6 +47,8 @@ export const ENDPOINTS = {
       `/api/v1/admin/sections/${sectionId}/team-imports/preview`,
     SECTION_TEAMS_FINALIZE: (sectionId: string | number) =>
       `/api/v1/admin/sections/${sectionId}/teams/finalize`,
+    SECTION_TEAMS_UNFINALIZE: (sectionId: string | number) =>
+      `/api/v1/admin/sections/${sectionId}/teams/unfinalize`,
     TEAM: (teamId: string | number) => `/api/v1/admin/teams/${teamId}`,
     TEAM_MEMBER: (teamId: string | number, studentNumber: string) =>
       `/api/v1/admin/teams/${teamId}/members/${studentNumber}`,

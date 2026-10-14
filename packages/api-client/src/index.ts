@@ -138,11 +138,14 @@ export {
   fetchAdminSectionTeams,
   fetchAdminTeam,
   finalizeAdminSectionTeams,
+  unfinalizeAdminSectionTeams,
   updateAdminTeamMember,
   type AdminSectionTeamSummaryDto,
   type AdminSectionTeamsResponse,
   type AdminTeamDetailDto,
   type AdminTeamMemberDto,
+  type AdminTeamStatus,
+  type UnfinalizeAdminSectionTeamsInput,
   type UpdateAdminTeamMemberInput,
 } from './adminTeam';
 export {

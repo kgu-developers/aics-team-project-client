@@ -2,6 +2,7 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
+import { getAdminSectionTeamsResponse } from './adminStudentTeams';
 import {
   getAdminMilestoneSubmissionsFixture,
   resetAdminMilestoneSubmissionsFixture,
@@ -12,9 +13,15 @@ import {
   resetAdminPresentationEvaluationsFixture,
 } from '../data/adminPresentationEvaluations';
 import {
+  resetAdminPresentationOrderFixture,
+  setAdminPresentationOrderFixture,
+} from '../data/adminPresentationOrders';
+import {
+  findAdminSectionMilestoneFixture,
   getAdminSectionMilestoneFixture,
   resetAdminSectionMilestonesFixture,
 } from '../data/adminSectionMilestones';
+import { getAdminSection } from '../data/adminSections';
 import { evaluationSectionId } from '../data/evaluation';
 import { demoAdmin } from '../data/users';
 
@@ -58,6 +65,7 @@ function resetPresentationEvaluationScenario() {
   resetAdminMilestoneSubmissionsFixture();
   resetAdminPresentationEvaluationsFixture();
   resetAdminSectionMilestonesFixture();
+  resetAdminPresentationOrderFixture();
   criteria = structuredClone(initialCriteria);
   professorEvaluations.clear();
 }
@@ -77,14 +85,22 @@ function isPresentationSectionManager(
   sectionId: string | readonly string[] | undefined,
 ) {
   const account = getMockAuthenticatedAccount(request);
-  if (!account || !isPresentationSectionId(sectionId)) return false;
+  if (!account) return false;
+  const requestedSectionId =
+    typeof sectionId === 'string' ? sectionId : undefined;
+  const isKnownSection =
+    isPresentationSectionId(sectionId) ||
+    (requestedSectionId !== undefined &&
+      Number.isSafeInteger(Number(requestedSectionId)) &&
+      Boolean(getAdminSection(Number(requestedSectionId))));
+  if (!isKnownSection) return false;
   if (account.user.id === demoAdmin.id) return true;
 
   return (
     account.user.globalRole === 'PROFESSOR' &&
     account.user.sections.some(
       section =>
-        String(section.id) === String(sectionId) &&
+        String(section.id) === requestedSectionId &&
         section.role === 'PROFESSOR',
     )
   );
@@ -527,7 +543,10 @@ export const adminPresentationEvaluationHandlers = [
           { status: 403 },
         );
       }
-      if (params.milestoneId !== '103') {
+      if (
+        params.milestoneId !== '103' &&
+        !findAdminSectionMilestoneFixture(String(params.milestoneId))
+      ) {
         return HttpResponse.json(
           { message: '발표 평가 마일스톤을 찾을 수 없습니다.' },
           { status: 404 },
@@ -547,9 +566,17 @@ export const adminPresentationEvaluationHandlers = [
         );
       }
 
-      const expectedTeamIds = getAdminMilestoneSubmissionsFixture(
-        String(params.milestoneId),
-      )!.contents.map(team => team.teamId);
+      const milestoneId = String(params.milestoneId);
+      const submissionFixture =
+        getAdminMilestoneSubmissionsFixture(milestoneId);
+      const dynamicMilestone = findAdminSectionMilestoneFixture(milestoneId);
+      const expectedTeamIds = submissionFixture
+        ? submissionFixture.contents.map(team => team.teamId)
+        : dynamicMilestone
+          ? getAdminSectionTeamsResponse(
+              String(dynamicMilestone.sectionId),
+            ).contents.map(team => team.id)
+          : [];
       const submittedTeamIds = body.teamOrders.map(team => team.teamId);
       const orders = body.teamOrders.map(team => team.order);
       const hasValidTeams =
@@ -577,6 +604,7 @@ export const adminPresentationEvaluationHandlers = [
             teamOrders.get(team.teamId) ?? team.presentationOrder,
         }));
       updatePresentationOrderFixture(body.teamOrders);
+      setAdminPresentationOrderFixture(milestoneId, body.teamOrders);
 
       return new HttpResponse(null, { status: 204 });
     },

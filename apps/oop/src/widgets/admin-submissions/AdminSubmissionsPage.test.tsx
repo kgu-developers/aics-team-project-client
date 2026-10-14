@@ -213,7 +213,8 @@ describe('AdminSubmissionsPage', () => {
         'src',
         'https://example.test/screen.png',
       );
-      expect(screen.getByText(/제출 완료 ·/)).toBeVisible();
+      expect(screen.getByText('제출 완료')).toBeVisible();
+      expect(screen.getByText('2026-09-13/10:00')).toBeVisible();
       expect(
         screen.queryByText('표시할 제출 버전이 없습니다.'),
       ).not.toBeInTheDocument();
@@ -333,11 +334,11 @@ describe('AdminSubmissionsPage', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('제안서와 중간 점검 목록은 왼쪽에 상태와 제출 정보를 표시한다', async () => {
+  it('제안서와 중간 보고서 목록은 왼쪽에 상태와 제출 정보를 표시한다', async () => {
     const user = userEvent.setup();
 
     renderPage();
-    await user.click(await screen.findByRole('tab', { name: '중간 점검' }));
+    await user.click(await screen.findByRole('tab', { name: '중간 보고서' }));
 
     expect(await screen.findByText('피드백 제공')).toBeInTheDocument();
     expect(await screen.findByText('2026-10-14/18:00')).toBeInTheDocument();
@@ -365,7 +366,7 @@ describe('AdminSubmissionsPage', () => {
     ).toHaveAttribute('tabindex', '0');
   });
 
-  it('제안서와 중간 점검 상세에는 해당 단계의 피드백만 표시한다', async () => {
+  it('제안서와 중간 보고서 상세에는 해당 단계의 피드백만 표시한다', async () => {
     const user = userEvent.setup();
     const midReportFeedbackRequest = vi.fn();
     const proposalFeedbacks = [
@@ -462,7 +463,7 @@ describe('AdminSubmissionsPage', () => {
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole('link', { name: '제안서 목록으로' }));
-    await user.click(await screen.findByRole('tab', { name: '중간 점검' }));
+    await user.click(await screen.findByRole('tab', { name: '중간 보고서' }));
     const midtermDetailLinks = await screen.findAllByRole('link', {
       name: '상세보기',
     });
@@ -484,7 +485,7 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByRole('heading', { name: '연결된 회의록 (1건)' }),
     ).toBeInTheDocument();
     const midReportFeedbackHeading = screen.getByRole('heading', {
-      name: '중간 점검 피드백',
+      name: '중간 보고서 피드백',
     });
     const midReportMeetingsHeading = screen.getByRole('heading', {
       name: '연결된 회의록 (1건)',
@@ -494,9 +495,14 @@ describe('AdminSubmissionsPage', () => {
         midReportMeetingsHeading,
       ) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(
+      screen.getByText(
+        /학생이 수정본을 재제출하기 전까지 추가 수정 요청을 보낼 수 없습니다/,
+      ),
+    ).toBeVisible();
 
     await user.type(
-      screen.getByRole('textbox', { name: '중간 점검 피드백 내용' }),
+      screen.getByRole('textbox', { name: '중간 보고서 피드백 내용' }),
       '중간보고서 수정 요청을 전송합니다.',
     );
     await user.click(screen.getByRole('button', { name: '수정 요청 보내기' }));
@@ -521,7 +527,7 @@ describe('AdminSubmissionsPage', () => {
     expect(feedback.status).toBe(200);
 
     renderPage('/admin/submissions?sectionId=1');
-    await user.click(await screen.findByRole('tab', { name: '중간 점검' }));
+    await user.click(await screen.findByRole('tab', { name: '중간 보고서' }));
     const detailLinks = await screen.findAllByRole('link', {
       name: '상세보기',
     });
@@ -687,7 +693,7 @@ describe('AdminSubmissionsPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('중간 점검은 팀 식별자로 전용 조회 API의 블록과 제출 상태를 표시한다', async () => {
+  it('중간 보고서는 팀 식별자로 전용 조회 API의 블록과 제출 상태를 표시한다', async () => {
     renderPage(
       '/admin/submissions/1003?milestoneId=midterm&sectionId=1&teamId=1',
     );
@@ -695,15 +701,14 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'OOP-01 - 1팀 중간보고서' }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/상태: SUBMITTED · 현재 버전: 1차/),
-    ).toBeInTheDocument();
+    expect(screen.getByText('SUBMITTED')).toBeInTheDocument();
+    expect(screen.getByText('1차')).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: '3. 핵심 로직/엔진 설계' }),
     ).toBeInTheDocument();
   });
 
-  it('중간 점검 2팀을 팀 식별자로 분리해 조회한다', async () => {
+  it('중간 보고서 2팀을 팀 식별자로 분리해 조회한다', async () => {
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_PROPOSAL('1', '2')}/feedbacks`,
@@ -899,6 +904,11 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('heading', { name: '발표 평가 시작' }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /평가 시작 후에는 평가 항목을 추가·수정·삭제할 수 없습니다/,
+      ),
+    ).toBeVisible();
     await user.click(screen.getByRole('button', { name: '취소' }));
 
     await user.click(screen.getByRole('button', { name: '평가 설정' }));
@@ -1055,7 +1065,7 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.queryByRole('button', { name: '발표 자료 보기·평가' }),
     ).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '평가 설정 보기' }));
+    await user.click(screen.getByRole('button', { name: '발표 순서 관리' }));
 
     await screen.findByRole('heading', { name: '발표 순서·평가 항목 설정' });
     expect(

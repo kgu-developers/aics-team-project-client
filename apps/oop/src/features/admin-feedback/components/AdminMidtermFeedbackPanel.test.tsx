@@ -31,7 +31,7 @@ it('새 피드백 ID를 받은 뒤에는 작성 중인 draft를 최신 피드백
     </AstryxThemeProvider>,
   );
   const feedbackInput = screen.getByRole('textbox', {
-    name: '중간 점검 피드백',
+    name: '중간 보고서 피드백',
   });
 
   await user.clear(feedbackInput);
@@ -69,7 +69,7 @@ it('제출물 ID가 바뀌면 이전 제출물의 draft를 유지하지 않는�
     </AstryxThemeProvider>,
   );
   const feedbackInput = screen.getByRole('textbox', {
-    name: '중간 점검 피드백',
+    name: '중간 보고서 피드백',
   });
 
   await user.clear(feedbackInput);
@@ -84,7 +84,7 @@ it('제출물 ID가 바뀌면 이전 제출물의 draft를 유지하지 않는�
     </AstryxThemeProvider>,
   );
 
-  expect(screen.getByRole('textbox', { name: '중간 점검 피드백' })).toHaveValue(
-    '시연 흐름을 보완해 주세요.',
-  );
+  expect(
+    screen.getByRole('textbox', { name: '중간 보고서 피드백' }),
+  ).toHaveValue('시연 흐름을 보완해 주세요.');
 });

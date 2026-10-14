@@ -2,7 +2,10 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
+import { getAdminSectionTeamsResponse } from './adminStudentTeams';
 import { getAdminMilestoneSubmissionsFixture } from '../data/adminMilestoneSubmissions';
+import { getAdminPresentationOrderFixture } from '../data/adminPresentationOrders';
+import { findAdminSectionMilestoneFixture } from '../data/adminSectionMilestones';
 import { demoAdmin } from '../data/users';
 
 function isAuthorizedMilestoneViewer(request: Request) {
@@ -34,6 +37,28 @@ export const adminMilestoneSubmissionsHandlers = [
       const fixture = getAdminMilestoneSubmissionsFixture(milestoneId);
 
       if (!fixture) {
+        const milestone = findAdminSectionMilestoneFixture(milestoneId);
+        if (milestone) {
+          const contents = getAdminSectionTeamsResponse(
+            String(milestone.sectionId),
+          ).contents.map(team => ({
+            canSubmitNow: false,
+            currentVersion: 0,
+            hasPendingReview: false,
+            id: milestone.id * 100_000 + team.id,
+            meetingRecordCount: 0,
+            milestoneId: milestone.id,
+            presentationOrder: getAdminPresentationOrderFixture(
+              milestoneId,
+              team.id,
+            ),
+            status: 'NOT_SUBMITTED' as const,
+            teamId: team.id,
+            teamName: team.name,
+            totalMeetingRecordCount: 0,
+          }));
+          return HttpResponse.json({ contents });
+        }
         return HttpResponse.json(
           { code: 'NOT_FOUND', message: '마일스톤을 찾을 수 없습니다.' },
           { status: 404 },

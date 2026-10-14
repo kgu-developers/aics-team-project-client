@@ -7,6 +7,7 @@ import {
   RadioList,
   RadioListItem,
   Text,
+  TextArea,
   TextInput,
 } from '@aics/design-system';
 import { Link } from '@tanstack/react-router';
@@ -29,6 +30,7 @@ import {
   useMoveAdminTeamMemberMutation,
   useUpdateAdminTeamLeaderMutation,
   useUpdateAdminTeamMemberRoleMutation,
+  useUnfinalizeAdminSectionTeamsMutation,
   useWithdrawAdminSectionEnrollmentMutation,
 } from '~/features/admin-student-team/queries';
 
@@ -85,6 +87,31 @@ function getTeamMemberRoleErrorMessage(error: unknown) {
   }
 }
 
+function getTeamUnfinalizeErrorMessage(error: unknown) {
+  if (!isAxiosError<{ code?: string; message?: string }>(error)) {
+    return '팀 배정 확정을 취소하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+  }
+
+  if (
+    error.response?.status === 409 &&
+    error.response.data?.code === 'TEAM_UNFINALIZE_COMPLETED_FINAL_REPORT'
+  ) {
+    return '완료된 최종보고서가 있어 확정을 취소할 수 없습니다. 최종보고서를 먼저 재개한 뒤 다시 시도해 주세요.';
+  }
+
+  const serverMessage = error.response?.data?.message;
+  if (serverMessage) return serverMessage;
+
+  switch (error.response?.status) {
+    case 400:
+      return '확정 취소 사유를 앞뒤 공백을 제외하고 30자 이상 500자 이하로 입력해 주세요.';
+    case 409:
+      return '현재 팀 또는 제출물 상태에서는 확정을 취소할 수 없습니다.';
+    default:
+      return '팀 배정 확정을 취소하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+  }
+}
+
 export default function AdminStudentTeamManagement({
   initialSectionId,
   isEmbedded = false,
@@ -99,6 +126,8 @@ export default function AdminStudentTeamManagement({
     initialSectionId ?? null,
   );
   const [isFinalizeDialogOpen, setIsFinalizeDialogOpen] = useState(false);
+  const [isUnfinalizeDialogOpen, setIsUnfinalizeDialogOpen] = useState(false);
+  const [unfinalizeReason, setUnfinalizeReason] = useState('');
   const [selectedStudentNumber, setSelectedStudentNumber] = useState<
     string | null
   >(null);
@@ -123,6 +152,7 @@ export default function AdminStudentTeamManagement({
   );
   const withdrawMutation = useWithdrawAdminSectionEnrollmentMutation();
   const finalizeMutation = useFinalizeAdminSectionTeamsMutation();
+  const unfinalizeMutation = useUnfinalizeAdminSectionTeamsMutation();
   const moveTeamMemberMutation = useMoveAdminTeamMemberMutation();
   const updateTeamLeaderMutation = useUpdateAdminTeamLeaderMutation();
   const updateTeamMemberRoleMutation = useUpdateAdminTeamMemberRoleMutation();
@@ -139,6 +169,10 @@ export default function AdminStudentTeamManagement({
   const isTeamAssignmentFinalized =
     hasTeams &&
     teamsQuery.data!.contents.every(team => team.status === 'CONFIRMED');
+  const trimmedUnfinalizeReason = unfinalizeReason.trim();
+  const isUnfinalizeReasonValid =
+    trimmedUnfinalizeReason.length >= 30 &&
+    trimmedUnfinalizeReason.length <= 500;
   const teamByStudentNumber = useMemo(
     () =>
       new Map(
@@ -493,13 +527,25 @@ export default function AdminStudentTeamManagement({
                 isDisabled={
                   !sectionId ||
                   !hasTeams ||
-                  isTeamAssignmentFinalized ||
-                  finalizeMutation.isPending
+                  finalizeMutation.isPending ||
+                  unfinalizeMutation.isPending
                 }
                 label={
-                  isTeamAssignmentFinalized ? '팀 배정 확정됨' : '팀 배정 확정'
+                  isTeamAssignmentFinalized
+                    ? '팀 배정 확정 취소'
+                    : '팀 배정 확정'
                 }
-                onClick={() => setIsFinalizeDialogOpen(true)}
+                onClick={() => {
+                  if (isTeamAssignmentFinalized) {
+                    unfinalizeMutation.reset();
+                    setUnfinalizeReason('');
+                    setIsUnfinalizeDialogOpen(true);
+                    return;
+                  }
+
+                  finalizeMutation.reset();
+                  setIsFinalizeDialogOpen(true);
+                }}
               />
             </div>
             {teams.length === 0 ? (
@@ -952,6 +998,72 @@ export default function AdminStudentTeamManagement({
                 finalizeMutation.mutate(sectionId, {
                   onSuccess: () => setIsFinalizeDialogOpen(false),
                 });
+              }}
+            />
+          </HStack>
+        </div>
+      </Dialog>
+      <Dialog
+        aria-label='팀 배정 확정 취소 확인'
+        isOpen={isUnfinalizeDialogOpen}
+        onOpenChange={open => {
+          if (!open && !unfinalizeMutation.isPending)
+            setIsUnfinalizeDialogOpen(false);
+        }}
+        purpose='required'
+        width={520}
+      >
+        <div className={styles.withdrawDialogContent}>
+          <Heading level={2}>팀 배정 확정을 취소할까요?</Heading>
+          <Text>
+            취소하면 팀 이동과 역할 변경이 다시 가능해집니다. 기존 팀원과
+            제출·평가 데이터는 유지됩니다.
+          </Text>
+          <TextArea
+            aria-label='팀 배정 확정 취소 사유'
+            label='확정 취소 사유'
+            onChange={value => {
+              setUnfinalizeReason(value.slice(0, 500));
+              if (unfinalizeMutation.isError) unfinalizeMutation.reset();
+            }}
+            placeholder='팀 구성을 다시 조정해야 하는 이유를 입력하세요.'
+            rows={5}
+            value={unfinalizeReason}
+          />
+          <Text color='secondary' type='supporting'>
+            앞뒤 공백을 제외하고 {trimmedUnfinalizeReason.length}/500자 · 최소
+            30자
+          </Text>
+          {unfinalizeMutation.isError ? (
+            <Text role='alert'>
+              {getTeamUnfinalizeErrorMessage(unfinalizeMutation.error)}
+            </Text>
+          ) : null}
+          <HStack gap={2} justify='end'>
+            <Button
+              isDisabled={unfinalizeMutation.isPending}
+              label='취소'
+              onClick={() => setIsUnfinalizeDialogOpen(false)}
+              variant='secondary'
+            />
+            <Button
+              isDisabled={
+                !isUnfinalizeReasonValid || unfinalizeMutation.isPending
+              }
+              isLoading={unfinalizeMutation.isPending}
+              label='확정 취소하기'
+              onClick={() => {
+                if (!isUnfinalizeReasonValid) return;
+
+                unfinalizeMutation.mutate(
+                  { reason: trimmedUnfinalizeReason, sectionId },
+                  {
+                    onSuccess: () => {
+                      setIsUnfinalizeDialogOpen(false);
+                      setUnfinalizeReason('');
+                    },
+                  },
+                );
               }}
             />
           </HStack>

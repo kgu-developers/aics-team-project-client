@@ -190,6 +190,10 @@ it('목록과 상세가 오프셋 없는 게시일을 한국 현지 시각으로
   const row = await screen.findByRole('row', {
     name: /이미지 자료 확인 안내 공지사항 보기/,
   });
+  expect(
+    screen.getAllByRole('columnheader').map(header => header.textContent),
+  ).toEqual(['분반', '제목', '게시일']);
+  expect(within(row).getByText('OOP-01 · 월요일 1-2교시')).toBeInTheDocument();
   expect(within(row).getByText('2026-08-27/15:00')).toBeInTheDocument();
   await user.click(row);
   expect(

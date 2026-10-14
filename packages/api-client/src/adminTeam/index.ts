@@ -1,6 +1,7 @@
 export { fetchAdminSectionTeams } from './fetchAdminSectionTeams';
 export { fetchAdminTeam } from './fetchAdminTeam';
 export { finalizeAdminSectionTeams } from './finalizeAdminSectionTeams';
+export { unfinalizeAdminSectionTeams } from './unfinalizeAdminSectionTeams';
 export {
   updateAdminTeamMember,
   type UpdateAdminTeamMemberInput,
@@ -10,4 +11,6 @@ export type {
   AdminSectionTeamsResponse,
   AdminTeamDetailDto,
   AdminTeamMemberDto,
+  AdminTeamStatus,
+  UnfinalizeAdminSectionTeamsInput,
 } from './types';

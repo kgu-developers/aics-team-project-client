@@ -15,6 +15,7 @@ export type AdminRelatedSubmission = {
   milestoneTitle: string;
   /** Document ID required by the message contract, distinct from submissionId. */
   relatedId: number;
+  status?: string;
   submissionId: number;
 };
 
@@ -68,8 +69,10 @@ export function useAdminRelatedSubmissionQuery(
 
       return {
         milestoneId: milestone.id,
-        milestoneTitle: milestone.title,
+        milestoneTitle:
+          relatedType === 'MID_REPORT' ? '중간 보고서' : milestone.title,
         relatedId,
+        status: 'status' in document ? document.status : undefined,
         submissionId: submission.id,
       };
     },

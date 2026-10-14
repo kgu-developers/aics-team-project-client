@@ -43,12 +43,39 @@ export default function AdminProposalDocument({
   if (!project) return <EmptyState title='아직 작성한 제안서가 없습니다.' />;
   return (
     <Card className={styles.document}>
-      <Heading level={2}>{project.title}</Heading>
-      <Text>
-        {project.proposalCompletedAt
-          ? `제출 완료 · ${formatSeoulDateTime(project.proposalCompletedAt)}`
-          : '작성 중'}
-      </Text>
+      <header className={styles.header}>
+        <Text className={styles.eyebrow}>PROPOSAL / READ ONLY</Text>
+        <Heading level={2}>{project.title}</Heading>
+        <dl className={styles.summary}>
+          <div>
+            <dt>상태</dt>
+            <dd>{project.proposalCompletedAt ? '제출 완료' : '작성 중'}</dd>
+          </div>
+          <div>
+            <dt>제출 일시</dt>
+            <dd>
+              {project.proposalCompletedAt
+                ? formatSeoulDateTime(project.proposalCompletedAt)
+                : '-'}
+            </dd>
+          </div>
+          <div>
+            <dt>팀</dt>
+            <dd>
+              <a
+                className={styles.teamLink}
+                href={`/admin/teams/${teamId}?sectionId=${encodeURIComponent(sectionId)}`}
+              >
+                팀 대시보드 보기
+              </a>
+            </dd>
+          </div>
+          <div>
+            <dt>팀원</dt>
+            <dd>{project.teamOperation.members.length}명</dd>
+          </div>
+        </dl>
+      </header>
       <section className={styles.section}>
         <Heading level={3}>1. 주제</Heading>
         <Text className={styles.content}>{project.description}</Text>
@@ -58,8 +85,8 @@ export default function AdminProposalDocument({
       <section className={styles.section}>
         <Heading level={3}>2. 데이터 구성</Heading>
         {project.dataConfiguration.map((item, index) => (
-          <div className={styles.section} key={index}>
-            <Text>{item.name || '데이터'}</Text>
+          <div className={styles.item} key={index}>
+            <Text weight='medium'>{item.name || '데이터'}</Text>
             <Text className={styles.content}>{item.description}</Text>
             <Text>{item.expectedCount}</Text>
           </div>
@@ -70,8 +97,10 @@ export default function AdminProposalDocument({
         {project.screenConfiguration.map((screen, index) => {
           const imageUrl = safeDisplayUrl(screen.imageUrl);
           return (
-            <figure className={styles.section} key={index}>
-              <figcaption>{screen.title || '화면'}</figcaption>
+            <figure className={styles.item} key={index}>
+              <figcaption className={styles.itemTitle}>
+                {screen.title || '화면'}
+              </figcaption>
               {imageUrl ? (
                 <img
                   className={styles.image}

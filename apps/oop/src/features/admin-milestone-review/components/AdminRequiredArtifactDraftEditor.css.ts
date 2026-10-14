@@ -21,13 +21,27 @@ export const list = style({
 });
 
 export const artifact = style({
-  alignItems: 'center',
+  alignItems: 'flex-start',
   border: `1px solid ${tokens.color.border.base}`,
   borderRadius: tokens.radius.container,
   display: 'flex',
   gap: 16,
   justifyContent: 'space-between',
   padding: 16,
+});
+
+export const artifactContent = style({
+  display: 'flex',
+  flex: 1,
+  flexDirection: 'column',
+  gap: 6,
+  minWidth: 0,
+});
+
+export const artifactMeta = style({
+  lineHeight: 1.5,
+  margin: 0,
+  overflowWrap: 'anywhere',
 });
 
 export const artifactActions = style({

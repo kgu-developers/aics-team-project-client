@@ -35,7 +35,7 @@ export function PresentationTeamNavigator({
         withAdminSidebar ? styles.footerWithAdminSidebar : undefined,
       )}
     >
-      <Card className={styles.card} padding={2} variant='muted' width='100%'>
+      <Card className={styles.card} padding={2} width='100%'>
         <nav aria-label='발표 팀 이동' className={styles.navigation}>
           <Button
             isDisabled={isPreviousDisabled}

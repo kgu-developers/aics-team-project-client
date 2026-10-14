@@ -18,4 +18,5 @@ export { useResetAdminUserPasswordMutation } from './useResetAdminUserPasswordMu
 export { useUpdateAdminTeamLeaderMutation } from './useUpdateAdminTeamLeaderMutation';
 export { useUpdateAdminTeamMemberRoleMutation } from './useUpdateAdminTeamMemberRoleMutation';
 export { useUpdateAdminAssistantMutation } from './useUpdateAdminAssistantMutation';
+export { useUnfinalizeAdminSectionTeamsMutation } from './useUnfinalizeAdminSectionTeamsMutation';
 export { useWithdrawAdminSectionEnrollmentMutation } from './useUpdateAdminSectionEnrollmentMutation';

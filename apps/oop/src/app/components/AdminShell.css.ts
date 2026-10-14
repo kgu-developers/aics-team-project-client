@@ -1,12 +1,22 @@
 import { tokens } from '@aics/design-system';
 import { globalStyle, style } from '@vanilla-extract/css';
 
+import { layoutTokens } from '~/app/tokens.css';
+
 export const shell = style({
   background: tokens.color.background.body,
   display: 'grid',
-  gridTemplateColumns: '240px minmax(0, 1fr)',
+  gridTemplateColumns: `${layoutTokens.workspace['sidebar-width']} minmax(0, 1fr)`,
   minHeight: '100dvh',
-  '@media': { '(max-width: 900px)': { gridTemplateColumns: '1fr' } },
+  transitionDuration: tokens.duration['fast-min'],
+  transitionProperty: 'grid-template-columns',
+  transitionTimingFunction: tokens.ease.standard,
+});
+
+export const shellCollapsed = style({
+  vars: {
+    [layoutTokens.workspace['sidebar-width']]: '64px',
+  },
 });
 export const sidebar = style({
   alignSelf: 'start',
@@ -15,17 +25,38 @@ export const sidebar = style({
   display: 'flex',
   flexDirection: 'column',
   height: '100dvh',
-  overflowY: 'auto',
+  overflow: 'visible',
   padding: '24px 16px 16px',
   position: 'sticky',
   top: 0,
-  '@media': {
-    '(max-width: 900px)': {
-      height: 'auto',
-      minHeight: 'auto',
-      position: 'static',
-    },
-  },
+  transitionDuration: tokens.duration['fast-min'],
+  transitionProperty: 'padding',
+  transitionTimingFunction: tokens.ease.standard,
+  zIndex: 20,
+});
+
+export const sidebarCollapsed = style({
+  paddingInline: 8,
+});
+
+export const sidebarToggle = style({
+  boxShadow: '0 2px 10px rgba(10, 19, 23, 0.24)',
+  position: 'absolute',
+  right: -18,
+  top: 24,
+  zIndex: 30,
+});
+
+export const sidebarContent = style({
+  display: 'flex',
+  flex: 1,
+  flexDirection: 'column',
+  minHeight: 0,
+  overflowY: 'auto',
+});
+
+globalStyle(`${sidebarContent}[hidden]`, {
+  display: 'none',
 });
 export const brand = style({
   display: 'flex',

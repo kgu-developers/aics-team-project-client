@@ -27,6 +27,7 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminTeamDashboard from './AdminTeamDashboard';
 
 import { getAdminMilestoneSubmissionsFixture } from '~/mocks/data/adminMilestoneSubmissions';
+import { teamMessageProfessorId } from '~/mocks/data/teamMessages';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminEvaluationResultHandlers } from '~/mocks/handlers/adminEvaluationResults';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
@@ -34,6 +35,7 @@ import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMi
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 import { adminStudentTeamHandlers } from '~/mocks/handlers/adminStudentTeams';
+import { createTeamMessageHandlers } from '~/mocks/handlers/teamMessages';
 
 const server = setupServer(
   ...adminEvaluationResultHandlers,
@@ -42,6 +44,9 @@ const server = setupServer(
   ...adminMilestoneSubmissionsHandlers,
   ...adminSectionMilestoneHandlers,
   ...adminStudentTeamHandlers,
+  ...createTeamMessageHandlers({
+    getAuthenticatedUserId: () => teamMessageProfessorId,
+  }),
 );
 const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
@@ -226,6 +231,7 @@ describe('AdminTeamDashboard', () => {
         /^\/admin\/sections\/1\?(?:sectionId=1&tab=roster|tab=roster&sectionId=1)$/,
       ),
     );
+    expect(screen.getByRole('button', { name: '쪽지함' })).toBeInTheDocument();
     expect(
       await screen.findByText('AI 기반 팀 프로젝트 관리 서비스'),
     ).toBeInTheDocument();
@@ -305,6 +311,29 @@ describe('AdminTeamDashboard', () => {
     expect(meetingRequestUrl.searchParams.get('sectionId')).toBe('1');
     expect(meetingRequestUrl.searchParams.get('teamId')).toBe('1');
     expect(meetingRequestUrl.searchParams.get('size')).toBe('3');
+  });
+
+  it('팀 대시보드 쪽지함 탭에서 해당 팀의 쪽지만 확인한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage('1');
+    await user.click(await screen.findByRole('button', { name: '쪽지함' }));
+
+    expect(
+      await screen.findByRole('region', { name: '1팀 쪽지함' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: '일반 메시지 보내기' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '분반' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '팀' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('row', { name: '1팀 제안서 피드백 상세 보기' }),
+    ).not.toHaveLength(0);
   });
 
   it('팀 분반이 담당 분반과 다르면 종속 요청과 팀 내용을 차단한다', async () => {

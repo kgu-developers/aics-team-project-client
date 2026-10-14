@@ -248,7 +248,7 @@ export default function AdminRequiredArtifactsManager({
           {artifacts.map(artifact => (
             <Card className={styles.artifact} key={artifact.id} padding={0}>
               <div className={styles.artifactHeader}>
-                <div>
+                <div className={styles.artifactContent}>
                   <Heading level={3}>
                     {artifact.label ?? '이름 없는 산출물'}
                   </Heading>
@@ -258,6 +258,13 @@ export default function AdminRequiredArtifactsManager({
                     {' · '}
                     {artifact.required ? '필수 제출' : '선택 제출'}
                   </Text>
+                  {artifact.type === 'FILE' ? (
+                    <Text color='secondary' type='supporting'>
+                      허용 확장자:{' '}
+                      {artifact.allowedExtensions?.join(', ') || '제한 없음'} ·{' '}
+                      {formatRequiredArtifactFileSize(artifact.maxFileSizeMb)}
+                    </Text>
+                  ) : null}
                 </div>
                 <div className={styles.actions}>
                   <Button
@@ -274,14 +281,6 @@ export default function AdminRequiredArtifactsManager({
                   />
                 </div>
               </div>
-              {artifact.type === 'FILE' ? (
-                <Text color='secondary' type='supporting'>
-                  허용 확장자:{' '}
-                  {artifact.allowedExtensions?.join(', ') || '제한 없음'}
-                  {' · '}
-                  {formatRequiredArtifactFileSize(artifact.maxFileSizeMb)}
-                </Text>
-              ) : null}
             </Card>
           ))}
         </div>
