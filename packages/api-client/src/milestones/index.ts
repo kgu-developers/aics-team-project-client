@@ -6,6 +6,7 @@ export {
 } from './fetchAdminMilestoneSchedule';
 export { fetchAdminSectionMilestone } from './fetchAdminSectionMilestone';
 export { fetchAdminSectionMilestones } from './fetchAdminSectionMilestones';
+export { removeAdminSectionMilestone } from './removeAdminSectionMilestone';
 export { submitAdminSectionMilestone } from './submitAdminSectionMilestone';
 export { updateAdminSectionMilestone } from './updateAdminSectionMilestone';
 export { updateAdminSectionMilestoneEvaluationWindow } from './updateAdminSectionMilestoneEvaluationWindow';

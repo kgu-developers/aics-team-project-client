@@ -126,3 +126,26 @@ it('종료 dueAt만 있는 이전 상호평가 생성 본문은 거부한다', a
     code: 'INVALID_MILESTONE_REQUEST',
   });
 });
+
+it('운영 데이터가 없는 DRAFT 마일스톤을 삭제하고 204로 응답한다', async () => {
+  const response = await fetch(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '102')}`,
+    { headers, method: 'DELETE' },
+  );
+
+  expect(response.status).toBe(204);
+  expect(getAdminSectionMilestoneFixture('1', '102')).toBeUndefined();
+});
+
+it('DRAFT가 아닌 마일스톤 삭제를 409로 거부하고 기존 데이터를 유지한다', async () => {
+  const response = await fetch(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '101')}`,
+    { headers, method: 'DELETE' },
+  );
+
+  expect(response.status).toBe(409);
+  await expect(response.json()).resolves.toMatchObject({
+    code: 'MILESTONE_DELETE_CONFLICT',
+  });
+  expect(getAdminSectionMilestoneFixture('1', '101')).toBeDefined();
+});

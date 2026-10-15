@@ -1,4 +1,5 @@
 export { adminSectionMilestoneKeys } from './adminSectionMilestoneKeys';
+export { useRemoveAdminSectionMilestoneMutation } from './useRemoveAdminSectionMilestoneMutation';
 export { useAdminMilestoneScheduleQuery } from './useAdminMilestoneScheduleQuery';
 export { useAdminSectionMilestoneQuery } from './useAdminSectionMilestoneQuery';
 export { useAdminAccessibleSectionMilestonesQuery } from './useAdminAccessibleSectionMilestonesQuery';

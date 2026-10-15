@@ -1,6 +1,8 @@
 import { tokens } from '@aics/design-system';
 import { globalStyle, style } from '@vanilla-extract/css';
 
+import { layoutTokens } from '~/app/tokens.css';
+
 export const page = style({
   display: 'flex',
   flexDirection: 'column',
@@ -43,6 +45,7 @@ export const detailStack = style({
   flexDirection: 'column',
   gap: 16,
   minWidth: 0,
+  paddingBottom: `calc(${layoutTokens.workspace['savebar-height']} + 24px)`,
 });
 
 export const section = style({
@@ -142,11 +145,28 @@ export const artifactContent = style({
 
 export const actions = style({
   display: 'flex',
+  gap: 8,
   justifyContent: 'flex-end',
 });
 
 export const actionCard = style({
-  position: 'static',
+  boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.06)',
+  maxWidth: 'calc(1240px - clamp(20px, 5vw, 48px) - clamp(20px, 5vw, 48px))',
+  pointerEvents: 'auto',
+  width: '100%',
+});
+
+export const actionDock = style({
+  bottom: 16,
+  boxSizing: 'border-box',
+  display: 'flex',
+  justifyContent: 'center',
+  left: layoutTokens.workspace['sidebar-width'],
+  paddingInline: 'clamp(20px, 5vw, 48px)',
+  pointerEvents: 'none',
+  position: 'fixed',
+  right: 0,
+  zIndex: 10,
 });
 
 export const evaluationWindow = style({

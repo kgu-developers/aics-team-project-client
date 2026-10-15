@@ -1,4 +1,4 @@
-import { setApiAccessToken } from '@aics/api-client';
+import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -8,7 +8,9 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 import {
   afterAll,
@@ -30,6 +32,10 @@ import {
   resetMockSessionState,
 } from '~/mocks/authSession';
 import {
+  getAdminSectionMilestoneFixture,
+  resetAdminSectionMilestonesFixture,
+} from '~/mocks/data/adminSectionMilestones';
+import {
   demoAdmin,
   demoAdminAccessToken,
   demoUserAccounts,
@@ -47,6 +53,7 @@ const clients: QueryClient[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
+  resetAdminSectionMilestonesFixture();
   resetMockSessionState();
   mockSessionResponseHeaders(
     issueMockSession(
@@ -60,6 +67,7 @@ afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
   server.resetHandlers();
   setApiAccessToken(null);
+  resetAdminSectionMilestonesFixture();
   useAuthStore.setState({ accessToken: null, currentUser: null });
 });
 afterAll(() => server.close());
@@ -86,11 +94,16 @@ function renderPage(milestoneId: string) {
       sectionId: search.sectionId ? String(search.sectionId) : undefined,
     }),
   });
+  const listRoute = createRoute({
+    component: () => <div>마일스톤 목록 화면</div>,
+    getParentRoute: () => root,
+    path: '/admin/milestones',
+  });
   const router = createRouter({
     history: createMemoryHistory({
       initialEntries: [`/admin/milestones/${milestoneId}?sectionId=1`],
     }),
-    routeTree: root.addChildren([route]),
+    routeTree: root.addChildren([listRoute, route]),
   });
   render(
     <AstryxThemeProvider>
@@ -159,5 +172,77 @@ describe('AdminMilestoneDetailPage 발표 평가 안내', () => {
     expect(
       screen.getByRole('button', { name: '발표 평가 관리로 이동' }),
     ).toBeVisible();
+  });
+});
+
+describe('AdminMilestoneDetailPage 마일스톤 삭제', () => {
+  it('미공개 마일스톤은 확인 후 삭제하고 해당 분반 목록으로 이동한다', async () => {
+    const user = userEvent.setup();
+    renderPage('102');
+
+    await user.click(await screen.findByRole('button', { name: '삭제' }));
+    const dialog = screen.getByRole('alertdialog', {
+      name: '중간 보고서 마일스톤을 삭제할까요?',
+    });
+    expect(
+      within(dialog).getByText(/운영 데이터가 있으면 삭제되지 않습니다/),
+    ).toBeVisible();
+
+    await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+
+    expect(await screen.findByText('마일스톤 목록 화면')).toBeVisible();
+    expect(getAdminSectionMilestoneFixture('1', '102')).toBeUndefined();
+  });
+
+  it('공개된 마일스톤은 삭제 버튼과 비활성화 사유를 보여준다', async () => {
+    renderPage('101');
+
+    expect(
+      await screen.findByRole('heading', { name: '제안서 · OOP-01' }),
+    ).toBeVisible();
+    const deleteButton = screen.getByRole('button', { name: '삭제' });
+    expect(deleteButton).toHaveAttribute('aria-disabled', 'true');
+    const tooltipId = deleteButton.getAttribute('aria-describedby');
+    expect(tooltipId).toBeTruthy();
+    expect(document.getElementById(tooltipId!)).toHaveTextContent(
+      '마일스톤 목록에서 공개 상태를 미공개로 변경한 뒤 삭제할 수 있습니다.',
+    );
+  });
+
+  it('운영 데이터 충돌 응답을 받으면 이유를 안내하고 상세 화면을 유지한다', async () => {
+    server.use(
+      http.delete(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '102')}`,
+        () =>
+          HttpResponse.json(
+            { code: 'MILESTONE_DELETE_CONFLICT' },
+            { status: 409 },
+          ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage('102');
+
+    await user.click(await screen.findByRole('button', { name: '삭제' }));
+    const dialog = screen.getByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: '삭제' }));
+
+    expect(
+      await within(dialog).findByText(
+        '미공개 상태가 아니거나 제출·평가 등 운영 데이터가 있어 삭제할 수 없습니다.',
+      ),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: '중간 보고서 · OOP-01' }),
+    ).toBeVisible();
+
+    await user.click(within(dialog).getByRole('button', { name: '취소' }));
+    const deleteButton = screen.getByRole('button', { name: '삭제' });
+    expect(deleteButton).toHaveAttribute('aria-disabled', 'true');
+    const tooltipId = deleteButton.getAttribute('aria-describedby');
+    expect(tooltipId).toBeTruthy();
+    expect(document.getElementById(tooltipId!)).toHaveTextContent(
+      '미공개 상태가 아니거나 제출·평가 등 운영 데이터가 있어 삭제할 수 없습니다.',
+    );
   });
 });

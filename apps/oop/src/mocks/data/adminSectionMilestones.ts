@@ -186,6 +186,25 @@ export function getAdminSectionMilestoneFixture(
   );
 }
 
+export function removeAdminSectionMilestoneFixture(
+  sectionId: string,
+  milestoneId: string,
+) {
+  const milestones = milestonesBySectionId[sectionId];
+  if (!milestones) return { error: 'MILESTONE_NOT_FOUND' } as const;
+
+  const index = milestones.findIndex(
+    milestone => milestone.id === Number(milestoneId),
+  );
+  if (index < 0) return { error: 'MILESTONE_NOT_FOUND' } as const;
+  if (milestones[index]?.status !== 'DRAFT') {
+    return { error: 'MILESTONE_DELETE_CONFLICT' } as const;
+  }
+
+  milestones.splice(index, 1);
+  return { deleted: true } as const;
+}
+
 export function findAdminSectionMilestoneFixture(milestoneId: string) {
   return Object.values(milestonesBySectionId)
     .flat()

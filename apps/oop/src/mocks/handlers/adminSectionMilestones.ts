@@ -13,6 +13,7 @@ import {
   ensureAdminSectionMilestonesFixture,
   getAdminSectionMilestoneFixture,
   getAdminSectionMilestonesFixture,
+  removeAdminSectionMilestoneFixture,
   reopenAdminPresentationEvaluationFixture,
   updateAdminSectionMilestoneFixture,
   updateAdminSectionMilestoneFixtureEvaluationWindow,
@@ -139,6 +140,30 @@ export const adminSectionMilestoneHandlers = [
             },
             { status: 404 },
           );
+    },
+  ),
+  http.delete(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE(':sectionId', ':milestoneId')}`,
+    ({ params, request }) => {
+      if (!isAuthorizedSectionManager(request, String(params.sectionId))) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
+        );
+      }
+
+      const result = removeAdminSectionMilestoneFixture(
+        String(params.sectionId),
+        String(params.milestoneId),
+      );
+      if ('error' in result) {
+        return HttpResponse.json(
+          { code: result.error },
+          { status: result.error === 'MILESTONE_NOT_FOUND' ? 404 : 409 },
+        );
+      }
+
+      return new HttpResponse(null, { status: 204 });
     },
   ),
   http.put(

@@ -67,6 +67,7 @@ export {
 } from './adminMilestoneSubmissions';
 export {
   formatAdminMilestoneRequestError,
+  toAdminMilestoneDeleteError,
   toAdminMilestoneRequestError,
   type AdminMilestoneRequestError,
 } from './adminMilestoneRequestError';

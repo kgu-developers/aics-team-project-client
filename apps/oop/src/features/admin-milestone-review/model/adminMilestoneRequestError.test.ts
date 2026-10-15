@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   formatAdminMilestoneRequestError,
+  toAdminMilestoneDeleteError,
   toAdminMilestoneRequestError,
 } from './adminMilestoneRequestError';
 
@@ -53,5 +54,18 @@ describe('adminMilestoneRequestError', () => {
     expect(
       toAdminMilestoneRequestError(axiosError(502, null)).message,
     ).toContain('서버가 응답하지 않습니다');
+  });
+
+  it('삭제 409는 상태와 운영 데이터 제약을 안내한다', () => {
+    expect(
+      toAdminMilestoneDeleteError(
+        axiosError(409, { code: 'MILESTONE_DELETE_CONFLICT' }),
+      ),
+    ).toEqual({
+      code: 'MILESTONE_DELETE_CONFLICT',
+      message:
+        '미공개 상태가 아니거나 제출·평가 등 운영 데이터가 있어 삭제할 수 없습니다.',
+      status: 409,
+    });
   });
 });
