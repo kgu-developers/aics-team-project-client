@@ -128,13 +128,42 @@ it('종료 dueAt만 있는 이전 상호평가 생성 본문은 거부한다', a
 });
 
 it('운영 데이터가 없는 DRAFT 마일스톤을 삭제하고 204로 응답한다', async () => {
+  const createResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
+    body: JSON.stringify({
+      allowResubmissionBeforeDueAt: true,
+      schedule: {
+        dueAt: '2026-12-20T23:59:00',
+        opensAt: '2026-12-16T09:00:00',
+      },
+      title: '삭제 가능한 초안',
+      type: 'PROPOSAL',
+      weekNumber: 14,
+    }),
+    headers,
+    method: 'POST',
+  });
+  const { id } = (await createResponse.json()) as { id: number };
+
+  const response = await fetch(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', String(id))}`,
+    { headers, method: 'DELETE' },
+  );
+
+  expect(response.status).toBe(204);
+  expect(getAdminSectionMilestoneFixture('1', String(id))).toBeUndefined();
+});
+
+it('운영 데이터가 있는 DRAFT 마일스톤 삭제를 409로 거부한다', async () => {
   const response = await fetch(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '102')}`,
     { headers, method: 'DELETE' },
   );
 
-  expect(response.status).toBe(204);
-  expect(getAdminSectionMilestoneFixture('1', '102')).toBeUndefined();
+  expect(response.status).toBe(409);
+  await expect(response.json()).resolves.toMatchObject({
+    code: 'MILESTONE_DELETE_CONFLICT',
+  });
+  expect(getAdminSectionMilestoneFixture('1', '102')).toBeDefined();
 });
 
 it('DRAFT가 아닌 마일스톤 삭제를 409로 거부하고 기존 데이터를 유지한다', async () => {

@@ -222,6 +222,17 @@ export function getAdminMilestoneSubmissionsFixture(
     : undefined;
 }
 
+export function hasAdminMilestoneOperationalData(milestoneId: string) {
+  return (
+    submissionsByMilestoneId[milestoneId]?.contents.some(
+      submission =>
+        submission.status !== 'NOT_SUBMITTED' ||
+        submission.currentVersion > 0 ||
+        submission.hasPendingReview,
+    ) ?? false
+  );
+}
+
 export function updatePresentationOrderFixture(
   teamOrders: Array<{ order: number; teamId: number }>,
 ) {

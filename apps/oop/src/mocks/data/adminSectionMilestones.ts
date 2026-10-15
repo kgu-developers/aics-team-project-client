@@ -7,6 +7,8 @@ import type {
   AdminSectionMilestonesResponse,
 } from '@aics/api-client';
 
+import { hasAdminMilestoneOperationalData } from './adminMilestoneSubmissions';
+
 const sectionOneMilestones: AdminSectionMilestoneDto[] = [
   {
     allowResubmissionBeforeDueAt: true,
@@ -197,7 +199,10 @@ export function removeAdminSectionMilestoneFixture(
     milestone => milestone.id === Number(milestoneId),
   );
   if (index < 0) return { error: 'MILESTONE_NOT_FOUND' } as const;
-  if (milestones[index]?.status !== 'DRAFT') {
+  if (
+    milestones[index]?.status !== 'DRAFT' ||
+    hasAdminMilestoneOperationalData(milestoneId)
+  ) {
     return { error: 'MILESTONE_DELETE_CONFLICT' } as const;
   }
 
