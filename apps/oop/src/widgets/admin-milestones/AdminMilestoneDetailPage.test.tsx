@@ -1,4 +1,4 @@
-import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
+import { setApiAccessToken } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -10,7 +10,6 @@ import {
 } from '@tanstack/react-router';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
 import {
   afterAll,
@@ -32,6 +31,7 @@ import {
   resetMockSessionState,
 } from '~/mocks/authSession';
 import {
+  createAdminSectionMilestoneFixture,
   getAdminSectionMilestoneFixture,
   resetAdminSectionMilestonesFixture,
 } from '~/mocks/data/adminSectionMilestones';
@@ -177,12 +177,24 @@ describe('AdminMilestoneDetailPage 발표 평가 안내', () => {
 
 describe('AdminMilestoneDetailPage 마일스톤 삭제', () => {
   it('미공개 마일스톤은 확인 후 삭제하고 해당 분반 목록으로 이동한다', async () => {
+    const milestone = createAdminSectionMilestoneFixture('1', {
+      allowResubmissionBeforeDueAt: true,
+      schedule: {
+        dueAt: '2026-12-20T23:59:00',
+        opensAt: '2026-12-16T09:00:00',
+      },
+      title: '삭제 가능한 초안',
+      type: 'PROPOSAL',
+      weekNumber: 14,
+    });
+    expect(milestone).toBeDefined();
+
     const user = userEvent.setup();
-    renderPage('102');
+    renderPage(String(milestone!.id));
 
     await user.click(await screen.findByRole('button', { name: '삭제' }));
     const dialog = screen.getByRole('alertdialog', {
-      name: '중간 보고서 마일스톤을 삭제할까요?',
+      name: '삭제 가능한 초안 마일스톤을 삭제할까요?',
     });
     expect(
       within(dialog).getByText(/운영 데이터가 있으면 삭제되지 않습니다/),
@@ -191,7 +203,9 @@ describe('AdminMilestoneDetailPage 마일스톤 삭제', () => {
     await user.click(within(dialog).getByRole('button', { name: '삭제' }));
 
     expect(await screen.findByText('마일스톤 목록 화면')).toBeVisible();
-    expect(getAdminSectionMilestoneFixture('1', '102')).toBeUndefined();
+    expect(
+      getAdminSectionMilestoneFixture('1', String(milestone!.id)),
+    ).toBeUndefined();
   });
 
   it('공개된 마일스톤은 삭제 버튼과 비활성화 사유를 보여준다', async () => {
@@ -210,16 +224,6 @@ describe('AdminMilestoneDetailPage 마일스톤 삭제', () => {
   });
 
   it('운영 데이터 충돌 응답을 받으면 이유를 안내하고 상세 화면을 유지한다', async () => {
-    server.use(
-      http.delete(
-        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '102')}`,
-        () =>
-          HttpResponse.json(
-            { code: 'MILESTONE_DELETE_CONFLICT' },
-            { status: 409 },
-          ),
-      ),
-    );
     const user = userEvent.setup();
     renderPage('102');
 
