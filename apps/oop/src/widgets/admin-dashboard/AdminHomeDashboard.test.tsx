@@ -540,15 +540,16 @@ describe('AdminHomeDashboard', () => {
       .getByRole('link', { name: '제안서 보완 사항을 확인해 주세요.' })
       .closest('li')!;
     expect(
-      within(messageItem).getByText('변경된 분반명 · 월요일 1-2교시 · 1팀'),
+      within(messageItem).getByText('변경된 분반명 · 월요일 1-2교시'),
     ).toBeInTheDocument();
+    expect(within(messageItem).getByText('1팀')).toBeInTheDocument();
     expect(within(meetingItem).queryByText('OOP-01')).not.toBeInTheDocument();
     expect(
       within(messageItem).queryByText('객체지향프로그래밍'),
     ).not.toBeInTheDocument();
   });
 
-  it('홈 쪽지함은 유형 배지에 읽음 상태를 표시하고 열 때 읽음 처리한다', async () => {
+  it('홈 쪽지함은 팀 배지 앞의 파란 점으로 읽지 않음을 표시하고 열 때 읽음 처리한다', async () => {
     const user = userEvent.setup();
     dashboardState.messages.push({
       ...dashboardState.messages[0]!,
@@ -571,17 +572,19 @@ describe('AdminHomeDashboard', () => {
     });
     expect(unreadLink).toHaveAttribute('href', '/admin/messages/teams/7');
     expect(
-      within(unreadLink.closest('li')!).getByLabelText(
-        '제안서 피드백 읽지 않음',
-      ),
+      within(unreadLink.closest('li')!).getByLabelText('읽지 않음'),
     ).toBeInTheDocument();
     expect(
-      within(readLink.closest('li')!).getByLabelText('제안서 피드백 읽음'),
+      within(readLink.closest('li')!).queryByLabelText('읽지 않음'),
+    ).not.toBeInTheDocument();
+    expect(
+      within(unreadLink.closest('li')!).getByText('OOP-01 · 월요일 1-2교시'),
     ).toBeInTheDocument();
     expect(
-      within(unreadLink.closest('li')!).getByText(
-        'OOP-01 · 월요일 1-2교시 · 1팀',
-      ),
+      within(unreadLink.closest('li')!).getByText('1팀'),
+    ).toBeInTheDocument();
+    expect(
+      within(unreadLink.closest('li')!).getByText('제안서 피드백'),
     ).toBeInTheDocument();
 
     await user.click(unreadLink);
@@ -605,7 +608,7 @@ describe('AdminHomeDashboard', () => {
     expect(await screen.findByText('팀 대화')).toBeInTheDocument();
   });
 
-  it('공지사항·회의록·쪽지함은 서버가 준 순서의 최신 3건만 표시하고 각 목록으로 연결한다', async () => {
+  it('공지사항·회의록·쪽지함은 응답 순서와 무관하게 최신 3건만 표시하고 각 목록으로 연결한다', async () => {
     dashboardState.notices = Array.from({ length: 4 }, (_, index) => ({
       id: index + 10,
       sectionId: 1,
@@ -638,6 +641,9 @@ describe('AdminHomeDashboard', () => {
       teamId: index + 40,
       teamName: `${index + 1}팀`,
     }));
+    dashboardState.notices.reverse();
+    dashboardState.meetingRecords.reverse();
+    dashboardState.messages.reverse();
 
     renderPage();
 

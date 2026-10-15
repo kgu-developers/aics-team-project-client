@@ -378,6 +378,14 @@ describe('AdminSubmissionsPage', () => {
         senderId: demoAdmin.studentNumber,
         senderName: demoAdmin.name,
       },
+      {
+        createdAt: '2026-08-31 09:30',
+        message: '제안서 초안의 문제 정의를 먼저 확인해 주세요.',
+        messageId: 709,
+        projectId: 1001,
+        senderId: '20260001',
+        senderName: '학생',
+      },
     ];
 
     server.use(
@@ -424,6 +432,39 @@ describe('AdminSubmissionsPage', () => {
           });
         },
       ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT('1', '1')}/feedbacks`,
+        () =>
+          HttpResponse.json({
+            contents: [
+              {
+                createdAt: '2026-09-13 15:00',
+                message: '중간보고서 수정 전 학생 답변입니다.',
+                messageId: 702,
+                midReportId: 401,
+                senderId: '20260001',
+                senderName: '학생',
+                teamId: 1,
+              },
+              {
+                createdAt: '2026-09-12 10:30',
+                message: 'GUI 화면 흐름과 예외 처리 계획을 보완해 주세요.',
+                messageId: 701,
+                midReportId: 401,
+                senderId: demoAdmin.studentNumber,
+                senderName: demoAdmin.name,
+                teamId: 1,
+              },
+            ],
+            pageable: {
+              isEnd: true,
+              page: 0,
+              size: 20,
+              totalElements: 2,
+              totalPages: 1,
+            },
+          }),
+      ),
       http.post(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT('1', '1')}/feedback`,
         async ({ request }) => {
@@ -449,6 +490,16 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByText('제안서의 문제 정의와 구현 범위를 보완해 주세요.'),
     ).toBeInTheDocument();
+    const oldestProposalFeedback = screen.getByText(
+      '제안서 초안의 문제 정의를 먼저 확인해 주세요.',
+    );
+    const latestProposalFeedback = screen.getByText(
+      '제안서의 문제 정의와 구현 범위를 보완해 주세요.',
+    );
+    expect(
+      oldestProposalFeedback.compareDocumentPosition(latestProposalFeedback) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(
       screen.getByRole('heading', { name: '연결된 회의록 (1건)' }),
     ).toBeInTheDocument();
@@ -475,6 +526,16 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByText('GUI 화면 흐름과 예외 처리 계획을 보완해 주세요.'),
     ).toBeInTheDocument();
+    const oldestMidReportFeedback = screen.getByText(
+      'GUI 화면 흐름과 예외 처리 계획을 보완해 주세요.',
+    );
+    const latestMidReportFeedback = screen.getByText(
+      '중간보고서 수정 전 학생 답변입니다.',
+    );
+    expect(
+      oldestMidReportFeedback.compareDocumentPosition(latestMidReportFeedback) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(
       screen.queryByRole('heading', { name: '이전 단계 제안서 피드백' }),
     ).not.toBeInTheDocument();

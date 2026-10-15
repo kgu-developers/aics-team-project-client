@@ -164,6 +164,11 @@ export function createTeamMessageHandlers(
       const query = new URL(request.url).searchParams;
       const sectionId = query.get('sectionId');
       const teamId = query.get('teamId');
+      const page = Number(query.get('page') ?? 0);
+      const size = Number(query.get('size') ?? 10);
+      if (!Number.isSafeInteger(page) || page < 0 || !isId(size)) {
+        return error(400, 'INVALID_REQUEST');
+      }
       const accessibleSections = getMockMySections(
         account.credentials.studentNumber,
         {},
@@ -180,42 +185,49 @@ export function createTeamMessageHandlers(
         item => !sectionId || isAccessibleSection(item.id, sectionId),
       );
       if (!section) return error(403, 'ACCESS_DENIED');
-      const contents = data.messages.flatMap(message => {
-        const thread = data.threads.find(
-          item => item.threadId === message.threadId,
-        );
-        const team = data.teams.find(item => item.id === thread?.teamId);
-        if (!team) return [];
-        if (teamId && String(team.id) !== teamId) return [];
-        if (
-          !accessibleSections.some(section =>
-            isAccessibleSection(section.id, team.sectionId),
+      const matchingMessages = data.messages
+        .flatMap(message => {
+          const thread = data.threads.find(
+            item => item.threadId === message.threadId,
+          );
+          const team = data.teams.find(item => item.id === thread?.teamId);
+          if (!team) return [];
+          if (teamId && String(team.id) !== teamId) return [];
+          if (
+            !accessibleSections.some(section =>
+              isAccessibleSection(section.id, team.sectionId),
+            )
           )
-        )
-          return [];
-        const matchingSection = accessibleSections.find(section =>
-          isAccessibleSection(section.id, team.sectionId),
-        );
-        const matchingSectionId = Number(matchingSection?.id);
-        if (!isId(matchingSectionId)) return [];
+            return [];
+          const matchingSection = accessibleSections.find(section =>
+            isAccessibleSection(section.id, team.sectionId),
+          );
+          const matchingSectionId = Number(matchingSection?.id);
+          if (!isId(matchingSectionId)) return [];
 
-        return {
-          ...message,
-          sectionId: matchingSectionId,
-          sectionName: matchingSection?.name ?? team.sectionId,
-          teamId: team.id,
-          teamName: team.name,
-        };
-      });
+          return {
+            ...message,
+            sectionId: matchingSectionId,
+            sectionName: matchingSection?.name ?? team.sectionId,
+            teamId: team.id,
+            teamName: team.name,
+          };
+        })
+        .sort((left, right) => {
+          const createdAtOrder = right.createdAt.localeCompare(left.createdAt);
+          return createdAtOrder || right.id - left.id;
+        });
+      const totalPages = Math.ceil(matchingMessages.length / size);
+      const contents = matchingMessages.slice(page * size, (page + 1) * size);
       return HttpResponse.json({
         contents,
-        unreadCount: contents.filter(message => !message.read).length,
+        unreadCount: matchingMessages.filter(message => !message.read).length,
         pageable: {
-          page: 0,
-          size: contents.length,
-          totalElements: contents.length,
-          totalPages: 1,
-          isEnd: true,
+          page,
+          size,
+          totalElements: matchingMessages.length,
+          totalPages,
+          isEnd: page + 1 >= totalPages,
         },
       });
     }),

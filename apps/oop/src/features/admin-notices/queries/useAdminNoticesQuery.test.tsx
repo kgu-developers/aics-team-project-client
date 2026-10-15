@@ -73,6 +73,25 @@ it('정확한 contents 계약으로 분반 목록을 읽고 로그인 사용자�
   );
   await waitFor(() => expect(request).toHaveBeenCalledTimes(2));
 });
+it('서버 응답 순서와 관계없이 게시일시가 최신인 공지부터 반환한다', async () => {
+  const newerNotice = {
+    ...notice,
+    id: 11,
+    publishedAt: '2026-08-28 09:00',
+  };
+  server.use(
+    http.get(`${API_BASE_URL}/api/v1/sections/:sectionId/announcements`, () =>
+      HttpResponse.json({ contents: [notice, newerNotice] }),
+    ),
+  );
+
+  const { result } = renderHook(() => useAdminNoticesQuery(1), {
+    wrapper: wrapper(),
+  });
+
+  await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  expect(result.current.data?.map(item => item.id)).toEqual([11, 10]);
+});
 it.each([undefined, 0, -1, NaN, 2])(
   '유효한 담당 분반 %s가 없으면 요청하지 않는다',
   async sectionId => {

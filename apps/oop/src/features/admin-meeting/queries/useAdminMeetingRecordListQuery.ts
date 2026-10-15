@@ -4,6 +4,8 @@ import {
 } from '@aics/api-client';
 import { useQuery } from '@tanstack/react-query';
 
+import { compareDateTimeDesc } from '~/shared/lib/compareDateTimeDesc';
+
 import { adminMeetingKeys } from './adminMeetingKeys';
 
 export function useAdminMeetingRecordListQuery(
@@ -15,5 +17,13 @@ export function useAdminMeetingRecordListQuery(
     enabled: accessibleSectionIds.length > 0 && isEnabled,
     queryKey: adminMeetingKeys.serverList(accessibleSectionIds, filter),
     queryFn: () => fetchAdminMeetingRecordList(filter),
+    select: response => ({
+      ...response,
+      contents: [...response.contents].sort(
+        (left, right) =>
+          compareDateTimeDesc(left.meetingAt, right.meetingAt) ||
+          right.id - left.id,
+      ),
+    }),
   });
 }

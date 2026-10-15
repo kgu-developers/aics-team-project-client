@@ -17,7 +17,7 @@ const initialFeedbacks = [
     message: '제안서의 문제 정의와 구현 범위를 보완해 주세요.',
     messageId: 710,
     projectId: 1001,
-    senderId: demoAdmin.id,
+    senderId: demoAdmin.studentNumber,
     senderName: demoAdmin.name,
     teamId: 1,
   },
@@ -167,7 +167,7 @@ export const adminProposalFeedbackHandlers = [
         message: body.message.trim(),
         messageId: Math.max(0, ...feedbacks.map(item => item.messageId)) + 1,
         projectId: 1001,
-        senderId: demoAdmin.id,
+        senderId: demoAdmin.studentNumber,
         senderName: demoAdmin.name,
         teamId: Number(teamId),
       };

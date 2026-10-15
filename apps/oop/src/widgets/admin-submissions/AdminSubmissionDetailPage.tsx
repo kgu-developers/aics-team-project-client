@@ -153,6 +153,9 @@ export default function AdminSubmissionDetailPage() {
     proposalFeedbackTeamId,
     proposalFeedbackPage,
   );
+  const proposalFeedbacks = [
+    ...(proposalFeedbacksQuery.data?.contents ?? []),
+  ].sort((left, right) => left.messageId - right.messageId);
   const submitFeedbackMutation = useSubmitAdminProposalFeedbackMutation();
   const proposalFeedbackPageable = proposalFeedbacksQuery.data?.pageable;
   const relatedMeetingsQuery = useAdminMeetingRecordListQuery(
@@ -447,13 +450,13 @@ export default function AdminSubmissionDetailPage() {
                     description='잠시 후 다시 시도해 주세요.'
                     title='피드백을 불러오지 못했습니다.'
                   />
-                ) : proposalFeedbacksQuery.data?.contents.length === 0 ? (
+                ) : proposalFeedbacks.length === 0 ? (
                   <Text className={styles.sectionDescription}>
                     등록된 피드백이 없습니다.
                   </Text>
                 ) : (
                   <div className={styles.feedbackThread}>
-                    {proposalFeedbacksQuery.data?.contents.map(feedback => (
+                    {proposalFeedbacks.map(feedback => (
                       <article
                         className={cx(
                           styles.feedbackMessage,

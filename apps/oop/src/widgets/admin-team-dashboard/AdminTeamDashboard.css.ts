@@ -1,15 +1,14 @@
 import { tokens } from '@aics/design-system';
 import { globalStyle, style } from '@vanilla-extract/css';
 
-import { layoutTokens } from '~/app/tokens.css';
-
 export const page = style({
   display: 'flex',
   flexDirection: 'column',
-  gap: layoutTokens.page['section-gap'],
+  gap: 24,
   margin: '0 auto',
-  maxWidth: layoutTokens.workspace['content-width'],
-  padding: `${layoutTokens.page['padding-y']} ${layoutTokens.page['padding-x']}`,
+  maxWidth: 1240,
+  padding: '28px clamp(20px, 5vw, 48px) 56px',
+  width: '100%',
 });
 
 export const titleRow = style({

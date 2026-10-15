@@ -54,6 +54,22 @@ export function toAdminMilestoneRequestError(
   return { code, message, status };
 }
 
+export function toAdminMilestoneDeleteError(
+  error: unknown,
+): AdminMilestoneRequestError {
+  const requestError = toAdminMilestoneRequestError(error);
+
+  if (requestError.status === 409) {
+    return {
+      ...requestError,
+      message:
+        '미공개 상태가 아니거나 제출·평가 등 운영 데이터가 있어 삭제할 수 없습니다.',
+    };
+  }
+
+  return requestError;
+}
+
 export function formatAdminMilestoneRequestError({
   code,
   message,

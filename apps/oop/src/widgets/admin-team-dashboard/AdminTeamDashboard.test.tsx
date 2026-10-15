@@ -114,8 +114,24 @@ function renderPage(teamId: string, sessionSectionId = '1') {
       </AstryxThemeProvider>
     ),
   });
+  const teamMessagesRoute = createRoute({
+    component: () => <div>팀 쪽지 상세</div>,
+    getParentRoute: () => rootRoute,
+    path: '/admin/messages/teams/$teamId',
+    validateSearch: (
+      search: Record<string, unknown>,
+    ): { type?: 'ALL' | 'GENERAL' | 'MID_REPORT' | 'PROPOSAL' } => ({
+      type:
+        search.type === 'ALL' ||
+        search.type === 'GENERAL' ||
+        search.type === 'MID_REPORT' ||
+        search.type === 'PROPOSAL'
+          ? search.type
+          : undefined,
+    }),
+  });
   const router = createRouter({
-    routeTree: rootRoute.addChildren([teamDashboardRoute]),
+    routeTree: rootRoute.addChildren([teamDashboardRoute, teamMessagesRoute]),
     history: createMemoryHistory({
       initialEntries: [`/admin/teams/${teamId}`],
     }),
@@ -129,6 +145,7 @@ function renderPage(teamId: string, sessionSectionId = '1') {
       sections: [
         {
           code: 'OOP-01',
+          classTime: '월요일 1-2교시',
           courseId: 1,
           id: sessionSectionId,
           name: '객체지향프로그래밍 01분반',
@@ -138,7 +155,8 @@ function renderPage(teamId: string, sessionSectionId = '1') {
     },
   });
 
-  return render(<RouterProvider router={router} />);
+  render(<RouterProvider router={router} />);
+  return router;
 }
 
 describe('AdminTeamDashboard', () => {
@@ -228,7 +246,7 @@ describe('AdminTeamDashboard', () => {
     ).toHaveAttribute(
       'href',
       expect.stringMatching(
-        /^\/admin\/sections\/1\?(?:sectionId=1&tab=roster|tab=roster&sectionId=1)$/,
+        /^\/admin\/sections\/1\?(?:sectionId=1&tab=teams|tab=teams&sectionId=1)$/,
       ),
     );
     expect(screen.getByRole('button', { name: '쪽지함' })).toBeInTheDocument();
@@ -329,11 +347,80 @@ describe('AdminTeamDashboard', () => {
       screen.getByRole('columnheader', { name: '분반' }),
     ).toBeInTheDocument();
     expect(
+      screen.getByRole('columnheader', { name: '읽음 상태' }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole('columnheader', { name: '팀' }),
     ).toBeInTheDocument();
     expect(
       screen.getAllByRole('row', { name: '1팀 제안서 피드백 상세 보기' }),
     ).not.toHaveLength(0);
+    expect(screen.getAllByLabelText('읽지 않음')).not.toHaveLength(0);
+    expect(screen.getAllByText('OOP-01 · 월요일 1-2교시')).not.toHaveLength(0);
+    expect(screen.getAllByText('제안서 피드백')).not.toHaveLength(0);
+  });
+
+  it('팀 대시보드 쪽지를 열면 읽음 처리하고 해당 유형 상세로 이동한다', async () => {
+    const user = userEvent.setup();
+    const readRequest = vi.fn();
+    server.use(
+      http.patch(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.READ(':messageId')}`,
+        ({ params }) => {
+          readRequest(String(params.messageId));
+          return new HttpResponse(null, { status: 204 });
+        },
+      ),
+    );
+    const router = renderPage('1');
+    await user.click(await screen.findByRole('button', { name: '쪽지함' }));
+    await user.click(
+      screen.getAllByRole('row', {
+        name: '1팀 제안서 피드백 상세 보기',
+      })[0]!,
+    );
+
+    await waitFor(() => expect(readRequest).toHaveBeenCalledWith('712'));
+    expect(router.state.location.pathname).toBe('/admin/messages/teams/1');
+    expect(router.state.location.search).toMatchObject({ type: 'PROPOSAL' });
+  });
+
+  it('팀 대시보드 쪽지함은 관리자 목록 API에 팀 필터와 페이지 크기를 전달한다', async () => {
+    const messageRequests: URL[] = [];
+    const track = ({ request }: { request: Request }) => {
+      const url = new URL(request.url);
+      if (url.pathname === ENDPOINTS.ADMIN_MESSAGE.LIST) {
+        messageRequests.push(url);
+      }
+    };
+    server.events.on('request:start', track);
+    try {
+      renderPage('1');
+      await userEvent.click(
+        await screen.findByRole('button', { name: '쪽지함' }),
+      );
+      await screen.findByRole('region', { name: '1팀 쪽지함' });
+      await waitFor(() => expect(messageRequests).toHaveLength(1));
+
+      expect(messageRequests[0]?.searchParams.get('sectionId')).toBe('1');
+      expect(messageRequests[0]?.searchParams.get('teamId')).toBe('1');
+      expect(messageRequests[0]?.searchParams.get('page')).toBe('0');
+      expect(messageRequests[0]?.searchParams.get('size')).toBe('10');
+    } finally {
+      server.events.removeListener('request:start', track);
+    }
+  });
+
+  it('일반 메시지 보내기는 해당 팀의 일반 메시지 상세로 이동한다', async () => {
+    const user = userEvent.setup();
+    const router = renderPage('1');
+    await user.click(await screen.findByRole('button', { name: '쪽지함' }));
+    await user.click(
+      screen.getByRole('button', { name: '일반 메시지 보내기' }),
+    );
+
+    expect(router.state.location.pathname).toBe('/admin/messages/teams/1');
+    expect(router.state.location.search).toMatchObject({ type: 'GENERAL' });
   });
 
   it('팀 분반이 담당 분반과 다르면 종속 요청과 팀 내용을 차단한다', async () => {

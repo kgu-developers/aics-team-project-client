@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { compareDateTimeDesc } from '~/shared/lib/compareDateTimeDesc';
 import { cx } from '~/shared/lib/cx';
 import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
@@ -147,17 +148,19 @@ function List({
     <ul className={styles.list}>
       {items.map(item => (
         <li
-          className={cx(
-            styles.item,
-            isMessageList && styles.messageItem,
-            isNoticeList && styles.noticeItem,
-          )}
+          className={cx(styles.item, isNoticeList && styles.noticeItem)}
           key={
             item.id ?? item.meetingId ?? [item.section, item.title].join('-')
           }
         >
-          {!isNoticeList && !isMessageList ? (
+          {!isNoticeList ? (
             <span className={styles.itemLeading}>
+              {isMeetingList &&
+              item.meetingId &&
+              !isMeetingRead?.(item.meetingId) ? (
+                <AdminUnreadDot />
+              ) : null}
+              {isMessageList && item.read === false ? <AdminUnreadDot /> : null}
               {item.team ? (
                 <span className={styles.label} title={item.team}>
                   {item.team}
@@ -167,11 +170,6 @@ function List({
           ) : null}
           <div className={styles.itemContent}>
             <span className={styles.itemTitleRow}>
-              {isMeetingList &&
-              item.meetingId &&
-              !isMeetingRead?.(item.meetingId) ? (
-                <AdminUnreadDot />
-              ) : null}
               {isNoticeList && item.id ? (
                 <Link
                   className={styles.itemTitle}
@@ -226,25 +224,19 @@ function List({
                   : item.section
               }
             >
-              {isMessageList && item.relatedType ? (
-                <span
-                  aria-label={`${formatTeamMessageRelatedType(item.relatedType)} ${
-                    item.read ? '읽음' : '읽지 않음'
-                  }`}
-                >
-                  <Badge
-                    label={formatTeamMessageRelatedType(item.relatedType)}
-                    variant={item.read ? 'neutral' : 'info'}
-                  />
-                </span>
-              ) : null}
               {isMessageList ? (
-                <span className={styles.messageContext}>
-                  {item.team ? `${item.section} · ${item.team}` : item.section}
-                </span>
+                <span className={styles.messageContext}>{item.section}</span>
               ) : (
                 item.section
               )}
+              {isMessageList && item.relatedType ? (
+                <span className={styles.messageType}>
+                  <Badge
+                    label={formatTeamMessageRelatedType(item.relatedType)}
+                    variant='neutral'
+                  />
+                </span>
+              ) : null}
             </span>
           </div>
           <time
@@ -413,9 +405,14 @@ export default function AdminHomeDashboard() {
   const hasMilestoneScheduleError =
     activeSectionsQuery.isError ||
     milestoneQueries.some(query => query.isError);
-  const meetingItems: DashboardListItem[] = (
-    meetingRecordsQuery.data?.contents ?? []
-  )
+  const meetingItems: DashboardListItem[] = [
+    ...(meetingRecordsQuery.data?.contents ?? []),
+  ]
+    .sort(
+      (left, right) =>
+        compareDateTimeDesc(left.meetingAt, right.meetingAt) ||
+        right.id - left.id,
+    )
     .slice(0, 3)
     .map(record => {
       const section = accessibleSections.find(
@@ -441,7 +438,12 @@ export default function AdminHomeDashboard() {
         : meetingRecordsQuery.isError
           ? '회의록을 불러오지 못했습니다.'
           : '등록된 회의록이 없습니다.';
-  const noticeItems: DashboardListItem[] = (noticesQuery.data ?? [])
+  const noticeItems: DashboardListItem[] = [...(noticesQuery.data ?? [])]
+    .sort(
+      (left, right) =>
+        compareDateTimeDesc(left.publishedAt, right.publishedAt) ||
+        right.id - left.id,
+    )
     .slice(0, 3)
     .map(notice => {
       const section = accessibleSections.find(
@@ -475,7 +477,14 @@ export default function AdminHomeDashboard() {
   const noticeEmptyMessage = noticesQuery.isPending
     ? '공지사항을 불러오는 중입니다.'
     : noticeWarningMessage || '등록된 공지사항이 없습니다.';
-  const messageItems: DashboardListItem[] = (messagesQuery.data?.contents ?? [])
+  const messageItems: DashboardListItem[] = [
+    ...(messagesQuery.data?.contents ?? []),
+  ]
+    .sort(
+      (left, right) =>
+        compareDateTimeDesc(left.createdAt, right.createdAt) ||
+        right.id - left.id,
+    )
     .slice(0, 3)
     .map(message => {
       const section = accessibleSections.find(

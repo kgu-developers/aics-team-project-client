@@ -1,5 +1,6 @@
 import type { RequiredArtifactType } from '@aics/api-client';
 import {
+  AlertDialog,
   Button,
   Card,
   CheckboxList,
@@ -15,6 +16,7 @@ import {
   TextArea,
   TextInput,
   TimeInput,
+  useToast,
   type DateInputProps,
   type TimeInputProps,
 } from '@aics/design-system';
@@ -24,6 +26,7 @@ import {
   useParams,
   useSearch,
 } from '@tanstack/react-router';
+import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -36,9 +39,11 @@ import {
   getAdminMilestoneStatusLabel,
   getAdminMilestoneTypeLabel,
   getStudentMilestonePreviewTemplateId,
+  toAdminMilestoneDeleteError,
 } from '~/features/admin-milestone-review/model';
 import {
   useAdminRequiredArtifactsQuery,
+  useRemoveAdminSectionMilestoneMutation,
   useAdminSectionMilestoneQuery,
 } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -85,6 +90,9 @@ const artifactTypeLabels: Record<RequiredArtifactType, string> = {
 export default function AdminMilestoneDetailPage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const navigate = useNavigate();
+  const toast = useToast();
+  const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] =
+    useState(false);
   const { milestoneId } = useParams({
     from: '/admin/milestones/$milestoneId',
   });
@@ -108,6 +116,7 @@ export default function AdminMilestoneDetailPage() {
     isAccessibleSection ? search.sectionId : undefined,
     isAccessibleSection ? milestoneId : undefined,
   );
+  const removeMilestoneMutation = useRemoveAdminSectionMilestoneMutation();
   const milestone = milestoneQuery.data;
   const studentPreviewTemplateId = milestone
     ? getStudentMilestonePreviewTemplateId(milestone.type)
@@ -129,6 +138,43 @@ export default function AdminMilestoneDetailPage() {
         milestone.peerEvaluationForm,
       )
     : undefined;
+  const deleteRequestError = removeMilestoneMutation.isError
+    ? toAdminMilestoneDeleteError(removeMilestoneMutation.error)
+    : undefined;
+  const deleteDisabledReason =
+    milestone?.status === 'PUBLISHED'
+      ? '마일스톤 목록에서 공개 상태를 미공개로 변경한 뒤 삭제할 수 있습니다.'
+      : milestone?.status === 'CLOSED'
+        ? '마감 상태의 마일스톤은 삭제할 수 없습니다.'
+        : deleteRequestError?.status === 409
+          ? deleteRequestError.message
+          : undefined;
+
+  function removeMilestone() {
+    if (
+      !search.sectionId ||
+      milestone?.status !== 'DRAFT' ||
+      removeMilestoneMutation.isPending
+    )
+      return;
+
+    removeMilestoneMutation.mutate(
+      { milestoneId, sectionId: search.sectionId },
+      {
+        onSuccess: () => {
+          setIsDeleteConfirmationOpen(false);
+          toast({ body: '마일스톤을 삭제했어요.' });
+          void navigate({
+            search: { sectionId: search.sectionId },
+            to: ROUTES.ADMIN_MILESTONES,
+          });
+        },
+        onError: error => {
+          toast({ body: toAdminMilestoneDeleteError(error).message });
+        },
+      },
+    );
+  }
 
   if (!search.sectionId || !isAccessibleSection) {
     return (
@@ -468,24 +514,54 @@ export default function AdminMilestoneDetailPage() {
           </Card>
         ) : null}
 
-        <Card className={styles.actionCard} padding={3}>
-          <div className={styles.actions}>
-            <Button
-              label='수정'
-              onClick={() =>
-                navigate({
-                  search: {
-                    milestoneId,
-                    sectionId: search.sectionId,
-                  },
-                  to: ROUTES.ADMIN_MILESTONE_NEW,
-                })
-              }
-              variant='primary'
-            />
-          </div>
-        </Card>
+        <div className={styles.actionDock}>
+          <Card className={styles.actionCard} padding={3}>
+            <div className={styles.actions}>
+              <Button
+                isDisabled={deleteDisabledReason !== undefined}
+                label='삭제'
+                onClick={() => {
+                  removeMilestoneMutation.reset();
+                  setIsDeleteConfirmationOpen(true);
+                }}
+                tooltip={deleteDisabledReason}
+                variant='destructive'
+              />
+              <Button
+                label='수정'
+                onClick={() =>
+                  navigate({
+                    search: {
+                      milestoneId,
+                      sectionId: search.sectionId,
+                    },
+                    to: ROUTES.ADMIN_MILESTONE_NEW,
+                  })
+                }
+                variant='primary'
+              />
+            </div>
+          </Card>
+        </div>
       </div>
+      <AlertDialog
+        actionLabel='삭제'
+        actionVariant='destructive'
+        cancelLabel='취소'
+        description={
+          deleteRequestError?.message ??
+          '삭제하면 마일스톤과 필수 산출물 설정, 응답이 없는 상호평가 양식 초안이 함께 삭제됩니다. 제출·평가 등 운영 데이터가 있으면 삭제되지 않습니다.'
+        }
+        isActionLoading={removeMilestoneMutation.isPending}
+        isOpen={isDeleteConfirmationOpen}
+        onAction={removeMilestone}
+        onOpenChange={isOpen => {
+          if (!isOpen && !removeMilestoneMutation.isPending) {
+            setIsDeleteConfirmationOpen(false);
+          }
+        }}
+        title={`${milestone.title} 마일스톤을 삭제할까요?`}
+      />
     </div>
   );
 }

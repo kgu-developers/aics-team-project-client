@@ -48,7 +48,7 @@ const initialFeedbacks = [
     message: 'GUI 화면 흐름과 예외 처리 계획을 보완해 주세요.',
     messageId: 701,
     midReportId: 401,
-    senderId: demoAdmin.id,
+    senderId: demoAdmin.studentNumber,
     senderName: demoAdmin.name,
     teamId: 1,
   },
@@ -297,7 +297,7 @@ export const adminMidReportHandlers = [
           message: '중간보고서 피드백 반영을 완료 처리했습니다.',
           relatedId: report.id,
           relatedType: 'MID_REPORT',
-          senderId: demoAdmin.id,
+          senderId: demoAdmin.studentNumber,
           senderName: demoAdmin.name,
           teamId: report.teamId,
         });
@@ -378,7 +378,7 @@ export const adminMidReportHandlers = [
         message: body.message.trim(),
         messageId: Math.max(0, ...feedbacks.map(item => item.messageId)) + 1,
         midReportId: 400 + Number(params.teamId),
-        senderId: demoAdmin.id,
+        senderId: demoAdmin.studentNumber,
         senderName: demoAdmin.name,
         teamId: Number(params.teamId),
       };

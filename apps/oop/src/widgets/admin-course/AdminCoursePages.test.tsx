@@ -138,13 +138,17 @@ function renderAt(initialEntry: string) {
     path: '/$courseId',
     validateSearch: (
       search: Record<string, unknown>,
-    ): { sectionId?: number; tab?: 'roster' | 'survey' } => ({
+    ): { sectionId?: number; tab?: 'students' | 'teams' | 'survey' } => ({
       sectionId:
         typeof search.sectionId === 'number' ? search.sectionId : undefined,
       tab:
-        search.tab === 'roster' || search.tab === 'survey'
-          ? search.tab
-          : undefined,
+        search.tab === 'roster'
+          ? 'students'
+          : search.tab === 'students' ||
+              search.tab === 'teams' ||
+              search.tab === 'survey'
+            ? search.tab
+            : undefined,
     }),
   });
   const studentTeamRoute = createRoute({
@@ -339,12 +343,15 @@ describe('AdminCourseDetailPage', () => {
     expect(router.state.location.search).toMatchObject({ sectionId: 3 });
   });
 
-  it('기본 설정, 학생·팀 구성, 사전 정보를 한 화면의 탭으로 제공한다', async () => {
+  it('기본 설정, 수강생, 팀 구성, 사전 정보를 한 화면의 탭으로 제공한다', async () => {
     const user = userEvent.setup();
     renderAt('/admin/sections/1?sectionId=1');
 
     expect(
       await screen.findByRole('table', { name: '선택한 분반 기본 설정' }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: '데이터 업로드' }),
     ).toBeInTheDocument();
     const scheduleTable = await screen.findByRole('table', {
       name: '분반 진행 일정',
@@ -362,14 +369,25 @@ describe('AdminCourseDetailPage', () => {
     await user.click(
       within(
         screen.getByRole('navigation', { name: '강좌·분반 관리 메뉴' }),
-      ).getByRole('button', { name: '학생·팀 구성' }),
+      ).getByRole('button', { name: '수강생' }),
     );
-    expect(
-      await screen.findByRole('heading', { name: '데이터 업로드' }),
-    ).toBeInTheDocument();
     expect(
       await screen.findByRole('heading', { name: '수강생 목록' }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'OOP-01 팀 구성' }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      within(
+        screen.getByRole('navigation', { name: '강좌·분반 관리 메뉴' }),
+      ).getByRole('button', { name: '팀 구성' }),
+    );
+    expect(
+      await screen.findByRole('heading', { name: 'OOP-01 팀 구성' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: '수강생 목록' }),
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('combobox', { name: '분반 선택' }),
     ).not.toBeInTheDocument();
@@ -447,7 +465,7 @@ describe('AdminCourseDetailPage', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('학생 명단과 팀 명단이 모두 업로드되면 데이터 업로드를 학생·팀 구성 아래에 둔다', async () => {
+  it('학생 명단과 팀 명단이 모두 업로드되면 데이터 업로드를 기본 설정 맨 아래에 둔다', async () => {
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ROSTER_IMPORT_STATUS(
@@ -467,20 +485,20 @@ describe('AdminCourseDetailPage', () => {
       ),
     );
 
-    renderAt('/admin/sections/1?sectionId=1&tab=roster');
+    renderAt('/admin/sections/1?sectionId=1');
 
     await waitFor(() => {
-      const studentSection = screen
-        .getByRole('heading', { name: '수강생 목록' })
+      const scheduleSection = screen
+        .getByRole('table', { name: '분반 진행 일정' })
         .closest('section');
       const uploadSection = screen
         .getByRole('heading', { name: '데이터 업로드' })
         .closest('section');
 
-      expect(studentSection).not.toBeNull();
+      expect(scheduleSection).not.toBeNull();
       expect(uploadSection).not.toBeNull();
       expect(
-        studentSection!.compareDocumentPosition(uploadSection!) &
+        scheduleSection!.compareDocumentPosition(uploadSection!) &
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
     });

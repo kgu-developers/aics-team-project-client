@@ -60,6 +60,36 @@ globalStyle(table + ' tbody tr:hover td', {
   background: tokens.color.background.muted,
 });
 
+export const readStateHeader = style({
+  width: 36,
+});
+
+export const readStateCell = style({
+  textAlign: 'center',
+  verticalAlign: 'middle',
+  width: 36,
+});
+
+globalStyle(`${table} th.${readStateHeader}`, {
+  paddingLeft: 8,
+  paddingRight: 4,
+  width: 36,
+});
+
+globalStyle(`${table} td.${readStateCell}`, {
+  paddingLeft: 8,
+  paddingRight: 4,
+  width: 36,
+});
+
+globalStyle(`${table} th:nth-child(2)`, {
+  paddingLeft: 4,
+});
+
+globalStyle(`${table} td:nth-child(2)`, {
+  paddingLeft: 4,
+});
+
 export const clickableRow = style({
   cursor: 'pointer',
   ':focus-visible': {

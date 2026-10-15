@@ -309,17 +309,10 @@ export const noticeItem = style({
     },
   },
 });
-export const messageItem = style({
-  gridTemplateColumns: 'minmax(0, 1fr) auto',
-  '@media': {
-    '(max-width: 480px)': {
-      gridTemplateColumns: 'minmax(0, 1fr) auto',
-    },
-  },
-});
 export const itemLeading = style({
   alignItems: 'center',
   display: 'flex',
+  gap: tokens.spacing['1'],
   justifyContent: 'center',
   minWidth: 54,
 });
@@ -380,6 +373,7 @@ export const messageContext = style({
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
 });
+export const messageType = style({ flexShrink: 0 });
 export const date = style({
   color: tokens.color.text.secondary,
   flexShrink: 0,

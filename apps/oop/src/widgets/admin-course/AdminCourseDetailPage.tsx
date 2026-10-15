@@ -58,7 +58,7 @@ import * as styles from './AdminCourseDetailPage.css';
 import AdminSectionScheduleTable from './AdminSectionScheduleTable';
 
 type UploadFileKind = 'studentRoster' | 'teamRoster';
-export type AdminCourseDetailTab = 'basic' | 'roster' | 'survey';
+export type AdminCourseDetailTab = 'basic' | 'students' | 'teams' | 'survey';
 
 const uploadCopy: Record<
   UploadFileKind,
@@ -418,7 +418,12 @@ export default function AdminCourseDetailPage({
         <TabList
           aria-label='강좌·분반 관리 메뉴'
           onChange={value => {
-            if (value === 'basic' || value === 'roster' || value === 'survey') {
+            if (
+              value === 'basic' ||
+              value === 'students' ||
+              value === 'teams' ||
+              value === 'survey'
+            ) {
               setActiveTab(value);
               void navigate({
                 search: previous => ({
@@ -431,13 +436,15 @@ export default function AdminCourseDetailPage({
           value={activeTab}
         >
           <Tab label='기본 설정' value='basic' />
-          <Tab label='학생·팀 구성' value='roster' />
+          <Tab label='수강생' value='students' />
+          <Tab label='팀 구성' value='teams' />
           <Tab label='사전 정보' value='survey' />
         </TabList>
       ) : null}
 
       {detailSection && activeTab === 'basic' ? (
         <>
+          {!hasImportedBothRosters ? dataUploadPanel : null}
           <section
             aria-labelledby='section-settings-title'
             className={styles.block}
@@ -515,19 +522,17 @@ export default function AdminCourseDetailPage({
           </section>
 
           <AdminSectionScheduleTable sectionId={String(detailSection.id)} />
+          {hasImportedBothRosters ? dataUploadPanel : null}
         </>
       ) : null}
 
-      {detailSection && activeTab === 'roster' ? (
-        <>
-          {!hasImportedBothRosters ? dataUploadPanel : null}
-          <AdminStudentTeamManagement
-            initialSectionId={String(detailSection.id)}
-            isEmbedded
-            showSectionFilter={false}
-          />
-          {hasImportedBothRosters ? dataUploadPanel : null}
-        </>
+      {detailSection && (activeTab === 'students' || activeTab === 'teams') ? (
+        <AdminStudentTeamManagement
+          initialSectionId={String(detailSection.id)}
+          isEmbedded
+          showSectionFilter={false}
+          view={activeTab}
+        />
       ) : null}
 
       {detailSection && activeTab === 'survey' ? (

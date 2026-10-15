@@ -245,6 +245,7 @@ export {
   fetchAdminMilestoneSchedule,
   fetchAdminSectionMilestone,
   fetchAdminSectionMilestones,
+  removeAdminSectionMilestone,
   submitAdminSectionMilestone,
   updateAdminSectionMilestone,
   updateAdminSectionMilestoneEvaluationWindow,

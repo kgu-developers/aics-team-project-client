@@ -184,6 +184,9 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
   const [completionError, setCompletionError] = useState<string | null>(null);
   const report = reportQuery.data;
+  const feedbacks = [...(feedbacksQuery.data?.contents ?? [])].sort(
+    (left, right) => left.messageId - right.messageId,
+  );
   const relatedMeetingsQuery = useAdminMeetingRecordListQuery(
     [sectionId],
     {
@@ -435,9 +438,9 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
           </Text>
         ) : feedbacksQuery.isError ? (
           <Text role='alert'>피드백을 불러오지 못했습니다.</Text>
-        ) : feedbacksQuery.data?.contents.length ? (
+        ) : feedbacks.length ? (
           <div className={styles.feedbackThread}>
-            {feedbacksQuery.data.contents.map(feedback => (
+            {feedbacks.map(feedback => (
               <article
                 className={cx(
                   styles.feedbackMessage,

@@ -13,16 +13,23 @@ import {
   useParams,
   useSearch,
 } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
+import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
-import { useAdminRelatedSubmissionQuery } from '~/features/admin-message/queries';
+import {
+  useAdminMessagesQuery,
+  useAdminRelatedSubmissionQuery,
+  useUpdateAdminMessageReadMutation,
+} from '~/features/admin-message/queries';
 import { useSubmitAdminMidReportFeedbackMutation } from '~/features/admin-milestone-review/queries/useSubmitAdminMidReportFeedbackMutation';
+import { useSubmitAdminProposalFeedbackMutation } from '~/features/admin-milestone-review/queries/useSubmitAdminProposalFeedbackMutation';
 import AdminStudentDetailDialog from '~/features/admin-student-team/components/AdminStudentDetailDialog';
 import { useAdminTeamDashboardQuery } from '~/features/admin-team-dashboard/queries';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -31,6 +38,7 @@ import {
   useTeamMessagesQuery,
 } from '~/features/team-message/queries';
 
+import * as listStyles from './AdminMessagesPage.css';
 import * as styles from './AdminTeamMessagesPage.css';
 
 type RelatedType = 'GENERAL' | 'PROPOSAL' | 'MID_REPORT';
@@ -106,6 +114,8 @@ export function AdminTeamMessagesPanel({
   const submitMutation = useSubmitTeamMessageMutation(teamId);
   const submitMidReportFeedbackMutation =
     useSubmitAdminMidReportFeedbackMutation();
+  const submitProposalFeedbackMutation =
+    useSubmitAdminProposalFeedbackMutation();
   const [message, setMessage] = useState('');
   const [messageFilter, setMessageFilter] =
     useState<MessageFilter>(initialFilter);
@@ -116,34 +126,32 @@ export function AdminTeamMessagesPanel({
   const messages = messagesQuery.data ?? [];
   const sectionId = team.sectionId;
   const relatedType = messageFilter === 'ALL' ? undefined : messageFilter;
-  const needsProposalSubmission =
-    relatedType === 'PROPOSAL' ||
-    messages.some(item => item.relatedType === 'PROPOSAL');
-  const needsMidReportSubmission =
-    relatedType === 'MID_REPORT' ||
-    messages.some(item => item.relatedType === 'MID_REPORT');
   const proposalSubmissionQuery = useAdminRelatedSubmissionQuery(
-    needsProposalSubmission ? sectionId : undefined,
-    needsProposalSubmission ? teamId : undefined,
-    'PROPOSAL',
+    relatedType === 'PROPOSAL' ? sectionId : undefined,
+    relatedType === 'PROPOSAL' ? teamId : undefined,
+    relatedType === 'PROPOSAL' ? 'PROPOSAL' : undefined,
   );
   const midReportSubmissionQuery = useAdminRelatedSubmissionQuery(
-    needsMidReportSubmission ? sectionId : undefined,
-    needsMidReportSubmission ? teamId : undefined,
-    'MID_REPORT',
+    relatedType === 'MID_REPORT' ? sectionId : undefined,
+    relatedType === 'MID_REPORT' ? teamId : undefined,
+    relatedType === 'MID_REPORT' ? 'MID_REPORT' : undefined,
   );
   const relatedSubmissionQuery =
     relatedType === 'MID_REPORT'
       ? midReportSubmissionQuery
-      : proposalSubmissionQuery;
-  const relatedSubmission = relatedSubmissionQuery.data;
+      : relatedType === 'PROPOSAL'
+        ? proposalSubmissionQuery
+        : undefined;
+  const relatedSubmission = relatedSubmissionQuery?.data;
   const isMidReportFeedback = relatedType === 'MID_REPORT';
   const isMidReportRevisionRequested =
     isMidReportFeedback && relatedSubmission?.status === 'REVISION_REQUESTED';
   const canRequestMidReportRevision =
     !isMidReportFeedback || relatedSubmission?.status === 'SUBMITTED';
   const isSubmitting =
-    submitMutation.isPending || submitMidReportFeedbackMutation.isPending;
+    submitMutation.isPending ||
+    submitMidReportFeedbackMutation.isPending ||
+    submitProposalFeedbackMutation.isPending;
   const filteredMessages =
     messageFilter === 'ALL'
       ? messages
@@ -282,9 +290,9 @@ export function AdminTeamMessagesPanel({
         </div>
         {relatedType === 'PROPOSAL' ? (
           <Text className={styles.relatedNotice}>
-            {relatedSubmissionQuery.isPending
+            {relatedSubmissionQuery?.isPending
               ? '제안서 제출물을 불러오는 중입니다.'
-              : relatedSubmissionQuery.isError
+              : relatedSubmissionQuery?.isError
                 ? '제안서 제출물을 불러오지 못했습니다. 다시 시도해 주세요.'
                 : relatedSubmission
                   ? `${relatedSubmission.milestoneTitle} 제출물 #${relatedSubmission.submissionId}에 자동 연결됩니다.`
@@ -294,9 +302,9 @@ export function AdminTeamMessagesPanel({
         {relatedType === 'MID_REPORT' ? (
           <>
             <Text className={styles.relatedNotice}>
-              {relatedSubmissionQuery.isPending
+              {relatedSubmissionQuery?.isPending
                 ? '중간 보고서 제출물을 불러오는 중입니다.'
-                : relatedSubmissionQuery.isError
+                : relatedSubmissionQuery?.isError
                   ? '중간 보고서 제출물을 불러오지 못했습니다. 다시 시도해 주세요.'
                   : relatedSubmission
                     ? `${relatedSubmission.milestoneTitle} 제출물 #${relatedSubmission.submissionId}에 자동 연결됩니다.`
@@ -369,14 +377,34 @@ export function AdminTeamMessagesPanel({
                 return;
               }
 
+              if (relatedType === 'PROPOSAL') {
+                submitProposalFeedbackMutation.mutate(
+                  {
+                    input: { message: message.trim() },
+                    sectionId,
+                    teamId,
+                  },
+                  {
+                    onError: () =>
+                      setMutationError(
+                        '피드백을 보내지 못했습니다. 제안서 상태를 확인한 뒤 다시 시도해 주세요.',
+                      ),
+                    onSuccess: async () => {
+                      setMessage('');
+                      await Promise.all([
+                        proposalSubmissionQuery.refetch(),
+                        messagesQuery.refetch(),
+                      ]);
+                    },
+                  },
+                );
+                return;
+              }
+
               submitMutation.mutate(
                 {
-                  message,
-                  relatedType,
-                  relatedId:
-                    relatedType === 'GENERAL'
-                      ? undefined
-                      : relatedSubmission?.relatedId,
+                  message: message.trim(),
+                  relatedType: 'GENERAL',
                 },
                 {
                   onError: () =>
@@ -405,30 +433,52 @@ export function AdminTeamMessageList({
 }) {
   const navigate = useNavigate();
   const currentUser = useAuthStore(state => state.currentUser);
-  const messagesQuery = useTeamMessagesQuery(team.id);
-  const messages = messagesQuery.data ?? [];
-  const sectionLabel =
-    currentUser?.sections.find(section => section.id === team.sectionId)
-      ?.code ?? team.sectionId;
+  const [page, setPage] = useState(0);
+  const messagesQuery = useAdminMessagesQuery(
+    String(team.sectionId),
+    page,
+    String(team.id),
+  );
+  const readMutation = useUpdateAdminMessageReadMutation();
+  const messages = messagesQuery.data?.contents ?? [];
+  const pagination = messagesQuery.data?.pageable;
+  const boundedPage = pagination
+    ? Math.max(0, Math.min(pagination.page, pagination.totalPages - 1))
+    : page;
+  const section = currentUser?.sections.find(
+    item => String(item.id) === String(team.sectionId),
+  );
+  const sectionLabel = section
+    ? formatAdminSectionLabel(section)
+    : String(team.sectionId);
 
-  if (messagesQuery.isPending)
+  useEffect(() => {
+    if (messagesQuery.isSuccess && page !== boundedPage) setPage(boundedPage);
+  }, [boundedPage, messagesQuery.isSuccess, page]);
+
+  if (messagesQuery.isPending || page !== boundedPage)
     return <Text role='status'>쪽지 목록을 불러오는 중입니다.</Text>;
   if (messagesQuery.isError)
     return <Text role='alert'>쪽지 목록을 불러오지 못했습니다.</Text>;
 
   return (
     <section aria-label={`${team.name} 쪽지함`}>
-      <Card className={styles.listCard} padding={0}>
+      <Card className={listStyles.tableCard} padding={0}>
         {messages.length === 0 ? (
           <EmptyState title='이 팀의 쪽지가 없습니다.' />
         ) : (
-          <table className={styles.messageTable}>
+          <table className={listStyles.table}>
             <thead>
               <tr>
-                <th>분반</th>
-                <th>팀</th>
-                <th>발신자</th>
+                <th
+                  aria-label='읽음 상태'
+                  className={listStyles.readStateColumn}
+                  scope='col'
+                />
+                <th className={listStyles.sectionColumn}>분반</th>
+                <th className={listStyles.teamColumn}>팀</th>
                 <th>내용</th>
+                <th className={listStyles.senderColumn}>발신자</th>
               </tr>
             </thead>
             <tbody>
@@ -439,17 +489,19 @@ export function AdminTeamMessageList({
                   item.relatedType === 'MID_REPORT'
                     ? item.relatedType
                     : 'ALL';
-                const openThread = () =>
+                const openThread = () => {
+                  if (!item.read) readMutation.mutate(item.id);
                   void navigate({
                     params: { teamId: String(team.id) },
                     search: { type },
                     to: ROUTES.ADMIN_MESSAGE_TEAM,
                   });
+                };
 
                 return (
                   <tr
                     aria-label={`${team.name} ${messageFilterLabels[type]} 상세 보기`}
-                    className={styles.messageRow}
+                    className={listStyles.messageRow}
                     key={item.id}
                     onClick={openThread}
                     onKeyDown={event => {
@@ -460,18 +512,53 @@ export function AdminTeamMessageList({
                     }}
                     tabIndex={0}
                   >
-                    <td>
-                      {item.read ? null : (
-                        <span
-                          aria-label='읽지 않음'
-                          className={styles.unreadDot}
-                        />
+                    <td className={listStyles.readStateColumn}>
+                      {item.read ? (
+                        <span className={listStyles.visuallyHidden}>읽음</span>
+                      ) : (
+                        <AdminUnreadDot />
                       )}
-                      {sectionLabel}
                     </td>
-                    <td>{team.name}</td>
-                    <td>{item.senderName ?? item.senderId}</td>
-                    <td>{item.message}</td>
+                    <td className={listStyles.sectionColumn}>
+                      <span className={listStyles.sectionContext}>
+                        <span
+                          className={listStyles.metadataText}
+                          title={sectionLabel}
+                        >
+                          {sectionLabel}
+                        </span>
+                        <span className={listStyles.typeBadge}>
+                          <Badge
+                            label={messageFilterLabels[type]}
+                            variant='neutral'
+                          />
+                        </span>
+                      </span>
+                    </td>
+                    <td className={listStyles.teamColumn}>
+                      <span
+                        className={listStyles.metadataText}
+                        title={team.name}
+                      >
+                        {team.name}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        className={listStyles.messagePreview}
+                        title={item.message}
+                      >
+                        {item.message}
+                      </span>
+                    </td>
+                    <td className={listStyles.senderColumn}>
+                      <span
+                        className={listStyles.metadataText}
+                        title={item.senderName ?? item.senderId}
+                      >
+                        {item.senderName ?? item.senderId}
+                      </span>
+                    </td>
                   </tr>
                 );
               })}
@@ -479,6 +566,15 @@ export function AdminTeamMessageList({
           </table>
         )}
       </Card>
+      {pagination && pagination.totalPages > 1 ? (
+        <ListPagination
+          isDisabled={messagesQuery.isFetching}
+          label={`${team.name} 쪽지함 페이지 이동`}
+          onPageChange={setPage}
+          page={boundedPage}
+          pageCount={pagination.totalPages}
+        />
+      ) : null}
     </section>
   );
 }
