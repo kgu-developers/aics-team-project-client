@@ -7,7 +7,10 @@ function sectionId(value: unknown) {
 }
 
 function tab(value: unknown) {
-  return value === 'roster' || value === 'survey' ? value : undefined;
+  if (value === 'roster') return 'students';
+  return value === 'students' || value === 'teams' || value === 'survey'
+    ? value
+    : undefined;
 }
 
 export const Route = createFileRoute('/admin/sections/$courseId')({
@@ -18,7 +21,7 @@ export const Route = createFileRoute('/admin/sections/$courseId')({
   },
   validateSearch: (
     search: Record<string, unknown>,
-  ): { sectionId?: number; tab?: 'roster' | 'survey' } => ({
+  ): { sectionId?: number; tab?: 'students' | 'teams' | 'survey' } => ({
     sectionId: sectionId(search.sectionId),
     tab: tab(search.tab),
   }),
