@@ -153,18 +153,21 @@ it('운영 데이터가 없는 DRAFT 마일스톤을 삭제하고 204로 응답�
   expect(getAdminSectionMilestoneFixture('1', String(id))).toBeUndefined();
 });
 
-it('운영 데이터가 있는 DRAFT 마일스톤 삭제를 409로 거부한다', async () => {
-  const response = await fetch(
-    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', '102')}`,
-    { headers, method: 'DELETE' },
-  );
+it.each(['102', '0102'])(
+  '운영 데이터가 있는 DRAFT 마일스톤 삭제를 409로 거부한다 (요청 ID: %s)',
+  async requestedMilestoneId => {
+    const response = await fetch(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONE('1', requestedMilestoneId)}`,
+      { headers, method: 'DELETE' },
+    );
 
-  expect(response.status).toBe(409);
-  await expect(response.json()).resolves.toMatchObject({
-    code: 'MILESTONE_DELETE_CONFLICT',
-  });
-  expect(getAdminSectionMilestoneFixture('1', '102')).toBeDefined();
-});
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      code: 'MILESTONE_DELETE_CONFLICT',
+    });
+    expect(getAdminSectionMilestoneFixture('1', '102')).toBeDefined();
+  },
+);
 
 it('DRAFT가 아닌 마일스톤 삭제를 409로 거부하고 기존 데이터를 유지한다', async () => {
   const response = await fetch(

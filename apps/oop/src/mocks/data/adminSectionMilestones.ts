@@ -199,9 +199,11 @@ export function removeAdminSectionMilestoneFixture(
     milestone => milestone.id === Number(milestoneId),
   );
   if (index < 0) return { error: 'MILESTONE_NOT_FOUND' } as const;
+  const milestone = milestones[index];
+  if (!milestone) return { error: 'MILESTONE_NOT_FOUND' } as const;
   if (
-    milestones[index]?.status !== 'DRAFT' ||
-    hasAdminMilestoneOperationalData(milestoneId)
+    milestone.status !== 'DRAFT' ||
+    hasAdminMilestoneOperationalData(String(milestone.id))
   ) {
     return { error: 'MILESTONE_DELETE_CONFLICT' } as const;
   }
