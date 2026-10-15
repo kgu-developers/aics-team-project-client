@@ -1,12 +1,12 @@
 import { tokens } from '@aics/design-system';
-import { globalStyle, style } from '@vanilla-extract/css';
+import { style } from '@vanilla-extract/css';
 
 export const page = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 20,
   margin: '0 auto',
-  maxWidth: 960,
+  maxWidth: 1240,
   padding: '28px clamp(20px, 5vw, 48px) 56px',
   width: '100%',
 });
@@ -70,6 +70,7 @@ export const message = style({
   flexDirection: 'column',
   gap: 6,
   maxWidth: '78%',
+  minWidth: 0,
   padding: '12px 14px',
   width: 'fit-content',
 });
@@ -89,7 +90,9 @@ export const messageMeta = style({
 export const messageContent = style({
   fontSize: 15,
   lineHeight: 1.6,
+  overflowWrap: 'anywhere',
   whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
 });
 export const submissionContext = style({
   alignItems: 'center',
@@ -149,47 +152,4 @@ export const typeButton = style({ minWidth: 120 });
 export const relatedNotice = style({
   color: tokens.color.text.secondary,
   fontSize: 13,
-});
-
-export const listCard = style({
-  minWidth: 0,
-  overflowX: 'auto',
-});
-export const messageTable = style({
-  borderCollapse: 'collapse',
-  minWidth: 720,
-  width: '100%',
-});
-export const messageRow = style({
-  cursor: 'pointer',
-  ':hover': { background: tokens.color.background.muted },
-  ':focus-visible': {
-    outline: `2px solid ${tokens.color.accent}`,
-    outlineOffset: -2,
-  },
-});
-export const unreadDot = style({
-  background: tokens.color.accent,
-  borderRadius: '50%',
-  display: 'inline-block',
-  height: 8,
-  marginRight: tokens.spacing['2'],
-  width: 8,
-});
-
-globalStyle(`${messageTable} th`, {
-  borderBottom: `1px solid ${tokens.color.border.base}`,
-  color: tokens.color.text.secondary,
-  fontWeight: 500,
-  padding: tokens.spacing['4'],
-  textAlign: 'left',
-});
-globalStyle(`${messageTable} td`, {
-  borderBottom: `1px solid ${tokens.color.border.base}`,
-  maxWidth: 420,
-  overflowWrap: 'anywhere',
-  padding: tokens.spacing['4'],
-});
-globalStyle(`${messageTable} tbody tr:last-child td`, {
-  borderBottom: 0,
 });

@@ -26,6 +26,7 @@ import {
 } from '~/mocks/handlers/adminMidReports';
 import { adminMilestoneSubmissionsHandlers } from '~/mocks/handlers/adminMilestoneSubmissions';
 import { adminProjectProposalHandlers } from '~/mocks/handlers/adminProjectProposal';
+import { adminProposalFeedbackHandlers } from '~/mocks/handlers/adminProposalFeedbacks';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 import { adminStudentTeamHandlers } from '~/mocks/handlers/adminStudentTeams';
 import { createTeamMessageHandlers } from '~/mocks/handlers/teamMessages';
@@ -35,6 +36,7 @@ const server = setupServer(
   ...adminSectionMilestoneHandlers,
   ...adminMilestoneSubmissionsHandlers,
   ...adminMidReportHandlers,
+  ...adminProposalFeedbackHandlers,
   ...adminProjectProposalHandlers,
   ...createTeamMessageHandlers({
     getAuthenticatedUserId: () => teamMessageProfessorId,
@@ -149,6 +151,84 @@ it('locks additional mid-report revision requests until the student resubmits', 
   expect(
     screen.getByRole('button', { name: '수정 요청 보내기' }),
   ).toBeDisabled();
+});
+
+it('uses the proposal feedback API instead of the generic message API', async () => {
+  const proposalFeedbackRequests: unknown[] = [];
+  const genericMessageRequests: unknown[] = [];
+  server.use(
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_PROPOSAL('1', '1')}/feedback`,
+      async ({ request }) => {
+        proposalFeedbackRequests.push(await request.json());
+        return HttpResponse.json({
+          createdAt: '2026-10-15 20:00',
+          message: '제안서 범위를 보완해 주세요.',
+          messageId: 999,
+          projectId: 1001,
+          senderId: demoAdmin.studentNumber,
+          senderName: demoAdmin.name,
+          teamId: 1,
+        });
+      },
+    ),
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('1')}`,
+      async ({ request }) => {
+        genericMessageRequests.push(await request.json());
+        return HttpResponse.json({}, { status: 201 });
+      },
+    ),
+  );
+  renderPage();
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole('button', { name: '제안서 피드백' }),
+  );
+  const input = screen.getByRole('textbox', { name: '메시지 내용' });
+  await user.type(input, '제안서 범위를 보완해 주세요.');
+  const send = screen.getByRole('button', { name: '메시지 보내기' });
+  await waitFor(() => expect(send).toBeEnabled());
+  await user.click(send);
+
+  await waitFor(() =>
+    expect(proposalFeedbackRequests).toEqual([
+      { message: '제안서 범위를 보완해 주세요.' },
+    ]),
+  );
+  expect(genericMessageRequests).toEqual([]);
+  expect(input).toHaveValue('');
+});
+
+it('loads related submissions only after selecting a feedback type', async () => {
+  const milestoneRequests: string[] = [];
+  const track = ({ request }: { request: Request }) => {
+    const url = new URL(request.url);
+    if (url.pathname === ENDPOINTS.ADMIN.SECTION_MILESTONES('1')) {
+      milestoneRequests.push(url.pathname);
+    }
+  };
+  server.events.on('request:start', track);
+  try {
+    renderPage();
+    const user = userEvent.setup();
+
+    await screen.findByRole('heading', { name: '1팀 · 전체 쪽지' });
+    expect(milestoneRequests).toEqual([]);
+
+    await user.click(screen.getByRole('button', { name: '제안서 피드백' }));
+    await screen.findByRole('link', { name: '제출물 상세 보기 →' });
+    expect(milestoneRequests).toHaveLength(1);
+
+    await user.click(
+      screen.getByRole('button', { name: '중간 보고서 피드백' }),
+    );
+    await screen.findByRole('link', { name: '제출물 상세 보기 →' });
+    expect(milestoneRequests).toHaveLength(2);
+  } finally {
+    server.events.removeListener('request:start', track);
+  }
 });
 
 it('filters message types and exposes each related submission link once', async () => {

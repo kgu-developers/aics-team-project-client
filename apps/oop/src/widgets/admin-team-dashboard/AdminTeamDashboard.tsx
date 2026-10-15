@@ -310,7 +310,7 @@ export default function AdminTeamDashboard() {
             <Link
               className={styles.backLink}
               params={{ courseId: String(dashboardSection.courseId) }}
-              search={{ sectionId: Number(detailSectionId), tab: 'roster' }}
+              search={{ sectionId: Number(detailSectionId), tab: 'teams' }}
               to={ROUTES.ADMIN_COURSE_DETAIL}
             >
               ← 강좌·분반 관리로

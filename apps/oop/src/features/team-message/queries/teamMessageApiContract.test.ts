@@ -79,6 +79,25 @@ it('관리자 쪽지함은 현재 분반의 숫자 ID와 분반 라벨을 반환
       expect.objectContaining({ sectionId: 1, sectionName: 'OOP-01' }),
     ]),
   );
+  expect(page.contents.map(message => message.id)).toEqual([
+    711, 705, 704, 703, 712, 702, 701, 710,
+  ]);
+});
+
+it('관리자 쪽지함은 팀 필터와 페이지 크기를 실제 응답에 적용한다', async () => {
+  setApiAccessToken(demoAdminAccessToken);
+
+  const first = await fetchAdminMessages({ page: 0, size: 2, teamId: 7 });
+  const second = await fetchAdminMessages({ page: 1, size: 2, teamId: 7 });
+
+  expect(first.contents).toHaveLength(2);
+  expect(first.contents.every(message => message.teamId === 7)).toBe(true);
+  expect(first.pageable).toMatchObject({ page: 0, size: 2, isEnd: false });
+  expect(second.contents.every(message => message.teamId === 7)).toBe(true);
+  expect(second.contents.map(message => message.id)).not.toEqual(
+    first.contents.map(message => message.id),
+  );
+  expect(second.pageable).toMatchObject({ page: 1, size: 2 });
 });
 
 it('전송은 인증된 학번을 저장하고 같은 팀 방의 후속 조회에 나타난다', async () => {
