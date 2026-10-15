@@ -235,6 +235,7 @@ export const feedbackMessage = style({
   flexDirection: 'column',
   gap: tokens.spacing['2'],
   maxWidth: '78%',
+  minWidth: 0,
   padding: tokens.spacing['4'],
   '@media': {
     'screen and (max-width: 640px)': { maxWidth: '100%' },
@@ -253,7 +254,9 @@ export const feedbackMessageMeta = style({
 export const feedbackMessageContent = style({
   fontSize: 15,
   lineHeight: 1.6,
+  overflowWrap: 'anywhere',
   whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
 });
 
 export const feedbackComposer = style({

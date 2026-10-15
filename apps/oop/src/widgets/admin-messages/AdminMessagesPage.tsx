@@ -15,6 +15,7 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { formatTeamMessageRelatedType } from '~/shared/lib/formatTeamMessageRelatedType';
+import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
@@ -122,11 +123,15 @@ export default function AdminMessagesPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <th>유형</th>
-                  <th>분반</th>
-                  <th>팀</th>
+                  <th
+                    aria-label='읽음 상태'
+                    className={styles.readStateColumn}
+                    scope='col'
+                  />
+                  <th className={styles.sectionColumn}>분반</th>
+                  <th className={styles.teamColumn}>팀</th>
                   <th>내용</th>
-                  <th>발신자</th>
+                  <th className={styles.senderColumn}>발신자</th>
                 </tr>
               </thead>
               <tbody>
@@ -152,26 +157,56 @@ export default function AdminMessagesPage() {
                       }}
                       tabIndex={0}
                     >
-                      <td>
+                      <td className={styles.readStateColumn}>
+                        {row.read ? (
+                          <span className={styles.visuallyHidden}>읽음</span>
+                        ) : (
+                          <AdminUnreadDot />
+                        )}
+                      </td>
+                      <td className={styles.sectionColumn}>
+                        <span className={styles.sectionContext}>
+                          <span
+                            className={styles.metadataText}
+                            title={
+                              section
+                                ? formatAdminSectionLabel(section)
+                                : row.sectionName
+                            }
+                          >
+                            {section
+                              ? formatAdminSectionLabel(section)
+                              : row.sectionName}
+                          </span>
+                          <span className={styles.typeBadge}>
+                            <Badge label={relatedTypeLabel} variant='neutral' />
+                          </span>
+                        </span>
+                      </td>
+                      <td className={styles.teamColumn}>
                         <span
-                          aria-label={`${relatedTypeLabel} ${
-                            row.read ? '읽음' : '읽지 않음'
-                          }`}
+                          className={styles.metadataText}
+                          title={row.teamName}
                         >
-                          <Badge
-                            label={relatedTypeLabel}
-                            variant={row.read ? 'neutral' : 'info'}
-                          />
+                          {row.teamName}
                         </span>
                       </td>
                       <td>
-                        {section
-                          ? formatAdminSectionLabel(section)
-                          : row.sectionName}
+                        <span
+                          className={styles.messagePreview}
+                          title={row.message}
+                        >
+                          {row.message}
+                        </span>
                       </td>
-                      <td>{row.teamName}</td>
-                      <td>{row.message}</td>
-                      <td>{row.senderName ?? row.senderId}</td>
+                      <td className={styles.senderColumn}>
+                        <span
+                          className={styles.metadataText}
+                          title={row.senderName ?? row.senderId}
+                        >
+                          {row.senderName ?? row.senderId}
+                        </span>
+                      </td>
                     </tr>
                   );
                 })}

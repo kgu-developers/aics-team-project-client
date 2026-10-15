@@ -87,13 +87,16 @@ function renderPage(initialEntry = '/admin/meetings/') {
 }
 
 describe('AdminMeetingsPage', () => {
-  it('관리자 회의록 목록은 핵심 5개 열을 표시하고 행 전체를 눌러 상세를 볼 수 있게 한다', async () => {
+  it('관리자 회의록 목록은 읽음 상태와 핵심 5개 열을 표시하고 행 전체를 눌러 상세를 볼 수 있게 한다', async () => {
     const { container } = renderPage();
 
     await screen.findByRole('columnheader', { name: '회의 제목' });
     expect(
+      screen.getByRole('columnheader', { name: '읽음 상태' }),
+    ).toBeInTheDocument();
+    expect(
       screen.getAllByRole('columnheader').map(header => header.textContent),
-    ).toEqual(['분반', '팀', '회의 제목', '회의 일자', '작성자']);
+    ).toEqual(['', '분반', '팀', '회의 제목', '회의 일자', '작성자']);
     expect(screen.getAllByText('OOP-01 · 월요일 1-2교시')).not.toHaveLength(0);
     expect(
       screen.getByRole('row', { name: /발표 자료 구성 논의 회의록 보기/ }),

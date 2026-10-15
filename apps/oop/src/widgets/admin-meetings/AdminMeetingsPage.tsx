@@ -185,6 +185,11 @@ export default function AdminMeetingsPage() {
           <table className={styles.table}>
             <thead>
               <tr>
+                <th
+                  aria-label='읽음 상태'
+                  className={styles.readStateHeader}
+                  scope='col'
+                />
                 <th scope='col'>분반</th>
                 <th scope='col'>팀</th>
                 <th scope='col'>회의 제목</th>
@@ -213,6 +218,9 @@ export default function AdminMeetingsPage() {
                     onKeyDown={event => handleRowNavigation(event, openMeeting)}
                     tabIndex={0}
                   >
+                    <td className={styles.readStateCell}>
+                      {!isRead(record.id) ? <AdminUnreadDot /> : null}
+                    </td>
                     <td>
                       {section
                         ? formatAdminSectionLabel(section)
@@ -220,10 +228,7 @@ export default function AdminMeetingsPage() {
                     </td>
                     <td>{record.teamName}</td>
                     <td>{record.title}</td>
-                    <td>
-                      {!isRead(record.id) ? <AdminUnreadDot /> : null}
-                      {formatAdminMeetingDateTime(record.meetingAt)}
-                    </td>
+                    <td>{formatAdminMeetingDateTime(record.meetingAt)}</td>
                     <td>{record.authorId}</td>
                   </tr>
                 );

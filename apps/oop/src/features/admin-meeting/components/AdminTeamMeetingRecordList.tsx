@@ -73,12 +73,12 @@ export function AdminTeamMeetingRecordList({
             >
               <div className={styles.recordMain}>
                 {!isRead(record.id) ? <AdminUnreadDot /> : null}
-                <Text
+                <span
                   className={styles.team}
                   title={`${record.sectionLabel} · ${record.teamLabel}`}
                 >
                   {record.sectionLabel} · {record.teamLabel}
-                </Text>
+                </span>
                 <Text className={styles.title}>{record.title}</Text>
               </div>
               <Text className={styles.date}>
