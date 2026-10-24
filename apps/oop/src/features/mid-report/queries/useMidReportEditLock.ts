@@ -1,6 +1,8 @@
 import type { LiveEditLockTarget, MidReport } from '@aics/core';
 import { useState } from 'react';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 import { useAuthStore } from '~/features/auth/authStore';
 import { useDocumentSectionLock } from '~/features/editor/queries';
 
@@ -23,7 +25,7 @@ export function useMidReportEditLock(
           sectionKey: section,
         }
       : null;
-  const expired = Boolean(report && Date.parse(report.dueDate) <= Date.now());
+  const expired = Boolean(report && seoulInstant(report.dueDate) <= Date.now());
   const mutable = Boolean(report && report.status !== 'SUBMITTED' && !expired);
   const lock = useDocumentSectionLock({ target, isWritable: mutable });
   const assertSession = () => {

@@ -10,7 +10,13 @@ import {
   redirect,
   RouterProvider,
 } from '@tanstack/react-router';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent, { type UserEvent } from '@testing-library/user-event';
 import ExcelJS from 'exceljs';
 import { http, HttpResponse } from 'msw';
@@ -685,6 +691,45 @@ describe('AdminCourseDetailPage', () => {
     // waits for the separate section-list and session refreshes, which are not
     // part of the input-locking contract exercised here.
     resolveSectionUpdate?.();
+  });
+
+  it('온보딩 KST 시간을 그대로 조회하고 수정한 시간 그대로 PATCH한다', async () => {
+    const user = userEvent.setup();
+    updateAdminSectionFixture(1, {
+      contactVisibleFrom: '2026-10-24T03:00:00',
+      contactVisibleUntil: '2026-10-24T18:00:00',
+    });
+    let sent: unknown;
+    server.use(
+      http.patch(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_SECTION_CONTACT_VISIBILITY(':sectionId')}`,
+        async ({ request }) => {
+          sent = await request.json();
+          return HttpResponse.json(updateAdminSectionFixture(1, {})!);
+        },
+      ),
+    );
+    renderAt('/admin/sections/1?sectionId=1');
+    await user.click(await screen.findByRole('button', { name: '분반 설정' }));
+    const dialog = await screen.findByRole('dialog', {
+      name: '분반 정보 수정',
+    });
+    const startTime = within(dialog).getByRole('textbox', {
+      name: '온보딩 시작 시간',
+    });
+    expect(startTime).toHaveValue('03:00');
+    expect(
+      within(dialog).getByRole('textbox', { name: '온보딩 종료 시간' }),
+    ).toHaveValue('18:00');
+    fireEvent.change(startTime, { target: { value: '04:00' } });
+    fireEvent.blur(startTime);
+    await user.click(within(dialog).getByRole('button', { name: '저장' }));
+    await waitFor(() =>
+      expect(sent).toEqual({
+        visibleFrom: '2026-10-24T04:00:00',
+        visibleUntil: '2026-10-24T18:00:00',
+      }),
+    );
   });
 
   it('분반 설정에서 삭제 확인 후 표에서 제거한다', async () => {

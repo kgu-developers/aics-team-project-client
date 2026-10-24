@@ -8,6 +8,8 @@ import {
 } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 import { getMockAuthenticatedAccount } from '../authSession';
 import {
   createAdminSection,
@@ -112,9 +114,9 @@ function isContactVisibilityInput(
   return (
     typeof visibleFrom === 'string' &&
     typeof visibleUntil === 'string' &&
-    !Number.isNaN(Date.parse(visibleFrom)) &&
-    !Number.isNaN(Date.parse(visibleUntil)) &&
-    Date.parse(visibleFrom) < Date.parse(visibleUntil)
+    !Number.isNaN(seoulInstant(visibleFrom)) &&
+    !Number.isNaN(seoulInstant(visibleUntil)) &&
+    seoulInstant(visibleFrom) < seoulInstant(visibleUntil)
   );
 }
 

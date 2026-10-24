@@ -1,6 +1,8 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 import { getMockAuthenticatedAccount } from '../authSession';
 import { getAdminSectionTeamsResponse } from './adminStudentTeams';
 import {
@@ -149,13 +151,15 @@ function isEvaluationOpen() {
   const period = getPresentationEvaluationPeriod();
   if (!period.startsAt || !period.endsAt) return false;
   const now = Date.now();
-  return Date.parse(period.startsAt) <= now && now < Date.parse(period.endsAt);
+  return (
+    seoulInstant(period.startsAt) <= now && now < seoulInstant(period.endsAt)
+  );
 }
 
 /** Matches the server rule: criteria remain locked after the first evaluation start. */
 function isCriterionLocked() {
   const period = getPresentationEvaluationPeriod();
-  const startsAt = period.startsAt ? Date.parse(period.startsAt) : Number.NaN;
+  const startsAt = period.startsAt ? seoulInstant(period.startsAt) : Number.NaN;
   return (
     (Number.isFinite(startsAt) && Date.now() >= startsAt) ||
     professorEvaluations.size > 0

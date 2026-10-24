@@ -105,3 +105,60 @@ test('분반이 없으면 설문이나 팀 API를 호출하지 않는다', async
     ),
   ).toBe(false);
 });
+
+test('KST 온보딩 시작 정시에 다음 단계와 연락처 공개가 함께 열린다', async ({
+  page,
+  api,
+}) => {
+  const start = new Date('2026-10-24T03:00:00+09:00');
+  await page.clock.setFixedTime(new Date(start.getTime() - 1_000));
+  api.state.team.members.forEach(member => {
+    member.isLeader = false;
+  });
+  api.state.sections[0]!.contactVisibleFrom = '2026-10-24T03:00:00';
+  api.state.sections[0]!.contactVisibleUntil = '2026-10-24T04:00:00';
+  let contactRequests = 0;
+  await page.route('**/api/v1/teams/7/members/contacts', async route => {
+    contactRequests += 1;
+    const now = await page.evaluate(() => Date.now());
+    if (now < start.getTime()) {
+      await route.fulfill({
+        status: 403,
+        json: { code: 'CONTACT_NOT_VISIBLE' },
+      });
+      return;
+    }
+    await route.fulfill({
+      json: {
+        contents: [
+          {
+            studentNumber: '20269901',
+            phone: '010-0000-0001',
+            isLeader: false,
+          },
+          {
+            studentNumber: '20269902',
+            phone: '010-0000-0002',
+            isLeader: false,
+          },
+        ],
+      },
+    });
+  });
+  await login(page);
+  await page.getByRole('button', { name: '우리 팀 확인하기' }).click();
+  await expect(
+    page.getByRole('button', { name: '다음', exact: true }),
+  ).toBeDisabled();
+  expect(contactRequests).toBe(0);
+  await page.clock.setFixedTime(start);
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect(
+    page.getByRole('button', { name: '다음', exact: true }),
+  ).toBeEnabled();
+  await page.getByRole('button', { name: '다음', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: '010-0000-0001 복사' }),
+  ).toBeVisible();
+  expect(contactRequests).toBe(1);
+});

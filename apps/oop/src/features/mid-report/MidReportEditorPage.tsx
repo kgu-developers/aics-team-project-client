@@ -2,6 +2,8 @@ import type { MidReport, MidReportBlock, MidReportField } from '@aics/core';
 import { Button, useToast } from '@aics/design-system';
 import { useCallback, useRef, useState } from 'react';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 import { useAuthStore } from '~/features/auth/authStore';
 import DocumentEditorPage, {
   getSaveErrorMessage,
@@ -122,7 +124,7 @@ export default function MidReportEditorPage({
               label='편집 권한 다시 확인'
               isDisabled={
                 lock.pending ||
-                Date.parse(query.data?.dueDate ?? '') <= Date.now()
+                seoulInstant(query.data?.dueDate ?? '') <= Date.now()
               }
               onClick={() => void lock.startEditing()}
               size='sm'
