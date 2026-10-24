@@ -1,6 +1,8 @@
 import type { SectionResponse, TeamKickoffResponse } from '@aics/core';
 import { describe, expect, it } from 'vitest';
 
+import { toContactWindowServerDateTime } from '~/shared/lib/contactWindowDateTime';
+
 import {
   resolveContactVisibility,
   resolveLiveTeamAssignmentStage,
@@ -38,23 +40,23 @@ const team: TeamKickoffResponse = {
 };
 
 describe('resolveLiveTeamAssignmentStage', () => {
-  it('서버 UTC LocalDateTime을 서울 공개 시각과 같은 순간으로 해석한다', () => {
-    const utcSection = {
+  it('서버 KST LocalDateTime을 서울 공개 시각과 같은 순간으로 해석한다', () => {
+    const kstSection = {
       ...section,
-      contactVisibleFrom: '2026-09-10T01:00:00',
-      contactVisibleUntil: '2026-09-10T02:00:00',
+      contactVisibleFrom: '2026-09-10T10:00:00',
+      contactVisibleUntil: '2026-09-10T11:00:00',
     };
 
     expect(
       resolveLiveTeamAssignmentStage(
-        utcSection,
+        kstSection,
         team,
         Date.parse('2026-09-10T09:59:59+09:00'),
       ),
     ).toBe('result');
     expect(
       resolveLiveTeamAssignmentStage(
-        utcSection,
+        kstSection,
         team,
         Date.parse('2026-09-10T10:00:00+09:00'),
       ),
@@ -201,3 +203,34 @@ it('팀원은 온보딩 시작일의 서울 자정부터 공개한다', () => {
   expect(toTeamResultReleaseAt(null)).toBeUndefined();
   expect(toTeamResultReleaseAt('invalid')).toBeUndefined();
 });
+
+it.each(['2026-10-24T03:00:00', '2026-10-24T18:00:00'])(
+  '관리자 입력 %s의 저장값으로 학생 단계·연락처·팀장 선정 경계가 일치한다',
+  input => {
+    const saved = {
+      ...section,
+      contactVisibleFrom: toContactWindowServerDateTime(input),
+      contactVisibleUntil: '2026-10-24T23:00:00',
+    };
+    const start = Date.parse(`${input}+09:00`);
+    for (const now of [start - 9 * 60 * 60 * 1000, start - 1, start]) {
+      const open = now >= start;
+      expect(resolveContactVisibility(saved, now)).toBe(
+        open ? 'open' : 'upcoming',
+      );
+      expect(resolveLiveTeamAssignmentStage(saved, team, now)).toBe(
+        open ? 'firstMeeting' : 'result',
+      );
+      expect(
+        toTeamAssignmentProjection(saved, team, 'result', now)
+          .leaderConfirmation?.isActionAvailable,
+      ).toBe(open);
+    }
+    const end = Date.parse('2026-10-24T23:00:00+09:00');
+    expect(resolveContactVisibility(saved, end)).toBe('open');
+    expect(resolveContactVisibility(saved, end + 1)).toBe('closed');
+    expect(toTeamResultReleaseAt(saved.contactVisibleFrom)).toBe(
+      '2026-10-24T00:00:00+09:00',
+    );
+  },
+);

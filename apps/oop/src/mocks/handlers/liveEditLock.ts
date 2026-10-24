@@ -42,7 +42,7 @@ export function createLiveEditLockHandlers({
       locked: true,
       lockedBy: lock.lockedBy,
       lockedByName: lock.lockedByName,
-      lockedAt: new Date(lock.at).toISOString().slice(0, 16).replace('T', ' '),
+      lockedAt: new Date(lock.at).toISOString(),
     };
   }
   const error = (code: string, status: number) =>

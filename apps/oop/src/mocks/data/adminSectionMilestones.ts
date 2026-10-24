@@ -7,6 +7,8 @@ import type {
   AdminSectionMilestonesResponse,
 } from '@aics/api-client';
 
+import { seoulInstant } from '~/shared/lib/seoulInstant';
+
 import { hasAdminMilestoneOperationalData } from './adminMilestoneSubmissions';
 
 const sectionOneMilestones: AdminSectionMilestoneDto[] = [
@@ -338,8 +340,8 @@ export function updateAdminSectionMilestoneFixtureEvaluationWindow(
   const currentOpensAt = milestone.schedule.evaluationOpensAt;
   const hasStarted =
     milestone.type === 'PRESENTATION' &&
-    Number.isFinite(Date.parse(currentOpensAt ?? '')) &&
-    Date.now() >= Date.parse(currentOpensAt!);
+    Number.isFinite(seoulInstant(currentOpensAt ?? '')) &&
+    Date.now() >= seoulInstant(currentOpensAt!);
   if (
     hasStarted &&
     (input.clearEvaluationWindow ||
@@ -380,8 +382,8 @@ export function closeAdminPresentationEvaluationFixture(
   const milestone = getAdminSectionMilestoneFixture(sectionId, milestoneId);
   if (!milestone) return { error: 'MILESTONE_NOT_FOUND' } as const;
   const now = Date.now();
-  const opensAt = Date.parse(milestone.schedule.evaluationOpensAt ?? '');
-  const closesAt = Date.parse(milestone.schedule.evaluationClosesAt ?? '');
+  const opensAt = seoulInstant(milestone.schedule.evaluationOpensAt ?? '');
+  const closesAt = seoulInstant(milestone.schedule.evaluationClosesAt ?? '');
   if (
     milestone.type !== 'PRESENTATION' ||
     !Number.isFinite(opensAt) ||
@@ -406,11 +408,11 @@ export function reopenAdminPresentationEvaluationFixture(
   const milestone = getAdminSectionMilestoneFixture(sectionId, milestoneId);
   if (!milestone) return { error: 'MILESTONE_NOT_FOUND' } as const;
   const now = Date.now();
-  const opensAt = Date.parse(milestone.schedule.evaluationOpensAt ?? '');
-  const previousClosesAt = Date.parse(
+  const opensAt = seoulInstant(milestone.schedule.evaluationOpensAt ?? '');
+  const previousClosesAt = seoulInstant(
     milestone.schedule.evaluationClosesAt ?? '',
   );
-  const nextClosesAt = Date.parse(evaluationClosesAt ?? '');
+  const nextClosesAt = seoulInstant(evaluationClosesAt ?? '');
   if (
     milestone.type !== 'PRESENTATION' ||
     !Number.isFinite(opensAt) ||

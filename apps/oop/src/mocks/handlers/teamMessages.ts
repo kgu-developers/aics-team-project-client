@@ -70,7 +70,7 @@ export function createTeamMessageHandlers(
     options.getAuthenticatedUserId ??
     ((request: Request) =>
       getMockAuthenticatedAccount(request)?.user.studentNumber);
-  const now = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
+  const now = () => new Date().toISOString();
 
   function refreshPersistedData() {
     if (!options.persist) return;

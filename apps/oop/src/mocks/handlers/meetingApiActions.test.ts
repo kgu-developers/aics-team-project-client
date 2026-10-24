@@ -35,7 +35,7 @@ it('등록·수정·해제 후 회의별/팀별 조회가 같은 액션과 회�
     dueAt: '2026-09-10 23:59',
     assignee: { userId: '20260001' },
   });
-  await updateMeetingActionApi(created.id, {
+  const updated = await updateMeetingActionApi(created.id, {
     status: 'DONE',
     clearAssignee: true,
     clearDueAt: true,
@@ -43,7 +43,7 @@ it('등록·수정·해제 후 회의별/팀별 조회가 같은 액션과 회�
   const completed = await fetchTeamMeetingActionEntries('7', 'DONE');
   expect(completed).toEqual([
     {
-      ...created,
+      ...updated,
       status: 'DONE',
       assignee: null,
       dueAt: null,

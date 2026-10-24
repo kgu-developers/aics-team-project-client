@@ -51,7 +51,7 @@ export function createMeetingApiHandlers() {
   const recordPath = `${API_BASE_URL}/api/v1/meeting-records/:id(\\d+)`;
   const recordActionsPath = `${API_BASE_URL}/api/v1/meeting-records/:id(\\d+)/actions`;
   const recordLogsPath = `${API_BASE_URL}/api/v1/meeting-records/:id(\\d+)/logs`;
-  const now = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
+  const now = () => new Date().toISOString();
   const validDueAt = (value: string | undefined) =>
     value === undefined || /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(value);
   const assignee = (id?: string) => {

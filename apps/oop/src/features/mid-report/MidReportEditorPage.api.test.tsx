@@ -47,6 +47,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   server.resetHandlers();
   clients.splice(0).forEach(client => client.clear());
   useAuthStore.getState().clearSession();
@@ -159,6 +160,35 @@ it('기간이 끝난 문서는 편집과 제출을 막는다', async () => {
     screen.queryByRole('button', { name: '제출하기' }),
   ).not.toBeInTheDocument();
 });
+
+it.each([
+  ['2026-10-24T17:59:59+09:00', false],
+  ['2026-10-24T18:00:00+09:00', true],
+])(
+  'KST 마감 18시를 브라우저 시간대와 관계없이 판정한다: %s',
+  async (now, expired) => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse(now));
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+        HttpResponse.json({
+          ...getCurrentMidReport(),
+          teamId: 7,
+          dueDate: '2026-10-24T18:00:00',
+        }),
+      ),
+    );
+    renderEditor();
+    const input = await screen.findByRole('textbox', { name: '프로젝트 제목' });
+    if (expired) {
+      expect(input).toBeDisabled();
+      expect(
+        screen.getByRole('button', { name: '편집 권한 다시 확인' }),
+      ).toBeDisabled();
+    } else {
+      await waitFor(() => expect(input).toBeEnabled());
+    }
+  },
+);
 
 it('401 응답에서 에디터와 잠금 획득을 노출하지 않는다', async () => {
   server.use(

@@ -254,30 +254,35 @@ it('연락처 공개 일정이 미설정이어도 내 팀 화면에서 identity�
   expect(claimRequests).not.toHaveBeenCalled();
 });
 
-it('시작일 00시부터 팀원을 공개하고 설정 시각부터 연락처·팀장 선정을 연다', async () => {
-  const start = Date.parse('2026-09-10T10:00:00+09:00');
-  const now = vi.spyOn(Date, 'now').mockReturnValue(start - 60_000);
-  activeSection.contactVisibleFrom = '2026-09-10T10:00:00+09:00';
-  renderFlow();
+it.each(['2026-09-10T10:00:00', '2026-09-10T10:00:00+09:00'])(
+  'KST 일정 %s의 시작 시각부터 다음 단계와 연락처를 함께 연다',
+  async visibleFrom => {
+    const start = Date.parse('2026-09-10T10:00:00+09:00');
+    const now = vi.spyOn(Date, 'now').mockReturnValue(start - 60_000);
+    activeSection.contactVisibleFrom = visibleFrom;
+    renderFlow();
 
-  await viewTeam();
-  expect(screen.getByText('한가온')).toBeVisible();
-  expect(screen.getByText('20260001')).toBeVisible();
-  expect(screen.getByRole('button', { name: '다음' })).toBeDisabled();
-  expect(kickoffRequests).toHaveBeenCalledOnce();
-  expect(contactRequests).not.toHaveBeenCalled();
+    await viewTeam();
+    expect(screen.getByText('한가온')).toBeVisible();
+    expect(screen.getByText('20260001')).toBeVisible();
+    expect(screen.getByRole('button', { name: '다음' })).toBeDisabled();
+    expect(kickoffRequests).toHaveBeenCalledOnce();
+    expect(contactRequests).not.toHaveBeenCalled();
 
-  act(() => {
-    now.mockReturnValue(start);
-    window.dispatchEvent(new Event('focus'));
-  });
-  expect(screen.getByRole('button', { name: '다음' })).toBeEnabled();
-  expect(screen.queryByRole('button', { name: '내가 팀장입니다' })).toBeNull();
-  await userEvent.setup().click(screen.getByRole('button', { name: '다음' }));
-  expect(
-    await screen.findByRole('button', { name: '010-0000-0001 복사' }),
-  ).toBeVisible();
-});
+    act(() => {
+      now.mockReturnValue(start);
+      window.dispatchEvent(new Event('focus'));
+    });
+    expect(screen.getByRole('button', { name: '다음' })).toBeEnabled();
+    expect(
+      screen.queryByRole('button', { name: '내가 팀장입니다' }),
+    ).toBeNull();
+    await userEvent.setup().click(screen.getByRole('button', { name: '다음' }));
+    expect(
+      await screen.findByRole('button', { name: '010-0000-0001 복사' }),
+    ).toBeVisible();
+  },
+);
 
 it('연락처 기간 종료 후에는 번호를 요청하지 않고 팀장 선정만 허용한다', async () => {
   activeSection.contactVisibleUntil = '2020-01-02T00:00:00+09:00';
