@@ -27,6 +27,8 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
+
 import { useActiveAdminSections } from '~/features/admin-course/queries';
 import { useCreateAdminPeerEvaluationFormMutation } from '~/features/admin-evaluation/queries';
 import AdminPeerEvaluationStudentPreview from '~/features/admin-milestone-review/components/AdminPeerEvaluationStudentPreview';
@@ -243,7 +245,7 @@ export default function AdminMilestoneSetupPage() {
   const hydratedMilestoneKey = useRef<string | undefined>(undefined);
   const initializedCreationSection = useRef(Boolean(initialSectionId));
   const sectionOptions = sections.map(section => ({
-    label: `${section.code} · ${section.name}`,
+    label: formatAdminSectionLabel(section),
     value: section.id,
   }));
 
@@ -760,7 +762,7 @@ export default function AdminMilestoneSetupPage() {
 
   const getSectionLabel = (sectionId: string) => {
     const section = sections.find(candidate => candidate.id === sectionId);
-    return section ? `${section.code} · ${section.name}` : sectionId;
+    return section ? formatAdminSectionLabel(section) : sectionId;
   };
 
   if (activeSectionsQuery.isPending) {
@@ -1009,9 +1011,9 @@ export default function AdminMilestoneSetupPage() {
                           className={styles.sectionSchedule}
                           key={section.id}
                         >
-                          <Heading
-                            level={3}
-                          >{`${section.code} · ${section.name}`}</Heading>
+                          <Heading level={3}>
+                            {formatAdminSectionLabel(section)}
+                          </Heading>
                           <div className={styles.scheduleGrid}>
                             {!isPeerEvaluation ? (
                               <div className={styles.scheduleField}>

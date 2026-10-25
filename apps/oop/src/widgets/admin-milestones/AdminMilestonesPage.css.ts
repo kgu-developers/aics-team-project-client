@@ -50,7 +50,7 @@ export const table = style({
   width: '100%',
 });
 
-export const sectionColumn = style({ width: 132 });
+export const sectionColumn = style({ width: 220 });
 export const dueAtColumn = style({ width: 156 });
 export const statusColumn = style({ width: 152 });
 
@@ -72,6 +72,12 @@ globalStyle(table + ' td', {
 export const milestoneTitle = style({
   overflowWrap: 'anywhere',
   wordBreak: 'break-word',
+});
+
+export const sectionLabel = style({
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 });
 
 globalStyle(table + ' tbody tr:hover td', {

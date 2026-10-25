@@ -111,6 +111,17 @@ globalStyle(`${profileActions} > button`, {
   minWidth: 0,
 });
 
+globalStyle(`${profileActions} > button:first-child`, {
+  flex: '1.5 1 0',
+  whiteSpace: 'nowrap',
+});
+
+globalStyle(`${profileActions} > button:first-child span`, {
+  overflow: 'visible',
+  textOverflow: 'clip',
+  whiteSpace: 'nowrap',
+});
+
 export const passwordForm = style({
   display: 'flex',
   flexDirection: 'column',

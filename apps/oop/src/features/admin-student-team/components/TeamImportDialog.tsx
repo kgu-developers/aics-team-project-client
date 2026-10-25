@@ -11,6 +11,8 @@ import {
 import { isAxiosError } from 'axios';
 import { useState } from 'react';
 
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
+
 import {
   useApplyAdminTeamImportMutation,
   usePreviewAdminTeamImportMutation,
@@ -30,7 +32,7 @@ type TeamImportDialogProps = {
   onClose: () => void;
   onSectionChange: (sectionId: string) => void;
   sectionId: string;
-  sections: { id: string; code: string; name: string }[];
+  sections: { id: string; code: string; classTime?: string; name: string }[];
 };
 
 export default function TeamImportDialog({
@@ -87,7 +89,7 @@ export default function TeamImportDialog({
               reset();
             }}
             options={sections.map(section => ({
-              label: `${section.code} (${section.name})`,
+              label: formatAdminSectionLabel(section),
               value: section.id,
             }))}
             renderOption={option => (

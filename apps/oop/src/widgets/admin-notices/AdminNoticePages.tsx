@@ -54,6 +54,7 @@ import {
   useSubmitSectionAnnouncementsMutation,
   useUpdateSectionAnnouncementMutation,
 } from '~/features/admin-notices/queries';
+import { ADMIN_SECTION_FILTER_WIDTH } from '~/features/admin-section/filterLayout';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminNoticePages.css';
@@ -132,7 +133,7 @@ function SectionSelect({
         activeSectionsQuery.isPending ||
         activeSectionsQuery.isError
       }
-      width={320}
+      width={ADMIN_SECTION_FILTER_WIDTH}
     />
   );
 }
@@ -590,7 +591,7 @@ export function AdminNoticeNewPage() {
           label='분반'
           onChange={setSelectedSectionIds}
           options={publishableSections.map(section => ({
-            label: `${section.code} · ${section.name}`,
+            label: formatAdminSectionLabel(section),
             value: String(section.id),
           }))}
           placeholder='게시할 분반을 선택해 주세요.'

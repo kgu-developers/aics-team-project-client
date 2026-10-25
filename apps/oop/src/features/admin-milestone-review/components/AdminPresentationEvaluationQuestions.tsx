@@ -1,9 +1,12 @@
 import { Heading, Text } from '@aics/design-system';
 
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
+
 import { useAdminTeamEvaluationCriteriaQuery } from '../queries';
 import * as styles from './AdminPresentationEvaluationQuestions.css';
 
 export type PresentationEvaluationSection = {
+  classTime?: string;
   code: string;
   id: string;
   name: string;
@@ -19,7 +22,7 @@ function PresentationEvaluationCriteriaList({
   return (
     <article className={styles.sectionCard}>
       <Heading className={styles.sectionTitle} level={3}>
-        {`${section.code} · ${section.name}`}
+        {formatAdminSectionLabel(section)}
       </Heading>
       {criteriaQuery.isPending ? (
         <Text aria-live='polite' role='status'>

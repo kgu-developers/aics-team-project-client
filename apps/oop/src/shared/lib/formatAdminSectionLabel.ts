@@ -5,6 +5,12 @@ type AdminSectionLabelSource = Pick<CurrentUserSection, 'code'> &
 
 export function formatAdminSectionLabel(section: AdminSectionLabelSource) {
   const classTime = section.classTime?.trim();
+  const duplicateCodeSuffix = `/${section.code}`;
+  const normalizedClassTime = classTime?.endsWith(duplicateCodeSuffix)
+    ? classTime.slice(0, -duplicateCodeSuffix.length).trim()
+    : classTime;
 
-  return classTime ? `${section.code} · ${classTime}` : section.code;
+  return normalizedClassTime
+    ? `${section.code} · ${normalizedClassTime}`
+    : section.code;
 }

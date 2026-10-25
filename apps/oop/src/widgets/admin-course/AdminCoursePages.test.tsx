@@ -341,7 +341,9 @@ describe('AdminCourseDetailPage', () => {
     expect(selector).toHaveTextContent('OOP-01');
 
     await user.click(selector);
-    await user.click(screen.getByRole('option', { name: 'OOP-02 (OOP-02)' }));
+    await user.click(
+      screen.getByRole('option', { name: 'OOP-02 · 화요일 3-4교시' }),
+    );
 
     expect(
       await screen.findByRole('heading', { name: 'OOP-02 분반' }),

@@ -12,6 +12,7 @@ import {
 } from '@aics/design-system';
 import { useEffect, useState } from 'react';
 
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { paginate } from '~/shared/lib/pagination';
 import { saveDownload } from '~/shared/lib/saveDownload';
 import ListPagination from '~/shared/ui/ListPagination/ListPagination';
@@ -26,7 +27,7 @@ import { formatTeamRolePreferences } from '~/features/team-assignment/teamRolePr
 
 import * as styles from './AdminPreSurveyResponses.css';
 
-type Section = { code: string; id: string; name: string };
+type Section = { classTime?: string; code: string; id: string; name: string };
 
 type PreSurveyTableRow = {
   etcOpinion?: string | null;
@@ -201,7 +202,7 @@ export function AdminPreSurveyResponses({
                     label='분반'
                     onChange={setSectionId}
                     options={sections.map(section => ({
-                      label: `${section.code} (${section.name})`,
+                      label: formatAdminSectionLabel(section),
                       value: section.id,
                     }))}
                     renderOption={option => (

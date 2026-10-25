@@ -8,7 +8,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
@@ -86,8 +86,11 @@ describe('AdminMilestonesPage', () => {
       name: '제안서 마일스톤 보기',
     });
     const trigger = screen.getByRole('combobox', {
-      name: 'OOP-01 제안서 공개 상태',
+      name: 'OOP-01 · 월요일 1-2교시 제안서 공개 상태',
     });
+    expect(
+      within(row).getByText('OOP-01 · 월요일 1-2교시'),
+    ).toBeInTheDocument();
     expect(trigger).toHaveTextContent('공개');
 
     await user.click(trigger);

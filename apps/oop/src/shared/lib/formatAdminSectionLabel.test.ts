@@ -17,4 +17,16 @@ describe('formatAdminSectionLabel', () => {
       'TEST-01',
     );
   });
+
+  it('수업 시간 뒤에 함께 내려오는 중복 분반명은 표시하지 않는다', () => {
+    expect(
+      formatAdminSectionLabel({ classTime: '월6/1152', code: '1152' }),
+    ).toBe('1152 · 월6');
+  });
+
+  it('수업 시간 자체에 포함된 슬래시는 유지한다', () => {
+    expect(
+      formatAdminSectionLabel({ classTime: '월/수', code: 'TEST-01' }),
+    ).toBe('TEST-01 · 월/수');
+  });
 });

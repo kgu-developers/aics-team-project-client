@@ -115,13 +115,14 @@ export const dragOverTeamCard = style({
 
 export const teamName = style({
   fontSize: 16,
+  fontWeight: 500,
   margin: 0,
   minWidth: 0,
   paddingTop: 8,
 });
 
 export const teamDashboardLink = style({
-  color: 'inherit',
+  color: tokens.color.text.accent,
   display: 'block',
   overflowWrap: 'anywhere',
   textDecoration: 'underline',
