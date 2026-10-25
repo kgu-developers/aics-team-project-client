@@ -15,11 +15,7 @@ export const header = style({
   gap: tokens.spacing['3'],
   paddingBottom: tokens.spacing['5'],
 });
-export const eyebrow = style({
-  color: tokens.color.text.secondary,
-  fontSize: 13,
-  fontWeight: 600,
-});
+export const projectTitle = style({ fontWeight: 600 });
 export const summary = style({
   display: 'grid',
   gap: tokens.spacing['4'],

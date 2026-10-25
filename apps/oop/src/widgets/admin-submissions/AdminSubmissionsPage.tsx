@@ -8,6 +8,8 @@ import {
   Card,
   EmptyState,
   Heading,
+  HStack,
+  IconButton,
   proportional,
   Selector,
   SelectorOption,
@@ -16,6 +18,7 @@ import {
   Text,
 } from '@aics/design-system';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { ArrowDown, ArrowDownUp, ArrowUp } from 'lucide-react';
 import {
   type KeyboardEvent,
   useEffect,
@@ -57,6 +60,7 @@ import {
   useAdminSubmissionVersionDetailsQueries,
   useDownloadAdminSubmissionArtifactsMutation,
 } from '~/features/admin-milestone-review/queries';
+import { ADMIN_SECTION_FILTER_WIDTH } from '~/features/admin-section/filterLayout';
 import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 import { useAdminSubmissionReadState } from '~/features/admin-submission-read/useAdminSubmissionReadState';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -102,6 +106,35 @@ type PresentationEvaluationTablePlugin = NonNullable<
 type PeerEvaluationTablePlugin = NonNullable<
   TableProps<PeerEvaluationTeam>['plugins']
 >[string];
+
+type PresentationTotalScoreSort = 'ascending' | 'default' | 'descending';
+
+function getNextPresentationTotalScoreSort(
+  sort: PresentationTotalScoreSort,
+): PresentationTotalScoreSort {
+  if (sort === 'default') return 'descending';
+  if (sort === 'descending') return 'ascending';
+  return 'default';
+}
+
+function getPresentationTotalScoreSortButton(sort: PresentationTotalScoreSort) {
+  if (sort === 'default') {
+    return {
+      icon: <ArrowDownUp aria-hidden='true' size={16} />,
+      label: '합계 높은 순으로 정렬',
+    };
+  }
+  if (sort === 'descending') {
+    return {
+      icon: <ArrowDown aria-hidden='true' size={16} />,
+      label: '합계 낮은 순으로 정렬',
+    };
+  }
+  return {
+    icon: <ArrowUp aria-hidden='true' size={16} />,
+    label: '합계 기본순으로 정렬',
+  };
+}
 
 const milestoneTypeByTab: Partial<Record<MilestoneTabId, AdminMilestoneType>> =
   {
@@ -277,6 +310,8 @@ export default function AdminSubmissionsPage() {
   const [isEvaluationStartOpen, setIsEvaluationStartOpen] = useState(false);
   const [isEvaluationEndOpen, setIsEvaluationEndOpen] = useState(false);
   const [isEvaluationResumeOpen, setIsEvaluationResumeOpen] = useState(false);
+  const [presentationTotalScoreSort, setPresentationTotalScoreSort] =
+    useState<PresentationTotalScoreSort>('default');
   const [presentationReadinessClock, setPresentationReadinessClock] = useState(
     () => Date.now(),
   );
@@ -480,8 +515,22 @@ export default function AdminSubmissionsPage() {
     label: formatAdminSectionLabel(section),
     value: section.id,
   }));
-  const presentationEvaluationTeams =
-    presentationEvaluationsQuery.data?.teams ?? [];
+  const presentationEvaluationTeams = useMemo(() => {
+    const teams = presentationEvaluationsQuery.data?.teams ?? [];
+    if (presentationTotalScoreSort === 'default') return teams;
+
+    return [...teams].sort((left, right) => {
+      if (left.totalScore == null && right.totalScore == null) return 0;
+      if (left.totalScore == null) return 1;
+      if (right.totalScore == null) return -1;
+      return presentationTotalScoreSort === 'descending'
+        ? right.totalScore - left.totalScore
+        : left.totalScore - right.totalScore;
+    });
+  }, [presentationEvaluationsQuery.data?.teams, presentationTotalScoreSort]);
+  const presentationTotalScoreSortButton = getPresentationTotalScoreSortButton(
+    presentationTotalScoreSort,
+  );
   const presentationEvaluationRowPlugin =
     useMemo<PresentationEvaluationTablePlugin>(
       () => ({
@@ -637,7 +686,7 @@ export default function AdminSubmissionsPage() {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <div>
+        <div className={styles.headerContent}>
           <Heading level={1}>제출·평가 현황</Heading>
           {accessibleSections.length > 0 ? (
             <Selector
@@ -650,7 +699,7 @@ export default function AdminSubmissionsPage() {
                 <SelectorOption label={option.label ?? option.value} />
               )}
               value={effectiveSectionId}
-              width={280}
+              width={ADMIN_SECTION_FILTER_WIDTH}
             />
           ) : null}
         </div>
@@ -973,7 +1022,27 @@ export default function AdminSubmissionsPage() {
                           ),
                           {
                             align: 'center',
-                            header: '합계',
+                            header: (
+                              <HStack align='center' gap={0}>
+                                합계
+                                <IconButton
+                                  icon={presentationTotalScoreSortButton.icon}
+                                  label={presentationTotalScoreSortButton.label}
+                                  onClick={() =>
+                                    setPresentationTotalScoreSort(
+                                      getNextPresentationTotalScoreSort(
+                                        presentationTotalScoreSort,
+                                      ),
+                                    )
+                                  }
+                                  size='sm'
+                                  tooltip={
+                                    presentationTotalScoreSortButton.label
+                                  }
+                                  variant='ghost'
+                                />
+                              </HStack>
+                            ),
                             key: 'total',
                             renderCell: team => team.totalScore ?? '-',
                             width: proportional(0.7, { minWidth: 72 }),

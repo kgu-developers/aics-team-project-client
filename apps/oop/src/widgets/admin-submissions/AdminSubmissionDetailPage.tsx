@@ -21,6 +21,8 @@ import type { AdminSubmissionArtifactView } from '~/features/admin-milestone-rev
 import {
   useAdminProposalFeedbacksQuery,
   useAdminMilestoneSubmissionDetailQuery,
+  useAdminMidReportQuery,
+  useAdminProjectProposalQuery,
   useAdminSubmissionVersionQuery,
   useAdminSubmissionVersionsQuery,
   useSubmitAdminProposalFeedbackMutation,
@@ -56,6 +58,68 @@ function getMilestoneLabel(milestoneId: string | undefined) {
 
 function normalizeSearchId(value: string | number | undefined) {
   return value === undefined ? undefined : String(value).replace(/^"|"$/g, '');
+}
+
+function formatSubmissionTitle(teamName: string, milestoneLabel: string) {
+  return `${teamName.replace(/\s+-\s+/, ' · ')} ${milestoneLabel}`;
+}
+
+function formatMidReportStatus(status: string) {
+  const labels: Record<string, string> = {
+    APPROVED: '승인됨',
+    COMPLETED: '완료',
+    FEEDBACK_PROVIDED: '피드백 제공',
+    NOT_SUBMITTED: '미제출',
+    REVISION_REQUESTED: '수정 요청',
+    SUBMITTED: '제출 완료',
+  };
+
+  return labels[status] ?? status;
+}
+
+function SubmissionDetailHeader({
+  milestoneLabel,
+  statusLabel,
+  teamName,
+  version,
+}: {
+  milestoneLabel: string;
+  statusLabel?: string;
+  teamName?: string;
+  version?: number;
+}) {
+  const search = useSearch({ from: '/admin/submissions/$submissionId' }) as {
+    apiSectionId?: string | number;
+    milestoneId?: string;
+    sectionId?: string | number;
+    teamId?: string | number;
+  };
+
+  return (
+    <div className={styles.pageHeader}>
+      <div className={styles.pageHeaderContent}>
+        <Heading level={1}>
+          {teamName
+            ? formatSubmissionTitle(teamName, milestoneLabel)
+            : `${milestoneLabel} 상세`}
+        </Heading>
+        {statusLabel ? (
+          <Text className={styles.metadata}>
+            상태: {statusLabel}
+            {version !== undefined ? ` · 현재 버전: ${version}차` : ''}
+          </Text>
+        ) : null}
+      </div>
+      <Link
+        aria-label={`${milestoneLabel} 목록으로`}
+        className={styles.backLink}
+        search={search}
+        to={ROUTES.ADMIN_SUBMISSIONS}
+      >
+        ← {milestoneLabel} 목록으로
+      </Link>
+    </div>
+  );
 }
 
 function ArtifactValue({
@@ -136,6 +200,16 @@ export default function AdminSubmissionDetailPage() {
   );
   const detail = submissionQuery.data;
   const isProjectProposal = isProposal && detail?.currentVersion === 0;
+  const midReportQuery = useAdminMidReportQuery(
+    isRequestedSectionAccessible && isMidReport && normalizedTeamId
+      ? (normalizedApiSectionId ?? normalizedSectionId)
+      : undefined,
+    isRequestedSectionAccessible && isMidReport ? normalizedTeamId : undefined,
+  );
+  const projectProposalQuery = useAdminProjectProposalQuery(
+    normalizedSectionId ?? '',
+    isProjectProposal ? String(detail?.teamId) : undefined,
+  );
   const versionsQuery = useAdminSubmissionVersionsQuery(
     submissionId,
     canRequestDetail && submissionQuery.isSuccess && !isProjectProposal,
@@ -207,6 +281,25 @@ export default function AdminSubmissionDetailPage() {
     canRequestDetail && versionsQuery.isSuccess,
   );
   const milestoneLabel = getMilestoneLabel(search.milestoneId);
+  const headerTeamName = isMidReport
+    ? midReportQuery.data?.teamName
+    : detail?.teamName;
+  const headerStatusLabel = isMidReport
+    ? midReportQuery.data
+      ? formatMidReportStatus(midReportQuery.data.status)
+      : undefined
+    : isProjectProposal
+      ? projectProposalQuery.data
+        ? projectProposalQuery.data.proposalCompletedAt
+          ? '제출 완료'
+          : '작성 중'
+        : undefined
+      : detail?.statusLabel;
+  const headerVersion = isMidReport
+    ? midReportQuery.data?.version
+    : isProjectProposal
+      ? undefined
+      : detail?.currentVersion;
 
   if (
     isRequestedSectionAccessible &&
@@ -216,17 +309,12 @@ export default function AdminSubmissionDetailPage() {
   ) {
     return (
       <div className={styles.page}>
-        <div className={styles.pageHeader}>
-          <Heading level={1}>제출물 &gt; {milestoneLabel}</Heading>
-          <Link
-            aria-label={`${milestoneLabel} 목록으로`}
-            className={styles.backLink}
-            search={search}
-            to={ROUTES.ADMIN_SUBMISSIONS}
-          >
-            ← {milestoneLabel} 목록으로
-          </Link>
-        </div>
+        <SubmissionDetailHeader
+          milestoneLabel={milestoneLabel}
+          statusLabel={headerStatusLabel}
+          teamName={headerTeamName}
+          version={headerVersion}
+        />
         <AdminMidReportDetail
           sectionId={normalizedApiSectionId ?? normalizedSectionId}
           teamId={normalizedTeamId}
@@ -237,17 +325,12 @@ export default function AdminSubmissionDetailPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.pageHeader}>
-        <Heading level={1}>제출물 &gt; {milestoneLabel}</Heading>
-        <Link
-          aria-label={`${milestoneLabel} 목록으로`}
-          className={styles.backLink}
-          search={search}
-          to={ROUTES.ADMIN_SUBMISSIONS}
-        >
-          ← {milestoneLabel} 목록으로
-        </Link>
-      </div>
+      <SubmissionDetailHeader
+        milestoneLabel={milestoneLabel}
+        statusLabel={headerStatusLabel}
+        teamName={headerTeamName}
+        version={headerVersion}
+      />
 
       {!isRequestedSectionAccessible ? (
         <EmptyState
@@ -277,17 +360,6 @@ export default function AdminSubmissionDetailPage() {
             />
           ) : (
             <Card className={styles.document}>
-              <div className={styles.documentHeader}>
-                <Text className={styles.documentLabel}>
-                  SUBMISSION / READ ONLY
-                </Text>
-                <Heading level={2}>{detail.teamName} 제출물</Heading>
-                <Text className={styles.metadata}>
-                  상태: {detail.statusLabel} · 현재 버전:{' '}
-                  {detail.currentVersion}차
-                </Text>
-              </div>
-
               <section className={styles.section}>
                 <Heading level={3}>제출 현황</Heading>
                 <div className={styles.fieldGrid}>

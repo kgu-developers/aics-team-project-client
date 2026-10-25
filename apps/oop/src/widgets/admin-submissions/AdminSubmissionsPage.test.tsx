@@ -205,21 +205,33 @@ describe('AdminSubmissionsPage', () => {
       const user = userEvent.setup();
       renderPage();
       await user.click(await screen.findByRole('link', { name: '상세보기' }));
-      expect(
-        await screen.findByRole('heading', { name: project.title }),
-      ).toBeVisible();
+      expect(await screen.findByText(project.title)).toBeVisible();
       expect(screen.getByText(project.goal)).toBeVisible();
       expect(screen.getByRole('img', { name: '도서 검색' })).toHaveAttribute(
         'src',
         'https://example.test/screen.png',
       );
-      expect(screen.getByText('제출 완료')).toBeVisible();
+      expect(screen.getByText('상태: 제출 완료')).toBeVisible();
       expect(screen.getByText('2026-09-13/10:00')).toBeVisible();
       expect(
         screen.queryByText('표시할 제출 버전이 없습니다.'),
       ).not.toBeInTheDocument();
       const posted = vi.fn();
       server.use(
+        http.get(
+          `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_PROPOSAL('1', '1')}/feedbacks`,
+          () =>
+            HttpResponse.json({
+              contents: [],
+              pageable: {
+                isEnd: true,
+                page: 0,
+                size: 20,
+                totalElements: 0,
+                totalPages: 0,
+              },
+            }),
+        ),
         http.post(
           `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_PROPOSAL('1', '1')}/feedback`,
           async ({ request }) => {
@@ -356,8 +368,12 @@ describe('AdminSubmissionsPage', () => {
 
     await user.click(detailLink);
     expect(
-      await screen.findByRole('heading', { name: 'OOP-01 - 1팀 제출물' }),
+      await screen.findByRole('heading', { name: 'OOP-01 · 1팀 제안서' }),
     ).toBeInTheDocument();
+    expect(screen.getByText('상태: 수정 요청 · 현재 버전: 2차')).toBeVisible();
+    expect(
+      screen.queryByText('SUBMISSION / READ ONLY'),
+    ).not.toBeInTheDocument();
     expect(
       await screen.findByRole('heading', { name: '연결된 회의록 (1건)' }),
     ).toBeInTheDocument();
@@ -521,7 +537,9 @@ describe('AdminSubmissionsPage', () => {
     await user.click(midtermDetailLinks[0]!);
 
     expect(
-      await screen.findByRole('heading', { name: 'OOP-01 - 1팀 중간보고서' }),
+      await screen.findByRole('heading', {
+        name: 'OOP-01 · 1팀 중간 보고서',
+      }),
     ).toBeInTheDocument();
     expect(
       screen.getByText('GUI 화면 흐름과 예외 처리 계획을 보완해 주세요.'),
@@ -560,6 +578,9 @@ describe('AdminSubmissionsPage', () => {
       screen.getByText(
         /학생이 수정본을 재제출하기 전까지 추가 수정 요청을 보낼 수 없습니다/,
       ),
+    ).toBeVisible();
+    expect(
+      screen.getByText(/추가 안내는 쪽지함의 일반 메시지로 전달할 수 있습니다/),
     ).toBeVisible();
 
     await user.type(
@@ -760,10 +781,14 @@ describe('AdminSubmissionsPage', () => {
     );
 
     expect(
-      await screen.findByRole('heading', { name: 'OOP-01 - 1팀 중간보고서' }),
+      await screen.findByRole('heading', {
+        name: 'OOP-01 · 1팀 중간 보고서',
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByText('SUBMITTED')).toBeInTheDocument();
-    expect(screen.getByText('1차')).toBeInTheDocument();
+    expect(screen.getByText('상태: 제출 완료 · 현재 버전: 1차')).toBeVisible();
+    expect(
+      screen.queryByText('MID REPORT / READ ONLY'),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: '3. 핵심 로직/엔진 설계' }),
     ).toBeInTheDocument();
@@ -792,7 +817,9 @@ describe('AdminSubmissionsPage', () => {
     );
 
     expect(
-      await screen.findByRole('heading', { name: 'OOP-01 - 2팀 중간보고서' }),
+      await screen.findByRole('heading', {
+        name: 'OOP-01 · 2팀 중간 보고서',
+      }),
     ).toBeInTheDocument();
     expect(screen.getByText('프로젝트 주제')).toBeInTheDocument();
     expect(
@@ -976,6 +1003,63 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('heading', { name: '발표 순서·평가 항목 설정' }),
     ).toBeInTheDocument();
+  });
+
+  it('발표 평가 목록을 합계 높은 순과 낮은 순으로 정렬한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRESENTATION_EVALUATIONS('1')}`,
+        () =>
+          HttpResponse.json({
+            ...adminPresentationEvaluationListFixture,
+            teams: [
+              ...adminPresentationEvaluationListFixture.teams,
+              {
+                evaluationCount: 3,
+                projectTitle: '높은 점수 프로젝트',
+                scores: [],
+                teamId: 3,
+                teamName: 'OOP-01 - 3팀',
+                totalScore: 20,
+              },
+              {
+                evaluationCount: 0,
+                projectTitle: '미평가 프로젝트',
+                scores: [],
+                teamId: 4,
+                teamName: 'OOP-01 - 4팀',
+                totalScore: null,
+              },
+            ],
+          }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    const getTeamRowOrder = () =>
+      screen
+        .getAllByRole('row')
+        .slice(1)
+        .map(row => row.textContent);
+
+    await screen.findByText('OOP-01 - 3팀');
+    await user.click(
+      screen.getByRole('button', { name: '합계 높은 순으로 정렬' }),
+    );
+    expect(getTeamRowOrder()[0]).toContain('OOP-01 - 3팀');
+    expect(getTeamRowOrder()[1]).toContain('OOP-01 - 1팀');
+    expect(getTeamRowOrder()[2]).toContain('OOP-01 - 2팀');
+    expect(getTeamRowOrder()[3]).toContain('OOP-01 - 4팀');
+
+    await user.click(
+      screen.getByRole('button', { name: '합계 낮은 순으로 정렬' }),
+    );
+    expect(getTeamRowOrder()[0]).toContain('OOP-01 - 1팀');
+    expect(getTeamRowOrder()[1]).toContain('OOP-01 - 3팀');
+    expect(getTeamRowOrder()[2]).toContain('OOP-01 - 2팀');
+    expect(getTeamRowOrder()[3]).toContain('OOP-01 - 4팀');
   });
 
   it('발표 평가 설정이 부족하면 평가 시작 전 경고와 설정 필요 상태를 표시한다', async () => {
@@ -1417,7 +1501,9 @@ describe('AdminSubmissionsPage', () => {
     );
 
     expect(
-      await screen.findByRole('heading', { name: 'OOP-01 - 1팀 제출물' }),
+      await screen.findByRole('heading', {
+        name: 'OOP-01 · 1팀 발표 자료 제출',
+      }),
     ).toBeInTheDocument();
     expect(
       await screen.findByRole('link', { name: 'presentation.pdf' }),
