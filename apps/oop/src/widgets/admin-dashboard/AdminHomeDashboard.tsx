@@ -23,10 +23,10 @@ import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
 import { getRichTextPlainText } from '~/features/admin-meeting/model';
-import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
+import { useAdminActiveMeetingRecordsQuery } from '~/features/admin-meeting/queries';
 import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
 import {
-  useAdminMessagesQuery,
+  useAdminActiveMessagesQuery,
   useUpdateAdminMessageReadMutation,
 } from '~/features/admin-message/queries';
 import {
@@ -254,10 +254,12 @@ function MeetingPanel({
   emptyMessage,
   isMeetingRead,
   items,
+  warningMessage,
 }: {
   emptyMessage?: string;
   isMeetingRead?: (meetingId: string) => boolean;
   items: readonly DashboardListItem[];
+  warningMessage?: string;
 }) {
   return (
     <section className={styles.dashboardPanel}>
@@ -269,7 +271,14 @@ function MeetingPanel({
       </div>
       <div className={styles.dashboardPanelBody}>
         {items.length > 0 ? (
-          <List isMeetingList isMeetingRead={isMeetingRead} items={items} />
+          <>
+            {warningMessage ? (
+              <p className={styles.panelState} role='alert'>
+                {warningMessage}
+              </p>
+            ) : null}
+            <List isMeetingList isMeetingRead={isMeetingRead} items={items} />
+          </>
         ) : emptyMessage ? (
           <p className={styles.panelState}>{emptyMessage}</p>
         ) : null}
@@ -285,22 +294,17 @@ export default function AdminHomeDashboard() {
   const [scheduleClock, setScheduleClock] = useState(() => Date.now());
   const currentUser = useAuthStore(state => state.currentUser);
   const meetingReadState = useAdminMeetingReadState(currentUser?.id);
-  const accessibleSections = currentUser?.sections ?? [];
-  const accessibleSectionIds = accessibleSections.map(section => section.id);
   const activeSectionsQuery = useActiveAdminSections();
-  const activeScheduleSections = activeSectionsQuery.data;
-  const activeScheduleSectionIds = activeScheduleSections.map(
-    section => section.id,
-  );
-  const milestoneQueries = useAdminAccessibleSectionMilestonesQuery(
-    activeScheduleSectionIds,
-  );
+  const activeSections = activeSectionsQuery.data;
+  const activeSectionIds = activeSections.map(section => section.id);
+  const milestoneQueries =
+    useAdminAccessibleSectionMilestonesQuery(activeSectionIds);
   const meetingRecordsQuery =
-    useAdminMeetingRecordListQuery(accessibleSectionIds);
-  const messagesQuery = useAdminMessagesQuery();
+    useAdminActiveMeetingRecordsQuery(activeSectionIds);
+  const messagesQuery = useAdminActiveMessagesQuery(activeSectionIds);
   const messageReadMutation = useUpdateAdminMessageReadMutation();
-  const noticesQuery = useAdminAccessibleNoticesQuery();
-  const scheduleSections = activeScheduleSections.map((section, index) => ({
+  const noticesQuery = useAdminAccessibleNoticesQuery(activeSectionIds);
+  const scheduleSections = activeSections.map((section, index) => ({
     classTime: section.classTime,
     courseId: section.courseId,
     milestones: milestoneQueries[index]?.data?.content ?? [],
@@ -415,7 +419,7 @@ export default function AdminHomeDashboard() {
     )
     .slice(0, 3)
     .map(record => {
-      const section = accessibleSections.find(
+      const section = activeSections.find(
         item => String(item.id) === String(record.sectionId),
       );
 
@@ -430,14 +434,20 @@ export default function AdminHomeDashboard() {
         title: getMeetingContentPreview(record.content),
       };
     });
-  const meetingEmptyMessage =
-    accessibleSectionIds.length === 0
-      ? '담당 분반이 없어 회의록을 표시할 수 없습니다.'
-      : meetingRecordsQuery.isPending
-        ? '회의록을 불러오는 중입니다.'
-        : meetingRecordsQuery.isError
-          ? '회의록을 불러오지 못했습니다.'
-          : '등록된 회의록이 없습니다.';
+  const meetingEmptyMessage = activeSectionsQuery.isPending
+    ? '운영 중인 분반을 불러오는 중입니다.'
+    : activeSectionsQuery.isError
+      ? '운영 중인 분반을 불러오지 못했습니다.'
+      : activeSectionIds.length === 0
+        ? '운영 중인 담당 분반이 없어 회의록을 표시할 수 없습니다.'
+        : meetingRecordsQuery.isPending
+          ? '회의록을 불러오는 중입니다.'
+          : meetingRecordsQuery.isError
+            ? '회의록을 불러오지 못했습니다.'
+            : '등록된 회의록이 없습니다.';
+  const meetingWarningMessage = meetingRecordsQuery.isError
+    ? '일부 운영 중인 분반의 회의록을 불러오지 못했습니다.'
+    : undefined;
   const noticeItems: DashboardListItem[] = [...(noticesQuery.data ?? [])]
     .sort(
       (left, right) =>
@@ -446,7 +456,7 @@ export default function AdminHomeDashboard() {
     )
     .slice(0, 3)
     .map(notice => {
-      const section = accessibleSections.find(
+      const section = activeSections.find(
         item => noticeId(item.id) === notice.sectionId,
       );
 
@@ -465,7 +475,9 @@ export default function AdminHomeDashboard() {
         ? '공지사항을 표시할 활성 담당 분반이 없습니다.'
         : undefined;
   const noticeWarningMessage = [
-    noticeScopeMessage,
+    !activeSectionsQuery.isPending && !activeSectionsQuery.isError
+      ? noticeScopeMessage
+      : undefined,
     noticesQuery.isError
       ? noticeItems.length > 0
         ? '일부 분반의 공지사항을 불러오지 못했습니다.'
@@ -474,9 +486,13 @@ export default function AdminHomeDashboard() {
   ]
     .filter(Boolean)
     .join(' ');
-  const noticeEmptyMessage = noticesQuery.isPending
-    ? '공지사항을 불러오는 중입니다.'
-    : noticeWarningMessage || '등록된 공지사항이 없습니다.';
+  const noticeEmptyMessage = activeSectionsQuery.isPending
+    ? '운영 중인 분반을 불러오는 중입니다.'
+    : activeSectionsQuery.isError
+      ? '운영 중인 분반을 불러오지 못했습니다.'
+      : noticesQuery.isPending
+        ? '공지사항을 불러오는 중입니다.'
+        : noticeWarningMessage || '등록된 공지사항이 없습니다.';
   const messageItems: DashboardListItem[] = [
     ...(messagesQuery.data?.contents ?? []),
   ]
@@ -487,7 +503,7 @@ export default function AdminHomeDashboard() {
     )
     .slice(0, 3)
     .map(message => {
-      const section = accessibleSections.find(
+      const section = activeSections.find(
         item => String(item.id) === String(message.sectionId),
       );
 
@@ -504,11 +520,20 @@ export default function AdminHomeDashboard() {
         title: message.message,
       };
     });
-  const messageEmptyMessage = messagesQuery.isPending
-    ? '쪽지함을 불러오는 중입니다.'
-    : messagesQuery.isError
-      ? '쪽지함을 불러오지 못했습니다.'
-      : '도착한 메시지가 없습니다.';
+  const messageEmptyMessage = activeSectionsQuery.isPending
+    ? '운영 중인 분반을 불러오는 중입니다.'
+    : activeSectionsQuery.isError
+      ? '운영 중인 분반을 불러오지 못했습니다.'
+      : activeSectionIds.length === 0
+        ? '쪽지를 표시할 운영 중인 담당 분반이 없습니다.'
+        : messagesQuery.isPending
+          ? '쪽지함을 불러오는 중입니다.'
+          : messagesQuery.isError
+            ? '쪽지함을 불러오지 못했습니다.'
+            : '도착한 메시지가 없습니다.';
+  const messageWarningMessage = messagesQuery.isError
+    ? '일부 운영 중인 분반의 쪽지를 불러오지 못했습니다.'
+    : undefined;
 
   return (
     <div className={styles.content}>
@@ -539,7 +564,7 @@ export default function AdminHomeDashboard() {
               분반별 진행 일정을 불러오지 못했습니다. 잠시 후 다시 시도해
               주세요.
             </p>
-          ) : activeScheduleSectionIds.length === 0 ? (
+          ) : activeSectionIds.length === 0 ? (
             <p className={styles.scheduleState}>
               운영 중인 담당 분반이 없어 진행 일정을 표시할 수 없습니다.
             </p>
@@ -710,13 +735,20 @@ export default function AdminHomeDashboard() {
                 <p className={styles.panelState}>{noticeEmptyMessage}</p>
               )
             ) : messageItems.length > 0 ? (
-              <List
-                isMessageList
-                items={messageItems}
-                onOpenMessage={messageId =>
-                  messageReadMutation.mutate(messageId)
-                }
-              />
+              <>
+                {messageWarningMessage ? (
+                  <p className={styles.panelState} role='alert'>
+                    {messageWarningMessage}
+                  </p>
+                ) : null}
+                <List
+                  isMessageList
+                  items={messageItems}
+                  onOpenMessage={messageId =>
+                    messageReadMutation.mutate(messageId)
+                  }
+                />
+              </>
             ) : (
               <p className={styles.panelState}>{messageEmptyMessage}</p>
             )}
@@ -726,6 +758,7 @@ export default function AdminHomeDashboard() {
           emptyMessage={meetingEmptyMessage}
           isMeetingRead={meetingReadState.isRead}
           items={meetingItems}
+          warningMessage={meetingWarningMessage}
         />
       </div>
     </div>

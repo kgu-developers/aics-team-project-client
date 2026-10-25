@@ -6,6 +6,10 @@ import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { useActiveAdminSections } from '~/features/admin-course/queries';
 import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 
+import {
+  ADMIN_SECTION_FILTER_WIDTH,
+  ADMIN_TEAM_FILTER_WIDTH,
+} from '../filterLayout';
 import * as styles from './AdminSectionTeamFilter.css';
 
 export const ALL_SECTIONS = 'all';
@@ -70,7 +74,7 @@ export default function AdminSectionTeamFilter({
           <SelectorOption label={option.label ?? option.value} />
         )}
         value={sectionId}
-        width={240}
+        width={ADMIN_SECTION_FILTER_WIDTH}
       />
       {hasTeamFilter && isSectionSelected ? (
         <Selector
@@ -88,7 +92,7 @@ export default function AdminSectionTeamFilter({
             <SelectorOption label={option.label ?? option.value} />
           )}
           value={teamId ?? ALL_TEAMS}
-          width={200}
+          width={ADMIN_TEAM_FILTER_WIDTH}
         />
       ) : null}
       {children}

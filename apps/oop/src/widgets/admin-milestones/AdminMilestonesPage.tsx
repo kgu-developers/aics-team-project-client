@@ -12,6 +12,7 @@ import { type KeyboardEvent, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { paginate } from '~/shared/lib/pagination';
 import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
@@ -111,7 +112,7 @@ export default function AdminMilestonesPage() {
     return (milestoneQueries[index]?.data?.content ?? []).map(milestone => ({
       ...milestone,
       sectionKey: section.id,
-      sectionLabel: section.code,
+      sectionLabel: formatAdminSectionLabel(section),
     }));
   });
   const [page, setPage] = useState(0);
@@ -250,7 +251,12 @@ export default function AdminMilestonesPage() {
                         }
                         tabIndex={0}
                       >
-                        <td>{milestone.sectionLabel}</td>
+                        <td
+                          className={styles.sectionLabel}
+                          title={milestone.sectionLabel}
+                        >
+                          {milestone.sectionLabel}
+                        </td>
                         <td className={styles.milestoneTitle}>
                           {milestone.title}
                         </td>

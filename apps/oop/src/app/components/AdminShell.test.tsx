@@ -16,11 +16,13 @@ import AdminShell from './AdminShell';
 
 import { demoAdmin } from '~/mocks/data/users';
 
-const unreadMessageCount = vi.hoisted(() => ({ value: 0 }));
+const shellState = vi.hoisted(() => ({
+  unreadMessageCount: 0,
+}));
 
 vi.mock('~/features/admin-message/queries', () => ({
   useAdminMessagesQuery: () => ({
-    data: { unreadCount: unreadMessageCount.value },
+    data: { unreadCount: shellState.unreadMessageCount },
   }),
 }));
 
@@ -50,7 +52,7 @@ function renderShell() {
 
 describe('AdminShell', () => {
   beforeEach(() => {
-    unreadMessageCount.value = 0;
+    shellState.unreadMessageCount = 0;
     useAuthStore.setState({
       currentUser: demoAdmin,
       isAuthenticated: true,
@@ -123,7 +125,7 @@ describe('AdminShell', () => {
   });
 
   it('미확인 쪽지가 있으면 쪽지함 탐색 항목에 숫자 배지를 표시한다', () => {
-    unreadMessageCount.value = 3;
+    shellState.unreadMessageCount = 3;
 
     renderShell();
 

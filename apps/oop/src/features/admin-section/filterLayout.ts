@@ -1,0 +1,2 @@
+export const ADMIN_SECTION_FILTER_WIDTH = 280;
+export const ADMIN_TEAM_FILTER_WIDTH = 200;

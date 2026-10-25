@@ -44,13 +44,9 @@ export default function AdminProposalDocument({
   return (
     <Card className={styles.document}>
       <header className={styles.header}>
-        <Text className={styles.eyebrow}>PROPOSAL / READ ONLY</Text>
-        <Heading level={2}>{project.title}</Heading>
+        <Heading level={2}>프로젝트 개요</Heading>
+        <Text className={styles.projectTitle}>{project.title}</Text>
         <dl className={styles.summary}>
-          <div>
-            <dt>상태</dt>
-            <dd>{project.proposalCompletedAt ? '제출 완료' : '작성 중'}</dd>
-          </div>
           <div>
             <dt>제출 일시</dt>
             <dd>

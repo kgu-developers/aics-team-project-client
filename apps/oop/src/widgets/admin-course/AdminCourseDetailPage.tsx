@@ -31,6 +31,8 @@ import {
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
+
 import {
   SectionAssistantManagement,
   SectionSettingsDialog,
@@ -40,6 +42,7 @@ import {
   contactVisibilityStatus,
 } from '~/features/admin-course/model/courseLabels';
 import { useAdminOopCourseQuery } from '~/features/admin-course/queries';
+import { ADMIN_SECTION_FILTER_WIDTH } from '~/features/admin-section/filterLayout';
 import { useAdminOopSectionsQuery } from '~/features/admin-section/queries';
 import EnrollmentImportDialog from '~/features/admin-student-team/components/EnrollmentImportDialog';
 import TeamImportDialog from '~/features/admin-student-team/components/TeamImportDialog';
@@ -211,6 +214,7 @@ export default function AdminCourseDetailPage({
 
   const selectedCourseSections = detailSection ? [detailSection] : [];
   const uploadSections = selectedCourseSections.map(section => ({
+    classTime: section.classTime,
     code: section.code,
     id: String(section.id),
     name: section.name,
@@ -402,14 +406,14 @@ export default function AdminCourseDetailPage({
             label='현재 분반'
             onChange={selectDetailSection}
             options={sections.map(section => ({
-              label: `${section.code} (${section.name})`,
+              label: formatAdminSectionLabel(section),
               value: String(section.id),
             }))}
             renderOption={option => (
               <SelectorOption label={option.label ?? option.value} />
             )}
             value={detailSectionId ?? ''}
-            width='100%'
+            width={ADMIN_SECTION_FILTER_WIDTH}
           />
         </div>
       ) : null}

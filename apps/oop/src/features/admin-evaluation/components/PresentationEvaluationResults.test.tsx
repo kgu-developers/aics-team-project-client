@@ -136,6 +136,11 @@ describe('PresentationEvaluationResults', () => {
       { ...evaluations[0]!, evaluatorName: '낮은 점수', totalScore: 1 },
       { ...evaluations[0]!, evaluatorName: '높은 점수', totalScore: 9 },
       { ...evaluations[1]!, evaluatorName: '미제출 평가자' },
+      {
+        ...evaluations[1]!,
+        evaluatorId: '20230003',
+        evaluatorName: '두 번째 미제출 평가자',
+      },
     ]);
 
     const evaluatorNames = () =>
@@ -143,9 +148,13 @@ describe('PresentationEvaluationResults', () => {
         .getAllByRole('button')
         .map(button => button.textContent)
         .filter(name =>
-          ['중간 점수', '낮은 점수', '높은 점수', '미제출 평가자'].includes(
-            name ?? '',
-          ),
+          [
+            '중간 점수',
+            '낮은 점수',
+            '높은 점수',
+            '미제출 평가자',
+            '두 번째 미제출 평가자',
+          ].includes(name ?? ''),
         );
 
     expect(evaluatorNames()).toEqual([
@@ -153,6 +162,7 @@ describe('PresentationEvaluationResults', () => {
       '낮은 점수',
       '높은 점수',
       '미제출 평가자',
+      '두 번째 미제출 평가자',
     ]);
 
     await user.click(
@@ -163,6 +173,7 @@ describe('PresentationEvaluationResults', () => {
       '중간 점수',
       '낮은 점수',
       '미제출 평가자',
+      '두 번째 미제출 평가자',
     ]);
 
     await user.click(
@@ -173,6 +184,7 @@ describe('PresentationEvaluationResults', () => {
       '중간 점수',
       '높은 점수',
       '미제출 평가자',
+      '두 번째 미제출 평가자',
     ]);
 
     await user.click(
@@ -183,6 +195,7 @@ describe('PresentationEvaluationResults', () => {
       '낮은 점수',
       '높은 점수',
       '미제출 평가자',
+      '두 번째 미제출 평가자',
     ]);
   });
 });

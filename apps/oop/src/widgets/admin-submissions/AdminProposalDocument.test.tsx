@@ -89,8 +89,9 @@ it('유효한 문서를 실제 조회하는 동안 로딩을 표시하고 응답
       '제안서를 불러오는 중입니다.',
     );
     release();
+    expect(await screen.findByText(project.title)).toBeVisible();
     expect(
-      await screen.findByRole('heading', { name: project.title }),
+      screen.getByRole('heading', { name: '프로젝트 개요' }),
     ).toBeVisible();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   } finally {
@@ -109,7 +110,7 @@ it('제안서 상위 구성 영역에 순서 번호를 표시한다', async () =
 
   const cleanup = renderDocument('1', '19');
   try {
-    await screen.findByRole('heading', { name: project.title });
+    await screen.findByText(project.title);
     expect(
       screen.getByRole('heading', { level: 3, name: '1. 주제' }),
     ).toBeVisible();
@@ -143,9 +144,7 @@ it('서버 문서의 백슬래시 기반 외부 이미지 URL을 렌더링하지
 
   const cleanup = renderDocument('1', '19');
   try {
-    expect(
-      await screen.findByRole('heading', { name: project.title }),
-    ).toBeVisible();
+    expect(await screen.findByText(project.title)).toBeVisible();
     expect(screen.queryByRole('img', { name: '도서 목록' })).toBeNull();
   } finally {
     cleanup();

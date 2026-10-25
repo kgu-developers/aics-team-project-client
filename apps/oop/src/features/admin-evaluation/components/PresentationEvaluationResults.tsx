@@ -121,6 +121,7 @@ export default function PresentationEvaluationResults({
     if (totalScoreSort === 'default') return filteredEvaluations;
 
     return [...filteredEvaluations].sort((left, right) => {
+      if (left.totalScore == null && right.totalScore == null) return 0;
       if (left.totalScore == null) return 1;
       if (right.totalScore == null) return -1;
       return totalScoreSort === 'descending'

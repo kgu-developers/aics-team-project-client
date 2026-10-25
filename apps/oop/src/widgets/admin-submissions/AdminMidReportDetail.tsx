@@ -222,18 +222,9 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
   return (
     <>
       <Card className={styles.document}>
-        <div className={styles.documentHeader}>
-          <Text className={styles.documentLabel}>MID REPORT / READ ONLY</Text>
-          <Heading level={2}>{report.title}</Heading>
+        <section className={styles.section}>
+          <Heading level={2}>제출 현황</Heading>
           <dl className={styles.metadataSummary}>
-            <div>
-              <dt>상태</dt>
-              <dd>{report.status}</dd>
-            </div>
-            <div>
-              <dt>현재 버전</dt>
-              <dd>{report.version}차</dd>
-            </div>
             <div>
               <dt>팀</dt>
               <dd>
@@ -281,7 +272,7 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
           ) : report.revision?.requestedAt ? (
             <Text className={styles.metadata}>교수자 최종 확인 전</Text>
           ) : null}
-        </div>
+        </section>
         {report.blocks.map(block => {
           const fields = parseBlockFields(block.fields);
 
@@ -482,6 +473,7 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
             <Text className={styles.sectionDescription}>
               수정 요청을 보내면 학생이 수정본을 재제출하기 전까지 추가 수정
               요청을 보낼 수 없습니다. 필요한 내용을 한 메시지에 작성해 주세요.
+              추가 안내는 쪽지함의 일반 메시지로 전달할 수 있습니다.
             </Text>
           ) : null}
           <TextArea

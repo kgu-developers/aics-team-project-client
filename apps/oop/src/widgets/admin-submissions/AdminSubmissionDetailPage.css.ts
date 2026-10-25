@@ -36,6 +36,13 @@ export const pageHeader = style({
   },
 });
 
+export const pageHeaderContent = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 6,
+  minWidth: 0,
+});
+
 export const metadata = style({
   color: tokens.color.text.secondary,
   fontSize: 14,
@@ -52,20 +59,6 @@ export const relatedMeetings = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 12,
-});
-
-export const documentHeader = style({
-  borderBottom: `1px solid ${tokens.color.border.base}`,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 8,
-  paddingBottom: 20,
-});
-
-export const documentLabel = style({
-  color: tokens.color.text.secondary,
-  fontSize: 13,
-  fontWeight: 600,
 });
 
 export const metadataSummary = style({

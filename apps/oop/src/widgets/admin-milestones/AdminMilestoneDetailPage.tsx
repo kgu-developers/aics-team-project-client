@@ -30,6 +30,8 @@ import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
+
 import AdminPeerEvaluationStudentPreview from '~/features/admin-milestone-review/components/AdminPeerEvaluationStudentPreview';
 import AdminPresentationEvaluationQuestions from '~/features/admin-milestone-review/components/AdminPresentationEvaluationQuestions';
 import AdminStudentMilestonePreview from '~/features/admin-milestone-review/components/AdminStudentMilestonePreview';
@@ -250,7 +252,7 @@ export default function AdminMilestoneDetailPage() {
                 onChange={() => undefined}
                 options={[
                   {
-                    label: `${section.code} · ${section.name}`,
+                    label: formatAdminSectionLabel(section),
                     value: section.id,
                   },
                 ]}
@@ -428,6 +430,7 @@ export default function AdminMilestoneDetailPage() {
             <AdminPresentationEvaluationQuestions
               sections={[
                 {
+                  classTime: section.classTime,
                   code: section.code,
                   id: section.id,
                   name: section.name,
