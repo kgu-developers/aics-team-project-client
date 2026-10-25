@@ -56,12 +56,12 @@ afterEach(() => {
   useAuthStore.setState({ currentUser: null });
 });
 afterAll(() => server.close());
-function renderQuery() {
+function renderQuery(activeSectionIds?: readonly string[]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   clients.push(client);
-  return renderHook(() => useAdminAccessibleNoticesQuery(), {
+  return renderHook(() => useAdminAccessibleNoticesQuery(activeSectionIds), {
     wrapper: ({ children }: PropsWithChildren) => (
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     ),
@@ -86,6 +86,16 @@ it('requests each valid ACTIVE section once and excludes inactive, unknown-statu
   expect(result.current.data).toHaveLength(1);
   expect(result.current.isError).toBe(false);
   expect(result.current.scopeStatus).toBe('unknown-status');
+});
+
+it('강좌까지 운영 중인 것으로 확인된 분반 ID만 조회한다', async () => {
+  setSections([section, { ...section, id: '2' }]);
+
+  const { result } = renderQuery(['2']);
+
+  await waitFor(() => expect(result.current.isPending).toBe(false));
+  expect(request).toHaveBeenCalledExactlyOnceWith('2');
+  expect(result.current.data.map(item => item.sectionId)).toEqual([2]);
 });
 
 it.each(['no user', 'no active sections', 'no sections'] as const)(

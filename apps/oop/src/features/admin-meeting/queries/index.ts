@@ -1,4 +1,5 @@
 export { adminMeetingKeys } from './adminMeetingKeys';
+export { useAdminActiveMeetingRecordsQuery } from './useAdminActiveMeetingRecordsQuery';
 export { useAdminMeetingRecordQuery } from './useAdminMeetingRecordQuery';
 export { useAdminMeetingRecordDetailQuery } from './useAdminMeetingRecordDetailQuery';
 export { useAdminMeetingRecordListQuery } from './useAdminMeetingRecordListQuery';

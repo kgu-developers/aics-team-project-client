@@ -21,6 +21,8 @@ import { demoAdmin } from '~/mocks/data/users';
 const dashboardState = vi.hoisted(() => ({
   activeSections: [] as CurrentUser['sections'],
   meetingContent: '',
+  meetingError: false,
+  meetingSectionIds: [] as string[],
   meetingRecords: [] as {
     authorId: string;
     content: string;
@@ -45,6 +47,8 @@ const dashboardState = vi.hoisted(() => ({
     teamId: number;
     teamName: string;
   }[],
+  messageSectionIds: [] as string[],
+  messageError: false,
   milestoneSectionIds: [] as string[],
   milestones: [] as AdminSectionMilestoneDto[],
   markMessageRead: vi.fn(),
@@ -57,6 +61,7 @@ const dashboardState = vi.hoisted(() => ({
     content: string;
     publishedAt: string;
   }[],
+  noticeSectionIds: [] as string[],
 }));
 beforeEach(() => {
   vi.spyOn(Date, 'now').mockReturnValue(
@@ -64,6 +69,8 @@ beforeEach(() => {
   );
   dashboardState.activeSections = [];
   dashboardState.meetingContent = '발표 자료의 핵심 흐름과 역할을 확정한다.';
+  dashboardState.meetingError = false;
+  dashboardState.meetingSectionIds = [];
   dashboardState.meetingRecords = [
     {
       authorId: '20260001',
@@ -92,6 +99,8 @@ beforeEach(() => {
       teamName: '1팀',
     },
   ];
+  dashboardState.messageSectionIds = [];
+  dashboardState.messageError = false;
   dashboardState.milestoneSectionIds = [];
   dashboardState.milestones = [];
   dashboardState.markMessageRead.mockReset();
@@ -106,6 +115,7 @@ beforeEach(() => {
       publishedAt: '2026-09-14T15:30:00Z',
     },
   ];
+  dashboardState.noticeSectionIds = [];
 });
 afterEach(() => {
   vi.restoreAllMocks();
@@ -121,36 +131,42 @@ vi.mock('~/features/admin-course/queries', () => ({
 }));
 
 vi.mock('~/features/admin-meeting/queries', () => ({
-  useAdminMeetingRecordListQuery: () => ({
-    data: {
-      contents: dashboardState.meetingRecords.map((record, index) =>
-        index === 0
-          ? { ...record, content: dashboardState.meetingContent }
-          : record,
-      ),
-      pageable: {
-        isEnd: true,
-        page: 0,
-        size: 20,
-        totalElements: 1,
-        totalPages: 1,
+  useAdminActiveMeetingRecordsQuery: (sectionIds: string[]) => {
+    dashboardState.meetingSectionIds = sectionIds;
+    return {
+      data: {
+        contents: dashboardState.meetingRecords.map((record, index) =>
+          index === 0
+            ? { ...record, content: dashboardState.meetingContent }
+            : record,
+        ),
+        pageable: {
+          isEnd: true,
+          page: 0,
+          size: 20,
+          totalElements: 1,
+          totalPages: 1,
+        },
       },
-    },
-    isError: false,
-    isPending: false,
-  }),
+      isError: dashboardState.meetingError,
+      isPending: false,
+    };
+  },
 }));
 
 vi.mock('~/features/admin-message/queries', () => ({
-  useAdminMessagesQuery: () => ({
-    data: {
-      contents: dashboardState.messages,
-      unreadCount: dashboardState.messages.filter(message => !message.read)
-        .length,
-    },
-    isError: false,
-    isPending: false,
-  }),
+  useAdminActiveMessagesQuery: (sectionIds: string[]) => {
+    dashboardState.messageSectionIds = sectionIds;
+    return {
+      data: {
+        contents: dashboardState.messages,
+        unreadCount: dashboardState.messages.filter(message => !message.read)
+          .length,
+      },
+      isError: dashboardState.messageError,
+      isPending: false,
+    };
+  },
   useUpdateAdminMessageReadMutation: () => ({
     mutate: dashboardState.markMessageRead,
   }),
@@ -168,12 +184,15 @@ vi.mock('~/features/admin-milestone-review/queries', () => ({
 }));
 
 vi.mock('~/features/admin-notices/queries', () => ({
-  useAdminAccessibleNoticesQuery: () => ({
-    data: dashboardState.notices,
-    isError: dashboardState.noticeError,
-    scopeStatus: dashboardState.noticeScopeStatus,
-    isPending: false,
-  }),
+  useAdminAccessibleNoticesQuery: (sectionIds: string[]) => {
+    dashboardState.noticeSectionIds = sectionIds;
+    return {
+      data: dashboardState.notices,
+      isError: dashboardState.noticeError,
+      scopeStatus: dashboardState.noticeScopeStatus,
+      isPending: false,
+    };
+  },
 }));
 
 function renderPage(
@@ -245,6 +264,21 @@ function renderPage(
 }
 
 describe('AdminHomeDashboard', () => {
+  it('홈의 일정·공지·회의록·쪽지 조회에 같은 운영 분반 범위를 사용한다', async () => {
+    const activeSections = demoAdmin.sections.filter(
+      section => section.status === 'ACTIVE',
+    );
+
+    renderPage(demoAdmin, activeSections);
+    await screen.findByRole('heading', { name: '홈' });
+
+    const expectedSectionIds = activeSections.map(section => section.id);
+    expect(dashboardState.milestoneSectionIds).toEqual(expectedSectionIds);
+    expect(dashboardState.noticeSectionIds).toEqual(expectedSectionIds);
+    expect(dashboardState.meetingSectionIds).toEqual(expectedSectionIds);
+    expect(dashboardState.messageSectionIds).toEqual(expectedSectionIds);
+  });
+
   it('분반별 일정에서 고정 단계 칼럼과 제출물 링크를 표시한다', async () => {
     dashboardState.milestones = [
       {
@@ -685,6 +719,38 @@ describe('AdminHomeDashboard', () => {
     expect(
       within(communicationPanel).getByRole('link', { name: '전체보기 ›' }),
     ).toHaveAttribute('href', '/admin/messages');
+  });
+
+  it('일부 분반 조회가 실패해도 성공한 회의록·쪽지와 경고를 함께 표시한다', async () => {
+    const user = userEvent.setup();
+    dashboardState.meetingError = true;
+    dashboardState.messageError = true;
+
+    renderPage();
+
+    const meetingLink = await screen.findByRole('link', {
+      name: '발표 자료의 핵심 흐름과 역할을 확정한다.',
+    });
+    const meetingPanel = meetingLink.closest('section')!;
+    expect(within(meetingPanel).getByRole('alert')).toHaveTextContent(
+      '일부 운영 중인 분반의 회의록을 불러오지 못했습니다.',
+    );
+
+    const communicationPanel = screen.getByRole('region', {
+      name: '공지사항과 쪽지함',
+    });
+    await user.click(
+      within(communicationPanel).getByRole('button', { name: '쪽지함' }),
+    );
+
+    expect(
+      within(communicationPanel).getByRole('link', {
+        name: '제안서 보완 사항을 확인해 주세요.',
+      }),
+    ).toBeInTheDocument();
+    expect(within(communicationPanel).getByRole('alert')).toHaveTextContent(
+      '일부 운영 중인 분반의 쪽지를 불러오지 못했습니다.',
+    );
   });
 });
 

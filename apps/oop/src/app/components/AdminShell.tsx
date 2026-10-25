@@ -13,7 +13,8 @@ import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
 
-import { useAdminMessagesQuery } from '~/features/admin-message/queries';
+import { useActiveAdminSections } from '~/features/admin-course/queries';
+import { useAdminActiveMessagesQuery } from '~/features/admin-message/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import StudentContactLink from '~/widgets/student-contact-link/StudentContactLink';
@@ -64,7 +65,10 @@ function isMenuItemActive(pathname: string, itemPath: string) {
 export default function AdminShell() {
   const pathname = useRouterState({ select: state => state.location.pathname });
   const currentUser = useAuthStore(state => state.currentUser);
-  const messagesQuery = useAdminMessagesQuery();
+  const activeSectionsQuery = useActiveAdminSections();
+  const messagesQuery = useAdminActiveMessagesQuery(
+    activeSectionsQuery.data.map(section => section.id),
+  );
   const unreadMessageCount = messagesQuery.data?.unreadCount ?? 0;
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
