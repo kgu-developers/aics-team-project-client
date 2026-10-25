@@ -97,6 +97,7 @@ export const profileActions = style({
   borderBlockStart: `1px solid ${tokens.color.border.base}`,
   display: 'flex',
   flexDirection: 'row',
+  flexWrap: 'wrap',
   gap: tokens.spacing['2'],
   paddingBlockStart: tokens.spacing['3'],
 });
@@ -107,19 +108,20 @@ export const logoutError = style({
 });
 
 globalStyle(`${profileActions} > button`, {
-  flex: '1 1 0',
+  flex: '1 1 72px',
   minWidth: 0,
 });
 
 globalStyle(`${profileActions} > button:first-child`, {
-  flex: '1.5 1 0',
-  whiteSpace: 'nowrap',
+  flex: '1.5 1 112px',
+  whiteSpace: 'normal',
 });
 
 globalStyle(`${profileActions} > button:first-child span`, {
   overflow: 'visible',
+  overflowWrap: 'anywhere',
   textOverflow: 'clip',
-  whiteSpace: 'nowrap',
+  whiteSpace: 'normal',
 });
 
 export const passwordForm = style({

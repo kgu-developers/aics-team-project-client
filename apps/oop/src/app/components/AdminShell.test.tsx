@@ -17,20 +17,11 @@ import AdminShell from './AdminShell';
 import { demoAdmin } from '~/mocks/data/users';
 
 const shellState = vi.hoisted(() => ({
-  activeSections: [{ id: '1' }],
   unreadMessageCount: 0,
 }));
 
-vi.mock('~/features/admin-course/queries', () => ({
-  useActiveAdminSections: () => ({
-    data: shellState.activeSections,
-    isError: false,
-    isPending: false,
-  }),
-}));
-
 vi.mock('~/features/admin-message/queries', () => ({
-  useAdminActiveMessagesQuery: () => ({
+  useAdminMessagesQuery: () => ({
     data: { unreadCount: shellState.unreadMessageCount },
   }),
 }));
