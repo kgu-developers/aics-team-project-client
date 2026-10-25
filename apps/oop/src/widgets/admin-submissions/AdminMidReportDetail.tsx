@@ -226,10 +226,6 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
           <Heading level={2}>제출 현황</Heading>
           <dl className={styles.metadataSummary}>
             <div>
-              <dt>제목</dt>
-              <dd>{report.title}</dd>
-            </div>
-            <div>
               <dt>팀</dt>
               <dd>
                 <Link
