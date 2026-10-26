@@ -370,6 +370,7 @@ describe('AdminStudentTeamManagement', () => {
         .getAllByRole('radio')
         .map(radio => radio.getAttribute('value')),
     ).toEqual(['3', '2']);
+    expect(within(dialog).getByRole('radio', { name: /Alpha/ })).toBeChecked();
   });
 
   it('팀 카드의 팀원과 팀장 변경 목록을 이름순으로 표시한다', async () => {

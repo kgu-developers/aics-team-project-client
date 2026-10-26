@@ -353,14 +353,20 @@ export default function AdminStudentTeamManagement({
     sourceTeam: (typeof teams)[number],
     preferredTargetTeamId?: number,
   ) {
-    const targetTeam = teams.find(
-      candidate =>
-        candidate.id !== sourceTeam.id &&
-        candidate.sectionId === sourceTeam.sectionId &&
-        candidate.status !== 'CONFIRMED' &&
-        (preferredTargetTeamId === undefined ||
-          candidate.id === preferredTargetTeamId),
+    const eligibleTargetTeams = sortTeamsByName(
+      teams.filter(
+        candidate =>
+          candidate.id !== sourceTeam.id &&
+          candidate.sectionId === sourceTeam.sectionId &&
+          candidate.status !== 'CONFIRMED',
+      ),
     );
+    const targetTeam =
+      preferredTargetTeamId === undefined
+        ? eligibleTargetTeams[0]
+        : eligibleTargetTeams.find(
+            candidate => candidate.id === preferredTargetTeamId,
+          );
     if (!targetTeam) return;
 
     setTeamMemberToMove({ member, sourceTeam });
