@@ -61,7 +61,7 @@ function renderResults(
 describe('PresentationEvaluationResults', () => {
   it('제출 현황을 표시하고 평가자 표를 제출 상태로 필터링한다', async () => {
     const user = userEvent.setup();
-    const { onSelectEvaluator } = renderResults();
+    const { onSelectEvaluator } = renderResults([...evaluations].reverse());
 
     expect(
       screen.getByText('발표 평가 대상 2명 중 1명 제출'),
@@ -76,6 +76,12 @@ describe('PresentationEvaluationResults', () => {
     expect(
       screen.getByRole('button', { name: '미제출 학생' }),
     ).toBeInTheDocument();
+    expect(
+      screen
+        .getAllByRole('button')
+        .map(button => button.textContent)
+        .filter(name => ['제출 학생', '미제출 학생'].includes(name ?? '')),
+    ).toEqual(['제출 학생', '미제출 학생']);
 
     await user.click(screen.getByRole('combobox', { name: '제출 상태' }));
     await user.click(await screen.findByRole('option', { name: '제출' }));
@@ -158,11 +164,11 @@ describe('PresentationEvaluationResults', () => {
         );
 
     expect(evaluatorNames()).toEqual([
-      '중간 점수',
       '낮은 점수',
       '높은 점수',
-      '미제출 평가자',
+      '중간 점수',
       '두 번째 미제출 평가자',
+      '미제출 평가자',
     ]);
 
     await user.click(
@@ -172,8 +178,8 @@ describe('PresentationEvaluationResults', () => {
       '높은 점수',
       '중간 점수',
       '낮은 점수',
-      '미제출 평가자',
       '두 번째 미제출 평가자',
+      '미제출 평가자',
     ]);
 
     await user.click(
@@ -183,19 +189,19 @@ describe('PresentationEvaluationResults', () => {
       '낮은 점수',
       '중간 점수',
       '높은 점수',
-      '미제출 평가자',
       '두 번째 미제출 평가자',
+      '미제출 평가자',
     ]);
 
     await user.click(
       screen.getByRole('button', { name: '총점 기본순으로 정렬' }),
     );
     expect(evaluatorNames()).toEqual([
-      '중간 점수',
       '낮은 점수',
       '높은 점수',
-      '미제출 평가자',
+      '중간 점수',
       '두 번째 미제출 평가자',
+      '미제출 평가자',
     ]);
   });
 });

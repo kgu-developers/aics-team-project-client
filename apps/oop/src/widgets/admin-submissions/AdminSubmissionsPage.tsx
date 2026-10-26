@@ -109,6 +109,21 @@ type PeerEvaluationTablePlugin = NonNullable<
 
 type PresentationTotalScoreSort = 'ascending' | 'default' | 'descending';
 
+const koreanCollator = new Intl.Collator('ko-KR', {
+  numeric: true,
+  sensitivity: 'base',
+});
+
+function sortTeamRowsByName<
+  T extends { teamId: number | string; teamName: string },
+>(teams: readonly T[]) {
+  return [...teams].sort(
+    (left, right) =>
+      koreanCollator.compare(left.teamName, right.teamName) ||
+      koreanCollator.compare(String(left.teamId), String(right.teamId)),
+  );
+}
+
 function getNextPresentationTotalScoreSort(
   sort: PresentationTotalScoreSort,
 ): PresentationTotalScoreSort {
@@ -361,10 +376,11 @@ export default function AdminSubmissionsPage() {
     setPagedListKey(submissionListKey);
     setSubmissionPage(0);
   }
-  const pagedSubmissions = paginate(
-    submissionsQuery.data?.submissions ?? [],
-    submissionPage,
+  const sortedSubmissions = useMemo(
+    () => sortTeamRowsByName(submissionsQuery.data?.submissions ?? []),
+    [submissionsQuery.data?.submissions],
   );
+  const pagedSubmissions = paginate(sortedSubmissions, submissionPage);
   const versionMetadataTargets = useMemo(
     () =>
       versionMetadataMilestoneIds.has(activeMilestoneId)
@@ -516,18 +532,30 @@ export default function AdminSubmissionsPage() {
     value: section.id,
   }));
   const presentationEvaluationTeams = useMemo(() => {
-    const teams = presentationEvaluationsQuery.data?.teams ?? [];
+    const teams = sortTeamRowsByName(
+      presentationEvaluationsQuery.data?.teams ?? [],
+    );
     if (presentationTotalScoreSort === 'default') return teams;
 
     return [...teams].sort((left, right) => {
-      if (left.totalScore == null && right.totalScore == null) return 0;
+      if (left.totalScore == null && right.totalScore == null) {
+        return koreanCollator.compare(left.teamName, right.teamName);
+      }
       if (left.totalScore == null) return 1;
       if (right.totalScore == null) return -1;
-      return presentationTotalScoreSort === 'descending'
-        ? right.totalScore - left.totalScore
-        : left.totalScore - right.totalScore;
+      const scoreDifference =
+        presentationTotalScoreSort === 'descending'
+          ? right.totalScore - left.totalScore
+          : left.totalScore - right.totalScore;
+      return (
+        scoreDifference || koreanCollator.compare(left.teamName, right.teamName)
+      );
     });
   }, [presentationEvaluationsQuery.data?.teams, presentationTotalScoreSort]);
+  const peerEvaluationTeams = useMemo(
+    () => sortTeamRowsByName(peerEvaluationsQuery.data?.teams ?? []),
+    [peerEvaluationsQuery.data?.teams],
+  );
   const presentationTotalScoreSortButton = getPresentationTotalScoreSortButton(
     presentationTotalScoreSort,
   );
@@ -1170,7 +1198,7 @@ export default function AdminSubmissionsPage() {
                 <div className={styles.evaluationHeader}>
                   <Heading level={2}>상호평가 목록</Heading>
                 </div>
-                {peerEvaluationsQuery.data.teams.length === 0 ? (
+                {peerEvaluationTeams.length === 0 ? (
                   <EmptyState
                     description='상호평가 양식 또는 팀 구성을 확인해 주세요.'
                     title='표시할 상호평가 결과가 없습니다.'
@@ -1214,7 +1242,7 @@ export default function AdminSubmissionsPage() {
                           width: proportional(1.3, { minWidth: 148 }),
                         },
                       ]}
-                      data={peerEvaluationsQuery.data.teams}
+                      data={peerEvaluationTeams}
                       dividers='rows'
                       hasHover
                       idKey='teamId'

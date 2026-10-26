@@ -29,7 +29,10 @@ import AdminSubmissionDetailPage from './AdminSubmissionDetailPage';
 import AdminSubmissionsPage from './AdminSubmissionsPage';
 
 import { resetMockSessionState } from '~/mocks/authSession';
-import { adminPresentationEvaluationListFixture } from '~/mocks/data/adminEvaluationResults';
+import {
+  adminPeerEvaluationListFixture,
+  adminPresentationEvaluationListFixture,
+} from '~/mocks/data/adminEvaluationResults';
 import {
   getAdminMilestoneSubmissionsFixture,
   resetAdminMilestoneSubmissionsFixture,
@@ -134,6 +137,63 @@ function renderPage(
 }
 
 describe('AdminSubmissionsPage', () => {
+  it('일반 제출물과 상호평가 목록을 팀명순으로 표시한다', async () => {
+    const user = userEvent.setup();
+    const proposalSubmissions = getAdminMilestoneSubmissionsFixture('101')!;
+
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('101')}`,
+        () =>
+          HttpResponse.json({
+            contents: [...proposalSubmissions.contents].reverse(),
+          }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PEER_EVALUATIONS('1')}`,
+        () =>
+          HttpResponse.json({
+            ...adminPeerEvaluationListFixture,
+            teams: [...adminPeerEvaluationListFixture.teams].reverse(),
+          }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRESENTATION_EVALUATIONS('1')}`,
+        () =>
+          HttpResponse.json({
+            ...adminPresentationEvaluationListFixture,
+            teams: [...adminPresentationEvaluationListFixture.teams].reverse(),
+          }),
+      ),
+    );
+
+    renderPage('/admin/submissions?milestoneId=proposal&sectionId=1');
+
+    expect(
+      (await screen.findAllByText(/^OOP-01 - [12]팀$/)).map(
+        label => label.textContent,
+      ),
+    ).toEqual(['OOP-01 - 1팀', 'OOP-01 - 2팀']);
+
+    await user.click(await screen.findByRole('tab', { name: '상호 평가' }));
+
+    expect(
+      (await screen.findAllByRole('row')).slice(1).map(row => row.textContent),
+    ).toEqual([
+      expect.stringContaining('OOP-01 - 1팀'),
+      expect.stringContaining('OOP-01 - 2팀'),
+    ]);
+
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    expect(
+      (await screen.findAllByRole('row')).slice(1).map(row => row.textContent),
+    ).toEqual([
+      expect.stringContaining('OOP-01 - 1팀'),
+      expect.stringContaining('OOP-01 - 2팀'),
+    ]);
+  });
+
   it('제출·평가 현황에서는 산출물 현황 다운로드를 제공하지 않는다', async () => {
     renderPage('/admin/submissions?sectionId=1');
 
