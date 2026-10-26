@@ -6,6 +6,8 @@ import {
   Popover,
   RadioList,
   RadioListItem,
+  Selector,
+  SelectorOption,
   Text,
   TextArea,
   TextInput,
@@ -43,6 +45,31 @@ const koreanCollator = new Intl.Collator('ko-KR', {
 });
 
 type ManagementView = 'all' | 'students' | 'teams';
+type StudentListSort = 'team' | 'name';
+
+const studentListSortOptions = [
+  { label: '팀 순', value: 'team' },
+  { label: '이름 순', value: 'name' },
+] as const;
+
+function sortTeamMembersByName<
+  T extends { name: string; studentNumber: string },
+>(members: readonly T[]) {
+  return [...members].sort(
+    (left, right) =>
+      koreanCollator.compare(left.name, right.name) ||
+      koreanCollator.compare(left.studentNumber, right.studentNumber),
+  );
+}
+
+function sortTeamsByName<T extends { id: number; name: string }>(
+  teams: readonly T[],
+) {
+  return [...teams].sort(
+    (left, right) =>
+      koreanCollator.compare(left.name, right.name) || left.id - right.id,
+  );
+}
 
 function getTeamMoveErrorMessage(error: unknown) {
   if (!isAxiosError<{ code?: string; message?: string }>(error)) {
@@ -186,33 +213,6 @@ export default function AdminStudentTeamManagement({
       ),
     [teams],
   );
-  const studentsSortedByTeam = useMemo(
-    () =>
-      [...students].sort((left, right) => {
-        const leftTeamName = teamByStudentNumber.get(left.studentNumber)?.name;
-        const rightTeamName = teamByStudentNumber.get(
-          right.studentNumber,
-        )?.name;
-
-        if (leftTeamName && !rightTeamName) return -1;
-        if (!leftTeamName && rightTeamName) return 1;
-
-        const teamNameComparison = koreanCollator.compare(
-          leftTeamName ?? '',
-          rightTeamName ?? '',
-        );
-        if (teamNameComparison !== 0) return teamNameComparison;
-
-        const studentNameComparison = koreanCollator.compare(
-          left.name,
-          right.name,
-        );
-        return studentNameComparison !== 0
-          ? studentNameComparison
-          : koreanCollator.compare(left.studentNumber, right.studentNumber);
-      }),
-    [students, teamByStudentNumber],
-  );
   const selectedTeamMember = selectedStudentNumber
     ? teamByStudentNumber
         .get(selectedStudentNumber)
@@ -240,8 +240,59 @@ export default function AdminStudentTeamManagement({
     sourceTeam: (typeof teams)[number];
   } | null>(null);
   const [dragOverTeamId, setDragOverTeamId] = useState<number | null>(null);
+  const [studentSearchTerm, setStudentSearchTerm] = useState('');
+  const [studentListSort, setStudentListSort] =
+    useState<StudentListSort>('team');
   const [studentListPage, setStudentListPage] = useState(0);
-  const pagedStudents = paginate(studentsSortedByTeam, studentListPage, 8);
+  const filteredStudents = useMemo(() => {
+    const searchTerm = studentSearchTerm.trim().toLowerCase();
+    if (!searchTerm) return students;
+
+    return students.filter(
+      student =>
+        student.name.toLowerCase().includes(searchTerm) ||
+        student.studentNumber.includes(searchTerm),
+    );
+  }, [studentSearchTerm, students]);
+  const sortedStudents = useMemo(
+    () =>
+      [...filteredStudents].sort((left, right) => {
+        if (studentListSort === 'name') {
+          const studentNameComparison = koreanCollator.compare(
+            left.name,
+            right.name,
+          );
+          return studentNameComparison !== 0
+            ? studentNameComparison
+            : koreanCollator.compare(left.studentNumber, right.studentNumber);
+        }
+
+        const leftTeamName = teamByStudentNumber.get(left.studentNumber)?.name;
+        const rightTeamName = teamByStudentNumber.get(
+          right.studentNumber,
+        )?.name;
+
+        if (leftTeamName && !rightTeamName) return -1;
+        if (!leftTeamName && rightTeamName) return 1;
+
+        const teamNameComparison = koreanCollator.compare(
+          leftTeamName ?? '',
+          rightTeamName ?? '',
+        );
+        if (teamNameComparison !== 0) return teamNameComparison;
+
+        const studentNameComparison = koreanCollator.compare(
+          left.name,
+          right.name,
+        );
+        return studentNameComparison !== 0
+          ? studentNameComparison
+          : koreanCollator.compare(left.studentNumber, right.studentNumber);
+      }),
+    [filteredStudents, studentListSort, teamByStudentNumber],
+  );
+  const sortedTeams = useMemo(() => sortTeamsByName(teams), [teams]);
+  const pagedStudents = paginate(sortedStudents, studentListPage, 8);
   const withdrawingTeam = studentToWithdraw
     ? teamByStudentNumber.get(studentToWithdraw.studentNumber)
     : undefined;
@@ -254,14 +305,16 @@ export default function AdminStudentTeamManagement({
 
   useEffect(() => {
     setStudentListPage(0);
-  }, [sectionId]);
+  }, [sectionId, studentListSort, studentSearchTerm]);
 
   const targetTeams = teamMemberToMove
-    ? teams.filter(
-        team =>
-          team.id !== teamMemberToMove.sourceTeam.id &&
-          team.sectionId === teamMemberToMove.sourceTeam.sectionId &&
-          team.status !== 'CONFIRMED',
+    ? sortTeamsByName(
+        teams.filter(
+          team =>
+            team.id !== teamMemberToMove.sourceTeam.id &&
+            team.sectionId === teamMemberToMove.sourceTeam.sectionId &&
+            team.status !== 'CONFIRMED',
+        ),
       )
     : [];
 
@@ -300,14 +353,20 @@ export default function AdminStudentTeamManagement({
     sourceTeam: (typeof teams)[number],
     preferredTargetTeamId?: number,
   ) {
-    const targetTeam = teams.find(
-      candidate =>
-        candidate.id !== sourceTeam.id &&
-        candidate.sectionId === sourceTeam.sectionId &&
-        candidate.status !== 'CONFIRMED' &&
-        (preferredTargetTeamId === undefined ||
-          candidate.id === preferredTargetTeamId),
+    const eligibleTargetTeams = sortTeamsByName(
+      teams.filter(
+        candidate =>
+          candidate.id !== sourceTeam.id &&
+          candidate.sectionId === sourceTeam.sectionId &&
+          candidate.status !== 'CONFIRMED',
+      ),
     );
+    const targetTeam =
+      preferredTargetTeamId === undefined
+        ? eligibleTargetTeams[0]
+        : eligibleTargetTeams.find(
+            candidate => candidate.id === preferredTargetTeamId,
+          );
     if (!targetTeam) return;
 
     setTeamMemberToMove({ member, sourceTeam });
@@ -382,14 +441,43 @@ export default function AdminStudentTeamManagement({
           {view === 'all' || view === 'students' ? (
             <section className={styles.section}>
               <div className={styles.studentListHeader}>
-                <Heading level={2}>수강생 목록</Heading>
-                <Text color='secondary' type='supporting'>
-                  수강생 {students.length}명
-                </Text>
+                <div>
+                  <Heading level={2}>수강생 목록</Heading>
+                  <Text color='secondary' type='supporting'>
+                    {studentSearchTerm.trim()
+                      ? `검색 결과 ${filteredStudents.length}명 / 전체 ${students.length}명`
+                      : `수강생 ${students.length}명`}
+                  </Text>
+                </div>
+                <div className={styles.studentListControls}>
+                  <TextInput
+                    label='수강생 찾기'
+                    onChange={setStudentSearchTerm}
+                    placeholder='이름 또는 학번으로 찾기'
+                    value={studentSearchTerm}
+                    width={280}
+                  />
+                  <Selector
+                    label='정렬'
+                    onChange={value =>
+                      setStudentListSort(value as StudentListSort)
+                    }
+                    options={[...studentListSortOptions]}
+                    renderOption={option => (
+                      <SelectorOption label={option.label ?? option.value} />
+                    )}
+                    value={studentListSort}
+                    width={140}
+                  />
+                </div>
               </div>
               {students.length === 0 ? (
                 <div className={styles.statePanel}>
                   <p>이 분반에 등록된 수강생이 없습니다.</p>
+                </div>
+              ) : filteredStudents.length === 0 ? (
+                <div className={styles.statePanel}>
+                  <p>검색 결과가 없습니다.</p>
                 </div>
               ) : (
                 <div className={styles.tableWrap}>
@@ -566,7 +654,7 @@ export default function AdminStudentTeamManagement({
                 </div>
               ) : (
                 <div className={styles.teamGrid}>
-                  {teams.map(team => (
+                  {sortedTeams.map(team => (
                     <article
                       className={cx(
                         styles.teamCard,
@@ -650,7 +738,7 @@ export default function AdminStudentTeamManagement({
                           />
                         </HStack>
                         <ul className={styles.memberList}>
-                          {team.members.map(member => (
+                          {sortTeamMembersByName(team.members).map(member => (
                             <li
                               className={cx(
                                 styles.member,
@@ -860,7 +948,7 @@ export default function AdminStudentTeamManagement({
               onChange={setNextLeaderStudentNumber}
               value={nextLeaderStudentNumber}
             >
-              {teamToUpdateLeader.members.map(member => (
+              {sortTeamMembersByName(teamToUpdateLeader.members).map(member => (
                 <RadioListItem
                   description={`${member.studentNumber}${member.isLeader ? ' · 현재 팀장' : ''}`}
                   key={member.id}

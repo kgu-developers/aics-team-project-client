@@ -107,6 +107,7 @@ describe('AdminShell', () => {
   it('강좌·분반 관리는 바로 노출하고 나머지 관리 메뉴는 그룹별로 접을 수 있다', () => {
     renderShell();
 
+    expect(screen.getByText('OOTeamProject')).toBeVisible();
     expect(screen.getByRole('link', { name: '강좌·분반 관리' })).toBeVisible();
     expect(
       screen.queryByRole('button', { name: '강좌 관리' }),

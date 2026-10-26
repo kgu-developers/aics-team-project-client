@@ -33,6 +33,22 @@ const SUBMISSION_FILTER_OPTIONS: Array<{
   { label: '미제출', value: 'not-submitted' },
 ];
 
+const koreanCollator = new Intl.Collator('ko-KR', {
+  numeric: true,
+  sensitivity: 'base',
+});
+
+function compareEvaluationTeamName(
+  left: AdminPresentationEvaluationRowDto,
+  right: AdminPresentationEvaluationRowDto,
+) {
+  return (
+    koreanCollator.compare(left.teamName, right.teamName) ||
+    koreanCollator.compare(left.evaluatorName, right.evaluatorName) ||
+    koreanCollator.compare(left.evaluatorId, right.evaluatorId)
+  );
+}
+
 function getEmptyMessage(filter: SubmissionFilter) {
   switch (filter) {
     case 'submitted':
@@ -118,15 +134,21 @@ export default function PresentationEvaluationResults({
     return [...evaluations];
   }, [evaluations, submissionFilter]);
   const displayedEvaluations = useMemo(() => {
-    if (totalScoreSort === 'default') return filteredEvaluations;
+    if (totalScoreSort === 'default') {
+      return [...filteredEvaluations].sort(compareEvaluationTeamName);
+    }
 
     return [...filteredEvaluations].sort((left, right) => {
-      if (left.totalScore == null && right.totalScore == null) return 0;
+      if (left.totalScore == null && right.totalScore == null) {
+        return compareEvaluationTeamName(left, right);
+      }
       if (left.totalScore == null) return 1;
       if (right.totalScore == null) return -1;
-      return totalScoreSort === 'descending'
-        ? right.totalScore - left.totalScore
-        : left.totalScore - right.totalScore;
+      const scoreDifference =
+        totalScoreSort === 'descending'
+          ? right.totalScore - left.totalScore
+          : left.totalScore - right.totalScore;
+      return scoreDifference || compareEvaluationTeamName(left, right);
     });
   }, [filteredEvaluations, totalScoreSort]);
   const pagedEvaluations = paginate(displayedEvaluations, page);

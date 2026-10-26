@@ -116,7 +116,7 @@ export default function AdminShell() {
           id='admin-sidebar-content'
         >
           <div className={styles.brand}>
-            <strong>OOTeamPlay</strong>
+            <strong>OOTeamProject</strong>
             <small>2026-2 · 객체지향프로그래밍</small>
           </div>
           <nav aria-label='관리자 메뉴' className={styles.nav}>

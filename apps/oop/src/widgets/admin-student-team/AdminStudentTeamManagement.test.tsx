@@ -273,6 +273,171 @@ describe('AdminStudentTeamManagement', () => {
     ).toBe('1');
   });
 
+  it('팀 카드를 영문 팀명 A-Z 순으로 표시한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM(':teamId')}`,
+        ({ params }) => {
+          const teamId = Number(params.teamId);
+          const teamName = teamId === 1 ? 'Zulu' : 'Alpha';
+
+          return HttpResponse.json({
+            createdAt: '2026-10-20T00:00:00.000Z',
+            id: teamId,
+            kickoffRule: null,
+            meetingSchedule: null,
+            members: [],
+            name: teamName,
+            sectionId: 1,
+            status: 'FORMING',
+          });
+        },
+      ),
+    );
+
+    renderPage();
+
+    expect(
+      (await screen.findAllByRole('heading', { level: 3 })).map(
+        heading => heading.textContent,
+      ),
+    ).toEqual(['Alpha', 'Zulu']);
+  });
+
+  it('팀 이동 창의 대상 팀을 영문 팀명 A-Z 순으로 표시한다', async () => {
+    const user = userEvent.setup();
+    const teamNames = new Map([
+      [1, 'Source'],
+      [2, 'Zulu'],
+      [3, 'Alpha'],
+    ]);
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS(':sectionId')}`,
+        () =>
+          HttpResponse.json({
+            contents: [...teamNames.entries()].map(([id, name]) => ({
+              createdAt: '2026-10-20T00:00:00.000Z',
+              id,
+              kickoffRule: null,
+              meetingSchedule: null,
+              name,
+              status: 'FORMING',
+            })),
+          }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM(':teamId')}`,
+        ({ params }) => {
+          const id = Number(params.teamId);
+
+          return HttpResponse.json({
+            createdAt: '2026-10-20T00:00:00.000Z',
+            id,
+            kickoffRule: null,
+            meetingSchedule: null,
+            members:
+              id === 1
+                ? [
+                    {
+                      id: 1,
+                      isLeader: true,
+                      major: '컴퓨터공학과',
+                      name: '김민준',
+                      projectRole: null,
+                      studentNumber: '20231234',
+                    },
+                  ]
+                : [],
+            name: teamNames.get(id)!,
+            sectionId: 1,
+            status: 'FORMING',
+          });
+        },
+      ),
+    );
+
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', { name: '김민준 관리' }),
+    );
+    await user.click(await screen.findByRole('button', { name: '팀 이동' }));
+
+    const dialog = await screen.findByRole('dialog', { name: '팀원 이동' });
+    expect(
+      within(dialog)
+        .getAllByRole('radio')
+        .map(radio => radio.getAttribute('value')),
+    ).toEqual(['3', '2']);
+    expect(within(dialog).getByRole('radio', { name: /Alpha/ })).toBeChecked();
+  });
+
+  it('팀 카드의 팀원과 팀장 변경 목록을 이름순으로 표시한다', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM(':teamId')}`,
+        ({ params }) => {
+          if (params.teamId !== '1') return;
+
+          return HttpResponse.json({
+            createdAt: '2026-10-20T00:00:00.000Z',
+            id: 1,
+            kickoffRule: null,
+            meetingSchedule: null,
+            members: [
+              {
+                id: 2,
+                isLeader: false,
+                major: '소프트웨어학과',
+                name: '이서연',
+                projectRole: null,
+                studentNumber: '20235678',
+              },
+              {
+                id: 1,
+                isLeader: true,
+                major: '컴퓨터공학과',
+                name: '김민준',
+                projectRole: null,
+                studentNumber: '20231234',
+              },
+            ],
+            name: '1팀',
+            sectionId: 1,
+            status: 'FORMING',
+          });
+        },
+      ),
+    );
+
+    renderPage();
+
+    const teamCard = (
+      await screen.findByRole('heading', { name: '1팀' })
+    ).closest('article');
+    expect(teamCard).not.toBeNull();
+    expect(
+      within(teamCard!)
+        .getAllByRole('listitem')
+        .map(item => item.textContent),
+    ).toEqual([
+      expect.stringContaining('김민준'),
+      expect.stringContaining('이서연'),
+    ]);
+
+    await user.click(
+      within(teamCard!).getByRole('button', { name: '팀장 변경' }),
+    );
+    const dialog = await screen.findByRole('dialog', { name: '팀장 변경' });
+    expect(
+      within(dialog)
+        .getAllByRole('radio')
+        .map(radio => radio.getAttribute('value')),
+    ).toEqual(['20231234', '20235678']);
+  });
+
   it('수강생 목록을 8명씩 나누고 페이지를 전환한다', async () => {
     const user = userEvent.setup();
     server.use(
@@ -335,6 +500,49 @@ describe('AdminStudentTeamManagement', () => {
     expect(
       screen.queryByRole('button', { name: '페이지 학생 01' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('수강생 이름·학번을 검색하고 팀 또는 이름 기준으로 정렬한다', async () => {
+    const user = userEvent.setup();
+
+    renderPage();
+
+    const studentList = (
+      await screen.findByRole('heading', {
+        name: '수강생 목록',
+      })
+    ).closest('section');
+    expect(studentList).not.toBeNull();
+    expect(within(studentList!).getAllByRole('row')[1]!.textContent).toContain(
+      '김민준',
+    );
+
+    const sortSelect = within(studentList!).getByRole('combobox', {
+      name: '정렬',
+    });
+    await user.click(sortSelect);
+    await user.click(await screen.findByRole('option', { name: '이름 순' }));
+
+    await waitFor(() =>
+      expect(
+        within(studentList!).getAllByRole('row')[1]!.textContent,
+      ).toContain('검수 학생'),
+    );
+
+    await user.type(
+      within(studentList!).getByRole('textbox', { name: '수강생 찾기' }),
+      '20231234',
+    );
+
+    expect(
+      await within(studentList!).findByRole('button', { name: '김민준' }),
+    ).toBeInTheDocument();
+    expect(
+      within(studentList!).queryByRole('button', { name: '이서연' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(studentList!).getByText('검색 결과 1명 / 전체 5명'),
+    ).toBeInTheDocument();
   });
 
   it('수강생 목록의 이름을 누르면 학생 상세 모달을 연다', async () => {

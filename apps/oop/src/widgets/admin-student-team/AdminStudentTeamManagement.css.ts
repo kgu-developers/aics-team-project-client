@@ -31,11 +31,18 @@ export const section = style({
 });
 
 export const studentListHeader = style({
-  alignItems: 'baseline',
+  alignItems: 'flex-end',
   display: 'flex',
   flexWrap: 'wrap',
   gap: 12,
   justifyContent: 'space-between',
+});
+
+export const studentListControls = style({
+  alignItems: 'flex-end',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 12,
 });
 
 export const teamSectionHeader = style({
