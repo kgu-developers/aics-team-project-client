@@ -20,7 +20,8 @@
     "test:e2e:contract": "playwright test --config playwright.config.ts",
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
-    "test:e2e:integrated": "playwright test --config playwright.integrated.config.ts"
+    "test:e2e:integrated": "playwright test --config playwright.integrated.config.ts",
+    "test:e2e:msw": "playwright test --config playwright.msw.config.ts"
   },
   "dependencies": {
     "@aics/api-client": "workspace:*",

@@ -1,8 +1,14 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import type { StudentHomeMilestone } from '@aics/core';
-import { AstryxThemeProvider } from '@aics/design-system';
+import { AstryxThemeProvider, CollapsibleGroup } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -23,6 +29,7 @@ const server = setupServer();
 let client: QueryClient;
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
+  cleanup();
   client?.clear();
   server.resetHandlers();
   useAuthStore.getState().clearSession();
@@ -36,8 +43,14 @@ const milestone: StudentHomeMilestone = {
   dueDate: '마감 전',
   status: 'in-progress',
   statusLabel: '미제출',
-  interaction: 'static',
-  isDetailAvailable: false,
+  interaction: 'collapsible',
+  isDetailAvailable: true,
+  body: {
+    kind: 'topic',
+    guidance: '주제 후보를 확인해 주세요.',
+    topicCandidates: [],
+    completion: { label: '주제 선정', value: '투표 진행 중' },
+  },
   rows: [
     {
       id: 'proposal-topic-selection',
@@ -58,8 +71,38 @@ function setup({
   cardMilestone?: StudentHomeMilestone;
 } = {}) {
   useAuthStore.getState().setAccessToken(demoAccessToken);
+  useAuthStore.getState().markAuthenticated('STUDENT');
   let count = votes;
   server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+      HttpResponse.json({
+        studentNumber,
+        name: '테스트 학생',
+        globalRole: 'USER',
+        teamId: 7,
+        sections: [{ id: 2, code: 'OOP', name: '테스트 분반' }],
+      }),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.SECTION.MY_SECTIONS}`, () =>
+      HttpResponse.json({
+        contents: [
+          {
+            id: 2,
+            code: 'OOP',
+            name: '테스트 분반',
+            status: 'ACTIVE',
+            courseId: 1,
+            courseName: 'OOP',
+            year: 2026,
+            semester: 'FALL',
+            capacity: 40,
+            classTime: '',
+            contactVisibleFrom: null,
+            contactVisibleUntil: null,
+          },
+        ],
+      }),
+    ),
     http.get(`${API_BASE_URL}${ENDPOINTS.TOPIC.CANDIDATES('7')}`, () =>
       HttpResponse.json({
         contents: [
@@ -87,7 +130,9 @@ function setup({
           studentNumber={studentNumber}
           eligibility={{ status: 'open' }}
         >
-          <MilestoneCard milestone={cardMilestone} isOpen />
+          <CollapsibleGroup type='multiple' value={[cardMilestone.id]}>
+            <MilestoneCard milestone={cardMilestone} isOpen />
+          </CollapsibleGroup>
         </TopicApiProvider>
       </QueryClientProvider>
     </AstryxThemeProvider>,
@@ -156,7 +201,11 @@ it('팀장에게 전원 투표 뒤 기존 CTA 한 개만 확정으로 전환하�
   ).not.toBeInTheDocument();
   expect(screen.getAllByRole('button', { name: '주제 확정' })).toHaveLength(1);
   await user.click(screen.getByRole('button', { name: '주제 확정' }));
-  await user.click(screen.getByRole('radio', { name: /도서 대여 관리/ }));
+  await user.click(
+    within(screen.getByRole('dialog')).getByRole('radio', {
+      name: /도서 대여 관리/,
+    }),
+  );
   await user.type(screen.getByLabelText('프로젝트 목표'), '대여 관리 개선');
   await user.click(screen.getByRole('button', { name: '이 주제로 확정' }));
   await waitFor(() =>
@@ -201,4 +250,39 @@ it('전원 투표 뒤 누군가 취소하면 다시 후보 추가로 돌아간�
     screen.queryByRole('button', { name: '주제 확정' }),
   ).not.toBeInTheDocument();
   expect(navigate).not.toHaveBeenCalled();
+});
+
+it('투표 완료 전에도 팀장 직접 제출로 제안서 작성 단계에 진입한다', async () => {
+  setup({ votes: 0 });
+  const user = userEvent.setup();
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: '주제 직접 제출' }),
+    ).toBeEnabled(),
+  );
+  await user.click(screen.getByRole('button', { name: '주제 직접 제출' }));
+  await user.click(screen.getByRole('button', { name: '확인하고 계속' }));
+  await user.type(screen.getByLabelText('주제 제목'), '도서 관리');
+  await user.type(
+    screen.getByLabelText('주제 설명'),
+    '대여 현황을 관리합니다.',
+  );
+  await user.click(screen.getByRole('button', { name: '주제 제출' }));
+  await waitFor(() =>
+    expect(navigate).toHaveBeenCalledWith({
+      search: { returnTo: 'proposal' },
+      to: '/student/editor/proposal/team-info',
+    }),
+  );
+});
+it('투표 전 직접 제출도 상위 마일스톤 잠금을 유지한다', async () => {
+  setup({
+    votes: 0,
+    cardMilestone: {
+      ...milestone,
+      rows: milestone.rows.map(row => ({ ...row, actionDisabled: true })),
+    },
+  });
+  await waitFor(() => expect(client.isFetching()).toBe(0));
+  expect(screen.getByRole('button', { name: '주제 직접 제출' })).toBeDisabled();
 });

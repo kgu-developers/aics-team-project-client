@@ -26,6 +26,8 @@ export type TopicVotePersistResponse = {
 export type TopicFinalizeInput = { candidateId: number; goal: string };
 export type TopicFinalizeResponse = {
   projectId: number;
-  candidateId: number;
+  candidateId: number | null;
   title: string;
 };
+
+export type TopicDirectFinalizeInput = { title: string; description: string };

@@ -13,6 +13,10 @@ import { meetingApiTeam } from '../data/meetingApi';
 /** Independent fixture state for the deployed team/candidate contract. */
 export function createLiveTopicHandlers(
   initialProject: TeamProjectResponse | null = null,
+  options: {
+    projectResponse?: (project: TeamProjectResponse) => unknown;
+    onProjectChange?: (project: TeamProjectResponse) => void;
+  } = {},
 ) {
   let project = initialProject ? structuredClone(initialProject) : null;
   const state = createLiveTopicState();
@@ -37,13 +41,64 @@ export function createLiveTopicHandlers(
     return { studentNumber };
   }
   return [
+    http.patch(
+      `${API_BASE_URL}${ENDPOINTS.TOPIC.DIRECT_FINALIZE(':teamId')}`,
+      async ({ request, params }) => {
+        const result = guard(request, String(params.teamId));
+        if ('response' in result) return result.response;
+        if (
+          !meetingApiTeam.members.some(
+            member =>
+              member.studentNumber === result.studentNumber && member.isLeader,
+          )
+        )
+          return HttpResponse.json({ code: 'ACCESS_DENIED' }, { status: 403 });
+        const input = (await request.json()) as {
+          title?: string;
+          description?: string;
+        };
+        if (
+          typeof input.title !== 'string' ||
+          !input.title.trim() ||
+          input.title.trim().length > 200 ||
+          typeof input.description !== 'string' ||
+          !input.description.trim()
+        )
+          return HttpResponse.json(
+            { code: 'INVALID_REQUEST' },
+            { status: 400 },
+          );
+        if (project?.proposalCompletedAt)
+          return HttpResponse.json(
+            { code: 'PROJECT_PROPOSAL_COMPLETED' },
+            { status: 409 },
+          );
+        project = {
+          ...project,
+          id: project?.id ?? 17,
+          teamId: Number(liveTopicTeamId),
+          title: input.title.trim(),
+          description: input.description.trim(),
+          goal: project?.goal ?? '',
+          proposalCompletedAt: null,
+        };
+        state.candidates.length = 0;
+        state.votes.clear();
+        options.onProjectChange?.(project);
+        return HttpResponse.json({
+          projectId: project.id,
+          candidateId: null,
+          title: project.title,
+        });
+      },
+    ),
     http.get(
       `${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM(':teamId')}`,
       ({ request, params }) => {
         const result = guard(request, String(params.teamId));
         if ('response' in result) return result.response;
         return project
-          ? HttpResponse.json(project)
+          ? HttpResponse.json(options.projectResponse?.(project) ?? project)
           : HttpResponse.json({ code: 'PROJECT_NOT_FOUND' }, { status: 404 });
       },
     ),
@@ -94,6 +149,7 @@ export function createLiveTopicHandlers(
           goal: input.goal.trim(),
           proposalCompletedAt: null,
         };
+        options.onProjectChange?.(project);
         return HttpResponse.json({
           projectId: project.id,
           candidateId: candidate.id,

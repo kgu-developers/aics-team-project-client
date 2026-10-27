@@ -211,3 +211,16 @@ export const rowAction = style({
     background: tokens.color.accent,
   },
 });
+
+export const topicDirectAction = style({
+  display: 'flex',
+  justifyContent: 'flex-end',
+  paddingInline: tokens.spacing['6'],
+  paddingBlockEnd: tokens.spacing['6'],
+  ':empty': { display: 'none' },
+  '@media': {
+    'screen and (max-width: 767px)': {
+      paddingInline: tokens.spacing['4'],
+    },
+  },
+});

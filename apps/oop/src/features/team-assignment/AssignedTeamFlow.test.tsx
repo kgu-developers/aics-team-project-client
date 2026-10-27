@@ -213,7 +213,7 @@ it('내 팀에서 서버가 확정한 팀장의 이름과 학번을 확인할 �
     .setup()
     .click(screen.getByRole('button', { name: '학생 홈으로 돌아가기' }));
   expect(navigate).toHaveBeenCalledWith({ to: '/student' });
-  expect(contactRequests).not.toHaveBeenCalled();
+  expect(contactRequests).toHaveBeenCalledOnce();
 });
 
 it('온보딩 결과 안의 팀 요약에는 중복 홈 이동을 표시하지 않는다', async () => {
@@ -342,4 +342,44 @@ it('연락처 조회 실패는 팀장 선정을 막지 않고 연락처만 재�
   expect(
     await screen.findByRole('button', { name: '010-0000-0001 복사' }),
   ).toBeVisible();
+});
+
+it('팀장 선정 후에도 공개 중인 내 팀 표에 학번과 전화번호를 표시한다', async () => {
+  team.members[0]!.isLeader = true;
+  renderFlow(true);
+  expect(
+    await screen.findByRole('columnheader', { name: '전화번호' }),
+  ).toBeVisible();
+  expect(screen.getByRole('columnheader', { name: '학번' })).toBeVisible();
+  expect(
+    screen.getByRole('button', { name: '010-0000-0003 복사' }),
+  ).toBeVisible();
+  expect(contactRequests).toHaveBeenCalledOnce();
+});
+it('공개 종료 후 내 팀에서는 전화번호 열과 조회를 생략한다', async () => {
+  activeSection.contactVisibleUntil = '2020-01-02T00:00:00+09:00';
+  renderFlow(true);
+  await screen.findByRole('heading', { name: '내 팀' });
+  expect(
+    screen.queryByRole('columnheader', { name: '전화번호' }),
+  ).not.toBeInTheDocument();
+  expect(contactRequests).not.toHaveBeenCalled();
+});
+
+it('내 팀 화면을 열어 둔 채 공개 기간이 끝나도 기존 전화번호를 숨긴다', async () => {
+  const end = Date.parse('2026-10-26T23:59:00+09:00');
+  const now = vi.spyOn(Date, 'now').mockReturnValue(end - 60_000);
+  activeSection.contactVisibleUntil = '2026-10-26T23:59:00+09:00';
+  renderFlow(true);
+  expect(
+    await screen.findByRole('button', { name: '010-0000-0003 복사' }),
+  ).toBeVisible();
+  now.mockReturnValue(end + 1);
+  act(() => window.dispatchEvent(new Event('focus')));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole('columnheader', { name: '전화번호' }),
+    ).not.toBeInTheDocument(),
+  );
+  expect(screen.queryByText('010-0000-0003')).not.toBeInTheDocument();
 });
