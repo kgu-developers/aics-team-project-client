@@ -5,8 +5,8 @@ export const panel = style({
   background: tokens.color.background.card,
   border: `1px solid ${tokens.color.border.base}`,
   borderRadius: 12,
-  bottom: 24,
   boxShadow: '0 12px 32px rgb(10 19 23 / 18%)',
+  maxHeight: 'calc(100dvh - 112px)',
   maxWidth: 'calc(100vw - 32px)',
   overflowY: 'auto',
   position: 'fixed',
@@ -16,7 +16,7 @@ export const panel = style({
   zIndex: 20,
   '@media': {
     'screen and (max-width: 640px)': {
-      bottom: 16,
+      maxHeight: 'calc(100dvh - 88px)',
       right: 16,
       top: 72,
       width: 'calc(100vw - 32px)',

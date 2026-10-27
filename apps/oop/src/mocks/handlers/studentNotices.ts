@@ -19,9 +19,11 @@ import { studentNoticeAnnouncements } from '../data/studentNotices';
 
 let announcements = structuredClone(studentNoticeAnnouncements);
 let nextAttachmentId = 1;
+const uploadedAttachments = new Map<number, File>();
 export function resetSectionAnnouncements() {
   announcements = structuredClone(studentNoticeAnnouncements);
   nextAttachmentId = 1;
+  uploadedAttachments.clear();
 }
 function access(request: Request, sectionId: number, write = false) {
   const account = getMockAuthenticatedAccount(request);
@@ -86,12 +88,13 @@ async function readInput(request: Request) {
 function attachmentsFrom(files: File[]) {
   return files.map(file => {
     const id = nextAttachmentId++;
+    uploadedAttachments.set(id, file);
     return {
       id,
       fileName: file.name,
       mimeType: file.type || 'application/octet-stream',
       size: file.size,
-      downloadUrl: `https://files.example.test/announcements/${id}`,
+      downloadUrl: `${API_BASE_URL}/api/v1/mock/announcements/attachments/${id}`,
     };
   });
 }
@@ -102,6 +105,26 @@ function validPublishedAt(value: unknown) {
   );
 }
 export const studentNoticeHandlers = [
+  http.get(
+    `${API_BASE_URL}/api/v1/mock/announcements/attachments/:attachmentId`,
+    ({ params, request }) => {
+      if (!getMockAuthenticatedAccount(request)) return denied(401);
+      const attachmentId = id(params.attachmentId);
+      const file = attachmentId ? uploadedAttachments.get(attachmentId) : null;
+      if (!file)
+        return error(
+          404,
+          'SECTION_ANNOUNCEMENT_ATTACHMENT_NOT_FOUND',
+          '해당 첨부파일을 찾을 수 없습니다.',
+        );
+      return new HttpResponse(file, {
+        headers: {
+          'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(file.name)}`,
+          'Content-Type': file.type || 'application/octet-stream',
+        },
+      });
+    },
+  ),
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ANNOUNCEMENTS.SECTION_LIST(':sectionId')}`,
     ({ params, request }) => {
@@ -208,10 +231,6 @@ export const studentNoticeHandlers = [
           'SECTION_ANNOUNCEMENT_INVALID_CONTENT',
           '제목과 내용은 공백일 수 없습니다.',
         );
-      if (input.title != null) notice.title = String(input.title);
-      if (input.content != null) notice.content = String(input.content);
-      if (input.publishedAt != null)
-        notice.publishedAt = String(input.publishedAt);
       if (input.deleteAttachmentIds != null) {
         if (
           !Array.isArray(input.deleteAttachmentIds) ||
@@ -231,7 +250,14 @@ export const studentNoticeHandlers = [
             '해당 첨부파일을 찾을 수 없습니다.',
           );
         notice.attachments = existing.filter(file => !deleted.has(file.id));
+        input.deleteAttachmentIds.forEach(attachmentId =>
+          uploadedAttachments.delete(attachmentId),
+        );
       }
+      if (input.title != null) notice.title = String(input.title);
+      if (input.content != null) notice.content = String(input.content);
+      if (input.publishedAt != null)
+        notice.publishedAt = String(input.publishedAt);
       if (payload.files.length)
         notice.attachments = [
           ...(notice.attachments ?? []),

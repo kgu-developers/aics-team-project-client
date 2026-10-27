@@ -36,6 +36,47 @@ type GeneralMessageDraft = {
   teamId: string;
 };
 
+function readDraft(storageKey: string) {
+  try {
+    const stored = sessionStorage.getItem(storageKey);
+    return stored ? (JSON.parse(stored) as GeneralMessageDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeDraft({
+  draftTeamStorageKey,
+  message,
+  selectedDraftTeamStorageKey,
+  teamId,
+}: {
+  draftTeamStorageKey: string;
+  message: string;
+  selectedDraftTeamStorageKey: string;
+  teamId: string;
+}) {
+  try {
+    if (!message.trim()) {
+      sessionStorage.removeItem(draftTeamStorageKey);
+      if (teamId) {
+        sessionStorage.setItem(selectedDraftTeamStorageKey, teamId);
+      } else {
+        sessionStorage.removeItem(selectedDraftTeamStorageKey);
+      }
+      return;
+    }
+
+    sessionStorage.setItem(
+      draftTeamStorageKey,
+      JSON.stringify({ message, teamId } satisfies GeneralMessageDraft),
+    );
+    sessionStorage.setItem(selectedDraftTeamStorageKey, teamId);
+  } catch {
+    // Draft persistence is best-effort and must not interrupt message writing.
+  }
+}
+
 export function AdminGeneralMessageDialog({
   description,
   initialTeamId,
@@ -77,10 +118,9 @@ export function AdminGeneralMessageDialog({
         initialTeamId ??
         sessionStorage.getItem(selectedDraftTeamStorageKey) ??
         fallbackTeamId;
-      const stored = sessionStorage.getItem(
+      const draft = readDraft(
         `${draftStorageKey}:team:${storedTeamId || 'unselected'}`,
       );
-      const draft = stored ? (JSON.parse(stored) as GeneralMessageDraft) : null;
       setTeamId(initialTeamId ?? draft?.teamId ?? storedTeamId);
       setMessage(draft?.message ?? '');
     } catch {
@@ -95,18 +135,12 @@ export function AdminGeneralMessageDialog({
   useEffect(() => {
     if (!isOpen || !isDraftLoaded) return;
 
-    if (!message.trim()) {
-      sessionStorage.removeItem(draftTeamStorageKey);
-      if (sessionStorage.getItem(selectedDraftTeamStorageKey) === teamId)
-        sessionStorage.removeItem(selectedDraftTeamStorageKey);
-      return;
-    }
-
-    sessionStorage.setItem(
+    storeDraft({
       draftTeamStorageKey,
-      JSON.stringify({ message, teamId } satisfies GeneralMessageDraft),
-    );
-    sessionStorage.setItem(selectedDraftTeamStorageKey, teamId);
+      message,
+      selectedDraftTeamStorageKey,
+      teamId,
+    });
   }, [
     isDraftLoaded,
     isOpen,
@@ -117,6 +151,22 @@ export function AdminGeneralMessageDialog({
   ]);
 
   if (!isOpen) return null;
+
+  const handleTeamChange = (nextTeamId: string) => {
+    storeDraft({
+      draftTeamStorageKey,
+      message,
+      selectedDraftTeamStorageKey,
+      teamId,
+    });
+    const nextDraft = readDraft(
+      `${draftStorageKey}:team:${nextTeamId || 'unselected'}`,
+    );
+    setTeamId(nextTeamId);
+    setMessage(nextDraft?.message ?? '');
+    setErrorMessage(null);
+    setSuccessMessage(null);
+  };
 
   return (
     <aside
@@ -158,10 +208,7 @@ export function AdminGeneralMessageDialog({
               isTeamLocked || teamsQuery.isPending || teamsQuery.isError
             }
             label='팀'
-            onChange={nextTeamId => {
-              setTeamId(nextTeamId);
-              setSuccessMessage(null);
-            }}
+            onChange={handleTeamChange}
             options={[
               { label: '팀 선택', value: '' },
               ...teams.map(team => ({
@@ -218,12 +265,16 @@ export function AdminGeneralMessageDialog({
                       '일반 메시지를 보내지 못했습니다. 다시 시도해 주세요.',
                     ),
                   onSuccess: () => {
-                    sessionStorage.removeItem(draftTeamStorageKey);
-                    if (
-                      sessionStorage.getItem(selectedDraftTeamStorageKey) ===
-                      teamId
-                    )
-                      sessionStorage.removeItem(selectedDraftTeamStorageKey);
+                    try {
+                      sessionStorage.removeItem(draftTeamStorageKey);
+                      if (
+                        sessionStorage.getItem(selectedDraftTeamStorageKey) ===
+                        teamId
+                      )
+                        sessionStorage.removeItem(selectedDraftTeamStorageKey);
+                    } catch {
+                      // Sending has succeeded even if the local draft cannot clear.
+                    }
                     setMessage('');
                     setSuccessMessage(
                       '일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.',

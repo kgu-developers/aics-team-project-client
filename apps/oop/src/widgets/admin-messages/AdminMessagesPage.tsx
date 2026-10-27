@@ -8,7 +8,7 @@ import {
   TextArea,
 } from '@aics/design-system';
 import { useNavigate } from '@tanstack/react-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -32,12 +32,64 @@ import { useSubmitTeamMessageMutation } from '~/features/team-message/queries';
 import * as styles from './AdminMessagesPage.css';
 
 const draftStorageKey = 'aics.oop.admin.general-message-draft:inbox';
+const selectedRecipientStorageKey = `${draftStorageKey}:selected-recipient`;
 
 type GeneralMessageDraft = {
   message: string;
   sectionId: string;
   teamId: string;
 };
+
+function composeDraftStorageKey(sectionId: string, teamId: string) {
+  return `${draftStorageKey}:section:${sectionId || 'unselected'}:team:${teamId || 'unselected'}`;
+}
+
+function readComposeDraft(storageKey: string) {
+  try {
+    const stored = sessionStorage.getItem(storageKey);
+    return stored ? (JSON.parse(stored) as GeneralMessageDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function readSelectedRecipient() {
+  try {
+    const stored = sessionStorage.getItem(selectedRecipientStorageKey);
+    return stored
+      ? (JSON.parse(stored) as Pick<
+          GeneralMessageDraft,
+          'sectionId' | 'teamId'
+        >)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeComposeDraft(draft: GeneralMessageDraft) {
+  try {
+    const storageKey = composeDraftStorageKey(draft.sectionId, draft.teamId);
+    if (!draft.message.trim()) {
+      sessionStorage.removeItem(storageKey);
+    } else {
+      sessionStorage.setItem(storageKey, JSON.stringify(draft));
+    }
+    if (!draft.sectionId && !draft.teamId) {
+      sessionStorage.removeItem(selectedRecipientStorageKey);
+      return;
+    }
+    sessionStorage.setItem(
+      selectedRecipientStorageKey,
+      JSON.stringify({
+        sectionId: draft.sectionId,
+        teamId: draft.teamId,
+      }),
+    );
+  } catch {
+    // Draft persistence is best-effort and must not interrupt message writing.
+  }
+}
 
 export default function AdminMessagesPage() {
   const navigate = useNavigate();
@@ -55,6 +107,7 @@ export default function AdminMessagesPage() {
     string | null
   >(null);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+  const composeDefaultsRef = useRef({ sectionId, sections });
   const draggablePanel = useDraggableMessagePanel();
   const query = useAdminMessagesQuery(sectionId, page, teamId);
   const submitMutation = useSubmitTeamMessageMutation(composeTeamId);
@@ -69,46 +122,47 @@ export default function AdminMessagesPage() {
   }, [boundedPage, page, query.isSuccess]);
 
   useEffect(() => {
+    composeDefaultsRef.current = { sectionId, sections };
+  }, [sectionId, sections]);
+
+  useEffect(() => {
     if (!isComposeOpen) {
       setIsDraftLoaded(false);
       return;
     }
 
     setIsDraftLoaded(false);
+    const { sectionId: selectedSectionId, sections: activeSections } =
+      composeDefaultsRef.current;
+    const selectedRecipient = readSelectedRecipient();
+    const fallbackSectionId = selectedSectionId ?? activeSections[0]?.id ?? '';
+    const storedSectionId = selectedRecipient?.sectionId ?? fallbackSectionId;
+    const storedTeamId = selectedRecipient?.teamId ?? '';
+    const draft =
+      readComposeDraft(composeDraftStorageKey(storedSectionId, storedTeamId)) ??
+      readComposeDraft(draftStorageKey);
     try {
-      const stored = sessionStorage.getItem(draftStorageKey);
-      const draft = stored ? (JSON.parse(stored) as GeneralMessageDraft) : null;
-      setComposeSectionId(
-        draft?.sectionId ?? sectionId ?? sections[0]?.id ?? '',
-      );
-      setComposeTeamId(draft?.teamId ?? '');
+      setComposeSectionId(draft?.sectionId ?? storedSectionId);
+      setComposeTeamId(draft?.teamId ?? storedTeamId);
       setComposeMessage(draft?.message ?? '');
     } catch {
-      setComposeSectionId(sectionId ?? sections[0]?.id ?? '');
+      setComposeSectionId(selectedSectionId ?? activeSections[0]?.id ?? '');
       setComposeTeamId('');
       setComposeMessage('');
     }
     setComposeError(null);
     setComposeSuccessMessage(null);
     setIsDraftLoaded(true);
-  }, [isComposeOpen, sectionId, sections]);
+  }, [isComposeOpen]);
 
   useEffect(() => {
     if (!isComposeOpen || !isDraftLoaded) return;
 
-    if (!composeMessage.trim()) {
-      sessionStorage.removeItem(draftStorageKey);
-      return;
-    }
-
-    sessionStorage.setItem(
-      draftStorageKey,
-      JSON.stringify({
-        message: composeMessage,
-        sectionId: composeSectionId,
-        teamId: composeTeamId,
-      } satisfies GeneralMessageDraft),
-    );
+    storeComposeDraft({
+      message: composeMessage,
+      sectionId: composeSectionId,
+      teamId: composeTeamId,
+    });
   }, [
     composeMessage,
     composeSectionId,
@@ -313,12 +367,27 @@ export default function AdminMessagesPage() {
               allowAllTeams={false}
               label='일반 메시지 수신 팀'
               onSectionChange={next => {
+                storeComposeDraft({
+                  message: composeMessage,
+                  sectionId: composeSectionId,
+                  teamId: composeTeamId,
+                });
                 setComposeSectionId(next);
                 setComposeTeamId('');
+                setComposeMessage('');
                 setComposeSuccessMessage(null);
               }}
               onTeamChange={next => {
+                storeComposeDraft({
+                  message: composeMessage,
+                  sectionId: composeSectionId,
+                  teamId: composeTeamId,
+                });
+                const nextDraft = readComposeDraft(
+                  composeDraftStorageKey(composeSectionId, next),
+                );
                 setComposeTeamId(next);
+                setComposeMessage(nextDraft?.message ?? '');
                 setComposeSuccessMessage(null);
               }}
               sectionId={composeSectionId}
@@ -370,7 +439,24 @@ export default function AdminMessagesPage() {
                           '일반 메시지를 보내지 못했습니다. 다시 시도해 주세요.',
                         ),
                       onSuccess: () => {
-                        sessionStorage.removeItem(draftStorageKey);
+                        try {
+                          sessionStorage.removeItem(
+                            composeDraftStorageKey(
+                              composeSectionId,
+                              composeTeamId,
+                            ),
+                          );
+                          if (
+                            readSelectedRecipient()?.sectionId ===
+                              composeSectionId &&
+                            readSelectedRecipient()?.teamId === composeTeamId
+                          )
+                            sessionStorage.removeItem(
+                              selectedRecipientStorageKey,
+                            );
+                        } catch {
+                          // Sending has succeeded even if the local draft cannot clear.
+                        }
                         setComposeMessage('');
                         setComposeSuccessMessage(
                           '일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.',

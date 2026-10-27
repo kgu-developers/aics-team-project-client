@@ -297,6 +297,49 @@ it('분반과 팀을 선택해 첫 일반 메시지를 보낸다', async () => {
   );
 });
 
+it('작성 패널에서 팀을 바꿔도 기존 팀의 초안을 보존한다', async () => {
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>
+      HttpResponse.json(messagePage(0, 10, 0)),
+    ),
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS(':sectionId')}`,
+      () =>
+        HttpResponse.json({
+          contents: [
+            { id: 7, name: '7팀', status: 'CONFIRMED' },
+            { id: 8, name: '8팀', status: 'CONFIRMED' },
+          ],
+        }),
+    ),
+  );
+  setup();
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+  );
+  const panel = screen.getByRole('complementary', {
+    name: '일반 메시지 작성 패널',
+  });
+  const teamSelect = within(panel).getByRole('combobox', { name: '팀' });
+  const message = within(panel).getByRole('textbox', {
+    name: '일반 메시지 내용',
+  });
+
+  await user.click(teamSelect);
+  await user.click(await screen.findByRole('option', { name: '7팀' }));
+  await user.type(message, '7팀 초안');
+  await user.click(teamSelect);
+  await user.click(await screen.findByRole('option', { name: '8팀' }));
+  expect(message).toHaveValue('');
+  await user.type(message, '8팀 초안');
+  await user.click(teamSelect);
+  await user.click(await screen.findByRole('option', { name: '7팀' }));
+
+  expect(message).toHaveValue('7팀 초안');
+});
+
 it('reaches item 11, keeps page caches separate, and resets pages on section/all filters', async () => {
   const requests: Array<{ section: string; page: number; size: number }> = [];
   server.use(

@@ -433,6 +433,7 @@ function NoticeFields({
         isMultiple
         label='첨부파일'
         maxSize={announcementMaxFileSize}
+        mode='dropzone'
         onChange={selected => {
           const selectedFiles = Array.isArray(selected)
             ? selected

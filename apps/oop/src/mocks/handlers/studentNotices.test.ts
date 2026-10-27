@@ -251,6 +251,66 @@ it('담당 교수는 한 분반에 게시·부분 수정하고 학생 재조회�
     content: '수정 본문',
   });
 });
+
+it('업로드한 첨부파일은 mock 다운로드 주소에서도 실제 파일로 조회된다', async () => {
+  const headers = { Authorization: `Bearer ${demoNoticeProfessorAccessToken}` };
+  const file = new File(['공지 첨부 내용'], '안내.txt', {
+    type: 'text/plain',
+  });
+  const created = await fetch(
+    `${API_BASE_URL}/api/v1/sections/1/announcements`,
+    {
+      method: 'POST',
+      headers,
+      body: multipartBody({ title: '첨부 공지', content: '본문' }, [file]),
+    },
+  );
+  const notice = await created.json();
+
+  expect(created.status).toBe(201);
+  const attachment = notice.attachments[0];
+  const download = await fetch(attachment.downloadUrl, { headers });
+
+  expect(download.status).toBe(200);
+  expect(download.headers.get('content-type')).toContain('text/plain');
+  await expect(download.text()).resolves.toBe('공지 첨부 내용');
+});
+
+it('존재하지 않는 첨부파일 삭제는 공지의 다른 변경도 반영하지 않는다', async () => {
+  const headers = { Authorization: `Bearer ${demoNoticeProfessorAccessToken}` };
+  const created = await fetch(
+    `${API_BASE_URL}/api/v1/sections/1/announcements`,
+    {
+      method: 'POST',
+      headers,
+      body: multipartBody({ title: '삭제 검증 공지', content: '원래 본문' }, [
+        new File(['첨부'], '첨부.txt', { type: 'text/plain' }),
+      ]),
+    },
+  );
+  const original = await created.json();
+  const update = await fetch(
+    `${API_BASE_URL}/api/v1/announcements/${original.id}`,
+    {
+      method: 'PATCH',
+      headers,
+      body: multipartBody({
+        title: '변경되면 안 되는 제목',
+        deleteAttachmentIds: [999999],
+      }),
+    },
+  );
+
+  expect(update.status).toBe(404);
+  const read = await fetchNotices(1, demoAccessToken);
+  const persisted = (await read.json()).contents.find(
+    (item: { id: number }) => item.id === original.id,
+  );
+  expect(persisted).toMatchObject({
+    title: '삭제 검증 공지',
+    content: '원래 본문',
+  });
+});
 it('학생과 다른 분반 교수는 공지를 게시할 수 없고 빈 입력도 거부한다', async () => {
   const { demoNoticeProfessorAccessToken } = await import('../data/users');
   for (const [section, token, body, status] of [
