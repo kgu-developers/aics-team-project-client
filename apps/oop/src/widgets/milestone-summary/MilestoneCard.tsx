@@ -5,7 +5,6 @@ import type { ReactNode } from 'react';
 
 import { EDITOR_DOCS, editorSectionTo } from '~/app/constants/editorSections';
 
-import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { cx } from '~/shared/lib/cx';
 
 import { useAuthStore } from '~/features/auth/authStore';
@@ -75,23 +74,15 @@ export default function MilestoneCard({
   const navigate = useNavigate();
   const topicApi = useTopicApi();
   const toast = useToast();
-  const isDemo = isMockDevelopmentMode(
-    import.meta.env.DEV,
-    import.meta.env.VITE_ENABLE_MSW,
-  );
-  const context = useStudentContext(!isDemo);
-  const canAct = isDemo || context.status === 'ready';
+  const context = useStudentContext();
+  const canAct = context.status === 'ready';
   const currentUser = useAuthStore(state => state.currentUser);
   const { setIsOpen: setTopicCandidateDialogOpen } = useTopicCandidateDialog();
   const { openDialog: openSubmissionDialog, submissionTargets } =
     useSubmissionDialog();
   const sectionId =
-    isDemo && currentUser?.sections.length === 1
-      ? currentUser.sections[0]!.id
-      : context.status === 'ready'
-        ? String(context.section!.id)
-        : '';
-  const userId = (isDemo ? currentUser : context.user)?.studentNumber ?? '';
+    context.status === 'ready' ? String(context.section!.id) : '';
+  const userId = context.user?.studentNumber ?? '';
   const confirmationMutation = useUpdateSubmissionConfirmationMutation(
     sectionId,
     userId,
@@ -149,7 +140,30 @@ export default function MilestoneCard({
 
   const body =
     milestone.isDetailAvailable && milestone.body ? (
-      <MilestoneDetails body={milestone.body} milestoneId={milestone.id} />
+      <>
+        <MilestoneDetails body={milestone.body} milestoneId={milestone.id} />
+        {milestone.body.kind === 'topic' && topicApi ? (
+          <div className={styles.topicDirectAction}>
+            <TopicFinalizePanel
+              {...topicApi.scope}
+              directOnly
+              participationBusy={topicApi.busy}
+              isDisabled={
+                !canAct ||
+                milestone.rows.find(
+                  row => row.id === 'proposal-topic-selection',
+                )?.actionDisabled
+              }
+              onFinalized={() => {
+                void navigate({
+                  search: { returnTo: 'proposal' },
+                  to: editorSectionTo('proposal', 'team-info'),
+                });
+              }}
+            />
+          </div>
+        ) : null}
+      </>
     ) : null;
 
   function handleFinalReportAction() {
@@ -221,6 +235,7 @@ export default function MilestoneCard({
                   topicApi?.offerFinalization ? (
                   <TopicFinalizePanel
                     {...topicApi.scope}
+                    hideDirect
                     participationBusy={topicApi.busy}
                     className={styles.rowAction}
                     isDisabled={!canAct || row.actionDisabled}

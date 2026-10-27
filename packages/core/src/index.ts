@@ -198,6 +198,7 @@ export type {
 } from './topic/apiTypes';
 
 export type {
+  TopicDirectFinalizeInput,
   TopicFinalizeInput,
   TopicFinalizeResponse,
 } from './topic/apiTypes';

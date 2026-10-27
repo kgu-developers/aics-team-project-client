@@ -13,14 +13,10 @@ import { useMySectionsQuery } from '~/features/section/queries';
 import OnboardingRecovery from './OnboardingRecovery';
 import { useTeamAssignmentProjectionQuery } from './queries';
 import { resolvePreSurveySectionId } from './resolvePreSurveySectionId';
-import { FirstMeeting, ResultAnnouncement, TeamSummary } from './result';
+import { FirstMeeting, ResultAnnouncement } from './result';
 import ResultWaiting from './ResultWaiting';
 import { SurveyForm } from './survey/SurveyForm';
-import * as styles from './TeamAssignmentFlow.css';
-type TeamAssignmentFlowProps = { teamOnly?: boolean };
-export default function MockTeamAssignmentFlow({
-  teamOnly,
-}: TeamAssignmentFlowProps) {
+export default function MockTeamAssignmentFlow() {
   const clearSession = useAuthStore(state => state.clearSession);
   const navigate = useNavigate();
   const previewPhase = new URLSearchParams(window.location.search).get(
@@ -62,13 +58,6 @@ export default function MockTeamAssignmentFlow({
       />
     );
   }
-
-  if (teamOnly)
-    return (
-      <div className={styles.studentTeamPage}>
-        <TeamSummary projection={query.data} showBackNavigation />
-      </div>
-    );
 
   return (
     <PhaseContent currentSection={currentSection} projection={query.data} />

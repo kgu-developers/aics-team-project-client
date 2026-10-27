@@ -7,3 +7,5 @@ export { useLiveTopicCandidatesQuery } from './useLiveTopicCandidatesQuery';
 export { useLiveTopicParticipationMutation } from './useLiveTopicParticipationMutation';
 
 export { useUpdateTopicFinalizationMutation } from './useUpdateTopicFinalizationMutation';
+
+export { useUpdateTopicDirectFinalizationMutation } from './useUpdateTopicDirectFinalizationMutation';

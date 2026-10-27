@@ -437,3 +437,5 @@ export {
 } from './submission';
 
 export { updateStudentSubmissionCompletion } from './submission';
+
+export { updateTopicDirectFinalization } from './topic';

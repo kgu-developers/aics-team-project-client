@@ -8,3 +8,5 @@ export { submitTopicCandidateVote } from './submitTopicCandidateVote';
 export { removeTopicCandidateVote } from './removeTopicCandidateVote';
 
 export { updateTopicFinalization } from './updateTopicFinalization';
+
+export { updateTopicDirectFinalization } from './updateTopicDirectFinalization';

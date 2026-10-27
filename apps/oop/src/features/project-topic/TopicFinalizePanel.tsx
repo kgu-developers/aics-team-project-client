@@ -7,6 +7,7 @@ import {
   RadioListItem,
   Text,
   TextArea,
+  TextInput,
 } from '@aics/design-system';
 import { useMutationState } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
@@ -26,11 +27,14 @@ import {
   topicKeys,
   useLiveTopicCandidatesQuery,
   useUpdateTopicFinalizationMutation,
+  useUpdateTopicDirectFinalizationMutation,
 } from './queries';
 import { getTopicFinalizationError } from './topicFinalization';
 import * as styles from './TopicFinalizePanel.css';
 
 export type TopicFinalizePanelProps = {
+  directOnly?: boolean;
+  hideDirect?: boolean;
   sectionId?: string;
   teamId?: string;
   studentNumber?: string;
@@ -51,6 +55,8 @@ export default function TopicFinalizePanel(props: TopicFinalizePanelProps) {
 }
 
 function TopicFinalization({
+  directOnly = false,
+  hideDirect = false,
   sectionId,
   teamId,
   studentNumber,
@@ -75,6 +81,18 @@ function TopicFinalization({
     studentNumber,
     result => {
       setIsOpen(false);
+      onFinalized?.(result);
+    },
+  );
+  const [directStep, setDirectStep] = useState<'confirm' | 'form' | null>(null);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const directMutation = useUpdateTopicDirectFinalizationMutation(
+    teamId,
+    sectionId,
+    studentNumber,
+    result => {
+      setDirectStep(null);
       onFinalized?.(result);
     },
   );
@@ -106,11 +124,22 @@ function TopicFinalization({
   const busy =
     participationBusy ||
     mutation.isPending ||
+    directMutation.isPending ||
     lastAttempt?.status === 'pending' ||
     project.isFetching ||
     kickoff.isFetching ||
     candidates.isFetching;
   const completed = Boolean(project.data?.proposalCompletedAt);
+  const canDirectFinalize =
+    !isDisabled &&
+    ready &&
+    isLeader &&
+    eligibility.status === 'open' &&
+    !busy &&
+    !uncertain &&
+    !completed &&
+    project.isSuccess &&
+    !project.isError;
   const canFinalize =
     !isDisabled &&
     ready &&
@@ -131,6 +160,7 @@ function TopicFinalization({
     candidate => String(candidate.id) === candidateId,
   );
 
+  if (directOnly && !isLeader) return null;
   if (!ready) return <Text>소속 분반과 팀을 확인해 주세요.</Text>;
 
   return (
@@ -161,13 +191,26 @@ function TopicFinalization({
         </Text>
       ) : null}
       <div className={styles.actions}>
-        <Button
-          label='주제 확정'
-          variant='primary'
-          className={className}
-          isDisabled={!canFinalize || !candidates.data?.length}
-          onClick={() => setIsOpen(true)}
-        />
+        {!directOnly ? (
+          <Button
+            label='주제 확정'
+            variant='primary'
+            className={className}
+            isDisabled={!canFinalize || !candidates.data?.length}
+            onClick={() => setIsOpen(true)}
+          />
+        ) : null}
+        {isLeader && !hideDirect ? (
+          <Button
+            label='주제 직접 제출'
+            variant='secondary'
+            isDisabled={!canDirectFinalize}
+            onClick={() => {
+              directMutation.reset();
+              setDirectStep('confirm');
+            }}
+          />
+        ) : null}
         {project.isError || kickoff.isError || uncertain ? (
           <Button
             label='프로젝트 다시 확인'
@@ -178,6 +221,110 @@ function TopicFinalization({
           />
         ) : null}
       </div>
+      {directStep ? (
+        <Dialog
+          aria-label={
+            directStep === 'confirm' ? '주제 직접 제출 확인' : '주제 직접 제출'
+          }
+          purpose='info'
+          isOpen
+          onOpenChange={open => {
+            if (!open && !directMutation.isPending) setDirectStep(null);
+          }}
+        >
+          {directStep === 'confirm' ? (
+            <div className={styles.root}>
+              <Heading level={2}>주제 직접 제출 확인</Heading>
+              <Text>
+                주제 투표 상관 없이 바로 주제를 제출할 수 있는 기능입니다. 이미
+                주제가 정해진 경우에만 진행해주세요.
+              </Text>
+              <div className={styles.actions}>
+                <Button label='취소' onClick={() => setDirectStep(null)} />
+                <Button
+                  label='확인하고 계속'
+                  variant='primary'
+                  isDisabled={!canDirectFinalize}
+                  onClick={() => setDirectStep('form')}
+                />
+              </div>
+            </div>
+          ) : (
+            <form
+              className={styles.root}
+              onSubmit={event => {
+                event.preventDefault();
+                if (
+                  !canDirectFinalize ||
+                  !title.trim() ||
+                  title.trim().length > 200 ||
+                  !description.trim() ||
+                  inFlight.current
+                )
+                  return;
+                if (
+                  eligibility.window &&
+                  (Date.now() < eligibility.window.opensAt ||
+                    Date.now() >= eligibility.window.dueAt)
+                )
+                  return;
+                inFlight.current = true;
+                directMutation.mutate(
+                  { title, description },
+                  {
+                    onSettled: () => {
+                      inFlight.current = false;
+                    },
+                  },
+                );
+              }}
+            >
+              <Heading level={2}>주제 직접 제출</Heading>
+              <Text>
+                제출하면 기존 주제 후보와 투표가 삭제됩니다. 기존 프로젝트
+                목표는 유지됩니다.
+              </Text>
+              <TextInput
+                label='주제 제목'
+                value={title}
+                onChange={setTitle}
+                isDisabled={busy}
+              />
+              <Text>제목은 200자 이내로 입력해 주세요.</Text>
+              <TextArea
+                label='주제 설명'
+                value={description}
+                onChange={setDescription}
+                isDisabled={busy}
+              />
+              {directMutation.isError ? (
+                <Text role='alert'>
+                  {getTopicFinalizationError(directMutation.error, 'direct')}
+                </Text>
+              ) : null}
+              <div className={styles.actions}>
+                <Button
+                  label='취소'
+                  isDisabled={directMutation.isPending}
+                  onClick={() => setDirectStep(null)}
+                />
+                <Button
+                  label='주제 제출'
+                  type='submit'
+                  variant='primary'
+                  isLoading={directMutation.isPending}
+                  isDisabled={
+                    !canDirectFinalize ||
+                    !title.trim() ||
+                    title.trim().length > 200 ||
+                    !description.trim()
+                  }
+                />
+              </div>
+            </form>
+          )}
+        </Dialog>
+      ) : null}
       {isOpen ? (
         <Dialog
           aria-label='팀 주제 확정'

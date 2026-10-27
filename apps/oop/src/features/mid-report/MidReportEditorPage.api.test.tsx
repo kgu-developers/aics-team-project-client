@@ -41,6 +41,8 @@ const server = setupServer(...handlers);
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
+  // Keep edit scenarios inside the fixture deadline, independent of today.
+  vi.setSystemTime(new Date('2026-10-21T12:00:00+09:00'));
   resetMidReportMockData();
   useAuthStore.getState().setAccessToken(demoAccessToken);
   useAuthStore.getState().setCurrentUser(demoStudent);
@@ -48,6 +50,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.useRealTimers();
   server.resetHandlers();
   clients.splice(0).forEach(client => client.clear());
   useAuthStore.getState().clearSession();

@@ -52,12 +52,8 @@ async function enableMocking() {
     return;
   }
 
-  const { worker } = await import('./mocks/browser');
-
-  await worker.start({
-    onUnhandledRequest: 'bypass',
-    quiet: true,
-  });
+  const { startMockWorker } = await import('./mocks/browser');
+  await startMockWorker();
 }
 
 async function enableDevelopmentMilestonePreview() {

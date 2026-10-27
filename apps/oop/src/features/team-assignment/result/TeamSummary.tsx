@@ -16,6 +16,9 @@ type TeamSummaryProps = {
   onContinue?: () => void;
   projection: TeamAssignmentProjection;
   showBackNavigation?: boolean;
+  showContacts?: boolean;
+  contactStatus?: 'loading' | 'error';
+  onRetryContacts?: () => void;
 };
 
 const mockDevelopmentMode = isMockDevelopmentMode(
@@ -24,6 +27,9 @@ const mockDevelopmentMode = isMockDevelopmentMode(
 );
 
 export function TeamSummary({
+  showContacts = false,
+  contactStatus,
+  onRetryContacts,
   isResult = false,
   isContinueDisabled = false,
   onContinue,
@@ -61,7 +67,19 @@ export function TeamSummary({
             {leader ? `${leader.name} (${leader.studentNumber})` : '미확정'}
           </p>
         ) : null}
-        <TeamMemberTable members={team.members} variant='assignment' />
+        {contactStatus === 'loading' ? (
+          <p role='status'>팀원 연락처를 불러오는 중입니다.</p>
+        ) : null}
+        {contactStatus === 'error' ? (
+          <div>
+            <p role='alert'>팀원 연락처를 불러오지 못했어요.</p>
+            <Button label='연락처 다시 확인' onClick={onRetryContacts} />
+          </div>
+        ) : null}
+        <TeamMemberTable
+          members={team.members}
+          variant={showContacts ? 'teamContacts' : 'assignment'}
+        />
         {showBackNavigation ? (
           <HStack justify='center'>
             <Button

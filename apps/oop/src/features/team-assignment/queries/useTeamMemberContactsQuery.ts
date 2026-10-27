@@ -20,7 +20,7 @@ export function useTeamMemberContactsQuery(teamId?: string, enabled = true) {
       validTeamId === undefined
         ? skipToken
         : () => fetchTeamMemberContacts(validTeamId),
-    // Contact details are intentionally scoped to the first-meeting screen.
+    // Contact details are intentionally scoped to the contact visibility window.
     // Drop them as soon as the final observer leaves instead of retaining
     // sensitive values in the shared query cache.
     gcTime: 0,

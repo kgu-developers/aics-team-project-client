@@ -22,6 +22,7 @@ import {
 } from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import { projectProposalKeys } from '~/features/proposal/queries/projectProposalKeys';
 
 import TopicFinalizePanel, {
   type TopicFinalizePanelProps,
@@ -278,4 +279,89 @@ it('전원 투표 전에 확정을 막는다', async () => {
   const view = setup();
   await waitFor(() => expect(view.client.isFetching()).toBe(0));
   expect(screen.getByRole('button', { name: '주제 확정' })).toBeDisabled();
+});
+
+it('투표나 후보 없이 팀장이 확인 후 제목과 설명을 직접 제출한다', async () => {
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.TOPIC.CANDIDATES('7')}`, () =>
+      HttpResponse.json({ contents: [] }),
+    ),
+  );
+  const session = useAuthStore.getState();
+  const proposalKey = [
+    ...projectProposalKeys.scope(session, '7'),
+    'document',
+  ] as const;
+  const cacheAtNavigation: unknown[] = [];
+  const clientRef: { current?: QueryClient } = {};
+  const onFinalized = vi.fn(() => {
+    cacheAtNavigation.push(clientRef.current?.getQueryData(proposalKey));
+  });
+  const { client } = setup({ onFinalized });
+  clientRef.current = client;
+  client.setQueryData(proposalKey, {
+    title: '이전 제목',
+    description: '이전 설명',
+  });
+  const user = userEvent.setup();
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: '주제 직접 제출' }),
+    ).toBeEnabled(),
+  );
+  expect(screen.getByRole('button', { name: '주제 확정' })).toBeDisabled();
+  await user.click(screen.getByRole('button', { name: '주제 직접 제출' }));
+  expect(screen.getByText(/이미 주제가 정해진 경우에만/)).toBeVisible();
+  expect(screen.queryByLabelText('주제 제목')).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: '확인하고 계속' }));
+  expect(screen.getByRole('button', { name: '주제 제출' })).toBeDisabled();
+  await user.type(screen.getByLabelText('주제 제목'), '  도서 관리  ');
+  await user.type(screen.getByLabelText('주제 설명'), '  대여 현황 관리  ');
+  await user.click(screen.getByRole('button', { name: '주제 제출' }));
+  await waitFor(() =>
+    expect(onFinalized).toHaveBeenCalledWith({
+      projectId: 17,
+      candidateId: null,
+      title: '도서 관리',
+    }),
+  );
+  expect(cacheAtNavigation).toEqual([undefined]);
+  expect(client.getQueryData(proposalKey)).toBeUndefined();
+  expect(await fetchTeamProject('7')).toMatchObject({
+    title: '도서 관리',
+    description: '대여 현황 관리',
+  });
+});
+it('일반 팀원에게 직접 제출 버튼을 노출하지 않는다', async () => {
+  setup({ studentNumber: '20260003' });
+  await screen.findByText('팀장이 주제를 확정할 수 있어요.');
+  expect(
+    screen.queryByRole('button', { name: '주제 직접 제출' }),
+  ).not.toBeInTheDocument();
+});
+
+it('직접 제출 실패 시 입력을 유지하고 직접 입력에 맞는 오류를 표시한다', async () => {
+  server.use(
+    http.patch(`${API_BASE_URL}${ENDPOINTS.TOPIC.DIRECT_FINALIZE('7')}`, () =>
+      HttpResponse.json({}, { status: 400 }),
+    ),
+  );
+  const onFinalized = vi.fn();
+  setup({ onFinalized });
+  const user = userEvent.setup();
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: '주제 직접 제출' }),
+    ).toBeEnabled(),
+  );
+  await user.click(screen.getByRole('button', { name: '주제 직접 제출' }));
+  await user.click(screen.getByRole('button', { name: '확인하고 계속' }));
+  await user.type(screen.getByLabelText('주제 제목'), '도서 관리');
+  await user.type(screen.getByLabelText('주제 설명'), '설명');
+  await user.click(screen.getByRole('button', { name: '주제 제출' }));
+  expect(
+    await screen.findByText('주제 제목(200자 이내)과 설명을 확인해 주세요.'),
+  ).toBeVisible();
+  expect(screen.getByLabelText('주제 제목')).toHaveValue('도서 관리');
+  expect(onFinalized).not.toHaveBeenCalled();
 });
