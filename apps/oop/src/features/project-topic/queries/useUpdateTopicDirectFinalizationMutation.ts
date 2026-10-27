@@ -6,6 +6,8 @@ import type {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
+import { useAuthStore } from '~/features/auth/authStore';
+import { projectProposalKeys } from '~/features/proposal/queries/projectProposalKeys';
 import { studentHomeKeys } from '~/features/student-home/queries';
 
 import { topicKeys } from './topicKeys';
@@ -17,6 +19,7 @@ export function useUpdateTopicDirectFinalizationMutation(
   onFinalized?: (result: TopicFinalizeResponse) => void,
 ) {
   const queryClient = useQueryClient();
+  const session = useAuthStore();
   const active = useRef(true);
   useEffect(() => {
     active.current = true;
@@ -34,9 +37,14 @@ export function useUpdateTopicDirectFinalizationMutation(
         throw new Error('소속 분반과 팀을 먼저 확인해 주세요.');
       return updateTopicDirectFinalization(teamId, input);
     },
+    onMutate: () => ({ session, teamId }),
     // Project refetch can replace the topic row and unmount its action.
     // Deliver success first; ignore a response after leaving this account/team form.
-    onSuccess: result => {
+    onSuccess: (result, _input, context) => {
+      if (useAuthStore.getState() === context.session)
+        queryClient.removeQueries({
+          queryKey: projectProposalKeys.scope(context.session, context.teamId),
+        });
       if (active.current) onFinalized?.(result);
     },
     onSettled: async () => {

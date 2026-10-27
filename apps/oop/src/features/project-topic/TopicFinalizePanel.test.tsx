@@ -22,6 +22,7 @@ import {
 } from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import { projectProposalKeys } from '~/features/proposal/queries/projectProposalKeys';
 
 import TopicFinalizePanel, {
   type TopicFinalizePanelProps,
@@ -286,8 +287,22 @@ it('투표나 후보 없이 팀장이 확인 후 제목과 설명을 직접 제�
       HttpResponse.json({ contents: [] }),
     ),
   );
-  const onFinalized = vi.fn();
-  setup({ onFinalized });
+  const session = useAuthStore.getState();
+  const proposalKey = [
+    ...projectProposalKeys.scope(session, '7'),
+    'document',
+  ] as const;
+  const cacheAtNavigation: unknown[] = [];
+  const clientRef: { current?: QueryClient } = {};
+  const onFinalized = vi.fn(() => {
+    cacheAtNavigation.push(clientRef.current?.getQueryData(proposalKey));
+  });
+  const { client } = setup({ onFinalized });
+  clientRef.current = client;
+  client.setQueryData(proposalKey, {
+    title: '이전 제목',
+    description: '이전 설명',
+  });
   const user = userEvent.setup();
   await waitFor(() =>
     expect(
@@ -310,6 +325,8 @@ it('투표나 후보 없이 팀장이 확인 후 제목과 설명을 직접 제�
       title: '도서 관리',
     }),
   );
+  expect(cacheAtNavigation).toEqual([undefined]);
+  expect(client.getQueryData(proposalKey)).toBeUndefined();
   expect(await fetchTeamProject('7')).toMatchObject({
     title: '도서 관리',
     description: '대여 현황 관리',
