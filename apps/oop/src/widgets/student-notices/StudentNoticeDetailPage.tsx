@@ -52,7 +52,7 @@ function formatFileSize(sizeBytes: number) {
 }
 
 function isImageAttachment(attachment: SectionAnnouncementAttachment) {
-  return attachment.contentType.startsWith('image/');
+  return attachment.mimeType?.startsWith('image/') ?? false;
 }
 
 export default function StudentNoticeDetailPage({
@@ -168,7 +168,7 @@ export default function StudentNoticeDetailPage({
             className={styles.imagePreviewList}
           >
             {imageAttachments.map(attachment => {
-              const src = safeDisplayUrl(attachment.url);
+              const src = safeDisplayUrl(attachment.downloadUrl);
               if (!src) return null;
               return (
                 <figure className={styles.imagePreview} key={attachment.id}>
@@ -200,14 +200,14 @@ export default function StudentNoticeDetailPage({
                   <div className={styles.attachmentInfo}>
                     <Text weight='medium'>{attachment.fileName}</Text>
                     <Text color='secondary' type='supporting'>
-                      {formatFileSize(attachment.sizeBytes)}
+                      {formatFileSize(attachment.size)}
                     </Text>
                   </div>
                   <div className={styles.attachmentActions}>
                     <a
                       className={styles.downloadLink}
                       download={attachment.fileName}
-                      href={attachment.url}
+                      href={attachment.downloadUrl}
                     >
                       다운로드
                     </a>

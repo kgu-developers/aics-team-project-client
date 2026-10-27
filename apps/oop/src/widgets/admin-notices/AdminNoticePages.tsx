@@ -4,6 +4,7 @@ import {
   Card,
   Dialog,
   EmptyState,
+  FileInput,
   Heading,
   HStack,
   MultiSelector,
@@ -60,6 +61,7 @@ import { useAuthStore } from '~/features/auth/authStore';
 import * as styles from './AdminNoticePages.css';
 
 const noticePageSize = 8;
+const announcementMaxFileSize = 100 * 1024 * 1024;
 
 function useNoticeScope() {
   const { sectionId } = useSearch({ from: '/admin/notices' });
@@ -342,6 +344,27 @@ export function AdminNoticeDetailPage() {
         <section aria-label='공지 내용'>
           <RichTextViewer content={parseRichTextContent(notice.content)} />
         </section>
+        {notice.attachments?.length ? (
+          <section aria-labelledby='admin-notice-attachments'>
+            <Heading level={3} id='admin-notice-attachments'>
+              첨부파일
+            </Heading>
+            <ul className={styles.attachmentList}>
+              {notice.attachments.map(attachment => (
+                <li className={styles.attachmentItem} key={attachment.id}>
+                  <Text weight='medium'>{attachment.fileName}</Text>
+                  <a
+                    className={styles.downloadLink}
+                    download={attachment.fileName}
+                    href={attachment.downloadUrl}
+                  >
+                    다운로드
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         <div className={styles.actions}>
           <Button
             label='수정'
@@ -363,14 +386,18 @@ export function AdminNoticeDetailPage() {
 function NoticeFields({
   title,
   content,
+  files,
   setTitle,
   setContent,
+  setFiles,
   pending,
 }: {
   title: string;
   content: RichTextJson;
+  files: File[];
   setTitle: (value: string) => void;
   setContent: (value: RichTextJson) => void;
+  setFiles: (files: File[]) => void;
   pending: boolean;
 }) {
   return (
@@ -389,6 +416,21 @@ function NoticeFields({
         isDisabled={pending}
         label='내용'
         onChange={setContent}
+      />
+      <FileInput
+        description='모든 파일 형식 · 파일 1개 최대 100MB · 첨부파일 전체 최대 110MB'
+        isDisabled={pending}
+        isMultiple
+        label='첨부파일'
+        maxSize={announcementMaxFileSize}
+        onChange={selected =>
+          setFiles(
+            Array.isArray(selected) ? selected : selected ? [selected] : [],
+          )
+        }
+        placeholder='파일을 끌어 놓거나 눌러서 선택하세요.'
+        value={files}
+        width='100%'
       />
     </>
   );
@@ -454,6 +496,8 @@ function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
   const [content, setContent] = useState(() =>
     parseRichTextContent(notice.content),
   );
+  const [files, setFiles] = useState<File[]>([]);
+  const [deleteAttachmentIds, setDeleteAttachmentIds] = useState<number[]>([]);
   const mutation = useUpdateSectionAnnouncementMutation();
   const allowNavigation = useRef(false);
   const serializedContent = serializeRichTextContent(content);
@@ -463,6 +507,8 @@ function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
     serializeRichTextContent(parseRichTextContent(notice.content))
       ? { content: serializedContent }
       : {}),
+    ...(files.length ? { files } : {}),
+    ...(deleteAttachmentIds.length ? { deleteAttachmentIds } : {}),
   };
   const canSave =
     canPublishNotice(user, section) &&
@@ -489,9 +535,40 @@ function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
           content={content}
           setTitle={setTitle}
           setContent={setContent}
+          files={files}
+          setFiles={setFiles}
           pending={mutation.isPending}
         />
       </div>
+      {notice.attachments?.length ? (
+        <section aria-labelledby='edit-notice-attachments'>
+          <Heading level={3} id='edit-notice-attachments'>
+            기존 첨부파일
+          </Heading>
+          <ul className={styles.attachmentList}>
+            {notice.attachments
+              .filter(
+                attachment => !deleteAttachmentIds.includes(attachment.id),
+              )
+              .map(attachment => (
+                <li className={styles.attachmentItem} key={attachment.id}>
+                  <Text>{attachment.fileName}</Text>
+                  <Button
+                    isDisabled={mutation.isPending}
+                    label='삭제'
+                    onClick={() =>
+                      setDeleteAttachmentIds(current => [
+                        ...current,
+                        attachment.id,
+                      ])
+                    }
+                    variant='secondary'
+                  />
+                </li>
+              ))}
+          </ul>
+        </section>
+      ) : null}
       {mutation.isError ? (
         <Text role='alert'>
           저장하지 못했습니다. 입력 내용을 유지했으니 권한과 저장 상태를 확인해
@@ -557,6 +634,7 @@ export function AdminNoticeNewPage() {
   const { sectionId, user } = useNoticeScope();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState<RichTextJson>(emptyRichText);
+  const [files, setFiles] = useState<File[]>([]);
   const [selectedSectionIds, setSelectedSectionIds] = useState<string[]>(
     sectionId === undefined ? [] : [String(sectionId)],
   );
@@ -575,6 +653,7 @@ export function AdminNoticeNewPage() {
     title !== '' ||
     serializeRichTextContent(content) !==
       serializeRichTextContent(emptyRichText) ||
+    files.length > 0 ||
     JSON.stringify(selectedSectionIds) !== JSON.stringify(initialSectionIds);
   return (
     <div className={styles.page}>
@@ -610,6 +689,8 @@ export function AdminNoticeNewPage() {
             content={content}
             setTitle={setTitle}
             setContent={setContent}
+            files={files}
+            setFiles={setFiles}
             pending={mutation.isPending}
           />
         </div>
@@ -655,6 +736,7 @@ export function AdminNoticeNewPage() {
                   sectionIds,
                   title: title.trim(),
                   content: serializeRichTextContent(content),
+                  files,
                 },
                 {
                   onSuccess: result => {

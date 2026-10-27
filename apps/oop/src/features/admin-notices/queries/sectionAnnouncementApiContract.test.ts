@@ -1,3 +1,5 @@
+import { Blob as NodeBlob, File as NodeFile } from 'node:buffer';
+
 import {
   API_BASE_URL,
   ENDPOINTS,
@@ -7,12 +9,23 @@ import {
 } from '@aics/api-client';
 import { HttpResponse, http } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, expect, it, vi } from 'vitest';
 
 const server = setupServer();
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeAll(async () => {
+  const nativeForm = await new Response('', {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  }).formData();
+  vi.stubGlobal('FormData', nativeForm.constructor);
+  vi.stubGlobal('Blob', NodeBlob);
+  vi.stubGlobal('File', NodeFile);
+  server.listen({ onUnhandledRequest: 'error' });
+});
 afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+afterAll(() => {
+  server.close();
+  vi.unstubAllGlobals();
+});
 const announcement = {
   id: 10,
   sectionId: 1,
@@ -21,8 +34,20 @@ const announcement = {
   publishedAt: '2026-09-16T09:00:00',
 };
 
-it('GET/POST/PATCH는 한 번만 정규화한 실제 경로와 contents/단일 응답 계약을 사용한다', async () => {
-  const requests: unknown[] = [];
+async function readRequestPart(formData: FormData) {
+  const requestPart = formData.get('request');
+  if (requestPart == null) throw new Error('request 파트가 없습니다.');
+  return JSON.parse(
+    typeof requestPart === 'string' ? requestPart : await requestPart.text(),
+  );
+}
+
+it('GET/POST/PATCH는 multipart request/files 파트와 contents/단일 응답 계약을 사용한다', async () => {
+  const requests: Array<{
+    contentType: string | null;
+    files: string[];
+    request: unknown;
+  }> = [];
   server.use(
     http.get(`${API_BASE_URL}/api/v1/sections/1/announcements`, () =>
       HttpResponse.json({ contents: [announcement] }),
@@ -30,30 +55,58 @@ it('GET/POST/PATCH는 한 번만 정규화한 실제 경로와 contents/단일 �
     http.post(
       `${API_BASE_URL}/api/v1/sections/1/announcements`,
       async ({ request }) => {
-        requests.push(await request.json());
+        const formData = await request.formData();
+        requests.push({
+          contentType: request.headers.get('content-type'),
+          files: formData
+            .getAll('files')
+            .filter((part): part is File => part instanceof File)
+            .map(file => file.name),
+          request: await readRequestPart(formData),
+        });
         return HttpResponse.json(announcement, { status: 201 });
       },
     ),
     http.patch(
       `${API_BASE_URL}/api/v1/announcements/10`,
       async ({ request }) => {
-        const input = await request.json();
-        requests.push(input);
+        const formData = await request.formData();
+        const input = await readRequestPart(formData);
+        requests.push({
+          contentType: request.headers.get('content-type'),
+          files: formData
+            .getAll('files')
+            .filter((part): part is File => part instanceof File)
+            .map(file => file.name),
+          request: input,
+        });
         return HttpResponse.json({ ...announcement, ...(input as object) });
       },
     ),
   );
   expect(await fetchSectionAnnouncements('1')).toEqual([announcement]);
   expect(
-    await submitSectionAnnouncement(1, { title: '공지', content: '본문' }),
+    await submitSectionAnnouncement(1, {
+      title: '공지',
+      content: '본문',
+      files: [new File(['guide'], '안내.pdf', { type: 'application/pdf' })],
+    }),
   ).toEqual(announcement);
   expect(await updateSectionAnnouncement('10', { content: '수정' })).toEqual({
     ...announcement,
     content: '수정',
   });
   expect(requests).toEqual([
-    { title: '공지', content: '본문' },
-    { content: '수정' },
+    {
+      contentType: expect.stringContaining('multipart/form-data'),
+      files: ['안내.pdf'],
+      request: { title: '공지', content: '본문' },
+    },
+    {
+      contentType: expect.stringContaining('multipart/form-data'),
+      files: [],
+      request: { content: '수정' },
+    },
   ]);
 });
 

@@ -1,3 +1,5 @@
+import { Blob as NodeBlob, File as NodeFile } from 'node:buffer';
+
 import { API_BASE_URL } from '@aics/api-client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
@@ -25,14 +27,25 @@ import { demoNoticeProfessor } from '~/mocks/data/users';
 
 const server = setupServer();
 const clients: QueryClient[] = [];
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeAll(async () => {
+  const nativeForm = await new Response('', {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  }).formData();
+  vi.stubGlobal('FormData', nativeForm.constructor);
+  vi.stubGlobal('Blob', NodeBlob);
+  vi.stubGlobal('File', NodeFile);
+  server.listen({ onUnhandledRequest: 'error' });
+});
 beforeEach(() => useAuthStore.setState({ currentUser: demoNoticeProfessor }));
 afterEach(() => {
   server.resetHandlers();
   clients.splice(0).forEach(client => client.clear());
   useAuthStore.setState({ currentUser: null });
 });
-afterAll(() => server.close());
+afterAll(() => {
+  server.close();
+  vi.unstubAllGlobals();
+});
 function renderMutations() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -59,6 +72,15 @@ const announcement = {
   publishedAt: '2026-09-16T09:00:00',
 };
 
+async function readRequestPart(request: Request) {
+  const formData = await request.formData();
+  const requestPart = formData.get('request');
+  if (requestPart == null) throw new Error('request 파트가 없습니다.');
+  return JSON.parse(
+    typeof requestPart === 'string' ? requestPart : await requestPart.text(),
+  );
+}
+
 it('PATCH 응답에 없는 목록의 첨부와 다른 항목은 재조회 전에 보존한다', async () => {
   server.use(
     http.patch(`${API_BASE_URL}/api/v1/announcements/10`, () =>
@@ -69,11 +91,11 @@ it('PATCH 응답에 없는 목록의 첨부와 다른 항목은 재조회 전에
   const listKey = adminNoticeKeys.list(demoNoticeProfessor.id, 1);
   const attachments = [
     {
-      id: 'file-1',
+      id: 1,
       fileName: '안내.pdf',
-      contentType: 'application/pdf',
-      sizeBytes: 12,
-      url: '/files/1',
+      mimeType: 'application/pdf',
+      size: 12,
+      downloadUrl: '/files/1',
     },
   ];
   const other = { ...announcement, id: 11 };
@@ -103,7 +125,7 @@ it('PATCH는 변경 필드만 보내고 원래 사용자의 목록·상세와 �
     http.patch(
       `${API_BASE_URL}/api/v1/announcements/10`,
       async ({ request }) => {
-        patch(await request.json());
+        patch(await readRequestPart(request));
         await pending;
         return HttpResponse.json({ ...announcement, content: '수정' });
       },

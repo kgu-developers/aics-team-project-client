@@ -1,9 +1,9 @@
 export type SectionAnnouncementAttachment = {
-  id: string;
+  id: number;
   fileName: string;
-  contentType: string;
-  sizeBytes: number;
-  url: string;
+  mimeType?: string;
+  size: number;
+  downloadUrl: string;
 };
 
 export type SectionAnnouncementResponse = {
@@ -12,6 +12,8 @@ export type SectionAnnouncementResponse = {
   title: string;
   content: string;
   publishedAt: string;
+  /** Optional while older deployed responses without attachments remain cached. */
+  attachments?: SectionAnnouncementAttachment[];
 };
 
 export type SectionAnnouncementListResponse = {
@@ -22,11 +24,14 @@ export type CreateSectionAnnouncementInput = {
   title: string;
   content: string;
   publishedAt?: string;
+  files?: File[];
 };
 
-export type UpdateSectionAnnouncementInput =
-  Partial<CreateSectionAnnouncementInput>;
-
-export type SectionAnnouncement = SectionAnnouncementResponse & {
-  attachments?: SectionAnnouncementAttachment[];
+export type UpdateSectionAnnouncementInput = Partial<
+  Omit<CreateSectionAnnouncementInput, 'files'>
+> & {
+  deleteAttachmentIds?: number[];
+  files?: File[];
 };
+
+export type SectionAnnouncement = SectionAnnouncementResponse;

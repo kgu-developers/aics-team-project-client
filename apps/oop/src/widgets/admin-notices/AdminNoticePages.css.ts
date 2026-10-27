@@ -79,12 +79,33 @@ export const actions = style({
 export const leaveDialog = style({
   display: 'grid',
   gap: tokens.spacing[4],
-  padding: tokens.spacing[5],
 });
 export const fields = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 18,
+});
+export const attachmentList = style({
+  display: 'grid',
+  gap: tokens.spacing[2],
+  listStyle: 'none',
+  margin: `${tokens.spacing[2]} 0 0`,
+  padding: 0,
+});
+export const attachmentItem = style({
+  alignItems: 'center',
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: 8,
+  display: 'flex',
+  gap: tokens.spacing[3],
+  justifyContent: 'space-between',
+  padding: `${tokens.spacing[2]} ${tokens.spacing[3]}`,
+});
+export const downloadLink = style({
+  color: tokens.color.text.accent,
+  fontSize: 14,
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
 });
 globalStyle(table + ' th', {
   background: tokens.color.background.card,

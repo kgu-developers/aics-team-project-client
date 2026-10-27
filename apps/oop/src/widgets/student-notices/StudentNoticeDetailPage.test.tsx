@@ -52,18 +52,18 @@ const mySectionAnnouncements: SectionAnnouncement[] = [
     publishedAt: '2025-12-17 09:00',
     attachments: [
       {
-        id: 'attachment-image',
+        id: 1,
         fileName: '일정 이미지.svg',
-        contentType: 'image/svg+xml',
-        sizeBytes: 12_000,
-        url: '/evaluation/cineflow-screen-1.svg',
+        mimeType: 'image/svg+xml',
+        size: 12_000,
+        downloadUrl: '/evaluation/cineflow-screen-1.svg',
       },
       {
-        id: 'attachment-pdf',
+        id: 2,
         fileName: '일정 안내.pdf',
-        contentType: 'application/pdf',
-        sizeBytes: 240_000,
-        url: '/evaluation/cineflow-presentation.pdf',
+        mimeType: 'application/pdf',
+        size: 240_000,
+        downloadUrl: '/evaluation/cineflow-presentation.pdf',
       },
     ],
   },
@@ -180,7 +180,7 @@ describe('StudentNoticeDetailPage', () => {
           attachments: [
             {
               ...mySectionAnnouncements[0]!.attachments![0],
-              url: '/\\attacker.example/beacon.png',
+              downloadUrl: '/\\attacker.example/beacon.png',
             },
           ],
         },
