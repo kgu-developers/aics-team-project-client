@@ -517,6 +517,57 @@ describe('학생 홈의 히어로·목록·제출 상태 API 연결', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('후보와 투표 없이 직접 제출하면 실제 홈이 제안서 작성 단계로 전환된다', async () => {
+    let finalized = false;
+    server.use(
+      proposalSectionsHandler(),
+      http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
+        finalized
+          ? HttpResponse.json({ id: 21, teamId: 7, title: '팀 프로젝트' })
+          : HttpResponse.json({ code: 'PROJECT_NOT_FOUND' }, { status: 404 }),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.TOPIC.CANDIDATES('7')}`, () =>
+        HttpResponse.json({
+          contents: [],
+        }),
+      ),
+      http.patch(
+        `${API_BASE_URL}${ENDPOINTS.TOPIC.DIRECT_FINALIZE('7')}`,
+        () => {
+          finalized = true;
+          return HttpResponse.json({
+            projectId: 21,
+            candidateId: null,
+            title: '팀 프로젝트',
+          });
+        },
+      ),
+    );
+    render(<StudentHomePage />, { wrapper: Wrapper });
+    const user = userEvent.setup();
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: '주제 직접 제출' }),
+      ).toBeEnabled(),
+    );
+    await user.click(screen.getByRole('button', { name: '주제 직접 제출' }));
+    await user.click(screen.getByRole('button', { name: '확인하고 계속' }));
+    await user.type(screen.getByLabelText('주제 제목'), '팀 프로젝트');
+    await user.type(screen.getByLabelText('주제 설명'), '설명');
+    await user.click(screen.getByRole('button', { name: '주제 제출' }));
+    await waitFor(() =>
+      expect(navigationHistory.location.pathname).toBe(
+        '/student/editor/proposal/team-info',
+      ),
+    );
+    expect(
+      (await screen.findAllByRole('button', { name: '작성하기' })).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.queryByRole('button', { name: '후보 추가' }),
+    ).not.toBeInTheDocument();
+  });
+
   it('주제 선정 일정이 열리면 후보를 등록하고 실제 팀 목록을 다시 조회한다', async () => {
     const candidate = {
       id: 81,

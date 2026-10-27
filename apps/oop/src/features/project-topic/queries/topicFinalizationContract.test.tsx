@@ -2,6 +2,7 @@ import {
   API_BASE_URL,
   fetchTeamProject,
   updateTopicFinalization,
+  updateTopicDirectFinalization,
 } from '@aics/api-client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
@@ -130,3 +131,64 @@ it.each([{ goal: {} }, { proposalCompletedAt: true }])(
     await expect(fetchTeamProject('4')).rejects.toThrow('목표와 완료 상태');
   },
 );
+
+it('직접 확정은 제목·설명만 전송하며 후보 없는 receipt를 받는다', async () => {
+  server.use(
+    http.patch(`${url}/direct`, async ({ request }) => {
+      expect(await request.json()).toEqual({
+        title: '직접 주제',
+        description: '설명',
+      });
+      return HttpResponse.json({
+        projectId: 12,
+        candidateId: null,
+        title: '직접 주제',
+      });
+    }),
+  );
+  expect(
+    await updateTopicDirectFinalization('4', {
+      title: ' 직접 주제 ',
+      description: ' 설명 ',
+    }),
+  ).toEqual({ projectId: 12, candidateId: null, title: '직접 주제' });
+});
+it.each(['', '0', '../4'])(
+  '직접 제출도 잘못된 팀 ID %s를 전송하지 않는다',
+  async teamId => {
+    await expect(
+      updateTopicDirectFinalization(teamId, {
+        title: '주제',
+        description: '설명',
+      }),
+    ).rejects.toThrow('식별자');
+  },
+);
+it('직접 제출의 403을 성공으로 처리하지 않는다', async () => {
+  server.use(
+    http.patch(`${url}/direct`, () => HttpResponse.json({}, { status: 403 })),
+  );
+  await expect(
+    updateTopicDirectFinalization('4', { title: '주제', description: '설명' }),
+  ).rejects.toMatchObject({ response: { status: 403 } });
+});
+
+it.each([
+  { title: ' ', description: '설명' },
+  { title: '가'.repeat(201), description: '설명' },
+  { title: '주제', description: ' ' },
+])('유효하지 않은 직접 제출 입력은 요청하지 않는다: %o', async input => {
+  await expect(updateTopicDirectFinalization('4', input)).rejects.toThrow(
+    '제목(200자 이내)과 설명',
+  );
+});
+it('직접 제출에 후보 ID가 포함된 잘못된 응답은 성공으로 처리하지 않는다', async () => {
+  server.use(
+    http.patch(`${url}/direct`, () =>
+      HttpResponse.json({ projectId: 12, candidateId: 3, title: '주제' }),
+    ),
+  );
+  await expect(
+    updateTopicDirectFinalization('4', { title: '주제', description: '설명' }),
+  ).rejects.toThrow('결과');
+});

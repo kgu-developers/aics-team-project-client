@@ -9,7 +9,7 @@ import * as styles from './TeamMemberTable.css';
 
 type TeamMemberTableProps = {
   members: TeamAssignmentMember[];
-  variant: 'assignment' | 'firstMeeting';
+  variant: 'assignment' | 'firstMeeting' | 'teamContacts';
 };
 
 function copyWithSelection(text: string) {
@@ -80,7 +80,7 @@ export function TeamMemberTable({ members, variant }: TeamMemberTableProps) {
     >
       <Table
         columns={
-          variant === 'assignment'
+          variant !== 'firstMeeting'
             ? [
                 ...(hasDepartment ? [departmentColumn] : []),
                 {
@@ -95,6 +95,31 @@ export function TeamMemberTable({ members, variant }: TeamMemberTableProps) {
                   key: 'name',
                   width: proportional(1, { minWidth: 0 }),
                 },
+                ...(variant === 'teamContacts'
+                  ? [
+                      {
+                        align: 'start' as const,
+                        header: '전화번호',
+                        key: 'phoneNumber' as const,
+                        renderCell: (member: (typeof rows)[number]) =>
+                          member.phoneNumber ? (
+                            <Button
+                              label={`${member.phoneNumber} 복사`}
+                              variant='ghost'
+                              size='sm'
+                              clickAction={() =>
+                                copyPhoneNumber(member.phoneNumber!)
+                              }
+                            >
+                              {member.phoneNumber}
+                            </Button>
+                          ) : (
+                            <span>연락처 미등록</span>
+                          ),
+                        width: proportional(1.45, { minWidth: 0 }),
+                      },
+                    ]
+                  : []),
               ]
             : [
                 ...(hasDepartment ? [departmentColumn] : []),

@@ -26,7 +26,12 @@ const {
 }));
 const { studentContextState } = vi.hoisted(() => ({
   studentContextState: {
-    current: { status: 'loading' } as { status: string; teamId?: string },
+    current: { status: 'loading' } as {
+      status: string;
+      teamId?: string;
+      section?: { id: number };
+      user?: { studentNumber: string };
+    },
   },
 }));
 
@@ -93,6 +98,7 @@ const PERSISTENCE_KEY = 'student-a:oop-section-1';
 describe('MilestoneList', () => {
   beforeEach(() => {
     window.sessionStorage.clear();
+    studentContextState.current = { status: 'loading' };
     submitMidReportFeedback.mockReset();
     submitProposalFeedbackResponse.mockReset();
     feedbackMutationState.midError = null;
@@ -304,6 +310,12 @@ describe('MilestoneList', () => {
       false,
     );
     useAuthStore.setState({ currentUser: demoCompletedStudent });
+    studentContextState.current = {
+      status: 'ready',
+      teamId: '7',
+      section: { id: 1 },
+      user: { studentNumber: demoCompletedStudent.studentNumber },
+    };
 
     renderWithRouter(
       <MilestoneList

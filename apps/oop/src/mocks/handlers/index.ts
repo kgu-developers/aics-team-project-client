@@ -29,6 +29,7 @@ import { studentFeedbackHandlers } from './studentFeedback';
 import { studentHomeHandlers } from './studentHome';
 import { studentMilestoneHandlers } from './studentMilestones';
 import { studentNoticeHandlers } from './studentNotices';
+import { createStudentPageHandlers } from './studentPages';
 import { studentSubmissionHandlers } from './studentSubmission';
 import { submissionHandlers } from './submission';
 import {
@@ -39,48 +40,53 @@ import { createTeamMessageHandlers } from './teamMessages';
 import { topicHandlers } from './topic';
 import { liveEditLockMockResources } from '../data/liveEditLock';
 
-export const handlers = [
-  ...sectionHandlers,
-  ...authHandlers,
-  ...adminCourseHandlers,
-  ...adminEvaluationResultHandlers,
-  ...adminSectionHandlers,
-  ...adminSectionArtifactHandlers,
-  ...adminMilestoneScheduleHandlers,
-  ...adminSectionMilestoneHandlers,
-  ...adminRequiredArtifactHandlers,
-  ...adminMilestoneSubmissionDetailHandlers,
-  ...adminMilestoneSubmissionsHandlers,
-  ...adminMeetingHandlers,
-  ...adminMidReportHandlers,
-  ...adminProposalFeedbackHandlers,
-  ...adminPresentationEvaluationHandlers,
-  ...adminPeerEvaluationFormHandlers,
-  ...adminProjectProposalHandlers,
-  ...createLiveEditLockHandlers({
-    onlyMidReport: true,
-    resources: liveEditLockMockResources.map(resource => ({
-      ...resource,
-      id: 701,
-    })),
-  }),
-  ...editLockHandlers,
-  ...evaluationHandlers,
-  ...topicHandlers,
-  ...createTeamMessageHandlers({ persist: true }),
-  ...createMeetingApiHandlers(),
-  ...meetingHandlers,
-  ...midReportHandlers,
-  ...presentationHandlers,
-  ...proposalHandlers,
-  ...studentFeedbackHandlers,
-  ...studentHomeHandlers,
-  ...studentNoticeHandlers,
-  ...studentMilestoneHandlers,
-  ...studentSubmissionHandlers,
-  ...submissionHandlers,
-  ...teamAssignmentHandlers,
-  ...teamAssignmentUserHandlers,
-  ...adminStudentTeamHandlers,
-  ...adminProfileHandlers,
-];
+export function createHandlers({ persistStudentPages = false } = {}) {
+  return [
+    ...sectionHandlers,
+    ...authHandlers,
+    ...adminCourseHandlers,
+    ...adminEvaluationResultHandlers,
+    ...adminSectionHandlers,
+    ...adminSectionArtifactHandlers,
+    ...adminMilestoneScheduleHandlers,
+    ...adminSectionMilestoneHandlers,
+    ...adminRequiredArtifactHandlers,
+    ...adminMilestoneSubmissionDetailHandlers,
+    ...adminMilestoneSubmissionsHandlers,
+    ...adminMeetingHandlers,
+    ...adminMidReportHandlers,
+    ...adminProposalFeedbackHandlers,
+    ...adminPresentationEvaluationHandlers,
+    ...adminPeerEvaluationFormHandlers,
+    ...adminProjectProposalHandlers,
+    ...createStudentPageHandlers({ persist: persistStudentPages }),
+    ...createLiveEditLockHandlers({
+      onlyMidReport: true,
+      resources: liveEditLockMockResources.map(resource => ({
+        ...resource,
+        id: 701,
+      })),
+    }),
+    ...editLockHandlers,
+    ...evaluationHandlers,
+    ...topicHandlers,
+    ...createTeamMessageHandlers({ persist: true }),
+    ...createMeetingApiHandlers(),
+    ...meetingHandlers,
+    ...midReportHandlers,
+    ...presentationHandlers,
+    ...proposalHandlers,
+    ...studentFeedbackHandlers,
+    ...studentHomeHandlers,
+    ...studentNoticeHandlers,
+    ...studentMilestoneHandlers,
+    ...studentSubmissionHandlers,
+    ...submissionHandlers,
+    ...teamAssignmentHandlers,
+    ...teamAssignmentUserHandlers,
+    ...adminStudentTeamHandlers,
+    ...adminProfileHandlers,
+  ];
+}
+
+export const handlers = createHandlers();

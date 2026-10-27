@@ -14,8 +14,9 @@ import {
   toTeamResultReleaseAt,
 } from './liveTeamAssignment';
 import { isValidPositiveTeamId, useTeamKickoffQuery } from './queries';
-import { ResultAnnouncement, TeamSummary } from './result';
+import { ResultAnnouncement } from './result';
 import LiveFirstMeeting from './result/LiveFirstMeeting';
+import LiveTeamSummary from './result/LiveTeamSummary';
 import ResultWaiting from './ResultWaiting';
 import { useContactWindowClock } from './useContactWindowClock';
 
@@ -93,7 +94,12 @@ function VisibleAssignedTeamFlow({
     now,
   );
   if (teamOnly)
-    return <TeamSummary projection={projection} showBackNavigation />;
+    return (
+      <LiveTeamSummary
+        projection={projection}
+        contactsVisible={contactVisibility === 'open'}
+      />
+    );
   if (stage === 'completed')
     return <Navigate replace to={ROUTES.STUDENT.HOME} />;
   const canContinue = stage !== 'result';

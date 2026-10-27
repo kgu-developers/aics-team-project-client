@@ -24,10 +24,12 @@ import {
   demoAccessToken,
   demoPartnerAccessToken,
 } from '~/mocks/data/users';
+import { userHandlers } from '~/mocks/handlers/auth';
+import { sectionHandlers } from '~/mocks/handlers/section';
 import { createStudentSubmissionConsentHandlers } from '~/mocks/handlers/studentSubmissionConsent';
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn() }));
-const server = setupServer();
+const server = setupServer(...userHandlers, ...sectionHandlers);
 let client: QueryClient;
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
@@ -83,6 +85,7 @@ function setup({
     .getState()
     .setAccessToken(leader ? demoAccessToken : demoPartnerAccessToken);
   useAuthStore.getState().setCurrentUser(user);
+  useAuthStore.getState().markAuthenticated('STUDENT');
   server.use(
     ...createStudentSubmissionConsentHandlers({
       getSubmission: () => {
