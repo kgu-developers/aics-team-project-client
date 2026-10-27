@@ -53,6 +53,7 @@ beforeAll(() => {
 });
 afterEach(() => {
   server.resetHandlers();
+  sessionStorage.clear();
   setApiAccessToken(null);
   useAuthStore.setState({ accessToken: null, currentUser: null });
 });
@@ -152,6 +153,26 @@ describe('AdminMeetingDetailPage', () => {
       within(panel).getByRole('combobox', { name: '팀' }),
     ).toHaveTextContent('1팀');
     expect(within(panel).getByRole('combobox', { name: '팀' })).toBeDisabled();
+  });
+
+  it('다른 팀에 작성하던 일반 메시지 초안은 현재 팀에 복원하지 않는다', async () => {
+    sessionStorage.setItem(
+      'aics.oop.admin.general-message-draft:1:team:2',
+      JSON.stringify({ message: '2팀에 보낼 내용', teamId: '2' }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+    );
+
+    const panel = await screen.findByRole('complementary', {
+      name: '일반 메시지 작성 패널',
+    });
+    expect(
+      within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
+    ).toHaveValue('');
   });
 
   it('회의록에 등록된 액션플랜만 표시하고 전체 목록으로 연결한다', async () => {

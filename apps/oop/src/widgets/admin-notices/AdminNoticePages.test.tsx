@@ -233,6 +233,52 @@ it('선택한 한 분반에 제목·본문만 게시하고 상세·목록 재조
     await screen.findByRole('row', { name: /새 공지 공지사항 보기/ }),
   ).toHaveAttribute('tabindex', '0');
 });
+
+it('첨부파일은 여러 번 선택해 누적하고, 전체 109MB를 초과하면 추가하지 않는다', async () => {
+  const user = userEvent.setup();
+  renderPage('/admin/notices/new?sectionId=1');
+  const fileInput = (await screen.findAllByLabelText('첨부파일')).find(
+    (element): element is HTMLInputElement =>
+      element instanceof HTMLInputElement,
+  );
+  if (!fileInput) throw new Error('첨부파일 input을 찾을 수 없습니다.');
+
+  const first = new File(['first'], '첫번째.pdf', {
+    type: 'application/pdf',
+  });
+  const second = new File(['second'], '두번째.pdf', {
+    type: 'application/pdf',
+  });
+  await user.upload(fileInput, first);
+  await user.upload(fileInput, second);
+
+  expect(await screen.findByText('첫번째.pdf')).toBeInTheDocument();
+  expect(screen.getByText('두번째.pdf')).toBeInTheDocument();
+
+  const largeFirst = new File(['large-first'], '큰파일-1.pdf', {
+    type: 'application/pdf',
+  });
+  Object.defineProperty(largeFirst, 'size', {
+    configurable: true,
+    value: 60 * 1024 * 1024,
+  });
+  const largeSecond = new File(['large-second'], '큰파일-2.pdf', {
+    type: 'application/pdf',
+  });
+  Object.defineProperty(largeSecond, 'size', {
+    configurable: true,
+    value: 60 * 1024 * 1024,
+  });
+  await user.upload(fileInput, largeFirst);
+  await user.upload(fileInput, largeSecond);
+
+  expect(
+    await screen.findByText('첨부파일 전체 용량은 109MB 이하로 선택해 주세요.'),
+  ).toBeInTheDocument();
+  expect(screen.getByText('큰파일-1.pdf')).toBeInTheDocument();
+  expect(screen.queryByText('큰파일-2.pdf')).not.toBeInTheDocument();
+});
+
 it('편집은 분반을 고정하고 변경된 필드만 PATCH하여 게시일과 ID를 유지한다', async () => {
   const patch = vi.fn();
   server.use(

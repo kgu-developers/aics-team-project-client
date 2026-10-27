@@ -61,6 +61,8 @@ export function AdminGeneralMessageDialog({
   );
 
   const draftStorageKey = `${draftStoragePrefix}${sectionId}`;
+  const draftTeamStorageKey = `${draftStorageKey}:team:${teamId || 'unselected'}`;
+  const selectedDraftTeamStorageKey = `${draftStorageKey}:selected-team`;
 
   useEffect(() => {
     if (!isOpen) {
@@ -71,9 +73,15 @@ export function AdminGeneralMessageDialog({
     setIsDraftLoaded(false);
     const fallbackTeamId = initialTeamId ?? '';
     try {
-      const stored = sessionStorage.getItem(draftStorageKey);
+      const storedTeamId =
+        initialTeamId ??
+        sessionStorage.getItem(selectedDraftTeamStorageKey) ??
+        fallbackTeamId;
+      const stored = sessionStorage.getItem(
+        `${draftStorageKey}:team:${storedTeamId || 'unselected'}`,
+      );
       const draft = stored ? (JSON.parse(stored) as GeneralMessageDraft) : null;
-      setTeamId(initialTeamId ?? draft?.teamId ?? fallbackTeamId);
+      setTeamId(initialTeamId ?? draft?.teamId ?? storedTeamId);
       setMessage(draft?.message ?? '');
     } catch {
       setTeamId(fallbackTeamId);
@@ -82,21 +90,31 @@ export function AdminGeneralMessageDialog({
     setErrorMessage(null);
     setSuccessMessage(null);
     setIsDraftLoaded(true);
-  }, [draftStorageKey, initialTeamId, isOpen]);
+  }, [draftStorageKey, initialTeamId, isOpen, selectedDraftTeamStorageKey]);
 
   useEffect(() => {
     if (!isOpen || !isDraftLoaded) return;
 
     if (!message.trim()) {
-      sessionStorage.removeItem(draftStorageKey);
+      sessionStorage.removeItem(draftTeamStorageKey);
+      if (sessionStorage.getItem(selectedDraftTeamStorageKey) === teamId)
+        sessionStorage.removeItem(selectedDraftTeamStorageKey);
       return;
     }
 
     sessionStorage.setItem(
-      draftStorageKey,
+      draftTeamStorageKey,
       JSON.stringify({ message, teamId } satisfies GeneralMessageDraft),
     );
-  }, [draftStorageKey, isDraftLoaded, isOpen, message, teamId]);
+    sessionStorage.setItem(selectedDraftTeamStorageKey, teamId);
+  }, [
+    isDraftLoaded,
+    isOpen,
+    message,
+    draftTeamStorageKey,
+    selectedDraftTeamStorageKey,
+    teamId,
+  ]);
 
   if (!isOpen) return null;
 
@@ -200,7 +218,12 @@ export function AdminGeneralMessageDialog({
                       '일반 메시지를 보내지 못했습니다. 다시 시도해 주세요.',
                     ),
                   onSuccess: () => {
-                    sessionStorage.removeItem(draftStorageKey);
+                    sessionStorage.removeItem(draftTeamStorageKey);
+                    if (
+                      sessionStorage.getItem(selectedDraftTeamStorageKey) ===
+                      teamId
+                    )
+                      sessionStorage.removeItem(selectedDraftTeamStorageKey);
                     setMessage('');
                     setSuccessMessage(
                       '일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.',

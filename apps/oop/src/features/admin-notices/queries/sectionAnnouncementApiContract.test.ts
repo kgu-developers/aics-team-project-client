@@ -80,7 +80,12 @@ it('GET/POST/PATCH는 multipart request/files 파트와 contents/단일 응답 �
             .map(file => file.name),
           request: input,
         });
-        return HttpResponse.json({ ...announcement, ...(input as object) });
+        const updatedFields = Object.fromEntries(
+          Object.entries(input as Record<string, unknown>).filter(
+            ([key]) => key !== 'deleteAttachmentIds',
+          ),
+        );
+        return HttpResponse.json({ ...announcement, ...updatedFields });
       },
     ),
   );
@@ -92,10 +97,13 @@ it('GET/POST/PATCH는 multipart request/files 파트와 contents/단일 응답 �
       files: [new File(['guide'], '안내.pdf', { type: 'application/pdf' })],
     }),
   ).toEqual(announcement);
-  expect(await updateSectionAnnouncement('10', { content: '수정' })).toEqual({
-    ...announcement,
-    content: '수정',
-  });
+  expect(
+    await updateSectionAnnouncement('10', {
+      content: '수정',
+      deleteAttachmentIds: [4],
+      files: [new File(['revised'], '수정본.pdf', { type: 'application/pdf' })],
+    }),
+  ).toEqual({ ...announcement, content: '수정' });
   expect(requests).toEqual([
     {
       contentType: expect.stringContaining('multipart/form-data'),
@@ -104,8 +112,8 @@ it('GET/POST/PATCH는 multipart request/files 파트와 contents/단일 응답 �
     },
     {
       contentType: expect.stringContaining('multipart/form-data'),
-      files: [],
-      request: { content: '수정' },
+      files: ['수정본.pdf'],
+      request: { content: '수정', deleteAttachmentIds: [4] },
     },
   ]);
 });
