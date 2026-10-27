@@ -137,6 +137,23 @@ describe('AdminMeetingDetailPage', () => {
     expect(screen.queryByText(/student-1151-1/)).not.toBeInTheDocument();
   });
 
+  it('회의록의 팀을 고정한 일반 메시지 모달을 연다', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+    );
+
+    const panel = await screen.findByRole('complementary', {
+      name: '일반 메시지 작성 패널',
+    });
+    expect(
+      within(panel).getByRole('combobox', { name: '팀' }),
+    ).toHaveTextContent('1팀');
+    expect(within(panel).getByRole('combobox', { name: '팀' })).toBeDisabled();
+  });
+
   it('회의록에 등록된 액션플랜만 표시하고 전체 목록으로 연결한다', async () => {
     renderPage();
 

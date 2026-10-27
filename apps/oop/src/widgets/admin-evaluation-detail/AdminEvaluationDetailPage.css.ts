@@ -10,6 +10,7 @@ export const page = style({
   padding: '28px clamp(20px, 5vw, 48px) 56px',
   width: '100%',
 });
+
 export const backLink = style({
   color: tokens.color.text.accent,
   textDecoration: 'underline',
@@ -53,8 +54,11 @@ export const section = style({
   gap: 12,
 });
 export const sectionHeader = style({
-  display: 'grid',
-  gap: 4,
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: tokens.spacing[3],
+  justifyContent: 'space-between',
 });
 export const tableWrap = style({ overflowX: 'auto' });
 export const table = style({
@@ -130,13 +134,6 @@ export const averageScore = style({
   fontSize: 20,
   fontWeight: 700,
   margin: 0,
-});
-export const evaluationHeader = style({
-  alignItems: 'center',
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 8,
-  justifyContent: 'space-between',
 });
 export const muted = style({ color: tokens.color.text.secondary });
 export const responseGrid = style({

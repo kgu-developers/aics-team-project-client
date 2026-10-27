@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import RichTextViewer from '~/shared/ui/RichTextViewer';
 
 import {
@@ -33,6 +34,7 @@ import AdminStudentDetailDialog from '~/features/admin-student-team/components/A
 import { useAdminSectionEnrollmentsQuery } from '~/features/admin-student-team/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 import { parseMeetingContent } from '~/features/meeting/model/studentMeeting';
+import { AdminGeneralMessageDialog } from '~/features/team-message/components';
 
 import * as styles from './AdminMeetingDetailPage.css';
 
@@ -42,6 +44,8 @@ export default function AdminMeetingDetailPage() {
   >(null);
   const [actionPage, setActionPage] = useState(0);
   const [editLogPage, setEditLogPage] = useState(0);
+  const [isGeneralMessageDialogOpen, setIsGeneralMessageDialogOpen] =
+    useState(false);
   const { meetingId } = useParams({ from: '/admin/meetings/$meetingId' });
   const currentUser = useAuthStore(state => state.currentUser);
   const { markAsRead } = useAdminMeetingReadState(currentUser?.id);
@@ -143,6 +147,9 @@ export default function AdminMeetingDetailPage() {
   const authorLabel = author
     ? `${author.studentNumber} · ${author.name}`
     : record.authorId;
+  const section = currentUser?.sections.find(
+    item => String(item.id) === String(record.sectionId),
+  );
 
   return (
     <div className={styles.page}>
@@ -218,16 +225,28 @@ export default function AdminMeetingDetailPage() {
           </div>
         </section>
       </Card>
-      <Card className={styles.contentCard}>
-        <section className={styles.contentSection}>
-          <Heading level={2}>회의 내용</Heading>
-          {getRichTextPlainText(content).trim() ? (
-            <RichTextViewer content={content} />
-          ) : (
-            <Text>작성된 회의 내용이 없습니다.</Text>
-          )}
-        </section>
-      </Card>
+      <section aria-labelledby='meeting-content-heading'>
+        <div className={styles.contentTitleRow}>
+          <Heading id='meeting-content-heading' level={2}>
+            회의 내용
+          </Heading>
+          <Button
+            label='일반 메시지 보내기'
+            onClick={() => setIsGeneralMessageDialogOpen(true)}
+            size='sm'
+            variant='secondary'
+          />
+        </div>
+        <Card className={styles.contentCard}>
+          <div className={styles.contentSection}>
+            {getRichTextPlainText(content).trim() ? (
+              <RichTextViewer content={content} />
+            ) : (
+              <Text>작성된 회의 내용이 없습니다.</Text>
+            )}
+          </div>
+        </Card>
+      </section>
       <section className={styles.actionsSection}>
         <div className={styles.actionsTitleRow}>
           <div>
@@ -332,6 +351,16 @@ export default function AdminMeetingDetailPage() {
         }
         studentNumber={selectedParticipantId}
         onClose={() => setSelectedParticipantId(null)}
+      />
+      <AdminGeneralMessageDialog
+        initialTeamId={String(record.teamId)}
+        isOpen={isGeneralMessageDialogOpen}
+        isTeamLocked
+        onClose={() => setIsGeneralMessageDialogOpen(false)}
+        sectionId={String(record.sectionId)}
+        sectionLabel={
+          section ? formatAdminSectionLabel(section) : record.sectionName
+        }
       />
     </div>
   );

@@ -173,6 +173,7 @@ describe('AdminShell', () => {
 
     const profile = await screen.findByRole('dialog', { name: '내 프로필' });
     expect(profile).toHaveTextContent('OOP 데모 조교');
+    expect(profile).not.toHaveTextContent(demoAdmin.studentNumber);
     expect(profile).toHaveTextContent('OOP-01');
     expect(profile).toHaveTextContent('assistant@example.com');
     expect(screen.getByRole('button', { name: '비밀번호 변경' })).toBeVisible();

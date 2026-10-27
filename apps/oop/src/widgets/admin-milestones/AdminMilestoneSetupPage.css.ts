@@ -110,7 +110,9 @@ export const scheduleGrid = style({
   display: 'grid',
   gap: 16,
   gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  '@media': { '(max-width: 900px)': { gridTemplateColumns: '1fr' } },
+  // Each schedule group contains a date and a time control. Stack groups
+  // before either inner control becomes too narrow or its label overlaps.
+  '@media': { '(max-width: 1200px)': { gridTemplateColumns: '1fr' } },
 });
 
 export const sectionScheduleList = style({

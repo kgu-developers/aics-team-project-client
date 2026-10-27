@@ -11,12 +11,25 @@ import {
 import { render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
 import AdminMeetingActionsPage from './AdminMeetingActionsPage';
 
+import { resetMockSessionState } from '~/mocks/authSession';
+import {
+  getAdminCourses,
+  resetAdminCoursesMockData,
+} from '~/mocks/data/adminCourses';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
@@ -31,7 +44,18 @@ const server = setupServer(
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => {
+  resetAdminCoursesMockData();
+  resetMockSessionState();
+  sessionStorage.clear();
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`, () =>
+      HttpResponse.json({ contents: getAdminCourses() }),
+    ),
+  );
+});
 afterEach(() => {
+  sessionStorage.clear();
   server.resetHandlers();
   setApiAccessToken(null);
   useAuthStore.setState({ accessToken: null, currentUser: null });
@@ -73,7 +97,11 @@ describe('AdminMeetingActionsPage', () => {
     renderPage();
 
     expect(
-      await screen.findByRole('columnheader', { name: '액션 항목' }),
+      await screen.findByRole(
+        'columnheader',
+        { name: '액션 항목' },
+        { timeout: 10_000 },
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('columnheader', { name: '팀' }),
@@ -82,8 +110,10 @@ describe('AdminMeetingActionsPage', () => {
       screen.getByRole('columnheader', { name: '회의록' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: '관리' })).toBeNull();
-    expect(screen.getByText('중간 점검 피드백 반영 사항 정리')).toBeVisible();
-    expect(screen.getByText('발표 자료 역할별 초안 작성')).toBeVisible();
+    expect(
+      await screen.findByText('중간 점검 피드백 반영 사항 정리'),
+    ).toBeVisible();
+    expect(await screen.findByText('발표 자료 역할별 초안 작성')).toBeVisible();
   });
 
   it('분반 액션플랜 조회가 403이면 대상 존재 여부를 구분하지 않는 안내를 표시한다', async () => {

@@ -40,12 +40,12 @@ export function createAdminMilestoneSectionScheduleDraft(): AdminMilestoneSectio
   return {
     allowLateSubmission: false,
     allowSubmissionEditBeforeDueAt: false,
-    dueAt: createDateTimeDraft(),
+    dueAt: { date: '', time: '23:59' },
     evaluationClosesAt: createDateTimeDraft(),
     evaluationOpensAt: createDateTimeDraft(),
     isPublished: false,
     lateSubmissionUntil: createDateTimeDraft(),
-    opensAt: createDateTimeDraft(),
+    opensAt: { date: '', time: '00:00' },
   };
 }
 

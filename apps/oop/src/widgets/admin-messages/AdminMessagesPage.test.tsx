@@ -12,13 +12,15 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from 'vitest';
 
 import { adminMessageKeys } from '~/features/admin-message/queries/adminMessageKeys';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import AdminMessagesPage from './AdminMessagesPage';
 
+import { resetMockSessionState } from '~/mocks/authSession';
+import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 
@@ -44,9 +46,15 @@ const server = setupServer(
 );
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => {
+  resetAdminCoursesMockData();
+  resetMockSessionState();
+  sessionStorage.clear();
+});
 afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
   server.resetHandlers();
+  sessionStorage.clear();
   useAuthStore.getState().clearSession();
   setApiAccessToken(null);
 });
@@ -253,20 +261,31 @@ it('분반과 팀을 선택해 첫 일반 메시지를 보낸다', async () => {
   setup();
   const user = userEvent.setup();
 
-  await user.click(
-    await screen.findByRole('button', { name: '일반 메시지 보내기' }),
-  );
-  const dialog = screen.getByRole('dialog', { name: '일반 메시지 보내기' });
-  expect(dialog).toHaveTextContent(
+  const composeButton = await screen.findByRole('button', {
+    name: '일반 메시지 보내기',
+  });
+  await waitFor(() => expect(composeButton).toBeEnabled());
+  await user.click(composeButton);
+  const panel = screen.getByRole('complementary', {
+    name: '일반 메시지 작성 패널',
+  });
+  expect(panel).toHaveTextContent(
     '보낸 메시지는 해당 팀의 일반 메시지 대화에 추가됩니다.',
   );
-  await user.click(within(dialog).getByRole('combobox', { name: '팀' }));
+  await user.click(within(panel).getByRole('combobox', { name: '팀' }));
   await user.click(await screen.findByRole('option', { name: '7팀' }));
   await user.type(
-    within(dialog).getByRole('textbox', { name: '일반 메시지 내용' }),
+    within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
     '팀 상담 일정을 확인해 주세요.',
   );
-  await user.click(within(dialog).getByRole('button', { name: '보내기' }));
+  await user.click(within(panel).getByRole('button', { name: '보내기' }));
+
+  expect(
+    await within(panel).findByText(
+      '일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.',
+    ),
+  ).toBeVisible();
+  expect(panel).toBeInTheDocument();
 
   await waitFor(() =>
     expect(posted).toEqual([

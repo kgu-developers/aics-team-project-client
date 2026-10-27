@@ -13,7 +13,7 @@ import {
   Text,
 } from '@aics/design-system';
 import { ArrowDown, ArrowDownUp, ArrowUp } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import { paginate } from '~/shared/lib/pagination';
 import ListPagination from '~/shared/ui/ListPagination/ListPagination';
@@ -92,6 +92,7 @@ function getTotalScoreSortButton(sort: TotalScoreSort) {
 }
 
 type PresentationEvaluationResultsProps = {
+  action?: ReactNode;
   criteria: readonly AdminPresentationEvaluationCriterionDto[];
   evaluations: readonly AdminPresentationEvaluationRowDto[];
   formatSubmissionStatus: (
@@ -105,6 +106,7 @@ type PresentationEvaluationResultsProps = {
  * API 응답을 다시 요청하거나 변경하지 않고, 받은 대상 목록만 필터링한다.
  */
 export default function PresentationEvaluationResults({
+  action,
   criteria,
   evaluations,
   formatSubmissionStatus,
@@ -172,12 +174,15 @@ export default function PresentationEvaluationResults({
           value={submissionFilter}
           width={144}
         />
-        <Badge
-          label={`발표 평가 대상 ${evaluations.length}명 중 ${submittedCount}명 제출`}
-          variant={
-            submittedCount === evaluations.length ? 'success' : 'neutral'
-          }
-        />
+        <div className={styles.toolbarActions}>
+          <Badge
+            label={`발표 평가 대상 ${evaluations.length}명 중 ${submittedCount}명 제출`}
+            variant={
+              submittedCount === evaluations.length ? 'success' : 'neutral'
+            }
+          />
+          {action}
+        </div>
       </div>
       {filteredEvaluations.length === 0 ? (
         <Text aria-live='polite' className={styles.emptyState}>

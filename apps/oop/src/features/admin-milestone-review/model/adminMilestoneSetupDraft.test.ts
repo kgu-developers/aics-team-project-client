@@ -7,6 +7,20 @@ import {
 } from './adminMilestoneSetupDraft';
 
 describe('syncAdminMilestoneSectionScheduleDrafts', () => {
+  it('새 마일스톤의 제출 마감 시간을 23:59로 설정한다', () => {
+    expect(createAdminMilestoneSectionScheduleDraft().dueAt).toEqual({
+      date: '',
+      time: '23:59',
+    });
+  });
+
+  it('새 마일스톤의 공개 시작 시간을 00:00으로 설정한다', () => {
+    expect(createAdminMilestoneSectionScheduleDraft().opensAt).toEqual({
+      date: '',
+      time: '00:00',
+    });
+  });
+
   it('선택한 분반 수만큼 독립적인 일정 초안을 만든다', () => {
     const firstSectionDraft = createAdminMilestoneSectionScheduleDraft();
     firstSectionDraft.opensAt.date = '2026-09-01';

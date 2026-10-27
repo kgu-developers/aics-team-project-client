@@ -64,6 +64,7 @@ import { ADMIN_SECTION_FILTER_WIDTH } from '~/features/admin-section/filterLayou
 import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 import { useAdminSubmissionReadState } from '~/features/admin-submission-read/useAdminSubmissionReadState';
 import { useAuthStore } from '~/features/auth/authStore';
+import { AdminGeneralMessageDialog } from '~/features/team-message/components';
 
 import { AdminPresentationEvaluationEndDialog } from './AdminPresentationEvaluationEndDialog';
 import { AdminPresentationEvaluationSettingsDialog } from './AdminPresentationEvaluationSettingsDialog';
@@ -108,6 +109,13 @@ type PeerEvaluationTablePlugin = NonNullable<
 >[string];
 
 type PresentationTotalScoreSort = 'ascending' | 'default' | 'descending';
+
+const selectionStorageKey = 'aics.oop.admin.submissions-selection';
+
+type StoredSubmissionSelection = {
+  milestoneId: MilestoneTabId;
+  sectionId: string;
+};
 
 const koreanCollator = new Intl.Collator('ko-KR', {
   numeric: true,
@@ -190,6 +198,24 @@ function formatPresentationEvaluationPeriod(
 
 function isMilestoneTabId(value: string | undefined): value is MilestoneTabId {
   return MILESTONE_TABS.some(tab => tab.id === value);
+}
+
+function readStoredSubmissionSelection():
+  StoredSubmissionSelection | undefined {
+  if (typeof window === 'undefined') return undefined;
+
+  try {
+    const value = sessionStorage.getItem(selectionStorageKey);
+    if (!value) return undefined;
+
+    const selection = JSON.parse(value) as Partial<StoredSubmissionSelection>;
+    return typeof selection.sectionId === 'string' &&
+      isMilestoneTabId(selection.milestoneId)
+      ? { milestoneId: selection.milestoneId, sectionId: selection.sectionId }
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function findMilestoneForTab(
@@ -325,8 +351,11 @@ export default function AdminSubmissionsPage() {
   const [isEvaluationStartOpen, setIsEvaluationStartOpen] = useState(false);
   const [isEvaluationEndOpen, setIsEvaluationEndOpen] = useState(false);
   const [isEvaluationResumeOpen, setIsEvaluationResumeOpen] = useState(false);
+  const [isGeneralMessageDialogOpen, setIsGeneralMessageDialogOpen] =
+    useState(false);
   const [presentationTotalScoreSort, setPresentationTotalScoreSort] =
     useState<PresentationTotalScoreSort>('default');
+  const [storedSelection] = useState(readStoredSubmissionSelection);
   const [presentationReadinessClock, setPresentationReadinessClock] = useState(
     () => Date.now(),
   );
@@ -339,17 +368,44 @@ export default function AdminSubmissionsPage() {
   const { milestoneId } = search;
   const sectionId =
     search.sectionId === undefined ? undefined : String(search.sectionId);
-  const activeMilestoneId = isMilestoneTabId(milestoneId)
-    ? milestoneId
-    : 'proposal';
+  const activeMilestoneId =
+    milestoneId === undefined
+      ? (storedSelection?.milestoneId ?? 'proposal')
+      : isMilestoneTabId(milestoneId)
+        ? milestoneId
+        : 'proposal';
   const activeTab = MILESTONE_TABS.find(tab => tab.id === activeMilestoneId);
   const activeSectionsQuery = useActiveAdminSections();
   const accessibleSections = activeSectionsQuery.data;
   const accessibleSectionIds = accessibleSections.map(section => section.id);
-  const effectiveSectionId = sectionId ?? accessibleSectionIds[0];
+  const effectiveSectionId =
+    sectionId ??
+    (storedSelection?.sectionId &&
+    accessibleSectionIds.includes(storedSelection.sectionId)
+      ? storedSelection.sectionId
+      : accessibleSectionIds[0]);
+  const selectedSection = accessibleSections.find(
+    section => section.id === effectiveSectionId,
+  );
   const isAccessibleSection = Boolean(
     effectiveSectionId && accessibleSectionIds.includes(effectiveSectionId),
   );
+
+  useEffect(() => {
+    if (!isAccessibleSection || !effectiveSectionId) return;
+
+    try {
+      sessionStorage.setItem(
+        selectionStorageKey,
+        JSON.stringify({
+          milestoneId: activeMilestoneId,
+          sectionId: effectiveSectionId,
+        } satisfies StoredSubmissionSelection),
+      );
+    } catch {
+      // Browsers can disable storage; the page still works through URL state.
+    }
+  }, [activeMilestoneId, effectiveSectionId, isAccessibleSection]);
   const selectedMilestoneType = milestoneTypeByTab[activeMilestoneId];
   const shouldLoadSectionMilestones =
     isAccessibleSection &&
@@ -1197,6 +1253,11 @@ export default function AdminSubmissionsPage() {
               <>
                 <div className={styles.evaluationHeader}>
                   <Heading level={2}>상호평가 목록</Heading>
+                  <Button
+                    label='일반 메시지 보내기'
+                    onClick={() => setIsGeneralMessageDialogOpen(true)}
+                    variant='secondary'
+                  />
                 </div>
                 {peerEvaluationTeams.length === 0 ? (
                   <EmptyState
@@ -1257,6 +1318,12 @@ export default function AdminSubmissionsPage() {
             <>
               <div className={styles.evaluationHeader}>
                 <Heading level={2}>{activeTab.label} 목록</Heading>
+                <Button
+                  isDisabled={!isAccessibleSection}
+                  label='일반 메시지 보내기'
+                  onClick={() => setIsGeneralMessageDialogOpen(true)}
+                  variant='secondary'
+                />
               </div>
               {accessibleSectionIds.length === 0 ? (
                 <EmptyState
@@ -1428,6 +1495,14 @@ export default function AdminSubmissionsPage() {
           )}
         </div>
       </section>
+      {effectiveSectionId && selectedSection ? (
+        <AdminGeneralMessageDialog
+          isOpen={isGeneralMessageDialogOpen}
+          onClose={() => setIsGeneralMessageDialogOpen(false)}
+          sectionId={effectiveSectionId}
+          sectionLabel={formatAdminSectionLabel(selectedSection)}
+        />
+      ) : null}
     </div>
   );
 }

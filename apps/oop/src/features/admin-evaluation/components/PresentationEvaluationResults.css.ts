@@ -16,6 +16,14 @@ export const toolbar = style({
   justifyContent: 'space-between',
 });
 
+export const toolbarActions = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: tokens.spacing[3],
+  marginLeft: 'auto',
+});
+
 export const emptyState = style({
   color: tokens.color.text.secondary,
   paddingBlock: 12,

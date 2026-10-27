@@ -13,6 +13,14 @@ export const page = style({
 
 export const pagination = style({ alignSelf: 'flex-end' });
 
+export const activityTabsRow = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: tokens.spacing[3],
+  justifyContent: 'space-between',
+});
+
 export const editLogsSection = style({
   display: 'grid',
   gap: tokens.spacing[3],

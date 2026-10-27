@@ -30,6 +30,7 @@ import AdminSectionTeamFilter, {
   ALL_TEAMS,
 } from '~/features/admin-section/components/AdminSectionTeamFilter';
 import { useAuthStore } from '~/features/auth/authStore';
+import { AdminGeneralMessageDialog } from '~/features/team-message/components';
 
 import * as styles from './AdminMeetingsPage.css';
 
@@ -44,6 +45,8 @@ function handleRowNavigation(
 
 export default function AdminMeetingsPage() {
   const [editLogPage, setEditLogPage] = useState(0);
+  const [isGeneralMessageDialogOpen, setIsGeneralMessageDialogOpen] =
+    useState(false);
   const currentUser = useAuthStore(state => state.currentUser);
   const { isRead } = useAdminMeetingReadState(currentUser?.id);
   const navigate = useNavigate();
@@ -68,6 +71,9 @@ export default function AdminMeetingsPage() {
     Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 0;
   const selectedTeamId =
     selectedSectionId === ALL_SECTIONS ? undefined : requestedTeamId;
+  const selectedSection = accessibleSections.find(
+    section => section.id === selectedSectionId,
+  );
   const query = useAdminMeetingRecordListQuery(accessibleSectionIds, {
     page: selectedPage,
     sectionId:
@@ -138,13 +144,22 @@ export default function AdminMeetingsPage() {
   return (
     <div className={styles.page}>
       <Heading level={1}>회의록</Heading>
-      <AdminTeamActivityTabs
-        activeView='meetings'
-        sectionId={
-          selectedSectionId === ALL_SECTIONS ? undefined : selectedSectionId
-        }
-        teamId={selectedTeamId}
-      />
+      <div className={styles.activityTabsRow}>
+        <AdminTeamActivityTabs
+          activeView='meetings'
+          sectionId={
+            selectedSectionId === ALL_SECTIONS ? undefined : selectedSectionId
+          }
+          teamId={selectedTeamId}
+        />
+        <Button
+          isDisabled={!selectedSection}
+          label='일반 메시지 보내기'
+          onClick={() => setIsGeneralMessageDialogOpen(true)}
+          size='sm'
+          variant='secondary'
+        />
+      </div>
       <AdminSectionTeamFilter
         onSectionChange={selectSection}
         onTeamChange={selectTeam}
@@ -288,6 +303,14 @@ export default function AdminMeetingsPage() {
             />
           ) : null}
         </section>
+      ) : null}
+      {selectedSection ? (
+        <AdminGeneralMessageDialog
+          isOpen={isGeneralMessageDialogOpen}
+          onClose={() => setIsGeneralMessageDialogOpen(false)}
+          sectionId={selectedSection.id}
+          sectionLabel={formatAdminSectionLabel(selectedSection)}
+        />
       ) : null}
     </div>
   );
