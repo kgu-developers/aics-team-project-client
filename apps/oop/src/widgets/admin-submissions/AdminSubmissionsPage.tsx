@@ -6,13 +6,12 @@ import {
   Badge,
   Button,
   Card,
+  Divider,
   EmptyState,
   Heading,
   HStack,
   IconButton,
   proportional,
-  Selector,
-  SelectorOption,
   Tab,
   TabList,
   Table,
@@ -56,7 +55,6 @@ import {
   useAdminSubmissionVersionDetailsQueries,
   useDownloadAdminSubmissionArtifactsMutation,
 } from '~/features/admin-milestone-review/queries';
-import { ADMIN_SECTION_FILTER_WIDTH } from '~/features/admin-section/filterLayout';
 import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 import { useAdminSubmissionReadState } from '~/features/admin-submission-read/useAdminSubmissionReadState';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -379,6 +377,7 @@ export default function AdminSubmissionsPage() {
     accessibleSectionIds.includes(storedSelection.sectionId)
       ? storedSelection.sectionId
       : accessibleSectionIds[0]);
+  const sectionPanelId = `submission-section-panel-${effectiveSectionId ?? 'unselected'}`;
   const selectedSection = accessibleSections.find(
     section => section.id === effectiveSectionId,
   );
@@ -578,10 +577,6 @@ export default function AdminSubmissionsPage() {
   const isPresentationMilestoneError = sectionMilestonesQuery.isError;
   const isPresentationMilestoneMissing =
     sectionMilestonesQuery.isSuccess && !presentationEvaluationMilestone;
-  const sectionOptions = accessibleSections.map(section => ({
-    label: formatAdminSectionLabel(section),
-    value: section.id,
-  }));
   const presentationEvaluationTeams = useMemo(() => {
     const teams = sortTeamRowsByName(
       presentationEvaluationsQuery.data?.teams ?? [],
@@ -744,23 +739,32 @@ export default function AdminSubmissionsPage() {
         <div className={styles.headerContent}>
           <Heading level={1}>제출·평가 현황</Heading>
           {accessibleSections.length > 0 ? (
-            <Selector
+            <TabList
               aria-label='조회할 분반'
-              isDisabled={activeSectionsQuery.isPending}
-              label='분반'
               onChange={selectSection}
-              options={sectionOptions}
-              renderOption={option => (
-                <SelectorOption label={option.label ?? option.value} />
-              )}
-              value={effectiveSectionId}
-              width={ADMIN_SECTION_FILTER_WIDTH}
-            />
+              role='tablist'
+              value={effectiveSectionId ?? ''}
+            >
+              {accessibleSections.map(section => (
+                <Tab
+                  key={section.id}
+                  label={formatAdminSectionLabel(section)}
+                  panelId={`submission-section-panel-${section.id}`}
+                  value={section.id}
+                />
+              ))}
+            </TabList>
           ) : null}
+          <Divider className={styles.sectionTabDivider} />
         </div>
       </div>
 
-      <section className={styles.listSection}>
+      <section
+        aria-label='선택한 분반 제출·평가 현황'
+        className={styles.listSection}
+        id={sectionPanelId}
+        role='tabpanel'
+      >
         <TabList
           aria-label='마일스톤 선택'
           onChange={selectTab}
