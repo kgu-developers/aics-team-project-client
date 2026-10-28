@@ -153,11 +153,19 @@ describe('AdminSubmissionsPage', () => {
     expect(
       await screen.findByRole('tab', { name: '중간 보고서' }),
     ).toHaveAttribute('aria-selected', 'true');
+    const sectionTabs = await screen.findByRole('tablist', {
+      name: '조회할 분반',
+    });
     expect(
-      within(
-        await screen.findByRole('navigation', { name: '조회할 분반' }),
-      ).getByRole('button', { name: 'OOP-01 · 월요일 1-2교시' }),
-    ).toHaveAttribute('aria-current', 'true');
+      within(sectionTabs).getByRole('tab', {
+        name: 'OOP-01 · 월요일 1-2교시',
+      }),
+    ).toHaveAttribute('aria-selected', 'true');
+    expect(
+      await screen.findByRole('tabpanel', {
+        name: '선택한 분반 제출·평가 현황',
+      }),
+    ).toHaveAttribute('id', 'submission-section-panel-1');
   });
 
   it('일반 제출물과 상호평가 목록을 팀명순으로 표시한다', async () => {
@@ -222,9 +230,9 @@ describe('AdminSubmissionsPage', () => {
 
     expect(
       within(
-        await screen.findByRole('navigation', { name: '조회할 분반' }),
-      ).getByRole('button', { name: 'OOP-01 · 월요일 1-2교시' }),
-    ).toHaveAttribute('aria-current', 'true');
+        await screen.findByRole('tablist', { name: '조회할 분반' }),
+      ).getByRole('tab', { name: 'OOP-01 · 월요일 1-2교시' }),
+    ).toHaveAttribute('aria-selected', 'true');
     expect(screen.queryByText('분반 선택')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: '산출물 현황 다운로드' }),

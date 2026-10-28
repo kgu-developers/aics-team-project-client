@@ -15,6 +15,8 @@ export const headerContent = style({
   display: 'flex',
   flexDirection: 'column',
   gap: 20,
+  minWidth: 0,
+  width: '100%',
 });
 
 export const sectionTabDivider = style({

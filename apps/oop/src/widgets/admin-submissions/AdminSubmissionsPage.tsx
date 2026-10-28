@@ -377,6 +377,7 @@ export default function AdminSubmissionsPage() {
     accessibleSectionIds.includes(storedSelection.sectionId)
       ? storedSelection.sectionId
       : accessibleSectionIds[0]);
+  const sectionPanelId = `submission-section-panel-${effectiveSectionId ?? 'unselected'}`;
   const selectedSection = accessibleSections.find(
     section => section.id === effectiveSectionId,
   );
@@ -741,12 +742,14 @@ export default function AdminSubmissionsPage() {
             <TabList
               aria-label='조회할 분반'
               onChange={selectSection}
+              role='tablist'
               value={effectiveSectionId ?? ''}
             >
               {accessibleSections.map(section => (
                 <Tab
                   key={section.id}
                   label={formatAdminSectionLabel(section)}
+                  panelId={`submission-section-panel-${section.id}`}
                   value={section.id}
                 />
               ))}
@@ -756,7 +759,12 @@ export default function AdminSubmissionsPage() {
         </div>
       </div>
 
-      <section className={styles.listSection}>
+      <section
+        aria-label='선택한 분반 제출·평가 현황'
+        className={styles.listSection}
+        id={sectionPanelId}
+        role='tabpanel'
+      >
         <TabList
           aria-label='마일스톤 선택'
           onChange={selectTab}
