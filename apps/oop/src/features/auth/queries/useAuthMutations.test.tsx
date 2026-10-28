@@ -4,7 +4,15 @@ import { act, renderHook } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import type { PropsWithChildren } from 'react';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 
 import {
   demoAccessToken,
@@ -25,6 +33,7 @@ const queryClients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   server.resetHandlers();
+  localStorage.removeItem('aics:session-recovery');
   queryClients.splice(0).forEach(client => client.clear());
   resetDemoPasswordState();
   useAuthStore.getState().clearSession();
@@ -261,14 +270,57 @@ describe('auth mutations', () => {
     const { result } = renderHook(() => useLogoutMutation(), {
       wrapper: createWrapper(queryClient),
     });
+    const storageWrites = vi.spyOn(Storage.prototype, 'setItem');
 
     await act(async () => {
-      await expect(result.current.mutateAsync()).resolves.toBeUndefined();
+      await expect(result.current.mutateAsync()).resolves.toEqual({
+        generation: null,
+      });
     });
 
+    expect(
+      storageWrites.mock.calls.some(([key]) => key === 'aics:auth-event'),
+    ).toBe(false);
+    storageWrites.mockRestore();
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
     expect(useAuthStore.getState().currentUser).toBeNull();
     expect(queryClient.getQueryData(['private-data'])).toBeUndefined();
+  });
+
+  it('서버가 확정한 로그아웃만 현재 커밋 세대로 브로드캐스트한다', async () => {
+    useAuthStore.getState().setAccessToken(demoAccessToken);
+    useAuthStore.getState().setCurrentUser(demoStudent);
+    server.use(
+      http.post(
+        API_BASE_URL + ENDPOINTS.AUTH.LOGOUT,
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    );
+    const { result } = renderHook(() => useLogoutMutation(), {
+      wrapper: createWrapper(createQueryClient()),
+    });
+    let logoutEvent: { session?: string; revision?: string } | undefined;
+    const originalSetItem = Storage.prototype.setItem;
+    const storageWrites = vi
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(function (this: Storage, key, value) {
+        originalSetItem.call(this, key, value);
+        if (key === 'aics:auth-event') logoutEvent = JSON.parse(value);
+      });
+
+    await act(async () => {
+      await result.current.mutateAsync();
+    });
+    storageWrites.mockRestore();
+
+    const committed = JSON.parse(
+      localStorage.getItem('aics:session-recovery') ?? 'null',
+    ) as { session?: string; revision?: string } | null;
+    expect(logoutEvent).toMatchObject({
+      session: committed?.session,
+      revision: committed?.revision,
+    });
+    expect(logoutEvent?.session).toBeTruthy();
   });
 
   it('로그아웃 403 응답이 CSRF 쿠키를 갱신하면 한 번만 재시도한다', async () => {

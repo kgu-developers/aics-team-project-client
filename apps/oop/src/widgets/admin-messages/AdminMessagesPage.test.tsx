@@ -9,7 +9,14 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -58,10 +65,12 @@ beforeEach(() => {
   sessionStorage.clear();
 });
 afterEach(() => {
+  cleanup();
   clients.splice(0).forEach(client => client.clear());
   server.resetHandlers();
   sessionStorage.clear();
   useAuthStore.getState().clearSession();
+  localStorage.removeItem('aics:session-recovery');
   setApiAccessToken(null);
 });
 afterAll(() => server.close());

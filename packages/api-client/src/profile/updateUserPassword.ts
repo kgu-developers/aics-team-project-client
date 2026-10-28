@@ -15,6 +15,7 @@ export async function updateUserPassword({
   const response = await apiClient.put<string>(
     ENDPOINTS.PROFILE.PASSWORD(studentNumber),
     { currentPassword, password },
+    { skipSessionRecovery: true },
   );
 
   return response.data;

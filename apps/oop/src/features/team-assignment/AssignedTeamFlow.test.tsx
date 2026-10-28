@@ -113,6 +113,7 @@ const server = setupServer(
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
+  localStorage.removeItem('aics:session-recovery');
   team = structuredClone(initialTeam);
   activeSection = { ...section };
   vi.clearAllMocks();
@@ -125,6 +126,7 @@ afterEach(() => {
   client.clear();
   server.resetHandlers();
   useAuthStore.getState().clearSession();
+  localStorage.removeItem('aics:session-recovery');
   vi.restoreAllMocks();
 });
 afterAll(() => server.close());
@@ -305,6 +307,14 @@ it.each([401, 403, 404, 500])(
         `${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF('4')}`,
         () => new HttpResponse(null, { status }),
       ),
+      ...(status === 401
+        ? [
+            http.post(
+              `${API_BASE_URL}${ENDPOINTS.AUTH.REFRESH}`,
+              () => new HttpResponse(null, { status: 401 }),
+            ),
+          ]
+        : []),
     );
     renderFlow();
     expect(
@@ -315,10 +325,16 @@ it.each([401, 403, 404, 500])(
     await userEvent
       .setup()
       .click(screen.getByRole('button', { name: '다시 확인' }));
-    await enterFirstMeeting();
-    expect(
-      await screen.findByRole('button', { name: '010-0000-0001 복사' }),
-    ).toBeVisible();
+    if (status === 401) {
+      expect(
+        await screen.findByText('배정된 팀 정보를 확인하지 못했어요.'),
+      ).toHaveAttribute('role', 'alert');
+    } else {
+      await enterFirstMeeting();
+      expect(
+        await screen.findByRole('button', { name: '010-0000-0001 복사' }),
+      ).toBeVisible();
+    }
   },
 );
 
