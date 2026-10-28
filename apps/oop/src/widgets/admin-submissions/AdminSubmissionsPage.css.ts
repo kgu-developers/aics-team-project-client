@@ -17,6 +17,10 @@ export const headerContent = style({
   gap: 20,
 });
 
+export const sectionTabDivider = style({
+  marginTop: 4,
+});
+
 export const header = style({
   alignItems: 'flex-start',
   display: 'flex',

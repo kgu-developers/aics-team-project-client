@@ -6,13 +6,12 @@ import {
   Badge,
   Button,
   Card,
+  Divider,
   EmptyState,
   Heading,
   HStack,
   IconButton,
   proportional,
-  Selector,
-  SelectorOption,
   Tab,
   TabList,
   Table,
@@ -56,7 +55,6 @@ import {
   useAdminSubmissionVersionDetailsQueries,
   useDownloadAdminSubmissionArtifactsMutation,
 } from '~/features/admin-milestone-review/queries';
-import { ADMIN_SECTION_FILTER_WIDTH } from '~/features/admin-section/filterLayout';
 import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 import { useAdminSubmissionReadState } from '~/features/admin-submission-read/useAdminSubmissionReadState';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -578,10 +576,6 @@ export default function AdminSubmissionsPage() {
   const isPresentationMilestoneError = sectionMilestonesQuery.isError;
   const isPresentationMilestoneMissing =
     sectionMilestonesQuery.isSuccess && !presentationEvaluationMilestone;
-  const sectionOptions = accessibleSections.map(section => ({
-    label: formatAdminSectionLabel(section),
-    value: section.id,
-  }));
   const presentationEvaluationTeams = useMemo(() => {
     const teams = sortTeamRowsByName(
       presentationEvaluationsQuery.data?.teams ?? [],
@@ -744,19 +738,21 @@ export default function AdminSubmissionsPage() {
         <div className={styles.headerContent}>
           <Heading level={1}>제출·평가 현황</Heading>
           {accessibleSections.length > 0 ? (
-            <Selector
+            <TabList
               aria-label='조회할 분반'
-              isDisabled={activeSectionsQuery.isPending}
-              label='분반'
               onChange={selectSection}
-              options={sectionOptions}
-              renderOption={option => (
-                <SelectorOption label={option.label ?? option.value} />
-              )}
-              value={effectiveSectionId}
-              width={ADMIN_SECTION_FILTER_WIDTH}
-            />
+              value={effectiveSectionId ?? ''}
+            >
+              {accessibleSections.map(section => (
+                <Tab
+                  key={section.id}
+                  label={formatAdminSectionLabel(section)}
+                  value={section.id}
+                />
+              ))}
+            </TabList>
           ) : null}
+          <Divider className={styles.sectionTabDivider} />
         </div>
       </div>
 

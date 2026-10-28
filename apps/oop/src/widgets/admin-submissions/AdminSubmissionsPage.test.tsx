@@ -154,8 +154,10 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByRole('tab', { name: '중간 보고서' }),
     ).toHaveAttribute('aria-selected', 'true');
     expect(
-      await screen.findByRole('combobox', { name: '조회할 분반' }),
-    ).toHaveTextContent('OOP-01 · 월요일 1-2교시');
+      within(
+        await screen.findByRole('navigation', { name: '조회할 분반' }),
+      ).getByRole('button', { name: 'OOP-01 · 월요일 1-2교시' }),
+    ).toHaveAttribute('aria-current', 'true');
   });
 
   it('일반 제출물과 상호평가 목록을 팀명순으로 표시한다', async () => {
@@ -219,8 +221,10 @@ describe('AdminSubmissionsPage', () => {
     renderPage('/admin/submissions?sectionId=1');
 
     expect(
-      await screen.findByRole('combobox', { name: '조회할 분반' }),
-    ).toHaveTextContent('OOP-01 · 월요일 1-2교시');
+      within(
+        await screen.findByRole('navigation', { name: '조회할 분반' }),
+      ).getByRole('button', { name: 'OOP-01 · 월요일 1-2교시' }),
+    ).toHaveAttribute('aria-current', 'true');
     expect(screen.queryByText('분반 선택')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: '산출물 현황 다운로드' }),
