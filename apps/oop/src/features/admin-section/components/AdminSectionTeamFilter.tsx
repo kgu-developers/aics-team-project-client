@@ -16,6 +16,8 @@ export const ALL_SECTIONS = 'all';
 export const ALL_TEAMS = '';
 
 type AdminSectionTeamFilterProps = {
+  /** Override the filter sentinel when an action must distinguish "전체 팀" from no selection. */
+  allTeamValue?: string;
   /** Offer an "전체 분반" option; otherwise the first section is expected to be selected. */
   allowAllSections?: boolean;
   /** Offer an "전체 팀" option when the team selector is rendered. */
@@ -38,6 +40,7 @@ type AdminSectionTeamFilterProps = {
  * while "전체 분반" is active.
  */
 export default function AdminSectionTeamFilter({
+  allTeamValue = ALL_TEAMS,
   allowAllSections = true,
   allowAllTeams = true,
   children,
@@ -82,7 +85,9 @@ export default function AdminSectionTeamFilter({
           label='팀'
           onChange={onTeamChange}
           options={[
-            ...(allowAllTeams ? [{ label: '전체 팀', value: ALL_TEAMS }] : []),
+            ...(allowAllTeams
+              ? [{ label: '전체 팀', value: allTeamValue }]
+              : []),
             ...(teamsQuery.data?.contents ?? []).map(team => ({
               label: team.name,
               value: String(team.id),
@@ -91,7 +96,7 @@ export default function AdminSectionTeamFilter({
           renderOption={option => (
             <SelectorOption label={option.label ?? option.value} />
           )}
-          value={teamId ?? ALL_TEAMS}
+          value={teamId ?? allTeamValue}
           width={ADMIN_TEAM_FILTER_WIDTH}
         />
       ) : null}

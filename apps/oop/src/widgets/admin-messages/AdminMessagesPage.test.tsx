@@ -4,22 +4,30 @@ import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
+  createRoute,
   createRootRoute,
   createRouter,
-  RouterContextProvider,
+  RouterProvider,
 } from '@tanstack/react-router';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from 'vitest';
 
 import { adminMessageKeys } from '~/features/admin-message/queries/adminMessageKeys';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import AdminMessagesPage from './AdminMessagesPage';
 
-import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { resetMockSessionState } from '~/mocks/authSession';
+import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
+import {
+  demoAdmin,
+  demoAdminAccessToken,
+  demoNoticeProfessor,
+  demoNoticeProfessorAccessToken,
+} from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 
 // Section teams feed the dependent team filter; the list itself is enough here.
@@ -44,9 +52,15 @@ const server = setupServer(
 );
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => {
+  resetAdminCoursesMockData();
+  resetMockSessionState();
+  sessionStorage.clear();
+});
 afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
   server.resetHandlers();
+  sessionStorage.clear();
   useAuthStore.getState().clearSession();
   setApiAccessToken(null);
 });
@@ -67,31 +81,104 @@ const defaultSections: CurrentUser['sections'] = [
   },
 ];
 
-function setup(sections = defaultSections) {
-  useAuthStore.getState().setAccessToken(demoAdminAccessToken);
+function positiveId(value: unknown) {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function nonNegativePage(value: unknown) {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
+function validateMessageSearch(search: Record<string, unknown>) {
+  return {
+    page: nonNegativePage(search.page),
+    sectionId: positiveId(search.sectionId),
+    teamId: positiveId(search.teamId),
+  };
+}
+
+function setup(
+  sections = defaultSections,
+  currentUser: CurrentUser = demoAdmin,
+  accessToken = demoAdminAccessToken,
+) {
+  useAuthStore.getState().setAccessToken(accessToken);
   useAuthStore.getState().setCurrentUser({
-    ...demoAdmin,
+    ...currentUser,
     sections,
   });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   clients.push(client);
+  const rootRoute = createRootRoute();
+  const messagesRoute = createRoute({
+    component: () => (
+      <AstryxThemeProvider>
+        <QueryClientProvider client={client}>
+          <AdminMessagesPage />
+        </QueryClientProvider>
+      </AstryxThemeProvider>
+    ),
+    getParentRoute: () => rootRoute,
+    path: '/admin/messages/',
+    validateSearch: validateMessageSearch,
+  });
   const router = createRouter({
-    routeTree: createRootRoute(),
+    routeTree: rootRoute.addChildren([messagesRoute]),
     history: createMemoryHistory({ initialEntries: ['/admin/messages'] }),
   });
-  render(
-    <AstryxThemeProvider>
-      <QueryClientProvider client={client}>
-        <RouterContextProvider router={router}>
-          <AdminMessagesPage />
-        </RouterContextProvider>
-      </QueryClientProvider>
-    </AstryxThemeProvider>,
-  );
+  render(<RouterProvider router={router} />);
   return client;
 }
+
+it('담당 교수는 분반 전체 팀에 일반 메시지를 한 번에 보낸다', async () => {
+  const posted: unknown[] = [];
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>
+      HttpResponse.json(messagePage(0, 10, 0)),
+    ),
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_SECTION('1')}`,
+      async ({ request }) => {
+        posted.push(await request.json());
+        return HttpResponse.json({ sentCount: 3 }, { status: 201 });
+      },
+    ),
+  );
+  setup(
+    demoNoticeProfessor.sections,
+    demoNoticeProfessor,
+    demoNoticeProfessorAccessToken,
+  );
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+  );
+  const panel = screen.getByRole('complementary', {
+    name: '일반 메시지 작성 패널',
+  });
+  await user.click(within(panel).getByRole('combobox', { name: '팀' }));
+  await user.click(await screen.findByRole('option', { name: '전체 팀' }));
+  await user.type(
+    within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
+    '전체 팀 안내',
+  );
+  await user.click(within(panel).getByRole('button', { name: '보내기' }));
+  await user.click(
+    await screen.findByRole('button', { name: '전체 팀에 보내기' }),
+  );
+
+  expect(
+    await within(panel).findByText(
+      '전체 3개 팀에 일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.',
+    ),
+  ).toBeVisible();
+  expect(posted).toEqual([{ message: '전체 팀 안내' }]);
+});
 
 function messagePage(
   page: number,
@@ -253,20 +340,31 @@ it('분반과 팀을 선택해 첫 일반 메시지를 보낸다', async () => {
   setup();
   const user = userEvent.setup();
 
-  await user.click(
-    await screen.findByRole('button', { name: '일반 메시지 보내기' }),
-  );
-  const dialog = screen.getByRole('dialog', { name: '일반 메시지 보내기' });
-  expect(dialog).toHaveTextContent(
+  const composeButton = await screen.findByRole('button', {
+    name: '일반 메시지 보내기',
+  });
+  await waitFor(() => expect(composeButton).toBeEnabled());
+  await user.click(composeButton);
+  const panel = screen.getByRole('complementary', {
+    name: '일반 메시지 작성 패널',
+  });
+  expect(panel).toHaveTextContent(
     '보낸 메시지는 해당 팀의 일반 메시지 대화에 추가됩니다.',
   );
-  await user.click(within(dialog).getByRole('combobox', { name: '팀' }));
+  await user.click(within(panel).getByRole('combobox', { name: '팀' }));
   await user.click(await screen.findByRole('option', { name: '7팀' }));
   await user.type(
-    within(dialog).getByRole('textbox', { name: '일반 메시지 내용' }),
+    within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
     '팀 상담 일정을 확인해 주세요.',
   );
-  await user.click(within(dialog).getByRole('button', { name: '보내기' }));
+  await user.click(within(panel).getByRole('button', { name: '보내기' }));
+
+  expect(
+    await within(panel).findByText(
+      '일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.',
+    ),
+  ).toBeVisible();
+  expect(panel).toBeInTheDocument();
 
   await waitFor(() =>
     expect(posted).toEqual([
@@ -276,6 +374,49 @@ it('분반과 팀을 선택해 첫 일반 메시지를 보낸다', async () => {
       },
     ]),
   );
+});
+
+it('작성 패널에서 팀을 바꿔도 기존 팀의 초안을 보존한다', async () => {
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>
+      HttpResponse.json(messagePage(0, 10, 0)),
+    ),
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS(':sectionId')}`,
+      () =>
+        HttpResponse.json({
+          contents: [
+            { id: 7, name: '7팀', status: 'CONFIRMED' },
+            { id: 8, name: '8팀', status: 'CONFIRMED' },
+          ],
+        }),
+    ),
+  );
+  setup();
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+  );
+  const panel = screen.getByRole('complementary', {
+    name: '일반 메시지 작성 패널',
+  });
+  const teamSelect = within(panel).getByRole('combobox', { name: '팀' });
+  const message = within(panel).getByRole('textbox', {
+    name: '일반 메시지 내용',
+  });
+
+  await user.click(teamSelect);
+  await user.click(await screen.findByRole('option', { name: '7팀' }));
+  await user.type(message, '7팀 초안');
+  await user.click(teamSelect);
+  await user.click(await screen.findByRole('option', { name: '8팀' }));
+  expect(message).toHaveValue('');
+  await user.type(message, '8팀 초안');
+  await user.click(teamSelect);
+  await user.click(await screen.findByRole('option', { name: '7팀' }));
+
+  expect(message).toHaveValue('7팀 초안');
 });
 
 it('reaches item 11, keeps page caches separate, and resets pages on section/all filters', async () => {

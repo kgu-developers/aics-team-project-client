@@ -207,7 +207,9 @@ export const feedbackThread = style({
   display: 'flex',
   flexDirection: 'column',
   gap: tokens.spacing['3'],
+  maxHeight: 360,
   minHeight: 160,
+  overflowY: 'auto',
   padding: tokens.spacing['4'],
 });
 

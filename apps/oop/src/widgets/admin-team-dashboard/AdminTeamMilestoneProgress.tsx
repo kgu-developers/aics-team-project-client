@@ -257,8 +257,8 @@ export default function AdminTeamMilestoneProgress({
                     <Link
                       to={ROUTES.ADMIN_MEETINGS}
                       search={{
-                        sectionId,
-                        teamId: String(submission.teamId),
+                        sectionId: Number(sectionId),
+                        teamId: Number(submission.teamId),
                       }}
                     >
                       {formatAdminTotalMeetingRecordCount(

@@ -421,6 +421,7 @@ export {
   fetchTeamThread,
   fetchTeamUnreadMessageCount,
   submitTeamMessage,
+  submitSectionTeamMessage,
   updateTeamMessageImportant,
   updateTeamMessageRead,
 } from './teamMessage';

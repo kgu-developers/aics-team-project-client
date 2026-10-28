@@ -1,3 +1,5 @@
+import { Blob as NodeBlob, File as NodeFile } from 'node:buffer';
+
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import type { SectionAnnouncementListResponse } from '@aics/core';
 import { setupServer } from 'msw/node';
@@ -30,7 +32,15 @@ import {
 
 const server = setupServer(...studentNoticeHandlers);
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeAll(async () => {
+  const nativeForm = await new Response('', {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  }).formData();
+  vi.stubGlobal('FormData', nativeForm.constructor);
+  vi.stubGlobal('Blob', NodeBlob);
+  vi.stubGlobal('File', NodeFile);
+  server.listen({ onUnhandledRequest: 'error' });
+});
 beforeEach(() => {
   resetMockSessionState();
   resetSectionAnnouncements();
@@ -39,7 +49,10 @@ afterEach(() => {
   server.resetHandlers();
   vi.restoreAllMocks();
 });
-afterAll(() => server.close());
+afterAll(() => {
+  server.close();
+  vi.unstubAllGlobals();
+});
 
 function fetchNotices(sectionId: number | string, accessToken?: string) {
   return fetch(
@@ -48,6 +61,16 @@ function fetchNotices(sectionId: number | string, accessToken?: string) {
       ? { headers: { Authorization: `Bearer ${accessToken}` } }
       : undefined,
   );
+}
+
+function multipartBody(request: Record<string, unknown>, files: File[] = []) {
+  const formData = new FormData();
+  formData.append(
+    'request',
+    new Blob([JSON.stringify(request)], { type: 'application/json' }),
+  );
+  files.forEach(file => formData.append('files', file));
+  return formData;
 }
 
 describe('studentNoticeHandlers', () => {
@@ -161,7 +184,7 @@ it.each([
         {
           method: 'PATCH',
           headers: { Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ content: ' ' }),
+          body: multipartBody({ content: ' ' }),
         },
       );
       expect(response.status).toBe(noticeId === existingId ? 403 : 404);
@@ -180,9 +203,8 @@ it('authorizes the owner before validating an empty PATCH and leaves the notice 
     method: 'PATCH',
     headers: {
       Authorization: `Bearer ${demoNoticeProfessorAccessToken}`,
-      'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ content: ' ' }),
+    body: multipartBody({ content: ' ' }),
   });
   expect(response.status).toBe(400);
   const read = await fetchNotices(1, demoAccessToken);
@@ -194,21 +216,19 @@ it('authorizes the owner before validating an empty PATCH and leaves the notice 
 
 it('담당 교수는 한 분반에 게시·부분 수정하고 학생 재조회는 같은 리소스를 반환한다', async () => {
   const { demoNoticeProfessorAccessToken } = await import('../data/users');
-  const headers = {
-    Authorization: `Bearer ${demoNoticeProfessorAccessToken}`,
-    'Content-Type': 'application/json',
-  };
+  const headers = { Authorization: `Bearer ${demoNoticeProfessorAccessToken}` };
   const created = await fetch(
     `${API_BASE_URL}/api/v1/sections/1/announcements`,
     {
       method: 'POST',
       headers,
-      body: JSON.stringify({ title: '교수 공지', content: '첫 줄\n둘째 줄' }),
+      body: multipartBody({ title: '교수 공지', content: '첫 줄\n둘째 줄' }),
     },
   );
   expect(created.status).toBe(201);
   const original = await created.json();
   expect(Object.keys(original).sort()).toEqual([
+    'attachments',
     'content',
     'id',
     'publishedAt',
@@ -220,7 +240,7 @@ it('담당 교수는 한 분반에 게시·부분 수정하고 학생 재조회�
     {
       method: 'PATCH',
       headers,
-      body: JSON.stringify({ content: '수정 본문' }),
+      body: multipartBody({ content: '수정 본문' }),
     },
   );
   expect(updated.status).toBe(200);
@@ -229,6 +249,74 @@ it('담당 교수는 한 분반에 게시·부분 수정하고 학생 재조회�
   expect((await read.json()).contents).toContainEqual({
     ...original,
     content: '수정 본문',
+  });
+});
+
+it('업로드한 첨부파일은 소속 분반 사용자만 mock 다운로드 주소에서 조회한다', async () => {
+  const headers = { Authorization: `Bearer ${demoNoticeProfessorAccessToken}` };
+  const file = new File(['공지 첨부 내용'], '안내.txt', {
+    type: 'text/plain',
+  });
+  const created = await fetch(
+    `${API_BASE_URL}/api/v1/sections/1/announcements`,
+    {
+      method: 'POST',
+      headers,
+      body: multipartBody({ title: '첨부 공지', content: '본문' }, [file]),
+    },
+  );
+  const notice = await created.json();
+
+  expect(created.status).toBe(201);
+  const attachment = notice.attachments[0];
+  const download = await fetch(attachment.downloadUrl, { headers });
+
+  expect(download.status).toBe(200);
+  expect(download.headers.get('content-type')).toContain('text/plain');
+  await expect(download.text()).resolves.toBe('공지 첨부 내용');
+
+  const unauthorizedDownload = await fetch(attachment.downloadUrl, {
+    headers: { Authorization: `Bearer ${demoOtherSectionAccessToken}` },
+  });
+  expect(unauthorizedDownload.status).toBe(403);
+  await expect(unauthorizedDownload.json()).resolves.toMatchObject({
+    code: 'ACCESS_DENIED',
+  });
+});
+
+it('존재하지 않는 첨부파일 삭제는 공지의 다른 변경도 반영하지 않는다', async () => {
+  const headers = { Authorization: `Bearer ${demoNoticeProfessorAccessToken}` };
+  const created = await fetch(
+    `${API_BASE_URL}/api/v1/sections/1/announcements`,
+    {
+      method: 'POST',
+      headers,
+      body: multipartBody({ title: '삭제 검증 공지', content: '원래 본문' }, [
+        new File(['첨부'], '첨부.txt', { type: 'text/plain' }),
+      ]),
+    },
+  );
+  const original = await created.json();
+  const update = await fetch(
+    `${API_BASE_URL}/api/v1/announcements/${original.id}`,
+    {
+      method: 'PATCH',
+      headers,
+      body: multipartBody({
+        title: '변경되면 안 되는 제목',
+        deleteAttachmentIds: [999999],
+      }),
+    },
+  );
+
+  expect(update.status).toBe(404);
+  const read = await fetchNotices(1, demoAccessToken);
+  const persisted = (await read.json()).contents.find(
+    (item: { id: number }) => item.id === original.id,
+  );
+  expect(persisted).toMatchObject({
+    title: '삭제 검증 공지',
+    content: '원래 본문',
   });
 });
 it('학생과 다른 분반 교수는 공지를 게시할 수 없고 빈 입력도 거부한다', async () => {
@@ -249,9 +337,8 @@ it('학생과 다른 분반 교수는 공지를 게시할 수 없고 빈 입력�
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(body),
+        body: multipartBody(body),
       },
     );
     expect(response.status).toBe(status);
@@ -309,15 +396,14 @@ it('assistant role alone cannot read/write, while an active enrollment independe
     method: 'POST',
     headers: {
       Authorization: `Bearer ${demoAccessToken}`,
-      'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ title: '조교 공지', content: '본문' }),
+    body: multipartBody({ title: '조교 공지', content: '본문' }),
   });
   expect(write.status).toBe(403);
   const patch = await fetch(`${API_BASE_URL}/api/v1/announcements/10`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${demoAccessToken}` },
-    body: JSON.stringify({ content: '수정' }),
+    body: multipartBody({ content: '수정' }),
   });
   expect(patch.status).toBe(403);
 });
@@ -344,7 +430,7 @@ it('inactive professor ownership grants neither read nor write without enrollmen
     const response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers: { Authorization: `Bearer ${demoNoticeProfessorAccessToken}` },
-      body: JSON.stringify({ title: '공지', content: '본문' }),
+      body: multipartBody({ title: '공지', content: '본문' }),
     });
     expect(response.status).toBe(403);
   }
@@ -363,7 +449,7 @@ it.each(['0x1', '1e0', ' 1 ', '01', '0', '-1', '1.0', '9007199254740992'])(
         headers: { Authorization: `Bearer ${demoNoticeProfessorAccessToken}` },
         ...(method === 'GET'
           ? {}
-          : { body: JSON.stringify({ title: '공지', content: '본문' }) }),
+          : { body: multipartBody({ title: '공지', content: '본문' }) }),
       });
       expect(response.status).toBe(400);
       expect(await response.json()).toMatchObject({ code: 'INVALID_INPUT' });
@@ -385,7 +471,7 @@ it.each([
     {
       method: 'POST',
       headers: { Authorization: `Bearer ${demoNoticeProfessorAccessToken}` },
-      body: JSON.stringify({
+      body: multipartBody({
         title: '예약 공지',
         content: '본문',
         publishedAt,

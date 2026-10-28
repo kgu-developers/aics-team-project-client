@@ -165,11 +165,16 @@ function formatBlockFields(fields: unknown) {
 }
 
 type Props = {
+  onOpenGeneralMessage: () => void;
   sectionId: string;
   teamId: string;
 };
 
-export function AdminMidReportDetail({ sectionId, teamId }: Props) {
+export function AdminMidReportDetail({
+  onOpenGeneralMessage,
+  sectionId,
+  teamId,
+}: Props) {
   const currentUser = useAuthStore(state => state.currentUser);
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [feedbackPage, setFeedbackPage] = useState(0);
@@ -484,6 +489,12 @@ export function AdminMidReportDetail({ sectionId, teamId }: Props) {
             value={feedbackMessage}
           />
           <div className={styles.feedbackSubmitAction}>
+            <Button
+              label='일반 메시지 보내기'
+              onClick={onOpenGeneralMessage}
+              type='button'
+              variant='secondary'
+            />
             <Button
               isDisabled={
                 !feedbackMessage.trim() ||

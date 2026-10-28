@@ -235,9 +235,6 @@ export default function AdminProfilePopover({
           >
             {currentUser.name}
           </Heading>
-          <Text color='secondary' type='supporting'>
-            {currentUser.studentNumber}
-          </Text>
         </div>
       </div>
 
@@ -306,7 +303,7 @@ export default function AdminProfilePopover({
           >
             <span className={styles.profileTriggerCopy}>
               <strong>{currentUser.name}</strong>
-              <span>{currentUser.studentNumber} · 프로필</span>
+              <span>프로필</span>
             </span>
           </Button>
         )}

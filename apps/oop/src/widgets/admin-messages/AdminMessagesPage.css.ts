@@ -10,11 +10,44 @@ export const page = style({
   padding: '28px clamp(20px, 5vw, 48px) 56px',
   width: '100%',
 });
-export const composeDialog = style({
+export const composePanel = style({
+  background: tokens.color.background.card,
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: 12,
+  boxShadow: '0 12px 32px rgb(10 19 23 / 18%)',
+  display: 'flex',
+  flexDirection: 'column',
+  maxWidth: 'calc(100vw - 32px)',
+  maxHeight: 'calc(100dvh - 112px)',
+  overflowY: 'auto',
+  position: 'fixed',
+  right: 24,
+  top: 88,
+  width: 400,
+  zIndex: 20,
+  '@media': {
+    'screen and (max-width: 640px)': {
+      maxHeight: 'calc(100dvh - 88px)',
+      right: 16,
+      top: 72,
+      width: 'calc(100vw - 32px)',
+    },
+  },
+});
+export const composePanelContent = style({
   display: 'flex',
   flexDirection: 'column',
   gap: tokens.spacing['5'],
   padding: tokens.spacing['5'],
+});
+export const composePanelHeader = style({
+  alignItems: 'center',
+  cursor: 'grab',
+  display: 'flex',
+  justifyContent: 'space-between',
+  selectors: {
+    '&:active': { cursor: 'grabbing' },
+  },
 });
 export const composeActions = style({
   display: 'flex',

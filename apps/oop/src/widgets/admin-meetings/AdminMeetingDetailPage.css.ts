@@ -102,6 +102,15 @@ export const contentCard = style({
   padding: 'clamp(24px, 4vw, 40px)',
 });
 
+export const contentTitleRow = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: tokens.spacing[3],
+  justifyContent: 'space-between',
+  marginBottom: tokens.spacing[3],
+});
+
 export const contentSection = style({
   display: 'flex',
   flexDirection: 'column',
@@ -139,6 +148,12 @@ export const actionsSection = style({
 export const editLogsSection = style({
   display: 'grid',
   gap: tokens.spacing[3],
+});
+
+export const editLogsContent = style({
+  display: 'grid',
+  gap: tokens.spacing[3],
+  paddingTop: tokens.spacing[3],
 });
 
 export const actionsTitleRow = style({

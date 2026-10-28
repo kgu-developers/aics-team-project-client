@@ -18,8 +18,15 @@ import { getMockMySections } from '../data/sections';
 import { studentNoticeAnnouncements } from '../data/studentNotices';
 
 let announcements = structuredClone(studentNoticeAnnouncements);
+let nextAttachmentId = 1;
+const uploadedAttachments = new Map<
+  number,
+  { file: File; sectionId: number }
+>();
 export function resetSectionAnnouncements() {
   announcements = structuredClone(studentNoticeAnnouncements);
+  nextAttachmentId = 1;
+  uploadedAttachments.clear();
 }
 function access(request: Request, sectionId: number, write = false) {
   const account = getMockAuthenticatedAccount(request);
@@ -56,17 +63,43 @@ function validText(value: unknown) {
 }
 async function readInput(request: Request) {
   try {
-    const input: unknown = await request.json();
+    const formData = await request.formData();
+    const requestPart = formData.get('request');
+    if (requestPart == null) return undefined;
+    // MSW/XHR can materialize a multipart JSON Blob as a string in jsdom,
+    // whereas browsers preserve it as a Blob. Both represent the same part.
+    const requestText =
+      typeof requestPart === 'string' ? requestPart : await requestPart.text();
+    const input: unknown = JSON.parse(requestText);
     if (!input || typeof input !== 'object' || Array.isArray(input))
       return undefined;
-    return input as {
-      title?: unknown;
-      content?: unknown;
-      publishedAt?: unknown;
+    return {
+      files: formData
+        .getAll('files')
+        .filter((part): part is File => part instanceof File),
+      input: input as {
+        title?: unknown;
+        content?: unknown;
+        publishedAt?: unknown;
+        deleteAttachmentIds?: unknown;
+      },
     };
   } catch {
     return undefined;
   }
+}
+function attachmentsFrom(files: File[], sectionId: number) {
+  return files.map(file => {
+    const id = nextAttachmentId++;
+    uploadedAttachments.set(id, { file, sectionId });
+    return {
+      id,
+      fileName: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      size: file.size,
+      downloadUrl: `${API_BASE_URL}/api/v1/mock/announcements/attachments/${id}`,
+    };
+  });
 }
 function validPublishedAt(value: unknown) {
   return (
@@ -75,6 +108,30 @@ function validPublishedAt(value: unknown) {
   );
 }
 export const studentNoticeHandlers = [
+  http.get(
+    `${API_BASE_URL}/api/v1/mock/announcements/attachments/:attachmentId`,
+    ({ params, request }) => {
+      if (!getMockAuthenticatedAccount(request)) return denied(401);
+      const attachmentId = id(params.attachmentId);
+      const attachment = attachmentId
+        ? uploadedAttachments.get(attachmentId)
+        : null;
+      if (!attachment)
+        return error(
+          404,
+          'SECTION_ANNOUNCEMENT_ATTACHMENT_NOT_FOUND',
+          '해당 첨부파일을 찾을 수 없습니다.',
+        );
+      const status = access(request, attachment.sectionId);
+      if (status) return denied(status);
+      return new HttpResponse(attachment.file, {
+        headers: {
+          'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(attachment.file.name)}`,
+          'Content-Type': attachment.file.type || 'application/octet-stream',
+        },
+      });
+    },
+  ),
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ANNOUNCEMENTS.SECTION_LIST(':sectionId')}`,
     ({ params, request }) => {
@@ -102,8 +159,10 @@ export const studentNoticeHandlers = [
       const sectionId = id(params.sectionId);
       if (!sectionId) return invalid();
       // Spring parses/validates the DTO before the facade checks ownership.
-      const input = await readInput(request);
+      const payload = await readInput(request);
+      const input = payload?.input;
       if (
+        !payload ||
         !input ||
         !validText(input.title) ||
         String(input.title).length > 192 ||
@@ -122,6 +181,7 @@ export const studentNoticeHandlers = [
           input.publishedAt == null
             ? new Date().toISOString()
             : String(input.publishedAt),
+        attachments: attachmentsFrom(payload.files, sectionId),
       };
       announcements = [notice, ...announcements];
       return HttpResponse.json(notice, {
@@ -136,8 +196,10 @@ export const studentNoticeHandlers = [
       if (!getMockAuthenticatedAccount(request)) return denied(401);
       const noticeId = id(params.id);
       if (!noticeId) return invalid();
-      const input = await readInput(request);
+      const payload = await readInput(request);
+      const input = payload?.input;
       if (
+        !payload ||
         !input ||
         (input.title != null &&
           (typeof input.title !== 'string' || input.title.length > 192)) ||
@@ -158,7 +220,9 @@ export const studentNoticeHandlers = [
       if (
         input.title == null &&
         input.content == null &&
-        input.publishedAt == null
+        input.publishedAt == null &&
+        input.deleteAttachmentIds == null &&
+        payload.files.length === 0
       )
         return error(
           400,
@@ -174,10 +238,38 @@ export const studentNoticeHandlers = [
           'SECTION_ANNOUNCEMENT_INVALID_CONTENT',
           '제목과 내용은 공백일 수 없습니다.',
         );
+      if (input.deleteAttachmentIds != null) {
+        if (
+          !Array.isArray(input.deleteAttachmentIds) ||
+          input.deleteAttachmentIds.some(value => !Number.isInteger(value))
+        )
+          return invalid();
+        const deleted = new Set(input.deleteAttachmentIds);
+        const existing = notice.attachments ?? [];
+        if (
+          input.deleteAttachmentIds.some(
+            value => !existing.some(file => file.id === value),
+          )
+        )
+          return error(
+            404,
+            'SECTION_ANNOUNCEMENT_ATTACHMENT_NOT_FOUND',
+            '해당 첨부파일을 찾을 수 없습니다.',
+          );
+        notice.attachments = existing.filter(file => !deleted.has(file.id));
+        input.deleteAttachmentIds.forEach(attachmentId =>
+          uploadedAttachments.delete(attachmentId),
+        );
+      }
       if (input.title != null) notice.title = String(input.title);
       if (input.content != null) notice.content = String(input.content);
       if (input.publishedAt != null)
         notice.publishedAt = String(input.publishedAt);
+      if (payload.files.length)
+        notice.attachments = [
+          ...(notice.attachments ?? []),
+          ...attachmentsFrom(payload.files, notice.sectionId),
+        ];
       return HttpResponse.json(notice, { headers: mockCsrfResponseHeaders() });
     },
   ),

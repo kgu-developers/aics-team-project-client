@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { AdminLinkedMeetingsTable } from '~/features/admin-meeting/components';
@@ -28,6 +29,7 @@ import {
   useSubmitAdminProposalFeedbackMutation,
 } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
+import { AdminGeneralMessageDialog } from '~/features/team-message/components';
 
 import { AdminMidReportDetail } from './AdminMidReportDetail';
 import AdminProposalDocument from './AdminProposalDocument';
@@ -164,6 +166,8 @@ export default function AdminSubmissionDetailPage() {
   const [relatedMeetingsPage, setRelatedMeetingsPage] = useState(0);
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [proposalFeedbackPage, setProposalFeedbackPage] = useState(0);
+  const [isGeneralMessageDialogOpen, setIsGeneralMessageDialogOpen] =
+    useState(false);
   const currentUser = useAuthStore(state => state.currentUser);
   const { submissionId } = useParams({
     from: '/admin/submissions/$submissionId',
@@ -300,6 +304,9 @@ export default function AdminSubmissionDetailPage() {
     : isProjectProposal
       ? undefined
       : detail?.currentVersion;
+  const selectedSection = currentUser?.sections.find(
+    section => String(section.id) === normalizedSectionId,
+  );
 
   if (
     isRequestedSectionAccessible &&
@@ -316,8 +323,22 @@ export default function AdminSubmissionDetailPage() {
           version={headerVersion}
         />
         <AdminMidReportDetail
+          onOpenGeneralMessage={() => setIsGeneralMessageDialogOpen(true)}
           sectionId={normalizedApiSectionId ?? normalizedSectionId}
           teamId={normalizedTeamId}
+        />
+        <AdminGeneralMessageDialog
+          initialTeamId={normalizedTeamId}
+          description='일반 메시지는 중간 보고서 피드백과 별도로 팀의 일반 메시지 대화에 전달됩니다.'
+          isOpen={isGeneralMessageDialogOpen}
+          isTeamLocked
+          onClose={() => setIsGeneralMessageDialogOpen(false)}
+          sectionId={normalizedApiSectionId ?? normalizedSectionId}
+          sectionLabel={
+            selectedSection
+              ? formatAdminSectionLabel(selectedSection)
+              : normalizedSectionId
+          }
         />
       </div>
     );
@@ -331,6 +352,23 @@ export default function AdminSubmissionDetailPage() {
         teamName={headerTeamName}
         version={headerVersion}
       />
+      {isProposal && detail && normalizedSectionId ? (
+        <>
+          <AdminGeneralMessageDialog
+            initialTeamId={String(detail.teamId)}
+            description='일반 메시지는 제안서 피드백과 별도로 팀의 일반 메시지 대화에 전달됩니다.'
+            isOpen={isGeneralMessageDialogOpen}
+            isTeamLocked
+            onClose={() => setIsGeneralMessageDialogOpen(false)}
+            sectionId={normalizedApiSectionId ?? normalizedSectionId}
+            sectionLabel={
+              selectedSection
+                ? formatAdminSectionLabel(selectedSection)
+                : normalizedSectionId
+            }
+          />
+        </>
+      ) : null}
 
       {!isRequestedSectionAccessible ? (
         <EmptyState
@@ -590,6 +628,11 @@ export default function AdminSubmissionDetailPage() {
                     value={feedbackMessage}
                   />
                   <div className={styles.feedbackSubmitAction}>
+                    <Button
+                      label='일반 메시지 보내기'
+                      onClick={() => setIsGeneralMessageDialogOpen(true)}
+                      variant='secondary'
+                    />
                     <Button
                       isDisabled={
                         !feedbackMessage.trim() ||

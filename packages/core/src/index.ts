@@ -220,6 +220,8 @@ export * from './proposal/apiTypes';
 export { teamMessageRelatedTypes } from './teamMessage/types';
 export type {
   SubmitTeamMessageInput,
+  SubmitSectionTeamMessageInput,
+  SectionTeamMessagePersistResponse,
   TeamMessage,
   AdminMessage,
   AdminMessagePage,

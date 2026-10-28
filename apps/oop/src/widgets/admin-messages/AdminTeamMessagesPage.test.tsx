@@ -43,6 +43,25 @@ const server = setupServer(
   }),
 );
 const clients: QueryClient[] = [];
+
+function positiveId(value: unknown) {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function nonNegativePage(value: unknown) {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
+function validateMessageSearch(search: Record<string, unknown>) {
+  return {
+    page: nonNegativePage(search.page),
+    sectionId: positiveId(search.sectionId),
+    teamId: positiveId(search.teamId),
+  };
+}
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
@@ -54,7 +73,7 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderPage(sectionId = '1') {
+function renderPage(sectionId = '1', initialEntry = '/admin/messages/teams/1') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
@@ -71,12 +90,19 @@ function renderPage(sectionId = '1') {
   const child = createRoute({
     getParentRoute: () => root,
     path: '/admin/messages/teams/$teamId',
+    validateSearch: validateMessageSearch,
     component: AdminTeamMessagesPage,
   });
+  const messagesRoute = createRoute({
+    getParentRoute: () => root,
+    path: '/admin/messages/',
+    validateSearch: validateMessageSearch,
+    component: () => <div>쪽지함 목록</div>,
+  });
   const router = createRouter({
-    routeTree: root.addChildren([child]),
+    routeTree: root.addChildren([child, messagesRoute]),
     history: createMemoryHistory({
-      initialEntries: ['/admin/messages/teams/1'],
+      initialEntries: [initialEntry],
     }),
   });
   const requests: string[] = [];
@@ -94,6 +120,14 @@ function renderPage(sectionId = '1') {
 }
 const teamPath = new URL(`${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM('1')}`)
   .pathname;
+
+it('쪽지함 목록으로 돌아갈 때 열기 전의 분반·팀 필터를 유지한다', async () => {
+  renderPage('1', '/admin/messages/teams/1?sectionId=1&teamId=1&page=2');
+
+  expect(
+    await screen.findByRole('link', { name: '← 쪽지함 목록으로' }),
+  ).toHaveAttribute('href', '/admin/messages?sectionId=1&teamId=1&page=2');
+});
 
 it('uses the revision request API for mid-report feedback and preserves the draft on conflict', async () => {
   const posted: unknown[] = [];

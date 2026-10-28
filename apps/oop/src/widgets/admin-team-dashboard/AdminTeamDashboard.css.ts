@@ -2,12 +2,14 @@ import { tokens } from '@aics/design-system';
 import { globalStyle, style } from '@vanilla-extract/css';
 
 export const page = style({
+  boxSizing: 'border-box',
   display: 'flex',
   flexDirection: 'column',
   gap: 24,
   margin: '0 auto',
   maxWidth: 1240,
   padding: '28px clamp(20px, 5vw, 48px) 56px',
+  minWidth: 0,
   width: '100%',
 });
 
@@ -33,16 +35,17 @@ export const titleActions = style({
   gap: tokens.spacing[2],
 });
 
+export const tabRow = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: tokens.spacing[3],
+  justifyContent: 'space-between',
+});
+
 export const messageTab = style({
   display: 'grid',
   gap: tokens.spacing[3],
-});
-
-export const messageTabHeader = style({
-  alignItems: 'center',
-  display: 'flex',
-  gap: tokens.spacing[3],
-  justifyContent: 'space-between',
 });
 
 export const errorActions = style({

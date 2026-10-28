@@ -52,6 +52,7 @@ import {
 } from '~/features/admin-student-team/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 import { fetchSessionUser } from '~/features/auth/fetchSessionUser';
+import { AdminGeneralMessageDialog } from '~/features/team-message/components';
 
 import { AdminPreSurveyResponses } from '~/widgets/admin-profile/AdminPreSurveyResponses';
 import { formatRosterImportAppliedAt } from '~/widgets/admin-profile/formatRosterImportAppliedAt';
@@ -146,6 +147,8 @@ export default function AdminCourseDetailPage({
   const [detailSectionId, setDetailSectionId] = useState<string | undefined>(
     initialSectionId,
   );
+  const [isGeneralMessageDialogOpen, setIsGeneralMessageDialogOpen] =
+    useState(false);
 
   const sectionIds = sections.map(section => String(section.id));
   const sectionIdsKey = sectionIds.join('|');
@@ -419,31 +422,39 @@ export default function AdminCourseDetailPage({
       ) : null}
 
       {detailSection ? (
-        <TabList
-          aria-label='강좌·분반 관리 메뉴'
-          onChange={value => {
-            if (
-              value === 'basic' ||
-              value === 'students' ||
-              value === 'teams' ||
-              value === 'survey'
-            ) {
-              setActiveTab(value);
-              void navigate({
-                search: previous => ({
-                  ...previous,
-                  tab: value === 'basic' ? undefined : value,
-                }),
-              });
-            }
-          }}
-          value={activeTab}
-        >
-          <Tab label='기본 설정' value='basic' />
-          <Tab label='수강생' value='students' />
-          <Tab label='팀 구성' value='teams' />
-          <Tab label='사전 정보' value='survey' />
-        </TabList>
+        <div className={styles.tabRow}>
+          <TabList
+            aria-label='강좌·분반 관리 메뉴'
+            onChange={value => {
+              if (
+                value === 'basic' ||
+                value === 'students' ||
+                value === 'teams' ||
+                value === 'survey'
+              ) {
+                setActiveTab(value);
+                void navigate({
+                  search: previous => ({
+                    ...previous,
+                    tab: value === 'basic' ? undefined : value,
+                  }),
+                });
+              }
+            }}
+            value={activeTab}
+          >
+            <Tab label='기본 설정' value='basic' />
+            <Tab label='수강생' value='students' />
+            <Tab label='팀 구성' value='teams' />
+            <Tab label='사전 정보' value='survey' />
+          </TabList>
+          <Button
+            label='일반 메시지 보내기'
+            onClick={() => setIsGeneralMessageDialogOpen(true)}
+            size='sm'
+            variant='secondary'
+          />
+        </div>
       ) : null}
 
       {detailSection && activeTab === 'basic' ? (
@@ -563,6 +574,12 @@ export default function AdminCourseDetailPage({
           section={assistantSection}
         />
       ) : null}
+      <AdminGeneralMessageDialog
+        isOpen={isGeneralMessageDialogOpen}
+        onClose={() => setIsGeneralMessageDialogOpen(false)}
+        sectionId={String(detailSection.id)}
+        sectionLabel={formatAdminSectionLabel(detailSection)}
+      />
       <EnrollmentImportDialog
         isOpen={uploadKind === 'studentRoster' && uploadSectionId !== ''}
         onClose={closeUpload}

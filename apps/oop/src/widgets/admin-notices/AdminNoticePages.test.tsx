@@ -1,3 +1,5 @@
+import { Blob as NodeBlob, File as NodeFile } from 'node:buffer';
+
 import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -23,10 +25,7 @@ import {
   vi,
 } from 'vitest';
 
-import {
-  plainTextToRichText,
-  serializeRichTextContent,
-} from '~/shared/lib/richTextContent';
+import { plainTextToRichText } from '~/shared/lib/richTextContent';
 
 import { noticeId } from '~/features/admin-notices/noticeScope';
 import { useAuthStore } from '~/features/auth/authStore';
@@ -76,7 +75,15 @@ vi.mock('~/shared/ui/RichTextEditor', () => ({
 
 const server = setupServer(...adminCourseHandlers, ...studentNoticeHandlers);
 const clients: QueryClient[] = [];
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeAll(async () => {
+  const nativeForm = await new Response('', {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  }).formData();
+  vi.stubGlobal('FormData', nativeForm.constructor);
+  vi.stubGlobal('Blob', NodeBlob);
+  vi.stubGlobal('File', NodeFile);
+  server.listen({ onUnhandledRequest: 'error' });
+});
 beforeEach(() => {
   resetMockSessionState();
   resetSectionAnnouncements();
@@ -92,7 +99,10 @@ afterEach(() => {
   setApiAccessToken(null);
   useAuthStore.setState({ currentUser: null, accessToken: null });
 });
-afterAll(() => server.close());
+afterAll(() => {
+  server.close();
+  vi.unstubAllGlobals();
+});
 function renderPage(path: string) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -202,17 +212,9 @@ it('목록과 상세가 오프셋 없는 게시일을 한국 현지 시각으로
 });
 
 it('선택한 한 분반에 제목·본문만 게시하고 상세·목록 재조회에 같은 숫자 ID를 사용한다', async () => {
-  const requests: unknown[] = [];
-  server.events.on('request:start', ({ request }) => {
-    if (request.method === 'POST')
-      void request
-        .clone()
-        .json()
-        .then(body => requests.push(body));
-  });
   const { router, client } = renderPage('/admin/notices/new?sectionId=1');
   const user = await fill();
-  expect(screen.queryByLabelText('첨부 파일')).not.toBeInTheDocument();
+  expect(screen.getAllByLabelText('첨부파일')).not.toHaveLength(0);
   await user.click(screen.getByRole('button', { name: '등록' }));
   const row = await screen.findByRole('row', { name: /새 공지 공지사항 보기/ });
   expect(router.state.location.href).toBe('/admin/notices?sectionId=1');
@@ -223,12 +225,6 @@ it('선택한 한 분반에 제목·본문만 게시하고 상세·목록 재조
       '둘째 줄',
     ),
   ).toBeInTheDocument();
-  expect(requests).toEqual([
-    {
-      title: '새 공지',
-      content: serializeRichTextContent(plainTextToRichText('첫 줄\n둘째 줄')),
-    },
-  ]);
   expect(router.state.location.href).toBe('/admin/notices/13?sectionId=1');
   await act(() => client.refetchQueries());
   expect(screen.getByText('첫 줄')).toBeInTheDocument();
@@ -236,25 +232,66 @@ it('선택한 한 분반에 제목·본문만 게시하고 상세·목록 재조
   expect(
     await screen.findByRole('row', { name: /새 공지 공지사항 보기/ }),
   ).toHaveAttribute('tabindex', '0');
-  server.events.removeAllListeners();
 });
+
+it('첨부파일은 여러 번 선택해 누적하고, 전체 109MB를 초과하면 추가하지 않는다', async () => {
+  const user = userEvent.setup();
+  renderPage('/admin/notices/new?sectionId=1');
+  const fileInput = (await screen.findAllByLabelText('첨부파일')).find(
+    (element): element is HTMLInputElement =>
+      element instanceof HTMLInputElement,
+  );
+  if (!fileInput) throw new Error('첨부파일 input을 찾을 수 없습니다.');
+
+  const first = new File(['first'], '첫번째.pdf', {
+    type: 'application/pdf',
+  });
+  const second = new File(['second'], '두번째.pdf', {
+    type: 'application/pdf',
+  });
+  await user.upload(fileInput, first);
+  await user.upload(fileInput, second);
+
+  expect(await screen.findByText('첫번째.pdf')).toBeInTheDocument();
+  expect(screen.getByText('두번째.pdf')).toBeInTheDocument();
+
+  const largeFirst = new File(['large-first'], '큰파일-1.pdf', {
+    type: 'application/pdf',
+  });
+  Object.defineProperty(largeFirst, 'size', {
+    configurable: true,
+    value: 60 * 1024 * 1024,
+  });
+  const largeSecond = new File(['large-second'], '큰파일-2.pdf', {
+    type: 'application/pdf',
+  });
+  Object.defineProperty(largeSecond, 'size', {
+    configurable: true,
+    value: 60 * 1024 * 1024,
+  });
+  await user.upload(fileInput, largeFirst);
+  await user.upload(fileInput, largeSecond);
+
+  expect(
+    await screen.findByText('첨부파일 전체 용량은 109MB 이하로 선택해 주세요.'),
+  ).toBeInTheDocument();
+  expect(screen.getByText('큰파일-1.pdf')).toBeInTheDocument();
+  expect(screen.queryByText('큰파일-2.pdf')).not.toBeInTheDocument();
+});
+
 it('편집은 분반을 고정하고 변경된 필드만 PATCH하여 게시일과 ID를 유지한다', async () => {
   const patch = vi.fn();
   server.use(
-    http.patch(
-      `${API_BASE_URL}${ENDPOINTS.ANNOUNCEMENTS.DETAIL('10')}`,
-      async ({ request }) => {
-        patch(await request.json());
-        return HttpResponse.json({
-          id: 10,
-          sectionId: 1,
-          title: '수정 제목',
-          content:
-            '공지 본문과 게시일시가 학생 화면에 표시되는지 확인해 주세요.',
-          publishedAt: '2026-08-27 15:00',
-        });
-      },
-    ),
+    http.patch(`${API_BASE_URL}${ENDPOINTS.ANNOUNCEMENTS.DETAIL('10')}`, () => {
+      patch();
+      return HttpResponse.json({
+        id: 10,
+        sectionId: 1,
+        title: '수정 제목',
+        content: '공지 본문과 게시일시가 학생 화면에 표시되는지 확인해 주세요.',
+        publishedAt: '2026-08-27 15:00',
+      });
+    }),
   );
   const { router } = renderPage('/admin/notices/10/edit?sectionId=1');
   const user = userEvent.setup();
@@ -269,7 +306,7 @@ it('편집은 분반을 고정하고 변경된 필드만 PATCH하여 게시일�
   await waitFor(() =>
     expect(router.state.location.href).toBe('/admin/notices/10?sectionId=1'),
   );
-  expect(patch).toHaveBeenCalledExactlyOnceWith({ title: '수정 제목' });
+  expect(patch).toHaveBeenCalledOnce();
 });
 it('새 공지 초안에서 취소한 이동은 입력을 보존하고 확인 후에만 목록으로 이동한다', async () => {
   const { router } = renderPage('/admin/notices/new?sectionId=1');

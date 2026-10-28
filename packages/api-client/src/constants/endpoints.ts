@@ -207,6 +207,7 @@ export const ENDPOINTS = {
   },
   TEAM_MESSAGE: {
     BY_TEAM: (teamId: string) => `/api/v1/teams/${teamId}/messages`,
+    BY_SECTION: (sectionId: string) => `/api/v1/sections/${sectionId}/messages`,
     UNREAD_COUNT: (teamId: string) =>
       `/api/v1/teams/${teamId}/unread-message-count`,
     IMPORTANT: (messageId: string | number) =>

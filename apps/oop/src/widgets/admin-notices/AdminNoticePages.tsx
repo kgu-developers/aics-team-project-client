@@ -4,6 +4,7 @@ import {
   Card,
   Dialog,
   EmptyState,
+  FileInput,
   Heading,
   HStack,
   MultiSelector,
@@ -20,8 +21,10 @@ import {
   useSearch,
 } from '@tanstack/react-router';
 import {
+  type Dispatch,
   type KeyboardEvent,
   type MutableRefObject,
+  type SetStateAction,
   useRef,
   useState,
 } from 'react';
@@ -60,6 +63,11 @@ import { useAuthStore } from '~/features/auth/authStore';
 import * as styles from './AdminNoticePages.css';
 
 const noticePageSize = 8;
+const announcementMaxFileSize = 100 * 1024 * 1024;
+// The server's multipart request cap is 110MB. Leave room for the multipart
+// boundary and the JSON request part so a client-accepted upload is not
+// rejected by the server at exactly the limit.
+const announcementMaxTotalFileSize = 109 * 1024 * 1024;
 
 function useNoticeScope() {
   const { sectionId } = useSearch({ from: '/admin/notices' });
@@ -342,6 +350,27 @@ export function AdminNoticeDetailPage() {
         <section aria-label='공지 내용'>
           <RichTextViewer content={parseRichTextContent(notice.content)} />
         </section>
+        {notice.attachments?.length ? (
+          <section aria-labelledby='admin-notice-attachments'>
+            <Heading level={3} id='admin-notice-attachments'>
+              첨부파일
+            </Heading>
+            <ul className={styles.attachmentList}>
+              {notice.attachments.map(attachment => (
+                <li className={styles.attachmentItem} key={attachment.id}>
+                  <Text weight='medium'>{attachment.fileName}</Text>
+                  <a
+                    className={styles.downloadLink}
+                    download={attachment.fileName}
+                    href={attachment.downloadUrl}
+                  >
+                    다운로드
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         <div className={styles.actions}>
           <Button
             label='수정'
@@ -363,14 +392,22 @@ export function AdminNoticeDetailPage() {
 function NoticeFields({
   title,
   content,
+  files,
+  fileError,
   setTitle,
   setContent,
+  setFileError,
+  setFiles,
   pending,
 }: {
   title: string;
   content: RichTextJson;
+  files: File[];
+  fileError?: string;
   setTitle: (value: string) => void;
   setContent: (value: RichTextJson) => void;
+  setFileError: (value: string | undefined) => void;
+  setFiles: Dispatch<SetStateAction<File[]>>;
   pending: boolean;
 }) {
   return (
@@ -390,6 +427,75 @@ function NoticeFields({
         label='내용'
         onChange={setContent}
       />
+      <FileInput
+        description='여러 번 선택하면 아래 목록에 파일이 추가됩니다. 모든 파일 형식 · 파일 1개 최대 100MB · 전체 최대 109MB'
+        isDisabled={pending}
+        isMultiple
+        label='첨부파일'
+        maxSize={announcementMaxFileSize}
+        mode='dropzone'
+        onChange={selected => {
+          const selectedFiles = Array.isArray(selected)
+            ? selected
+            : selected
+              ? [selected]
+              : [];
+          const nextFiles = [
+            ...files,
+            ...selectedFiles.filter(
+              selectedFile =>
+                !files.some(
+                  file =>
+                    file.name === selectedFile.name &&
+                    file.size === selectedFile.size &&
+                    file.lastModified === selectedFile.lastModified,
+                ),
+            ),
+          ];
+          const totalSize = nextFiles.reduce(
+            (total, file) => total + file.size,
+            0,
+          );
+          if (totalSize > announcementMaxTotalFileSize) {
+            setFileError('첨부파일 전체 용량은 109MB 이하로 선택해 주세요.');
+            return;
+          }
+          setFileError(undefined);
+          setFiles(nextFiles);
+        }}
+        placeholder='파일을 추가하려면 누르거나 끌어 놓으세요.'
+        status={fileError ? { message: fileError, type: 'error' } : undefined}
+        value={null}
+        width='100%'
+      />
+      {files.length ? (
+        <section aria-labelledby='selected-notice-attachments'>
+          <Heading level={3} id='selected-notice-attachments'>
+            선택한 첨부파일
+          </Heading>
+          <ul className={styles.attachmentList}>
+            {files.map(file => (
+              <li
+                className={styles.attachmentItem}
+                key={`${file.name}-${file.size}-${file.lastModified}`}
+              >
+                <Text>{file.name}</Text>
+                <Button
+                  aria-label={`${file.name} 삭제`}
+                  isDisabled={pending}
+                  label='삭제'
+                  onClick={() =>
+                    setFiles(current =>
+                      current.filter(candidate => candidate !== file),
+                    )
+                  }
+                  variant='secondary'
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </>
   );
 }
@@ -454,6 +560,9 @@ function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
   const [content, setContent] = useState(() =>
     parseRichTextContent(notice.content),
   );
+  const [files, setFiles] = useState<File[]>([]);
+  const [fileError, setFileError] = useState<string>();
+  const [deleteAttachmentIds, setDeleteAttachmentIds] = useState<number[]>([]);
   const mutation = useUpdateSectionAnnouncementMutation();
   const allowNavigation = useRef(false);
   const serializedContent = serializeRichTextContent(content);
@@ -463,6 +572,8 @@ function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
     serializeRichTextContent(parseRichTextContent(notice.content))
       ? { content: serializedContent }
       : {}),
+    ...(files.length ? { files } : {}),
+    ...(deleteAttachmentIds.length ? { deleteAttachmentIds } : {}),
   };
   const canSave =
     canPublishNotice(user, section) &&
@@ -487,11 +598,44 @@ function EditNoticeForm({ notice }: { notice: SectionAnnouncementResponse }) {
         <NoticeFields
           title={title}
           content={content}
+          fileError={fileError}
           setTitle={setTitle}
           setContent={setContent}
+          setFileError={setFileError}
+          files={files}
+          setFiles={setFiles}
           pending={mutation.isPending}
         />
       </div>
+      {notice.attachments?.length ? (
+        <section aria-labelledby='edit-notice-attachments'>
+          <Heading level={3} id='edit-notice-attachments'>
+            기존 첨부파일
+          </Heading>
+          <ul className={styles.attachmentList}>
+            {notice.attachments
+              .filter(
+                attachment => !deleteAttachmentIds.includes(attachment.id),
+              )
+              .map(attachment => (
+                <li className={styles.attachmentItem} key={attachment.id}>
+                  <Text>{attachment.fileName}</Text>
+                  <Button
+                    isDisabled={mutation.isPending}
+                    label='삭제'
+                    onClick={() =>
+                      setDeleteAttachmentIds(current => [
+                        ...current,
+                        attachment.id,
+                      ])
+                    }
+                    variant='secondary'
+                  />
+                </li>
+              ))}
+          </ul>
+        </section>
+      ) : null}
       {mutation.isError ? (
         <Text role='alert'>
           저장하지 못했습니다. 입력 내용을 유지했으니 권한과 저장 상태를 확인해
@@ -557,6 +701,8 @@ export function AdminNoticeNewPage() {
   const { sectionId, user } = useNoticeScope();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState<RichTextJson>(emptyRichText);
+  const [files, setFiles] = useState<File[]>([]);
+  const [fileError, setFileError] = useState<string>();
   const [selectedSectionIds, setSelectedSectionIds] = useState<string[]>(
     sectionId === undefined ? [] : [String(sectionId)],
   );
@@ -575,6 +721,7 @@ export function AdminNoticeNewPage() {
     title !== '' ||
     serializeRichTextContent(content) !==
       serializeRichTextContent(emptyRichText) ||
+    files.length > 0 ||
     JSON.stringify(selectedSectionIds) !== JSON.stringify(initialSectionIds);
   return (
     <div className={styles.page}>
@@ -608,8 +755,12 @@ export function AdminNoticeNewPage() {
           <NoticeFields
             title={title}
             content={content}
+            fileError={fileError}
             setTitle={setTitle}
             setContent={setContent}
+            setFileError={setFileError}
+            files={files}
+            setFiles={setFiles}
             pending={mutation.isPending}
           />
         </div>
@@ -655,6 +806,7 @@ export function AdminNoticeNewPage() {
                   sectionIds,
                   title: title.trim(),
                   content: serializeRichTextContent(content),
+                  files,
                 },
                 {
                   onSuccess: result => {

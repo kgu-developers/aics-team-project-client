@@ -10,9 +10,11 @@ import {
   Text,
 } from '@aics/design-system';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
+
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
 import {
@@ -23,6 +25,7 @@ import { useAdminSectionMeetingActionsQuery } from '~/features/admin-meeting/que
 import AdminSectionTeamFilter, {
   ALL_TEAMS,
 } from '~/features/admin-section/components/AdminSectionTeamFilter';
+import { AdminGeneralMessageDialog } from '~/features/team-message/components';
 
 import * as styles from './AdminMeetingActionsPage.css';
 
@@ -45,6 +48,8 @@ function toStatusFilter(
 
 export default function AdminMeetingActionsPage() {
   const navigate = useNavigate();
+  const [isGeneralMessageDialogOpen, setIsGeneralMessageDialogOpen] =
+    useState(false);
   const search = useSearch({ from: '/admin/meeting-actions' }) as {
     page?: number;
     sectionId?: number | string;
@@ -61,6 +66,9 @@ export default function AdminMeetingActionsPage() {
   const selectedSectionId = isRequestedSectionAvailable
     ? requestedSectionId
     : sections[0]?.id;
+  const selectedSection = sections.find(
+    section => section.id === selectedSectionId,
+  );
   const selectedTeamId =
     isRequestedSectionAvailable && search.teamId !== undefined
       ? String(search.teamId)
@@ -173,11 +181,20 @@ export default function AdminMeetingActionsPage() {
       <div className={styles.titleArea}>
         <Heading level={1}>액션플랜</Heading>
       </div>
-      <AdminTeamActivityTabs
-        activeView='actions'
-        sectionId={selectedSectionId}
-        teamId={selectedTeamId || undefined}
-      />
+      <div className={styles.activityTabsRow}>
+        <AdminTeamActivityTabs
+          activeView='actions'
+          sectionId={selectedSectionId}
+          teamId={selectedTeamId || undefined}
+        />
+        <Button
+          isDisabled={!selectedSection}
+          label='일반 메시지 보내기'
+          onClick={() => setIsGeneralMessageDialogOpen(true)}
+          size='sm'
+          variant='secondary'
+        />
+      </div>
       <AdminSectionTeamFilter
         allowAllSections={false}
         label='액션플랜 필터'
@@ -242,6 +259,14 @@ export default function AdminMeetingActionsPage() {
           pageSize={pagination.size}
           totalPages={pagination.totalPages}
           variant='compact'
+        />
+      ) : null}
+      {selectedSectionId && selectedSection ? (
+        <AdminGeneralMessageDialog
+          isOpen={isGeneralMessageDialogOpen}
+          onClose={() => setIsGeneralMessageDialogOpen(false)}
+          sectionId={selectedSectionId}
+          sectionLabel={formatAdminSectionLabel(selectedSection)}
         />
       ) : null}
     </div>

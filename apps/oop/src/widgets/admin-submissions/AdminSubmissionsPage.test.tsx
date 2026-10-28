@@ -29,6 +29,7 @@ import AdminSubmissionDetailPage from './AdminSubmissionDetailPage';
 import AdminSubmissionsPage from './AdminSubmissionsPage';
 
 import { resetMockSessionState } from '~/mocks/authSession';
+import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
 import {
   adminPeerEvaluationListFixture,
   adminPresentationEvaluationListFixture,
@@ -76,7 +77,11 @@ const server = setupServer(
 );
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-beforeEach(() => resetMockSessionState());
+beforeEach(() => {
+  resetAdminCoursesMockData();
+  sessionStorage.clear();
+  resetMockSessionState();
+});
 afterEach(() => {
   resetAdminMilestoneSubmissionsFixture();
   resetAdminMidReportScenario();
@@ -137,6 +142,22 @@ function renderPage(
 }
 
 describe('AdminSubmissionsPage', () => {
+  it('세션 동안 마지막으로 선택한 분반과 단계를 복원한다', async () => {
+    sessionStorage.setItem(
+      'aics.oop.admin.submissions-selection',
+      JSON.stringify({ milestoneId: 'midterm', sectionId: '1' }),
+    );
+
+    renderPage('/admin/submissions');
+
+    expect(
+      await screen.findByRole('tab', { name: '중간 보고서' }),
+    ).toHaveAttribute('aria-selected', 'true');
+    expect(
+      await screen.findByRole('combobox', { name: '조회할 분반' }),
+    ).toHaveTextContent('OOP-01 · 월요일 1-2교시');
+  });
+
   it('일반 제출물과 상호평가 목록을 팀명순으로 표시한다', async () => {
     const user = userEvent.setup();
     const proposalSubmissions = getAdminMilestoneSubmissionsFixture('101')!;
@@ -204,6 +225,75 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.queryByRole('button', { name: '산출물 현황 다운로드' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('현재 분반과 마일스톤 탭을 유지한 채 일반 메시지를 보낸다', async () => {
+    const posted: unknown[] = [];
+    const user = userEvent.setup();
+
+    server.use(
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('1')}`,
+        async ({ request }) => {
+          posted.push(await request.json());
+          return HttpResponse.json({
+            createdAt: '2026-10-12T04:00:00Z',
+            id: 99,
+            message: '팀 상담 일정을 확인해 주세요.',
+            relatedType: 'GENERAL',
+            senderId: demoAdmin.studentNumber,
+            senderName: demoAdmin.name,
+            threadId: 1,
+          });
+        },
+      ),
+    );
+    renderPage('/admin/submissions?milestoneId=midterm&sectionId=1');
+
+    const composeButton = await screen.findByRole('button', {
+      name: '일반 메시지 보내기',
+    });
+    await waitFor(() => expect(composeButton).toBeEnabled());
+    await user.click(composeButton);
+    const panel = screen.getByRole('complementary', {
+      name: '일반 메시지 작성 패널',
+    });
+
+    expect(
+      within(panel).getByRole('combobox', { name: '분반' }),
+    ).toHaveTextContent('OOP-01 · 월요일 1-2교시');
+    expect(screen.getByRole('tab', { name: '중간 보고서' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+
+    await user.click(within(panel).getByRole('combobox', { name: '팀' }));
+    await user.click(await screen.findByRole('option', { name: '1팀' }));
+    await user.type(
+      within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
+      '팀 상담 일정을 확인해 주세요.',
+    );
+    await user.click(within(panel).getByRole('button', { name: '보내기' }));
+
+    expect(
+      await within(panel).findByText(
+        '일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.',
+      ),
+    ).toBeVisible();
+    expect(panel).toBeInTheDocument();
+
+    await waitFor(() =>
+      expect(posted).toEqual([
+        {
+          message: '팀 상담 일정을 확인해 주세요.',
+          relatedType: 'GENERAL',
+        },
+      ]),
+    );
+    expect(screen.getByRole('tab', { name: '중간 보고서' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 
   it('운영 분반 조회 실패를 제출물 접근 거부로 표시하지 않는다', async () => {
@@ -373,16 +463,10 @@ describe('AdminSubmissionsPage', () => {
     expect(screen.getByText('프로젝트 주제: -')).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: '팀 전체 회의록 2건' }),
-    ).toHaveAttribute(
-      'href',
-      '/admin/meetings?sectionId=%221%22&teamId=%221%22',
-    );
+    ).toHaveAttribute('href', '/admin/meetings?sectionId=1&teamId=1');
     expect(
       screen.getByRole('link', { name: '팀 전체 회의록 1건' }),
-    ).toHaveAttribute(
-      'href',
-      '/admin/meetings?sectionId=%221%22&teamId=%222%22',
-    );
+    ).toHaveAttribute('href', '/admin/meetings?sectionId=1&teamId=2');
   });
 
   it('팀 전체 회의록 수가 0건이면 빈 회의록 목록으로 이동시키지 않는다', async () => {

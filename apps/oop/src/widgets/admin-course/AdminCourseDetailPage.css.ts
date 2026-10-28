@@ -30,6 +30,14 @@ export const sectionSelector = style({
   width: '100%',
 });
 
+export const tabRow = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: tokens.spacing[3],
+  justifyContent: 'space-between',
+});
+
 export const summaryCard = style({
   display: 'flex',
   flexDirection: 'column',

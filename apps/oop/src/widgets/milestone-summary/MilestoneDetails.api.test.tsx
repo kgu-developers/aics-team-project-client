@@ -116,7 +116,7 @@ describe('existing proposal feedback form with team messages', () => {
   });
 
   it.each([undefined, null, '   '])(
-    '이름이 %s이면 식별자를 유지하고 답변할 수 있다',
+    '이름이 %s이면 담당 교수자로 표시하고 답변할 수 있다',
     async senderName => {
       server.use(
         http.get(`${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`, () =>
@@ -141,10 +141,11 @@ describe('existing proposal feedback form with team messages', () => {
       );
       renderFeedback();
       expect(
-        await screen.findByText(
-          `${demoStudent.studentNumber} (2026-09-01/10:10)`,
-        ),
+        await screen.findByText('담당 교수자 (2026-09-01/10:10)'),
       ).toBeInTheDocument();
+      expect(
+        screen.queryByText(`${demoStudent.studentNumber} (2026-09-01/10:10)`),
+      ).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: '답변 보내기' })).toBeEnabled();
     },
   );

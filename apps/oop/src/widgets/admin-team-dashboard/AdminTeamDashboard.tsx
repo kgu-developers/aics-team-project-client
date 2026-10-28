@@ -9,11 +9,13 @@ import {
   Table,
   Text,
 } from '@aics/design-system';
-import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import { Link, useParams } from '@tanstack/react-router';
 import { isAxiosError } from 'axios';
 import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
+
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 
 import {
   AdminMeetingActionTable,
@@ -35,6 +37,7 @@ import {
   useAdminTeamMilestoneSubmissionsQueries,
 } from '~/features/admin-team-dashboard/queries';
 import { useAuthStore } from '~/features/auth/authStore';
+import { AdminGeneralMessageDialog } from '~/features/team-message/components';
 
 import * as styles from './AdminTeamDashboard.css';
 import AdminTeamEvaluationTables from './AdminTeamEvaluationTables';
@@ -102,8 +105,9 @@ function getTeamStatusLabel(status: string) {
 
 export default function AdminTeamDashboard() {
   const { teamId } = useParams({ from: '/admin/teams/$teamId' });
-  const navigate = useNavigate();
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [isGeneralMessageDialogOpen, setIsGeneralMessageDialogOpen] =
+    useState(false);
   const [activeTab, setActiveTab] = useState<
     'activity' | 'messages' | 'overview' | 'submissions'
   >('overview');
@@ -319,25 +323,33 @@ export default function AdminTeamDashboard() {
         </div>
       </div>
 
-      <TabList
-        aria-label='팀 대시보드 메뉴'
-        onChange={value => {
-          if (
-            value === 'activity' ||
-            value === 'messages' ||
-            value === 'overview' ||
-            value === 'submissions'
-          ) {
-            setActiveTab(value);
-          }
-        }}
-        value={activeTab}
-      >
-        <Tab label='개요' value='overview' />
-        <Tab label='제출·평가' value='submissions' />
-        <Tab label='회의록·액션플랜' value='activity' />
-        <Tab label='쪽지함' value='messages' />
-      </TabList>
+      <div className={styles.tabRow}>
+        <TabList
+          aria-label='팀 대시보드 메뉴'
+          onChange={value => {
+            if (
+              value === 'activity' ||
+              value === 'messages' ||
+              value === 'overview' ||
+              value === 'submissions'
+            ) {
+              setActiveTab(value);
+            }
+          }}
+          value={activeTab}
+        >
+          <Tab label='개요' value='overview' />
+          <Tab label='제출·평가' value='submissions' />
+          <Tab label='회의록·액션플랜' value='activity' />
+          <Tab label='쪽지함' value='messages' />
+        </TabList>
+        <Button
+          label='일반 메시지 보내기'
+          onClick={() => setIsGeneralMessageDialogOpen(true)}
+          size='sm'
+          variant='secondary'
+        />
+      </div>
 
       {activeTab === 'overview' ? (
         <>
@@ -490,19 +502,7 @@ export default function AdminTeamDashboard() {
 
       {activeTab === 'messages' ? (
         <section className={styles.messageTab}>
-          <div className={styles.messageTabHeader}>
-            <Heading level={2}>쪽지함</Heading>
-            <Button
-              label='일반 메시지 보내기'
-              onClick={() =>
-                void navigate({
-                  params: { teamId: String(team.id) },
-                  search: { type: 'GENERAL' },
-                  to: ROUTES.ADMIN_MESSAGE_TEAM,
-                })
-              }
-            />
-          </div>
+          <Heading level={2}>쪽지함</Heading>
           <AdminTeamMessageList team={team} />
         </section>
       ) : null}
@@ -511,6 +511,18 @@ export default function AdminTeamDashboard() {
         major={selectedMember?.major}
         onClose={() => setSelectedMemberId(null)}
         studentNumber={selectedMember?.studentNumber ?? null}
+      />
+      <AdminGeneralMessageDialog
+        initialTeamId={String(team.id)}
+        isOpen={isGeneralMessageDialogOpen}
+        isTeamLocked
+        onClose={() => setIsGeneralMessageDialogOpen(false)}
+        sectionId={String(team.sectionId)}
+        sectionLabel={
+          dashboardSection
+            ? formatAdminSectionLabel(dashboardSection)
+            : sectionCode
+        }
       />
     </div>
   );

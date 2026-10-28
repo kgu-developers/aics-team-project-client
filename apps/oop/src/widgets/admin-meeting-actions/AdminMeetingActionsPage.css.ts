@@ -16,6 +16,14 @@ export const titleArea = style({
   gap: tokens.spacing[2],
 });
 
+export const activityTabsRow = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: tokens.spacing[3],
+  justifyContent: 'space-between',
+});
+
 export const tableCard = style({
   minWidth: 0,
   padding: tokens.spacing[4],

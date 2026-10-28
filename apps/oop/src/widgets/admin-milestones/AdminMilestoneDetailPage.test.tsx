@@ -72,7 +72,7 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderPage(milestoneId: string) {
+function renderPage(milestoneId: string, milestoneType?: string) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -91,6 +91,10 @@ function renderPage(milestoneId: string) {
     getParentRoute: () => root,
     path: '/admin/milestones/$milestoneId',
     validateSearch: (search: Record<string, unknown>) => ({
+      milestoneType:
+        typeof search.milestoneType === 'string'
+          ? search.milestoneType
+          : undefined,
       sectionId: search.sectionId ? String(search.sectionId) : undefined,
     }),
   });
@@ -101,7 +105,11 @@ function renderPage(milestoneId: string) {
   });
   const router = createRouter({
     history: createMemoryHistory({
-      initialEntries: [`/admin/milestones/${milestoneId}?sectionId=1`],
+      initialEntries: [
+        `/admin/milestones/${milestoneId}?sectionId=1${
+          milestoneType ? `&milestoneType=${milestoneType}` : ''
+        }`,
+      ],
     }),
     routeTree: root.addChildren([listRoute, route]),
   });
@@ -112,9 +120,25 @@ function renderPage(milestoneId: string) {
       </QueryClientProvider>
     </AstryxThemeProvider>,
   );
+  return router;
 }
 
 describe('AdminMilestoneDetailPage 발표 평가 안내', () => {
+  it('목록으로 돌아갈 때 진입 시의 분반과 유형 필터를 유지한다', async () => {
+    const user = userEvent.setup();
+    const router = renderPage('101', 'PROPOSAL');
+
+    await user.click(
+      await screen.findByRole('link', { name: '← 마일스톤 목록으로' }),
+    );
+
+    expect(router.state.location.pathname).toBe('/admin/milestones');
+    expect(router.state.location.search).toMatchObject({
+      milestoneType: 'PROPOSAL',
+      sectionId: '1',
+    });
+  });
+
   it('상호평가는 필수 산출물 대신 학생 상호평가 문항 미리보기를 보여준다', async () => {
     renderPage('105');
 

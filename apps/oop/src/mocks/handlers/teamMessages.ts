@@ -1,6 +1,7 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import {
   teamMessageRelatedTypes,
+  type SubmitSectionTeamMessageInput,
   type SubmitTeamMessageInput,
   type TeamMessage,
   type TeamMessagePersistResponse,
@@ -134,6 +135,33 @@ export function createTeamMessageHandlers(
       persistData();
     }
     return thread;
+  }
+
+  function guardSectionBroadcast(request: Request, sectionId: string) {
+    refreshPersistedData();
+    const userId = authenticatedUserId(request);
+    const account = getMockAuthenticatedAccount(request);
+    if (!userId || !account)
+      return { response: new HttpResponse(null, { status: 401 }) };
+    if (!/^\d+$/.test(sectionId) || !isId(Number(sectionId))) {
+      return { response: error(400, 'INVALID_REQUEST') };
+    }
+    const section = getMockMySections(
+      account.credentials.studentNumber,
+      {},
+    ).find(item => isAccessibleSection(item.id, sectionId));
+    const teams = data.teams.filter(team =>
+      isAccessibleSection(sectionId, team.sectionId),
+    );
+    const isProfessor =
+      account.user.sections.some(
+        item =>
+          isAccessibleSection(item.id, sectionId) && item.role === 'PROFESSOR',
+      ) || teams.some(team => team.professorId === userId);
+    if (!section || !isProfessor) {
+      return { response: error(403, 'ACCESS_DENIED') };
+    }
+    return { teams, userId };
   }
 
   function guardMessage(request: Request, messageId: string) {
@@ -288,6 +316,45 @@ export function createTeamMessageHandlers(
             isEnd: page + 1 >= totalPages,
           },
         });
+      },
+    ),
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_SECTION(':sectionId')}`,
+      async ({ params, request }) => {
+        const access = guardSectionBroadcast(request, String(params.sectionId));
+        if ('response' in access) return access.response;
+        let input: SubmitSectionTeamMessageInput;
+        try {
+          input = (await request.json()) as SubmitSectionTeamMessageInput;
+        } catch {
+          return error(400, 'INVALID_REQUEST');
+        }
+        if (
+          !input ||
+          typeof input.message !== 'string' ||
+          !input.message.trim()
+        ) {
+          return error(400, 'INVALID_REQUEST');
+        }
+        for (const team of access.teams) {
+          const thread = getOrCreateThread(team.id);
+          data.messages.push({
+            id: data.nextMessageId++,
+            threadId: thread.threadId,
+            senderId: access.userId,
+            senderName: teamMessageSenderNames[access.userId] ?? '담당 교수자',
+            relatedType: 'GENERAL',
+            message: input.message,
+            important: false,
+            read: false,
+            createdAt: now(),
+          });
+        }
+        persistData();
+        return HttpResponse.json(
+          { sentCount: access.teams.length },
+          { status: 201 },
+        );
       },
     ),
     http.post(

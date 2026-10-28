@@ -202,6 +202,18 @@ it('교수자에게 받은 모든 팀 메시지만 테이블에 최신순으로 
   expect(screen.queryByLabelText('답장 내용')).toBeNull();
 });
 
+it('교수자 이름이 누락돼도 학번 대신 역할명을 표시한다', async () => {
+  messages[0] = {
+    ...messages[0]!,
+    senderId: '999999999',
+    senderName: undefined,
+  };
+  renderPage();
+
+  expect(await screen.findByText('담당 교수자')).toBeVisible();
+  expect(screen.queryByText('999999999')).not.toBeInTheDocument();
+});
+
 it('조회된 교수자 메시지를 열어 기존 대화를 확인하고 같은 대상으로만 답장한다', async () => {
   const user = userEvent.setup();
   renderPage();

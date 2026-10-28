@@ -58,6 +58,10 @@ function belongsToConversation(message: TeamMessage, selected: TeamMessage) {
     : message.relatedId === selected.relatedId;
 }
 
+function getSenderDisplayName(message: TeamMessage) {
+  return message.senderName?.trim() || '담당 교수자';
+}
+
 export default function StudentMessagesPage() {
   const isDemo = isMockDevelopmentMode(
     import.meta.env.DEV,
@@ -276,7 +280,7 @@ export default function StudentMessagesPage() {
                       variant={message.read ? 'neutral' : 'info'}
                     />
                   </td>
-                  <td>{message.senderName ?? message.senderId}</td>
+                  <td>{getSenderDisplayName(message)}</td>
                   <td>{message.message}</td>
                   <td>{formatSeoulDateTime(message.createdAt)}</td>
                   <td>
@@ -310,8 +314,8 @@ export default function StudentMessagesPage() {
                 {relatedTypeLabels[selectedMessage.relatedType]}
               </Heading>
               <Text color='secondary'>
-                {selectedMessage.senderName ?? selectedMessage.senderId}에게
-                받은 메시지에 답장합니다.
+                {getSenderDisplayName(selectedMessage)}에게 받은 메시지에
+                답장합니다.
               </Text>
             </header>
 
@@ -339,10 +343,8 @@ export default function StudentMessagesPage() {
                     key={message.id}
                   >
                     <Text className={styles.messageMeta} type='supporting'>
-                      {isOwnMessage
-                        ? '나'
-                        : (message.senderName ?? message.senderId)}{' '}
-                      · {formatSeoulDateTime(message.createdAt)}
+                      {isOwnMessage ? '나' : getSenderDisplayName(message)} ·{' '}
+                      {formatSeoulDateTime(message.createdAt)}
                     </Text>
                     <Text>{message.message}</Text>
                   </div>

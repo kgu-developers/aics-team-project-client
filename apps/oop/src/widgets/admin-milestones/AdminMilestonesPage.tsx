@@ -1,3 +1,4 @@
+import type { AdminMilestoneType } from '@aics/api-client';
 import {
   Button,
   Card,
@@ -5,6 +6,8 @@ import {
   Heading,
   Selector,
   SelectorOption,
+  Tab,
+  TabList,
   Text,
 } from '@aics/design-system';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
@@ -30,12 +33,41 @@ import AdminSectionTeamFilter from '~/features/admin-section/components/AdminSec
 import * as styles from './AdminMilestonesPage.css';
 
 const allSectionsValue = 'all';
+const allMilestoneTypesValue = 'all';
 const milestonePageSize = 8;
+
+const filterableMilestoneTypes = [
+  'PROPOSAL',
+  'MID_REPORT',
+  'PRESENTATION',
+  'FINAL_REPORT',
+  'PEER_EVALUATION',
+] as const satisfies readonly AdminMilestoneType[];
+
+const milestoneTypeTabs = [
+  { label: '전체', value: allMilestoneTypesValue },
+  { label: '제안서', value: 'PROPOSAL' },
+  { label: '중간 보고서', value: 'MID_REPORT' },
+  { label: '발표', value: 'PRESENTATION' },
+  { label: '최종 보고서', value: 'FINAL_REPORT' },
+  { label: '상호 평가', value: 'PEER_EVALUATION' },
+] as const satisfies readonly {
+  label: string;
+  value: AdminMilestoneType | typeof allMilestoneTypesValue;
+}[];
 
 type StatusUpdateError = {
   key: string;
   message: string;
 };
+
+function isFilterableMilestoneType(
+  value: string | undefined,
+): value is (typeof filterableMilestoneTypes)[number] {
+  return (
+    value !== undefined && filterableMilestoneTypes.some(type => type === value)
+  );
+}
 
 /**
  * Clicks that start inside a control must not open the row. The design-system
@@ -76,10 +108,14 @@ function handleRowNavigation(
 export default function AdminMilestonesPage() {
   const navigate = useNavigate();
   const rawSearch = useSearch({ from: '/admin/milestones/' }) as {
+    milestoneType?: string;
     sectionId?: string | number;
   };
   // Hand-typed URLs arrive as numbers; router links serialize strings.
   const search = {
+    milestoneType: isFilterableMilestoneType(rawSearch.milestoneType)
+      ? rawSearch.milestoneType
+      : undefined,
     sectionId:
       rawSearch.sectionId === undefined
         ? undefined
@@ -103,6 +139,7 @@ export default function AdminMilestonesPage() {
   const updateStatusMutation = useUpdateAdminSectionMilestoneStatusMutation();
   const [statusUpdateError, setStatusUpdateError] =
     useState<StatusUpdateError>();
+  const selectedMilestoneType = search.milestoneType ?? allMilestoneTypesValue;
   const isLoading = milestoneQueries.some(query => query.isPending);
   const hasSuccessfulQuery = milestoneQueries.some(query => query.isSuccess);
   const failedSectionLabels = displayedSections.flatMap((section, index) =>
@@ -116,13 +153,23 @@ export default function AdminMilestonesPage() {
     }));
   });
   const [page, setPage] = useState(0);
-  const paged = paginate(allMilestones, page, milestonePageSize);
+  const filteredMilestones = allMilestones.filter(
+    milestone =>
+      selectedMilestoneType === allMilestoneTypesValue ||
+      milestone.type === selectedMilestoneType,
+  );
+  const paged = paginate(filteredMilestones, page, milestonePageSize);
   const milestones = paged.items;
 
   function selectSection(sectionId: string) {
     setPage(0);
     void navigate({
-      search: sectionId === allSectionsValue ? {} : { sectionId },
+      search: {
+        ...(sectionId === allSectionsValue ? {} : { sectionId }),
+        ...(selectedMilestoneType === allMilestoneTypesValue
+          ? {}
+          : { milestoneType: selectedMilestoneType }),
+      },
       to: ROUTES.ADMIN_MILESTONES,
     });
   }
@@ -173,6 +220,29 @@ export default function AdminMilestonesPage() {
           variant='primary'
         />
       </div>
+
+      <TabList
+        aria-label='마일스톤 단계 필터'
+        onChange={value => {
+          setPage(0);
+          void navigate({
+            search: {
+              ...(selectedSectionId === allSectionsValue
+                ? {}
+                : { sectionId: selectedSectionId }),
+              ...(value === allMilestoneTypesValue
+                ? {}
+                : { milestoneType: value }),
+            },
+            to: ROUTES.ADMIN_MILESTONES,
+          });
+        }}
+        value={selectedMilestoneType}
+      >
+        {milestoneTypeTabs.map(tab => (
+          <Tab key={tab.value} label={tab.label} value={tab.value} />
+        ))}
+      </TabList>
 
       {activeSectionsQuery.isPending ? (
         <Text aria-live='polite' role='status'>
@@ -232,7 +302,12 @@ export default function AdminMilestonesPage() {
                     const openMilestone = () =>
                       void navigate({
                         params: { milestoneId: String(milestone.id) },
-                        search: { sectionId: milestone.sectionKey },
+                        search: {
+                          sectionId: milestone.sectionKey,
+                          ...(selectedMilestoneType === allMilestoneTypesValue
+                            ? {}
+                            : { milestoneType: selectedMilestoneType }),
+                        },
                         to: ROUTES.ADMIN_MILESTONE_DETAIL,
                       });
 

@@ -26,6 +26,25 @@ const server = setupServer(
   ...adminMeetingHandlers,
   ...adminStudentTeamHandlers,
 );
+
+function positiveId(value: unknown) {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function nonNegativePage(value: unknown) {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
+function validateMeetingSearch(search: Record<string, unknown>) {
+  return {
+    page: nonNegativePage(search.page),
+    sectionId: positiveId(search.sectionId),
+    teamId: positiveId(search.teamId),
+  };
+}
+
 const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
   'close',
@@ -53,6 +72,7 @@ beforeAll(() => {
 });
 afterEach(() => {
   server.resetHandlers();
+  sessionStorage.clear();
   setApiAccessToken(null);
   useAuthStore.setState({ accessToken: null, currentUser: null });
 });
@@ -80,7 +100,7 @@ afterAll(() => {
   }
 });
 
-function renderPage() {
+function renderPage(initialEntry = '/admin/meetings/1') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
@@ -95,10 +115,17 @@ function renderPage() {
     ),
     getParentRoute: () => rootRoute,
     path: '/admin/meetings/$meetingId',
+    validateSearch: validateMeetingSearch,
+  });
+  const meetingsRoute = createRoute({
+    component: () => <div>회의록 목록</div>,
+    getParentRoute: () => rootRoute,
+    path: '/admin/meetings/',
+    validateSearch: validateMeetingSearch,
   });
   const router = createRouter({
-    history: createMemoryHistory({ initialEntries: ['/admin/meetings/1'] }),
-    routeTree: rootRoute.addChildren([meetingDetailRoute]),
+    history: createMemoryHistory({ initialEntries: [initialEntry] }),
+    routeTree: rootRoute.addChildren([meetingDetailRoute, meetingsRoute]),
   });
 
   setApiAccessToken(demoAdminAccessToken);
@@ -107,7 +134,7 @@ function renderPage() {
     currentUser: demoAdmin,
   });
 
-  return render(<RouterProvider router={router} />);
+  return { ...render(<RouterProvider router={router} />), router };
 }
 
 describe('AdminMeetingDetailPage', () => {
@@ -137,6 +164,43 @@ describe('AdminMeetingDetailPage', () => {
     expect(screen.queryByText(/student-1151-1/)).not.toBeInTheDocument();
   });
 
+  it('회의록의 팀을 고정한 일반 메시지 모달을 연다', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+    );
+
+    const panel = await screen.findByRole('complementary', {
+      name: '일반 메시지 작성 패널',
+    });
+    expect(
+      within(panel).getByRole('combobox', { name: '팀' }),
+    ).toHaveTextContent('1팀');
+    expect(within(panel).getByRole('combobox', { name: '팀' })).toBeDisabled();
+  });
+
+  it('다른 팀에 작성하던 일반 메시지 초안은 현재 팀에 복원하지 않는다', async () => {
+    sessionStorage.setItem(
+      'aics.oop.admin.general-message-draft:1:team:2',
+      JSON.stringify({ message: '2팀에 보낼 내용', teamId: '2' }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(
+      await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+    );
+
+    const panel = await screen.findByRole('complementary', {
+      name: '일반 메시지 작성 패널',
+    });
+    expect(
+      within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
+    ).toHaveValue('');
+  });
+
   it('회의록에 등록된 액션플랜만 표시하고 전체 목록으로 연결한다', async () => {
     renderPage();
 
@@ -150,12 +214,40 @@ describe('AdminMeetingDetailPage', () => {
     ).toHaveAttribute('href', '/admin/meeting-actions?sectionId=1&teamId=1');
   });
 
-  it('현재 회의록의 수정 이력만 표시한다', async () => {
+  it('회의록 목록으로 돌아갈 때 열기 전의 분반·팀 필터를 유지한다', async () => {
+    const user = userEvent.setup();
+    const { router } = renderPage('/admin/meetings/1?sectionId=1&teamId=1');
+
+    await user.click(
+      await screen.findByRole('link', { name: '← 회의록 목록으로' }),
+    );
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/admin/meetings'),
+    );
+    expect(router.state.location.search).toMatchObject({
+      sectionId: 1,
+      teamId: 1,
+    });
+  });
+
+  it('수정 이력은 기본으로 접혀 있고 펼치면 현재 회의록의 이력만 표시한다', async () => {
+    const user = userEvent.setup();
     renderPage();
 
+    const editLogsToggle = await screen.findByRole('button', {
+      name: '수정 이력 (1건)',
+    });
+    expect(editLogsToggle).toHaveAttribute('aria-expanded', 'false');
     expect(
-      await screen.findByRole('heading', { name: '수정 이력' }),
-    ).toBeInTheDocument();
+      screen.queryByText(
+        '프로젝트 역할 분담 내용 중 누락된 담당 업무를 회의 결과에 맞게 추가했습니다.',
+      ),
+    ).not.toBeInTheDocument();
+
+    await user.click(editLogsToggle);
+    expect(editLogsToggle).toHaveAttribute('aria-expanded', 'true');
+
     expect(
       await screen.findByText(
         '프로젝트 역할 분담 내용 중 누락된 담당 업무를 회의 결과에 맞게 추가했습니다.',
@@ -272,9 +364,11 @@ it.each([
     expect(container.textContent).not.toContain('"type":"doc"');
     expect(container.textContent).not.toContain('"content"');
     expect(container.querySelector('[contenteditable="true"], img')).toBeNull();
-    expect(
-      screen.queryByRole('button', { name: /수정|삭제|저장/ }),
-    ).not.toBeInTheDocument();
+    for (const label of ['수정', '삭제', '저장']) {
+      expect(
+        screen.queryByRole('button', { name: new RegExp(`^${label}$`) }),
+      ).not.toBeInTheDocument();
+    }
   },
 );
 

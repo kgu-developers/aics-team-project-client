@@ -8,7 +8,7 @@ import {
   createRoute,
   createRouter,
 } from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -27,7 +27,13 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminMeetingsPage from './AdminMeetingsPage';
 
 import { resetMockSessionState } from '~/mocks/authSession';
-import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
+import {
+  demoAdmin,
+  demoAdminAccessToken,
+  demoNoticeProfessor,
+  demoNoticeProfessorAccessToken,
+} from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
 
@@ -46,8 +52,29 @@ const server = setupServer(
   ),
 );
 
+function positiveId(value: unknown) {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function nonNegativePage(value: unknown) {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
+function validateMeetingSearch(search: Record<string, unknown>) {
+  return {
+    page: nonNegativePage(search.page),
+    sectionId: positiveId(search.sectionId),
+    teamId: positiveId(search.teamId),
+  };
+}
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-beforeEach(() => resetMockSessionState());
+beforeEach(() => {
+  resetMockSessionState();
+  resetAdminCoursesMockData();
+});
 afterEach(() => {
   window.localStorage.clear();
   server.resetHandlers();
@@ -56,7 +83,11 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderPage(initialEntry = '/admin/meetings/') {
+function renderPage(
+  initialEntry = '/admin/meetings/',
+  currentUser = demoAdmin,
+  accessToken = demoAdminAccessToken,
+) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
@@ -71,19 +102,26 @@ function renderPage(initialEntry = '/admin/meetings/') {
     ),
     getParentRoute: () => rootRoute,
     path: '/admin/meetings/',
+    validateSearch: validateMeetingSearch,
+  });
+  const meetingDetailRoute = createRoute({
+    component: () => <div>회의록 상세</div>,
+    getParentRoute: () => rootRoute,
+    path: '/admin/meetings/$meetingId',
+    validateSearch: validateMeetingSearch,
   });
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
-    routeTree: rootRoute.addChildren([meetingsRoute]),
+    routeTree: rootRoute.addChildren([meetingsRoute, meetingDetailRoute]),
   });
 
-  setApiAccessToken(demoAdminAccessToken);
+  setApiAccessToken(accessToken);
   useAuthStore.setState({
-    accessToken: demoAdminAccessToken,
-    currentUser: demoAdmin,
+    accessToken,
+    currentUser,
   });
 
-  return render(<RouterProvider router={router} />);
+  return { ...render(<RouterProvider router={router} />), router };
 }
 
 describe('AdminMeetingsPage', () => {
@@ -166,12 +204,40 @@ describe('AdminMeetingsPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('필터링한 회의록을 열 때 현재 목록 필터를 상세 URL에 유지한다', async () => {
+    const user = userEvent.setup();
+    const { router } = renderPage('/admin/meetings/?sectionId=1&teamId=1');
+
+    await user.click(
+      await screen.findByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
+    );
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/admin/meetings/1'),
+    );
+    expect(router.state.location.search).toMatchObject({
+      sectionId: 1,
+      teamId: 1,
+    });
+  });
+
   it('선택한 분반과 팀 기준의 회의록 수정 이력을 목록 아래에 표시한다', async () => {
+    const user = userEvent.setup();
     renderPage('/admin/meetings/?sectionId=1&teamId=1');
 
+    const editLogsToggle = await screen.findByRole('button', {
+      name: '회의록 수정 이력 (2건)',
+    });
+    expect(editLogsToggle).toHaveAttribute('aria-expanded', 'false');
     expect(
-      await screen.findByRole('heading', { name: '회의록 수정 이력' }),
-    ).toBeInTheDocument();
+      screen.queryByText(
+        '중간 점검 피드백 반영 담당자가 실제 논의 내용과 달라 역할 분담을 바로잡았습니다.',
+      ),
+    ).not.toBeInTheDocument();
+
+    await user.click(editLogsToggle);
+    expect(editLogsToggle).toHaveAttribute('aria-expanded', 'true');
+
     expect(
       await screen.findByText(
         '중간 점검 피드백 반영 담당자가 실제 논의 내용과 달라 역할 분담을 바로잡았습니다.',
@@ -215,6 +281,47 @@ describe('AdminMeetingsPage', () => {
         screen.queryByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
       ).not.toBeInTheDocument(),
     );
+  });
+
+  it('분반 단위 회의록 화면에서 담당 교수만 전체 팀 전송을 선택할 수 있다', async () => {
+    const user = userEvent.setup();
+    server.use(
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_SECTION('1')}`,
+        async ({ request }) => {
+          expect(await request.json()).toEqual({ message: '전체 회의 안내' });
+          return HttpResponse.json({ sentCount: 2 }, { status: 201 });
+        },
+      ),
+    );
+    renderPage(
+      '/admin/meetings/?sectionId=1',
+      demoNoticeProfessor,
+      demoNoticeProfessorAccessToken,
+    );
+
+    await user.click(
+      await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+    );
+    const panel = await screen.findByRole('complementary', {
+      name: '일반 메시지 작성 패널',
+    });
+    await user.click(within(panel).getByRole('combobox', { name: '팀' }));
+    await user.click(await screen.findByRole('option', { name: '전체 팀' }));
+    await user.type(
+      within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
+      '전체 회의 안내',
+    );
+    await user.click(within(panel).getByRole('button', { name: '보내기' }));
+    await user.click(
+      await screen.findByRole('button', { name: '전체 팀에 보내기' }),
+    );
+
+    expect(
+      await within(panel).findByText(
+        '전체 2개 팀에 일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.',
+      ),
+    ).toBeVisible();
   });
 });
 

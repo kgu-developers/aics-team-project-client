@@ -33,7 +33,7 @@ export function useMidReportFeedbackQuery(body: MidReportFeedbackBody) {
     feedback: query.isSuccess
       ? (messages ?? []).map(message => ({
           id: String(message.id),
-          title: `${message.senderName?.trim() || message.senderId} (${formatSeoulDateTime(message.createdAt)})`,
+          title: `${message.senderName?.trim() || '담당 교수자'} (${formatSeoulDateTime(message.createdAt)})`,
           content: message.message,
         }))
       : [],

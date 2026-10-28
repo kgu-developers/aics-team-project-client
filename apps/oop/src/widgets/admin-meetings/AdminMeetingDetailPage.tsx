@@ -2,16 +2,18 @@ import {
   Badge,
   Button,
   Card,
+  Collapsible,
   EmptyState,
   Heading,
   Pagination,
   Text,
 } from '@aics/design-system';
-import { Link, useParams } from '@tanstack/react-router';
+import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import RichTextViewer from '~/shared/ui/RichTextViewer';
 
 import {
@@ -33,6 +35,7 @@ import AdminStudentDetailDialog from '~/features/admin-student-team/components/A
 import { useAdminSectionEnrollmentsQuery } from '~/features/admin-student-team/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 import { parseMeetingContent } from '~/features/meeting/model/studentMeeting';
+import { AdminGeneralMessageDialog } from '~/features/team-message/components';
 
 import * as styles from './AdminMeetingDetailPage.css';
 
@@ -42,7 +45,15 @@ export default function AdminMeetingDetailPage() {
   >(null);
   const [actionPage, setActionPage] = useState(0);
   const [editLogPage, setEditLogPage] = useState(0);
+  const [isEditLogsOpen, setIsEditLogsOpen] = useState(false);
+  const [isGeneralMessageDialogOpen, setIsGeneralMessageDialogOpen] =
+    useState(false);
   const { meetingId } = useParams({ from: '/admin/meetings/$meetingId' });
+  const search = useSearch({ from: '/admin/meetings/$meetingId' }) as {
+    page?: number | string;
+    sectionId?: number | string;
+    teamId?: number | string;
+  };
   const currentUser = useAuthStore(state => state.currentUser);
   const { markAsRead } = useAdminMeetingReadState(currentUser?.id);
   const query = useAdminMeetingRecordDetailQuery(meetingId);
@@ -125,6 +136,9 @@ export default function AdminMeetingDetailPage() {
   const record = query.data;
   const actions = actionsQuery.data?.contents ?? [];
   const editLogs = editLogsQuery.data?.contents ?? [];
+  const editLogCount = editLogsQuery.isSuccess
+    ? editLogPagination?.totalElements
+    : undefined;
   const content = parseMeetingContent(record.content);
   const participants = record.participantIds.map(participantId => {
     const student = enrollmentsQuery.data?.contents.find(
@@ -143,12 +157,27 @@ export default function AdminMeetingDetailPage() {
   const authorLabel = author
     ? `${author.studentNumber} · ${author.name}`
     : record.authorId;
+  const section = currentUser?.sections.find(
+    item => String(item.id) === String(record.sectionId),
+  );
+  const page = Number(search.page);
+  const returnSearch = {
+    ...(search.sectionId === undefined
+      ? {}
+      : { sectionId: Number(search.sectionId) }),
+    ...(search.teamId === undefined ? {} : { teamId: Number(search.teamId) }),
+    ...(Number.isInteger(page) && page > 0 ? { page } : {}),
+  };
 
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
         <Heading level={1}>회의록 상세</Heading>
-        <Link className={styles.backLink} to={ROUTES.ADMIN_MEETINGS}>
+        <Link
+          className={styles.backLink}
+          search={returnSearch}
+          to={ROUTES.ADMIN_MEETINGS}
+        >
           ← 회의록 목록으로
         </Link>
       </div>
@@ -218,16 +247,28 @@ export default function AdminMeetingDetailPage() {
           </div>
         </section>
       </Card>
-      <Card className={styles.contentCard}>
-        <section className={styles.contentSection}>
-          <Heading level={2}>회의 내용</Heading>
-          {getRichTextPlainText(content).trim() ? (
-            <RichTextViewer content={content} />
-          ) : (
-            <Text>작성된 회의 내용이 없습니다.</Text>
-          )}
-        </section>
-      </Card>
+      <section aria-labelledby='meeting-content-heading'>
+        <div className={styles.contentTitleRow}>
+          <Heading id='meeting-content-heading' level={2}>
+            회의 내용
+          </Heading>
+          <Button
+            label='일반 메시지 보내기'
+            onClick={() => setIsGeneralMessageDialogOpen(true)}
+            size='sm'
+            variant='secondary'
+          />
+        </div>
+        <Card className={styles.contentCard}>
+          <div className={styles.contentSection}>
+            {getRichTextPlainText(content).trim() ? (
+              <RichTextViewer content={content} />
+            ) : (
+              <Text>작성된 회의 내용이 없습니다.</Text>
+            )}
+          </div>
+        </Card>
+      </section>
       <section className={styles.actionsSection}>
         <div className={styles.actionsTitleRow}>
           <div>
@@ -283,48 +324,57 @@ export default function AdminMeetingDetailPage() {
         ) : null}
       </section>
       <section className={styles.editLogsSection}>
-        <div className={styles.actionsTitleRow}>
-          <div>
-            <Heading level={2}>수정 이력</Heading>
-            <Text color='secondary'>
-              이 회의록에 남긴 수정 사유를 최신순으로 확인합니다.
-            </Text>
-          </div>
-        </div>
-        {editLogsQuery.isPending || editLogPage !== boundedEditLogPage ? (
-          <Text aria-live='polite' role='status'>
-            수정 이력을 불러오는 중입니다.
-          </Text>
-        ) : editLogsQuery.isError ? (
-          <Card className={styles.actionsError}>
-            <Text>수정 이력을 불러오지 못했습니다.</Text>
-            <Button
-              label='다시 시도'
-              onClick={() => void editLogsQuery.refetch()}
-              variant='secondary'
-            />
-          </Card>
-        ) : (
-          <Card className={styles.actionsCard}>
-            <AdminMeetingEditLogTable
-              emptyMessage='이 회의록의 수정 이력이 없습니다.'
-              logs={editLogs}
-              showMeeting={false}
-              showTeam={false}
-            />
-          </Card>
-        )}
-        {editLogPagination && editLogPagination.totalPages > 1 ? (
-          <Pagination
-            className={styles.actionsPagination}
-            isDisabled={editLogsQuery.isFetching}
-            onChange={page => setEditLogPage(page - 1)}
-            page={boundedEditLogPage + 1}
-            pageSize={editLogPagination.size}
-            totalPages={editLogPagination.totalPages}
-            variant='compact'
-          />
-        ) : null}
+        <Collapsible
+          isOpen={isEditLogsOpen}
+          onOpenChange={setIsEditLogsOpen}
+          trigger={
+            editLogCount === undefined
+              ? '수정 이력'
+              : `수정 이력 (${editLogCount}건)`
+          }
+        >
+          {isEditLogsOpen ? (
+            <div className={styles.editLogsContent}>
+              <Text color='secondary'>
+                이 회의록에 남긴 수정 사유를 최신순으로 확인합니다.
+              </Text>
+              {editLogsQuery.isPending || editLogPage !== boundedEditLogPage ? (
+                <Text aria-live='polite' role='status'>
+                  수정 이력을 불러오는 중입니다.
+                </Text>
+              ) : editLogsQuery.isError ? (
+                <Card className={styles.actionsError}>
+                  <Text>수정 이력을 불러오지 못했습니다.</Text>
+                  <Button
+                    label='다시 시도'
+                    onClick={() => void editLogsQuery.refetch()}
+                    variant='secondary'
+                  />
+                </Card>
+              ) : (
+                <Card className={styles.actionsCard}>
+                  <AdminMeetingEditLogTable
+                    emptyMessage='이 회의록의 수정 이력이 없습니다.'
+                    logs={editLogs}
+                    showMeeting={false}
+                    showTeam={false}
+                  />
+                </Card>
+              )}
+              {editLogPagination && editLogPagination.totalPages > 1 ? (
+                <Pagination
+                  className={styles.actionsPagination}
+                  isDisabled={editLogsQuery.isFetching}
+                  onChange={page => setEditLogPage(page - 1)}
+                  page={boundedEditLogPage + 1}
+                  pageSize={editLogPagination.size}
+                  totalPages={editLogPagination.totalPages}
+                  variant='compact'
+                />
+              ) : null}
+            </div>
+          ) : null}
+        </Collapsible>
       </section>
       <AdminStudentDetailDialog
         major={
@@ -332,6 +382,16 @@ export default function AdminMeetingDetailPage() {
         }
         studentNumber={selectedParticipantId}
         onClose={() => setSelectedParticipantId(null)}
+      />
+      <AdminGeneralMessageDialog
+        initialTeamId={String(record.teamId)}
+        isOpen={isGeneralMessageDialogOpen}
+        isTeamLocked
+        onClose={() => setIsGeneralMessageDialogOpen(false)}
+        sectionId={String(record.sectionId)}
+        sectionLabel={
+          section ? formatAdminSectionLabel(section) : record.sectionName
+        }
       />
     </div>
   );

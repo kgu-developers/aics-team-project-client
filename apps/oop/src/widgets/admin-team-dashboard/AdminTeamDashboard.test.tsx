@@ -16,6 +16,7 @@ import {
   afterAll,
   afterEach,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
@@ -26,6 +27,7 @@ import { useAuthStore } from '~/features/auth/authStore';
 
 import AdminTeamDashboard from './AdminTeamDashboard';
 
+import { resetMockSessionState } from '~/mocks/authSession';
 import { getAdminMilestoneSubmissionsFixture } from '~/mocks/data/adminMilestoneSubmissions';
 import { teamMessageProfessorId } from '~/mocks/data/teamMessages';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
@@ -73,7 +75,13 @@ beforeAll(() => {
     },
   });
 });
+beforeEach(() => {
+  resetMockSessionState();
+  sessionStorage.clear();
+});
 afterEach(() => {
+  sessionStorage.clear();
+  resetMockSessionState();
   setApiAccessToken(null);
   useAuthStore.setState({ accessToken: null, currentUser: null });
   server.resetHandlers();
@@ -411,16 +419,26 @@ describe('AdminTeamDashboard', () => {
     }
   });
 
-  it('일반 메시지 보내기는 해당 팀의 일반 메시지 상세로 이동한다', async () => {
+  it('일반 메시지 보내기는 현재 팀이 선택된 작성 패널을 연다', async () => {
     const user = userEvent.setup();
-    const router = renderPage('1');
+    renderPage('1');
     await user.click(await screen.findByRole('button', { name: '쪽지함' }));
     await user.click(
       screen.getByRole('button', { name: '일반 메시지 보내기' }),
     );
 
-    expect(router.state.location.pathname).toBe('/admin/messages/teams/1');
-    expect(router.state.location.search).toMatchObject({ type: 'GENERAL' });
+    const panel = await screen.findByRole('complementary', {
+      name: '일반 메시지 작성 패널',
+    });
+    expect(
+      within(panel).getByRole('combobox', { name: '분반' }),
+    ).toHaveTextContent('OOP-01 · 월요일 1-2교시');
+    await waitFor(() =>
+      expect(
+        within(panel).getByRole('combobox', { name: '팀' }),
+      ).toHaveTextContent('1팀'),
+    );
+    expect(within(panel).getByRole('combobox', { name: '팀' })).toBeDisabled();
   });
 
   it('팀 분반이 담당 분반과 다르면 종속 요청과 팀 내용을 차단한다', async () => {

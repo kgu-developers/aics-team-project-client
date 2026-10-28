@@ -1,6 +1,7 @@
 import {
   Button,
   Card,
+  Collapsible,
   EmptyState,
   Heading,
   Pagination,
@@ -30,6 +31,7 @@ import AdminSectionTeamFilter, {
   ALL_TEAMS,
 } from '~/features/admin-section/components/AdminSectionTeamFilter';
 import { useAuthStore } from '~/features/auth/authStore';
+import { AdminGeneralMessageDialog } from '~/features/team-message/components';
 
 import * as styles from './AdminMeetingsPage.css';
 
@@ -44,6 +46,9 @@ function handleRowNavigation(
 
 export default function AdminMeetingsPage() {
   const [editLogPage, setEditLogPage] = useState(0);
+  const [isEditLogsOpen, setIsEditLogsOpen] = useState(false);
+  const [isGeneralMessageDialogOpen, setIsGeneralMessageDialogOpen] =
+    useState(false);
   const currentUser = useAuthStore(state => state.currentUser);
   const { isRead } = useAdminMeetingReadState(currentUser?.id);
   const navigate = useNavigate();
@@ -68,6 +73,9 @@ export default function AdminMeetingsPage() {
     Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 0;
   const selectedTeamId =
     selectedSectionId === ALL_SECTIONS ? undefined : requestedTeamId;
+  const selectedSection = accessibleSections.find(
+    section => section.id === selectedSectionId,
+  );
   const query = useAdminMeetingRecordListQuery(accessibleSectionIds, {
     page: selectedPage,
     sectionId:
@@ -87,6 +95,9 @@ export default function AdminMeetingsPage() {
   const records = query.data?.contents ?? [];
   const editLogs = editLogsQuery.data?.contents ?? [];
   const editLogPagination = editLogsQuery.data?.pageable;
+  const editLogCount = editLogsQuery.isSuccess
+    ? editLogPagination?.totalElements
+    : undefined;
   const boundedEditLogPage = editLogPagination
     ? Math.max(
         0,
@@ -106,7 +117,10 @@ export default function AdminMeetingsPage() {
 
   function selectSection(sectionId: string) {
     void navigate({
-      search: sectionId === ALL_SECTIONS ? {} : { sectionId, page: 0 },
+      search:
+        sectionId === ALL_SECTIONS
+          ? {}
+          : { page: 0, sectionId: Number(sectionId) },
       to: ROUTES.ADMIN_MEETINGS,
     });
   }
@@ -114,8 +128,8 @@ export default function AdminMeetingsPage() {
   function selectTeam(teamId: string) {
     void navigate({
       search: {
-        sectionId: selectedSectionId,
-        ...(teamId !== ALL_TEAMS ? { teamId } : {}),
+        sectionId: Number(selectedSectionId),
+        ...(teamId !== ALL_TEAMS ? { teamId: Number(teamId) } : {}),
         page: 0,
       },
       to: ROUTES.ADMIN_MEETINGS,
@@ -127,24 +141,41 @@ export default function AdminMeetingsPage() {
       search: {
         ...(selectedSectionId === ALL_SECTIONS
           ? {}
-          : { sectionId: selectedSectionId }),
-        ...(selectedTeamId ? { teamId: selectedTeamId } : {}),
+          : { sectionId: Number(selectedSectionId) }),
+        ...(selectedTeamId ? { teamId: Number(selectedTeamId) } : {}),
         page,
       },
       to: ROUTES.ADMIN_MEETINGS,
     });
   }
 
+  const detailSearch = {
+    ...(selectedSectionId === ALL_SECTIONS
+      ? {}
+      : { sectionId: Number(selectedSectionId) }),
+    ...(selectedTeamId ? { teamId: Number(selectedTeamId) } : {}),
+    ...(selectedPage === 0 ? {} : { page: selectedPage }),
+  };
+
   return (
     <div className={styles.page}>
       <Heading level={1}>회의록</Heading>
-      <AdminTeamActivityTabs
-        activeView='meetings'
-        sectionId={
-          selectedSectionId === ALL_SECTIONS ? undefined : selectedSectionId
-        }
-        teamId={selectedTeamId}
-      />
+      <div className={styles.activityTabsRow}>
+        <AdminTeamActivityTabs
+          activeView='meetings'
+          sectionId={
+            selectedSectionId === ALL_SECTIONS ? undefined : selectedSectionId
+          }
+          teamId={selectedTeamId}
+        />
+        <Button
+          isDisabled={!selectedSection}
+          label='일반 메시지 보내기'
+          onClick={() => setIsGeneralMessageDialogOpen(true)}
+          size='sm'
+          variant='secondary'
+        />
+      </div>
       <AdminSectionTeamFilter
         onSectionChange={selectSection}
         onTeamChange={selectTeam}
@@ -205,6 +236,7 @@ export default function AdminMeetingsPage() {
                 const openMeeting = () => {
                   void navigate({
                     params: { meetingId: String(record.id) },
+                    search: detailSearch,
                     to: ROUTES.ADMIN_MEETING_DETAIL,
                   });
                 };
@@ -250,44 +282,64 @@ export default function AdminMeetingsPage() {
       ) : null}
       {selectedSectionId !== ALL_SECTIONS ? (
         <section className={styles.editLogsSection}>
-          <div className={styles.editLogsHeading}>
-            <Heading level={2}>회의록 수정 이력</Heading>
-          </div>
-          {editLogsQuery.isPending || editLogPage !== boundedEditLogPage ? (
-            <Text aria-live='polite' role='status'>
-              수정 이력을 불러오는 중입니다.
-            </Text>
-          ) : editLogsQuery.isError ? (
-            <EmptyState
-              actions={
-                <Button
-                  label='다시 시도'
-                  onClick={() => void editLogsQuery.refetch()}
-                />
-              }
-              description='담당 분반의 회의록 수정 이력만 조회할 수 있습니다.'
-              title='수정 이력을 불러오지 못했습니다.'
-            />
-          ) : (
-            <Card className={styles.editLogsCard}>
-              <AdminMeetingEditLogTable
-                emptyMessage='조건에 맞는 회의록 수정 이력이 없습니다.'
-                logs={editLogs}
-              />
-            </Card>
-          )}
-          {editLogPagination && editLogPagination.totalPages > 1 ? (
-            <Pagination
-              className={styles.pagination}
-              isDisabled={editLogsQuery.isFetching}
-              onChange={page => setEditLogPage(page - 1)}
-              page={boundedEditLogPage + 1}
-              pageSize={editLogPagination.size}
-              totalPages={editLogPagination.totalPages}
-              variant='compact'
-            />
-          ) : null}
+          <Collapsible
+            isOpen={isEditLogsOpen}
+            onOpenChange={setIsEditLogsOpen}
+            trigger={
+              editLogCount === undefined
+                ? '회의록 수정 이력'
+                : `회의록 수정 이력 (${editLogCount}건)`
+            }
+          >
+            {isEditLogsOpen ? (
+              <div className={styles.editLogsContent}>
+                {editLogsQuery.isPending ||
+                editLogPage !== boundedEditLogPage ? (
+                  <Text aria-live='polite' role='status'>
+                    수정 이력을 불러오는 중입니다.
+                  </Text>
+                ) : editLogsQuery.isError ? (
+                  <EmptyState
+                    actions={
+                      <Button
+                        label='다시 시도'
+                        onClick={() => void editLogsQuery.refetch()}
+                      />
+                    }
+                    description='담당 분반의 회의록 수정 이력만 조회할 수 있습니다.'
+                    title='수정 이력을 불러오지 못했습니다.'
+                  />
+                ) : (
+                  <Card className={styles.editLogsCard}>
+                    <AdminMeetingEditLogTable
+                      emptyMessage='조건에 맞는 회의록 수정 이력이 없습니다.'
+                      logs={editLogs}
+                    />
+                  </Card>
+                )}
+                {editLogPagination && editLogPagination.totalPages > 1 ? (
+                  <Pagination
+                    className={styles.pagination}
+                    isDisabled={editLogsQuery.isFetching}
+                    onChange={page => setEditLogPage(page - 1)}
+                    page={boundedEditLogPage + 1}
+                    pageSize={editLogPagination.size}
+                    totalPages={editLogPagination.totalPages}
+                    variant='compact'
+                  />
+                ) : null}
+              </div>
+            ) : null}
+          </Collapsible>
         </section>
+      ) : null}
+      {selectedSection ? (
+        <AdminGeneralMessageDialog
+          isOpen={isGeneralMessageDialogOpen}
+          onClose={() => setIsGeneralMessageDialogOpen(false)}
+          sectionId={selectedSection.id}
+          sectionLabel={formatAdminSectionLabel(selectedSection)}
+        />
       ) : null}
     </div>
   );

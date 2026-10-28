@@ -19,6 +19,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { paginate } from '~/shared/lib/pagination';
 import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
@@ -35,6 +36,7 @@ import {
   useUnfinalizeAdminSectionTeamsMutation,
   useWithdrawAdminSectionEnrollmentMutation,
 } from '~/features/admin-student-team/queries';
+import { AdminGeneralMessageDialog } from '~/features/team-message/components';
 
 import * as styles from './AdminStudentTeamManagement.css';
 import AdminStudentDetailDialog from '../../features/admin-student-team/components/AdminStudentDetailDialog';
@@ -158,6 +160,10 @@ export default function AdminStudentTeamManagement({
   );
   const [isFinalizeDialogOpen, setIsFinalizeDialogOpen] = useState(false);
   const [isUnfinalizeDialogOpen, setIsUnfinalizeDialogOpen] = useState(false);
+  const [messageRecipient, setMessageRecipient] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
   const [unfinalizeReason, setUnfinalizeReason] = useState('');
   const [selectedStudentNumber, setSelectedStudentNumber] = useState<
     string | null
@@ -707,16 +713,29 @@ export default function AdminStudentTeamManagement({
                         });
                       }}
                     >
-                      <h3 className={styles.teamName}>
-                        <Link
-                          className={styles.teamDashboardLink}
-                          params={{ teamId: String(team.id) }}
-                          search={{ sectionId: Number(sectionId) }}
-                          to={ROUTES.ADMIN_TEAM_DETAIL}
-                        >
-                          {team.name}
-                        </Link>
-                      </h3>
+                      <div className={styles.teamHeader}>
+                        <h3 className={styles.teamName}>
+                          <Link
+                            className={styles.teamDashboardLink}
+                            params={{ teamId: String(team.id) }}
+                            search={{ sectionId: Number(sectionId) }}
+                            to={ROUTES.ADMIN_TEAM_DETAIL}
+                          >
+                            {team.name}
+                          </Link>
+                        </h3>
+                        <Button
+                          label='일반 메시지 보내기'
+                          onClick={() =>
+                            setMessageRecipient({
+                              id: team.id,
+                              name: team.name,
+                            })
+                          }
+                          size='sm'
+                          variant='secondary'
+                        />
+                      </div>
                       <div className={styles.teamContent}>
                         <HStack className={styles.teamLeader} gap={1}>
                           <Text color='secondary' type='supporting'>
@@ -1171,6 +1190,16 @@ export default function AdminStudentTeamManagement({
           </HStack>
         </div>
       </Dialog>
+      {selectedSection && messageRecipient ? (
+        <AdminGeneralMessageDialog
+          initialTeamId={String(messageRecipient.id)}
+          isOpen
+          isTeamLocked
+          onClose={() => setMessageRecipient(null)}
+          sectionId={selectedSection.id}
+          sectionLabel={formatAdminSectionLabel(selectedSection)}
+        />
+      ) : null}
     </div>
   );
 }

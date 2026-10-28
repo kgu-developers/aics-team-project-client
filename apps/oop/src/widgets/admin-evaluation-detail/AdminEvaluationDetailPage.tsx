@@ -1,6 +1,7 @@
 import type { AdminPeerEvaluationRowDto } from '@aics/api-client';
 import {
   Badge,
+  Button,
   Card,
   EmptyState,
   Heading,
@@ -13,6 +14,7 @@ import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
+import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
@@ -25,6 +27,7 @@ import { AdminLinkedMeetingsTable } from '~/features/admin-meeting/components';
 import { useAdminProfessorPresentationEvaluationQuery } from '~/features/admin-milestone-review/queries';
 import AdminStudentDetailDialog from '~/features/admin-student-team/components/AdminStudentDetailDialog';
 import { useAuthStore } from '~/features/auth/authStore';
+import { AdminGeneralMessageDialog } from '~/features/team-message/components';
 
 import * as styles from './AdminEvaluationDetailPage.css';
 
@@ -193,10 +196,12 @@ function Meetings({
 
 function PeerDetail({
   formId,
+  onOpenGeneralMessage,
   sectionId,
   teamId,
 }: {
   formId?: number;
+  onOpenGeneralMessage: () => void;
   sectionId: string;
   teamId: number;
 }) {
@@ -239,6 +244,12 @@ function PeerDetail({
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <Heading level={2}>평가자별 응답</Heading>
+          <Button
+            label='일반 메시지 보내기'
+            onClick={onOpenGeneralMessage}
+            size='sm'
+            variant='secondary'
+          />
         </div>
         <Card>
           <Table
@@ -329,10 +340,12 @@ function PeerDetail({
 
 function PresentationDetail({
   milestoneId,
+  onOpenGeneralMessage,
   sectionId,
   teamId,
 }: {
   milestoneId?: number;
+  onOpenGeneralMessage: () => void;
   sectionId: string;
   teamId: number;
 }) {
@@ -390,6 +403,14 @@ function PresentationDetail({
       <section className={styles.section}>
         <Heading level={2}>평가자별 결과</Heading>
         <PresentationEvaluationResults
+          action={
+            <Button
+              label='일반 메시지 보내기'
+              onClick={onOpenGeneralMessage}
+              size='sm'
+              variant='secondary'
+            />
+          }
           criteria={data.criteria}
           evaluations={data.evaluations}
           formatSubmissionStatus={evaluation =>
@@ -462,6 +483,8 @@ function PresentationDetail({
 }
 
 export default function AdminEvaluationDetailPage() {
+  const [isGeneralMessageDialogOpen, setIsGeneralMessageDialogOpen] =
+    useState(false);
   const currentUser = useAuthStore(state => state.currentUser);
   const { evaluationType, teamId: rawTeamId } = useParams({
     from: '/admin/evaluations/$evaluationType/teams/$teamId',
@@ -480,6 +503,9 @@ export default function AdminEvaluationDetailPage() {
   );
   const isValidType =
     evaluationType === 'peer' || evaluationType === 'presentation';
+  const section = currentUser?.sections.find(
+    item => item.id === search.sectionId,
+  );
   return (
     <main className={styles.page}>
       {!isValidType || !teamId ? (
@@ -495,16 +521,30 @@ export default function AdminEvaluationDetailPage() {
       ) : evaluationType === 'peer' ? (
         <PeerDetail
           formId={asOptionalPositiveInteger(search.formId)}
+          onOpenGeneralMessage={() => setIsGeneralMessageDialogOpen(true)}
           sectionId={search.sectionId}
           teamId={teamId}
         />
       ) : (
         <PresentationDetail
           milestoneId={asOptionalPositiveInteger(search.milestoneId)}
+          onOpenGeneralMessage={() => setIsGeneralMessageDialogOpen(true)}
           sectionId={search.sectionId}
           teamId={teamId}
         />
       )}
+      {teamId && search.sectionId ? (
+        <AdminGeneralMessageDialog
+          initialTeamId={String(teamId)}
+          isOpen={isGeneralMessageDialogOpen}
+          isTeamLocked
+          onClose={() => setIsGeneralMessageDialogOpen(false)}
+          sectionId={search.sectionId}
+          sectionLabel={
+            section ? formatAdminSectionLabel(section) : search.sectionId
+          }
+        />
+      ) : null}
     </main>
   );
 }

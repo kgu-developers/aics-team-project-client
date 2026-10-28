@@ -128,6 +128,14 @@ export const teamName = style({
   paddingTop: 8,
 });
 
+export const teamHeader = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: tokens.spacing[2],
+  justifyContent: 'space-between',
+});
+
 export const teamDashboardLink = style({
   color: tokens.color.text.accent,
   display: 'block',
