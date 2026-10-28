@@ -13,19 +13,15 @@ import {
   proportional,
   Selector,
   SelectorOption,
+  Tab,
+  TabList,
   Table,
   type TableProps,
   Text,
 } from '@aics/design-system';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ArrowDown, ArrowDownUp, ArrowUp } from 'lucide-react';
-import {
-  type KeyboardEvent,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -345,7 +341,6 @@ export default function AdminSubmissionsPage() {
   const currentUser = useAuthStore(state => state.currentUser);
   const submissionReadState = useAdminSubmissionReadState(currentUser?.id);
   const navigate = useNavigate();
-  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [isEvaluationSettingsOpen, setIsEvaluationSettingsOpen] =
     useState(false);
   const [isEvaluationStartOpen, setIsEvaluationStartOpen] = useState(false);
@@ -727,15 +722,13 @@ export default function AdminSubmissionsPage() {
 
   if (!activeTab) return null;
 
-  function selectTab(index: number) {
-    const tab = MILESTONE_TABS[index];
-    if (!tab) return;
+  function selectTab(tabId: string) {
+    if (!isMilestoneTabId(tabId)) return;
 
     navigate({
-      search: { milestoneId: tab.id, sectionId: effectiveSectionId },
+      search: { milestoneId: tabId, sectionId: effectiveSectionId },
       to: ROUTES.ADMIN_SUBMISSIONS,
     });
-    tabRefs.current[index]?.focus();
   }
 
   function selectSection(nextSectionId: string) {
@@ -743,28 +736,6 @@ export default function AdminSubmissionsPage() {
       search: { milestoneId: activeMilestoneId, sectionId: nextSectionId },
       to: ROUTES.ADMIN_SUBMISSIONS,
     });
-  }
-
-  function handleTabKeyDown(
-    event: KeyboardEvent<HTMLButtonElement>,
-    index: number,
-  ) {
-    let nextIndex: number | null = null;
-
-    if (event.key === 'ArrowRight') {
-      nextIndex = (index + 1) % MILESTONE_TABS.length;
-    } else if (event.key === 'ArrowLeft') {
-      nextIndex = (index - 1 + MILESTONE_TABS.length) % MILESTONE_TABS.length;
-    } else if (event.key === 'Home') {
-      nextIndex = 0;
-    } else if (event.key === 'End') {
-      nextIndex = MILESTONE_TABS.length - 1;
-    }
-
-    if (nextIndex === null) return;
-
-    event.preventDefault();
-    selectTab(nextIndex);
   }
 
   return (
@@ -790,34 +761,18 @@ export default function AdminSubmissionsPage() {
       </div>
 
       <section className={styles.listSection}>
-        <div aria-label='마일스톤 선택' className={styles.tabs} role='tablist'>
-          {MILESTONE_TABS.map((tab, index) => {
-            const isActive = tab.id === activeTab.id;
-
-            return (
-              <button
-                aria-controls={`submission-panel-${tab.id}`}
-                aria-selected={isActive}
-                className={cx(styles.tab, isActive ? styles.tabActive : '')}
-                id={`submission-tab-${tab.id}`}
-                key={tab.id}
-                onClick={() => selectTab(index)}
-                onKeyDown={event => handleTabKeyDown(event, index)}
-                ref={element => {
-                  tabRefs.current[index] = element;
-                }}
-                role='tab'
-                tabIndex={isActive ? 0 : -1}
-                type='button'
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        <TabList
+          aria-label='마일스톤 선택'
+          onChange={selectTab}
+          value={activeTab.id}
+        >
+          {MILESTONE_TABS.map(tab => (
+            <Tab key={tab.id} label={tab.label} value={tab.id} />
+          ))}
+        </TabList>
 
         <div
-          aria-labelledby={`submission-tab-${activeTab.id}`}
+          aria-label={`${activeTab.label} 제출·평가 내용`}
           className={styles.tabPanel}
           id={`submission-panel-${activeTab.id}`}
           role='tabpanel'
@@ -1391,8 +1346,10 @@ export default function AdminSubmissionsPage() {
                               <Link
                                 to={ROUTES.ADMIN_MEETINGS}
                                 search={{
-                                  sectionId: effectiveSectionId,
-                                  teamId: String(submission.teamId),
+                                  sectionId: effectiveSectionId
+                                    ? Number(effectiveSectionId)
+                                    : undefined,
+                                  teamId: Number(submission.teamId),
                                 }}
                               >
                                 {formatAdminTotalMeetingRecordCount(

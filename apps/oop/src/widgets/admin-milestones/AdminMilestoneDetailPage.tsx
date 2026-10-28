@@ -100,9 +100,10 @@ export default function AdminMilestoneDetailPage() {
   });
   const rawSearch = useSearch({
     from: '/admin/milestones/$milestoneId',
-  }) as { sectionId?: string | number };
+  }) as { milestoneType?: string; sectionId?: string | number };
   // Hand-typed URLs arrive as numbers; router links serialize strings.
   const search = {
+    milestoneType: rawSearch.milestoneType,
     sectionId:
       rawSearch.sectionId === undefined
         ? undefined
@@ -167,7 +168,12 @@ export default function AdminMilestoneDetailPage() {
           setIsDeleteConfirmationOpen(false);
           toast({ body: '마일스톤을 삭제했어요.' });
           void navigate({
-            search: { sectionId: search.sectionId },
+            search: {
+              sectionId: search.sectionId,
+              ...(search.milestoneType
+                ? { milestoneType: search.milestoneType }
+                : {}),
+            },
             to: ROUTES.ADMIN_MILESTONES,
           });
         },
@@ -231,7 +237,12 @@ export default function AdminMilestoneDetailPage() {
         </div>
         <Link
           className={styles.backLink}
-          search={{ sectionId: search.sectionId }}
+          search={{
+            sectionId: search.sectionId,
+            ...(search.milestoneType
+              ? { milestoneType: search.milestoneType }
+              : {}),
+          }}
           to={ROUTES.ADMIN_MILESTONES}
         >
           ← 마일스톤 목록으로

@@ -11,12 +11,21 @@ import {
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { setupServer } from 'msw/node';
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
 
 import AdminMilestonesPage from './AdminMilestonesPage';
 
+import { resetAdminSectionMilestonesFixture } from '~/mocks/data/adminSectionMilestones';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
@@ -28,7 +37,9 @@ const server = setupServer(
 const clients: QueryClient[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => resetAdminSectionMilestonesFixture());
 afterEach(() => {
+  resetAdminSectionMilestonesFixture();
   clients.splice(0).forEach(client => client.clear());
   server.resetHandlers();
   setApiAccessToken(null);
@@ -55,6 +66,10 @@ function renderPage() {
     getParentRoute: () => root,
     path: '/admin/milestones/',
     validateSearch: (search: Record<string, unknown>) => ({
+      milestoneType:
+        typeof search.milestoneType === 'string'
+          ? search.milestoneType
+          : undefined,
       sectionId: search.sectionId ? String(search.sectionId) : undefined,
     }),
   });
@@ -62,6 +77,13 @@ function renderPage() {
     component: () => <div>마일스톤 상세</div>,
     getParentRoute: () => root,
     path: '/admin/milestones/$milestoneId',
+    validateSearch: (search: Record<string, unknown>) => ({
+      milestoneType:
+        typeof search.milestoneType === 'string'
+          ? search.milestoneType
+          : undefined,
+      sectionId: search.sectionId ? String(search.sectionId) : undefined,
+    }),
   });
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: ['/admin/milestones'] }),
@@ -114,5 +136,37 @@ describe('AdminMilestonesPage', () => {
       expect(router.state.location.pathname).toBe('/admin/milestones/101'),
     );
     expect(await screen.findByText('마일스톤 상세')).toBeInTheDocument();
+  });
+
+  it('단계 탭은 분반 필터 결과에서 같은 유형의 마일스톤만 표시한다', async () => {
+    const user = userEvent.setup();
+    const router = renderPage();
+
+    await screen.findByRole('row', { name: '제안서 마일스톤 보기' });
+    await user.click(screen.getByRole('button', { name: '발표' }));
+
+    expect(
+      screen.getByRole('row', { name: '발표 자료 제출 마일스톤 보기' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('row', { name: '발표 평가 마일스톤 보기' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: '제안서 마일스톤 보기' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('row', { name: '중간 보고서 마일스톤 보기' }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('row', { name: '발표 자료 제출 마일스톤 보기' }),
+    );
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/admin/milestones/106'),
+    );
+    expect(router.state.location.search).toMatchObject({
+      milestoneType: 'PRESENTATION',
+      sectionId: '1',
+    });
   });
 });
