@@ -463,16 +463,10 @@ describe('AdminSubmissionsPage', () => {
     expect(screen.getByText('프로젝트 주제: -')).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: '팀 전체 회의록 2건' }),
-    ).toHaveAttribute(
-      'href',
-      '/admin/meetings?sectionId=1&teamId=1',
-    );
+    ).toHaveAttribute('href', '/admin/meetings?sectionId=1&teamId=1');
     expect(
       screen.getByRole('link', { name: '팀 전체 회의록 1건' }),
-    ).toHaveAttribute(
-      'href',
-      '/admin/meetings?sectionId=1&teamId=2',
-    );
+    ).toHaveAttribute('href', '/admin/meetings?sectionId=1&teamId=2');
   });
 
   it('팀 전체 회의록 수가 0건이면 빈 회의록 목록으로 이동시키지 않는다', async () => {
@@ -500,7 +494,9 @@ describe('AdminSubmissionsPage', () => {
     const user = userEvent.setup();
 
     renderPage();
-    await user.click(await screen.findByRole('button', { name: '중간 보고서' }));
+    await user.click(
+      await screen.findByRole('button', { name: '중간 보고서' }),
+    );
 
     expect(await screen.findByText('피드백 제공')).toBeInTheDocument();
     expect(await screen.findByText('2026-10-14/18:00')).toBeInTheDocument();
@@ -680,7 +676,9 @@ describe('AdminSubmissionsPage', () => {
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole('link', { name: '제안서 목록으로' }));
-    await user.click(await screen.findByRole('button', { name: '중간 보고서' }));
+    await user.click(
+      await screen.findByRole('button', { name: '중간 보고서' }),
+    );
     const midtermDetailLinks = await screen.findAllByRole('link', {
       name: '상세보기',
     });
@@ -759,7 +757,9 @@ describe('AdminSubmissionsPage', () => {
     expect(feedback.status).toBe(200);
 
     renderPage('/admin/submissions?sectionId=1');
-    await user.click(await screen.findByRole('button', { name: '중간 보고서' }));
+    await user.click(
+      await screen.findByRole('button', { name: '중간 보고서' }),
+    );
     const detailLinks = await screen.findAllByRole('link', {
       name: '상세보기',
     });
@@ -1017,7 +1017,9 @@ describe('AdminSubmissionsPage', () => {
     const user = userEvent.setup();
 
     renderPage();
-    await user.click(await screen.findByRole('button', { name: '최종 보고서' }));
+    await user.click(
+      await screen.findByRole('button', { name: '최종 보고서' }),
+    );
 
     expect(await screen.findByText('OOP-01 - 2팀')).toBeInTheDocument();
     expect(screen.getByText('미제출')).toBeInTheDocument();
@@ -1075,7 +1077,9 @@ describe('AdminSubmissionsPage', () => {
     try {
       const user = userEvent.setup();
       renderPage();
-      await user.click(await screen.findByRole('button', { name: '최종 보고서' }));
+      await user.click(
+        await screen.findByRole('button', { name: '최종 보고서' }),
+      );
 
       expect(
         await screen.findAllByRole('link', { name: 'e2e-submission.pdf' }),
