@@ -112,7 +112,8 @@ export default function AdminMessagesPage() {
     search.sectionId === undefined ? undefined : String(search.sectionId);
   const teamId =
     search.teamId === undefined ? undefined : String(search.teamId);
-  const page = Number.isInteger(initialPage) && initialPage > 0 ? initialPage : 0;
+  const page =
+    Number.isInteger(initialPage) && initialPage > 0 ? initialPage : 0;
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [composeSectionId, setComposeSectionId] = useState('');
   const [composeTeamId, setComposeTeamId] = useState('');
