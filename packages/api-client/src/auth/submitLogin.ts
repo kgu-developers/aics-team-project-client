@@ -1,15 +1,19 @@
 import type { AuthLoginInput, AuthLoginResponse } from '@aics/core';
 
-import { apiClient } from '../client';
+import { changeCookieSession } from './sessionRecovery';
 import { ENDPOINTS } from '../constants/endpoints';
+import { authTransport } from '../transport';
 
 export async function submitLogin(
   input: AuthLoginInput,
 ): Promise<AuthLoginResponse> {
-  const response = await apiClient.post<AuthLoginResponse>(
-    ENDPOINTS.AUTH.LOGIN,
-    input,
-  );
+  return changeCookieSession(async () => {
+    const response = await authTransport.post<AuthLoginResponse>(
+      ENDPOINTS.AUTH.LOGIN,
+      input,
+      { timeout: 15_000 },
+    );
 
-  return response.data;
+    return response.data;
+  });
 }

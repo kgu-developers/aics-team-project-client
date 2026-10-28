@@ -1,6 +1,11 @@
-import { submitLogin } from '@aics/api-client';
+import {
+  submitLogin,
+  getSessionSnapshot,
+  assertSessionFinalizationCurrent,
+} from '@aics/api-client';
 import type { AuthLoginInput, CurrentUser } from '@aics/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { isCancel } from 'axios';
 
 import { useAuthStore } from '../authStore';
 import { fetchSessionUser } from '../fetchSessionUser';
@@ -16,12 +21,19 @@ export function useLoginMutation() {
       queryClient.clear();
       try {
         const role = requireSessionRole(await submitLogin(input));
+        const snapshot = getSessionSnapshot();
         const currentUser = await fetchSessionUser(role);
+        assertSessionFinalizationCurrent(snapshot);
         session.setCurrentUser(currentUser);
         session.markAuthenticated(role);
         return currentUser;
       } catch (error) {
-        session.clearSession();
+        if (
+          !isCancel(error) &&
+          useAuthStore.getState().sessionEndReason === null
+        ) {
+          session.clearSession();
+        }
         throw error;
       }
     },

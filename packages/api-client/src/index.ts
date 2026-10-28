@@ -1,4 +1,16 @@
 export {
+  SessionRefreshError,
+  setApiSessionActive,
+  getSessionSnapshot,
+  assertSessionCurrent,
+  assertSessionFinalizationCurrent,
+  isSessionGenerationCurrent,
+  notifyApiSessionExpired,
+  observeSessionRecoveryStorage,
+  onApiSessionExpired,
+  waitForSessionRecovery,
+  SESSION_RECOVERY_STORAGE_KEY,
+  type SessionGeneration,
   fetchCurrentUser,
   mapCurrentUserResponse,
   onApiUnauthorized,
@@ -17,7 +29,7 @@ export {
   type UpdateMyProfileInput,
 } from './profile/updateMyProfile';
 export { updateUserPassword, type UpdateUserPasswordInput } from './profile';
-export { API_BASE_URL, apiClient } from './client';
+export { API_BASE_URL, apiClient, isDefinitiveSessionExpiry } from './client';
 export {
   fetchAdminProposalFeedbacks,
   submitAdminProposalFeedback,

@@ -2,6 +2,7 @@ import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
 
+import { appQueryClient } from './app/providers/query-provider';
 import { routeTree } from './app/routeTree.gen';
 import { restoreSession } from './features/auth/restoreSession';
 import { startSessionSync } from './features/auth/sessionSync';
@@ -70,8 +71,8 @@ async function bootstrap() {
   await disableMocking();
   await enableMocking();
   await enableDevelopmentMilestonePreview();
+  startSessionSync(() => appQueryClient.clear());
   await restoreSession();
-  startSessionSync();
 
   const rootElement = document.getElementById('root')!;
   if (!rootElement.innerHTML) {

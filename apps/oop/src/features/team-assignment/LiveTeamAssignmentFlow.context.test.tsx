@@ -50,6 +50,7 @@ beforeAll(() => {
 afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
   server.resetHandlers();
+  localStorage.removeItem('aics:session-recovery');
   requests.length = 0;
   mockNavigate.mockReset();
   useAuthStore.getState().clearSession();
@@ -68,7 +69,9 @@ function requestPath(url: string) {
 const dependentRequests = () =>
   requests.filter(
     ({ path }) =>
-      path !== ENDPOINTS.USER.ME && path !== ENDPOINTS.SECTION.MY_SECTIONS,
+      path !== ENDPOINTS.USER.ME &&
+      path !== ENDPOINTS.SECTION.MY_SECTIONS &&
+      path !== ENDPOINTS.AUTH.REFRESH,
   );
 
 function setup({
@@ -176,6 +179,12 @@ it('offers re-login with disabled pending identity queries and clears stale loca
 it.each([401, 500])(
   'offers re-login after identity HTTP %s and clears the local session without dependent requests',
   async identityStatus => {
+    server.use(
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.AUTH.REFRESH}`,
+        () => new HttpResponse(null, { status: 401 }),
+      ),
+    );
     const { client, studentNumber } = setup({ identityStatus });
     await screen.findByText('로그인 정보를 확인해 주세요.');
     expect(
@@ -339,6 +348,7 @@ it('hides the survey after a prerequisite refetch fails and recovers with the se
     screen.queryByRole('button', { name: '시작하기' }),
   ).not.toBeInTheDocument();
   server.resetHandlers();
+  localStorage.removeItem('aics:session-recovery');
   // Restore a fresh authoritative identity after the failed refetch.
   server.use(
     http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>

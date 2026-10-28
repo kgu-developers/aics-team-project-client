@@ -1,9 +1,10 @@
-import { setApiAccessToken } from '@aics/api-client';
+import { setApiAccessToken, setApiSessionActive } from '@aics/api-client';
 import type { AuthSessionRole, CurrentUser } from '@aics/core';
 import { create } from 'zustand';
 
 /** Why the session ended without the user pressing 로그아웃 in this tab. */
-export type SessionEndReason = 'expired' | 'signed-out-elsewhere';
+export type SessionEndReason =
+  'expired' | 'signed-out-elsewhere' | 'session-changed-elsewhere';
 
 type AuthState = {
   isAuthenticated: boolean;
@@ -26,14 +27,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   accessToken: null,
   currentUser: null,
   sessionEndReason: null,
-  markAuthenticated: sessionRole =>
-    set({ isAuthenticated: true, sessionEndReason: null, sessionRole }),
+  markAuthenticated: sessionRole => {
+    setApiSessionActive(true);
+    set({ isAuthenticated: true, sessionEndReason: null, sessionRole });
+  },
   setAccessToken: accessToken => {
+    setApiSessionActive(true);
     setApiAccessToken(accessToken);
     set({ accessToken, isAuthenticated: true });
   },
   setCurrentUser: currentUser => set({ currentUser }),
   clearSession: reason => {
+    setApiSessionActive(false);
     setApiAccessToken(null);
     set({
       accessToken: null,

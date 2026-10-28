@@ -1,4 +1,8 @@
-import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
+import {
+  API_BASE_URL,
+  ENDPOINTS,
+  SESSION_RECOVERY_STORAGE_KEY,
+} from '@aics/api-client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -18,6 +22,7 @@ import { useAuthStore } from './authStore';
 import { useCurrentUserQuery } from './queries/useCurrentUserQuery';
 import { useLoginMutation } from './queries/useLoginMutation';
 import { restoreSession } from './restoreSession';
+import { startSessionSync } from './sessionSync';
 
 import { demoAdminCredentials, demoCredentials } from '~/mocks/data/users';
 import { adminProfileHandlers } from '~/mocks/handlers/adminProfile';
@@ -34,6 +39,7 @@ beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterAll(() => server.close());
 afterEach(() => {
   server.resetHandlers();
+  localStorage.removeItem('aics:session-recovery');
   resetDemoPasswordState();
   useAuthStore.getState().clearSession();
   clients.splice(0).forEach(client => client.clear());
@@ -50,6 +56,30 @@ function wrapper() {
     Wrapper: ({ children }: PropsWithChildren) => (
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     ),
+  };
+}
+
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>(done => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+function readSessionGeneration() {
+  return JSON.parse(
+    localStorage.getItem(SESSION_RECOVERY_STORAGE_KEY) ?? 'null',
+  ) as { session: string; revision: string };
+}
+
+function sessionUserResponse() {
+  return {
+    studentNumber: 'race-user',
+    name: 'Race User',
+    email: 'race@example.com',
+    phone: '',
+    globalRole: 'USER',
   };
 }
 
@@ -210,6 +240,198 @@ describe('cookie authentication bootstrap', () => {
     expect(client.getQueryData(['private'])).toBeUndefined();
   });
 
+  it('로그인 /me 대기 중 같은 세대가 만료되면 인증 상태를 커밋하지 않는다', async () => {
+    const meStarted = deferred();
+    const releaseMe = deferred();
+    server.use(
+      http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.LOGIN}`, () =>
+        HttpResponse.json({ message: 'ok', role: 'STUDENT' }),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, async () => {
+        meStarted.resolve();
+        await releaseMe.promise;
+        return HttpResponse.json(sessionUserResponse());
+      }),
+    );
+    const { Wrapper, client } = wrapper();
+    client.setQueryData(['private'], { previousAccount: true });
+    const { result } = renderHook(() => useLoginMutation(), {
+      wrapper: Wrapper,
+    });
+
+    const login = result.current.mutateAsync(demoCredentials);
+    await meStarted.promise;
+    const generation = readSessionGeneration();
+    localStorage.setItem(
+      SESSION_RECOVERY_STORAGE_KEY,
+      JSON.stringify({
+        ...generation,
+        failed: { ...generation, reason: 'expired' },
+      }),
+    );
+    releaseMe.resolve();
+
+    await act(async () => {
+      await expect(login).rejects.toThrow('세션이 만료');
+    });
+    expect(useAuthStore.getState()).toMatchObject({
+      isAuthenticated: false,
+      currentUser: null,
+      sessionRole: null,
+    });
+    expect(client.getQueryData(['private'])).toBeUndefined();
+    expect(client.getQueryData(['auth', 'current-user'])).toBeUndefined();
+  });
+
+  it('복원 /me 대기 중 같은 세대 만료 알림이 중복되어도 캐시를 한 번만 지우고 인증하지 않는다', async () => {
+    const meStarted = deferred();
+    const releaseMe = deferred();
+    server.use(
+      http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.REFRESH}`, () =>
+        HttpResponse.json({ message: 'ok', role: 'STUDENT' }),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, async () => {
+        meStarted.resolve();
+        await releaseMe.promise;
+        return HttpResponse.json(sessionUserResponse());
+      }),
+    );
+    const { client } = wrapper();
+    client.setQueryData(['private'], { restoredAccount: true });
+    const clearCache = vi.fn(() => client.clear());
+    const stopSync = startSessionSync(clearCache);
+
+    try {
+      const restore = restoreSession();
+      await meStarted.promise;
+      const generation = readSessionGeneration();
+      const expired = {
+        ...generation,
+        failed: { ...generation, reason: 'expired' },
+      };
+      const oldValue = JSON.stringify(generation);
+      const newValue = JSON.stringify(expired);
+      localStorage.setItem(SESSION_RECOVERY_STORAGE_KEY, newValue);
+      const event = new StorageEvent('storage', {
+        key: SESSION_RECOVERY_STORAGE_KEY,
+        oldValue,
+        newValue,
+      });
+      window.dispatchEvent(event);
+      window.dispatchEvent(event);
+      releaseMe.resolve();
+      await restore;
+
+      expect(useAuthStore.getState()).toMatchObject({
+        isAuthenticated: false,
+        currentUser: null,
+        sessionRole: null,
+        sessionEndReason: 'expired',
+      });
+      expect(client.getQueryData(['private'])).toBeUndefined();
+      expect(clearCache).toHaveBeenCalledOnce();
+    } finally {
+      stopSync();
+      releaseMe.resolve();
+    }
+  });
+
+  it('복원 /me 대기 중 기록된 같은 세대 만료를 최종 커밋 직전에 거부한다', async () => {
+    const meStarted = deferred();
+    const releaseMe = deferred();
+    server.use(
+      http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.REFRESH}`, () =>
+        HttpResponse.json({ message: 'ok', role: 'STUDENT' }),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, async () => {
+        meStarted.resolve();
+        await releaseMe.promise;
+        return HttpResponse.json(sessionUserResponse());
+      }),
+    );
+
+    const restore = restoreSession();
+    await meStarted.promise;
+    const generation = readSessionGeneration();
+    localStorage.setItem(
+      SESSION_RECOVERY_STORAGE_KEY,
+      JSON.stringify({
+        ...generation,
+        failed: { ...generation, reason: 'expired' },
+      }),
+    );
+    releaseMe.resolve();
+    await restore;
+
+    expect(useAuthStore.getState()).toMatchObject({
+      isAuthenticated: false,
+      currentUser: null,
+      sessionRole: null,
+    });
+  });
+
+  it('이전 세대 만료는 더 새로운 로그인 /me 완료를 막지 않는다', async () => {
+    const oldGeneration = { session: 'old-session', revision: 'old-revision' };
+    localStorage.setItem(
+      SESSION_RECOVERY_STORAGE_KEY,
+      JSON.stringify(oldGeneration),
+    );
+    const meStarted = deferred();
+    const releaseMe = deferred();
+    server.use(
+      http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.LOGIN}`, () =>
+        HttpResponse.json({ message: 'ok', role: 'STUDENT' }),
+      ),
+      http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, async () => {
+        meStarted.resolve();
+        await releaseMe.promise;
+        return HttpResponse.json(sessionUserResponse());
+      }),
+    );
+    const { Wrapper } = wrapper();
+    const { result } = renderHook(() => useLoginMutation(), {
+      wrapper: Wrapper,
+    });
+    const clearCache = vi.fn();
+    const stopSync = startSessionSync(clearCache);
+
+    try {
+      const login = result.current.mutateAsync(demoCredentials);
+      await meStarted.promise;
+      const current = readSessionGeneration();
+      const withStaleExpiry = {
+        ...current,
+        failed: { ...oldGeneration, reason: 'expired' },
+      };
+      const event = new StorageEvent('storage', {
+        key: SESSION_RECOVERY_STORAGE_KEY,
+        oldValue: JSON.stringify(current),
+        newValue: JSON.stringify(withStaleExpiry),
+      });
+      localStorage.setItem(
+        SESSION_RECOVERY_STORAGE_KEY,
+        JSON.stringify(withStaleExpiry),
+      );
+      window.dispatchEvent(event);
+      releaseMe.resolve();
+      await act(async () => {
+        await expect(login).resolves.toMatchObject({
+          studentNumber: 'race-user',
+        });
+      });
+
+      expect(useAuthStore.getState()).toMatchObject({
+        isAuthenticated: true,
+        currentUser: { studentNumber: 'race-user' },
+        sessionRole: 'STUDENT',
+      });
+      expect(clearCache).not.toHaveBeenCalled();
+    } finally {
+      stopSync();
+      releaseMe.resolve();
+    }
+  });
+
   it('역할 없는 로그인 응답과 잘못된 비밀번호를 거부한다', async () => {
     const { Wrapper } = wrapper();
     const { result } = renderHook(() => useLoginMutation(), {
@@ -298,6 +520,34 @@ describe('cookie authentication bootstrap', () => {
       sessionRole: 'STUDENT',
       currentUser: { studentNumber: 'review-user' },
     });
+  });
+
+  it('refresh 401 뒤 복원을 반복해도 stale marker가 만료 알림과 캐시 정리를 일으키지 않는다', async () => {
+    let refreshRequests = 0;
+    server.use(
+      http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.REFRESH}`, () => {
+        refreshRequests += 1;
+        return new HttpResponse(null, { status: 401 });
+      }),
+    );
+    const { client } = wrapper();
+    client.setQueryData(['private'], { restoredAccount: true });
+    const clearCache = vi.fn(() => client.clear());
+    const stopSync = startSessionSync(clearCache);
+
+    try {
+      await restoreSession();
+      await restoreSession();
+
+      expect(refreshRequests).toBe(1);
+      expect(clearCache).not.toHaveBeenCalled();
+      expect(client.getQueryData(['private'])).toEqual({
+        restoredAccount: true,
+      });
+      expect(useAuthStore.getState().sessionEndReason).toBeNull();
+    } finally {
+      stopSync();
+    }
   });
 
   it('refresh가 실패하면 이전 세션을 제거한다', async () => {
