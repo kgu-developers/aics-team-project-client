@@ -52,6 +52,24 @@ const server = setupServer(
   ),
 );
 
+function positiveId(value: unknown) {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function nonNegativePage(value: unknown) {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
+function validateMeetingSearch(search: Record<string, unknown>) {
+  return {
+    page: nonNegativePage(search.page),
+    sectionId: positiveId(search.sectionId),
+    teamId: positiveId(search.teamId),
+  };
+}
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   resetMockSessionState();
@@ -84,10 +102,17 @@ function renderPage(
     ),
     getParentRoute: () => rootRoute,
     path: '/admin/meetings/',
+    validateSearch: validateMeetingSearch,
+  });
+  const meetingDetailRoute = createRoute({
+    component: () => <div>회의록 상세</div>,
+    getParentRoute: () => rootRoute,
+    path: '/admin/meetings/$meetingId',
+    validateSearch: validateMeetingSearch,
   });
   const router = createRouter({
     history: createMemoryHistory({ initialEntries: [initialEntry] }),
-    routeTree: rootRoute.addChildren([meetingsRoute]),
+    routeTree: rootRoute.addChildren([meetingsRoute, meetingDetailRoute]),
   });
 
   setApiAccessToken(accessToken);
@@ -96,7 +121,7 @@ function renderPage(
     currentUser,
   });
 
-  return render(<RouterProvider router={router} />);
+  return { ...render(<RouterProvider router={router} />), router };
 }
 
 describe('AdminMeetingsPage', () => {
@@ -179,12 +204,40 @@ describe('AdminMeetingsPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('필터링한 회의록을 열 때 현재 목록 필터를 상세 URL에 유지한다', async () => {
+    const user = userEvent.setup();
+    const { router } = renderPage('/admin/meetings/?sectionId=1&teamId=1');
+
+    await user.click(
+      await screen.findByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
+    );
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/admin/meetings/1'),
+    );
+    expect(router.state.location.search).toMatchObject({
+      sectionId: 1,
+      teamId: 1,
+    });
+  });
+
   it('선택한 분반과 팀 기준의 회의록 수정 이력을 목록 아래에 표시한다', async () => {
+    const user = userEvent.setup();
     renderPage('/admin/meetings/?sectionId=1&teamId=1');
 
+    const editLogsToggle = await screen.findByRole('button', {
+      name: '회의록 수정 이력 (2건)',
+    });
+    expect(editLogsToggle).toHaveAttribute('aria-expanded', 'false');
     expect(
-      await screen.findByRole('heading', { name: '회의록 수정 이력' }),
-    ).toBeInTheDocument();
+      screen.queryByText(
+        '중간 점검 피드백 반영 담당자가 실제 논의 내용과 달라 역할 분담을 바로잡았습니다.',
+      ),
+    ).not.toBeInTheDocument();
+
+    await user.click(editLogsToggle);
+    expect(editLogsToggle).toHaveAttribute('aria-expanded', 'true');
+
     expect(
       await screen.findByText(
         '중간 점검 피드백 반영 담당자가 실제 논의 내용과 달라 역할 분담을 바로잡았습니다.',

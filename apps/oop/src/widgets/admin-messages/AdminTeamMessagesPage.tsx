@@ -43,6 +43,11 @@ import * as styles from './AdminTeamMessagesPage.css';
 
 type RelatedType = 'GENERAL' | 'PROPOSAL' | 'MID_REPORT';
 type MessageFilter = 'ALL' | RelatedType;
+type AdminMessageListSearch = {
+  page?: number;
+  sectionId?: number;
+  teamId?: number;
+};
 
 const messageFilterLabels: Record<MessageFilter, string> = {
   ALL: '전체 쪽지',
@@ -54,6 +59,9 @@ const messageFilterLabels: Record<MessageFilter, string> = {
 export default function AdminTeamMessagesPage() {
   const { teamId } = useParams({ from: '/admin/messages/teams/$teamId' });
   const search = useSearch({ from: '/admin/messages/teams/$teamId' }) as {
+    page?: number | string;
+    sectionId?: number | string;
+    teamId?: number | string;
     type?: MessageFilter;
   };
   const currentUser = useAuthStore(state => state.currentUser);
@@ -84,10 +92,19 @@ export default function AdminTeamMessagesPage() {
       />
     );
   }
+  const page = Number(search.page);
+  const listSearch: AdminMessageListSearch = {
+    ...(search.sectionId === undefined
+      ? {}
+      : { sectionId: Number(search.sectionId) }),
+    ...(search.teamId === undefined ? {} : { teamId: Number(search.teamId) }),
+    ...(Number.isInteger(page) && page > 0 ? { page } : {}),
+  };
   return (
     <AdminTeamMessagesPanel
       key={`${currentUser.id}:${teamQuery.data.id}`}
       initialFilter={search.type}
+      listSearch={listSearch}
       team={teamQuery.data}
     />
   );
@@ -96,10 +113,12 @@ export default function AdminTeamMessagesPage() {
 export function AdminTeamMessagesPanel({
   embedded = false,
   initialFilter = 'ALL',
+  listSearch = {},
   team,
 }: {
   embedded?: boolean;
   initialFilter?: MessageFilter;
+  listSearch?: AdminMessageListSearch;
   team: NonNullable<ReturnType<typeof useAdminTeamDashboardQuery>['data']>;
 }) {
   const teamId = team.id;
@@ -192,7 +211,11 @@ export function AdminTeamMessagesPanel({
         </div>
         {!embedded ? (
           <div className={styles.headerLinks}>
-            <Link className={styles.backLink} to={ROUTES.ADMIN_MESSAGES}>
+            <Link
+              className={styles.backLink}
+              search={listSearch}
+              to={ROUTES.ADMIN_MESSAGES}
+            >
               ← 쪽지함 목록으로
             </Link>
           </div>

@@ -8,7 +8,7 @@ import {
   Text,
   TextArea,
 } from '@aics/design-system';
-import { useNavigate } from '@tanstack/react-router';
+import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -99,12 +99,30 @@ function storeComposeDraft(draft: GeneralMessageDraft) {
 
 export default function AdminMessagesPage() {
   const navigate = useNavigate();
+  const location = useLocation() as {
+    search: {
+      page?: number | string;
+      sectionId?: number | string;
+      teamId?: number | string;
+    };
+  };
+  const initialPage = Number(location.search.page);
   const currentUser = useAuthStore(state => state.currentUser);
   const activeSectionsQuery = useActiveAdminSections();
   const sections = activeSectionsQuery.data;
-  const [sectionId, setSectionId] = useState<string>();
-  const [teamId, setTeamId] = useState<string>();
-  const [page, setPage] = useState(0);
+  const [sectionId, setSectionId] = useState<string | undefined>(() =>
+    location.search.sectionId === undefined
+      ? undefined
+      : String(location.search.sectionId),
+  );
+  const [teamId, setTeamId] = useState<string | undefined>(() =>
+    location.search.teamId === undefined
+      ? undefined
+      : String(location.search.teamId),
+  );
+  const [page, setPage] = useState(() =>
+    Number.isInteger(initialPage) && initialPage > 0 ? initialPage : 0,
+  );
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [composeSectionId, setComposeSectionId] = useState('');
   const [composeTeamId, setComposeTeamId] = useState('');
@@ -209,6 +227,11 @@ export default function AdminMessagesPage() {
     if (!message.read) readMutation.mutate(message.id);
     void navigate({
       params: { teamId: String(message.teamId) },
+      search: {
+        ...(sectionId ? { sectionId: Number(sectionId) } : {}),
+        ...(teamId ? { teamId: Number(teamId) } : {}),
+        ...(page > 0 ? { page } : {}),
+      },
       to: ROUTES.ADMIN_MESSAGE_TEAM,
     });
   };

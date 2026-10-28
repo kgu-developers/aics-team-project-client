@@ -150,6 +150,12 @@ export const editLogsSection = style({
   gap: tokens.spacing[3],
 });
 
+export const editLogsContent = style({
+  display: 'grid',
+  gap: tokens.spacing[3],
+  paddingTop: tokens.spacing[3],
+});
+
 export const actionsTitleRow = style({
   alignItems: 'end',
   display: 'flex',

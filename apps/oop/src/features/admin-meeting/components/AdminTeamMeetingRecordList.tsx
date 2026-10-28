@@ -38,7 +38,7 @@ export function AdminTeamMeetingRecordList({
         </Heading>
         <Link
           className={styles.allLink}
-          search={{ sectionId, teamId }}
+          search={{ sectionId: Number(sectionId), teamId: Number(teamId) }}
           to={ROUTES.ADMIN_MEETINGS}
         >
           전체보기 →
@@ -68,7 +68,10 @@ export function AdminTeamMeetingRecordList({
               className={styles.record}
               key={record.id}
               params={{ meetingId: record.id }}
-              search={{ sectionId: record.sectionId, teamId: record.teamId }}
+              search={{
+                sectionId: Number(record.sectionId),
+                teamId: Number(record.teamId),
+              }}
               to={ROUTES.ADMIN_MEETING_DETAIL}
             >
               <div className={styles.recordMain}>
