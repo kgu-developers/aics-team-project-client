@@ -30,11 +30,15 @@ export function broadcastLogout(generation: SessionGeneration) {
   }
 }
 
-function endSession(reason: SessionEndReason, clearCache: () => void) {
+function endSession(
+  reason: SessionEndReason,
+  clearCache: () => void,
+  allowUnauthenticated = false,
+) {
   const state = useAuthStore.getState();
   if (
     !selectHasAuthenticatedSession(state) &&
-    state.sessionEndReason !== null
+    (!allowUnauthenticated || state.sessionEndReason !== null)
   ) {
     return false;
   }
@@ -73,7 +77,7 @@ export function startSessionSync(clearCache: () => void = () => undefined) {
   let handledLogoutGeneration = '';
   const stopExpired = onApiSessionExpired(generation => {
     if (isSessionGenerationCurrent(generation)) {
-      endSession('expired', clearCache);
+      endSession('expired', clearCache, true);
     }
   });
   const onStorage = (event: StorageEvent) => {

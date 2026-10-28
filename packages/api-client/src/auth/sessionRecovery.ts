@@ -272,7 +272,12 @@ export function recoverSession(snapshot = getSessionSnapshot()) {
     // A failed rotation may have reached the server. Only a new login/logout
     // clears this marker; retries and other tabs must not replay that token.
     const failure = getOwnedFailure(current);
-    if (failure) throwOwnedFailure(failure);
+    if (failure) {
+      if (!active) {
+        throw new SessionRefreshError(failure.reason === 'expired');
+      }
+      throwOwnedFailure(failure);
+    }
     if (current.revision !== snapshot.revision && current.response) {
       return current.response;
     }

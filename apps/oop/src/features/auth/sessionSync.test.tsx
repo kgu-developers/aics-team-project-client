@@ -66,6 +66,34 @@ it('로그인·재발급 자체의 401은 세션 사유로 기록하지 않는�
   expect(useAuthStore.getState().isAuthenticated).toBe(true);
 });
 
+it('비인증 로그인·복원 대기 탭은 다른 탭의 세션 변경과 로그아웃을 무시한다', () => {
+  const current = { session: 'account-b', revision: '' };
+  localStorage.setItem('aics:session-recovery', JSON.stringify(current));
+  const clearCache = vi.fn();
+  stop = startSessionSync(clearCache);
+
+  window.dispatchEvent(
+    new StorageEvent('storage', {
+      key: 'aics:session-recovery',
+      oldValue: JSON.stringify({ session: 'account-a', revision: '' }),
+      newValue: JSON.stringify(current),
+    }),
+  );
+  window.dispatchEvent(
+    new StorageEvent('storage', {
+      key: 'aics:auth-event',
+      newValue: JSON.stringify({
+        ...current,
+        at: Date.now(),
+        type: 'logout',
+      }),
+    }),
+  );
+
+  expect(useAuthStore.getState().sessionEndReason).toBeNull();
+  expect(clearCache).not.toHaveBeenCalled();
+});
+
 it('현재 세대의 로그아웃 이벤트만 한 번 적용한다', () => {
   const generation = { session: 'logout-generation', revision: '' };
   localStorage.setItem('aics:session-recovery', JSON.stringify(generation));
@@ -223,6 +251,35 @@ it('다른 탭의 직접 로그인·계정 전환은 사용자와 개인 캐시�
     'session-changed-elsewhere',
   );
   expect(useAuthStore.getState().currentUser).toBeNull();
+  expect(clearCache).toHaveBeenCalledOnce();
+});
+
+it('세션 변경 뒤 로그아웃 이벤트는 캐시를 다시 지우지 않고 사유만 구체화한다', () => {
+  const next = { session: 'account-b', revision: '' };
+  localStorage.setItem('aics:session-recovery', JSON.stringify(next));
+  signIn();
+  const clearCache = vi.fn();
+  stop = startSessionSync(clearCache);
+
+  window.dispatchEvent(
+    new StorageEvent('storage', {
+      key: 'aics:session-recovery',
+      oldValue: JSON.stringify({ session: 'account-a', revision: '' }),
+      newValue: JSON.stringify(next),
+    }),
+  );
+  window.dispatchEvent(
+    new StorageEvent('storage', {
+      key: 'aics:auth-event',
+      newValue: JSON.stringify({
+        ...next,
+        at: Date.now(),
+        type: 'logout',
+      }),
+    }),
+  );
+
+  expect(useAuthStore.getState().sessionEndReason).toBe('signed-out-elsewhere');
   expect(clearCache).toHaveBeenCalledOnce();
 });
 

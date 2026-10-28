@@ -522,6 +522,34 @@ describe('cookie authentication bootstrap', () => {
     });
   });
 
+  it('refresh 401 뒤 복원을 반복해도 stale marker가 만료 알림과 캐시 정리를 일으키지 않는다', async () => {
+    let refreshRequests = 0;
+    server.use(
+      http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.REFRESH}`, () => {
+        refreshRequests += 1;
+        return new HttpResponse(null, { status: 401 });
+      }),
+    );
+    const { client } = wrapper();
+    client.setQueryData(['private'], { restoredAccount: true });
+    const clearCache = vi.fn(() => client.clear());
+    const stopSync = startSessionSync(clearCache);
+
+    try {
+      await restoreSession();
+      await restoreSession();
+
+      expect(refreshRequests).toBe(1);
+      expect(clearCache).not.toHaveBeenCalled();
+      expect(client.getQueryData(['private'])).toEqual({
+        restoredAccount: true,
+      });
+      expect(useAuthStore.getState().sessionEndReason).toBeNull();
+    } finally {
+      stopSync();
+    }
+  });
+
   it('refresh가 실패하면 이전 세션을 제거한다', async () => {
     useAuthStore.getState().markAuthenticated('ASSISTANT');
     server.use(
