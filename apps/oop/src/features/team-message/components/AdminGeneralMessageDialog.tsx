@@ -1,4 +1,5 @@
 import {
+  AlertDialog,
   Button,
   Heading,
   Selector,
@@ -13,7 +14,11 @@ import {
   ADMIN_TEAM_FILTER_WIDTH,
 } from '~/features/admin-section/filterLayout';
 import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
-import { useSubmitTeamMessageMutation } from '~/features/team-message/queries';
+import { useAuthStore } from '~/features/auth/authStore';
+import {
+  useSubmitSectionTeamMessageMutation,
+  useSubmitTeamMessageMutation,
+} from '~/features/team-message/queries';
 
 import * as styles from './AdminGeneralMessageDialog.css';
 import { useDraggableMessagePanel } from './useDraggableMessagePanel';
@@ -30,6 +35,7 @@ type AdminGeneralMessageDialogProps = {
 };
 
 const draftStoragePrefix = 'aics.oop.admin.general-message-draft:';
+const allTeamsRecipient = '__all_teams__';
 
 type GeneralMessageDraft = {
   message: string;
@@ -92,14 +98,31 @@ export function AdminGeneralMessageDialog({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+  const [isBroadcastConfirmationOpen, setIsBroadcastConfirmationOpen] =
+    useState(false);
+  const currentUser = useAuthStore(state => state.currentUser);
   const draggablePanel = useDraggableMessagePanel();
   const teamsQuery = useAdminSectionTeamsQuery(isOpen ? sectionId : undefined);
   const submitMutation = useSubmitTeamMessageMutation(teamId);
+  const submitSectionMutation = useSubmitSectionTeamMessageMutation(sectionId);
   const teams = teamsQuery.data?.contents ?? [];
+  const canBroadcast =
+    !isTeamLocked &&
+    Boolean(
+      currentUser?.sections.some(
+        section =>
+          String(section.id) === sectionId && section.role === 'PROFESSOR',
+      ),
+    );
+  // A restored draft may contain the sentinel after the user's role changed.
+  // Never let a stale local value bypass the current professor-only UI policy.
+  const isAllTeamsSelected = canBroadcast && teamId === allTeamsRecipient;
   const hasSelectedTeam = useMemo(
-    () => teams.some(team => String(team.id) === teamId),
-    [teamId, teams],
+    () => isAllTeamsSelected || teams.some(team => String(team.id) === teamId),
+    [isAllTeamsSelected, teamId, teams],
   );
+  const isSubmitPending =
+    submitMutation.isPending || submitSectionMutation.isPending;
 
   const draftStorageKey = `${draftStoragePrefix}${sectionId}`;
   const draftTeamStorageKey = `${draftStorageKey}:team:${teamId || 'unselected'}`;
@@ -168,6 +191,61 @@ export function AdminGeneralMessageDialog({
     setSuccessMessage(null);
   };
 
+  const clearDraftAfterSend = () => {
+    try {
+      sessionStorage.removeItem(draftTeamStorageKey);
+      if (sessionStorage.getItem(selectedDraftTeamStorageKey) === teamId)
+        sessionStorage.removeItem(selectedDraftTeamStorageKey);
+    } catch {
+      // Sending has succeeded even if the local draft cannot clear.
+    }
+  };
+
+  const handleSend = () => {
+    if (!hasSelectedTeam || !message.trim()) return;
+
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    const onError = () => {
+      setIsBroadcastConfirmationOpen(false);
+      setErrorMessage('일반 메시지를 보내지 못했습니다. 다시 시도해 주세요.');
+    };
+    if (isAllTeamsSelected) {
+      submitSectionMutation.mutate(
+        { message: message.trim() },
+        {
+          onError,
+          onSuccess: result => {
+            setIsBroadcastConfirmationOpen(false);
+            clearDraftAfterSend();
+            setMessage('');
+            setSuccessMessage(
+              result.sentCount === 0
+                ? '전송 대상 팀이 없습니다.'
+                : `전체 ${result.sentCount}개 팀에 일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.`,
+            );
+            onSent?.();
+          },
+        },
+      );
+      return;
+    }
+    submitMutation.mutate(
+      { message: message.trim(), relatedType: 'GENERAL' },
+      {
+        onError,
+        onSuccess: () => {
+          clearDraftAfterSend();
+          setMessage('');
+          setSuccessMessage(
+            '일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.',
+          );
+          onSent?.();
+        },
+      },
+    );
+  };
+
   return (
     <aside
       aria-label='일반 메시지 작성 패널'
@@ -187,8 +265,10 @@ export function AdminGeneralMessageDialog({
         </div>
         <div>
           <Text color='secondary'>
-            {description ??
-              '메시지를 받을 팀을 선택하세요. 보낸 메시지는 해당 팀의 일반 메시지 대화에 추가됩니다.'}
+            {isAllTeamsSelected
+              ? '분반의 삭제되지 않은 모든 팀에 같은 일반 메시지를 보냅니다.'
+              : (description ??
+                '메시지를 받을 팀을 선택하세요. 보낸 메시지는 해당 팀의 일반 메시지 대화에 추가됩니다.')}
           </Text>
         </div>
         <div className={styles.recipientSelectors}>
@@ -211,6 +291,9 @@ export function AdminGeneralMessageDialog({
             onChange={handleTeamChange}
             options={[
               { label: '팀 선택', value: '' },
+              ...(canBroadcast
+                ? [{ label: '전체 팀', value: allTeamsRecipient }]
+                : []),
               ...teams.map(team => ({
                 label: team.name,
                 value: String(team.id),
@@ -241,52 +324,39 @@ export function AdminGeneralMessageDialog({
         {errorMessage ? <Text role='alert'>{errorMessage}</Text> : null}
         <div className={styles.actions}>
           <Button
-            isDisabled={submitMutation.isPending}
+            isDisabled={isSubmitPending}
             label='닫기'
             onClick={onClose}
             variant='secondary'
           />
           <Button
-            isDisabled={
-              !hasSelectedTeam || !message.trim() || submitMutation.isPending
-            }
-            isLoading={submitMutation.isPending}
+            isDisabled={!hasSelectedTeam || !message.trim() || isSubmitPending}
+            isLoading={isSubmitPending}
             label='보내기'
             onClick={() => {
-              if (!hasSelectedTeam || !message.trim()) return;
-
-              setErrorMessage(null);
-              setSuccessMessage(null);
-              submitMutation.mutate(
-                { message: message.trim(), relatedType: 'GENERAL' },
-                {
-                  onError: () =>
-                    setErrorMessage(
-                      '일반 메시지를 보내지 못했습니다. 다시 시도해 주세요.',
-                    ),
-                  onSuccess: () => {
-                    try {
-                      sessionStorage.removeItem(draftTeamStorageKey);
-                      if (
-                        sessionStorage.getItem(selectedDraftTeamStorageKey) ===
-                        teamId
-                      )
-                        sessionStorage.removeItem(selectedDraftTeamStorageKey);
-                    } catch {
-                      // Sending has succeeded even if the local draft cannot clear.
-                    }
-                    setMessage('');
-                    setSuccessMessage(
-                      '일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.',
-                    );
-                    onSent?.();
-                  },
-                },
-              );
+              if (isAllTeamsSelected) {
+                setIsBroadcastConfirmationOpen(true);
+                return;
+              }
+              handleSend();
             }}
           />
         </div>
       </div>
+      <AlertDialog
+        actionLabel='전체 팀에 보내기'
+        cancelLabel='취소'
+        description='선택한 분반의 삭제되지 않은 모든 팀에 같은 일반 메시지가 전송됩니다.'
+        isActionLoading={submitSectionMutation.isPending}
+        isOpen={isBroadcastConfirmationOpen}
+        onAction={handleSend}
+        onOpenChange={nextIsOpen => {
+          if (!nextIsOpen && !submitSectionMutation.isPending) {
+            setIsBroadcastConfirmationOpen(false);
+          }
+        }}
+        title='분반 전체 팀에 메시지를 보낼까요?'
+      />
     </aside>
   );
 }

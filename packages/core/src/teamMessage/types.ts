@@ -17,6 +17,15 @@ export type SubmitTeamMessageInput = {
   relatedId?: number | null;
 };
 
+/** General message sent once by the server to every non-deleted team in a section. */
+export type SubmitSectionTeamMessageInput = {
+  message: string;
+};
+
+export type SectionTeamMessagePersistResponse = {
+  sentCount: number;
+};
+
 export type TeamMessagesParams = {
   relatedType?: TeamMessageRelatedType;
   page?: number;

@@ -1,10 +1,12 @@
 import {
   API_BASE_URL,
+  ENDPOINTS,
   apiClient,
   fetchAdminMessages,
   fetchTeamMessages,
   fetchTeamThread,
   setApiAccessToken,
+  submitSectionTeamMessage,
   submitTeamMessage,
 } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
@@ -17,6 +19,7 @@ import {
   demoAccessToken,
   demoAdminAccessToken,
   demoOtherSectionAccessToken,
+  demoNoticeProfessorAccessToken,
 } from '../../../mocks/data/users';
 import { createTeamMessageHandlers } from '../../../mocks/handlers/teamMessages';
 
@@ -122,6 +125,49 @@ it('전송은 인증된 학번을 저장하고 같은 팀 방의 후속 조회�
     read: false,
   });
   expect(page.pageable.totalElements).toBe(4);
+});
+
+it('담당 교수의 분반 전체 전송은 한 요청으로 모든 팀에 GENERAL 메시지를 남긴다', async () => {
+  setApiAccessToken(demoNoticeProfessorAccessToken);
+  const sent = await submitSectionTeamMessage('1', {
+    message: '전체 팀 공지입니다.',
+  });
+
+  expect(sent).toEqual({ sentCount: 3 });
+  for (const teamId of ['1', '7', '8']) {
+    const messages = await fetchTeamMessages(teamId, {
+      relatedType: 'GENERAL',
+    });
+    expect(messages.contents).toContainEqual(
+      expect.objectContaining({
+        message: '전체 팀 공지입니다.',
+        relatedType: 'GENERAL',
+      }),
+    );
+  }
+});
+
+it('분반 전체 전송은 팀별 관련 타입이나 식별자를 보내지 않는다', async () => {
+  setApiAccessToken(demoNoticeProfessorAccessToken);
+  server.use(
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_SECTION('1')}`,
+      async ({ request }) => {
+        expect(await request.json()).toEqual({ message: '전체 안내' });
+        return HttpResponse.json({ sentCount: 2 }, { status: 201 });
+      },
+    ),
+  );
+
+  await expect(
+    submitSectionTeamMessage('1', { message: '전체 안내' }),
+  ).resolves.toEqual({ sentCount: 2 });
+});
+
+it('학생은 분반 전체 전송을 할 수 없다', async () => {
+  await expect(
+    submitSectionTeamMessage('1', { message: '전체 안내' }),
+  ).rejects.toMatchObject({ response: { status: 403 } });
 });
 
 it('개발용 MSW 메시지는 새 핸들러가 시작된 뒤에도 저장소에서 복원한다', async () => {

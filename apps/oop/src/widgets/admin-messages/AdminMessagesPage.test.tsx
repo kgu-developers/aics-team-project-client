@@ -21,7 +21,12 @@ import AdminMessagesPage from './AdminMessagesPage';
 
 import { resetMockSessionState } from '~/mocks/authSession';
 import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
-import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import {
+  demoAdmin,
+  demoAdminAccessToken,
+  demoNoticeProfessor,
+  demoNoticeProfessorAccessToken,
+} from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 
 // Section teams feed the dependent team filter; the list itself is enough here.
@@ -75,10 +80,14 @@ const defaultSections: CurrentUser['sections'] = [
   },
 ];
 
-function setup(sections = defaultSections) {
-  useAuthStore.getState().setAccessToken(demoAdminAccessToken);
+function setup(
+  sections = defaultSections,
+  currentUser: CurrentUser = demoAdmin,
+  accessToken = demoAdminAccessToken,
+) {
+  useAuthStore.getState().setAccessToken(accessToken);
   useAuthStore.getState().setCurrentUser({
-    ...demoAdmin,
+    ...currentUser,
     sections,
   });
   const client = new QueryClient({
@@ -100,6 +109,52 @@ function setup(sections = defaultSections) {
   );
   return client;
 }
+
+it('담당 교수는 분반 전체 팀에 일반 메시지를 한 번에 보낸다', async () => {
+  const posted: unknown[] = [];
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>
+      HttpResponse.json(messagePage(0, 10, 0)),
+    ),
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_SECTION('1')}`,
+      async ({ request }) => {
+        posted.push(await request.json());
+        return HttpResponse.json({ sentCount: 3 }, { status: 201 });
+      },
+    ),
+  );
+  setup(
+    demoNoticeProfessor.sections,
+    demoNoticeProfessor,
+    demoNoticeProfessorAccessToken,
+  );
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+  );
+  const panel = screen.getByRole('complementary', {
+    name: '일반 메시지 작성 패널',
+  });
+  await user.click(within(panel).getByRole('combobox', { name: '팀' }));
+  await user.click(await screen.findByRole('option', { name: '전체 팀' }));
+  await user.type(
+    within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
+    '전체 팀 안내',
+  );
+  await user.click(within(panel).getByRole('button', { name: '보내기' }));
+  await user.click(
+    await screen.findByRole('button', { name: '전체 팀에 보내기' }),
+  );
+
+  expect(
+    await within(panel).findByText(
+      '전체 3개 팀에 일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.',
+    ),
+  ).toBeVisible();
+  expect(posted).toEqual([{ message: '전체 팀 안내' }]);
+});
 
 function messagePage(
   page: number,

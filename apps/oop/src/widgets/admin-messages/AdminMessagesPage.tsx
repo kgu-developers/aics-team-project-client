@@ -1,4 +1,5 @@
 import {
+  AlertDialog,
   Badge,
   Button,
   Card,
@@ -26,13 +27,18 @@ import AdminSectionTeamFilter, {
   ALL_SECTIONS,
   ALL_TEAMS,
 } from '~/features/admin-section/components/AdminSectionTeamFilter';
+import { useAuthStore } from '~/features/auth/authStore';
 import { useDraggableMessagePanel } from '~/features/team-message/components';
-import { useSubmitTeamMessageMutation } from '~/features/team-message/queries';
+import {
+  useSubmitSectionTeamMessageMutation,
+  useSubmitTeamMessageMutation,
+} from '~/features/team-message/queries';
 
 import * as styles from './AdminMessagesPage.css';
 
 const draftStorageKey = 'aics.oop.admin.general-message-draft:inbox';
 const selectedRecipientStorageKey = `${draftStorageKey}:selected-recipient`;
+const allTeamsRecipient = '__all_teams__';
 
 type GeneralMessageDraft = {
   message: string;
@@ -93,6 +99,7 @@ function storeComposeDraft(draft: GeneralMessageDraft) {
 
 export default function AdminMessagesPage() {
   const navigate = useNavigate();
+  const currentUser = useAuthStore(state => state.currentUser);
   const activeSectionsQuery = useActiveAdminSections();
   const sections = activeSectionsQuery.data;
   const [sectionId, setSectionId] = useState<string>();
@@ -107,16 +114,32 @@ export default function AdminMessagesPage() {
     string | null
   >(null);
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
+  const [isBroadcastConfirmationOpen, setIsBroadcastConfirmationOpen] =
+    useState(false);
   const composeDefaultsRef = useRef({ sectionId, sections });
   const draggablePanel = useDraggableMessagePanel();
   const query = useAdminMessagesQuery(sectionId, page, teamId);
   const submitMutation = useSubmitTeamMessageMutation(composeTeamId);
+  const submitSectionMutation =
+    useSubmitSectionTeamMessageMutation(composeSectionId);
   const readMutation = useUpdateAdminMessageReadMutation();
   const messages = useMemo(() => query.data?.contents ?? [], [query.data]);
   const pagination = query.data?.pageable;
   const boundedPage = pagination
     ? Math.max(0, Math.min(pagination.page, pagination.totalPages - 1))
     : page;
+  const canBroadcast = Boolean(
+    currentUser?.sections.some(
+      section =>
+        String(section.id) === composeSectionId && section.role === 'PROFESSOR',
+    ),
+  );
+  // A restored draft can outlive a role change, so the sentinel alone must not
+  // enable a section-wide request.
+  const isAllTeamsSelected =
+    canBroadcast && composeTeamId === allTeamsRecipient;
+  const isSubmitPending =
+    submitMutation.isPending || submitSectionMutation.isPending;
   useEffect(() => {
     if (query.isSuccess && page !== boundedPage) setPage(boundedPage);
   }, [boundedPage, page, query.isSuccess]);
@@ -188,6 +211,71 @@ export default function AdminMessagesPage() {
       params: { teamId: String(message.teamId) },
       to: ROUTES.ADMIN_MESSAGE_TEAM,
     });
+  };
+
+  const clearComposeDraftAfterSend = () => {
+    try {
+      sessionStorage.removeItem(
+        composeDraftStorageKey(composeSectionId, composeTeamId),
+      );
+      const selectedRecipient = readSelectedRecipient();
+      if (
+        selectedRecipient?.sectionId === composeSectionId &&
+        selectedRecipient.teamId === composeTeamId
+      ) {
+        sessionStorage.removeItem(selectedRecipientStorageKey);
+      }
+    } catch {
+      // Sending has succeeded even if the local draft cannot clear.
+    }
+  };
+
+  const submitComposeMessage = () => {
+    if (!composeSectionId || !composeTeamId || !composeMessage.trim()) return;
+
+    setComposeError(null);
+    setComposeSuccessMessage(null);
+    const onError = () => {
+      setIsBroadcastConfirmationOpen(false);
+      setComposeError('일반 메시지를 보내지 못했습니다. 다시 시도해 주세요.');
+    };
+    if (isAllTeamsSelected) {
+      submitSectionMutation.mutate(
+        { message: composeMessage.trim() },
+        {
+          onError,
+          onSuccess: result => {
+            setIsBroadcastConfirmationOpen(false);
+            clearComposeDraftAfterSend();
+            setComposeMessage('');
+            setComposeSuccessMessage(
+              result.sentCount === 0
+                ? '전송 대상 팀이 없습니다.'
+                : `전체 ${result.sentCount}개 팀에 일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.`,
+            );
+            void query.refetch();
+          },
+        },
+      );
+      return;
+    }
+    submitMutation.mutate(
+      {
+        message: composeMessage.trim(),
+        relatedType: 'GENERAL',
+      },
+      {
+        onError,
+        onSuccess: () => {
+          clearComposeDraftAfterSend();
+          setComposeMessage('');
+          setComposeSuccessMessage(
+            '일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.',
+          );
+          void query.refetch();
+        },
+      },
+    );
   };
 
   return (
@@ -358,13 +446,15 @@ export default function AdminMessagesPage() {
             </div>
             <div>
               <Text color='secondary'>
-                메시지를 받을 분반과 팀을 선택하세요. 보낸 메시지는 해당 팀의
-                일반 메시지 대화에 추가됩니다.
+                {isAllTeamsSelected
+                  ? '분반의 삭제되지 않은 모든 팀에 같은 일반 메시지를 보냅니다.'
+                  : '메시지를 받을 분반과 팀을 선택하세요. 보낸 메시지는 해당 팀의 일반 메시지 대화에 추가됩니다.'}
               </Text>
             </div>
             <AdminSectionTeamFilter
               allowAllSections={false}
-              allowAllTeams={false}
+              allowAllTeams={canBroadcast}
+              allTeamValue={allTeamsRecipient}
               label='일반 메시지 수신 팀'
               onSectionChange={next => {
                 storeComposeDraft({
@@ -410,7 +500,7 @@ export default function AdminMessagesPage() {
             {composeError ? <Text role='alert'>{composeError}</Text> : null}
             <div className={styles.composeActions}>
               <Button
-                isDisabled={submitMutation.isPending}
+                isDisabled={isSubmitPending}
                 label='닫기'
                 onClick={() => setIsComposeOpen(false)}
                 variant='secondary'
@@ -420,57 +510,36 @@ export default function AdminMessagesPage() {
                   !composeSectionId ||
                   !composeTeamId ||
                   !composeMessage.trim() ||
-                  submitMutation.isPending
+                  isSubmitPending
                 }
-                isLoading={submitMutation.isPending}
+                isLoading={isSubmitPending}
                 label='보내기'
                 onClick={() => {
-                  if (!composeTeamId || !composeMessage.trim()) return;
-                  setComposeError(null);
-                  setComposeSuccessMessage(null);
-                  submitMutation.mutate(
-                    {
-                      message: composeMessage.trim(),
-                      relatedType: 'GENERAL',
-                    },
-                    {
-                      onError: () =>
-                        setComposeError(
-                          '일반 메시지를 보내지 못했습니다. 다시 시도해 주세요.',
-                        ),
-                      onSuccess: () => {
-                        try {
-                          sessionStorage.removeItem(
-                            composeDraftStorageKey(
-                              composeSectionId,
-                              composeTeamId,
-                            ),
-                          );
-                          if (
-                            readSelectedRecipient()?.sectionId ===
-                              composeSectionId &&
-                            readSelectedRecipient()?.teamId === composeTeamId
-                          )
-                            sessionStorage.removeItem(
-                              selectedRecipientStorageKey,
-                            );
-                        } catch {
-                          // Sending has succeeded even if the local draft cannot clear.
-                        }
-                        setComposeMessage('');
-                        setComposeSuccessMessage(
-                          '일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.',
-                        );
-                        void query.refetch();
-                      },
-                    },
-                  );
+                  if (isAllTeamsSelected) {
+                    setIsBroadcastConfirmationOpen(true);
+                    return;
+                  }
+                  submitComposeMessage();
                 }}
               />
             </div>
           </div>
         </aside>
       ) : null}
+      <AlertDialog
+        actionLabel='전체 팀에 보내기'
+        cancelLabel='취소'
+        description='선택한 분반의 삭제되지 않은 모든 팀에 같은 일반 메시지가 전송됩니다.'
+        isActionLoading={submitSectionMutation.isPending}
+        isOpen={isBroadcastConfirmationOpen}
+        onAction={submitComposeMessage}
+        onOpenChange={nextIsOpen => {
+          if (!nextIsOpen && !submitSectionMutation.isPending) {
+            setIsBroadcastConfirmationOpen(false);
+          }
+        }}
+        title='분반 전체 팀에 메시지를 보낼까요?'
+      />
     </div>
   );
 }
