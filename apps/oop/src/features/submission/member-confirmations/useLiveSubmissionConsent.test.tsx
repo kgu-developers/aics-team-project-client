@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@aics/api-client';
+import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { AstryxThemeProvider, Button, Text } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -51,6 +51,7 @@ beforeEach(() => {
 afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
   server.resetHandlers();
+  localStorage.removeItem('aics:session-recovery');
   requests.length = 0;
   useAuthStore.getState().clearSession();
 });
@@ -185,6 +186,10 @@ it.each([401, 403])(
   '확인 요청의 %s 오류를 빈 현황이나 성공으로 표시하지 않고 재조회할 수 있다',
   async status => {
     server.use(
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.AUTH.REFRESH}`,
+        () => new HttpResponse(null, { status: 401 }),
+      ),
       http.put(
         `${API_BASE_URL}/api/v1/submissions/41/member-confirmations/me`,
         () => HttpResponse.json({ code: 'ACCESS_DENIED' }, { status }),
@@ -204,7 +209,12 @@ it.each([401, 403])(
     await actor.click(
       screen.getByRole('button', { name: '확인 현황 새로고침' }),
     );
-    expect(await screen.findByText('v2 확인 현황: 1/2명')).toBeVisible();
+    if (status === 401) {
+      expect(screen.queryByText('v2 확인 현황: 1/2명')).not.toBeInTheDocument();
+      expect(await screen.findByRole('alert')).toBeVisible();
+    } else {
+      expect(await screen.findByText('v2 확인 현황: 1/2명')).toBeVisible();
+    }
   },
 );
 it('새 버전 제출 후 이전 확인 수를 숨기고 새 버전으로 재조회한다', async () => {
@@ -371,6 +381,7 @@ it('재조회 503 동안 캐시된 확인 수를 표시하지 않고 재시도�
   expect(screen.queryByText('v2 확인 현황: 1/2명')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: '현재 버전 확인' })).toBeDisabled();
   server.resetHandlers();
+  localStorage.removeItem('aics:session-recovery');
   server.use(...createStudentSubmissionConsentHandlers());
   await actor.click(screen.getByRole('button', { name: '확인 현황 새로고침' }));
   expect(await screen.findByText('v2 확인 현황: 1/2명')).toBeVisible();

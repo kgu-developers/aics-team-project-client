@@ -12,17 +12,21 @@ export function useLogoutMutation() {
   return useMutation({
     mutationFn: async () => {
       try {
-        return await submitLogout();
+        const { generation } = await submitLogout({ withCommit: true });
+        return { generation };
       } catch (error) {
-        // An expired or already-cleared server session is already logged out.
-        if (axios.isAxiosError(error) && error.response?.status === 401) return;
+        // An expired or already-cleared server session permits local idempotent
+        // cleanup, but it is not a confirmed cookie-session commit to publish.
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
+          return { generation: null };
+        }
         throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: ({ generation }) => {
       clearSession();
       queryClient.clear();
-      broadcastLogout();
+      if (generation) broadcastLogout(generation);
     },
   });
 }
