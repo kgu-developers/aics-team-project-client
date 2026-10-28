@@ -4,9 +4,10 @@ import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
+  createRoute,
   createRootRoute,
   createRouter,
-  RouterContextProvider,
+  RouterProvider,
 } from '@tanstack/react-router';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -80,6 +81,24 @@ const defaultSections: CurrentUser['sections'] = [
   },
 ];
 
+function positiveId(value: unknown) {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function nonNegativePage(value: unknown) {
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
+function validateMessageSearch(search: Record<string, unknown>) {
+  return {
+    page: nonNegativePage(search.page),
+    sectionId: positiveId(search.sectionId),
+    teamId: positiveId(search.teamId),
+  };
+}
+
 function setup(
   sections = defaultSections,
   currentUser: CurrentUser = demoAdmin,
@@ -94,19 +113,24 @@ function setup(
     defaultOptions: { queries: { retry: false } },
   });
   clients.push(client);
+  const rootRoute = createRootRoute();
+  const messagesRoute = createRoute({
+    component: () => (
+      <AstryxThemeProvider>
+        <QueryClientProvider client={client}>
+          <AdminMessagesPage />
+        </QueryClientProvider>
+      </AstryxThemeProvider>
+    ),
+    getParentRoute: () => rootRoute,
+    path: '/admin/messages/',
+    validateSearch: validateMessageSearch,
+  });
   const router = createRouter({
-    routeTree: createRootRoute(),
+    routeTree: rootRoute.addChildren([messagesRoute]),
     history: createMemoryHistory({ initialEntries: ['/admin/messages'] }),
   });
-  render(
-    <AstryxThemeProvider>
-      <QueryClientProvider client={client}>
-        <RouterContextProvider router={router}>
-          <AdminMessagesPage />
-        </RouterContextProvider>
-      </QueryClientProvider>
-    </AstryxThemeProvider>,
-  );
+  render(<RouterProvider router={router} />);
   return client;
 }
 

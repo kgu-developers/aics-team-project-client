@@ -8,7 +8,7 @@ import {
   Text,
   TextArea,
 } from '@aics/design-system';
-import { useLocation, useNavigate } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -99,30 +99,20 @@ function storeComposeDraft(draft: GeneralMessageDraft) {
 
 export default function AdminMessagesPage() {
   const navigate = useNavigate();
-  const location = useLocation() as {
-    search: {
-      page?: number | string;
-      sectionId?: number | string;
-      teamId?: number | string;
-    };
+  const search = useSearch({ from: '/admin/messages/' }) as {
+    page?: number;
+    sectionId?: number;
+    teamId?: number;
   };
-  const initialPage = Number(location.search.page);
+  const initialPage = Number(search.page ?? 0);
   const currentUser = useAuthStore(state => state.currentUser);
   const activeSectionsQuery = useActiveAdminSections();
   const sections = activeSectionsQuery.data;
-  const [sectionId, setSectionId] = useState<string | undefined>(() =>
-    location.search.sectionId === undefined
-      ? undefined
-      : String(location.search.sectionId),
-  );
-  const [teamId, setTeamId] = useState<string | undefined>(() =>
-    location.search.teamId === undefined
-      ? undefined
-      : String(location.search.teamId),
-  );
-  const [page, setPage] = useState(() =>
-    Number.isInteger(initialPage) && initialPage > 0 ? initialPage : 0,
-  );
+  const sectionId =
+    search.sectionId === undefined ? undefined : String(search.sectionId);
+  const teamId =
+    search.teamId === undefined ? undefined : String(search.teamId);
+  const page = Number.isInteger(initialPage) && initialPage > 0 ? initialPage : 0;
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [composeSectionId, setComposeSectionId] = useState('');
   const [composeTeamId, setComposeTeamId] = useState('');
@@ -159,8 +149,17 @@ export default function AdminMessagesPage() {
   const isSubmitPending =
     submitMutation.isPending || submitSectionMutation.isPending;
   useEffect(() => {
-    if (query.isSuccess && page !== boundedPage) setPage(boundedPage);
-  }, [boundedPage, page, query.isSuccess]);
+    if (!query.isSuccess || page === boundedPage) return;
+
+    void navigate({
+      search: {
+        ...(sectionId ? { sectionId: Number(sectionId) } : {}),
+        ...(teamId ? { teamId: Number(teamId) } : {}),
+        ...(boundedPage > 0 ? { page: boundedPage } : {}),
+      },
+      to: ROUTES.ADMIN_MESSAGES,
+    });
+  }, [boundedPage, navigate, page, query.isSuccess, sectionId, teamId]);
 
   useEffect(() => {
     composeDefaultsRef.current = { sectionId, sections };
@@ -213,14 +212,31 @@ export default function AdminMessagesPage() {
   ]);
 
   const selectSection = (nextSectionId?: string) => {
-    setSectionId(nextSectionId);
-    setTeamId(undefined);
-    setPage(0);
+    void navigate({
+      search: nextSectionId ? { sectionId: Number(nextSectionId) } : {},
+      to: ROUTES.ADMIN_MESSAGES,
+    });
   };
 
   const selectTeam = (nextTeamId?: string) => {
-    setTeamId(nextTeamId);
-    setPage(0);
+    void navigate({
+      search: {
+        ...(sectionId ? { sectionId: Number(sectionId) } : {}),
+        ...(nextTeamId ? { teamId: Number(nextTeamId) } : {}),
+      },
+      to: ROUTES.ADMIN_MESSAGES,
+    });
+  };
+
+  const selectPage = (nextPage: number) => {
+    void navigate({
+      search: {
+        ...(sectionId ? { sectionId: Number(sectionId) } : {}),
+        ...(teamId ? { teamId: Number(teamId) } : {}),
+        ...(nextPage > 0 ? { page: nextPage } : {}),
+      },
+      to: ROUTES.ADMIN_MESSAGES,
+    });
   };
 
   const openMessageThread = (message: (typeof messages)[number]) => {
@@ -445,7 +461,7 @@ export default function AdminMessagesPage() {
         <ListPagination
           isDisabled={query.isFetching}
           label='쪽지함 페이지 이동'
-          onPageChange={setPage}
+          onPageChange={selectPage}
           page={boundedPage}
           pageCount={pagination.totalPages}
         />

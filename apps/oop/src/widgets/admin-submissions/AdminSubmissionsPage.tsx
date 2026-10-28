@@ -764,10 +764,16 @@ export default function AdminSubmissionsPage() {
         <TabList
           aria-label='마일스톤 선택'
           onChange={selectTab}
+          role='tablist'
           value={activeTab.id}
         >
           {MILESTONE_TABS.map(tab => (
-            <Tab key={tab.id} label={tab.label} value={tab.id} />
+            <Tab
+              key={tab.id}
+              label={tab.label}
+              panelId={`submission-panel-${tab.id}`}
+              value={tab.id}
+            />
           ))}
         </TabList>
 
