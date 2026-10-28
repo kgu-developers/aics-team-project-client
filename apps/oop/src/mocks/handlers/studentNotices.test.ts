@@ -252,7 +252,7 @@ it('담당 교수는 한 분반에 게시·부분 수정하고 학생 재조회�
   });
 });
 
-it('업로드한 첨부파일은 mock 다운로드 주소에서도 실제 파일로 조회된다', async () => {
+it('업로드한 첨부파일은 소속 분반 사용자만 mock 다운로드 주소에서 조회한다', async () => {
   const headers = { Authorization: `Bearer ${demoNoticeProfessorAccessToken}` };
   const file = new File(['공지 첨부 내용'], '안내.txt', {
     type: 'text/plain',
@@ -274,6 +274,14 @@ it('업로드한 첨부파일은 mock 다운로드 주소에서도 실제 파일
   expect(download.status).toBe(200);
   expect(download.headers.get('content-type')).toContain('text/plain');
   await expect(download.text()).resolves.toBe('공지 첨부 내용');
+
+  const unauthorizedDownload = await fetch(attachment.downloadUrl, {
+    headers: { Authorization: `Bearer ${demoOtherSectionAccessToken}` },
+  });
+  expect(unauthorizedDownload.status).toBe(403);
+  await expect(unauthorizedDownload.json()).resolves.toMatchObject({
+    code: 'ACCESS_DENIED',
+  });
 });
 
 it('존재하지 않는 첨부파일 삭제는 공지의 다른 변경도 반영하지 않는다', async () => {

@@ -19,7 +19,10 @@ import { studentNoticeAnnouncements } from '../data/studentNotices';
 
 let announcements = structuredClone(studentNoticeAnnouncements);
 let nextAttachmentId = 1;
-const uploadedAttachments = new Map<number, File>();
+const uploadedAttachments = new Map<
+  number,
+  { file: File; sectionId: number }
+>();
 export function resetSectionAnnouncements() {
   announcements = structuredClone(studentNoticeAnnouncements);
   nextAttachmentId = 1;
@@ -85,10 +88,10 @@ async function readInput(request: Request) {
     return undefined;
   }
 }
-function attachmentsFrom(files: File[]) {
+function attachmentsFrom(files: File[], sectionId: number) {
   return files.map(file => {
     const id = nextAttachmentId++;
-    uploadedAttachments.set(id, file);
+    uploadedAttachments.set(id, { file, sectionId });
     return {
       id,
       fileName: file.name,
@@ -110,17 +113,21 @@ export const studentNoticeHandlers = [
     ({ params, request }) => {
       if (!getMockAuthenticatedAccount(request)) return denied(401);
       const attachmentId = id(params.attachmentId);
-      const file = attachmentId ? uploadedAttachments.get(attachmentId) : null;
-      if (!file)
+      const attachment = attachmentId
+        ? uploadedAttachments.get(attachmentId)
+        : null;
+      if (!attachment)
         return error(
           404,
           'SECTION_ANNOUNCEMENT_ATTACHMENT_NOT_FOUND',
           '해당 첨부파일을 찾을 수 없습니다.',
         );
-      return new HttpResponse(file, {
+      const status = access(request, attachment.sectionId);
+      if (status) return denied(status);
+      return new HttpResponse(attachment.file, {
         headers: {
-          'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(file.name)}`,
-          'Content-Type': file.type || 'application/octet-stream',
+          'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(attachment.file.name)}`,
+          'Content-Type': attachment.file.type || 'application/octet-stream',
         },
       });
     },
@@ -174,7 +181,7 @@ export const studentNoticeHandlers = [
           input.publishedAt == null
             ? new Date().toISOString()
             : String(input.publishedAt),
-        attachments: attachmentsFrom(payload.files),
+        attachments: attachmentsFrom(payload.files, sectionId),
       };
       announcements = [notice, ...announcements];
       return HttpResponse.json(notice, {
@@ -261,7 +268,7 @@ export const studentNoticeHandlers = [
       if (payload.files.length)
         notice.attachments = [
           ...(notice.attachments ?? []),
-          ...attachmentsFrom(payload.files),
+          ...attachmentsFrom(payload.files, notice.sectionId),
         ];
       return HttpResponse.json(notice, { headers: mockCsrfResponseHeaders() });
     },
