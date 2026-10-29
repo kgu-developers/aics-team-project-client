@@ -1,5 +1,6 @@
 import { Card, EmptyState, Heading, Table, Text } from '@aics/design-system';
 import { Link } from '@tanstack/react-router';
+import type { ReactNode } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -20,8 +21,10 @@ function formatScheduleDateTime(value: string | null | undefined) {
 }
 
 export default function AdminSectionScheduleTable({
+  actions,
   sectionId,
 }: {
+  actions?: ReactNode;
   sectionId: string;
 }) {
   const milestonesQuery = useAdminSectionMilestonesQuery(sectionId);
@@ -35,6 +38,7 @@ export default function AdminSectionScheduleTable({
         <Heading id='section-schedule-heading' level={2}>
           진행 일정
         </Heading>
+        {actions}
       </div>
 
       {milestonesQuery.isPending ? (

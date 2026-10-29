@@ -120,3 +120,15 @@ export const uploadCopy = style({
   flexDirection: 'column',
   gap: 4,
 });
+
+export const artifactDownloadForm = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing[4],
+});
+
+export const dialogActions = style({
+  display: 'flex',
+  gap: tokens.spacing[2],
+  justifyContent: 'flex-end',
+});
