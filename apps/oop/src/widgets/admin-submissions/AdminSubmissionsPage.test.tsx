@@ -235,7 +235,7 @@ describe('AdminSubmissionsPage', () => {
     ).toHaveAttribute('aria-selected', 'true');
     expect(screen.queryByText('분반 선택')).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: '산출물 현황 다운로드' }),
+      screen.queryByRole('button', { name: '제출물 현황 다운로드' }),
     ).not.toBeInTheDocument();
   });
 

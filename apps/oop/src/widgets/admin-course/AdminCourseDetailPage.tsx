@@ -8,6 +8,8 @@ import {
   Breadcrumbs,
   Button,
   Card,
+  DateInput,
+  Dialog,
   EmptyState,
   Heading,
   proportional,
@@ -18,6 +20,7 @@ import {
   Table,
   Text,
   useToast,
+  type DateInputProps,
 } from '@aics/design-system';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import {
@@ -27,11 +30,13 @@ import {
   useMemo,
   useState,
   type ComponentPropsWithoutRef,
+  type FormEvent,
 } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
+import { saveDownload } from '~/shared/lib/saveDownload';
 
 import {
   SectionAssistantManagement,
@@ -44,6 +49,7 @@ import {
 import { useAdminOopCourseQuery } from '~/features/admin-course/queries';
 import { ADMIN_SECTION_FILTER_WIDTH } from '~/features/admin-section/filterLayout';
 import { useAdminOopSectionsQuery } from '~/features/admin-section/queries';
+import { useDownloadAdminSectionArtifactsExcelMutation } from '~/features/admin-section-artifact/queries';
 import EnrollmentImportDialog from '~/features/admin-student-team/components/EnrollmentImportDialog';
 import TeamImportDialog from '~/features/admin-student-team/components/TeamImportDialog';
 import {
@@ -149,6 +155,11 @@ export default function AdminCourseDetailPage({
   );
   const [isGeneralMessageDialogOpen, setIsGeneralMessageDialogOpen] =
     useState(false);
+  const [isArtifactDownloadDialogOpen, setIsArtifactDownloadDialogOpen] =
+    useState(false);
+  const [artifactAsOf, setArtifactAsOf] = useState('');
+  const artifactDownloadMutation =
+    useDownloadAdminSectionArtifactsExcelMutation();
 
   const sectionIds = sections.map(section => String(section.id));
   const sectionIdsKey = sectionIds.join('|');
@@ -232,6 +243,39 @@ export default function AdminCourseDetailPage({
   function closeUpload() {
     setUploadKind(null);
     setUploadSectionId('');
+  }
+
+  function openArtifactDownloadDialog() {
+    setArtifactAsOf('');
+    setIsArtifactDownloadDialogOpen(true);
+  }
+
+  function closeArtifactDownloadDialog() {
+    if (artifactDownloadMutation.isPending) return;
+    setIsArtifactDownloadDialogOpen(false);
+  }
+
+  function handleArtifactDownload(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!detailSection || !artifactAsOf || artifactDownloadMutation.isPending) {
+      return;
+    }
+
+    artifactDownloadMutation.mutate(
+      { asOf: artifactAsOf, sectionId: String(detailSection.id) },
+      {
+        onError: () => {
+          toast({
+            body: '제출물 현황 Excel 파일을 다운로드하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+          });
+        },
+        onSuccess: download => {
+          saveDownload(download.file, download.fileName);
+          toast({ body: '제출물 현황 Excel 파일을 다운로드했어요.' });
+          setIsArtifactDownloadDialogOpen(false);
+        },
+      },
+    );
   }
 
   if (numericCourseId === undefined || courseQuery.isError) {
@@ -536,7 +580,17 @@ export default function AdminCourseDetailPage({
             </Card>
           </section>
 
-          <AdminSectionScheduleTable sectionId={String(detailSection.id)} />
+          <AdminSectionScheduleTable
+            actions={
+              <Button
+                label='제출물 현황 다운로드'
+                onClick={openArtifactDownloadDialog}
+                size='sm'
+                variant='secondary'
+              />
+            }
+            sectionId={String(detailSection.id)}
+          />
           {hasImportedBothRosters ? dataUploadPanel : null}
         </>
       ) : null}
@@ -580,6 +634,55 @@ export default function AdminCourseDetailPage({
         sectionId={String(detailSection.id)}
         sectionLabel={formatAdminSectionLabel(detailSection)}
       />
+      <Dialog
+        aria-label='제출물 현황 Excel 다운로드'
+        isOpen={isArtifactDownloadDialogOpen}
+        onOpenChange={open => {
+          if (!open) closeArtifactDownloadDialog();
+        }}
+        purpose='form'
+        width={420}
+      >
+        <form
+          className={styles.artifactDownloadForm}
+          onSubmit={handleArtifactDownload}
+        >
+          <Heading level={2}>제출물 현황 Excel 다운로드</Heading>
+          <Text color='secondary'>
+            선택한 기준일을 기준으로 {detailSection.code} 분반 전체 팀의 제출물
+            현황을 Excel 파일로 내려받습니다.
+          </Text>
+          <DateInput
+            isDisabled={artifactDownloadMutation.isPending}
+            isRequired
+            label='기준일'
+            onChange={date => setArtifactAsOf(date ?? '')}
+            placeholder='기준일 선택'
+            value={
+              artifactAsOf
+                ? (artifactAsOf as DateInputProps['value'])
+                : undefined
+            }
+            width='100%'
+          />
+          <div className={styles.dialogActions}>
+            <Button
+              isDisabled={artifactDownloadMutation.isPending}
+              label='취소'
+              onClick={closeArtifactDownloadDialog}
+              type='button'
+              variant='secondary'
+            />
+            <Button
+              isDisabled={!artifactAsOf || artifactDownloadMutation.isPending}
+              isLoading={artifactDownloadMutation.isPending}
+              label='다운로드'
+              type='submit'
+              variant='primary'
+            />
+          </div>
+        </form>
+      </Dialog>
       <EnrollmentImportDialog
         isOpen={uploadKind === 'studentRoster' && uploadSectionId !== ''}
         onClose={closeUpload}

@@ -244,7 +244,7 @@ describe('AdminCoursesPage', () => {
       within(table).queryByRole('columnheader', { name: '관리' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: '산출물 현황 다운로드' }),
+      screen.queryByRole('button', { name: '제출물 현황 다운로드' }),
     ).not.toBeInTheDocument();
 
     await user.click(row);
@@ -421,6 +421,30 @@ describe('AdminCourseDetailPage', () => {
     expect(
       screen.queryByRole('button', { name: /사전 정보 (펼치기|접기)/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it('진행 일정에서 기준일을 선택해 제출물 현황 Excel 다운로드를 준비한다', async () => {
+    const user = userEvent.setup();
+    renderAt('/admin/sections/1?sectionId=1');
+
+    await screen.findByRole('table', {
+      name: '분반 진행 일정',
+    });
+    await user.click(
+      screen.getByRole('button', { name: '제출물 현황 다운로드' }),
+    );
+
+    const dialog = screen.getByRole('dialog', {
+      name: '제출물 현황 Excel 다운로드',
+    });
+    expect(
+      within(dialog).getByText(
+        '선택한 기준일을 기준으로 OOP-01 분반 전체 팀의 제출물 현황을 Excel 파일로 내려받습니다.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole('button', { name: '다운로드' }),
+    ).toBeDisabled();
   });
 
   it('사전 정보 내역을 8명씩 나누고 페이지를 전환한다', async () => {

@@ -8,9 +8,11 @@ export const root = style({
 });
 
 export const header = style({
+  alignItems: 'center',
   display: 'flex',
-  flexDirection: 'column',
-  gap: 4,
+  flexWrap: 'wrap',
+  gap: tokens.spacing[3],
+  justifyContent: 'space-between',
 });
 
 export const milestoneLink = style({
