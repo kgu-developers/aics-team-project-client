@@ -972,9 +972,6 @@ export function SectionCreateDialog({
             value={input.capacity}
             width='100%'
           />
-          <Text color='secondary' type='supporting'>
-            담당 교수는 현재 로그인한 관리자 계정으로 등록됩니다.
-          </Text>
           {!professorId ? (
             <Text role='alert'>로그인한 관리자 정보를 확인할 수 없습니다.</Text>
           ) : null}

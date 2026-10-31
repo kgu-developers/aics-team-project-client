@@ -573,6 +573,9 @@ describe('AdminCourseDetailPage', () => {
     const dialog = await screen.findByRole('dialog', {
       name: '객체지향 프로그래밍 분반 등록',
     });
+    expect(
+      within(dialog).queryByText('담당 교수: 관리자'),
+    ).not.toBeInTheDocument();
     await user.type(
       within(dialog).getByRole('textbox', { name: /분반 코드/ }),
       'OOP-02',

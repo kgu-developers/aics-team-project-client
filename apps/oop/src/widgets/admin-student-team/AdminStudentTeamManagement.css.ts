@@ -121,19 +121,24 @@ export const dragOverTeamCard = style({
 });
 
 export const teamName = style({
-  fontSize: 16,
-  fontWeight: 500,
+  fontSize: 18,
+  fontWeight: 600,
   margin: 0,
   minWidth: 0,
-  paddingTop: 8,
+  paddingTop: 4,
 });
 
 export const teamHeader = style({
-  alignItems: 'center',
+  alignItems: 'flex-start',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing[2],
+});
+
+export const teamActions = style({
   display: 'flex',
   flexWrap: 'wrap',
   gap: tokens.spacing[2],
-  justifyContent: 'space-between',
 });
 
 export const teamDashboardLink = style({
@@ -145,9 +150,9 @@ export const teamDashboardLink = style({
 });
 
 export const memberList = style({
-  display: 'flex',
-  flexWrap: 'wrap',
+  display: 'grid',
   gap: 8,
+  gridTemplateColumns: 'repeat(auto-fill, minmax(132px, 1fr))',
   listStyle: 'none',
   margin: 0,
   padding: 0,
@@ -160,23 +165,22 @@ export const teamContent = style({
   minWidth: 0,
 });
 
-export const teamLeader = style({
-  alignItems: 'center',
-  flexWrap: 'wrap',
-});
-
 export const member = style({
   alignItems: 'flex-start',
   border: `1px solid ${tokens.color.border.base}`,
   borderRadius: tokens.radius.element,
   color: tokens.color.text.primary,
   display: 'flex',
-  flex: '1 1 132px',
   flexDirection: 'column',
   fontSize: 14,
   gap: 4,
   minWidth: 0,
   padding: '12px 14px',
+});
+
+export const teamLeaderMember = style({
+  background: tokens.color.background.muted,
+  borderColor: tokens.color.border.base,
 });
 
 export const draggableMember = style({
@@ -200,7 +204,24 @@ export const memberButton = style({
   textUnderlineOffset: 3,
 });
 
-globalStyle(`${member} span`, {
+export const memberName = style({
+  alignItems: 'center',
+  display: 'inline-flex',
+  flexWrap: 'wrap',
+  gap: 6,
+});
+
+export const leaderBadge = style({
+  background: tokens.color.background.gray,
+  borderRadius: tokens.radius.full,
+  color: tokens.color.text.secondary,
+  fontSize: 12,
+  lineHeight: 1,
+  padding: '4px 6px',
+  textDecoration: 'none',
+});
+
+globalStyle(`${member} > span`, {
   color: tokens.color.text.secondary,
   fontSize: 13,
 });
