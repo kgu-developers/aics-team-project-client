@@ -8,8 +8,8 @@ import {
   Heading,
   HStack,
   MultiSelector,
-  Selector,
-  SelectorOption,
+  Tab,
+  TabList,
   Text,
   TextInput,
 } from '@aics/design-system';
@@ -57,7 +57,6 @@ import {
   useSubmitSectionAnnouncementsMutation,
   useUpdateSectionAnnouncementMutation,
 } from '~/features/admin-notices/queries';
-import { ADMIN_SECTION_FILTER_WIDTH } from '~/features/admin-section/filterLayout';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminNoticePages.css';
@@ -119,30 +118,29 @@ function SectionSelect({
 }) {
   const activeSectionsQuery = useActiveAdminSections();
   return (
-    <Selector
-      label='분반'
-      placeholder='분반을 선택해 주세요.'
-      options={[
-        ...(includeAll ? [{ label: '전체 분반', value: 'all' }] : []),
-        ...activeSectionsQuery.data
-          .filter(section => noticeId(section.id) !== undefined)
-          .map(section => ({
-            label: formatAdminSectionLabel(section),
-            value: section.id,
-          })),
-      ]}
-      renderOption={option => (
-        <SelectorOption label={option.label ?? option.value} />
-      )}
-      value={value === undefined ? (includeAll ? 'all' : '') : String(value)}
+    <TabList
+      aria-label='분반'
+      className={styles.sectionTabs}
       onChange={value => onChange(noticeId(value))}
-      isDisabled={
-        isDisabled ||
-        activeSectionsQuery.isPending ||
-        activeSectionsQuery.isError
-      }
-      width={ADMIN_SECTION_FILTER_WIDTH}
-    />
+      overflow='scroll'
+      value={value === undefined ? (includeAll ? 'all' : '') : String(value)}
+    >
+      {includeAll ? <Tab label='전체 분반' value='all' /> : null}
+      {activeSectionsQuery.data
+        .filter(section => noticeId(section.id) !== undefined)
+        .map(section => (
+          <Tab
+            aria-disabled={
+              isDisabled ||
+              activeSectionsQuery.isPending ||
+              activeSectionsQuery.isError
+            }
+            key={section.id}
+            label={formatAdminSectionLabel(section)}
+            value={String(section.id)}
+          />
+        ))}
+    </TabList>
   );
 }
 
@@ -706,6 +704,7 @@ export function AdminNoticeNewPage() {
   const [selectedSectionIds, setSelectedSectionIds] = useState<string[]>(
     sectionId === undefined ? [] : [String(sectionId)],
   );
+  const [sectionSelectorKey, setSectionSelectorKey] = useState(0);
   const mutation = useSubmitSectionAnnouncementsMutation();
   const allowNavigation = useRef(false);
   const publishableSections = (user?.sections ?? []).filter(section =>
@@ -732,22 +731,42 @@ export function AdminNoticeNewPage() {
       <Card className={styles.formCard}>
         <Heading level={2}>공지사항 작성</Heading>
         <MultiSelector
+          key={sectionSelectorKey}
           hasClear
           hasSelectAll
           isDisabled={mutation.isPending || publishableSections.length === 0}
           label='분반'
-          onChange={setSelectedSectionIds}
+          onChange={nextSectionIds => {
+            setSelectedSectionIds(nextSectionIds);
+            if (
+              publishableSections.length > 0 &&
+              nextSectionIds.length === publishableSections.length
+            ) {
+              // The all-sections state is unambiguous, so collapse the menu
+              // after it is selected while keeping individual selection open.
+              setSectionSelectorKey(current => current + 1);
+            }
+          }}
           options={publishableSections.map(section => ({
             label: formatAdminSectionLabel(section),
             value: String(section.id),
           }))}
           placeholder='게시할 분반을 선택해 주세요.'
           selectAllLabel='전체 선택'
-          triggerDisplay='labels'
+          formatValue={items =>
+            items.length === publishableSections.length
+              ? `전체 ${items.length}개 분반 선택`
+              : `${items.length}개 분반 선택`
+          }
+          triggerDisplay='count'
           value={selectedSectionIds}
           width='100%'
         />
-        <Text color='secondary'>선택한 모든 분반에 바로 게시됩니다.</Text>
+        <Text color='secondary'>
+          {selectedSections.length > 0
+            ? `${selectedSections.length}개 분반에 바로 게시됩니다.`
+            : '게시할 분반을 선택해 주세요.'}
+        </Text>
         {publishableSections.length === 0 ? (
           <Text role='status'>담당 교수의 활성 분반을 선택해 주세요.</Text>
         ) : null}

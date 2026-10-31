@@ -280,7 +280,7 @@ describe('AdminSubmissionsPage', () => {
     );
 
     await user.click(within(panel).getByRole('combobox', { name: '팀' }));
-    await user.click(await screen.findByRole('option', { name: '1팀' }));
+    await user.click(screen.getByRole('checkbox', { name: '1팀' }));
     await user.type(
       within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
       '팀 상담 일정을 확인해 주세요.',

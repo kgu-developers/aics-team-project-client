@@ -51,6 +51,10 @@ export const listControls = style({
     },
   },
 });
+export const sectionTabs = style({
+  flex: '1 1 0',
+  minWidth: 0,
+});
 export const detailCard = style({
   display: 'flex',
   flexDirection: 'column',

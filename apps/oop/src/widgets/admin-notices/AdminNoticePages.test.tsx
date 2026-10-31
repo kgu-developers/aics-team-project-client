@@ -234,6 +234,32 @@ it('선택한 한 분반에 제목·본문만 게시하고 상세·목록 재조
   ).toHaveAttribute('tabindex', '0');
 });
 
+it('전체 선택 시 선택한 분반 수를 요약해 표시한다', async () => {
+  useAuthStore.setState({
+    currentUser: {
+      ...demoNoticeProfessor,
+      sections: [
+        ...demoNoticeProfessor.sections,
+        {
+          ...demoNoticeProfessor.sections[0]!,
+          code: '추가 분반',
+          id: '2',
+        },
+      ],
+    },
+  });
+  const user = userEvent.setup();
+  renderPage('/admin/notices/new');
+
+  await user.click(await screen.findByRole('combobox', { name: '분반' }));
+  await user.click(await screen.findByRole('option', { name: '전체 선택' }));
+
+  expect(await screen.findByText(/전체 \d+개 분반 선택/)).toBeInTheDocument();
+  expect(
+    await screen.findByText(/\d+개 분반에 바로 게시됩니다\./),
+  ).toBeInTheDocument();
+});
+
 it('첨부파일은 여러 번 선택해 누적하고, 전체 109MB를 초과하면 추가하지 않는다', async () => {
   const user = userEvent.setup();
   renderPage('/admin/notices/new?sectionId=1');
@@ -563,7 +589,6 @@ it('전체 분반 목록에서도 운영 중인 분반만 조회하고 필터에
     ),
   );
   renderPage('/admin/notices');
-  const user = userEvent.setup();
   expect(
     await screen.findByRole('row', { name: /분반 1 공지 공지사항 보기/ }),
   ).toHaveAttribute('tabindex', '0');
@@ -571,9 +596,8 @@ it('전체 분반 목록에서도 운영 중인 분반만 조회하고 필터에
     screen.queryByRole('row', { name: /분반 2 공지 공지사항 보기/ }),
   ).not.toBeInTheDocument();
   expect(get.mock.calls.map(([id]) => id)).toEqual(['1']);
-  await user.click(screen.getByRole('combobox', { name: '분반' }));
   expect(
-    screen.queryByRole('option', { name: '보관 분반' }),
+    screen.queryByRole('button', { name: '보관 분반' }),
   ).not.toBeInTheDocument();
 });
 
