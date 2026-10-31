@@ -172,6 +172,10 @@ it('담당 교수는 분반 전체 팀에 일반 메시지를 한 번에 보낸�
   });
   await user.click(within(panel).getByRole('combobox', { name: '팀' }));
   await user.click(await screen.findByRole('option', { name: '전체 팀' }));
+  expect(screen.getByRole('option', { name: '7팀' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
   await user.type(
     within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
     '전체 팀 안내',
@@ -226,7 +230,9 @@ function messagePage(
 }
 
 function paginationButtons() {
-  return within(screen.getByRole('navigation')).getAllByRole('button');
+  return within(
+    screen.getByRole('navigation', { name: '쪽지함 페이지 이동' }),
+  ).getAllByRole('button');
 }
 
 it('운영 분반 조회 실패 중에는 독립적으로 조회된 쪽지함을 노출하지 않는다', async () => {
@@ -264,17 +270,13 @@ it('분반 필터에서 보관 강좌의 운영 분반을 제외한다', async (
     },
   ]);
 
-  const sectionFilter = await screen.findByRole('combobox', { name: '분반' });
-  await waitFor(() => expect(sectionFilter).toBeEnabled());
-  await userEvent.click(sectionFilter);
-
   expect(
-    await screen.findByRole('option', {
+    await screen.findByRole('button', {
       name: '현재 분반 하나 · 월요일 1-2교시',
     }),
-  ).toBeInTheDocument();
+  ).toBeEnabled();
   expect(
-    screen.queryByRole('option', { name: '보관 강좌 분반' }),
+    screen.queryByRole('button', { name: '보관 강좌 분반' }),
   ).not.toBeInTheDocument();
 });
 
@@ -410,20 +412,17 @@ it('작성 패널에서 팀을 바꿔도 기존 팀의 초안을 보존한다', 
   const panel = screen.getByRole('complementary', {
     name: '일반 메시지 작성 패널',
   });
-  const teamSelect = within(panel).getByRole('combobox', { name: '팀' });
   const message = within(panel).getByRole('textbox', {
     name: '일반 메시지 내용',
   });
 
-  await user.click(teamSelect);
+  await user.click(within(panel).getByRole('combobox', { name: '팀' }));
   await user.click(await screen.findByRole('option', { name: '7팀' }));
   await user.type(message, '7팀 초안');
-  await user.click(teamSelect);
-  await user.click(await screen.findByRole('option', { name: '8팀' }));
+  await user.click(screen.getByRole('option', { name: '8팀' }));
   expect(message).toHaveValue('');
   await user.type(message, '8팀 초안');
-  await user.click(teamSelect);
-  await user.click(await screen.findByRole('option', { name: '7팀' }));
+  await user.click(screen.getByRole('option', { name: '7팀' }));
 
   expect(message).toHaveValue('7팀 초안');
 });
@@ -467,13 +466,12 @@ it('reaches item 11, keeps page caches separate, and resets pages on section/all
   await user.click(paginationButtons()[1]!);
   await screen.findByText('all 쪽지 11');
   expect(
-    screen.getAllByText('현재 분반 하나 · 월요일 1-2교시'),
-  ).not.toHaveLength(0);
-  await user.click(screen.getByRole('combobox', { name: '분반' }));
-  await user.click(
-    await screen.findByRole('option', {
+    await screen.findByRole('button', {
       name: '현재 분반 하나 · 월요일 1-2교시',
     }),
+  ).toBeEnabled();
+  await user.click(
+    screen.getByRole('button', { name: '현재 분반 하나 · 월요일 1-2교시' }),
   );
   await screen.findByText('1 쪽지 1');
   expect(requests.filter(row => row.section === '1')).toEqual([
@@ -481,19 +479,19 @@ it('reaches item 11, keeps page caches separate, and resets pages on section/all
   ]);
   await user.click(paginationButtons()[1]!);
   await screen.findByText('1 쪽지 11');
-  await user.click(screen.getByRole('combobox', { name: '분반' }));
-  await user.click(await screen.findByRole('option', { name: '전체 분반' }));
+  await user.click(await screen.findByRole('button', { name: '전체 분반' }));
   await screen.findByText('all 쪽지 1');
   expect(paginationButtons()[0]).toBeDisabled();
-  await user.click(screen.getByRole('combobox', { name: '분반' }));
   await user.click(
-    await screen.findByRole('option', {
+    await screen.findByRole('button', {
       name: '현재 분반 둘 · 월요일 1-2교시',
     }),
   );
   await screen.findByText('쪽지가 없습니다.');
   // Empty mailbox: no pages to move between, so the pagination bar is hidden.
-  expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('navigation', { name: '쪽지함 페이지 이동' }),
+  ).not.toBeInTheDocument();
 });
 
 it.each([0, 1])(
@@ -522,7 +520,9 @@ it.each([0, 1])(
     await screen.findByText(totalAfter ? 'all 쪽지 1' : '쪽지가 없습니다.');
     await waitFor(() => expect(requests).toEqual([0, 1, 1, 0]));
     // 0 or 1 items fit on one page, so the pagination bar is hidden.
-    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('navigation', { name: '쪽지함 페이지 이동' }),
+    ).not.toBeInTheDocument();
   },
 );
 
