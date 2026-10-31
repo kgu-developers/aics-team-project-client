@@ -138,6 +138,24 @@ describe('AdminMilestonesPage', () => {
     expect(await screen.findByText('마일스톤 상세')).toBeInTheDocument();
   });
 
+  it('목록의 수정 버튼은 상세를 거치지 않고 수정 화면으로 이동한다', async () => {
+    const user = userEvent.setup();
+    const router = renderPage();
+
+    const row = await screen.findByRole('row', {
+      name: '제안서 마일스톤 보기',
+    });
+    await user.click(within(row).getByRole('button', { name: '제안서 수정' }));
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/admin/milestones/new'),
+    );
+    expect(router.state.location.search).toMatchObject({
+      milestoneId: '101',
+      sectionId: '1',
+    });
+  });
+
   it('단계 탭은 분반 필터 결과에서 같은 유형의 마일스톤만 표시한다', async () => {
     const user = userEvent.setup();
     const router = renderPage();

@@ -1,4 +1,4 @@
-import { Selector, SelectorOption } from '@aics/design-system';
+import { Selector, SelectorOption, Tab, TabList } from '@aics/design-system';
 import type { ReactNode } from 'react';
 
 import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
@@ -6,10 +6,7 @@ import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { useActiveAdminSections } from '~/features/admin-course/queries';
 import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 
-import {
-  ADMIN_SECTION_FILTER_WIDTH,
-  ADMIN_TEAM_FILTER_WIDTH,
-} from '../filterLayout';
+import { ADMIN_TEAM_FILTER_WIDTH } from '../filterLayout';
 import * as styles from './AdminSectionTeamFilter.css';
 
 export const ALL_SECTIONS = 'all';
@@ -60,25 +57,25 @@ export default function AdminSectionTeamFilter({
 
   return (
     <div aria-label={label} className={styles.root} role='group'>
-      <Selector
-        isDisabled={sectionsQuery.isPending || sectionsQuery.isError}
-        label='분반'
+      <TabList
+        aria-label='분반'
+        className={styles.sectionTabs}
         onChange={onSectionChange}
-        options={[
-          ...(allowAllSections
-            ? [{ label: '전체 분반', value: ALL_SECTIONS }]
-            : []),
-          ...sections.map(section => ({
-            label: formatAdminSectionLabel(section),
-            value: section.id,
-          })),
-        ]}
-        renderOption={option => (
-          <SelectorOption label={option.label ?? option.value} />
-        )}
+        overflow='scroll'
         value={sectionId}
-        width={ADMIN_SECTION_FILTER_WIDTH}
-      />
+      >
+        {allowAllSections ? (
+          <Tab label='전체 분반' value={ALL_SECTIONS} />
+        ) : null}
+        {sections.map(section => (
+          <Tab
+            aria-disabled={sectionsQuery.isPending || sectionsQuery.isError}
+            key={section.id}
+            label={formatAdminSectionLabel(section)}
+            value={String(section.id)}
+          />
+        ))}
+      </TabList>
       {hasTeamFilter && isSectionSelected ? (
         <Selector
           isDisabled={teamsQuery.isPending}

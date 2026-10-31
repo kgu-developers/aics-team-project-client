@@ -1,18 +1,7 @@
-import {
-  AlertDialog,
-  Button,
-  Heading,
-  Selector,
-  SelectorOption,
-  Text,
-  TextArea,
-} from '@aics/design-system';
+import { AlertDialog, Selector, SelectorOption } from '@aics/design-system';
 import { useEffect, useMemo, useState } from 'react';
 
-import {
-  ADMIN_SECTION_FILTER_WIDTH,
-  ADMIN_TEAM_FILTER_WIDTH,
-} from '~/features/admin-section/filterLayout';
+import { ADMIN_SECTION_FILTER_WIDTH } from '~/features/admin-section/filterLayout';
 import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 import {
@@ -20,8 +9,12 @@ import {
   useSubmitTeamMessageMutation,
 } from '~/features/team-message/queries';
 
+import { AdminGeneralMessageComposerPanel } from './AdminGeneralMessageComposerPanel';
 import * as styles from './AdminGeneralMessageDialog.css';
-import { useDraggableMessagePanel } from './useDraggableMessagePanel';
+import {
+  AdminGeneralMessageTeamChecklist,
+  ALL_TEAMS_RECIPIENT,
+} from './AdminGeneralMessageTeamChecklist';
 
 type AdminGeneralMessageDialogProps = {
   description?: string;
@@ -35,8 +28,6 @@ type AdminGeneralMessageDialogProps = {
 };
 
 const draftStoragePrefix = 'aics.oop.admin.general-message-draft:';
-const allTeamsRecipient = '__all_teams__';
-
 type GeneralMessageDraft = {
   message: string;
   teamId: string;
@@ -101,11 +92,9 @@ export function AdminGeneralMessageDialog({
   const [isBroadcastConfirmationOpen, setIsBroadcastConfirmationOpen] =
     useState(false);
   const currentUser = useAuthStore(state => state.currentUser);
-  const draggablePanel = useDraggableMessagePanel();
   const teamsQuery = useAdminSectionTeamsQuery(isOpen ? sectionId : undefined);
   const submitMutation = useSubmitTeamMessageMutation(teamId);
   const submitSectionMutation = useSubmitSectionTeamMessageMutation(sectionId);
-  const teams = teamsQuery.data?.contents ?? [];
   const canBroadcast =
     !isTeamLocked &&
     Boolean(
@@ -116,7 +105,8 @@ export function AdminGeneralMessageDialog({
     );
   // A restored draft may contain the sentinel after the user's role changed.
   // Never let a stale local value bypass the current professor-only UI policy.
-  const isAllTeamsSelected = canBroadcast && teamId === allTeamsRecipient;
+  const isAllTeamsSelected = canBroadcast && teamId === ALL_TEAMS_RECIPIENT;
+  const teams = teamsQuery.data?.contents ?? [];
   const hasSelectedTeam = useMemo(
     () => isAllTeamsSelected || teams.some(team => String(team.id) === teamId),
     [isAllTeamsSelected, teamId, teams],
@@ -247,102 +237,57 @@ export function AdminGeneralMessageDialog({
   };
 
   return (
-    <aside
-      aria-label='일반 메시지 작성 패널'
-      className={styles.panel}
-      onPointerDown={draggablePanel.handlePointerDown}
-      onPointerMove={draggablePanel.handlePointerMove}
-      onPointerUp={draggablePanel.handlePointerUp}
-      ref={draggablePanel.panelRef}
-      style={draggablePanel.panelStyle}
-    >
-      <div className={styles.content}>
-        <div className={styles.panelHeader} data-panel-drag-handle>
-          <Heading level={2}>일반 메시지 보내기</Heading>
-          <Text color='secondary' type='supporting'>
-            ⋮⋮ 이동
-          </Text>
-        </div>
-        <div>
-          <Text color='secondary'>
-            {isAllTeamsSelected
-              ? '분반의 삭제되지 않은 모든 팀에 같은 일반 메시지를 보냅니다.'
-              : (description ??
-                '메시지를 받을 팀을 선택하세요. 보낸 메시지는 해당 팀의 일반 메시지 대화에 추가됩니다.')}
-          </Text>
-        </div>
-        <div className={styles.recipientSelectors}>
-          <Selector
-            isDisabled
-            label='분반'
-            onChange={() => undefined}
-            options={[{ label: sectionLabel, value: sectionId }]}
-            renderOption={option => (
-              <SelectorOption label={option.label ?? option.value} />
-            )}
-            value={sectionId}
-            width={ADMIN_SECTION_FILTER_WIDTH}
-          />
-          <Selector
-            isDisabled={
-              isTeamLocked || teamsQuery.isPending || teamsQuery.isError
-            }
-            label='팀'
-            onChange={handleTeamChange}
-            options={[
-              { label: '팀 선택', value: '' },
-              ...(canBroadcast
-                ? [{ label: '전체 팀', value: allTeamsRecipient }]
-                : []),
-              ...teams.map(team => ({
-                label: team.name,
-                value: String(team.id),
-              })),
-            ]}
-            renderOption={option => (
-              <SelectorOption label={option.label ?? option.value} />
-            )}
-            value={teamId}
-            width={ADMIN_TEAM_FILTER_WIDTH}
-          />
-          {teamsQuery.isError ? (
-            <Text role='alert'>팀 목록을 불러오지 못했습니다.</Text>
-          ) : null}
-        </div>
-        <TextArea
-          aria-label='일반 메시지 내용'
-          label='내용'
-          onChange={value => {
-            setMessage(value);
-            if (errorMessage) setErrorMessage(null);
-            if (successMessage) setSuccessMessage(null);
-          }}
-          placeholder='팀에 전달할 메시지를 입력하세요.'
-          value={message}
-        />
-        {successMessage ? <Text role='status'>{successMessage}</Text> : null}
-        {errorMessage ? <Text role='alert'>{errorMessage}</Text> : null}
-        <div className={styles.actions}>
-          <Button
-            isDisabled={isSubmitPending}
-            label='닫기'
-            onClick={onClose}
-            variant='secondary'
-          />
-          <Button
-            isDisabled={!hasSelectedTeam || !message.trim() || isSubmitPending}
-            isLoading={isSubmitPending}
-            label='보내기'
-            onClick={() => {
-              if (isAllTeamsSelected) {
-                setIsBroadcastConfirmationOpen(true);
-                return;
-              }
-              handleSend();
-            }}
-          />
-        </div>
-      </div>
+    <>
+      <AdminGeneralMessageComposerPanel
+        description={
+          isAllTeamsSelected
+            ? '분반의 삭제되지 않은 모든 팀에 같은 일반 메시지를 보냅니다.'
+            : (description ??
+              '메시지를 받을 팀을 선택하세요. 보낸 메시지는 해당 팀의 일반 메시지 대화에 추가됩니다.')
+        }
+        errorMessage={errorMessage}
+        isSubmitDisabled={
+          !hasSelectedTeam || !message.trim() || isSubmitPending
+        }
+        isSubmitPending={isSubmitPending}
+        message={message}
+        onClose={onClose}
+        onMessageChange={value => {
+          setMessage(value);
+          if (errorMessage) setErrorMessage(null);
+          if (successMessage) setSuccessMessage(null);
+        }}
+        onSend={() => {
+          if (isAllTeamsSelected) {
+            setIsBroadcastConfirmationOpen(true);
+            return;
+          }
+          handleSend();
+        }}
+        recipientSelectors={
+          <div className={styles.recipientSelectors}>
+            <Selector
+              isDisabled
+              label='분반'
+              onChange={() => undefined}
+              options={[{ label: sectionLabel, value: sectionId }]}
+              renderOption={option => (
+                <SelectorOption label={option.label ?? option.value} />
+              )}
+              value={sectionId}
+              width={ADMIN_SECTION_FILTER_WIDTH}
+            />
+            <AdminGeneralMessageTeamChecklist
+              canBroadcast={canBroadcast}
+              isDisabled={isTeamLocked}
+              onChange={handleTeamChange}
+              sectionId={sectionId}
+              teamId={teamId}
+            />
+          </div>
+        }
+        successMessage={successMessage}
+      />
       <AlertDialog
         actionLabel='전체 팀에 보내기'
         cancelLabel='취소'
@@ -357,6 +302,6 @@ export function AdminGeneralMessageDialog({
         }}
         title='분반 전체 팀에 메시지를 보낼까요?'
       />
-    </aside>
+    </>
   );
 }

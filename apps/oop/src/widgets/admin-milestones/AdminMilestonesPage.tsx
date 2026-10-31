@@ -2,8 +2,10 @@ import type { AdminMilestoneType } from '@aics/api-client';
 import {
   Button,
   Card,
+  Divider,
   EmptyState,
   Heading,
+  IconButton,
   Selector,
   SelectorOption,
   Tab,
@@ -11,6 +13,7 @@ import {
   Text,
 } from '@aics/design-system';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { Pencil } from 'lucide-react';
 import { type KeyboardEvent, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -220,6 +223,7 @@ export default function AdminMilestonesPage() {
           variant='primary'
         />
       </div>
+      <Divider className={styles.filterDivider} />
 
       <TabList
         aria-label='마일스톤 단계 필터'
@@ -287,6 +291,7 @@ export default function AdminMilestonesPage() {
                   <col className={styles.sectionColumn} />
                   <col />
                   <col className={styles.dueAtColumn} />
+                  <col className={styles.actionColumn} />
                   <col className={styles.statusColumn} />
                 </colgroup>
                 <thead>
@@ -294,6 +299,7 @@ export default function AdminMilestonesPage() {
                     <th>적용 분반</th>
                     <th>제목</th>
                     <th>마감일</th>
+                    <th scope='col'>관리</th>
                     <th>공개 상태</th>
                   </tr>
                 </thead>
@@ -309,6 +315,17 @@ export default function AdminMilestonesPage() {
                             : { milestoneType: selectedMilestoneType }),
                         },
                         to: ROUTES.ADMIN_MILESTONE_DETAIL,
+                      });
+                    const editMilestone = () =>
+                      void navigate({
+                        search: {
+                          milestoneId: String(milestone.id),
+                          sectionId: milestone.sectionKey,
+                          ...(selectedMilestoneType === allMilestoneTypesValue
+                            ? {}
+                            : { milestoneType: selectedMilestoneType }),
+                        },
+                        to: ROUTES.ADMIN_MILESTONE_NEW,
                       });
 
                     return (
@@ -337,6 +354,17 @@ export default function AdminMilestonesPage() {
                         </td>
                         <td>
                           {formatAdminMilestoneDate(milestone.schedule.dueAt)}
+                        </td>
+                        <td>
+                          <IconButton
+                            icon={<Pencil aria-hidden='true' size={16} />}
+                            label={`${milestone.title} 수정`}
+                            onClick={event => {
+                              event.stopPropagation();
+                              editMilestone();
+                            }}
+                            variant='secondary'
+                          />
                         </td>
                         <td>
                           {milestone.status === 'CLOSED' ? (

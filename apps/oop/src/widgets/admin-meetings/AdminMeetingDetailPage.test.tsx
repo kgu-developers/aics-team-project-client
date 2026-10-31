@@ -175,9 +175,11 @@ describe('AdminMeetingDetailPage', () => {
     const panel = await screen.findByRole('complementary', {
       name: '일반 메시지 작성 패널',
     });
-    expect(
-      within(panel).getByRole('combobox', { name: '팀' }),
-    ).toHaveTextContent('1팀');
+    await waitFor(() =>
+      expect(
+        within(panel).getByRole('combobox', { name: '팀' }),
+      ).toHaveTextContent('1팀'),
+    );
     expect(within(panel).getByRole('combobox', { name: '팀' })).toBeDisabled();
   });
 
