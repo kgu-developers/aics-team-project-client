@@ -152,7 +152,7 @@ export const teamDashboardLink = style({
 export const memberList = style({
   display: 'grid',
   gap: 8,
-  gridTemplateColumns: 'repeat(auto-fill, minmax(132px, 1fr))',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(min(132px, 100%), 1fr))',
   listStyle: 'none',
   margin: 0,
   padding: 0,

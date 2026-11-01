@@ -25,6 +25,8 @@ import { useAuthStore } from '~/features/auth/authStore';
 
 import AdminMilestonesPage from './AdminMilestonesPage';
 
+import { resetMockSessionState } from '~/mocks/authSession';
+import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
 import { resetAdminSectionMilestonesFixture } from '~/mocks/data/adminSectionMilestones';
 import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
@@ -37,8 +39,14 @@ const server = setupServer(
 const clients: QueryClient[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-beforeEach(() => resetAdminSectionMilestonesFixture());
+beforeEach(() => {
+  resetMockSessionState();
+  resetAdminCoursesMockData();
+  resetAdminSectionMilestonesFixture();
+});
 afterEach(() => {
+  resetMockSessionState();
+  resetAdminCoursesMockData();
   resetAdminSectionMilestonesFixture();
   clients.splice(0).forEach(client => client.clear());
   server.resetHandlers();

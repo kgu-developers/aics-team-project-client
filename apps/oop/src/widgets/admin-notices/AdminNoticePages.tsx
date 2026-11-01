@@ -759,7 +759,7 @@ export function AdminNoticeNewPage() {
               : `${items.length}개 분반 선택`
           }
           triggerDisplay='count'
-          value={selectedSectionIds}
+          value={selectedSections.map(section => String(section.id))}
           width='100%'
         />
         <Text color='secondary'>

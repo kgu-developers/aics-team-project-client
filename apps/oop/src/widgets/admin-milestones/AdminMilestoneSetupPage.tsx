@@ -143,6 +143,7 @@ export default function AdminMilestoneSetupPage() {
   const queryClient = useQueryClient();
   const rawSearch = useSearch({ from: '/admin/milestones/new' }) as {
     milestoneId?: string | number;
+    milestoneType?: string;
     sectionId?: string | number;
   };
   // Hand-typed URLs arrive as numbers; router links serialize strings.
@@ -151,6 +152,10 @@ export default function AdminMilestoneSetupPage() {
       rawSearch.milestoneId === undefined
         ? undefined
         : String(rawSearch.milestoneId),
+    milestoneType:
+      typeof rawSearch.milestoneType === 'string'
+        ? rawSearch.milestoneType
+        : undefined,
     sectionId:
       rawSearch.sectionId === undefined
         ? undefined
@@ -473,7 +478,12 @@ export default function AdminMilestoneSetupPage() {
         if (result.weekNumberUpdated && result.statusUpdated) {
           await navigate({
             params: { milestoneId: editingMilestoneId },
-            search: { sectionId: editingSectionId },
+            search: {
+              sectionId: editingSectionId,
+              ...(search.milestoneType
+                ? { milestoneType: search.milestoneType }
+                : {}),
+            },
             to: ROUTES.ADMIN_MILESTONE_DETAIL,
           });
         } else if (!result.weekNumberUpdated && !result.statusUpdated) {
@@ -745,7 +755,16 @@ export default function AdminMilestoneSetupPage() {
       if (createdWithoutFollowUpFailure) {
         await navigate({
           search:
-            results.length === 1 ? { sectionId: results[0]!.sectionId } : {},
+            results.length === 1
+              ? {
+                  sectionId: results[0]!.sectionId,
+                  ...(search.milestoneType
+                    ? { milestoneType: search.milestoneType }
+                    : {}),
+                }
+              : search.milestoneType
+                ? { milestoneType: search.milestoneType }
+                : {},
           to: ROUTES.ADMIN_MILESTONES,
         });
       }
@@ -855,7 +874,16 @@ export default function AdminMilestoneSetupPage() {
                 : '기본 양식을 선택하고 담당 분반의 공개 일정과 마감 일시를 준비합니다.'}
           </Text>
         </div>
-        <Link className={styles.backLink} to={ROUTES.ADMIN_MILESTONES}>
+        <Link
+          className={styles.backLink}
+          search={{
+            ...(search.sectionId ? { sectionId: search.sectionId } : {}),
+            ...(search.milestoneType
+              ? { milestoneType: search.milestoneType }
+              : {}),
+          }}
+          to={ROUTES.ADMIN_MILESTONES}
+        >
           ← 마일스톤 목록으로
         </Link>
       </header>
@@ -1488,8 +1516,15 @@ export default function AdminMilestoneSetupPage() {
                 }
                 search={
                   isEditing && editingSectionId
-                    ? { sectionId: editingSectionId }
-                    : undefined
+                    ? {
+                        sectionId: editingSectionId,
+                        ...(search.milestoneType
+                          ? { milestoneType: search.milestoneType }
+                          : {}),
+                      }
+                    : search.milestoneType
+                      ? { milestoneType: search.milestoneType }
+                      : undefined
                 }
                 to={
                   isEditing
