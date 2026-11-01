@@ -19,15 +19,10 @@ export const header = style({
   justifyContent: 'space-between',
 });
 
-export const filters = style({
-  alignItems: 'flex-end',
+export const courseList = style({
   display: 'flex',
-  flexWrap: 'wrap',
-  gap: 12,
-});
-
-export const courseSelector = style({
-  minWidth: 280,
+  flexDirection: 'column',
+  gap: tokens.spacing['8'],
 });
 
 export const courseCard = style({

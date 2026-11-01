@@ -261,11 +261,13 @@ export function CourseFormDialog({
   isOpen,
   onClose,
   onCreated,
+  professorName,
 }: {
   courseId: number | null;
   isOpen: boolean;
   onClose: () => void;
   onCreated?: () => void;
+  professorName?: string;
 }) {
   const toast = useToast();
   const courseQuery = useAdminOopCourseQuery(courseId ?? undefined);
@@ -364,6 +366,11 @@ export function CourseFormDialog({
           <Text role='alert'>강좌 정보를 불러오지 못했습니다.</Text>
         ) : (
           <form className={styles.form} onSubmit={handleSubmit}>
+            {!isEditing ? (
+              <Text color='secondary' type='supporting'>
+                담당 교수자: {professorName ?? '현재 로그인한 교수자'}
+              </Text>
+            ) : null}
             <TextInput
               isDisabled={mutation.isPending}
               isRequired

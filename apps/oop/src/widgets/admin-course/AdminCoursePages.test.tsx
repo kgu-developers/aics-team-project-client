@@ -39,6 +39,7 @@ import AdminCoursesPage from './AdminCoursesPage';
 import {
   issueMockSession,
   mockSessionResponseHeaders,
+  resetMockSessionState,
 } from '~/mocks/authSession';
 import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
 import { resetAdminProfileMockData } from '~/mocks/data/adminProfile';
@@ -80,6 +81,7 @@ const queryClients: QueryClient[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
+  resetMockSessionState();
   resetAdminCoursesMockData();
   resetAdminSectionsMockData();
   resetAdminStudentTeamMockState();
@@ -101,6 +103,7 @@ beforeEach(() => {
 afterEach(() => {
   server.resetHandlers();
   queryClients.splice(0).forEach(queryClient => queryClient.clear());
+  resetMockSessionState();
   setApiAccessToken(null);
   useAuthStore.setState({ accessToken: null, currentUser: null });
 });
@@ -206,19 +209,31 @@ async function openAssistantDialog(user: UserEvent) {
   return screen.findByRole('dialog', { name: 'OOP-01 조교 관리' });
 }
 
+function courseLabel(courseName: string, year: number, semester: string) {
+  return `${courseName} · ${year}년 ${semester}`;
+}
+
+function getCourseSection(courseName: string, year: number, semester: string) {
+  const label = courseLabel(courseName, year, semester);
+  const section = screen
+    .getByRole('group', { name: `${label} 강좌 관리` })
+    .closest('section');
+  if (!section) throw new Error(`${label} 강좌 영역을 찾을 수 없습니다.`);
+  return section;
+}
+
 describe('AdminCoursesPage', () => {
-  it('강좌 설정과 분반 목록을 함께 표시하고 분반을 누르면 운영 화면으로 이동한다', async () => {
+  it('등록한 모든 강좌와 분반 목록을 함께 표시하고 분반을 누르면 운영 화면으로 이동한다', async () => {
     const user = userEvent.setup();
     const router = renderAt('/admin/sections');
 
-    expect(
-      await screen.findByRole('heading', { name: '강좌 설정' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { level: 3, name: '객체지향 프로그래밍' }),
-    ).toBeInTheDocument();
+    await screen.findAllByRole('heading', {
+      level: 2,
+      name: '객체지향 프로그래밍',
+    });
+    const oopCourseLabel = courseLabel('객체지향 프로그래밍', 2026, '2학기');
     const courseSummary = screen.getByRole('article', {
-      name: '객체지향 프로그래밍 강좌 요약',
+      name: `${oopCourseLabel} 강좌 요약`,
     });
     expect(within(courseSummary).getByText('운영 중')).toBeInTheDocument();
     expect(within(courseSummary).getByText('운영 학기')).toBeInTheDocument();
@@ -226,15 +241,20 @@ describe('AdminCoursesPage', () => {
     expect(within(courseSummary).getByText('등록 분반')).toBeInTheDocument();
     expect(await within(courseSummary).findByText(/\d+개/)).toBeInTheDocument();
     expect(
-      within(screen.getByRole('group', { name: '강좌 관리' }))
+      within(screen.getByRole('group', { name: `${oopCourseLabel} 강좌 관리` }))
         .getAllByRole('button')
         .map(button => button.textContent),
-    ).toEqual(['강좌 정보 수정', '강좌 등록', '강좌 삭제']);
-    expect(screen.getByRole('combobox', { name: '강좌' })).toHaveTextContent(
-      '객체지향 프로그래밍',
-    );
+    ).toEqual(['강좌 정보 수정', '강좌 삭제']);
+    expect(
+      screen.getByRole('article', {
+        name: '웹 프로그래밍 · 2027년 1학기 강좌 요약',
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('article', { name: `${oopCourseLabel} 강좌 요약` }),
+    ).toBeInTheDocument();
     const table = await screen.findByRole('table', {
-      name: '객체지향 프로그래밍 분반 목록',
+      name: `${oopCourseLabel} 분반 목록`,
     });
     const row = within(table).getByRole('row', {
       name: 'OOP-01 분반 운영 화면 열기',
@@ -257,22 +277,29 @@ describe('AdminCoursesPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('운영 중 강좌를 기본 선택하고 전체 조회에서는 최신 강좌를 선택한다', async () => {
-    const user = userEvent.setup();
+  it('연도·학기·상태와 관계없이 등록한 강좌를 모두 표시한다', async () => {
     renderAt('/admin/sections');
 
-    const courseSelector = await screen.findByRole('combobox', {
-      name: '강좌',
-    });
-    expect(courseSelector).toHaveTextContent('객체지향 프로그래밍');
-
-    await user.click(screen.getByRole('combobox', { name: '상태' }));
-    await user.click(screen.getByRole('option', { name: '전체 상태' }));
-
-    await waitFor(() =>
-      expect(courseSelector).toHaveTextContent('웹 프로그래밍'),
+    expect(
+      await screen.findByRole('article', {
+        name: '웹 프로그래밍 · 2027년 1학기 강좌 요약',
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('article', { name: /강좌 요약/ })).toHaveLength(
+      3,
     );
-    expect(courseSelector).toHaveTextContent('2027년');
+    expect(
+      screen.queryByRole('combobox', { name: '연도' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('combobox', { name: '학기' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('combobox', { name: '상태' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('combobox', { name: '강좌' }),
+    ).not.toBeInTheDocument();
   });
 
   it('강좌를 등록한다', async () => {
@@ -282,6 +309,9 @@ describe('AdminCoursesPage', () => {
 
     await user.click(screen.getByRole('button', { name: '강좌 등록' }));
     const dialog = screen.getByRole('dialog', { name: '강좌 등록' });
+    expect(
+      within(dialog).getByText(`담당 교수자: ${demoAdmin.name}`),
+    ).toBeInTheDocument();
     await user.type(
       within(dialog).getByRole('textbox', { name: /강좌명/ }),
       '알고리즘',
@@ -291,7 +321,11 @@ describe('AdminCoursesPage', () => {
     await user.type(year, '2027');
     await user.click(within(dialog).getByRole('button', { name: '등록' }));
 
-    expect(await screen.findByText('알고리즘')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('article', {
+        name: '알고리즘 · 2027년 2학기 강좌 요약',
+      }),
+    ).toBeInTheDocument();
   });
 
   it('연도가 비어 있으면 강좌 등록을 막는다', async () => {
@@ -328,7 +362,7 @@ describe('AdminCourseDetailPage', () => {
       expect(router.state.location.pathname).toBe('/admin/sections'),
     );
     const list = await screen.findByRole('table', {
-      name: '객체지향 프로그래밍 분반 목록',
+      name: '객체지향 프로그래밍 · 2026년 2학기 분반 목록',
     });
     await user.click(
       within(list).getByRole('row', {
@@ -569,7 +603,12 @@ describe('AdminCourseDetailPage', () => {
       name: 'OOP-01 분반 운영 화면 열기',
     });
 
-    await user.click(screen.getByRole('button', { name: '분반 등록' }));
+    await user.click(
+      within(getCourseSection('객체지향 프로그래밍', 2026, '2학기')).getByRole(
+        'button',
+        { name: '분반 등록' },
+      ),
+    );
     const dialog = await screen.findByRole('dialog', {
       name: '객체지향 프로그래밍 분반 등록',
     });
@@ -610,7 +649,12 @@ describe('AdminCourseDetailPage', () => {
       name: 'OOP-01 분반 운영 화면 열기',
     });
 
-    await user.click(screen.getByRole('button', { name: '분반 등록' }));
+    await user.click(
+      within(getCourseSection('객체지향 프로그래밍', 2026, '2학기')).getByRole(
+        'button',
+        { name: '분반 등록' },
+      ),
+    );
     const dialog = await screen.findByRole('dialog', {
       name: '객체지향 프로그래밍 분반 등록',
     });
@@ -918,9 +962,17 @@ describe('AdminCourseDetailPage', () => {
   it('강좌 정보 수정에서 운영 상태를 보관됨으로 바꾼다', async () => {
     const user = userEvent.setup();
     renderAt('/admin/sections');
-    await screen.findByRole('heading', { name: '강좌 설정' });
+    await screen.findByRole('article', {
+      name: '객체지향 프로그래밍 · 2026년 2학기 강좌 요약',
+    });
 
-    await user.click(screen.getByRole('button', { name: '강좌 정보 수정' }));
+    await user.click(
+      within(
+        screen.getByRole('group', {
+          name: '객체지향 프로그래밍 · 2026년 2학기 강좌 관리',
+        }),
+      ).getByRole('button', { name: '강좌 정보 수정' }),
+    );
     const dialog = await screen.findByRole('dialog', {
       name: '강좌 상세 및 수정',
     });
@@ -936,9 +988,17 @@ describe('AdminCourseDetailPage', () => {
   it('강좌를 삭제하면 목록으로 돌아간다', async () => {
     const user = userEvent.setup();
     const router = renderAt('/admin/sections');
-    await screen.findByRole('heading', { name: '강좌 설정' });
+    await screen.findByRole('article', {
+      name: '객체지향 프로그래밍 · 2026년 2학기 강좌 요약',
+    });
 
-    await user.click(screen.getByRole('button', { name: '강좌 삭제' }));
+    await user.click(
+      within(
+        screen.getByRole('group', {
+          name: '객체지향 프로그래밍 · 2026년 2학기 강좌 관리',
+        }),
+      ).getByRole('button', { name: '강좌 삭제' }),
+    );
     const dialog = await screen.findByRole('dialog', {
       name: '강좌 삭제 확인',
     });
@@ -947,18 +1007,14 @@ describe('AdminCourseDetailPage', () => {
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/admin/sections'),
     );
-    expect(await screen.findByText('표시할 강좌가 없습니다.')).toBeVisible();
-    await user.click(screen.getByRole('combobox', { name: '상태' }));
-    await user.click(screen.getByRole('option', { name: '전체 상태' }));
-    const courseSelector = await screen.findByRole('combobox', {
-      name: '강좌',
-    });
-    expect(courseSelector).toHaveTextContent('웹 프로그래밍');
-    await user.click(courseSelector);
-    // Only the 2025 archived course of the same name remains.
     expect(
-      screen.getAllByRole('option', {
-        name: /객체지향 프로그래밍/,
+      await screen.findByRole('article', {
+        name: '웹 프로그래밍 · 2027년 1학기 강좌 요약',
+      }),
+    ).toBeVisible();
+    expect(
+      screen.getAllByRole('article', {
+        name: /객체지향 프로그래밍 · .* 강좌 요약/,
       }),
     ).toHaveLength(1);
   });
