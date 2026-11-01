@@ -1,4 +1,4 @@
-import { MultiSelector, Text } from '@aics/design-system';
+import { Button, MultiSelector, Text } from '@aics/design-system';
 
 import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 
@@ -34,15 +34,6 @@ export function AdminGeneralMessageTeamChecklist({
       : [];
 
   const handleChange = (nextValues: string[]) => {
-    if (
-      canBroadcast &&
-      teams.length > 0 &&
-      nextValues.length === teams.length
-    ) {
-      onChange(ALL_TEAMS_RECIPIENT);
-      return;
-    }
-
     if (isAllTeamsSelected) {
       // The API only accepts one team or the whole section. Clear the whole
       // section mode before a different individual team is chosen.
@@ -71,7 +62,7 @@ export function AdminGeneralMessageTeamChecklist({
             : '현재는 전체 팀 또는 한 팀에만 보낼 수 있습니다. 일부 팀 여러 개 선택 전송은 지원되지 않습니다.'
         }
         hasClear
-        hasSelectAll={canBroadcast}
+        hasSelectAll={false}
         isDisabled={isSelectorDisabled}
         label='팀'
         onChange={handleChange}
@@ -80,11 +71,21 @@ export function AdminGeneralMessageTeamChecklist({
           value: String(team.id),
         }))}
         placeholder='팀 선택'
-        selectAllLabel='전체 팀'
         triggerDisplay='labels'
         value={selectedValues}
         width='100%'
       />
+      {canBroadcast ? (
+        <Button
+          isDisabled={isSelectorDisabled || teams.length === 0}
+          label={isAllTeamsSelected ? '전체 팀 선택 해제' : '전체 팀 선택'}
+          onClick={() =>
+            onChange(isAllTeamsSelected ? '' : ALL_TEAMS_RECIPIENT)
+          }
+          size='sm'
+          variant='secondary'
+        />
+      ) : null}
       {teamsQuery.isError ? (
         <Text role='alert'>팀 목록을 불러오지 못했습니다.</Text>
       ) : null}

@@ -221,6 +221,9 @@ export function createTeamMessageHandlers(
           const team = data.teams.find(item => item.id === thread?.teamId);
           if (!team) return [];
           if (teamId && String(team.id) !== teamId) return [];
+          if (sectionId && !isAccessibleSection(sectionId, team.sectionId)) {
+            return [];
+          }
           if (
             !accessibleSections.some(section =>
               isAccessibleSection(section.id, team.sectionId),

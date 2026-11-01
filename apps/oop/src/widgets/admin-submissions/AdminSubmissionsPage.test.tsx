@@ -28,7 +28,11 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminSubmissionDetailPage from './AdminSubmissionDetailPage';
 import AdminSubmissionsPage from './AdminSubmissionsPage';
 
-import { resetMockSessionState } from '~/mocks/authSession';
+import {
+  issueMockSession,
+  mockSessionResponseHeaders,
+  resetMockSessionState,
+} from '~/mocks/authSession';
 import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
 import {
   adminPeerEvaluationListFixture,
@@ -41,7 +45,11 @@ import {
 } from '~/mocks/data/adminMilestoneSubmissions';
 import { getAdminSectionMilestonesFixture } from '~/mocks/data/adminSectionMilestones';
 import { createProjectProposalFixture } from '~/mocks/data/projectProposal';
-import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import {
+  demoAdmin,
+  demoAdminAccessToken,
+  demoUserAccounts,
+} from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import { adminEvaluationResultHandlers } from '~/mocks/handlers/adminEvaluationResults';
 import { adminMeetingHandlers } from '~/mocks/handlers/adminMeetings';
@@ -57,6 +65,7 @@ import {
 } from '~/mocks/handlers/adminPresentationEvaluations';
 import { adminSectionMilestoneHandlers } from '~/mocks/handlers/adminSectionMilestones';
 import { adminStudentTeamHandlers } from '~/mocks/handlers/adminStudentTeams';
+import { authHandlers } from '~/mocks/handlers/auth';
 import { createTeamMessageHandlers } from '~/mocks/handlers/teamMessages';
 
 const server = setupServer(
@@ -73,6 +82,7 @@ const server = setupServer(
   ...adminPresentationEvaluationHandlers,
   ...adminSectionMilestoneHandlers,
   ...adminStudentTeamHandlers,
+  ...authHandlers,
   ...createTeamMessageHandlers(),
 );
 
@@ -81,6 +91,13 @@ beforeEach(() => {
   resetAdminCoursesMockData();
   sessionStorage.clear();
   resetMockSessionState();
+  mockSessionResponseHeaders(
+    issueMockSession(
+      demoUserAccounts.find(
+        account => account.accessToken === demoAdminAccessToken,
+      )!,
+    ),
+  );
 });
 afterEach(() => {
   resetAdminMilestoneSubmissionsFixture();
@@ -280,7 +297,7 @@ describe('AdminSubmissionsPage', () => {
     );
 
     await user.click(within(panel).getByRole('combobox', { name: '팀' }));
-    await user.click(screen.getByRole('checkbox', { name: '1팀' }));
+    await user.click(await screen.findByRole('option', { name: '1팀' }));
     await user.type(
       within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
       '팀 상담 일정을 확인해 주세요.',
@@ -413,12 +430,18 @@ describe('AdminSubmissionsPage', () => {
         '예외 처리를 보완해 주세요.',
       );
       await user.click(screen.getByRole('button', { name: '피드백 보내기' }));
-      expect(await screen.findByRole('alert')).toHaveTextContent(
-        '피드백을 보내지 못했습니다.',
+      await waitFor(
+        () =>
+          expect(posted).toHaveBeenCalledExactlyOnceWith({
+            message: '예외 처리를 보완해 주세요.',
+          }),
+        { timeout: 5_000 },
       );
-      expect(posted).toHaveBeenCalledExactlyOnceWith({
-        message: '예외 처리를 보완해 주세요.',
-      });
+      expect(
+        await screen.findByText(
+          '피드백을 보내지 못했습니다. 입력 내용을 확인한 뒤 다시 시도해 주세요.',
+        ),
+      ).toHaveAttribute('role', 'alert');
       expect(
         screen.getByRole('textbox', { name: '제안서 피드백 내용' }),
       ).toHaveValue('예외 처리를 보완해 주세요.');

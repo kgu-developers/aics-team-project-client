@@ -306,8 +306,9 @@ describe('AdminMeetingsPage', () => {
     const panel = await screen.findByRole('complementary', {
       name: '일반 메시지 작성 패널',
     });
-    await user.click(within(panel).getByRole('combobox', { name: '팀' }));
-    await user.click(screen.getByRole('option', { name: '전체 팀' }));
+    await user.click(
+      within(panel).getByRole('button', { name: '전체 팀 선택' }),
+    );
     await user.type(
       within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
       '전체 회의 안내',

@@ -126,7 +126,7 @@ export default function AdminMessagesPage() {
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   const [isBroadcastConfirmationOpen, setIsBroadcastConfirmationOpen] =
     useState(false);
-  const composeDefaultsRef = useRef({ sectionId, sections });
+  const composeDefaultsRef = useRef({ sectionId });
   const query = useAdminMessagesQuery(sectionId, page, teamId);
   const submitMutation = useSubmitTeamMessageMutation(composeTeamId);
   const submitSectionMutation =
@@ -163,8 +163,8 @@ export default function AdminMessagesPage() {
   }, [boundedPage, navigate, page, query.isSuccess, sectionId, teamId]);
 
   useEffect(() => {
-    composeDefaultsRef.current = { sectionId, sections };
-  }, [sectionId, sections]);
+    composeDefaultsRef.current = { sectionId };
+  }, [sectionId]);
 
   useEffect(() => {
     if (!isComposeOpen) {
@@ -173,21 +173,26 @@ export default function AdminMessagesPage() {
     }
 
     setIsDraftLoaded(false);
-    const { sectionId: selectedSectionId, sections: activeSections } =
-      composeDefaultsRef.current;
+    const { sectionId: selectedSectionId } = composeDefaultsRef.current;
     const selectedRecipient = readSelectedRecipient();
-    const fallbackSectionId = selectedSectionId ?? activeSections[0]?.id ?? '';
-    const storedSectionId = selectedRecipient?.sectionId ?? fallbackSectionId;
-    const storedTeamId = selectedRecipient?.teamId ?? '';
-    const draft =
-      readComposeDraft(composeDraftStorageKey(storedSectionId, storedTeamId)) ??
-      readComposeDraft(draftStorageKey);
+    // The inbox filter is the explicit recipient context. Do not let an old
+    // draft switch a message opened from a specific section to another one.
+    // When the list is on "전체 분반", leave the recipient empty instead of
+    // silently choosing the first assigned section.
+    const storedSectionId = selectedSectionId ?? '';
+    const storedTeamId =
+      selectedRecipient?.sectionId === storedSectionId
+        ? selectedRecipient.teamId
+        : '';
+    const draft = storedSectionId
+      ? readComposeDraft(composeDraftStorageKey(storedSectionId, storedTeamId))
+      : null;
     try {
       setComposeSectionId(draft?.sectionId ?? storedSectionId);
       setComposeTeamId(draft?.teamId ?? storedTeamId);
       setComposeMessage(draft?.message ?? '');
     } catch {
-      setComposeSectionId(selectedSectionId ?? activeSections[0]?.id ?? '');
+      setComposeSectionId(selectedSectionId ?? '');
       setComposeTeamId('');
       setComposeMessage('');
     }
@@ -512,25 +517,28 @@ export default function AdminMessagesPage() {
                 setComposeSuccessMessage(null);
               }}
               sectionId={composeSectionId}
+              sectionSelection='selector'
             >
-              <AdminGeneralMessageTeamChecklist
-                canBroadcast={canBroadcast}
-                onChange={next => {
-                  storeComposeDraft({
-                    message: composeMessage,
-                    sectionId: composeSectionId,
-                    teamId: composeTeamId,
-                  });
-                  const nextDraft = readComposeDraft(
-                    composeDraftStorageKey(composeSectionId, next),
-                  );
-                  setComposeTeamId(next);
-                  setComposeMessage(nextDraft?.message ?? '');
-                  setComposeSuccessMessage(null);
-                }}
-                sectionId={composeSectionId}
-                teamId={composeTeamId}
-              />
+              {composeSectionId ? (
+                <AdminGeneralMessageTeamChecklist
+                  canBroadcast={canBroadcast}
+                  onChange={next => {
+                    storeComposeDraft({
+                      message: composeMessage,
+                      sectionId: composeSectionId,
+                      teamId: composeTeamId,
+                    });
+                    const nextDraft = readComposeDraft(
+                      composeDraftStorageKey(composeSectionId, next),
+                    );
+                    setComposeTeamId(next);
+                    setComposeMessage(nextDraft?.message ?? '');
+                    setComposeSuccessMessage(null);
+                  }}
+                  sectionId={composeSectionId}
+                  teamId={composeTeamId}
+                />
+              ) : null}
             </AdminSectionTeamFilter>
           }
           successMessage={composeSuccessMessage}

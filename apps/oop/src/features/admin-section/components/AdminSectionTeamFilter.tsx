@@ -23,6 +23,8 @@ type AdminSectionTeamFilterProps = {
   children?: ReactNode;
   /** Selected section id, or `ALL_SECTIONS`. */
   sectionId: string;
+  /** Use a dropdown when a blank section selection must remain visible. */
+  sectionSelection?: 'tabs' | 'selector';
   onSectionChange: (sectionId: string) => void;
   /** Provide both to render the dependent team selector. */
   teamId?: string;
@@ -45,37 +47,66 @@ export default function AdminSectionTeamFilter({
   onSectionChange,
   onTeamChange,
   sectionId,
+  sectionSelection = 'tabs',
   teamId,
 }: AdminSectionTeamFilterProps) {
   const sectionsQuery = useActiveAdminSections();
   const sections = sectionsQuery.data;
   const hasTeamFilter = onTeamChange !== undefined;
-  const isSectionSelected = sectionId !== ALL_SECTIONS;
+  // A compose panel may intentionally start without a recipient section.
+  // Only an assigned, visible section may reveal the dependent team selector.
+  // This also keeps a stale draft recipient from issuing a team request.
+  const isSectionSelected = sections.some(
+    section => String(section.id) === sectionId,
+  );
   const teamsQuery = useAdminSectionTeamsQuery(
     hasTeamFilter && isSectionSelected ? sectionId : undefined,
   );
 
   return (
     <div aria-label={label} className={styles.root} role='group'>
-      <TabList
-        aria-label='분반'
-        className={styles.sectionTabs}
-        onChange={onSectionChange}
-        overflow='scroll'
-        value={sectionId}
-      >
-        {allowAllSections ? (
-          <Tab label='전체 분반' value={ALL_SECTIONS} />
-        ) : null}
-        {sections.map(section => (
-          <Tab
-            aria-disabled={sectionsQuery.isPending || sectionsQuery.isError}
-            key={section.id}
-            label={formatAdminSectionLabel(section)}
-            value={String(section.id)}
-          />
-        ))}
-      </TabList>
+      {sectionSelection === 'tabs' ? (
+        <TabList
+          aria-label='분반'
+          className={styles.sectionTabs}
+          onChange={onSectionChange}
+          overflow='scroll'
+          value={sectionId}
+        >
+          {allowAllSections ? (
+            <Tab label='전체 분반' value={ALL_SECTIONS} />
+          ) : null}
+          {sections.map(section => (
+            <Tab
+              aria-disabled={sectionsQuery.isPending || sectionsQuery.isError}
+              key={section.id}
+              label={formatAdminSectionLabel(section)}
+              value={String(section.id)}
+            />
+          ))}
+        </TabList>
+      ) : (
+        <Selector
+          isDisabled={sectionsQuery.isPending || sectionsQuery.isError}
+          label='분반'
+          onChange={onSectionChange}
+          options={[
+            ...(allowAllSections
+              ? [{ label: '전체 분반', value: ALL_SECTIONS }]
+              : []),
+            ...sections.map(section => ({
+              label: formatAdminSectionLabel(section),
+              value: String(section.id),
+            })),
+          ]}
+          placeholder='분반 선택'
+          renderOption={option => (
+            <SelectorOption label={option.label ?? option.value} />
+          )}
+          value={sectionId}
+          width='100%'
+        />
+      )}
       {hasTeamFilter && isSectionSelected ? (
         <Selector
           isDisabled={teamsQuery.isPending}

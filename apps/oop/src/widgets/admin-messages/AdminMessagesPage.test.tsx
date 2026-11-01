@@ -40,6 +40,9 @@ import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 // Section teams feed the dependent team filter; the list itself is enough here.
 const server = setupServer(
   ...adminCourseHandlers,
+  http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>
+    HttpResponse.json(messagePage(0, 10, 0)),
+  ),
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS(':sectionId')}`,
     () =>
@@ -112,6 +115,7 @@ function setup(
   sections = defaultSections,
   currentUser: CurrentUser = demoAdmin,
   accessToken = demoAdminAccessToken,
+  initialEntry = '/admin/messages',
 ) {
   useAuthStore.getState().setAccessToken(accessToken);
   useAuthStore.getState().setCurrentUser({
@@ -137,10 +141,22 @@ function setup(
   });
   const router = createRouter({
     routeTree: rootRoute.addChildren([messagesRoute]),
-    history: createMemoryHistory({ initialEntries: ['/admin/messages'] }),
+    history: createMemoryHistory({ initialEntries: [initialEntry] }),
   });
   render(<RouterProvider router={router} />);
   return client;
+}
+
+async function selectPanelSection(
+  user: ReturnType<typeof userEvent.setup>,
+  panel: HTMLElement,
+  sectionLabel: string,
+) {
+  await user.click(within(panel).getByRole('combobox', { name: '분반' }));
+  await user.click(await screen.findByRole('option', { name: sectionLabel }));
+  await waitFor(() =>
+    expect(within(panel).getByRole('combobox', { name: '팀' })).toBeEnabled(),
+  );
 }
 
 it('담당 교수는 분반 전체 팀에 일반 메시지를 한 번에 보낸다', async () => {
@@ -170,12 +186,8 @@ it('담당 교수는 분반 전체 팀에 일반 메시지를 한 번에 보낸�
   const panel = screen.getByRole('complementary', {
     name: '일반 메시지 작성 패널',
   });
-  await user.click(within(panel).getByRole('combobox', { name: '팀' }));
-  await user.click(await screen.findByRole('option', { name: '전체 팀' }));
-  expect(screen.getByRole('option', { name: '7팀' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  );
+  await selectPanelSection(user, panel, 'OOP-01 · 월요일 1-2교시');
+  await user.click(within(panel).getByRole('button', { name: '전체 팀 선택' }));
   await user.type(
     within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
     '전체 팀 안내',
@@ -362,6 +374,7 @@ it('분반과 팀을 선택해 첫 일반 메시지를 보낸다', async () => {
   expect(panel).toHaveTextContent(
     '보낸 메시지는 해당 팀의 일반 메시지 대화에 추가됩니다.',
   );
+  await selectPanelSection(user, panel, '현재 분반 하나 · 월요일 1-2교시');
   await user.click(within(panel).getByRole('combobox', { name: '팀' }));
   await user.click(await screen.findByRole('option', { name: '7팀' }));
   await user.type(
@@ -385,6 +398,46 @@ it('분반과 팀을 선택해 첫 일반 메시지를 보낸다', async () => {
       },
     ]),
   );
+});
+
+it('특정 분반 쪽지함에서 작성 패널을 열면 그 분반을 수신 분반으로 유지한다', async () => {
+  setup(
+    defaultSections,
+    demoAdmin,
+    demoAdminAccessToken,
+    '/admin/messages?sectionId=2',
+  );
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+  );
+  const panel = screen.getByRole('complementary', {
+    name: '일반 메시지 작성 패널',
+  });
+
+  expect(
+    within(panel).getByRole('combobox', { name: '분반' }),
+  ).toHaveTextContent('현재 분반 둘 · 월요일 1-2교시');
+});
+
+it('전체 분반 쪽지함에서 작성 패널을 열면 수신 분반을 직접 고르게 한다', async () => {
+  setup();
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+  );
+  const panel = screen.getByRole('complementary', {
+    name: '일반 메시지 작성 패널',
+  });
+
+  expect(
+    within(panel).getByRole('combobox', { name: '분반' }),
+  ).toHaveTextContent('분반 선택');
+  expect(
+    within(panel).queryByRole('combobox', { name: '팀' }),
+  ).not.toBeInTheDocument();
 });
 
 it('작성 패널에서 팀을 바꿔도 기존 팀의 초안을 보존한다', async () => {
@@ -416,6 +469,7 @@ it('작성 패널에서 팀을 바꿔도 기존 팀의 초안을 보존한다', 
     name: '일반 메시지 내용',
   });
 
+  await selectPanelSection(user, panel, '현재 분반 하나 · 월요일 1-2교시');
   await user.click(within(panel).getByRole('combobox', { name: '팀' }));
   await user.click(await screen.findByRole('option', { name: '7팀' }));
   await user.type(message, '7팀 초안');
