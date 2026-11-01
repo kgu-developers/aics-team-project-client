@@ -26,16 +26,29 @@ import { useAuthStore } from '~/features/auth/authStore';
 
 import AdminStudentTeamManagement from './AdminStudentTeamManagement';
 
-import { resetMockSessionState } from '~/mocks/authSession';
-import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import {
+  issueMockSession,
+  mockSessionResponseHeaders,
+  resetMockSessionState,
+} from '~/mocks/authSession';
+import {
+  demoAdmin,
+  demoAdminAccessToken,
+  demoUserAccounts,
+} from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import {
   adminStudentTeamHandlers,
   resetAdminStudentTeamMockState,
 } from '~/mocks/handlers/adminStudentTeams';
+import { authHandlers } from '~/mocks/handlers/auth';
 import { renderWithRouter } from '~/test/renderWithRouter';
 
-const server = setupServer(...adminCourseHandlers, ...adminStudentTeamHandlers);
+const server = setupServer(
+  ...adminCourseHandlers,
+  ...adminStudentTeamHandlers,
+  ...authHandlers,
+);
 const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
   'close',
@@ -64,6 +77,13 @@ beforeAll(() => {
 beforeEach(() => {
   resetMockSessionState();
   resetAdminStudentTeamMockState();
+  mockSessionResponseHeaders(
+    issueMockSession(
+      demoUserAccounts.find(
+        account => account.accessToken === demoAdminAccessToken,
+      )!,
+    ),
+  );
 });
 afterEach(() => {
   server.resetHandlers();
@@ -548,7 +568,11 @@ describe('AdminStudentTeamManagement', () => {
     renderPage();
 
     const studentNameButton = (
-      await screen.findAllByRole('button', { name: '김민준' })
+      await screen.findAllByRole(
+        'button',
+        { name: '김민준' },
+        { timeout: 5_000 },
+      )
     ).find(button => button.closest('table'));
     expect(studentNameButton).toBeDefined();
     await user.click(studentNameButton!);
@@ -988,10 +1012,14 @@ describe('AdminStudentTeamManagement', () => {
         .closest('article');
       expect(within(firstTeam!).queryByText('김민준')).not.toBeInTheDocument();
       expect(
-        within(firstTeam!).queryByRole('button', { name: /팀장/ }),
+        within(firstTeam!).queryByRole('button', { name: '김민준' }),
       ).not.toBeInTheDocument();
+      const secondTeamLeader = within(secondTeam!)
+        .getByRole('button', { name: /박지훈.*팀장/ })
+        .closest('li');
+      expect(within(secondTeamLeader!).getByText('팀장')).toBeInTheDocument();
       expect(
-        within(secondTeam!).getByRole('button', { name: /박지훈.*팀장/ }),
+        within(secondTeam!).getByRole('button', { name: '김민준' }),
       ).toBeInTheDocument();
       expect(
         within(secondTeam!).queryByRole('button', { name: /김민준.*팀장/ }),

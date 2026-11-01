@@ -68,10 +68,6 @@ let nextImportedTeamId = 20_000;
 const initialAdminStudents = structuredClone(adminStudentsFixture);
 const initialAdminTeams = structuredClone(adminTeamsFixture);
 
-const studentsById = new Map(
-  adminStudentsFixture.map(student => [student.id, student]),
-);
-
 function getStudentTeamId(student: (typeof adminStudentsFixture)[number]) {
   return teamIdByStudentNumber.get(student.studentNumber) ?? student.teamId;
 }
@@ -84,7 +80,11 @@ function getTeamStudents(teamId: string) {
 
 function getBaselineTeamStudents(team: (typeof adminTeamsFixture)[number]) {
   return team.memberIds.flatMap(memberId => {
-    const student = studentsById.get(memberId);
+    // The fixture arrays are restored in place between tests. Resolve against
+    // the current array rather than retaining members from a previous test.
+    const student = adminStudentsFixture.find(
+      candidate => candidate.id === memberId,
+    );
     return student ? [student] : [];
   });
 }
@@ -106,9 +106,8 @@ function getTeams(sectionId: string): Team[] {
         isLeader:
           student.studentNumber ===
           (teamLeaderStudentNumbers.get(team.id) ??
-            team.memberIds
-              .map(memberId => studentsById.get(memberId))
-              .find(candidate => candidate?.isLeader)?.studentNumber),
+            getBaselineTeamStudents(team).find(candidate => candidate.isLeader)
+              ?.studentNumber),
       })),
     }));
 }
@@ -561,9 +560,8 @@ export const adminStudentTeamHandlers = [
         );
         const sourceLeader =
           teamLeaderStudentNumbers.get(team.id) ??
-          team.memberIds
-            .map(memberId => studentsById.get(memberId))
-            .find(candidate => candidate?.isLeader)?.studentNumber;
+          getBaselineTeamStudents(team).find(candidate => candidate.isLeader)
+            ?.studentNumber;
 
         if (!targetTeam || targetTeam.sectionId !== team.sectionId) {
           return HttpResponse.json(
