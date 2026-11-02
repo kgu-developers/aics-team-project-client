@@ -143,6 +143,7 @@ export default function AdminCoursesPage() {
                   setIsEditOpen(true);
                 }}
                 onOpenSection={openSection}
+                professorName={currentUser?.name}
               />
             ))}
           </div>
@@ -186,6 +187,7 @@ function AdminCourseOverview({
   onDelete,
   onEdit,
   onOpenSection,
+  professorName,
 }: {
   course: AdminOopCourseDto;
   isSectionCreationDisabled: boolean;
@@ -193,6 +195,7 @@ function AdminCourseOverview({
   onDelete: () => void;
   onEdit: () => void;
   onOpenSection: (section: AdminOopSectionDto) => void;
+  professorName?: string;
 }) {
   const sectionsQuery = useAdminOopSectionsQuery({ courseId: course.id });
   const sections = sectionsQuery.data?.contents ?? [];
@@ -243,15 +246,9 @@ function AdminCourseOverview({
   );
 
   return (
-    <section
-      aria-label={courseLabel}
-      aria-labelledby={`course-${course.id}-title`}
-      className={styles.section}
-    >
+    <section aria-label={courseLabel} className={styles.section}>
       <div className={styles.courseCardHeader}>
-        <Heading id={`course-${course.id}-title`} level={2}>
-          {course.name}
-        </Heading>
+        <Heading level={2}>{course.name}</Heading>
         <div
           aria-label={`${courseLabel} 강좌 관리`}
           className={styles.courseActions}
@@ -290,6 +287,12 @@ function AdminCourseOverview({
                   : sectionsQuery.isError
                     ? '확인 불가'
                     : `${sections.length}개`}
+              </dd>
+            </div>
+            <div className={styles.courseMetadataItem}>
+              <dt className={styles.courseMetadataLabel}>담당 교수자</dt>
+              <dd className={styles.courseMetadataValue}>
+                {professorName ?? '확인 불가'}
               </dd>
             </div>
           </dl>

@@ -240,6 +240,8 @@ describe('AdminCoursesPage', () => {
     expect(within(courseSummary).getByText('2026년 2학기')).toBeInTheDocument();
     expect(within(courseSummary).getByText('등록 분반')).toBeInTheDocument();
     expect(await within(courseSummary).findByText(/\d+개/)).toBeInTheDocument();
+    expect(within(courseSummary).getByText('담당 교수자')).toBeInTheDocument();
+    expect(within(courseSummary).getByText(demoAdmin.name)).toBeInTheDocument();
     expect(
       within(screen.getByRole('group', { name: `${oopCourseLabel} 강좌 관리` }))
         .getAllByRole('button')
@@ -1012,6 +1014,13 @@ describe('AdminCourseDetailPage', () => {
         name: '웹 프로그래밍 · 2027년 1학기 강좌 요약',
       }),
     ).toBeVisible();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('article', {
+          name: '객체지향 프로그래밍 · 2026년 2학기 강좌 요약',
+        }),
+      ).not.toBeInTheDocument(),
+    );
     expect(
       screen.getAllByRole('article', {
         name: /객체지향 프로그래밍 · .* 강좌 요약/,

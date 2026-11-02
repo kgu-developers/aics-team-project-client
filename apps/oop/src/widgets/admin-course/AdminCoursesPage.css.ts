@@ -58,7 +58,7 @@ export const courseMetadata = style({
   borderLeft: `1px solid ${tokens.color.border.base}`,
   display: 'grid',
   gap: tokens.spacing['6'],
-  gridTemplateColumns: 'repeat(2, minmax(112px, auto))',
+  gridTemplateColumns: 'repeat(3, minmax(112px, auto))',
   margin: 0,
   paddingLeft: tokens.spacing['6'],
   '@media': {
