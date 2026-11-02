@@ -11,10 +11,16 @@ import {
 } from './adminStudentTeams';
 import { resetMockSessionState } from '../authSession';
 import { adminTeamsFixture } from '../data/adminStudentTeams';
-import { demoAdminAccessToken } from '../data/users';
+import {
+  demoAdminAccessToken,
+  demoNoticeProfessorAccessToken,
+} from '../data/users';
 
 const server = setupServer(...adminStudentTeamHandlers);
 const headers = { Authorization: `Bearer ${demoAdminAccessToken}` };
+const professorHeaders = {
+  Authorization: `Bearer ${demoNoticeProfessorAccessToken}`,
+};
 
 async function workbookFile(
   name: string,
@@ -49,6 +55,25 @@ afterEach(() => {
   resetMockSessionState();
 });
 afterAll(() => server.close());
+
+it('담당 교수는 자신의 분반 수강생과 명단 업로드 상태 및 팀을 조회한다', async () => {
+  const [enrollments, rosterImportStatus, team] = await Promise.all([
+    fetch(`${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ENROLLMENTS('1')}`, {
+      headers: professorHeaders,
+    }),
+    fetch(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ROSTER_IMPORT_STATUS('1')}`,
+      { headers: professorHeaders },
+    ),
+    fetch(`${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM('1')}`, {
+      headers: professorHeaders,
+    }),
+  ]);
+
+  expect(enrollments.status).toBe(200);
+  expect(rosterImportStatus.status).toBe(200);
+  expect(team.status).toBe(200);
+});
 
 it('새 분반의 수강생 엑셀을 읽어 미리보기하고 반영한다', async () => {
   const previewResponse = await preview(

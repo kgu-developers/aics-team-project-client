@@ -141,6 +141,22 @@ function resolveFixtureSectionId(sectionId: string) {
   return sectionId === String(adminSectionId) ? demoSectionId : sectionId;
 }
 
+function canReadSectionRoster(
+  account: ReturnType<typeof getMockAuthenticatedAccount>,
+  sectionId: string,
+) {
+  // Keep the existing assistant fixture available for administrator scenarios,
+  // while allowing the responsible professor to inspect their own section.
+  return Boolean(
+    account &&
+    (account.user.id === demoAdmin.id ||
+      account.user.sections.some(
+        section =>
+          String(section.id) === sectionId && section.role === 'PROFESSOR',
+      )),
+  );
+}
+
 function getAdminTeamId(teamId: string) {
   const suffix = teamId.split('-').at(-1);
   const numericId = Number(suffix);
@@ -150,6 +166,28 @@ function getAdminTeamId(teamId: string) {
   }
 
   return numericId;
+}
+
+function canReadTeam(
+  account: ReturnType<typeof getMockAuthenticatedAccount>,
+  teamId: string,
+) {
+  if (!account) return false;
+  if (account.user.id === demoAdmin.id) return true;
+
+  const team = adminTeamsFixture.find(
+    candidate => getAdminTeamId(candidate.id) === Number(teamId),
+  );
+
+  return Boolean(
+    team &&
+    account.user.globalRole === 'PROFESSOR' &&
+    account.user.sections.some(
+      section =>
+        resolveFixtureSectionId(String(section.id)) === team.sectionId &&
+        section.role === 'PROFESSOR',
+    ),
+  );
 }
 
 function getEnrollmentId(studentId: string) {
@@ -330,17 +368,17 @@ export const adminStudentTeamHandlers = [
       const account = getMockAuthenticatedAccount(request);
       const sectionId = params.sectionId;
 
-      if (account?.user.id !== demoAdmin.id) {
-        return HttpResponse.json(
-          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
-          { status: 401 },
-        );
-      }
-
       if (typeof sectionId !== 'string') {
         return HttpResponse.json(
           { code: 'SECTION_ID_REQUIRED', message: '분반 정보가 필요합니다.' },
           { status: 400 },
+        );
+      }
+
+      if (!canReadSectionRoster(account, sectionId)) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
         );
       }
 
@@ -645,17 +683,17 @@ export const adminStudentTeamHandlers = [
       const account = getMockAuthenticatedAccount(request);
       const sectionId = params.sectionId;
 
-      if (account?.user.id !== demoAdmin.id) {
-        return HttpResponse.json(
-          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
-          { status: 401 },
-        );
-      }
-
       if (typeof sectionId !== 'string') {
         return HttpResponse.json(
           { code: 'SECTION_ID_REQUIRED', message: '분반 정보가 필요합니다.' },
           { status: 400 },
+        );
+      }
+
+      if (!canReadSectionRoster(account, sectionId)) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
         );
       }
 
@@ -928,17 +966,17 @@ export const adminStudentTeamHandlers = [
       const account = getMockAuthenticatedAccount(request);
       const teamId = params.teamId;
 
-      if (account?.user.id !== demoAdmin.id) {
-        return HttpResponse.json(
-          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
-          { status: 401 },
-        );
-      }
-
       if (typeof teamId !== 'string') {
         return HttpResponse.json(
           { code: 'TEAM_ID_REQUIRED', message: '팀 정보가 필요합니다.' },
           { status: 400 },
+        );
+      }
+
+      if (!canReadTeam(account, teamId)) {
+        return HttpResponse.json(
+          { code: 'UNAUTHORIZED', message: '관리자 로그인이 필요합니다.' },
+          { status: 401 },
         );
       }
 
