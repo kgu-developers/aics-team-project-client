@@ -400,6 +400,62 @@ it('분반과 팀을 선택해 첫 일반 메시지를 보낸다', async () => {
   );
 });
 
+it('일반 메시지 전송 중에는 수신 대상과 내용을 바꾸지 못한다', async () => {
+  let resolveSend: (() => void) | undefined;
+  server.use(
+    http.post(
+      `${API_BASE_URL}${ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7')}`,
+      () =>
+        new Promise<Response>(resolve => {
+          resolveSend = () =>
+            resolve(
+              HttpResponse.json({
+                id: 99,
+                threadId: 7,
+                senderId: demoAdmin.studentNumber,
+                senderName: demoAdmin.name,
+                message: '전송 중 변경 방지',
+                relatedType: 'GENERAL',
+                relatedId: null,
+                createdAt: '2026-10-12T04:00:00Z',
+              }),
+            );
+        }),
+    ),
+  );
+  setup();
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+  );
+  const panel = screen.getByRole('complementary', {
+    name: '일반 메시지 작성 패널',
+  });
+  await selectPanelSection(user, panel, '현재 분반 하나 · 월요일 1-2교시');
+  await user.click(within(panel).getByRole('combobox', { name: '팀' }));
+  await user.click(await screen.findByRole('option', { name: '7팀' }));
+  await user.type(
+    within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
+    '전송 중 변경 방지',
+  );
+  await user.click(within(panel).getByRole('button', { name: '보내기' }));
+
+  await waitFor(() => expect(resolveSend).toBeTypeOf('function'));
+  expect(within(panel).getByRole('combobox', { name: '분반' })).toBeDisabled();
+  expect(within(panel).getByRole('combobox', { name: '팀' })).toBeDisabled();
+  expect(
+    within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
+  ).toBeDisabled();
+
+  act(() => resolveSend?.());
+  expect(
+    await within(panel).findByText(
+      '일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.',
+    ),
+  ).toBeVisible();
+});
+
 it('특정 분반 쪽지함에서 작성 패널을 열면 그 분반을 수신 분반으로 유지한다', async () => {
   setup(
     defaultSections,

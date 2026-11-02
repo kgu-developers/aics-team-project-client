@@ -53,6 +53,7 @@ export function AdminGeneralMessageComposerPanel({
         {recipientSelectors}
         <TextArea
           aria-label='일반 메시지 내용'
+          isDisabled={isSubmitPending}
           label='내용'
           onChange={onMessageChange}
           placeholder='팀에 전달할 메시지를 입력하세요.'

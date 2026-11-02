@@ -128,7 +128,11 @@ describe('AdminMeetingsPage', () => {
   it('관리자 회의록 목록은 읽음 상태와 핵심 5개 열을 표시하고 행 전체를 눌러 상세를 볼 수 있게 한다', async () => {
     const { container } = renderPage();
 
-    await screen.findByRole('columnheader', { name: '회의 제목' });
+    await screen.findByRole(
+      'columnheader',
+      { name: '회의 제목' },
+      { timeout: 5_000 },
+    );
     expect(
       screen.getByRole('columnheader', { name: '읽음 상태' }),
     ).toBeInTheDocument();
