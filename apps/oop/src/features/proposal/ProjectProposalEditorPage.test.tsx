@@ -1048,3 +1048,74 @@ it('버전 없는 조회를 0 버전으로 간주하지 않는다', async () => 
   );
   await expect(fetchProjectProposal('19')).rejects.toThrow('응답 형식');
 });
+
+it('권한 획득 후 최신 조회가 끝나야 최신 내용으로 편집할 수 있다', async () => {
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => {
+    release = resolve;
+  });
+  let acquired = false;
+  const onRequest = ({ request }: { request: Request }) => {
+    if (request.method === 'POST' && request.url.startsWith(lockUrl))
+      acquired = true;
+  };
+  server.events.on('request:start', onRequest);
+  const latest = createProjectProposalFixture();
+  latest.title = '권한 획득 후 최신 제목';
+  latest.sectionVersions.TOPIC = 7;
+  server.use(
+    http.get(projectUrl, async () => {
+      if (!acquired) return HttpResponse.json(createProjectProposalFixture());
+      await gate;
+      return HttpResponse.json(latest);
+    }),
+  );
+  try {
+    render();
+    await waitFor(() => expect(acquired).toBe(true));
+    expect(screen.getByLabelText(/프로젝트 제목/)).toBeDisabled();
+    release();
+    await start();
+    expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue(latest.title);
+    await userEvent.type(screen.getByLabelText(/프로젝트 제목/), ' 내 초안');
+    latest.title = '다른 서버 응답';
+    await client.invalidateQueries();
+    expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue(
+      '권한 획득 후 최신 제목 내 초안',
+    );
+  } finally {
+    release();
+    server.events.removeListener('request:start', onRequest);
+  }
+});
+
+it('편집 시작 전 최신 조회 실패 시 입력을 막고 재시도로 복구한다', async () => {
+  let acquired = false;
+  let fail = true;
+  const onRequest = ({ request }: { request: Request }) => {
+    if (request.method === 'POST' && request.url.startsWith(lockUrl))
+      acquired = true;
+  };
+  server.events.on('request:start', onRequest);
+  server.use(
+    http.get(projectUrl, () =>
+      acquired && fail
+        ? HttpResponse.json({}, { status: 500 })
+        : HttpResponse.json(createProjectProposalFixture()),
+    ),
+  );
+  try {
+    render();
+    await screen.findByText(
+      '최신 내용을 불러오지 못했어요. 편집 권한을 다시 확인해 주세요.',
+    );
+    expect(screen.getByLabelText(/프로젝트 제목/)).toBeDisabled();
+    fail = false;
+    await userEvent.click(
+      screen.getByRole('button', { name: '편집 권한 다시 확인' }),
+    );
+    await start();
+  } finally {
+    server.events.removeListener('request:start', onRequest);
+  }
+});
