@@ -9,6 +9,7 @@ import { afterAll, afterEach, beforeAll, expect, it } from 'vitest';
 import { useAdminMilestoneSubmissionsQuery } from './useAdminMilestoneSubmissionsQuery';
 
 import { getAdminMilestoneSubmissionsFixture } from '~/mocks/data/adminMilestoneSubmissions';
+import { createProjectProposalFixture } from '~/mocks/data/projectProposal';
 
 const server = setupServer(
   http.get(
@@ -61,6 +62,54 @@ it('없는 제안서만 미제출로 표시하고 다른 팀의 파일 제출 �
         submissionId: null,
       }),
     ]);
+  } finally {
+    cleanup();
+  }
+});
+
+it('수정 요청된 제안서는 제출 버전이 0이어도 상세 조회를 유지한다', async () => {
+  const fixture = getAdminMilestoneSubmissionsFixture('101');
+  if (!fixture) throw new Error('마일스톤 101 제출물 픽스처가 필요합니다.');
+
+  const submissions = structuredClone(fixture);
+  const initialSubmission = submissions.contents[1];
+  if (!initialSubmission)
+    throw new Error('두 번째 제출물 픽스처가 필요합니다.');
+
+  submissions.contents[1] = {
+    ...initialSubmission,
+    id: 11,
+    teamId: 42,
+    teamName: '델타',
+  };
+  const proposal = createProjectProposalFixture();
+
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('101')}`,
+      () => HttpResponse.json(submissions),
+    ),
+    http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('42')}`, () =>
+      HttpResponse.json({
+        ...proposal,
+        id: 29,
+        teamId: 42,
+        title: '수정 중인 제안서',
+        approvalStatus: 'REVISION_REQUESTED',
+        teamOperation: { ...proposal.teamOperation, id: 42, name: '델타' },
+      }),
+    ),
+  );
+
+  const { result, cleanup } = renderQuery();
+  try {
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.submissions[1]).toMatchObject({
+      teamId: '42',
+      status: 'REVISION_REQUESTED',
+      statusLabel: '수정 요청',
+      submissionId: '11',
+    });
   } finally {
     cleanup();
   }

@@ -54,6 +54,30 @@ describe('toAdminMilestoneSubmissionsView', () => {
     expect(hasAdminTotalMeetingRecords(null)).toBe(false);
   });
 
+  it('미제출 상태로 내려와도 이전 제출 버전이 있으면 상세 조회 ID를 유지한다', () => {
+    const view = toAdminMilestoneSubmissionsView({
+      contents: [
+        {
+          canSubmitNow: true,
+          currentVersion: 2,
+          hasPendingReview: true,
+          id: 1001,
+          meetingRecordCount: 1,
+          milestoneId: 101,
+          status: 'NOT_SUBMITTED',
+          teamId: 1,
+          teamName: 'OOP-01 - 1팀',
+        },
+      ],
+    });
+
+    expect(view.submissions[0]).toMatchObject({
+      currentVersion: 2,
+      status: 'NOT_SUBMITTED',
+      submissionId: '1001',
+    });
+  });
+
   it('전체 회의록 수가 0이면 목록 이동 대상으로 만들지 않는다', () => {
     expect(formatAdminTotalMeetingRecordCount(0)).toBe('팀 전체 회의록 0건');
     expect(hasAdminTotalMeetingRecords(0)).toBe(false);
