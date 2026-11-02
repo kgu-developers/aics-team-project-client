@@ -608,21 +608,33 @@ export default function AdminMessagesPage() {
                     setComposeMessage(nextDraft?.message ?? '');
                     setComposeSuccessMessage(null);
                   }}
-                  onInvalidTeamIds={() => {
+                  onInvalidTeamIds={nextTeamIds => {
                     // A stored recipient can become invalid after its team is
-                    // deleted. Keep the typed message as a section draft, but
-                    // clear the unusable recipient so it cannot be submitted.
+                    // deleted. Preserve the typed message for the remaining
+                    // valid recipients and prevent only the stale ID from
+                    // being submitted.
+                    const normalizedNextTeamIds = normalizeTeamIds(nextTeamIds);
+                    const previousDraftStorageKey = composeDraftStorageKey(
+                      composeSectionId,
+                      composeTeamIds,
+                    );
+                    const nextDraftStorageKey = composeDraftStorageKey(
+                      composeSectionId,
+                      normalizedNextTeamIds,
+                    );
                     storeComposeDraft({
                       message: composeMessage,
                       sectionId: composeSectionId,
-                      teamIds: composeTeamIds,
+                      teamIds: normalizedNextTeamIds,
                     });
-                    storeComposeDraft({
-                      message: composeMessage,
-                      sectionId: composeSectionId,
-                      teamIds: [],
-                    });
-                    setComposeTeamIds([]);
+                    if (previousDraftStorageKey !== nextDraftStorageKey) {
+                      try {
+                        sessionStorage.removeItem(previousDraftStorageKey);
+                      } catch {
+                        // Draft persistence is best-effort while composing.
+                      }
+                    }
+                    setComposeTeamIds(normalizedNextTeamIds);
                     setComposeSuccessMessage(null);
                   }}
                   sectionId={composeSectionId}

@@ -75,6 +75,15 @@ it('담당 교수는 자신의 분반 수강생과 명단 업로드 상태 및 �
   expect(team.status).toBe(200);
 });
 
+it('담당 교수에게 배정되지 않은 분반의 수강생 명단은 노출하지 않는다', async () => {
+  const response = await fetch(
+    `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ENROLLMENTS('2')}`,
+    { headers: professorHeaders },
+  );
+
+  expect(response.status).toBe(401);
+});
+
 it('새 분반의 수강생 엑셀을 읽어 미리보기하고 반영한다', async () => {
   const previewResponse = await preview(
     ENDPOINTS.ADMIN.SECTION_ENROLLMENT_IMPORT_PREVIEW('2'),

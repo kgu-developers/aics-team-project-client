@@ -91,44 +91,26 @@ export const demoAdmin: CurrentUser = {
 
 let demoAdminSections = demoAdmin.sections.map(section => ({ ...section }));
 
-function synchronizeDemoProfessorSections() {
-  const professorSections = demoAdminSections.map(section => ({
-    ...section,
-    role: 'PROFESSOR' as const,
-  }));
-
-  demoNoticeProfessor.sections = professorSections;
-  demoPresentationProfessor.sections = professorSections.map(section => ({
-    ...section,
-  }));
-}
-
 export function getDemoAdminSections(studentNumber: string) {
   if (studentNumber === demoAdmin.studentNumber) return demoAdminSections;
 
-  if (
-    studentNumber === demoNoticeProfessor.studentNumber ||
-    studentNumber === demoPresentationProfessor.studentNumber
-  ) {
-    return demoAdminSections.map(section => ({
-      ...section,
-      role: 'PROFESSOR' as const,
-    }));
-  }
+  if (studentNumber === demoNoticeProfessor.studentNumber)
+    return demoNoticeProfessor.sections;
+
+  if (studentNumber === demoPresentationProfessor.studentNumber)
+    return demoPresentationProfessor.sections;
 
   return undefined;
 }
 
 export function addDemoAdminSection(section: CurrentUser['sections'][number]) {
   demoAdminSections = [...demoAdminSections, section];
-  synchronizeDemoProfessorSections();
 }
 
 export function removeDemoAdminSection(sectionId: string | number) {
   demoAdminSections = demoAdminSections.filter(
     section => String(section.id) !== String(sectionId),
   );
-  synchronizeDemoProfessorSections();
 }
 
 export function updateDemoAdminSectionContactVisibility(
@@ -143,17 +125,14 @@ export function updateDemoAdminSectionContactVisibility(
       ? { ...section, ...contactVisibility }
       : section,
   );
-  synchronizeDemoProfessorSections();
 }
 
 export function resetDemoAdminSections() {
   demoAdminSections = demoAdmin.sections.map(section => ({ ...section }));
-  synchronizeDemoProfessorSections();
 }
 
 export function replaceDemoAdminSections(sections: CurrentUser['sections']) {
   demoAdminSections = sections.map(section => ({ ...section }));
-  synchronizeDemoProfessorSections();
 }
 
 export const demoAccessToken = 'msw-oop-demo-student-a-access-token';

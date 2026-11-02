@@ -31,40 +31,43 @@ export function AdminGeneralMessageTeamChecklist({
   const selectedValues = [...new Set(teamIds)].filter(teamId =>
     availableTeamIds.includes(teamId),
   );
+  const normalizedSelectedValues = canBroadcast
+    ? selectedValues
+    : selectedValues.slice(0, 1);
 
   const handleChange = (nextValues: string[]) => {
     const normalizedValues = [...new Set(nextValues)].filter(value =>
       availableTeamIds.includes(value),
     );
-    if (canBroadcast) {
-      onChange(normalizedValues);
-      return;
-    }
+    if (canBroadcast) return onChange(normalizedValues);
 
     // Keep the existing per-team endpoint policy for assistants/admins.
-    onChange(
-      normalizedValues.length > 1
-        ? [normalizedValues.find(value => !teamIds.includes(value)) ?? '']
-        : normalizedValues,
-    );
+    onChange(normalizedValues.slice(-1));
   };
   const isSelectorDisabled =
     isDisabled || teamsQuery.isPending || teamsQuery.isError;
 
   useEffect(() => {
-    // A session draft can outlive a team deletion or an access change.
-    // Remove only invalid IDs; a surviving selected team remains usable.
-    if (teamsQuery.isSuccess && selectedValues.length !== teamIds.length) {
+    // A session draft can outlive a team deletion or a role/access change.
+    // A non-professor draft may also predate the one-recipient policy.
+    // Keep the first still-valid recipient in that case.
+    if (
+      teamsQuery.isSuccess &&
+      (normalizedSelectedValues.length !== teamIds.length ||
+        normalizedSelectedValues.some(
+          (teamId, index) => teamId !== teamIds[index],
+        ))
+    ) {
       if (onInvalidTeamIds) {
-        onInvalidTeamIds(selectedValues);
+        onInvalidTeamIds(normalizedSelectedValues);
         return;
       }
-      onChange(selectedValues);
+      onChange(normalizedSelectedValues);
     }
   }, [
     onChange,
     onInvalidTeamIds,
-    selectedValues,
+    normalizedSelectedValues,
     teamIds.length,
     teamsQuery.isSuccess,
   ]);
@@ -89,7 +92,7 @@ export function AdminGeneralMessageTeamChecklist({
         placeholder='팀 선택'
         selectAllLabel='전체 선택'
         triggerDisplay='labels'
-        value={selectedValues}
+        value={normalizedSelectedValues}
         width='100%'
       />
       {teamsQuery.isError ? (

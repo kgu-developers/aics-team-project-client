@@ -231,23 +231,26 @@ export function AdminGeneralMessageDialog({
     setSuccessMessage(null);
   };
 
-  const handleInvalidTeamIds = () => {
+  const handleInvalidTeamIds = (nextTeamIds: string[]) => {
     // Keep the text when a persisted recipient was deleted or access changed.
-    // The cleared recipient makes the send action unavailable until a valid
-    // team is selected again.
+    // Move it to the still-valid selection instead of discarding recipients
+    // that remain available in the current section.
+    const normalizedNextTeamIds = normalizeTeamIds(nextTeamIds);
+    const nextDraftStorageKey = `${draftStorageKey}:team:${teamSelectionKey(normalizedNextTeamIds)}`;
     storeDraft({
-      draftStorageKey: draftTeamStorageKey,
+      draftStorageKey: nextDraftStorageKey,
       message,
       selectedDraftTeamStorageKey,
-      teamIds,
+      teamIds: normalizedNextTeamIds,
     });
-    storeDraft({
-      draftStorageKey: `${draftStorageKey}:team:${teamSelectionKey([])}`,
-      message,
-      selectedDraftTeamStorageKey,
-      teamIds: [],
-    });
-    setTeamIds([]);
+    if (nextDraftStorageKey !== draftTeamStorageKey) {
+      try {
+        sessionStorage.removeItem(draftTeamStorageKey);
+      } catch {
+        // Draft persistence is best-effort and must not interrupt writing.
+      }
+    }
+    setTeamIds(normalizedNextTeamIds);
     setSuccessMessage(null);
   };
 
