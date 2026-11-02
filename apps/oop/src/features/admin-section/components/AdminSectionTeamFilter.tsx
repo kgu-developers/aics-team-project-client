@@ -21,6 +21,8 @@ type AdminSectionTeamFilterProps = {
   allowAllTeams?: boolean;
   /** Extra filters rendered after the section/team selectors (e.g. milestone). */
   children?: ReactNode;
+  /** Prevent recipient/filter changes while a dependent action is being submitted. */
+  isDisabled?: boolean;
   /** Selected section id, or `ALL_SECTIONS`. */
   sectionId: string;
   /** Use a dropdown when a blank section selection must remain visible. */
@@ -43,6 +45,7 @@ export default function AdminSectionTeamFilter({
   allowAllSections = true,
   allowAllTeams = true,
   children,
+  isDisabled = false,
   label = '분반 필터',
   onSectionChange,
   onTeamChange,
@@ -69,7 +72,9 @@ export default function AdminSectionTeamFilter({
         <TabList
           aria-label='분반'
           className={styles.sectionTabs}
-          onChange={onSectionChange}
+          onChange={nextSectionId => {
+            if (!isDisabled) onSectionChange(nextSectionId);
+          }}
           overflow='scroll'
           value={sectionId}
         >
@@ -78,7 +83,9 @@ export default function AdminSectionTeamFilter({
           ) : null}
           {sections.map(section => (
             <Tab
-              aria-disabled={sectionsQuery.isPending || sectionsQuery.isError}
+              aria-disabled={
+                isDisabled || sectionsQuery.isPending || sectionsQuery.isError
+              }
               key={section.id}
               label={formatAdminSectionLabel(section)}
               value={String(section.id)}
@@ -87,7 +94,9 @@ export default function AdminSectionTeamFilter({
         </TabList>
       ) : (
         <Selector
-          isDisabled={sectionsQuery.isPending || sectionsQuery.isError}
+          isDisabled={
+            isDisabled || sectionsQuery.isPending || sectionsQuery.isError
+          }
           label='분반'
           onChange={onSectionChange}
           options={[
@@ -109,7 +118,7 @@ export default function AdminSectionTeamFilter({
       )}
       {hasTeamFilter && isSectionSelected ? (
         <Selector
-          isDisabled={teamsQuery.isPending}
+          isDisabled={isDisabled || teamsQuery.isPending}
           label='팀'
           onChange={onTeamChange}
           options={[

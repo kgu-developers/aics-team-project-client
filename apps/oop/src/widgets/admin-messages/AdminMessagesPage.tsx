@@ -511,17 +511,22 @@ export default function AdminMessagesPage() {
                   sectionId: composeSectionId,
                   teamId: composeTeamId,
                 });
+                const nextDraft = readComposeDraft(
+                  composeDraftStorageKey(next, ''),
+                );
                 setComposeSectionId(next);
-                setComposeTeamId('');
-                setComposeMessage('');
+                setComposeTeamId(nextDraft?.teamId ?? '');
+                setComposeMessage(nextDraft?.message ?? '');
                 setComposeSuccessMessage(null);
               }}
+              isDisabled={isSubmitPending}
               sectionId={composeSectionId}
               sectionSelection='selector'
             >
               {composeSectionId ? (
                 <AdminGeneralMessageTeamChecklist
                   canBroadcast={canBroadcast}
+                  isDisabled={isSubmitPending}
                   onChange={next => {
                     storeComposeDraft({
                       message: composeMessage,

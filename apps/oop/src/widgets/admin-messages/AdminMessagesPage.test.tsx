@@ -481,6 +481,31 @@ it('작성 패널에서 팀을 바꿔도 기존 팀의 초안을 보존한다', 
   expect(message).toHaveValue('7팀 초안');
 });
 
+it('작성 패널에서 분반을 바꿔도 새 분반의 팀 미선택 초안을 복원한다', async () => {
+  setup();
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+  );
+  const panel = screen.getByRole('complementary', {
+    name: '일반 메시지 작성 패널',
+  });
+  const message = within(panel).getByRole('textbox', {
+    name: '일반 메시지 내용',
+  });
+
+  await selectPanelSection(user, panel, '현재 분반 둘 · 월요일 1-2교시');
+  await user.type(message, '2분반 초안');
+  await selectPanelSection(user, panel, '현재 분반 하나 · 월요일 1-2교시');
+
+  expect(message).toHaveValue('');
+
+  await selectPanelSection(user, panel, '현재 분반 둘 · 월요일 1-2교시');
+
+  expect(message).toHaveValue('2분반 초안');
+});
+
 it('reaches item 11, keeps page caches separate, and resets pages on section/all filters', async () => {
   const requests: Array<{ section: string; page: number; size: number }> = [];
   server.use(
