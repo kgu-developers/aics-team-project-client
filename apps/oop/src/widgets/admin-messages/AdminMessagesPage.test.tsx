@@ -496,6 +496,45 @@ it('전체 분반 쪽지함에서 작성 패널을 열면 수신 분반을 직�
   ).not.toBeInTheDocument();
 });
 
+it('현재 분반에 없는 저장 팀은 수신 대상으로 복원하지 않는다', async () => {
+  setup(
+    defaultSections,
+    demoAdmin,
+    demoAdminAccessToken,
+    '/admin/messages?sectionId=1',
+  );
+  sessionStorage.setItem(
+    'aics.oop.admin.general-message-draft:inbox:selected-recipient',
+    JSON.stringify({ sectionId: '1', teamId: '999' }),
+  );
+  sessionStorage.setItem(
+    'aics.oop.admin.general-message-draft:inbox:section:1:team:999',
+    JSON.stringify({
+      message: '삭제된 팀에 남긴 초안',
+      sectionId: '1',
+      teamId: '999',
+    }),
+  );
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+  );
+  const panel = screen.getByRole('complementary', {
+    name: '일반 메시지 작성 패널',
+  });
+
+  await waitFor(() =>
+    expect(
+      within(panel).getByRole('combobox', { name: '팀' }),
+    ).toHaveTextContent('팀 선택'),
+  );
+  expect(
+    within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
+  ).toHaveValue('삭제된 팀에 남긴 초안');
+  expect(within(panel).getByRole('button', { name: '보내기' })).toBeDisabled();
+});
+
 it('작성 패널에서 팀을 바꿔도 기존 팀의 초안을 보존한다', async () => {
   server.use(
     http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>

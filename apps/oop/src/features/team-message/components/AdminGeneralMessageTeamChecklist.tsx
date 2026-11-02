@@ -1,4 +1,5 @@
 import { Button, MultiSelector, Text } from '@aics/design-system';
+import { useEffect } from 'react';
 
 import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 
@@ -8,6 +9,7 @@ type AdminGeneralMessageTeamChecklistProps = {
   canBroadcast: boolean;
   isDisabled?: boolean;
   onChange: (teamId: string) => void;
+  onInvalidTeam?: () => void;
   sectionId: string;
   teamId: string;
 };
@@ -21,12 +23,14 @@ export function AdminGeneralMessageTeamChecklist({
   canBroadcast,
   isDisabled = false,
   onChange,
+  onInvalidTeam,
   sectionId,
   teamId,
 }: AdminGeneralMessageTeamChecklistProps) {
   const teamsQuery = useAdminSectionTeamsQuery(sectionId || undefined);
   const teams = teamsQuery.data?.contents ?? [];
   const isAllTeamsSelected = canBroadcast && teamId === ALL_TEAMS_RECIPIENT;
+  const hasSelectedTeam = teams.some(team => String(team.id) === teamId);
   const selectedValues = isAllTeamsSelected
     ? teams.map(team => String(team.id))
     : teamId
@@ -52,6 +56,26 @@ export function AdminGeneralMessageTeamChecklist({
   };
   const isSelectorDisabled =
     isDisabled || teamsQuery.isPending || teamsQuery.isError;
+
+  useEffect(() => {
+    // A session draft can outlive a team deletion or a role/access change.
+    // Never keep such an ID as a valid recipient once the current section's
+    // authoritative team list has loaded.
+    if (
+      teamsQuery.isSuccess &&
+      teamId &&
+      !isAllTeamsSelected &&
+      !hasSelectedTeam
+    ) {
+      onInvalidTeam?.();
+    }
+  }, [
+    hasSelectedTeam,
+    isAllTeamsSelected,
+    onInvalidTeam,
+    teamId,
+    teamsQuery.isSuccess,
+  ]);
 
   return (
     <>

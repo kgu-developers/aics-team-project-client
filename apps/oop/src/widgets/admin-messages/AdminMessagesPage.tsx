@@ -540,6 +540,17 @@ export default function AdminMessagesPage() {
                     setComposeMessage(nextDraft?.message ?? '');
                     setComposeSuccessMessage(null);
                   }}
+                  onInvalidTeam={() => {
+                    // Keep the typed content as a section-level draft, but
+                    // require an existing team before another send attempt.
+                    storeComposeDraft({
+                      message: composeMessage,
+                      sectionId: composeSectionId,
+                      teamId: composeTeamId,
+                    });
+                    setComposeTeamId('');
+                    setComposeSuccessMessage(null);
+                  }}
                   sectionId={composeSectionId}
                   teamId={composeTeamId}
                 />
