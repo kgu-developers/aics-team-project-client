@@ -1,4 +1,4 @@
-import type { UpdateProjectProposalInput } from '@aics/core';
+import type { SaveProposalSectionInput } from '@aics/core';
 
 import { apiClient } from '../client';
 import {
@@ -8,17 +8,20 @@ import {
 import { ENDPOINTS } from '../constants/endpoints';
 export async function updateProjectProposal(
   teamId: string,
-  input: UpdateProjectProposalInput,
+  input: SaveProposalSectionInput,
 ) {
   assertProposalId(teamId);
-  const body = {
-    ...input,
-    screenConfiguration: input.screenConfiguration.map(screen => {
-      const stored = { ...screen };
-      delete stored.imageUrl;
-      return stored;
-    }),
-  };
+  const body =
+    input.sectionKey === 'SCREEN'
+      ? {
+          ...input,
+          screenConfiguration: input.screenConfiguration.map(screen => {
+            const stored = { ...screen };
+            delete stored.imageUrl;
+            return stored;
+          }),
+        }
+      : input;
   const response = await apiClient.put<unknown>(
     ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM(teamId),
     body,

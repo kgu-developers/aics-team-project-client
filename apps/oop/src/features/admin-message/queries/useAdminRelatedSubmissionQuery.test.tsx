@@ -1,4 +1,5 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
+import type { ProjectProposalResponse } from '@aics/core';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -59,6 +60,7 @@ const server = setupServer(
   ),
   http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('7')}`, () =>
     HttpResponse.json({
+      sectionVersions: { TOPIC: 0, DATA: 0, SCREEN: 0, TEAM_OPERATION: 0 },
       dataConfiguration: [],
       description: '프로젝트 설명',
       goal: '프로젝트 목표',
@@ -77,7 +79,7 @@ const server = setupServer(
       },
       title: '프로젝트',
       topicCandidateId: null,
-    }),
+    } satisfies ProjectProposalResponse),
   ),
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT('1', '7')}`,

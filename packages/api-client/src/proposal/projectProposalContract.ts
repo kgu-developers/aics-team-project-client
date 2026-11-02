@@ -22,6 +22,13 @@ export function parseProjectProposal(
 ): ProjectProposalResponse {
   if (
     !record(value) ||
+    !record(value.sectionVersions) ||
+    !PROPOSAL_SECTIONS.every(section => {
+      const version = (value.sectionVersions as Record<string, unknown>)[
+        section
+      ];
+      return Number.isSafeInteger(version) && Number(version) >= 0;
+    }) ||
     !Number.isSafeInteger(value.id) ||
     Number(value.id) <= 0 ||
     !Number.isSafeInteger(value.teamId) ||

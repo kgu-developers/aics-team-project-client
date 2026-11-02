@@ -21,6 +21,7 @@ export type ProposalScreenItem = {
   [key: string]: unknown;
 };
 export type ProjectProposalResponse = {
+  sectionVersions: Record<ProposalSectionType, number>;
   id: number;
   teamId: number;
   title: string;
@@ -71,3 +72,17 @@ export type UpdateProposalSectionInput = {
   assigneeUserId?: string;
   completed: boolean;
 };
+
+/** PR #328: the editable form stays separate from the section-only wire body. */
+export type SaveProposalSectionInput = { sectionVersion: number } & (
+  | ({ sectionKey: 'TOPIC' } & Pick<
+      UpdateProjectProposalInput,
+      'title' | 'description' | 'goal' | 'repositoryUrl' | 'externalLinks'
+    >)
+  | { sectionKey: 'DATA'; dataConfiguration: ProposalDataItem[] }
+  | { sectionKey: 'SCREEN'; screenConfiguration: ProposalScreenItem[] }
+  | ({ sectionKey: 'TEAM_OPERATION' } & Pick<
+      UpdateProjectProposalInput,
+      'projectSchedule' | 'kickoffRule' | 'meetingSchedule' | 'memberRoles'
+    >)
+);

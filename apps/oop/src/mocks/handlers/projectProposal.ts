@@ -3,7 +3,9 @@ import {
   PROPOSAL_SECTIONS,
   type ProjectProposalResponse,
   type ProposalSectionsResponse,
-  type UpdateProjectProposalInput,
+  type SaveProposalSectionInput,
+  type LiveEditLockTarget,
+  type LiveEditLockStatus,
 } from '@aics/core';
 import { http, HttpResponse } from 'msw';
 
@@ -18,9 +20,10 @@ export function createProjectProposalHandlers(
   options: {
     project?: ProjectProposalResponse;
     sections?: ProposalSectionsResponse;
+    lockStatus?: (target: LiveEditLockTarget) => LiveEditLockStatus;
   } = {},
 ) {
-  let project = structuredClone(
+  const project = structuredClone(
     options.project ?? createProjectProposalFixture(),
   );
   const sections = structuredClone(
@@ -111,76 +114,91 @@ export function createProjectProposalHandlers(
       if (String(project.teamId) !== params.teamId)
         return failure('PROJECT_NOT_FOUND', 404);
       if (project.proposalCompletedAt)
-        return failure('PROJECT_PROPOSAL_COMPLETED', 409);
-      const body = (await request.json()) as UpdateProjectProposalInput;
+        return failure('PROJECT_PROPOSAL_COMPLETED', 403);
+      const body = (await request.json()) as SaveProposalSectionInput;
       if (
-        !body.title?.trim() ||
-        body.title.length > 200 ||
-        !body.description?.trim() ||
-        !body.goal?.trim() ||
-        !Array.isArray(body.dataConfiguration) ||
-        !Array.isArray(body.screenConfiguration)
+        !PROPOSAL_SECTIONS.includes(body.sectionKey) ||
+        !Number.isSafeInteger(body.sectionVersion) ||
+        body.sectionVersion < 0
       )
         return failure('INVALID_INPUT', 400);
-      const changed = new Set<string>();
-      if (
-        ['title', 'description', 'goal'].some(
-          k => project[k as 'title'] !== body[k as 'title'],
-        )
-      )
-        changed.add('TOPIC');
-      if (
-        JSON.stringify(project.dataConfiguration) !==
-        JSON.stringify(body.dataConfiguration)
-      )
-        changed.add('DATA');
-      if (
-        JSON.stringify(project.screenConfiguration) !==
-        JSON.stringify(body.screenConfiguration)
-      )
-        changed.add('SCREEN');
-      if (
-        project.projectSchedule !== body.projectSchedule ||
-        (body.kickoffRule != null &&
-          body.kickoffRule !== project.teamOperation.kickoffRule) ||
-        (body.meetingSchedule != null &&
-          body.meetingSchedule !== project.teamOperation.meetingSchedule) ||
-        body.memberRoles?.some(
-          r =>
-            project.teamOperation.members.find(
-              m => m.studentNumber === r.studentNumber,
-            )?.projectRole !== r.projectRole,
-        )
-      )
-        changed.add('TEAM_OPERATION');
-      const { kickoffRule, meetingSchedule, memberRoles, ...content } = body;
-      project = {
-        ...project,
-        ...content,
-        screenConfiguration: body.screenConfiguration.map(screen => {
-          const stored = { ...screen };
-          delete stored.imageUrl;
-          return stored;
-        }),
-        teamOperation: {
-          ...project.teamOperation,
-          kickoffRule: kickoffRule ?? project.teamOperation.kickoffRule,
-          meetingSchedule:
-            meetingSchedule ?? project.teamOperation.meetingSchedule,
-          members: project.teamOperation.members.map(m => ({
-            ...m,
-            projectRole:
-              memberRoles?.find(r => r.studentNumber === m.studentNumber)
-                ?.projectRole ?? m.projectRole,
-          })),
-        },
-      };
-      sections.contents.forEach(s => {
-        if (changed.has(s.section)) {
-          s.completed = false;
-          s.completedAt = null;
-        }
+      if (body.sectionVersion !== project.sectionVersions[body.sectionKey])
+        return failure('PROJECT_VERSION_CONFLICT', 409);
+      const owner = getDemoUserAccount(getMockAccessToken(request))!.user
+        .studentNumber;
+      const lock = options.lockStatus?.({
+        targetType: 'PROJECT',
+        targetId: project.id,
+        sectionKey: body.sectionKey,
       });
+      if (!lock?.locked || lock.lockedBy !== owner)
+        return failure('EDIT_LOCK_CONFLICT', 409);
+      const before = JSON.stringify(project);
+      switch (body.sectionKey) {
+        case 'TOPIC':
+          if (
+            !body.title?.trim() ||
+            body.title.length > 200 ||
+            !body.description?.trim() ||
+            !body.goal?.trim() ||
+            (body.repositoryUrl?.length ?? 0) > 255
+          )
+            return failure('INVALID_INPUT', 400);
+          Object.assign(project, {
+            title: body.title,
+            description: body.description,
+            goal: body.goal,
+            repositoryUrl: body.repositoryUrl ?? null,
+            externalLinks: body.externalLinks ?? null,
+          });
+          break;
+        case 'DATA':
+          if (!Array.isArray(body.dataConfiguration))
+            return failure('INVALID_INPUT', 400);
+          project.dataConfiguration = body.dataConfiguration;
+          break;
+        case 'SCREEN':
+          if (!Array.isArray(body.screenConfiguration))
+            return failure('INVALID_INPUT', 400);
+          project.screenConfiguration = body.screenConfiguration.map(screen => {
+            const stored = { ...screen };
+            delete stored.imageUrl;
+            return stored;
+          });
+          break;
+        case 'TEAM_OPERATION':
+          if (
+            body.memberRoles?.some(
+              member => (member.projectRole?.length ?? 0) > 50,
+            )
+          )
+            return failure('INVALID_INPUT', 400);
+          project.projectSchedule =
+            body.projectSchedule ?? project.projectSchedule;
+          project.teamOperation.kickoffRule =
+            body.kickoffRule ?? project.teamOperation.kickoffRule;
+          project.teamOperation.meetingSchedule =
+            body.meetingSchedule ?? project.teamOperation.meetingSchedule;
+          project.teamOperation.members = project.teamOperation.members.map(
+            member => {
+              const role = body.memberRoles?.find(
+                r => r.studentNumber === member.studentNumber,
+              );
+              return role
+                ? { ...member, projectRole: role.projectRole }
+                : member;
+            },
+          );
+          break;
+      }
+      if (before !== JSON.stringify(project)) {
+        project.sectionVersions[body.sectionKey] += 1;
+        const section = sections.contents.find(
+          s => s.section === body.sectionKey,
+        )!;
+        section.completed = false;
+        section.completedAt = null;
+      }
       return HttpResponse.json(withImageUrls(project));
     }),
     http.get(
@@ -199,7 +217,7 @@ export function createProjectProposalHandlers(
         if (String(project.id) !== params.projectId)
           return failure('PROJECT_NOT_FOUND', 404);
         if (project.proposalCompletedAt)
-          return failure('PROJECT_PROPOSAL_COMPLETED', 409);
+          return failure('PROJECT_PROPOSAL_COMPLETED', 403);
         const body = (await request.json()) as {
           completed: boolean;
           assigneeUserId?: string | null;
@@ -239,7 +257,7 @@ export function createProjectProposalHandlers(
         )
           return failure('ACCESS_DENIED', 403);
         if (project.proposalCompletedAt)
-          return failure('PROJECT_PROPOSAL_COMPLETED', 409);
+          return failure('PROJECT_PROPOSAL_COMPLETED', 403);
         if (!sectionList().allCompleted)
           return failure('PROPOSAL_SECTION_INCOMPLETE', 409);
         project.proposalCompletedAt = new Date().toISOString();

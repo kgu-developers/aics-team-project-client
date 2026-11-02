@@ -18,6 +18,8 @@ export type DocumentSectionLockOptions = {
   isWritable: boolean;
   /** Shared polling interval so every editor notices a release alike. */
   pollMs?: number;
+  /** Opt-in heartbeat for the section-versioned proposal contract. */
+  renewMs?: number;
 };
 
 /**
@@ -29,6 +31,7 @@ export function useDocumentSectionLock({
   target,
   isWritable,
   pollMs = 15_000,
+  renewMs,
 }: DocumentSectionLockOptions) {
   const lock = useLiveEditLock(target);
   const releaseLock = useReleaseLiveEditLockMutation();
@@ -78,13 +81,39 @@ export function useDocumentSectionLock({
   );
 
   useEffect(() => {
-    if (!target || !isWritable) return;
-    const timer = window.setInterval(
-      () => void lockRef.current.refetch(),
-      pollMs,
-    );
+    if (!key || !isWritable) return;
+    let lastRenewed = Date.now();
+    const timer = window.setInterval(() => {
+      const current = lockRef.current;
+      if (
+        renewMs &&
+        current.state === 'owned-by-account' &&
+        Date.now() - lastRenewed >= renewMs
+      ) {
+        lastRenewed = Date.now();
+        void current.renew();
+      } else {
+        void current.refetch();
+      }
+    }, pollMs);
     return () => window.clearInterval(timer);
-  }, [key, isWritable, pollMs, target]);
+  }, [key, isWritable, pollMs, renewMs]);
+
+  useEffect(() => {
+    if (!key || !isWritable || !renewMs) return;
+    const resume = () => {
+      if (document.visibilityState === 'visible')
+        void lockRef.current.refetch();
+    };
+    window.addEventListener('focus', resume);
+    window.addEventListener('online', resume);
+    document.addEventListener('visibilitychange', resume);
+    return () => {
+      window.removeEventListener('focus', resume);
+      window.removeEventListener('online', resume);
+      document.removeEventListener('visibilitychange', resume);
+    };
+  }, [key, isWritable, renewMs]);
 
   /** Re-check ownership right before a write and renew the hold. */
   const ensureWrite = async () => {
@@ -106,6 +135,7 @@ export function useDocumentSectionLock({
 
   return {
     canEdit,
+    refetch: lock.refetch,
     ensureWrite,
     error: lock.error,
     isUnavailable: lock.state === 'error',

@@ -12,7 +12,6 @@ import {
   useToast,
 } from '@aics/design-system';
 import { Navigate, useBlocker } from '@tanstack/react-router';
-import { isAxiosError } from 'axios';
 import { useRef, useState } from 'react';
 
 import { EDITOR_DOCS, editorSectionTo } from '~/app/constants/editorSections';
@@ -24,7 +23,11 @@ import {
 import DocumentAccessNotice from '~/features/editor/DocumentAccessNotice';
 import DocumentActionBar from '~/features/editor/DocumentActionBar';
 import DocumentEditorLayout from '~/features/editor/DocumentEditorLayout';
-import { documentRequestErrorMessage } from '~/features/editor/documentRequestErrorMessage';
+import {
+  documentRequestErrorMessage,
+  documentRequestRecovery,
+  type DocumentRequestRecovery,
+} from '~/features/editor/documentRequestErrorMessage';
 import type { EditorReturnContext } from '~/features/editor/editorReturnContext';
 import { useDocumentSectionLock } from '~/features/editor/queries';
 
@@ -114,6 +117,13 @@ function ProjectProposalDocument({
   const session = useAuthStore();
   const user = session.currentUser!;
   const toast = useToast();
+  const documentQuery = useProjectProposalQuery();
+  const queryLatest = async () => {
+    const result = await documentQuery.refetch();
+    if (result.error) throw result.error;
+    if (!result.data) throw new Error('제안서를 다시 조회하지 못했어요.');
+    return result.data;
+  };
   const states = useProposalSectionsQuery(project.id);
   const actions = useProjectProposalActions();
   const sectionType = proposalSectionBySlug[section];
@@ -126,12 +136,22 @@ function ProjectProposalDocument({
           sectionKey: sectionType,
         }
       : null;
-  const lock = useDocumentSectionLock({ target, isWritable: !submitted });
+  const lock = useDocumentSectionLock({
+    target,
+    isWritable: !submitted,
+    renewMs: 30_000,
+  });
   const [baseline, setBaseline] = useState(project);
   const [draft, setDraft] = useState<UpdateProjectProposalInput>(() =>
     proposalDraft(project),
   );
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{
+    message: string;
+    recovery: DocumentRequestRecovery;
+  } | null>(null);
+  const [assigneePending, setAssigneePending] = useState(false);
+  const [replacement, setReplacement] =
+    useState<ProjectProposalResponse | null>(null);
   const [working, setWorking] = useState(false);
   const busyRef = useRef(false);
   const dirty = Boolean(
@@ -153,23 +173,19 @@ function ProjectProposalDocument({
   });
   const resetBlocker = () => blocker.reset?.();
   const proceedBlocker = () => blocker.proceed?.();
-  async function run(work: () => Promise<void>) {
+  async function run(work: () => Promise<void>, clearError = true) {
     if (busyRef.current) return;
     busyRef.current = true;
     setWorking(true);
-    setError(null);
+    if (clearError) setError(null);
     try {
       await work();
     } catch (e) {
-      // Only the lock conflict is silent; the lock query already shows its owner.
-      // Save and completion also answer 409, and those must reach the user.
-      if (
-        isAxiosError<{ code?: string }>(e) &&
-        e.response?.status === 409 &&
-        e.response.data?.code === 'EDIT_LOCK_CONFLICT'
-      )
-        return;
-      setError(documentRequestErrorMessage(e));
+      setError({
+        message: documentRequestErrorMessage(e),
+        recovery: documentRequestRecovery(e),
+      });
+      void lock.refetch();
     } finally {
       busyRef.current = false;
       setWorking(false);
@@ -185,8 +201,17 @@ function ProjectProposalDocument({
       section: sectionType,
       ...(assigneeChanged ? { assigneeUserId: user.studentNumber } : {}),
     });
-    setBaseline(saved);
-    setDraft(proposalDraft(saved));
+    setBaseline(saved.project);
+    setDraft(proposalDraft(saved.project));
+    setAssigneePending(saved.assigneePending);
+    setError(
+      saved.warning
+        ? {
+            message: saved.warning,
+            recovery: saved.assigneePending ? 'retry' : 'refresh-status',
+          }
+        : null,
+    );
     toast({ body: '제안서를 저장했어요.' });
   }
   return (
@@ -226,12 +251,18 @@ function ProjectProposalDocument({
       title={EDITOR_DOCS.proposal.title}
     >
       {submitted && <DocumentAccessNotice isSubmitted />}
-      {states.isError && (
+      {(states.isError || error?.recovery === 'refresh-status') && (
         <p role='alert' className={styles.error}>
           작성 상태를 불러오지 못했습니다.{' '}
           <Button
             label='작성 상태 다시 조회'
-            onClick={() => void states.refetch()}
+            isDisabled={pending}
+            onClick={() =>
+              void run(async () => {
+                const result = await states.refetch();
+                if (result.error) throw result.error;
+              })
+            }
           />
         </p>
       )}
@@ -240,13 +271,19 @@ function ProjectProposalDocument({
           {!submitted && (
             <DocumentAccessNotice
               action={
-                !lock.canEdit && !lock.lockedByOther ? (
+                error?.recovery === 'recheck-lock' ||
+                (!lock.canEdit && !lock.lockedByOther) ? (
                   <Button
                     isDisabled={pending}
                     label='편집 권한 다시 확인'
                     onClick={() =>
                       void run(async () => {
-                        await lock.retry();
+                        const status = await lock.retry();
+                        if (status?.lockedBy === user.studentNumber && !dirty) {
+                          const latest = await queryLatest();
+                          setBaseline(latest);
+                          setDraft(proposalDraft(latest));
+                        }
                       })
                     }
                     size='sm'
@@ -269,18 +306,60 @@ function ProjectProposalDocument({
             onChange={setDraft}
           />
           {!submitted && (
-            <DocumentActionBar error={error}>
+            <DocumentActionBar error={error?.message}>
               <Button
                 label='저장'
                 isDisabled={!editable || !dirty}
                 onClick={() => void run(save)}
               />
+              {assigneePending && (
+                <Button
+                  label='담당자 기록 다시 시도'
+                  variant='secondary'
+                  isDisabled={!editable || dirty}
+                  onClick={() =>
+                    void run(async () => {
+                      const result = await actions.mutateAsync({
+                        kind: 'assign',
+                        baseline,
+                        section: sectionType,
+                        assigneeUserId: user.studentNumber,
+                      });
+                      setAssigneePending(result.assigneePending);
+                      setError(
+                        result.warning
+                          ? {
+                              message: result.warning,
+                              recovery: result.assigneePending
+                                ? 'retry'
+                                : 'refresh-status',
+                            }
+                          : null,
+                      );
+                    })
+                  }
+                />
+              )}
+              {error?.recovery === 'replace-content' && (
+                <Button
+                  label='최신 내용 확인'
+                  variant='secondary'
+                  isDisabled={pending}
+                  onClick={() =>
+                    void run(async () => {
+                      const result = await queryLatest();
+                      setReplacement(result);
+                    }, false)
+                  }
+                />
+              )}
               <Button
                 label='작성 완료'
                 variant='secondary'
                 isDisabled={
                   !editable ||
                   dirty ||
+                  assigneePending ||
                   !current ||
                   states.isError ||
                   current.completed
@@ -312,9 +391,42 @@ function ProjectProposalDocument({
       )}
       {error && (!sectionType || submitted) && (
         <p className={styles.error} role='alert'>
-          {error}
+          {error.message}
         </p>
       )}
+      <Dialog
+        aria-label='최신 내용으로 다시 시작'
+        isOpen={replacement !== null}
+        onOpenChange={open => {
+          if (!open) setReplacement(null);
+        }}
+        purpose='info'
+        role='alertdialog'
+      >
+        <div className={styles.leaveDialog}>
+          <Heading level={2}>최신 내용으로 다시 시작할까요?</Heading>
+          <Text>
+            현재 입력을 버리고 서버에 저장된 내용으로 바꿉니다. 필요한 입력은
+            먼저 복사해 보관해 주세요.
+          </Text>
+          <Button
+            label='입력 유지'
+            variant='secondary'
+            onClick={() => setReplacement(null)}
+          />
+          <Button
+            label='입력 버리고 최신 내용 불러오기'
+            variant='destructive'
+            onClick={() => {
+              if (!replacement) return;
+              setBaseline(replacement);
+              setDraft(proposalDraft(replacement));
+              setReplacement(null);
+              setError(null);
+            }}
+          />
+        </div>
+      </Dialog>
       <Dialog
         aria-label='저장하지 않은 내용이 있어요.'
         isOpen={blocker.status === 'blocked'}

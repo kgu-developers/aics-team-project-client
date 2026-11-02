@@ -47,7 +47,7 @@ export function createLiveEditLockHandlers({
   }
   const error = (code: string, status: number) =>
     HttpResponse.json({ code }, { status });
-  return (['get', 'post', 'delete'] as const).map(method =>
+  const handlers = (['get', 'post', 'delete'] as const).map(method =>
     http[method](
       `${API_BASE_URL}${ENDPOINTS.EDIT_LOCKS.ROOT}`,
       async ({ request }) => {
@@ -93,6 +93,14 @@ export function createLiveEditLockHandlers({
             sectionKey: params.get('sectionKey'),
           };
         }
+        if (
+          method === 'post' &&
+          input.targetType === 'PROJECT' &&
+          !['TOPIC', 'DATA', 'SCREEN', 'TEAM_OPERATION'].includes(
+            String(input.sectionKey),
+          )
+        )
+          return error('INVALID_INPUT', 400);
         if (!isSupportedLiveEditLockTarget(input))
           return error('INVALID_INPUT', 400);
         const key = keyOf(input);
@@ -143,4 +151,7 @@ export function createLiveEditLockHandlers({
       },
     ),
   );
+  return Object.assign(handlers, {
+    getStatus: (target: LiveEditLockTarget) => status(keyOf(target)),
+  });
 }

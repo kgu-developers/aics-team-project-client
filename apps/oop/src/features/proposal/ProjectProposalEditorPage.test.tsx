@@ -10,7 +10,7 @@ import { AstryxThemeProvider, ToastViewport } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { getResponse, http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import {
   afterAll,
@@ -43,6 +43,7 @@ import { renderWithRouter } from '~/test/renderWithRouter';
 
 const server = setupServer();
 let client: QueryClient;
+let locks: ReturnType<typeof createLiveEditLockHandlers>;
 const projectUrl = `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('19')}`;
 const lockUrl = `${API_BASE_URL}${ENDPOINTS.EDIT_LOCKS.ROOT}`;
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -53,9 +54,10 @@ beforeEach(() => {
   });
   useAuthStore.getState().setAccessToken(demoAccessToken);
   useAuthStore.getState().setCurrentUser({ ...demoStudent, teamId: '19' });
+  locks = createLiveEditLockHandlers();
   server.use(
-    ...createProjectProposalHandlers(),
-    ...createLiveEditLockHandlers(),
+    ...createProjectProposalHandlers({ lockStatus: locks.getStatus }),
+    ...locks,
   );
 });
 afterEach(() => {
@@ -155,6 +157,7 @@ it('같은 영역이 서버에서 변경되면 덮어쓰지 않고 입력을 유
     '팀 프로젝트 내 초안',
   );
   expect(put).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: '최신 내용 확인' })).toBeEnabled();
 });
 it('잠금 만료 뒤 저장하지 않고 초안을 보존한다', async () => {
   render();
@@ -181,6 +184,14 @@ it('잠금 만료 뒤 저장하지 않고 초안을 보존한다', async () => {
     '팀 프로젝트 초안',
   );
   expect(put).not.toHaveBeenCalled();
+  expect(
+    screen.queryByRole('button', { name: '최신 내용 확인' }),
+  ).not.toBeInTheDocument();
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: '편집 권한 다시 확인' }),
+    ).toBeEnabled(),
+  );
 });
 it('저장과 후속 조회가 실패해도 폼을 제거하지 않는다', async () => {
   render();
@@ -269,7 +280,9 @@ it('잠금 충돌이 아닌 409는 오류로 알린다', async () => {
 it('제출한 제안서는 읽기 전용으로 연다', async () => {
   const project = createProjectProposalFixture();
   project.proposalCompletedAt = '2026-09-12T10:00:00';
-  server.use(...createProjectProposalHandlers({ project }));
+  server.use(
+    ...createProjectProposalHandlers({ project, lockStatus: locks.getStatus }),
+  );
   render();
 
   expect(
@@ -293,8 +306,8 @@ it('주제 저장은 최신 다른 영역과 링크를 보존하고 kickoff는 �
   latest.dataConfiguration = [{ name: '다른 팀원 데이터' }];
   latest.teamOperation.kickoffRule = '최신 규칙';
   const merged = mergeProposalSection(latest, baseline, draft, 'TOPIC');
-  expect(merged.dataConfiguration).toEqual(latest.dataConfiguration);
-  expect(merged.externalLinks).toEqual(latest.externalLinks);
+  expect(merged).not.toHaveProperty('dataConfiguration');
+  expect(merged).toMatchObject({ externalLinks: latest.externalLinks });
   expect(merged).not.toHaveProperty('kickoffRule');
   expect(merged).not.toHaveProperty('memberRoles');
 });
@@ -314,9 +327,12 @@ it('팀 운영 방식 저장은 바뀐 킥오프 항목만 보낸다', () => {
 
   expect(merged).not.toHaveProperty('kickoffRule');
   expect(merged).not.toHaveProperty('meetingSchedule');
-  expect(merged.memberRoles).toEqual([
-    { studentNumber: demoPartnerStudent.studentNumber, projectRole: '기획' },
-  ]);
+  expect(merged).toMatchObject({ sectionKey: 'TEAM_OPERATION' });
+  expect(merged).toMatchObject({
+    memberRoles: [
+      { studentNumber: demoPartnerStudent.studentNumber, projectRole: '기획' },
+    ],
+  });
 });
 it('팀 운영 방식에서 서버의 빈 값과 화면의 빈 문자열을 변경으로 보지 않는다', () => {
   const baseline = createProjectProposalFixture();
@@ -336,7 +352,7 @@ it('팀 운영 방식에서 서버의 빈 값과 화면의 빈 문자열을 변�
 
   expect(merged).not.toHaveProperty('kickoffRule');
   expect(merged).not.toHaveProperty('memberRoles');
-  expect(merged.projectSchedule).toBe('10월 통합 테스트');
+  expect(merged).toMatchObject({ projectSchedule: '10월 통합 테스트' });
 });
 it('화면 저장 요청은 imageFileId를 보존하고 만료되는 imageUrl을 제외한다', async () => {
   const project = createProjectProposalFixture();
@@ -352,7 +368,8 @@ it('화면 저장 요청은 imageFileId를 보존하고 만료되는 imageUrl을
   });
   server.use(http.put(projectUrl, put));
   await updateProjectProposal('19', {
-    ...proposalDraft(project),
+    sectionKey: 'SCREEN',
+    sectionVersion: 0,
     screenConfiguration: project.screenConfiguration,
   });
   expect(put).toHaveBeenCalledOnce();
@@ -388,14 +405,55 @@ it.each([
   );
 });
 
-it('저장 응답 유실 뒤 같은 내용 재시도는 충돌로 오판하지 않는다', () => {
-  const baseline = createProjectProposalFixture();
-  const draft = proposalDraft(baseline);
-  draft.title = '이미 저장된 제목';
-  const latest = { ...baseline, title: draft.title };
-  expect(mergeProposalSection(latest, baseline, draft, 'TOPIC').title).toBe(
-    draft.title,
+it('저장 응답 유실 뒤 재시도는 최신 버전을 채택하고 본문 PUT을 반복하지 않는다', async () => {
+  const handlers = createProjectProposalHandlers({
+    lockStatus: locks.getStatus,
+  });
+  const versions: number[] = [];
+  const statuses: number[] = [];
+  server.use(...handlers);
+  server.use(
+    http.put(projectUrl, async ({ request }) => {
+      const body = (await request.clone().json()) as { sectionVersion: number };
+      versions.push(body.sectionVersion);
+      // Persist through the real version-checking handler, then lose its response.
+      const response = await getResponse(handlers, request);
+      statuses.push(response!.status);
+      return versions.length === 1 ? HttpResponse.error() : response;
+    }),
   );
+  render();
+  await start();
+  await userEvent.type(screen.getByLabelText(/프로젝트 제목/), ' 저장됨');
+  await userEvent.click(screen.getByRole('button', { name: '저장' }));
+  await screen.findByText(/요청을 처리하지 못했어요/);
+  expect(await fetchProjectProposal('19')).toMatchObject({
+    title: '팀 프로젝트 저장됨',
+    sectionVersions: { TOPIC: 1 },
+  });
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: '저장' })).toBeEnabled(),
+  );
+  await userEvent.click(screen.getByRole('button', { name: '저장' }));
+  await screen.findByText('제안서를 저장했어요.');
+  expect(versions).toEqual([0]);
+  expect(statuses).toEqual([200]);
+  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+  expect(topicSection(await fetchProposalSections(19))?.assigneeUserId).toBe(
+    demoStudent.studentNumber,
+  );
+  // The next real edit must use the adopted version instead of the old baseline.
+  await userEvent.type(screen.getByLabelText(/프로젝트 제목/), ' 후속');
+  await userEvent.click(screen.getByRole('button', { name: '저장' }));
+  await waitFor(() => expect(statuses).toEqual([200, 200]));
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled(),
+  );
+  expect(versions).toEqual([0, 1]);
+  expect(await fetchProjectProposal('19')).toMatchObject({
+    title: '팀 프로젝트 저장됨 후속',
+    sectionVersions: { TOPIC: 2 },
+  });
 });
 
 const sectionUrl = `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.SECTION(19, 'TOPIC')}`;
@@ -427,7 +485,9 @@ it('담당자 입력 없이 저장한 계정을 영역 담당자로 기록한다
 it('저장한 팀원이 이전 담당자를 대신한다', async () => {
   const sections = createProposalSectionsFixture();
   topicSection(sections)!.assigneeUserId = demoStudent.studentNumber;
-  server.use(...createProjectProposalHandlers({ sections }));
+  server.use(
+    ...createProjectProposalHandlers({ sections, lockStatus: locks.getStatus }),
+  );
   useAuthStore.getState().setAccessToken(demoPartnerAccessToken);
   useAuthStore
     .getState()
@@ -446,7 +506,9 @@ it('저장한 팀원이 이전 담당자를 대신한다', async () => {
 it('이미 담당자로 기록된 계정은 영역 API를 다시 호출하지 않는다', async () => {
   const sections = createProposalSectionsFixture();
   topicSection(sections)!.assigneeUserId = demoStudent.studentNumber;
-  server.use(...createProjectProposalHandlers({ sections }));
+  server.use(
+    ...createProjectProposalHandlers({ sections, lockStatus: locks.getStatus }),
+  );
   const assign = vi.fn();
   server.use(http.put(sectionUrl, assign));
   render();
@@ -479,8 +541,11 @@ it('담당자 기록이 실패하면 오류를 알리고 입력을 유지한다'
     ).toBe(true),
   );
   expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue('실패한 저장');
-  expect(screen.getByRole('button', { name: '저장' })).toBeEnabled();
-  expect((await fetchProjectProposal('19'))?.title).toBe('팀 프로젝트');
+  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+  expect(
+    screen.getByRole('button', { name: '담당자 기록 다시 시도' }),
+  ).toBeEnabled();
+  expect((await fetchProjectProposal('19'))?.title).toBe('실패한 저장');
 });
 
 const imageUploadUrl = `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.IMAGE_UPLOAD('19')}`;
@@ -636,7 +701,9 @@ it('데이터 구성은 표에서 행을 추가하고 지운다', async () => {
 it('데이터가 없어도 빈 행 한 개를 표에 보여준다', async () => {
   const project = createProjectProposalFixture();
   project.dataConfiguration = [];
-  server.use(...createProjectProposalHandlers({ project }));
+  server.use(
+    ...createProjectProposalHandlers({ project, lockStatus: locks.getStatus }),
+  );
   render('data-composition');
   await waitFor(() =>
     expect(screen.getByLabelText('데이터 1 이름')).toBeEnabled(),
@@ -680,4 +747,304 @@ it('팀원 역할은 표에서 팀원별로 입력한다', async () => {
       member => member.studentNumber === demoPartnerStudent.studentNumber,
     )?.projectRole,
   ).toBe('기획');
+});
+
+it('연속 저장은 서버 응답 버전을 사용하고 다른 영역 필드를 보내지 않는다', async () => {
+  const bodies: Record<string, unknown>[] = [];
+  const observe = async ({ request }: { request: Request }) => {
+    if (request.method === 'PUT' && request.url === projectUrl)
+      bodies.push(await request.clone().json());
+  };
+  server.events.on('request:start', observe);
+  try {
+    render();
+    await start();
+    await userEvent.type(screen.getByLabelText(/프로젝트 제목/), ' 첫째');
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '저장' })).toBeDisabled(),
+    );
+    await userEvent.type(screen.getByLabelText(/프로젝트 제목/), ' 둘째');
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    expect(bodies.map(body => body.sectionVersion)).toEqual([0, 1]);
+    expect(bodies[0]).toMatchObject({
+      sectionKey: 'TOPIC',
+      repositoryUrl: 'https://example.com/repo',
+    });
+    expect(bodies[0]).not.toHaveProperty('dataConfiguration');
+    expect(bodies[0]).not.toHaveProperty('screenConfiguration');
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '저장' })).toBeDisabled(),
+    );
+  } finally {
+    server.events.removeListener('request:start', observe);
+  }
+});
+
+it.each(['PROJECT_VERSION_CONFLICT', 'EDIT_LOCK_CONFLICT'])(
+  '저장 중 %s는 오류를 표시하고 입력을 보존한다',
+  async code => {
+    render();
+    await start();
+    server.use(
+      http.put(projectUrl, () => HttpResponse.json({ code }, { status: 409 })),
+    );
+    await userEvent.type(
+      screen.getByLabelText(/프로젝트 제목/),
+      ' 보존할 초안',
+    );
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
+    await screen.findByText(
+      code === 'EDIT_LOCK_CONFLICT'
+        ? '편집 권한을 잃어 저장하지 못했어요. 입력은 유지됩니다. 편집 권한을 다시 확인해 주세요.'
+        : '이 영역에 다른 변경이 저장됐어요. 입력은 유지됩니다. 최신 내용을 확인한 뒤 다시 편집해 주세요.',
+    );
+    expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue(
+      '팀 프로젝트 보존할 초안',
+    );
+    if (code === 'PROJECT_VERSION_CONFLICT') {
+      expect(
+        screen.getByRole('button', { name: '최신 내용 확인' }),
+      ).toBeEnabled();
+    } else {
+      expect(
+        screen.queryByRole('button', { name: '최신 내용 확인' }),
+      ).not.toBeInTheDocument();
+      const retry = await screen.findByRole('button', {
+        name: '편집 권한 다시 확인',
+      });
+      await waitFor(() => expect(retry).toBeEnabled());
+      await userEvent.click(retry);
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: '저장' })).toBeEnabled(),
+      );
+      expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue(
+        '팀 프로젝트 보존할 초안',
+      );
+    }
+  },
+);
+
+it('충돌 후 최신 내용을 불러오는 선택 전까지 초안을 보존한다', async () => {
+  render();
+  await start();
+  await userEvent.type(screen.getByLabelText(/프로젝트 제목/), ' 내 초안');
+  const latest = createProjectProposalFixture();
+  latest.title = '서버의 최신 제목';
+  latest.sectionVersions.TOPIC = 4;
+  server.use(http.get(projectUrl, () => HttpResponse.json(latest)));
+  await userEvent.click(screen.getByRole('button', { name: '저장' }));
+  await screen.findByText(/다른 편집 내용/);
+  await userEvent.click(screen.getByRole('button', { name: '최신 내용 확인' }));
+  await screen.findByRole('alertdialog', { name: '최신 내용으로 다시 시작' });
+  expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue(
+    '팀 프로젝트 내 초안',
+  );
+  await userEvent.click(screen.getByRole('button', { name: '입력 유지' }));
+  expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue(
+    '팀 프로젝트 내 초안',
+  );
+  await userEvent.click(screen.getByRole('button', { name: '최신 내용 확인' }));
+  await screen.findByRole('alertdialog', { name: '최신 내용으로 다시 시작' });
+  await userEvent.click(
+    screen.getByRole('button', { name: '입력 버리고 최신 내용 불러오기' }),
+  );
+  expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue(latest.title);
+  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+});
+
+it.each(['ERROR', 'PROJECT_VERSION_CONFLICT'])(
+  '담당자 기록 %s 재시도는 성공한 본문을 다시 저장하지 않는다',
+  async code => {
+    let fail = true;
+    let bodies = 0;
+    const observe = ({ request }: { request: Request }) => {
+      if (request.method === 'PUT' && request.url === projectUrl) bodies++;
+    };
+    server.events.on('request:start', observe);
+    server.use(
+      http.put(sectionUrl, () =>
+        fail ? HttpResponse.json({ code }, { status: 500 }) : undefined,
+      ),
+    );
+    try {
+      render();
+      await start();
+      await userEvent.type(screen.getByLabelText(/프로젝트 제목/), ' 저장됨');
+      await userEvent.click(screen.getByRole('button', { name: '저장' }));
+      await screen.findByText(/본문은 저장됐지만 담당자/);
+      expect(
+        screen.queryByRole('button', { name: '최신 내용 확인' }),
+      ).not.toBeInTheDocument();
+      fail = false;
+      await userEvent.click(
+        screen.getByRole('button', { name: '담당자 기록 다시 시도' }),
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByRole('button', { name: '담당자 기록 다시 시도' }),
+        ).not.toBeInTheDocument(),
+      );
+      expect(bodies).toBe(1);
+      expect(
+        topicSection(await fetchProposalSections(19))?.assigneeUserId,
+      ).toBe(demoStudent.studentNumber);
+    } finally {
+      server.events.removeListener('request:start', observe);
+    }
+  },
+);
+
+it.each(['local-validation', 'server-validation', 'network', 'unknown-409'])(
+  '%s 실패는 초안 교체 없이 수정과 저장 재시도를 허용한다',
+  async failure => {
+    render();
+    await start();
+    await userEvent.clear(screen.getByLabelText(/프로젝트 제목/));
+    if (failure !== 'local-validation') {
+      await userEvent.type(
+        screen.getByLabelText(/프로젝트 제목/),
+        '보존할 초안',
+      );
+      server.use(
+        http.put(
+          projectUrl,
+          () =>
+            failure === 'network'
+              ? HttpResponse.error()
+              : HttpResponse.json(
+                  { code: 'INVALID_INPUT' },
+                  { status: failure === 'unknown-409' ? 409 : 400 },
+                ),
+          { once: true },
+        ),
+      );
+    }
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
+    await screen.findByText(
+      failure === 'local-validation'
+        ? '주제의 제목, 설명, 목표를 모두 입력해 주세요.'
+        : failure === 'network'
+          ? '요청을 처리하지 못했어요. 입력 내용을 유지한 채 다시 시도해 주세요.'
+          : failure === 'unknown-409'
+            ? '다른 변경이 먼저 저장됐어요. 최신 내용을 확인한 뒤 다시 시도해 주세요.'
+            : '입력하지 않은 필수 항목이 있어요. 제목·설명·목표와 각 영역 입력을 확인해 주세요.',
+    );
+    expect(
+      screen.queryByRole('button', { name: '최신 내용 확인' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue(
+      failure === 'local-validation' ? '' : '보존할 초안',
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText(/프로젝트 제목/)).toBeEnabled(),
+    );
+    if (failure === 'local-validation')
+      await userEvent.type(
+        screen.getByLabelText(/프로젝트 제목/),
+        '수정한 제목',
+      );
+    await userEvent.click(screen.getByRole('button', { name: '저장' }));
+    await screen.findByText('제안서를 저장했어요.');
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+  },
+);
+
+it('본문 저장 후 작성 상태 조회 실패는 본문 교체 대신 상태만 다시 조회한다', async () => {
+  const sections = createProposalSectionsFixture();
+  topicSection(sections)!.assigneeUserId = demoStudent.studentNumber;
+  server.use(
+    ...createProjectProposalHandlers({ sections, lockStatus: locks.getStatus }),
+  );
+  let failStatus = false;
+  const bodyWrites = vi.fn(() => {
+    failStatus = true;
+    return undefined;
+  });
+  server.use(
+    http.put(projectUrl, bodyWrites),
+    http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.SECTIONS(19)}`, () =>
+      failStatus
+        ? HttpResponse.json({ code: 'ERROR' }, { status: 503 })
+        : undefined,
+    ),
+  );
+  render();
+  await start();
+  await userEvent.type(screen.getByLabelText(/프로젝트 제목/), ' 저장됨');
+  await userEvent.click(screen.getByRole('button', { name: '저장' }));
+  await screen.findByText(/본문은 저장됐지만 작성 상태/);
+  expect(
+    screen.queryByRole('button', { name: '최신 내용 확인' }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: '저장' })).toBeDisabled();
+  expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue(
+    '팀 프로젝트 저장됨',
+  );
+  failStatus = false;
+  await userEvent.click(
+    screen.getByRole('button', { name: '작성 상태 다시 조회' }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.queryByText(/본문은 저장됐지만 작성 상태/),
+    ).not.toBeInTheDocument(),
+  );
+  expect(bodyWrites).toHaveBeenCalledOnce();
+  expect(screen.getByLabelText(/프로젝트 제목/)).toHaveValue(
+    '팀 프로젝트 저장됨',
+  );
+});
+
+it('다른 영역 저장은 보존하며 같은 영역의 오래된 버전은 거절한다', async () => {
+  const { submitLiveEditLock } = await import('@aics/api-client');
+  const before = createProjectProposalFixture();
+  await submitLiveEditLock({
+    targetType: 'PROJECT',
+    targetId: 19,
+    sectionKey: 'TOPIC',
+  });
+  await updateProjectProposal('19', {
+    sectionKey: 'TOPIC',
+    sectionVersion: 0,
+    title: 'A의 제목',
+    description: before.description,
+    goal: before.goal,
+    repositoryUrl: before.repositoryUrl,
+    externalLinks: before.externalLinks,
+  });
+  useAuthStore.getState().setAccessToken(demoPartnerAccessToken);
+  await submitLiveEditLock({
+    targetType: 'PROJECT',
+    targetId: 19,
+    sectionKey: 'DATA',
+  });
+  const saved = await updateProjectProposal('19', {
+    sectionKey: 'DATA',
+    sectionVersion: 0,
+    dataConfiguration: [],
+  });
+  expect(saved.title).toBe('A의 제목');
+  expect(saved.dataConfiguration).toEqual([]);
+  expect(saved.sectionVersions).toMatchObject({ TOPIC: 1, DATA: 1, SCREEN: 0 });
+  await expect(
+    updateProjectProposal('19', {
+      sectionKey: 'DATA',
+      sectionVersion: 0,
+      dataConfiguration: [{ name: '오래된 데이터' }],
+    }),
+  ).rejects.toMatchObject({
+    response: { status: 409, data: { code: 'PROJECT_VERSION_CONFLICT' } },
+  });
+});
+
+it('버전 없는 조회를 0 버전으로 간주하지 않는다', async () => {
+  const project = createProjectProposalFixture();
+  server.use(
+    http.get(projectUrl, () =>
+      HttpResponse.json({ ...project, sectionVersions: undefined }),
+    ),
+  );
+  await expect(fetchProjectProposal('19')).rejects.toThrow('응답 형식');
 });

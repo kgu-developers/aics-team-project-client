@@ -1,8 +1,11 @@
 import type {
   ProjectProposalResponse,
+  SaveProposalSectionInput,
   ProposalSectionType,
   UpdateProjectProposalInput,
 } from '@aics/core';
+
+import { DocumentRequestError } from '~/features/editor/documentRequestErrorMessage';
 
 export const proposalSectionBySlug: Record<
   string,
@@ -47,6 +50,8 @@ export function proposalSectionFields(
         title: draft.title,
         description: draft.description,
         goal: draft.goal,
+        repositoryUrl: draft.repositoryUrl,
+        externalLinks: draft.externalLinks,
       };
     case 'DATA':
       return { dataConfiguration: draft.dataConfiguration };
@@ -91,7 +96,10 @@ export function sameProposalSection(
  * 정규화한 값끼리 비교한다.
  */
 function pruneUnchangedKickoff(
-  body: UpdateProjectProposalInput,
+  body: Pick<
+    UpdateProjectProposalInput,
+    'kickoffRule' | 'meetingSchedule' | 'memberRoles'
+  >,
   latest: UpdateProjectProposalInput,
 ) {
   if (body.kickoffRule === latest.kickoffRule) delete body.kickoffRule;
@@ -112,34 +120,86 @@ export function mergeProposalSection(
   baseline: ProjectProposalResponse,
   draft: UpdateProjectProposalInput,
   section: ProposalSectionType,
-): UpdateProjectProposalInput {
+): SaveProposalSectionInput | null {
   if (latest.id !== baseline.id || latest.proposalCompletedAt)
     throw new Error(
       '제안서가 변경되었거나 이미 제출되었습니다. 입력 내용을 보관하고 다시 조회해 주세요.',
     );
   const current = proposalDraft(latest);
+  // A lost response may leave the draft already persisted at a newer version.
+  // Adopt that document instead of sending another PUT with the old version.
+  if (
+    latest.sectionVersions[section] > baseline.sectionVersions[section] &&
+    sameProposalSection(current, draft, section)
+  )
+    return null;
   if (
     !sameProposalSection(current, proposalDraft(baseline), section) &&
     !sameProposalSection(current, draft, section)
   )
-    throw new Error(
+    throw new DocumentRequestError(
       '다른 편집 내용이 저장되어 있습니다. 입력 내용은 유지됩니다. 최신 내용을 확인한 뒤 다시 편집해 주세요.',
+      'replace-content',
     );
-  // Only the selected section is overlaid. In particular, kickoff values are omitted
-  // outside TEAM_OPERATION so a topic save cannot rewrite teammates' roles.
-  const body = { ...current };
-  delete body.kickoffRule;
-  delete body.meetingSchedule;
-  delete body.memberRoles;
-  const merged = { ...body, ...proposalSectionFields(draft, section) };
-  if (section === 'TEAM_OPERATION') pruneUnchangedKickoff(merged, current);
-  if (!merged.title.trim() || !merged.description.trim() || !merged.goal.trim())
-    throw new Error('주제의 제목, 설명, 목표를 모두 입력해 주세요.');
-  if (merged.title.length > 200)
-    throw new Error('프로젝트 제목은 200자 이내로 입력해 주세요.');
-  if (
-    merged.memberRoles?.some(member => (member.projectRole?.length ?? 0) > 50)
-  )
-    throw new Error('역할은 50자 이내로 입력해 주세요.');
-  return merged;
+  return createProposalSectionInput(baseline, draft, section);
+}
+
+export function createProposalSectionInput(
+  baseline: ProjectProposalResponse,
+  draft: UpdateProjectProposalInput,
+  section: ProposalSectionType,
+): SaveProposalSectionInput {
+  const sectionVersion = baseline.sectionVersions[section];
+  switch (section) {
+    case 'TOPIC':
+      if (
+        !draft.title.trim() ||
+        !draft.description.trim() ||
+        !draft.goal.trim()
+      )
+        throw new Error('주제의 제목, 설명, 목표를 모두 입력해 주세요.');
+      if (draft.title.length > 200 || (draft.repositoryUrl?.length ?? 0) > 255)
+        throw new Error(
+          '제목은 200자, 저장소 URL은 255자 이내로 입력해 주세요.',
+        );
+      return {
+        sectionKey: section,
+        sectionVersion,
+        title: draft.title,
+        description: draft.description,
+        goal: draft.goal,
+        repositoryUrl: draft.repositoryUrl,
+        externalLinks: draft.externalLinks,
+      };
+    case 'DATA':
+      return {
+        sectionKey: section,
+        sectionVersion,
+        dataConfiguration: draft.dataConfiguration,
+      };
+    case 'SCREEN':
+      return {
+        sectionKey: section,
+        sectionVersion,
+        screenConfiguration: draft.screenConfiguration,
+      };
+    case 'TEAM_OPERATION': {
+      if (
+        draft.memberRoles?.some(
+          member => (member.projectRole?.length ?? 0) > 50,
+        )
+      )
+        throw new Error('역할은 50자 이내로 입력해 주세요.');
+      const body = {
+        sectionKey: section,
+        sectionVersion,
+        projectSchedule: draft.projectSchedule,
+        kickoffRule: draft.kickoffRule,
+        meetingSchedule: draft.meetingSchedule,
+        memberRoles: draft.memberRoles,
+      };
+      pruneUnchangedKickoff(body, proposalDraft(baseline));
+      return body;
+    }
+  }
 }

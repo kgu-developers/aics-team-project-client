@@ -7,6 +7,7 @@ import {
 import { demoStudent, demoPartnerStudent } from './users';
 export function createProjectProposalFixture(): ProjectProposalResponse {
   return {
+    sectionVersions: { TOPIC: 0, DATA: 0, SCREEN: 0, TEAM_OPERATION: 0 },
     id: 19,
     teamId: 19,
     title: '팀 프로젝트',

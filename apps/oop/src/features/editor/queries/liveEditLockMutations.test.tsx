@@ -30,9 +30,9 @@ import { createLiveEditLockHandlers } from '~/mocks/handlers/liveEditLock';
 const target: LiveEditLockTarget = {
   targetType: 'PROJECT',
   targetId: 19,
-  sectionKey: 'TEAM_INFO',
+  sectionKey: 'TOPIC',
 };
-const otherArea = { ...target, sectionKey: 'PROJECT_INFO' };
+const otherArea = { ...target, sectionKey: 'DATA' };
 const server = setupServer();
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));

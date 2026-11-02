@@ -21,7 +21,7 @@ import { liveEditLockKeys } from './liveEditLockKeys';
 import { canRequestLiveEditLock } from './liveEditLockRequest';
 import { useLiveEditLockQuery } from './useLiveEditLockQuery';
 
-type Operation = 'acquire' | 'confirm' | 'release';
+type Operation = 'acquire' | 'confirm' | 'release' | 'renew';
 
 /** Contract preparation only. Account ownership never enables document writes. */
 export function useLiveEditLock(target: LiveEditLockTarget | null | undefined) {
@@ -73,6 +73,7 @@ export function useLiveEditLock(target: LiveEditLockTarget | null | undefined) {
   };
   const run = async (
     kind: Operation,
+    background = false,
   ): Promise<LiveEditLockStatus | undefined> => {
     if (
       !allowed ||
@@ -83,7 +84,7 @@ export function useLiveEditLock(target: LiveEditLockTarget | null | undefined) {
       return undefined;
     const token = ++generation.current.number;
     busy.current = { scope, token };
-    setOperation({ scope, generation: token, pending: true });
+    setOperation({ scope, generation: token, pending: !background });
     try {
       // Cancel a pre-mutation status request so it cannot replace the newer result.
       await client.cancelQueries({ queryKey, exact: true });
@@ -91,12 +92,12 @@ export function useLiveEditLock(target: LiveEditLockTarget | null | undefined) {
       let status: LiveEditLockStatus;
       try {
         status =
-          kind === 'acquire'
+          kind === 'acquire' || kind === 'renew'
             ? await submitLiveEditLock(target)
             : await fetchLiveEditLock(target);
       } catch (error) {
         if (
-          kind !== 'acquire' ||
+          (kind !== 'acquire' && kind !== 'renew') ||
           !isAxiosError(error) ||
           error.response?.status !== 409 ||
           !current(token)
@@ -173,6 +174,10 @@ export function useLiveEditLock(target: LiveEditLockTarget | null | undefined) {
     acquire: () => run('acquire'),
     confirmOwnership: () => run('confirm'),
     release: () => run('release'),
-    refetch: () => run('confirm'),
+    refetch: () => run('confirm', true),
+    renew: () =>
+      status?.locked && status.lockedBy === user?.studentNumber
+        ? run('renew', true)
+        : Promise.resolve(undefined),
   };
 }
