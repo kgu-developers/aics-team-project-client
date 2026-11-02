@@ -16,6 +16,7 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useAuthStore } from '~/features/auth/authStore';
+import { DocumentRequestError } from '~/features/editor/documentRequestErrorMessage';
 
 import {
   mergeProposalSection,
@@ -35,6 +36,12 @@ type Action =
       section: ProposalSectionType;
       /** Present only when the section assignee changed in the same 저장. */
       assigneeUserId?: string;
+    }
+  | {
+      kind: 'assign';
+      baseline: ProjectProposalResponse;
+      section: ProposalSectionType;
+      assigneeUserId: string;
     }
   | {
       kind: 'complete';
@@ -64,7 +71,9 @@ export function useProjectProposalActions() {
       )
         throw new Error('팀이 배정된 학생만 제안서를 작성할 수 있습니다.');
       const projectId =
-        action.kind === 'save' ? action.baseline.id : action.projectId;
+        action.kind === 'save' || action.kind === 'assign'
+          ? action.baseline.id
+          : action.projectId;
       if (action.kind !== 'submit') {
         const target: LiveEditLockTarget = {
           targetType: 'PROJECT',
@@ -74,8 +83,9 @@ export function useProjectProposalActions() {
         const lock = await fetchLiveEditLock(target);
         assertSession();
         if (!lock.locked || lock.lockedBy !== user.studentNumber)
-          throw new Error(
+          throw new DocumentRequestError(
             '편집 잠금이 만료되었거나 다른 팀원이 편집 중입니다. 입력 내용은 유지됩니다. 편집 권한을 다시 확인해 주세요.',
+            'recheck-lock',
           );
       }
       const latest = await fetchProjectProposal(teamId);
@@ -84,28 +94,54 @@ export function useProjectProposalActions() {
         throw new Error(
           '제안서가 변경되었거나 이미 제출되었습니다. 다시 조회해 주세요.',
         );
-      if (action.kind === 'save') {
-        // The assignee is written first so a failed body save leaves nothing
-        // half-applied that the next 저장 cannot repeat.
-        if (action.assigneeUserId !== undefined) {
-          const states = await fetchProposalSections(projectId);
-          assertSession();
-          const section = states.contents.find(
-            s => s.section === action.section,
-          )!;
-          await updateProposalSection(projectId, action.section, {
-            assigneeUserId: action.assigneeUserId,
-            completed: section.completed,
-          });
-          assertSession();
+      if (action.kind === 'save' || action.kind === 'assign') {
+        let saved = latest;
+        if (action.kind === 'save') {
+          const input = mergeProposalSection(
+            latest,
+            action.baseline,
+            action.draft,
+            action.section,
+          );
+          if (input) saved = await updateProjectProposal(teamId, input);
         }
-        const body = mergeProposalSection(
-          latest,
-          action.baseline,
-          action.draft,
-          action.section,
-        );
-        await updateProjectProposal(teamId, body);
+        assertSession();
+        const scope = projectProposalKeys.scope(session, teamId);
+        await client.cancelQueries({ queryKey: scope });
+        assertSession();
+        client.setQueryData([...scope, 'document'], saved);
+        let assigneePending = false;
+        let warning: string | null = null;
+        // Body success is authoritative even if a separate metadata write/read fails.
+        if (action.assigneeUserId !== undefined) {
+          try {
+            const states = await fetchProposalSections(projectId);
+            assertSession();
+            const section = states.contents.find(
+              s => s.section === action.section,
+            )!;
+            await updateProposalSection(projectId, action.section, {
+              assigneeUserId: action.assigneeUserId,
+              completed: section.completed,
+            });
+            assertSession();
+          } catch {
+            assertSession();
+            assigneePending = true;
+            warning =
+              '본문은 저장됐지만 담당자 기록에 실패했어요. 담당자 기록만 다시 시도해 주세요.';
+          }
+        }
+        try {
+          const sections = await fetchProposalSections(projectId);
+          assertSession();
+          client.setQueryData([...scope, 'sections', projectId], sections);
+        } catch {
+          assertSession();
+          warning ??=
+            '본문은 저장됐지만 작성 상태를 확인하지 못했어요. 작성 상태를 다시 조회해 주세요.';
+        }
+        return { project: saved, warning, assigneePending };
       } else if (action.kind === 'submit') {
         const states = await fetchProposalSections(projectId);
         assertSession();
@@ -144,8 +180,9 @@ export function useProjectProposalActions() {
             action.section,
           )
         )
-          throw new Error(
+          throw new DocumentRequestError(
             '작성 내용이 변경되었습니다. 최신 내용을 확인한 뒤 완료해 주세요.',
+            'replace-content',
           );
         const states = await fetchProposalSections(projectId);
         assertSession();
@@ -181,7 +218,7 @@ export function useProjectProposalActions() {
       assertSession();
       client.setQueryData([...scope, 'document'], project);
       client.setQueryData([...scope, 'sections', projectId], sections);
-      return project;
+      return { project, warning: null, assigneePending: false };
     },
     onSettled: () => {
       if (useAuthStore.getState() === session) {

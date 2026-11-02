@@ -29,7 +29,7 @@ import { createLiveEditLockHandlers } from '~/mocks/handlers/liveEditLock';
 const target: LiveEditLockTarget = {
   targetType: 'PROJECT',
   targetId: 19,
-  sectionKey: 'TEAM_INFO',
+  sectionKey: 'TOPIC',
 };
 const server = setupServer();
 const clients: QueryClient[] = [];
@@ -286,7 +286,7 @@ it('동일 문서의 다른 영역으로 이동하면 이전 영역의 잠금 �
     await result.current.acquire();
   });
   await waitFor(() => expect(result.current.state).toBe('owned-by-account'));
-  rerender({ value: { ...target, sectionKey: 'PROJECT_INFO' } });
+  rerender({ value: { ...target, sectionKey: 'DATA' } });
   await waitFor(() => expect(result.current.state).toBe('unlocked'));
   expect(result.current.canRelease).toBe(false);
   rerender({ value: target });
@@ -316,7 +316,7 @@ it('영역 전환 후 이전 영역의 늦은 획득 응답을 무시한다', as
     acquire = result.current.acquire();
   });
   await waitFor(() => expect(started).toHaveBeenCalledOnce());
-  rerender({ value: { ...target, sectionKey: 'PROJECT_INFO' } });
+  rerender({ value: { ...target, sectionKey: 'DATA' } });
   await waitFor(() => expect(result.current.state).toBe('unlocked'));
   await act(async () => {
     finish();

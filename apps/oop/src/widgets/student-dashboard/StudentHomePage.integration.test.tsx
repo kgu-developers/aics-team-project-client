@@ -1,5 +1,5 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
-import type { TeamMessage } from '@aics/core';
+import type { ProjectProposalResponse, TeamMessage } from '@aics/core';
 import { AstryxThemeProvider } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -29,7 +29,10 @@ import { studentHomeKeys } from '~/features/student-home/queries';
 
 import StudentHomePage from './StudentHomePage';
 
-import { createProjectProposalFixture } from '~/mocks/data/projectProposal';
+import {
+  createProjectProposalFixture,
+  createProposalSectionsFixture,
+} from '~/mocks/data/projectProposal';
 import { liveHomeTeam, liveHomeUser } from '~/mocks/data/studentHomeLive';
 import { studentMilestoneFixtures } from '~/mocks/data/studentMilestones';
 import { studentHomeLiveHandlers } from '~/mocks/handlers/studentHomeLive';
@@ -132,6 +135,9 @@ const server = setupServer(
   ),
   http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT.BY_TEAM('7')}`, () =>
     HttpResponse.json({ code: 'PROJECT_NOT_FOUND' }, { status: 404 }),
+  ),
+  http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.SECTIONS(21)}`, () =>
+    HttpResponse.json(createProposalSectionsFixture()),
   ),
   ...studentHomeLiveHandlers,
   http.get(`${API_BASE_URL}/api/v1/teams/7/topic-candidates`, () =>
@@ -1455,8 +1461,9 @@ describe('학생 홈의 개인 상호평가 연결', () => {
   });
 });
 
-function teamProposalFixture() {
+function teamProposalFixture(): ProjectProposalResponse {
   return {
+    sectionVersions: { TOPIC: 0, DATA: 0, SCREEN: 0, TEAM_OPERATION: 0 },
     id: 21,
     teamId: 7,
     title: '서버 프로젝트',

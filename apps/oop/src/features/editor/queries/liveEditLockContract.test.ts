@@ -25,7 +25,7 @@ import { createLiveEditLockHandlers } from '~/mocks/handlers/liveEditLock';
 const target: LiveEditLockTarget = {
   targetType: 'PROJECT',
   targetId: 19,
-  sectionKey: 'TEAM_INFO',
+  sectionKey: 'TOPIC',
 };
 const server = setupServer();
 let now = Date.parse('2026-09-10T10:00:00Z');
@@ -127,7 +127,7 @@ it('같은 계정 갱신·다른 계정409·2분 만료 후 인수를 구분한�
 });
 
 it('문서 종류와 영역 키가 다르면 잠금과 해제를 독립적으로 처리한다', async () => {
-  const otherArea = { ...target, sectionKey: 'PROJECT_INFO' };
+  const otherArea = { ...target, sectionKey: 'DATA' };
   const meeting: LiveEditLockTarget = {
     ...target,
     targetType: 'MEETING_RECORD',

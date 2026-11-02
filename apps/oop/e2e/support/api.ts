@@ -81,6 +81,7 @@ export function createState() {
     ],
   };
   const project: ProjectProposalResponse = {
+    sectionVersions: { TOPIC: 0, DATA: 0, SCREEN: 0, TEAM_OPERATION: 0 },
     id: 21,
     teamId: 7,
     title: 'E2E 도서 관리',
@@ -280,7 +281,43 @@ export class StudentApi {
     if (path === paths.notices) return reply({ contents: s.notices });
     if (path === paths.project) {
       if (!s.project) return reply({ code: 'PROJECT_NOT_FOUND' }, 404);
-      if (method === 'PUT') Object.assign(s.project, body);
+      if (method === 'PUT') {
+        const section =
+          body?.sectionKey as keyof typeof s.project.sectionVersions;
+        if (
+          !Object.hasOwn(s.project.sectionVersions, section) ||
+          !Number.isSafeInteger(body?.sectionVersion)
+        )
+          return reply({ code: 'INVALID_INPUT' }, 400);
+        if (s.project.sectionVersions[section] !== body?.sectionVersion)
+          return reply({ code: 'PROJECT_VERSION_CONFLICT' }, 409);
+        if (s.lockOwner !== s.user.studentNumber)
+          return reply({ code: 'EDIT_LOCK_CONFLICT' }, 409);
+        const fields = {
+          TOPIC: [
+            'title',
+            'description',
+            'goal',
+            'repositoryUrl',
+            'externalLinks',
+          ],
+          DATA: ['dataConfiguration'],
+          SCREEN: ['screenConfiguration'],
+          TEAM_OPERATION: ['projectSchedule'],
+        }[section];
+        Object.assign(
+          s.project,
+          Object.fromEntries(
+            fields.filter(key => key in body!).map(key => [key, body![key]]),
+          ),
+        );
+        s.project.sectionVersions[section]++;
+        const state = s.proposalSections.contents.find(
+          item => item.section === section,
+        )!;
+        state.completed = false;
+        state.completedAt = null;
+      }
       return reply(s.project);
     }
     if (path === paths.proposalSections)

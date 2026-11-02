@@ -49,7 +49,7 @@ function renderPanel(
     <AstryxThemeProvider>
       <QueryClientProvider client={client}>
         <LiveEditLockPanel
-          target={{ targetType, targetId: 19, sectionKey: 'TEAM_INFO' }}
+          target={{ targetType, targetId: 19, sectionKey: 'TOPIC' }}
           allowContractActions={contractActions}
         />
       </QueryClientProvider>
