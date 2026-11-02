@@ -12,7 +12,7 @@ import {
   useToast,
 } from '@aics/design-system';
 import { Navigate, useBlocker } from '@tanstack/react-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { EDITOR_DOCS, editorSectionTo } from '~/app/constants/editorSections';
 
@@ -159,7 +159,39 @@ function ProjectProposalDocument({
     !sameProposalSection(proposalDraft(baseline), draft, sectionType),
   );
   const pending = working || actions.isPending || lock.pending;
-  const editable = lock.canEdit && !pending;
+  const [contentReady, setContentReady] = useState(false);
+  const [contentLoading, setContentLoading] = useState(false);
+  const preparationStarted = useRef(false);
+  const refetchDocument = documentQuery.refetch;
+  // Prepare once per section visit. Polling and renewals must never reset a draft.
+  useEffect(() => {
+    if (!lock.canEdit || preparationStarted.current) return;
+    preparationStarted.current = true;
+    let active = true;
+    let finished = false;
+    setContentLoading(true);
+    void refetchDocument().then(result => {
+      if (!active) return;
+      finished = true;
+      setContentLoading(false);
+      if (result.error || !result.data) {
+        setError({
+          message:
+            '최신 내용을 불러오지 못했어요. 편집 권한을 다시 확인해 주세요.',
+          recovery: 'recheck-lock',
+        });
+        return;
+      }
+      setBaseline(result.data);
+      setDraft(proposalDraft(result.data));
+      setContentReady(true);
+    });
+    return () => {
+      active = false;
+      if (!finished) preparationStarted.current = false;
+    };
+  }, [lock.canEdit, refetchDocument]);
+  const editable = lock.canEdit && contentReady && !contentLoading && !pending;
   const current = states.data?.contents.find(s => s.section === sectionType);
   const lockOwnerName = lock.ownerName;
   // The account that saves the section owns it; there is no separate picker.
@@ -283,6 +315,8 @@ function ProjectProposalDocument({
                           const latest = await queryLatest();
                           setBaseline(latest);
                           setDraft(proposalDraft(latest));
+                          setContentReady(true);
+                          setContentLoading(false);
                         }
                       })
                     }
