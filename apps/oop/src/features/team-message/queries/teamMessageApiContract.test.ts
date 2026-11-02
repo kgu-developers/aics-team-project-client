@@ -156,6 +156,32 @@ it('담당 교수의 분반 전체 전송은 한 요청으로 모든 팀에 GENE
   }
 });
 
+it('담당 교수는 선택한 여러 팀에만 한 요청으로 GENERAL 메시지를 보낸다', async () => {
+  setApiAccessToken(demoNoticeProfessorAccessToken);
+
+  await expect(
+    submitSectionTeamMessage('1', {
+      message: '선택 팀 안내입니다.',
+      teamIds: [1, 8],
+    }),
+  ).resolves.toEqual({ sentCount: 2 });
+
+  for (const teamId of ['1', '8']) {
+    const messages = await fetchTeamMessages(teamId, {
+      relatedType: 'GENERAL',
+    });
+    expect(messages.contents).toContainEqual(
+      expect.objectContaining({ message: '선택 팀 안내입니다.' }),
+    );
+  }
+  const unselected = await fetchTeamMessages('7', { relatedType: 'GENERAL' });
+  expect(
+    unselected.contents.some(
+      message => message.message === '선택 팀 안내입니다.',
+    ),
+  ).toBe(false);
+});
+
 it('분반 전체 전송은 팀별 관련 타입이나 식별자를 보내지 않는다', async () => {
   setApiAccessToken(demoNoticeProfessorAccessToken);
   server.use(

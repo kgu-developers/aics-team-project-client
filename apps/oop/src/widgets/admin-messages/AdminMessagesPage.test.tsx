@@ -187,7 +187,8 @@ it('담당 교수는 분반 전체 팀에 일반 메시지를 한 번에 보낸�
     name: '일반 메시지 작성 패널',
   });
   await selectPanelSection(user, panel, 'OOP-01 · 월요일 1-2교시');
-  await user.click(within(panel).getByRole('button', { name: '전체 팀 선택' }));
+  await user.click(within(panel).getByRole('combobox', { name: '팀' }));
+  await user.click(await screen.findByRole('option', { name: '전체 선택' }));
   await user.type(
     within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
     '전체 팀 안내',

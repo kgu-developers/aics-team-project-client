@@ -17,9 +17,13 @@ export type SubmitTeamMessageInput = {
   relatedId?: number | null;
 };
 
-/** General message sent once by the server to every non-deleted team in a section. */
+/**
+ * General message sent by a professor to selected teams in a section.
+ * Omit `teamIds` (or send an empty array) to target every active team.
+ */
 export type SubmitSectionTeamMessageInput = {
   message: string;
+  teamIds?: number[];
 };
 
 export type SectionTeamMessagePersistResponse = {
