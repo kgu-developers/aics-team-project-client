@@ -115,6 +115,10 @@ function renderPage(
     validateSearch: (search: Record<string, unknown>) => ({
       sectionId: String(search.sectionId),
       milestoneId: search.milestoneId ? String(search.milestoneId) : undefined,
+      milestoneType:
+        typeof search.milestoneType === 'string'
+          ? search.milestoneType
+          : undefined,
     }),
     component: AdminMilestoneSetupPage,
   });

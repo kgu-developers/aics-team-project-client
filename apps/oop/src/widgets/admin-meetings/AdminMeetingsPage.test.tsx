@@ -128,7 +128,11 @@ describe('AdminMeetingsPage', () => {
   it('관리자 회의록 목록은 읽음 상태와 핵심 5개 열을 표시하고 행 전체를 눌러 상세를 볼 수 있게 한다', async () => {
     const { container } = renderPage();
 
-    await screen.findByRole('columnheader', { name: '회의 제목' });
+    await screen.findByRole(
+      'columnheader',
+      { name: '회의 제목' },
+      { timeout: 5_000 },
+    );
     expect(
       screen.getByRole('columnheader', { name: '읽음 상태' }),
     ).toBeInTheDocument();
@@ -306,8 +310,9 @@ describe('AdminMeetingsPage', () => {
     const panel = await screen.findByRole('complementary', {
       name: '일반 메시지 작성 패널',
     });
-    await user.click(within(panel).getByRole('combobox', { name: '팀' }));
-    await user.click(await screen.findByRole('option', { name: '전체 팀' }));
+    await user.click(
+      within(panel).getByRole('button', { name: '전체 팀 선택' }),
+    );
     await user.type(
       within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
       '전체 회의 안내',

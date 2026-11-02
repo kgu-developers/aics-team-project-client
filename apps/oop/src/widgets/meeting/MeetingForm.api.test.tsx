@@ -26,6 +26,7 @@ import { mapStudentMeeting } from '~/features/meeting/model/studentMeeting';
 
 import { MeetingEditPage, MeetingForm, MeetingNewPage } from './MeetingPages';
 
+import { resetMockSessionState } from '~/mocks/authSession';
 import { meetingApiRecord, meetingApiTeam } from '~/mocks/data/meetingApi';
 import { demoAccessToken, demoStudent } from '~/mocks/data/users';
 import { createLiveEditLockHandlers } from '~/mocks/handlers/liveEditLock';
@@ -69,6 +70,7 @@ const server = setupServer(
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
+  resetMockSessionState();
   vi.stubEnv('VITE_ENABLE_MSW', 'false');
   useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setAccessToken(demoAccessToken);
@@ -81,6 +83,7 @@ afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
   server.resetHandlers();
   server.events.removeAllListeners();
+  resetMockSessionState();
   useAuthStore.getState().clearSession();
   vi.unstubAllEnvs();
   navigate.mockReset();

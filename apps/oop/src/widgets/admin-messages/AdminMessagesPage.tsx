@@ -6,7 +6,6 @@ import {
   EmptyState,
   Heading,
   Text,
-  TextArea,
 } from '@aics/design-system';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -28,7 +27,11 @@ import AdminSectionTeamFilter, {
   ALL_TEAMS,
 } from '~/features/admin-section/components/AdminSectionTeamFilter';
 import { useAuthStore } from '~/features/auth/authStore';
-import { useDraggableMessagePanel } from '~/features/team-message/components';
+import {
+  AdminGeneralMessageComposerPanel,
+  AdminGeneralMessageTeamChecklist,
+  ALL_TEAMS_RECIPIENT,
+} from '~/features/team-message/components';
 import {
   useSubmitSectionTeamMessageMutation,
   useSubmitTeamMessageMutation,
@@ -38,8 +41,6 @@ import * as styles from './AdminMessagesPage.css';
 
 const draftStorageKey = 'aics.oop.admin.general-message-draft:inbox';
 const selectedRecipientStorageKey = `${draftStorageKey}:selected-recipient`;
-const allTeamsRecipient = '__all_teams__';
-
 type GeneralMessageDraft = {
   message: string;
   sectionId: string;
@@ -125,8 +126,7 @@ export default function AdminMessagesPage() {
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   const [isBroadcastConfirmationOpen, setIsBroadcastConfirmationOpen] =
     useState(false);
-  const composeDefaultsRef = useRef({ sectionId, sections });
-  const draggablePanel = useDraggableMessagePanel();
+  const composeDefaultsRef = useRef({ sectionId });
   const query = useAdminMessagesQuery(sectionId, page, teamId);
   const submitMutation = useSubmitTeamMessageMutation(composeTeamId);
   const submitSectionMutation =
@@ -146,7 +146,7 @@ export default function AdminMessagesPage() {
   // A restored draft can outlive a role change, so the sentinel alone must not
   // enable a section-wide request.
   const isAllTeamsSelected =
-    canBroadcast && composeTeamId === allTeamsRecipient;
+    canBroadcast && composeTeamId === ALL_TEAMS_RECIPIENT;
   const isSubmitPending =
     submitMutation.isPending || submitSectionMutation.isPending;
   useEffect(() => {
@@ -163,8 +163,8 @@ export default function AdminMessagesPage() {
   }, [boundedPage, navigate, page, query.isSuccess, sectionId, teamId]);
 
   useEffect(() => {
-    composeDefaultsRef.current = { sectionId, sections };
-  }, [sectionId, sections]);
+    composeDefaultsRef.current = { sectionId };
+  }, [sectionId]);
 
   useEffect(() => {
     if (!isComposeOpen) {
@@ -173,21 +173,26 @@ export default function AdminMessagesPage() {
     }
 
     setIsDraftLoaded(false);
-    const { sectionId: selectedSectionId, sections: activeSections } =
-      composeDefaultsRef.current;
+    const { sectionId: selectedSectionId } = composeDefaultsRef.current;
     const selectedRecipient = readSelectedRecipient();
-    const fallbackSectionId = selectedSectionId ?? activeSections[0]?.id ?? '';
-    const storedSectionId = selectedRecipient?.sectionId ?? fallbackSectionId;
-    const storedTeamId = selectedRecipient?.teamId ?? '';
-    const draft =
-      readComposeDraft(composeDraftStorageKey(storedSectionId, storedTeamId)) ??
-      readComposeDraft(draftStorageKey);
+    // The inbox filter is the explicit recipient context. Do not let an old
+    // draft switch a message opened from a specific section to another one.
+    // When the list is on "전체 분반", leave the recipient empty instead of
+    // silently choosing the first assigned section.
+    const storedSectionId = selectedSectionId ?? '';
+    const storedTeamId =
+      selectedRecipient?.sectionId === storedSectionId
+        ? selectedRecipient.teamId
+        : '';
+    const draft = storedSectionId
+      ? readComposeDraft(composeDraftStorageKey(storedSectionId, storedTeamId))
+      : null;
     try {
       setComposeSectionId(draft?.sectionId ?? storedSectionId);
       setComposeTeamId(draft?.teamId ?? storedTeamId);
       setComposeMessage(draft?.message ?? '');
     } catch {
-      setComposeSectionId(selectedSectionId ?? activeSections[0]?.id ?? '');
+      setComposeSectionId(selectedSectionId ?? '');
       setComposeTeamId('');
       setComposeMessage('');
     }
@@ -468,33 +473,37 @@ export default function AdminMessagesPage() {
         />
       ) : null}
       {isComposeOpen ? (
-        <aside
-          aria-label='일반 메시지 작성 패널'
-          className={styles.composePanel}
-          onPointerDown={draggablePanel.handlePointerDown}
-          onPointerMove={draggablePanel.handlePointerMove}
-          onPointerUp={draggablePanel.handlePointerUp}
-          ref={draggablePanel.panelRef}
-          style={draggablePanel.panelStyle}
-        >
-          <div className={styles.composePanelContent}>
-            <div className={styles.composePanelHeader} data-panel-drag-handle>
-              <Heading level={2}>일반 메시지 보내기</Heading>
-              <Text color='secondary' type='supporting'>
-                ⋮⋮ 이동
-              </Text>
-            </div>
-            <div>
-              <Text color='secondary'>
-                {isAllTeamsSelected
-                  ? '분반의 삭제되지 않은 모든 팀에 같은 일반 메시지를 보냅니다.'
-                  : '메시지를 받을 분반과 팀을 선택하세요. 보낸 메시지는 해당 팀의 일반 메시지 대화에 추가됩니다.'}
-              </Text>
-            </div>
+        <AdminGeneralMessageComposerPanel
+          description={
+            isAllTeamsSelected
+              ? '분반의 삭제되지 않은 모든 팀에 같은 일반 메시지를 보냅니다.'
+              : '메시지를 받을 분반과 팀을 선택하세요. 보낸 메시지는 해당 팀의 일반 메시지 대화에 추가됩니다.'
+          }
+          errorMessage={composeError}
+          isSubmitDisabled={
+            !composeSectionId ||
+            !composeTeamId ||
+            !composeMessage.trim() ||
+            isSubmitPending
+          }
+          isSubmitPending={isSubmitPending}
+          message={composeMessage}
+          onClose={() => setIsComposeOpen(false)}
+          onMessageChange={value => {
+            setComposeMessage(value);
+            if (composeError) setComposeError(null);
+            if (composeSuccessMessage) setComposeSuccessMessage(null);
+          }}
+          onSend={() => {
+            if (isAllTeamsSelected) {
+              setIsBroadcastConfirmationOpen(true);
+              return;
+            }
+            submitComposeMessage();
+          }}
+          recipientSelectors={
             <AdminSectionTeamFilter
               allowAllSections={false}
-              allowAllTeams={canBroadcast}
-              allTeamValue={allTeamsRecipient}
               label='일반 메시지 수신 팀'
               onSectionChange={next => {
                 storeComposeDraft({
@@ -502,69 +511,54 @@ export default function AdminMessagesPage() {
                   sectionId: composeSectionId,
                   teamId: composeTeamId,
                 });
-                setComposeSectionId(next);
-                setComposeTeamId('');
-                setComposeMessage('');
-                setComposeSuccessMessage(null);
-              }}
-              onTeamChange={next => {
-                storeComposeDraft({
-                  message: composeMessage,
-                  sectionId: composeSectionId,
-                  teamId: composeTeamId,
-                });
                 const nextDraft = readComposeDraft(
-                  composeDraftStorageKey(composeSectionId, next),
+                  composeDraftStorageKey(next, ''),
                 );
-                setComposeTeamId(next);
+                setComposeSectionId(next);
+                setComposeTeamId(nextDraft?.teamId ?? '');
                 setComposeMessage(nextDraft?.message ?? '');
                 setComposeSuccessMessage(null);
               }}
+              isDisabled={isSubmitPending}
               sectionId={composeSectionId}
-              teamId={composeTeamId}
-            />
-            <TextArea
-              aria-label='일반 메시지 내용'
-              label='내용'
-              onChange={value => {
-                setComposeMessage(value);
-                if (composeError) setComposeError(null);
-                if (composeSuccessMessage) setComposeSuccessMessage(null);
-              }}
-              placeholder='팀에 전달할 메시지를 입력하세요.'
-              value={composeMessage}
-            />
-            {composeSuccessMessage ? (
-              <Text role='status'>{composeSuccessMessage}</Text>
-            ) : null}
-            {composeError ? <Text role='alert'>{composeError}</Text> : null}
-            <div className={styles.composeActions}>
-              <Button
-                isDisabled={isSubmitPending}
-                label='닫기'
-                onClick={() => setIsComposeOpen(false)}
-                variant='secondary'
-              />
-              <Button
-                isDisabled={
-                  !composeSectionId ||
-                  !composeTeamId ||
-                  !composeMessage.trim() ||
-                  isSubmitPending
-                }
-                isLoading={isSubmitPending}
-                label='보내기'
-                onClick={() => {
-                  if (isAllTeamsSelected) {
-                    setIsBroadcastConfirmationOpen(true);
-                    return;
-                  }
-                  submitComposeMessage();
-                }}
-              />
-            </div>
-          </div>
-        </aside>
+              sectionSelection='selector'
+            >
+              {composeSectionId ? (
+                <AdminGeneralMessageTeamChecklist
+                  canBroadcast={canBroadcast}
+                  isDisabled={isSubmitPending}
+                  onChange={next => {
+                    storeComposeDraft({
+                      message: composeMessage,
+                      sectionId: composeSectionId,
+                      teamId: composeTeamId,
+                    });
+                    const nextDraft = readComposeDraft(
+                      composeDraftStorageKey(composeSectionId, next),
+                    );
+                    setComposeTeamId(next);
+                    setComposeMessage(nextDraft?.message ?? '');
+                    setComposeSuccessMessage(null);
+                  }}
+                  onInvalidTeam={() => {
+                    // Keep the typed content as a section-level draft, but
+                    // require an existing team before another send attempt.
+                    storeComposeDraft({
+                      message: composeMessage,
+                      sectionId: composeSectionId,
+                      teamId: composeTeamId,
+                    });
+                    setComposeTeamId('');
+                    setComposeSuccessMessage(null);
+                  }}
+                  sectionId={composeSectionId}
+                  teamId={composeTeamId}
+                />
+              ) : null}
+            </AdminSectionTeamFilter>
+          }
+          successMessage={composeSuccessMessage}
+        />
       ) : null}
       <AlertDialog
         actionLabel='전체 팀에 보내기'

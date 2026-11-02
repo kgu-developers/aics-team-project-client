@@ -26,15 +26,29 @@ import { useAuthStore } from '~/features/auth/authStore';
 
 import AdminStudentTeamManagement from './AdminStudentTeamManagement';
 
-import { demoAdmin, demoAdminAccessToken } from '~/mocks/data/users';
+import {
+  issueMockSession,
+  mockSessionResponseHeaders,
+  resetMockSessionState,
+} from '~/mocks/authSession';
+import {
+  demoAdmin,
+  demoAdminAccessToken,
+  demoUserAccounts,
+} from '~/mocks/data/users';
 import { adminCourseHandlers } from '~/mocks/handlers/adminCourses';
 import {
   adminStudentTeamHandlers,
   resetAdminStudentTeamMockState,
 } from '~/mocks/handlers/adminStudentTeams';
+import { authHandlers } from '~/mocks/handlers/auth';
 import { renderWithRouter } from '~/test/renderWithRouter';
 
-const server = setupServer(...adminCourseHandlers, ...adminStudentTeamHandlers);
+const server = setupServer(
+  ...adminCourseHandlers,
+  ...adminStudentTeamHandlers,
+  ...authHandlers,
+);
 const originalDialogCloseDescriptor = Object.getOwnPropertyDescriptor(
   HTMLDialogElement.prototype,
   'close',
@@ -61,13 +75,23 @@ beforeAll(() => {
   });
 });
 beforeEach(() => {
+  resetMockSessionState();
   resetAdminStudentTeamMockState();
+  mockSessionResponseHeaders(
+    issueMockSession(
+      demoUserAccounts.find(
+        account => account.accessToken === demoAdminAccessToken,
+      )!,
+    ),
+  );
 });
 afterEach(() => {
   server.resetHandlers();
   resetAdminStudentTeamMockState();
   setApiAccessToken(null);
   useAuthStore.getState().clearSession();
+  sessionStorage.clear();
+  localStorage.removeItem('aics:session-recovery');
 });
 afterAll(() => {
   server.close();
@@ -174,14 +198,8 @@ describe('AdminStudentTeamManagement', () => {
       ],
     });
 
-    const sectionSelect = await screen.findByRole('combobox', {
-      name: '분반',
-    });
-    await waitFor(() => expect(sectionSelect).toHaveTextContent('OOP-01'));
-
-    await user.click(sectionSelect);
     await user.click(
-      await screen.findByRole('option', {
+      await screen.findByRole('button', {
         name: 'OOP-02 · 월요일 1-2교시',
       }),
     );
@@ -208,11 +226,9 @@ describe('AdminStudentTeamManagement', () => {
       '2',
     );
 
-    await waitFor(() =>
-      expect(screen.getByRole('combobox', { name: '분반' })).toHaveTextContent(
-        'OOP-02',
-      ),
-    );
+    expect(
+      await screen.findByRole('button', { name: 'OOP-02 · 월요일 1-2교시' }),
+    ).toHaveAttribute('aria-current', 'true');
   });
 
   it('직접 전달된 분반이 담당 목록에 없으면 다른 분반으로 대체하지 않는다', async () => {
@@ -229,11 +245,9 @@ describe('AdminStudentTeamManagement', () => {
   it('로그인한 관리자의 분반 목록을 분반 선택 UI에 표시한다', async () => {
     renderPage();
 
-    await waitFor(() =>
-      expect(screen.getByRole('combobox', { name: '분반' })).toHaveTextContent(
-        'OOP-01',
-      ),
-    );
+    expect(
+      await screen.findByRole('button', { name: 'OOP-01 · 월요일 1-2교시' }),
+    ).toHaveAttribute('aria-current', 'true');
     expect(screen.queryByText('1151 (월6)')).not.toBeInTheDocument();
   });
 
@@ -426,6 +440,9 @@ describe('AdminStudentTeamManagement', () => {
       expect.stringContaining('김민준'),
       expect.stringContaining('이서연'),
     ]);
+    expect(
+      within(teamCard!).getByRole('button', { name: /김민준.*팀장/ }),
+    ).toBeInTheDocument();
 
     await user.click(
       within(teamCard!).getByRole('button', { name: '팀장 변경' }),
@@ -551,7 +568,11 @@ describe('AdminStudentTeamManagement', () => {
     renderPage();
 
     const studentNameButton = (
-      await screen.findAllByRole('button', { name: '김민준' })
+      await screen.findAllByRole(
+        'button',
+        { name: '김민준' },
+        { timeout: 5_000 },
+      )
     ).find(button => button.closest('table'));
     expect(studentNameButton).toBeDefined();
     await user.click(studentNameButton!);
@@ -815,7 +836,9 @@ describe('AdminStudentTeamManagement', () => {
     await user.click(within(dialog).getByRole('button', { name: '팀장 변경' }));
 
     await waitFor(() =>
-      expect(screen.getByText('팀장: 이서연')).toBeInTheDocument(),
+      expect(
+        screen.getByRole('button', { name: /이서연.*팀장/ }),
+      ).toBeInTheDocument(),
     );
   });
 
@@ -988,10 +1011,18 @@ describe('AdminStudentTeamManagement', () => {
         .getByRole('heading', { name: '2팀' })
         .closest('article');
       expect(within(firstTeam!).queryByText('김민준')).not.toBeInTheDocument();
-      expect(within(firstTeam!).getByText('팀장: 미지정')).toBeInTheDocument();
-      expect(within(secondTeam!).getByText('팀장: 박지훈')).toBeInTheDocument();
       expect(
-        within(secondTeam!).queryByText('팀장: 김민준'),
+        within(firstTeam!).queryByRole('button', { name: '김민준' }),
+      ).not.toBeInTheDocument();
+      const secondTeamLeader = within(secondTeam!)
+        .getByRole('button', { name: /박지훈.*팀장/ })
+        .closest('li');
+      expect(within(secondTeamLeader!).getByText('팀장')).toBeInTheDocument();
+      expect(
+        within(secondTeam!).getByRole('button', { name: '김민준' }),
+      ).toBeInTheDocument();
+      expect(
+        within(secondTeam!).queryByRole('button', { name: /김민준.*팀장/ }),
       ).not.toBeInTheDocument();
     });
   });

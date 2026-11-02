@@ -548,6 +548,9 @@ export default function AdminMilestoneDetailPage() {
                     search: {
                       milestoneId,
                       sectionId: search.sectionId,
+                      ...(search.milestoneType
+                        ? { milestoneType: search.milestoneType }
+                        : {}),
                     },
                     to: ROUTES.ADMIN_MILESTONE_NEW,
                   })

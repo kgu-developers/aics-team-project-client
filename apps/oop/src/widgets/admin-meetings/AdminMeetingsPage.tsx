@@ -2,6 +2,7 @@ import {
   Button,
   Card,
   Collapsible,
+  Divider,
   EmptyState,
   Heading,
   Pagination,
@@ -176,6 +177,7 @@ export default function AdminMeetingsPage() {
           variant='secondary'
         />
       </div>
+      <Divider className={styles.activityTabDivider} />
       <AdminSectionTeamFilter
         onSectionChange={selectSection}
         onTeamChange={selectTeam}

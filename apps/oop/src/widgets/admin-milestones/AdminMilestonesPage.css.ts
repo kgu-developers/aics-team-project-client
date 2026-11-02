@@ -37,6 +37,10 @@ export const filterRow = style({
   justifyContent: 'space-between',
 });
 
+export const filterDivider = style({
+  marginTop: 4,
+});
+
 export const tableCard = style({
   overflowX: 'auto',
   overflowY: 'hidden',
@@ -45,7 +49,7 @@ export const tableCard = style({
 
 export const table = style({
   borderCollapse: 'collapse',
-  minWidth: 720,
+  minWidth: 800,
   tableLayout: 'fixed',
   width: '100%',
 });
@@ -53,6 +57,7 @@ export const table = style({
 export const sectionColumn = style({ width: 220 });
 export const dueAtColumn = style({ width: 156 });
 export const statusColumn = style({ width: 152 });
+export const actionColumn = style({ width: 84 });
 
 globalStyle(table + ' th', {
   background: tokens.color.background.card,

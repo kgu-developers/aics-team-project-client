@@ -19,12 +19,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { cx } from '~/shared/lib/cx';
-import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { paginate } from '~/shared/lib/pagination';
 import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
 import { useActiveAdminSections } from '~/features/admin-course/queries';
 import AdminSectionTeamFilter from '~/features/admin-section/components/AdminSectionTeamFilter';
+import AdminStudentDetailDialog from '~/features/admin-student-team/components/AdminStudentDetailDialog';
 import {
   useAdminSectionEnrollmentsQuery,
   useAdminSectionTeamsQuery,
@@ -36,10 +36,8 @@ import {
   useUnfinalizeAdminSectionTeamsMutation,
   useWithdrawAdminSectionEnrollmentMutation,
 } from '~/features/admin-student-team/queries';
-import { AdminGeneralMessageDialog } from '~/features/team-message/components';
 
 import * as styles from './AdminStudentTeamManagement.css';
-import AdminStudentDetailDialog from '../../features/admin-student-team/components/AdminStudentDetailDialog';
 
 const koreanCollator = new Intl.Collator('ko-KR', {
   numeric: true,
@@ -160,10 +158,6 @@ export default function AdminStudentTeamManagement({
   );
   const [isFinalizeDialogOpen, setIsFinalizeDialogOpen] = useState(false);
   const [isUnfinalizeDialogOpen, setIsUnfinalizeDialogOpen] = useState(false);
-  const [messageRecipient, setMessageRecipient] = useState<{
-    id: number;
-    name: string;
-  } | null>(null);
   const [unfinalizeReason, setUnfinalizeReason] = useState('');
   const [selectedStudentNumber, setSelectedStudentNumber] = useState<
     string | null
@@ -724,25 +718,7 @@ export default function AdminStudentTeamManagement({
                             {team.name}
                           </Link>
                         </h3>
-                        <Button
-                          label='일반 메시지 보내기'
-                          onClick={() =>
-                            setMessageRecipient({
-                              id: team.id,
-                              name: team.name,
-                            })
-                          }
-                          size='sm'
-                          variant='secondary'
-                        />
-                      </div>
-                      <div className={styles.teamContent}>
-                        <HStack className={styles.teamLeader} gap={1}>
-                          <Text color='secondary' type='supporting'>
-                            팀장:{' '}
-                            {team.members.find(member => member.isLeader)
-                              ?.name ?? '미지정'}
-                          </Text>
+                        <div className={styles.teamActions}>
                           <Button
                             label='팀장 변경'
                             onClick={() => {
@@ -755,12 +731,15 @@ export default function AdminStudentTeamManagement({
                             size='sm'
                             variant='secondary'
                           />
-                        </HStack>
+                        </div>
+                      </div>
+                      <div className={styles.teamContent}>
                         <ul className={styles.memberList}>
                           {sortTeamMembersByName(team.members).map(member => (
                             <li
                               className={cx(
                                 styles.member,
+                                member.isLeader && styles.teamLeaderMember,
                                 canMoveFromTeam(team) && styles.draggableMember,
                                 draggedTeamMember?.member.id === member.id &&
                                   styles.draggingMember,
@@ -790,7 +769,14 @@ export default function AdminStudentTeamManagement({
                                 }
                                 type='button'
                               >
-                                {member.name}
+                                <span className={styles.memberName}>
+                                  {member.name}
+                                  {member.isLeader ? (
+                                    <span className={styles.leaderBadge}>
+                                      팀장
+                                    </span>
+                                  ) : null}
+                                </span>
                               </button>
                               <span>{member.studentNumber}</span>
                             </li>
@@ -1190,16 +1176,6 @@ export default function AdminStudentTeamManagement({
           </HStack>
         </div>
       </Dialog>
-      {selectedSection && messageRecipient ? (
-        <AdminGeneralMessageDialog
-          initialTeamId={String(messageRecipient.id)}
-          isOpen
-          isTeamLocked
-          onClose={() => setMessageRecipient(null)}
-          sectionId={selectedSection.id}
-          sectionLabel={formatAdminSectionLabel(selectedSection)}
-        />
-      ) : null}
     </div>
   );
 }

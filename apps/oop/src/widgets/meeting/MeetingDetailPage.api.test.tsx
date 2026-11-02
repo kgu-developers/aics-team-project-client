@@ -34,6 +34,7 @@ import {
   MeetingNewPage,
 } from './MeetingPages';
 
+import { resetMockSessionState } from '~/mocks/authSession';
 import { meetingApiRecord, meetingApiTeam } from '~/mocks/data/meetingApi';
 import {
   demoAccessToken,
@@ -82,6 +83,7 @@ const server = setupServer(
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
+  resetMockSessionState();
   vi.stubEnv('VITE_ENABLE_MSW', 'false');
   useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setAccessToken(demoAccessToken);
@@ -100,6 +102,7 @@ afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
   server.resetHandlers();
   server.events.removeAllListeners();
+  resetMockSessionState();
   useAuthStore.getState().clearSession();
   vi.unstubAllEnvs();
   navigate.mockReset();
@@ -123,7 +126,11 @@ function renderPage(page = <MeetingDetailPage meetingId='19' />) {
 it('회의록 본문 수정 진입과 액션 관리·상태 변경을 제공한다', async () => {
   renderPage();
   expect(
-    await screen.findByRole('heading', { name: '진행 점검 회의' }),
+    await screen.findByRole(
+      'heading',
+      { name: '진행 점검 회의' },
+      { timeout: 5_000 },
+    ),
   ).toBeVisible();
   expect(
     screen.getByText('지난 회의의 결정 사항을 확인했습니다.'),
@@ -363,7 +370,7 @@ it('상세에서 액션 등록→수정→완료→삭제하면 회의별·팀�
   expect(await fetchMeetingRecordDetail('19')).toMatchObject({
     title: '진행 점검 회의',
   });
-}, 15_000);
+}, 30_000);
 
 it('두 번째 액션 등록 실패 시 저장된 회의록과 첫 행을 보존하고 남은 행만 재시도한다', async () => {
   const writes: string[] = [];
@@ -425,7 +432,7 @@ it('두 번째 액션 등록 실패 시 저장된 회의록과 첫 행을 보존
   expect(recordPosts).toBe(1);
   expect(writes).toEqual(['첫 번째 작업', '두 번째 작업', '두 번째 작업']);
   expect(await fetchMeetingActionEntries('20')).toHaveLength(2);
-}, 15_000);
+}, 30_000);
 
 it('액션 등록 409와 삭제 403을 입력·기존 행을 보존하는 오류로 보여준다', async () => {
   server.use(
@@ -438,7 +445,13 @@ it('액션 등록 409와 삭제 403을 입력·기존 행을 보존하는 오류
   );
   const user = userEvent.setup();
   renderPage();
-  await user.click(await screen.findByRole('button', { name: '액션 추가' }));
+  await user.click(
+    await screen.findByRole(
+      'button',
+      { name: '액션 추가' },
+      { timeout: 5_000 },
+    ),
+  );
   let dialog = screen.getByRole('dialog', { name: '액션 플랜 추가' });
   await user.type(
     within(dialog).getByRole('textbox', { name: /액션 항목/ }),

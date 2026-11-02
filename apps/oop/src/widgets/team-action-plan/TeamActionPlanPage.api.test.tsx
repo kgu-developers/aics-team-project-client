@@ -20,6 +20,7 @@ import { meetingApiKeys } from '~/features/meeting/queries/api';
 
 import TeamActionPlanPage from './TeamActionPlanPage';
 
+import { resetMockSessionState } from '~/mocks/authSession';
 import { meetingApiTeam } from '~/mocks/data/meetingApi';
 import { demoAccessToken, demoStudent } from '~/mocks/data/users';
 import { createMeetingApiHandlers } from '~/mocks/handlers/meetingApi';
@@ -68,6 +69,7 @@ beforeAll(() => {
   });
 });
 beforeEach(() => {
+  resetMockSessionState();
   vi.stubEnv('VITE_ENABLE_MSW', 'false');
   useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setAccessToken(demoAccessToken);
@@ -85,6 +87,7 @@ afterEach(() => {
   clients.splice(0).forEach(client => client.clear());
   server.resetHandlers();
   server.events.removeAllListeners();
+  resetMockSessionState();
   useAuthStore.getState().clearSession();
   vi.unstubAllEnvs();
 });
@@ -110,7 +113,11 @@ function renderPage() {
   return client;
 }
 async function ready() {
-  await screen.findByRole('heading', { name: '팀 액션 플랜' });
+  await screen.findByRole(
+    'heading',
+    { name: '팀 액션 플랜' },
+    { timeout: 5_000 },
+  );
   await waitFor(() =>
     expect(
       screen.getByRole('button', { name: '액션 플랜 추가' }),

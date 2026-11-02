@@ -87,6 +87,15 @@ it('관리자 쪽지함은 현재 분반의 숫자 ID와 분반 라벨을 반환
   ]);
 });
 
+it('관리자 쪽지함은 선택한 분반의 메시지만 반환한다', async () => {
+  setApiAccessToken(demoAdminAccessToken);
+
+  const page = await fetchAdminMessages({ sectionId: 1 });
+
+  expect(page.contents).not.toHaveLength(0);
+  expect(page.contents.every(message => message.sectionId === 1)).toBe(true);
+});
+
 it('관리자 쪽지함은 팀 필터와 페이지 크기를 실제 응답에 적용한다', async () => {
   setApiAccessToken(demoAdminAccessToken);
 

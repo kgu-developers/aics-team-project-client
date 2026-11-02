@@ -21,6 +21,10 @@ export const activityTabsRow = style({
   justifyContent: 'space-between',
 });
 
+export const activityTabDivider = style({
+  marginTop: 4,
+});
+
 export const editLogsSection = style({
   display: 'grid',
   gap: tokens.spacing[3],
