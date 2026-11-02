@@ -262,6 +262,7 @@ export const feedbackComposer = style({
 
 export const feedbackSubmitAction = style({
   display: 'flex',
+  gap: tokens.spacing['3'],
   justifyContent: 'flex-end',
 });
 

@@ -195,6 +195,27 @@ async function fill() {
 }
 
 it('목록과 상세가 오프셋 없는 게시일을 한국 현지 시각으로 표시한다', async () => {
+  // This formatting test owns the response it renders. Relying on the shared
+  // mutable announcement handler can leave the list query pending when another
+  // test changes its handler state before this request settles.
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ANNOUNCEMENTS.SECTION_LIST('1')}`,
+      () =>
+        HttpResponse.json({
+          contents: [
+            {
+              id: 10,
+              sectionId: 1,
+              title: '이미지 자료 확인 안내',
+              content:
+                '공지 본문과 게시일시가 학생 화면에 표시되는지 확인해 주세요.',
+              publishedAt: '2026-08-27 15:00',
+            },
+          ],
+        }),
+    ),
+  );
   const user = userEvent.setup();
   renderPage('/admin/notices?sectionId=1');
   const row = await screen.findByRole('row', {
