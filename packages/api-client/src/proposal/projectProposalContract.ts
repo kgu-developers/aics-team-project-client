@@ -36,6 +36,12 @@ export function parseProjectProposal(
     !['projectSchedule', 'repositoryUrl', 'proposalCompletedAt'].every(key =>
       nullableString(value[key]),
     ) ||
+    !(
+      value.approvalStatus == null ||
+      value.approvalStatus === 'DRAFT' ||
+      value.approvalStatus === 'SUBMITTED' ||
+      value.approvalStatus === 'REVISION_REQUESTED'
+    ) ||
     !Array.isArray(value.dataConfiguration) ||
     !value.dataConfiguration.every(
       row =>

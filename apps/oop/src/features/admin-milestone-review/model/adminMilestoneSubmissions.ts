@@ -65,8 +65,10 @@ function toSubmissionView(
     projectTitle: submission.projectTitle ?? null,
     status: submission.status,
     statusLabel: submissionStatusLabels[submission.status],
-    submissionId:
-      submission.status === 'NOT_SUBMITTED' ? null : String(submission.id),
+    // A feedback request can temporarily make the list status look unsubmitted
+    // while a previously submitted version still exists. The version is the
+    // reliable indicator that there is a detail document to open.
+    submissionId: submission.currentVersion > 0 ? String(submission.id) : null,
     teamId: String(submission.teamId),
     teamName: submission.teamName,
   };

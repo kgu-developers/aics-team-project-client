@@ -29,6 +29,7 @@ import {
   describe,
   expect,
   it,
+  vi,
 } from 'vitest';
 
 import { useAuthStore } from '~/features/auth/authStore';
@@ -36,6 +37,7 @@ import { useAuthStore } from '~/features/auth/authStore';
 import AdminCourseDetailPage from './AdminCourseDetailPage';
 import AdminCoursesPage from './AdminCoursesPage';
 
+import * as authSession from '~/mocks/authSession';
 import {
   issueMockSession,
   mockSessionResponseHeaders,
@@ -1080,16 +1082,37 @@ describe('admin section API contract', () => {
   });
 
   it('담당하지 않는 분반의 산출물 조회는 403으로 처리한다', async () => {
-    const response = await fetch(
-      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ARTIFACT_SUMMARY('2')}?asOf=2026-09-15`,
-      {
-        headers: {
-          Authorization: `Bearer ${demoPresentationProfessorAccessToken}`,
-        },
-      },
+    const presentationProfessor = demoUserAccounts.find(
+      account => account.accessToken === demoPresentationProfessorAccessToken,
     );
+    if (!presentationProfessor)
+      throw new Error('발표 데모 교수 계정이 필요합니다.');
 
-    expect(response.status).toBe(403);
+    const authenticationSpy = vi
+      .spyOn(authSession, 'getMockAuthenticatedAccount')
+      .mockReturnValue({
+        ...presentationProfessor,
+        user: {
+          ...presentationProfessor.user,
+          sections: presentationProfessor.user.sections.filter(
+            section => String(section.id) === '1',
+          ),
+        },
+      });
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_ARTIFACT_SUMMARY('2')}?asOf=2026-09-15`,
+        {
+          headers: {
+            Authorization: `Bearer ${demoPresentationProfessorAccessToken}`,
+          },
+        },
+      );
+
+      expect(response.status).toBe(403);
+    } finally {
+      authenticationSpy.mockRestore();
+    }
   });
 
   it('분반 PATCH의 잘못된 body를 400으로 처리한다', async () => {

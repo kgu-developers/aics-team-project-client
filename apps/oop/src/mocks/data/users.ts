@@ -92,9 +92,15 @@ export const demoAdmin: CurrentUser = {
 let demoAdminSections = demoAdmin.sections.map(section => ({ ...section }));
 
 export function getDemoAdminSections(studentNumber: string) {
-  return studentNumber === demoAdmin.studentNumber
-    ? demoAdminSections
-    : undefined;
+  if (studentNumber === demoAdmin.studentNumber) return demoAdminSections;
+
+  if (studentNumber === demoNoticeProfessor.studentNumber)
+    return demoNoticeProfessor.sections;
+
+  if (studentNumber === demoPresentationProfessor.studentNumber)
+    return demoPresentationProfessor.sections;
+
+  return undefined;
 }
 
 export function addDemoAdminSection(section: CurrentUser['sections'][number]) {

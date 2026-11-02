@@ -26,11 +26,11 @@ import AdminSectionTeamFilter, {
   ALL_SECTIONS,
   ALL_TEAMS,
 } from '~/features/admin-section/components/AdminSectionTeamFilter';
+import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 import {
   AdminGeneralMessageComposerPanel,
   AdminGeneralMessageTeamChecklist,
-  ALL_TEAMS_RECIPIENT,
 } from '~/features/team-message/components';
 import {
   useSubmitSectionTeamMessageMutation,
@@ -44,17 +44,37 @@ const selectedRecipientStorageKey = `${draftStorageKey}:selected-recipient`;
 type GeneralMessageDraft = {
   message: string;
   sectionId: string;
-  teamId: string;
+  teamId?: string;
+  teamIds?: string[];
 };
 
-function composeDraftStorageKey(sectionId: string, teamId: string) {
-  return `${draftStorageKey}:section:${sectionId || 'unselected'}:team:${teamId || 'unselected'}`;
+function normalizeTeamIds(teamIds: readonly string[]) {
+  return [...new Set(teamIds.filter(Boolean))].sort();
+}
+
+function teamSelectionKey(teamIds: readonly string[]) {
+  return normalizeTeamIds(teamIds).join(',') || 'unselected';
+}
+
+function composeDraftStorageKey(sectionId: string, teamIds: readonly string[]) {
+  return `${draftStorageKey}:section:${sectionId || 'unselected'}:team:${teamSelectionKey(teamIds)}`;
 }
 
 function readComposeDraft(storageKey: string) {
   try {
     const stored = sessionStorage.getItem(storageKey);
-    return stored ? (JSON.parse(stored) as GeneralMessageDraft) : null;
+    if (!stored) return null;
+    const draft = JSON.parse(stored) as GeneralMessageDraft;
+    return {
+      ...draft,
+      teamIds: normalizeTeamIds(
+        Array.isArray(draft.teamIds)
+          ? draft.teamIds
+          : draft.teamId
+            ? [draft.teamId]
+            : [],
+      ),
+    };
   } catch {
     return null;
   }
@@ -66,7 +86,7 @@ function readSelectedRecipient() {
     return stored
       ? (JSON.parse(stored) as Pick<
           GeneralMessageDraft,
-          'sectionId' | 'teamId'
+          'sectionId' | 'teamId' | 'teamIds'
         >)
       : null;
   } catch {
@@ -76,13 +96,23 @@ function readSelectedRecipient() {
 
 function storeComposeDraft(draft: GeneralMessageDraft) {
   try {
-    const storageKey = composeDraftStorageKey(draft.sectionId, draft.teamId);
+    const teamIds = normalizeTeamIds(
+      Array.isArray(draft.teamIds)
+        ? draft.teamIds
+        : draft.teamId
+          ? [draft.teamId]
+          : [],
+    );
+    const storageKey = composeDraftStorageKey(draft.sectionId, teamIds);
     if (!draft.message.trim()) {
       sessionStorage.removeItem(storageKey);
     } else {
-      sessionStorage.setItem(storageKey, JSON.stringify(draft));
+      sessionStorage.setItem(
+        storageKey,
+        JSON.stringify({ ...draft, teamIds } satisfies GeneralMessageDraft),
+      );
     }
-    if (!draft.sectionId && !draft.teamId) {
+    if (!draft.sectionId && teamIds.length === 0) {
       sessionStorage.removeItem(selectedRecipientStorageKey);
       return;
     }
@@ -90,7 +120,7 @@ function storeComposeDraft(draft: GeneralMessageDraft) {
       selectedRecipientStorageKey,
       JSON.stringify({
         sectionId: draft.sectionId,
-        teamId: draft.teamId,
+        teamIds,
       }),
     );
   } catch {
@@ -117,7 +147,7 @@ export default function AdminMessagesPage() {
     Number.isInteger(initialPage) && initialPage > 0 ? initialPage : 0;
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [composeSectionId, setComposeSectionId] = useState('');
-  const [composeTeamId, setComposeTeamId] = useState('');
+  const [composeTeamIds, setComposeTeamIds] = useState<string[]>([]);
   const [composeMessage, setComposeMessage] = useState('');
   const [composeError, setComposeError] = useState<string | null>(null);
   const [composeSuccessMessage, setComposeSuccessMessage] = useState<
@@ -128,7 +158,7 @@ export default function AdminMessagesPage() {
     useState(false);
   const composeDefaultsRef = useRef({ sectionId });
   const query = useAdminMessagesQuery(sectionId, page, teamId);
-  const submitMutation = useSubmitTeamMessageMutation(composeTeamId);
+  const submitMutation = useSubmitTeamMessageMutation(composeTeamIds[0]);
   const submitSectionMutation =
     useSubmitSectionTeamMessageMutation(composeSectionId);
   const readMutation = useUpdateAdminMessageReadMutation();
@@ -143,10 +173,24 @@ export default function AdminMessagesPage() {
         String(section.id) === composeSectionId && section.role === 'PROFESSOR',
     ),
   );
-  // A restored draft can outlive a role change, so the sentinel alone must not
-  // enable a section-wide request.
+  const composeTeamsQuery = useAdminSectionTeamsQuery(
+    isComposeOpen ? composeSectionId : undefined,
+  );
+  const availableComposeTeamIds = useMemo(
+    () => (composeTeamsQuery.data?.contents ?? []).map(team => String(team.id)),
+    [composeTeamsQuery.data?.contents],
+  );
+  const selectedComposeTeamIds = useMemo(
+    () =>
+      composeTeamIds.filter(teamId => availableComposeTeamIds.includes(teamId)),
+    [availableComposeTeamIds, composeTeamIds],
+  );
   const isAllTeamsSelected =
-    canBroadcast && composeTeamId === ALL_TEAMS_RECIPIENT;
+    canBroadcast &&
+    availableComposeTeamIds.length > 0 &&
+    availableComposeTeamIds.every(teamId =>
+      selectedComposeTeamIds.includes(teamId),
+    );
   const isSubmitPending =
     submitMutation.isPending || submitSectionMutation.isPending;
   useEffect(() => {
@@ -180,20 +224,26 @@ export default function AdminMessagesPage() {
     // When the list is on "전체 분반", leave the recipient empty instead of
     // silently choosing the first assigned section.
     const storedSectionId = selectedSectionId ?? '';
-    const storedTeamId =
+    const storedTeamIds =
       selectedRecipient?.sectionId === storedSectionId
-        ? selectedRecipient.teamId
-        : '';
+        ? normalizeTeamIds(
+            Array.isArray(selectedRecipient.teamIds)
+              ? selectedRecipient.teamIds
+              : selectedRecipient.teamId
+                ? [selectedRecipient.teamId]
+                : [],
+          )
+        : [];
     const draft = storedSectionId
-      ? readComposeDraft(composeDraftStorageKey(storedSectionId, storedTeamId))
+      ? readComposeDraft(composeDraftStorageKey(storedSectionId, storedTeamIds))
       : null;
     try {
       setComposeSectionId(draft?.sectionId ?? storedSectionId);
-      setComposeTeamId(draft?.teamId ?? storedTeamId);
+      setComposeTeamIds(draft?.teamIds ?? storedTeamIds);
       setComposeMessage(draft?.message ?? '');
     } catch {
       setComposeSectionId(selectedSectionId ?? '');
-      setComposeTeamId('');
+      setComposeTeamIds([]);
       setComposeMessage('');
     }
     setComposeError(null);
@@ -207,12 +257,12 @@ export default function AdminMessagesPage() {
     storeComposeDraft({
       message: composeMessage,
       sectionId: composeSectionId,
-      teamId: composeTeamId,
+      teamIds: composeTeamIds,
     });
   }, [
     composeMessage,
     composeSectionId,
-    composeTeamId,
+    composeTeamIds,
     isComposeOpen,
     isDraftLoaded,
   ]);
@@ -261,12 +311,18 @@ export default function AdminMessagesPage() {
   const clearComposeDraftAfterSend = () => {
     try {
       sessionStorage.removeItem(
-        composeDraftStorageKey(composeSectionId, composeTeamId),
+        composeDraftStorageKey(composeSectionId, composeTeamIds),
       );
       const selectedRecipient = readSelectedRecipient();
       if (
         selectedRecipient?.sectionId === composeSectionId &&
-        selectedRecipient.teamId === composeTeamId
+        teamSelectionKey(
+          Array.isArray(selectedRecipient.teamIds)
+            ? selectedRecipient.teamIds
+            : selectedRecipient.teamId
+              ? [selectedRecipient.teamId]
+              : [],
+        ) === teamSelectionKey(composeTeamIds)
       ) {
         sessionStorage.removeItem(selectedRecipientStorageKey);
       }
@@ -276,7 +332,12 @@ export default function AdminMessagesPage() {
   };
 
   const submitComposeMessage = () => {
-    if (!composeSectionId || !composeTeamId || !composeMessage.trim()) return;
+    if (
+      !composeSectionId ||
+      selectedComposeTeamIds.length === 0 ||
+      !composeMessage.trim()
+    )
+      return;
 
     setComposeError(null);
     setComposeSuccessMessage(null);
@@ -284,9 +345,16 @@ export default function AdminMessagesPage() {
       setIsBroadcastConfirmationOpen(false);
       setComposeError('일반 메시지를 보내지 못했습니다. 다시 시도해 주세요.');
     };
-    if (isAllTeamsSelected) {
+    if (canBroadcast) {
       submitSectionMutation.mutate(
-        { message: composeMessage.trim() },
+        {
+          message: composeMessage.trim(),
+          ...(isAllTeamsSelected
+            ? {}
+            : {
+                teamIds: selectedComposeTeamIds.map(teamId => Number(teamId)),
+              }),
+        },
         {
           onError,
           onSuccess: result => {
@@ -296,7 +364,7 @@ export default function AdminMessagesPage() {
             setComposeSuccessMessage(
               result.sentCount === 0
                 ? '전송 대상 팀이 없습니다.'
-                : `전체 ${result.sentCount}개 팀에 일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.`,
+                : `${isAllTeamsSelected ? '전체' : '선택한'} ${result.sentCount}개 팀에 일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.`,
             );
             void query.refetch();
           },
@@ -482,7 +550,7 @@ export default function AdminMessagesPage() {
           errorMessage={composeError}
           isSubmitDisabled={
             !composeSectionId ||
-            !composeTeamId ||
+            selectedComposeTeamIds.length === 0 ||
             !composeMessage.trim() ||
             isSubmitPending
           }
@@ -509,13 +577,13 @@ export default function AdminMessagesPage() {
                 storeComposeDraft({
                   message: composeMessage,
                   sectionId: composeSectionId,
-                  teamId: composeTeamId,
+                  teamIds: composeTeamIds,
                 });
                 const nextDraft = readComposeDraft(
-                  composeDraftStorageKey(next, ''),
+                  composeDraftStorageKey(next, []),
                 );
                 setComposeSectionId(next);
-                setComposeTeamId(nextDraft?.teamId ?? '');
+                setComposeTeamIds(nextDraft?.teamIds ?? []);
                 setComposeMessage(nextDraft?.message ?? '');
                 setComposeSuccessMessage(null);
               }}
@@ -531,28 +599,46 @@ export default function AdminMessagesPage() {
                     storeComposeDraft({
                       message: composeMessage,
                       sectionId: composeSectionId,
-                      teamId: composeTeamId,
+                      teamIds: composeTeamIds,
                     });
                     const nextDraft = readComposeDraft(
                       composeDraftStorageKey(composeSectionId, next),
                     );
-                    setComposeTeamId(next);
+                    setComposeTeamIds(next);
                     setComposeMessage(nextDraft?.message ?? '');
                     setComposeSuccessMessage(null);
                   }}
-                  onInvalidTeam={() => {
-                    // Keep the typed content as a section-level draft, but
-                    // require an existing team before another send attempt.
+                  onInvalidTeamIds={nextTeamIds => {
+                    // A stored recipient can become invalid after its team is
+                    // deleted. Preserve the typed message for the remaining
+                    // valid recipients and prevent only the stale ID from
+                    // being submitted.
+                    const normalizedNextTeamIds = normalizeTeamIds(nextTeamIds);
+                    const previousDraftStorageKey = composeDraftStorageKey(
+                      composeSectionId,
+                      composeTeamIds,
+                    );
+                    const nextDraftStorageKey = composeDraftStorageKey(
+                      composeSectionId,
+                      normalizedNextTeamIds,
+                    );
                     storeComposeDraft({
                       message: composeMessage,
                       sectionId: composeSectionId,
-                      teamId: composeTeamId,
+                      teamIds: normalizedNextTeamIds,
                     });
-                    setComposeTeamId('');
+                    if (previousDraftStorageKey !== nextDraftStorageKey) {
+                      try {
+                        sessionStorage.removeItem(previousDraftStorageKey);
+                      } catch {
+                        // Draft persistence is best-effort while composing.
+                      }
+                    }
+                    setComposeTeamIds(normalizedNextTeamIds);
                     setComposeSuccessMessage(null);
                   }}
                   sectionId={composeSectionId}
-                  teamId={composeTeamId}
+                  teamIds={composeTeamIds}
                 />
               ) : null}
             </AdminSectionTeamFilter>

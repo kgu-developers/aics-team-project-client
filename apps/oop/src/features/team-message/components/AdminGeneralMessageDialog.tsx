@@ -11,10 +11,7 @@ import {
 
 import { AdminGeneralMessageComposerPanel } from './AdminGeneralMessageComposerPanel';
 import * as styles from './AdminGeneralMessageDialog.css';
-import {
-  AdminGeneralMessageTeamChecklist,
-  ALL_TEAMS_RECIPIENT,
-} from './AdminGeneralMessageTeamChecklist';
+import { AdminGeneralMessageTeamChecklist } from './AdminGeneralMessageTeamChecklist';
 
 type AdminGeneralMessageDialogProps = {
   description?: string;
@@ -30,45 +27,90 @@ type AdminGeneralMessageDialogProps = {
 const draftStoragePrefix = 'aics.oop.admin.general-message-draft:';
 type GeneralMessageDraft = {
   message: string;
-  teamId: string;
+  teamId?: string;
+  teamIds?: string[];
 };
 
-function readDraft(storageKey: string) {
+function normalizeTeamIds(teamIds: readonly string[]) {
+  return [...new Set(teamIds.filter(Boolean))].sort();
+}
+
+function teamSelectionKey(teamIds: readonly string[]) {
+  return normalizeTeamIds(teamIds).join(',') || 'unselected';
+}
+
+function readDraft(storageKey: string): GeneralMessageDraft | null {
   try {
     const stored = sessionStorage.getItem(storageKey);
-    return stored ? (JSON.parse(stored) as GeneralMessageDraft) : null;
+    if (!stored) return null;
+    const draft = JSON.parse(stored) as GeneralMessageDraft;
+    return {
+      message: typeof draft.message === 'string' ? draft.message : '',
+      teamIds: normalizeTeamIds(
+        Array.isArray(draft.teamIds)
+          ? draft.teamIds
+          : draft.teamId
+            ? [draft.teamId]
+            : [],
+      ),
+    };
   } catch {
     return null;
   }
 }
 
+function readSelectedTeamIds(storageKey: string) {
+  try {
+    const stored = sessionStorage.getItem(storageKey);
+    if (!stored) return [];
+    const parsed = JSON.parse(stored) as unknown;
+    return normalizeTeamIds(
+      Array.isArray(parsed)
+        ? parsed
+        : typeof parsed === 'string' || typeof parsed === 'number'
+          ? [String(parsed)]
+          : [],
+    );
+  } catch {
+    // Earlier drafts stored one recipient as a plain string.
+    const legacyTeamId = sessionStorage.getItem(storageKey);
+    return normalizeTeamIds(legacyTeamId ? [legacyTeamId] : []);
+  }
+}
+
 function storeDraft({
-  draftTeamStorageKey,
+  draftStorageKey,
   message,
   selectedDraftTeamStorageKey,
-  teamId,
+  teamIds,
 }: {
-  draftTeamStorageKey: string;
+  draftStorageKey: string;
   message: string;
   selectedDraftTeamStorageKey: string;
-  teamId: string;
+  teamIds: string[];
 }) {
   try {
+    const normalizedTeamIds = normalizeTeamIds(teamIds);
     if (!message.trim()) {
-      sessionStorage.removeItem(draftTeamStorageKey);
-      if (teamId) {
-        sessionStorage.setItem(selectedDraftTeamStorageKey, teamId);
-      } else {
-        sessionStorage.removeItem(selectedDraftTeamStorageKey);
-      }
-      return;
+      sessionStorage.removeItem(draftStorageKey);
+    } else {
+      sessionStorage.setItem(
+        draftStorageKey,
+        JSON.stringify({
+          message,
+          teamIds: normalizedTeamIds,
+        } satisfies GeneralMessageDraft),
+      );
     }
 
-    sessionStorage.setItem(
-      draftTeamStorageKey,
-      JSON.stringify({ message, teamId } satisfies GeneralMessageDraft),
-    );
-    sessionStorage.setItem(selectedDraftTeamStorageKey, teamId);
+    if (normalizedTeamIds.length === 0) {
+      sessionStorage.removeItem(selectedDraftTeamStorageKey);
+    } else {
+      sessionStorage.setItem(
+        selectedDraftTeamStorageKey,
+        JSON.stringify(normalizedTeamIds),
+      );
+    }
   } catch {
     // Draft persistence is best-effort and must not interrupt message writing.
   }
@@ -84,7 +126,7 @@ export function AdminGeneralMessageDialog({
   sectionId,
   sectionLabel,
 }: AdminGeneralMessageDialogProps) {
-  const [teamId, setTeamId] = useState('');
+  const [teamIds, setTeamIds] = useState<string[]>([]);
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -93,8 +135,6 @@ export function AdminGeneralMessageDialog({
     useState(false);
   const currentUser = useAuthStore(state => state.currentUser);
   const teamsQuery = useAdminSectionTeamsQuery(isOpen ? sectionId : undefined);
-  const submitMutation = useSubmitTeamMessageMutation(teamId);
-  const submitSectionMutation = useSubmitSectionTeamMessageMutation(sectionId);
   const canBroadcast =
     !isTeamLocked &&
     Boolean(
@@ -103,19 +143,27 @@ export function AdminGeneralMessageDialog({
           String(section.id) === sectionId && section.role === 'PROFESSOR',
       ),
     );
-  // A restored draft may contain the sentinel after the user's role changed.
-  // Never let a stale local value bypass the current professor-only UI policy.
-  const isAllTeamsSelected = canBroadcast && teamId === ALL_TEAMS_RECIPIENT;
   const teams = teamsQuery.data?.contents ?? [];
-  const hasSelectedTeam = useMemo(
-    () => isAllTeamsSelected || teams.some(team => String(team.id) === teamId),
-    [isAllTeamsSelected, teamId, teams],
+  const availableTeamIds = useMemo(
+    () => teams.map(team => String(team.id)),
+    [teams],
   );
+  const selectedTeamIds = useMemo(
+    () => teamIds.filter(teamId => availableTeamIds.includes(teamId)),
+    [availableTeamIds, teamIds],
+  );
+  const isAllTeamsSelected =
+    canBroadcast &&
+    availableTeamIds.length > 0 &&
+    availableTeamIds.every(teamId => selectedTeamIds.includes(teamId));
+  const hasSelectedTeam = selectedTeamIds.length > 0;
+  const submitMutation = useSubmitTeamMessageMutation(selectedTeamIds[0]);
+  const submitSectionMutation = useSubmitSectionTeamMessageMutation(sectionId);
   const isSubmitPending =
     submitMutation.isPending || submitSectionMutation.isPending;
 
   const draftStorageKey = `${draftStoragePrefix}${sectionId}`;
-  const draftTeamStorageKey = `${draftStorageKey}:team:${teamId || 'unselected'}`;
+  const draftTeamStorageKey = `${draftStorageKey}:team:${teamSelectionKey(teamIds)}`;
   const selectedDraftTeamStorageKey = `${draftStorageKey}:selected-team`;
 
   useEffect(() => {
@@ -125,19 +173,20 @@ export function AdminGeneralMessageDialog({
     }
 
     setIsDraftLoaded(false);
-    const fallbackTeamId = initialTeamId ?? '';
+    const fallbackTeamIds = initialTeamId ? [initialTeamId] : [];
     try {
-      const storedTeamId =
-        initialTeamId ??
-        sessionStorage.getItem(selectedDraftTeamStorageKey) ??
-        fallbackTeamId;
+      const storedTeamIds = initialTeamId
+        ? fallbackTeamIds
+        : readSelectedTeamIds(selectedDraftTeamStorageKey);
       const draft = readDraft(
-        `${draftStorageKey}:team:${storedTeamId || 'unselected'}`,
+        `${draftStorageKey}:team:${teamSelectionKey(storedTeamIds)}`,
       );
-      setTeamId(initialTeamId ?? draft?.teamId ?? storedTeamId);
+      setTeamIds(
+        initialTeamId ? fallbackTeamIds : (draft?.teamIds ?? storedTeamIds),
+      );
       setMessage(draft?.message ?? '');
     } catch {
-      setTeamId(fallbackTeamId);
+      setTeamIds(fallbackTeamIds);
       setMessage('');
     }
     setErrorMessage(null);
@@ -149,10 +198,10 @@ export function AdminGeneralMessageDialog({
     if (!isOpen || !isDraftLoaded) return;
 
     storeDraft({
-      draftTeamStorageKey,
+      draftStorageKey: draftTeamStorageKey,
       message,
       selectedDraftTeamStorageKey,
-      teamId,
+      teamIds,
     });
   }, [
     isDraftLoaded,
@@ -160,31 +209,58 @@ export function AdminGeneralMessageDialog({
     message,
     draftTeamStorageKey,
     selectedDraftTeamStorageKey,
-    teamId,
+    teamIds,
   ]);
 
   if (!isOpen) return null;
 
-  const handleTeamChange = (nextTeamId: string) => {
+  const handleTeamChange = (nextTeamIds: string[]) => {
+    const normalizedNextTeamIds = normalizeTeamIds(nextTeamIds);
     storeDraft({
-      draftTeamStorageKey,
+      draftStorageKey: draftTeamStorageKey,
       message,
       selectedDraftTeamStorageKey,
-      teamId,
+      teamIds,
     });
     const nextDraft = readDraft(
-      `${draftStorageKey}:team:${nextTeamId || 'unselected'}`,
+      `${draftStorageKey}:team:${teamSelectionKey(normalizedNextTeamIds)}`,
     );
-    setTeamId(nextTeamId);
+    setTeamIds(normalizedNextTeamIds);
     setMessage(nextDraft?.message ?? '');
     setErrorMessage(null);
+    setSuccessMessage(null);
+  };
+
+  const handleInvalidTeamIds = (nextTeamIds: string[]) => {
+    // Keep the text when a persisted recipient was deleted or access changed.
+    // Move it to the still-valid selection instead of discarding recipients
+    // that remain available in the current section.
+    const normalizedNextTeamIds = normalizeTeamIds(nextTeamIds);
+    const nextDraftStorageKey = `${draftStorageKey}:team:${teamSelectionKey(normalizedNextTeamIds)}`;
+    storeDraft({
+      draftStorageKey: nextDraftStorageKey,
+      message,
+      selectedDraftTeamStorageKey,
+      teamIds: normalizedNextTeamIds,
+    });
+    if (nextDraftStorageKey !== draftTeamStorageKey) {
+      try {
+        sessionStorage.removeItem(draftTeamStorageKey);
+      } catch {
+        // Draft persistence is best-effort and must not interrupt writing.
+      }
+    }
+    setTeamIds(normalizedNextTeamIds);
     setSuccessMessage(null);
   };
 
   const clearDraftAfterSend = () => {
     try {
       sessionStorage.removeItem(draftTeamStorageKey);
-      if (sessionStorage.getItem(selectedDraftTeamStorageKey) === teamId)
+      if (
+        teamSelectionKey(readSelectedTeamIds(selectedDraftTeamStorageKey)) ===
+        teamSelectionKey(teamIds)
+      )
         sessionStorage.removeItem(selectedDraftTeamStorageKey);
     } catch {
       // Sending has succeeded even if the local draft cannot clear.
@@ -200,9 +276,14 @@ export function AdminGeneralMessageDialog({
       setIsBroadcastConfirmationOpen(false);
       setErrorMessage('일반 메시지를 보내지 못했습니다. 다시 시도해 주세요.');
     };
-    if (isAllTeamsSelected) {
+    if (canBroadcast) {
       submitSectionMutation.mutate(
-        { message: message.trim() },
+        {
+          message: message.trim(),
+          ...(isAllTeamsSelected
+            ? {}
+            : { teamIds: selectedTeamIds.map(teamId => Number(teamId)) }),
+        },
         {
           onError,
           onSuccess: result => {
@@ -212,7 +293,7 @@ export function AdminGeneralMessageDialog({
             setSuccessMessage(
               result.sentCount === 0
                 ? '전송 대상 팀이 없습니다.'
-                : `전체 ${result.sentCount}개 팀에 일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.`,
+                : `${isAllTeamsSelected ? '전체' : '선택한'} ${result.sentCount}개 팀에 일반 메시지를 보냈습니다. 쪽지함에서 전송 내역을 확인할 수 있습니다.`,
             );
             onSent?.();
           },
@@ -279,10 +360,11 @@ export function AdminGeneralMessageDialog({
             />
             <AdminGeneralMessageTeamChecklist
               canBroadcast={canBroadcast}
-              isDisabled={isTeamLocked}
+              isDisabled={isTeamLocked || isSubmitPending}
               onChange={handleTeamChange}
+              onInvalidTeamIds={handleInvalidTeamIds}
               sectionId={sectionId}
-              teamId={teamId}
+              teamIds={teamIds}
             />
           </div>
         }

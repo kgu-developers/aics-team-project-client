@@ -335,11 +335,31 @@ export function createTeamMessageHandlers(
         if (
           !input ||
           typeof input.message !== 'string' ||
-          !input.message.trim()
+          !input.message.trim() ||
+          (input.teamIds !== undefined &&
+            (!Array.isArray(input.teamIds) || !input.teamIds.every(isId)))
         ) {
           return error(400, 'INVALID_REQUEST');
         }
-        for (const team of access.teams) {
+        const requestedTeamIds = [...new Set(input.teamIds ?? [])];
+        if (
+          requestedTeamIds.length > 0 &&
+          requestedTeamIds.some(
+            teamId => !access.teams.some(team => team.id === teamId),
+          )
+        ) {
+          return error(403, 'ACCESS_DENIED');
+        }
+        const targetTeams = requestedTeamIds.length
+          ? access.teams.filter(team => requestedTeamIds.includes(team.id))
+          : access.teams;
+        if (
+          requestedTeamIds.length > 0 &&
+          targetTeams.length !== requestedTeamIds.length
+        ) {
+          return error(403, 'ACCESS_DENIED');
+        }
+        for (const team of targetTeams) {
           const thread = getOrCreateThread(team.id);
           data.messages.push({
             id: data.nextMessageId++,
@@ -355,7 +375,7 @@ export function createTeamMessageHandlers(
         }
         persistData();
         return HttpResponse.json(
-          { sentCount: access.teams.length },
+          { sentCount: targetTeams.length },
           { status: 201 },
         );
       },

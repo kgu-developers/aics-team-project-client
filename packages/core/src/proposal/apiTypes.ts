@@ -32,6 +32,7 @@ export type ProjectProposalResponse = {
   repositoryUrl?: string | null;
   externalLinks?: unknown;
   topicCandidateId?: number | null;
+  approvalStatus?: 'DRAFT' | 'SUBMITTED' | 'REVISION_REQUESTED' | null;
   proposalCompletedAt?: string | null;
   teamOperation: TeamKickoffResponse;
 };

@@ -44,6 +44,18 @@ export function useAdminMilestoneSubmissionsQuery(
         submissions: view.submissions.map((item, index) => {
           if (item.currentVersion > 0) return item;
           const project = projects[index];
+          const submissionId = String(response.contents[index]!.id);
+
+          if (project?.approvalStatus === 'REVISION_REQUESTED') {
+            return {
+              ...item,
+              projectTitle: project.title ?? item.projectTitle,
+              status: 'REVISION_REQUESTED' as const,
+              statusLabel: '수정 요청',
+              submissionId,
+            };
+          }
+
           return {
             ...item,
             projectTitle: project?.title ?? item.projectTitle,
@@ -51,9 +63,7 @@ export function useAdminMilestoneSubmissionsQuery(
               ? ('SUBMITTED' as const)
               : ('NOT_SUBMITTED' as const),
             statusLabel: project?.proposalCompletedAt ? '제출 완료' : '미제출',
-            submissionId: project?.proposalCompletedAt
-              ? String(response.contents[index]!.id)
-              : null,
+            submissionId: project?.proposalCompletedAt ? submissionId : null,
           };
         }),
       };

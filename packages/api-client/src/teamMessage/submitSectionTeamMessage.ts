@@ -20,7 +20,7 @@ export async function submitSectionTeamMessage(
     !Number.isSafeInteger(response.data.sentCount) ||
     response.data.sentCount < 0
   ) {
-    throw new Error('전체 메시지 전송 결과를 확인할 수 없습니다.');
+    throw new Error('선택 팀 메시지 전송 결과를 확인할 수 없습니다.');
   }
   return response.data;
 }

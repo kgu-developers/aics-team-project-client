@@ -187,7 +187,8 @@ it('담당 교수는 분반 전체 팀에 일반 메시지를 한 번에 보낸�
     name: '일반 메시지 작성 패널',
   });
   await selectPanelSection(user, panel, 'OOP-01 · 월요일 1-2교시');
-  await user.click(within(panel).getByRole('button', { name: '전체 팀 선택' }));
+  await user.click(within(panel).getByRole('combobox', { name: '팀' }));
+  await user.click(await screen.findByRole('option', { name: '전체 선택' }));
   await user.type(
     within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
     '전체 팀 안내',
@@ -533,6 +534,45 @@ it('현재 분반에 없는 저장 팀은 수신 대상으로 복원하지 않�
     within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
   ).toHaveValue('삭제된 팀에 남긴 초안');
   expect(within(panel).getByRole('button', { name: '보내기' })).toBeDisabled();
+});
+
+it('삭제된 팀이 포함된 저장 초안은 남은 팀으로 복원한다', async () => {
+  setup(
+    defaultSections,
+    demoAdmin,
+    demoAdminAccessToken,
+    '/admin/messages?sectionId=1',
+  );
+  sessionStorage.setItem(
+    'aics.oop.admin.general-message-draft:inbox:selected-recipient',
+    JSON.stringify({ sectionId: '1', teamIds: ['7', '999'] }),
+  );
+  sessionStorage.setItem(
+    'aics.oop.admin.general-message-draft:inbox:section:1:team:7,999',
+    JSON.stringify({
+      message: '남은 팀에도 전달할 초안',
+      sectionId: '1',
+      teamIds: ['7', '999'],
+    }),
+  );
+  const user = userEvent.setup();
+
+  await user.click(
+    await screen.findByRole('button', { name: '일반 메시지 보내기' }),
+  );
+  const panel = screen.getByRole('complementary', {
+    name: '일반 메시지 작성 패널',
+  });
+
+  await waitFor(() =>
+    expect(
+      within(panel).getByRole('combobox', { name: '팀' }),
+    ).toHaveTextContent('7팀'),
+  );
+  expect(
+    within(panel).getByRole('textbox', { name: '일반 메시지 내용' }),
+  ).toHaveValue('남은 팀에도 전달할 초안');
+  expect(within(panel).getByRole('button', { name: '보내기' })).toBeEnabled();
 });
 
 it('작성 패널에서 팀을 바꿔도 기존 팀의 초안을 보존한다', async () => {

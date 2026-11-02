@@ -30,6 +30,17 @@ function parseCourseId(value: string | readonly string[] | undefined) {
   return Number.isSafeInteger(courseId) && courseId > 0 ? courseId : null;
 }
 
+function getVisibleCourses(request: Request) {
+  const account = getMockAuthenticatedAccount(request);
+  const courses = getAdminCourses();
+  if (!account || account.user.globalRole !== 'PROFESSOR') return courses;
+
+  const assignedCourseIds = new Set(
+    account.user.sections.map(section => section.courseId),
+  );
+  return courses.filter(course => assignedCourseIds.has(course.id));
+}
+
 function isCourseInput(value: unknown): value is AdminOopCourseInput {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const input = value as Record<string, unknown>;
@@ -48,7 +59,7 @@ export const adminCourseHandlers = [
   http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`, ({ request }) => {
     const errorResponse = guardAdmin(request);
     if (errorResponse) return errorResponse;
-    return HttpResponse.json({ contents: getAdminCourses() });
+    return HttpResponse.json({ contents: getVisibleCourses(request) });
   }),
   http.post(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_COURSES}`,
