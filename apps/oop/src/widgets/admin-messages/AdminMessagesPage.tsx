@@ -6,6 +6,7 @@ import {
   EmptyState,
   Heading,
   Text,
+  TextInput,
 } from '@aics/design-system';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -13,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ROUTES } from '~/app/constants/routes';
 
 import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
+import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { formatTeamMessageRelatedType } from '~/shared/lib/formatTeamMessageRelatedType';
 import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
 import ListPagination from '~/shared/ui/ListPagination/ListPagination';
@@ -47,6 +49,8 @@ type GeneralMessageDraft = {
   teamId?: string;
   teamIds?: string[];
 };
+
+type AdminMessageSortDirection = 'ASC' | 'DESC';
 
 function normalizeTeamIds(teamIds: readonly string[]) {
   return [...new Set(teamIds.filter(Boolean))].sort();
@@ -133,6 +137,8 @@ export default function AdminMessagesPage() {
   const search = useSearch({ from: '/admin/messages/' }) as {
     page?: number;
     sectionId?: number;
+    senderKeyword?: string;
+    sort?: AdminMessageSortDirection;
     teamId?: number;
   };
   const initialPage = Number(search.page ?? 0);
@@ -143,6 +149,8 @@ export default function AdminMessagesPage() {
     search.sectionId === undefined ? undefined : String(search.sectionId);
   const teamId =
     search.teamId === undefined ? undefined : String(search.teamId);
+  const senderKeyword = search.senderKeyword ?? '';
+  const sort = search.sort ?? 'DESC';
   const page =
     Number.isInteger(initialPage) && initialPage > 0 ? initialPage : 0;
   const [isComposeOpen, setIsComposeOpen] = useState(false);
@@ -156,8 +164,15 @@ export default function AdminMessagesPage() {
   const [isDraftLoaded, setIsDraftLoaded] = useState(false);
   const [isBroadcastConfirmationOpen, setIsBroadcastConfirmationOpen] =
     useState(false);
+  const [senderKeywordInput, setSenderKeywordInput] = useState(senderKeyword);
   const composeDefaultsRef = useRef({ sectionId });
-  const query = useAdminMessagesQuery(sectionId, page, teamId);
+  const query = useAdminMessagesQuery(
+    sectionId,
+    page,
+    teamId,
+    senderKeyword,
+    sort,
+  );
   const submitMutation = useSubmitTeamMessageMutation(composeTeamIds[0]);
   const submitSectionMutation =
     useSubmitSectionTeamMessageMutation(composeSectionId);
@@ -199,16 +214,31 @@ export default function AdminMessagesPage() {
     void navigate({
       search: {
         ...(sectionId ? { sectionId: Number(sectionId) } : {}),
+        ...(senderKeyword ? { senderKeyword } : {}),
+        ...(sort === 'ASC' ? { sort } : {}),
         ...(teamId ? { teamId: Number(teamId) } : {}),
         ...(boundedPage > 0 ? { page: boundedPage } : {}),
       },
       to: ROUTES.ADMIN_MESSAGES,
     });
-  }, [boundedPage, navigate, page, query.isSuccess, sectionId, teamId]);
+  }, [
+    boundedPage,
+    navigate,
+    page,
+    query.isSuccess,
+    sectionId,
+    senderKeyword,
+    sort,
+    teamId,
+  ]);
 
   useEffect(() => {
     composeDefaultsRef.current = { sectionId };
   }, [sectionId]);
+
+  useEffect(() => {
+    setSenderKeywordInput(senderKeyword);
+  }, [senderKeyword]);
 
   useEffect(() => {
     if (!isComposeOpen) {
@@ -269,7 +299,11 @@ export default function AdminMessagesPage() {
 
   const selectSection = (nextSectionId?: string) => {
     void navigate({
-      search: nextSectionId ? { sectionId: Number(nextSectionId) } : {},
+      search: {
+        ...(nextSectionId ? { sectionId: Number(nextSectionId) } : {}),
+        ...(senderKeyword ? { senderKeyword } : {}),
+        ...(sort === 'ASC' ? { sort } : {}),
+      },
       to: ROUTES.ADMIN_MESSAGES,
     });
   };
@@ -278,6 +312,8 @@ export default function AdminMessagesPage() {
     void navigate({
       search: {
         ...(sectionId ? { sectionId: Number(sectionId) } : {}),
+        ...(senderKeyword ? { senderKeyword } : {}),
+        ...(sort === 'ASC' ? { sort } : {}),
         ...(nextTeamId ? { teamId: Number(nextTeamId) } : {}),
       },
       to: ROUTES.ADMIN_MESSAGES,
@@ -288,6 +324,8 @@ export default function AdminMessagesPage() {
     void navigate({
       search: {
         ...(sectionId ? { sectionId: Number(sectionId) } : {}),
+        ...(senderKeyword ? { senderKeyword } : {}),
+        ...(sort === 'ASC' ? { sort } : {}),
         ...(teamId ? { teamId: Number(teamId) } : {}),
         ...(nextPage > 0 ? { page: nextPage } : {}),
       },
@@ -301,10 +339,37 @@ export default function AdminMessagesPage() {
       params: { teamId: String(message.teamId) },
       search: {
         ...(sectionId ? { sectionId: Number(sectionId) } : {}),
+        ...(senderKeyword ? { senderKeyword } : {}),
+        ...(sort === 'ASC' ? { sort } : {}),
         ...(teamId ? { teamId: Number(teamId) } : {}),
         ...(page > 0 ? { page } : {}),
       },
       to: ROUTES.ADMIN_MESSAGE_TEAM,
+    });
+  };
+
+  const submitSenderKeyword = () => {
+    const nextSenderKeyword = senderKeywordInput.trim();
+    void navigate({
+      search: {
+        ...(sectionId ? { sectionId: Number(sectionId) } : {}),
+        ...(nextSenderKeyword ? { senderKeyword: nextSenderKeyword } : {}),
+        ...(sort === 'ASC' ? { sort } : {}),
+        ...(teamId ? { teamId: Number(teamId) } : {}),
+      },
+      to: ROUTES.ADMIN_MESSAGES,
+    });
+  };
+
+  const selectSort = (nextSort: AdminMessageSortDirection) => {
+    void navigate({
+      search: {
+        ...(sectionId ? { sectionId: Number(sectionId) } : {}),
+        ...(senderKeyword ? { senderKeyword } : {}),
+        ...(nextSort === 'ASC' ? { sort: nextSort } : {}),
+        ...(teamId ? { teamId: Number(teamId) } : {}),
+      },
+      to: ROUTES.ADMIN_MESSAGES,
     });
   };
 
@@ -401,17 +466,36 @@ export default function AdminMessagesPage() {
         onTeamChange={next => selectTeam(next === ALL_TEAMS ? undefined : next)}
         sectionId={sectionId ?? ALL_SECTIONS}
         teamId={teamId}
-      >
-        <div className={styles.filterAction}>
-          <Button
-            isDisabled={!sections.length}
-            label='일반 메시지 보내기'
-            onClick={() => {
-              setIsComposeOpen(true);
-            }}
-          />
-        </div>
-      </AdminSectionTeamFilter>
+        toolbar={
+          <div className={styles.messageToolbar}>
+            <form
+              className={styles.senderSearch}
+              onSubmit={event => {
+                event.preventDefault();
+                submitSenderKeyword();
+              }}
+            >
+              <TextInput
+                label='발신자 검색'
+                onChange={setSenderKeywordInput}
+                placeholder='이름 또는 학번 검색'
+                value={senderKeywordInput}
+                width='100%'
+              />
+              <Button label='검색' type='submit' variant='secondary' />
+            </form>
+            <div className={styles.filterAction}>
+              <Button
+                isDisabled={!sections.length}
+                label='일반 메시지 보내기'
+                onClick={() => {
+                  setIsComposeOpen(true);
+                }}
+              />
+            </div>
+          </div>
+        }
+      />
       {activeSectionsQuery.isPending ? (
         <Text aria-live='polite' role='status'>
           운영 중인 분반을 불러오는 중입니다.
@@ -441,6 +525,25 @@ export default function AdminMessagesPage() {
                     className={styles.readStateColumn}
                     scope='col'
                   />
+                  <th
+                    aria-sort={sort === 'DESC' ? 'descending' : 'ascending'}
+                    className={styles.createdAtColumn}
+                    scope='col'
+                  >
+                    <Button
+                      className={styles.dateSortButton}
+                      label={
+                        sort === 'DESC'
+                          ? '작성 일시 · 최신순 ↓'
+                          : '작성 일시 · 오래된순 ↑'
+                      }
+                      onClick={() =>
+                        selectSort(sort === 'DESC' ? 'ASC' : 'DESC')
+                      }
+                      size='sm'
+                      variant='ghost'
+                    />
+                  </th>
                   <th className={styles.sectionColumn}>분반</th>
                   <th className={styles.teamColumn}>팀</th>
                   <th>내용</th>
@@ -455,10 +558,18 @@ export default function AdminMessagesPage() {
                   const relatedTypeLabel = formatTeamMessageRelatedType(
                     row.relatedType,
                   );
+                  const targetTeamCount = row.targetTeamCount ?? 1;
+                  const isBroadcast = targetTeamCount > 1;
+                  const teamLabel = isBroadcast
+                    ? `${targetTeamCount}개 팀`
+                    : row.teamName;
+                  const messageThreadLabel = isBroadcast
+                    ? `${teamLabel} 발송 · 대표 팀 ${row.teamName} 쪽지함 보기`
+                    : `${row.teamName} 쪽지 상세 보기`;
 
                   return (
                     <tr
-                      aria-label={`${row.teamName} 쪽지 상세 보기`}
+                      aria-label={messageThreadLabel}
                       className={styles.messageRow}
                       key={row.id}
                       onClick={() => openMessageThread(row)}
@@ -476,6 +587,11 @@ export default function AdminMessagesPage() {
                         ) : (
                           <AdminUnreadDot />
                         )}
+                      </td>
+                      <td className={styles.createdAtColumn}>
+                        <time dateTime={row.createdAt}>
+                          {formatSeoulDateTime(row.createdAt)}
+                        </time>
                       </td>
                       <td className={styles.sectionColumn}>
                         <span className={styles.sectionContext}>
@@ -497,12 +613,29 @@ export default function AdminMessagesPage() {
                         </span>
                       </td>
                       <td className={styles.teamColumn}>
-                        <span
-                          className={styles.metadataText}
-                          title={row.teamName}
-                        >
-                          {row.teamName}
-                        </span>
+                        {isBroadcast ? (
+                          <span className={styles.broadcastTeamContext}>
+                            <span
+                              className={styles.metadataText}
+                              title={`${targetTeamCount}개 팀 발송`}
+                            >
+                              {teamLabel}
+                            </span>
+                            <span
+                              className={styles.broadcastRepresentative}
+                              title={`대표 팀 ${row.teamName} 쪽지함 보기`}
+                            >
+                              대표 팀: {row.teamName}
+                            </span>
+                          </span>
+                        ) : (
+                          <span
+                            className={styles.metadataText}
+                            title={row.teamName}
+                          >
+                            {teamLabel}
+                          </span>
+                        )}
                       </td>
                       <td>
                         <span

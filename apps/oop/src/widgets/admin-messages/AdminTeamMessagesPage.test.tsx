@@ -121,12 +121,18 @@ function renderPage(sectionId = '1', initialEntry = '/admin/messages/teams/1') {
 const teamPath = new URL(`${API_BASE_URL}${ENDPOINTS.ADMIN.TEAM('1')}`)
   .pathname;
 
-it('쪽지함 목록으로 돌아갈 때 열기 전의 분반·팀 필터를 유지한다', async () => {
-  renderPage('1', '/admin/messages/teams/1?sectionId=1&teamId=1&page=2');
+it('쪽지함 목록으로 돌아갈 때 열기 전의 필터·검색·정렬 상태를 유지한다', async () => {
+  renderPage(
+    '1',
+    '/admin/messages/teams/1?sectionId=1&senderKeyword=%ED%99%8D%EA%B8%B8%EB%8F%99&sort=ASC&teamId=1&page=2',
+  );
 
   expect(
     await screen.findByRole('link', { name: '← 쪽지함 목록으로' }),
-  ).toHaveAttribute('href', '/admin/messages?sectionId=1&teamId=1&page=2');
+  ).toHaveAttribute(
+    'href',
+    '/admin/messages?sectionId=1&senderKeyword=%ED%99%8D%EA%B8%B8%EB%8F%99&sort=ASC&teamId=1&page=2',
+  );
 });
 
 it('uses the revision request API for mid-report feedback and preserves the draft on conflict', async () => {

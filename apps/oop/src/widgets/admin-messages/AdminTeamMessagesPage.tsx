@@ -46,6 +46,8 @@ type MessageFilter = 'ALL' | RelatedType;
 type AdminMessageListSearch = {
   page?: number;
   sectionId?: number;
+  senderKeyword?: string;
+  sort?: 'ASC' | 'DESC';
   teamId?: number;
 };
 
@@ -61,6 +63,8 @@ export default function AdminTeamMessagesPage() {
   const search = useSearch({ from: '/admin/messages/teams/$teamId' }) as {
     page?: number | string;
     sectionId?: number | string;
+    senderKeyword?: string;
+    sort?: 'ASC' | 'DESC';
     teamId?: number | string;
     type?: MessageFilter;
   };
@@ -97,6 +101,8 @@ export default function AdminTeamMessagesPage() {
     ...(search.sectionId === undefined
       ? {}
       : { sectionId: Number(search.sectionId) }),
+    ...(search.senderKeyword ? { senderKeyword: search.senderKeyword } : {}),
+    ...(search.sort ? { sort: search.sort } : {}),
     ...(search.teamId === undefined ? {} : { teamId: Number(search.teamId) }),
     ...(Number.isInteger(page) && page > 0 ? { page } : {}),
   };

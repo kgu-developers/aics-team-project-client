@@ -21,6 +21,8 @@ type AdminSectionTeamFilterProps = {
   allowAllTeams?: boolean;
   /** Extra filters rendered after the section/team selectors (e.g. milestone). */
   children?: ReactNode;
+  /** Actions rendered beside the dependent team selector. */
+  toolbar?: ReactNode;
   /** Prevent recipient/filter changes while a dependent action is being submitted. */
   isDisabled?: boolean;
   /** Selected section id, or `ALL_SECTIONS`. */
@@ -52,6 +54,7 @@ export default function AdminSectionTeamFilter({
   sectionId,
   sectionSelection = 'tabs',
   teamId,
+  toolbar,
 }: AdminSectionTeamFilterProps) {
   const sectionsQuery = useActiveAdminSections();
   const sections = sectionsQuery.data;
@@ -137,6 +140,7 @@ export default function AdminSectionTeamFilter({
           width={ADMIN_TEAM_FILTER_WIDTH}
         />
       ) : null}
+      {toolbar}
       {children}
     </div>
   );

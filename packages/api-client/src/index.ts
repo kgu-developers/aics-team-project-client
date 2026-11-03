@@ -198,7 +198,10 @@ export {
   type AdminMeetingRecordsResponse,
 } from './adminMeeting';
 export { fetchAdminMessages, updateAdminMessageRead } from './adminMessage';
-export type { AdminMessagesParams } from './adminMessage';
+export type {
+  AdminMessagesParams,
+  AdminMessageSortDirection,
+} from './adminMessage';
 export {
   fetchAdminMeetingRecordList,
   type AdminMeetingRecordListFilter,
