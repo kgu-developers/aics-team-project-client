@@ -10,6 +10,7 @@ import {
 import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
+import { getAdminTeamLeaderName } from './adminStudentTeams';
 import { getMockMySections } from '../data/sections';
 import {
   createTeamMessageData,
@@ -45,6 +46,15 @@ type MockFeedbackTeamMessageInput = {
   senderName?: string | null;
   teamId: number;
 };
+
+function getCurrentMessageTeamLeaderName(team: {
+  id: number;
+  leaderName: string | null;
+}) {
+  const currentLeaderName = getAdminTeamLeaderName(team.id);
+
+  return currentLeaderName === undefined ? team.leaderName : currentLeaderName;
+}
 
 function error(status: number, code: string) {
   return HttpResponse.json({ code }, { status });
@@ -259,7 +269,7 @@ export function createTeamMessageHandlers(
           sectionId: matchingSectionId,
           sectionName: matchingSection?.name ?? team.sectionId,
           teamId: team.id,
-          leaderName: team.leaderName,
+          leaderName: getCurrentMessageTeamLeaderName(team),
           teamName: team.name,
         };
       });
@@ -344,6 +354,10 @@ export function createTeamMessageHandlers(
     http.get(
       `${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.RECIPIENTS(':messageId')}`,
       ({ params, request }) => {
+        const account = getMockAuthenticatedAccount(request);
+        if (!account || account.user.globalRole === 'STUDENT') {
+          return error(401, 'UNAUTHORIZED');
+        }
         const guarded = guardMessage(request, String(params.messageId));
         if (!('message' in guarded)) return guarded.response;
 
@@ -366,7 +380,7 @@ export function createTeamMessageHandlers(
           )
           .sort((left, right) => left.id - right.id)
           .map(team => ({
-            leaderName: team.leaderName,
+            leaderName: getCurrentMessageTeamLeaderName(team),
             teamId: team.id,
             teamName: team.name,
           }));

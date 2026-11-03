@@ -84,6 +84,12 @@ export const recipientList = style({
   margin: 0,
   padding: 0,
 });
+export const recipientLookupError = style({
+  alignItems: 'flex-start',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['2'],
+});
 export const recipientItem = style({
   alignItems: 'center',
   borderTop: `1px solid ${tokens.color.border.base}`,

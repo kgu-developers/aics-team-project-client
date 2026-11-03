@@ -296,42 +296,21 @@ it('대상 팀 수가 없는 이전 응답은 단일 팀 메시지로 안전하�
   expect(screen.queryByText(/undefined개 팀/)).not.toBeInTheDocument();
 });
 
-it('선택한 분반에서 목록 응답에 팀장이 없으면 팀 목록의 팀장으로 보완한다', async () => {
-  const messageWithoutLeader = { ...messagePage(0, 10, 1).contents[0]! };
-  Reflect.deleteProperty(messageWithoutLeader, 'leaderName');
-
+it('전체 분반 목록에서도 쪽지함 응답의 팀장을 표시한다', async () => {
+  const message = {
+    ...messagePage(0, 10, 1).contents[0]!,
+    leaderName: '김민준',
+  };
   server.use(
     http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>
       HttpResponse.json({
         ...messagePage(0, 10, 1),
-        contents: [messageWithoutLeader],
+        contents: [message],
       }),
-    ),
-    http.get(
-      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS(':sectionId')}`,
-      () =>
-        HttpResponse.json({
-          contents: [
-            {
-              createdAt: '2026-09-08T15:15:06.656Z',
-              id: 1,
-              kickoffRule: null,
-              leaderName: '김민준',
-              meetingSchedule: null,
-              name: '1팀',
-              status: 'CONFIRMED',
-            },
-          ],
-        }),
     ),
   );
 
-  setup(
-    defaultSections,
-    demoAdmin,
-    demoAdminAccessToken,
-    '/admin/messages?sectionId=1',
-  );
+  setup();
 
   expect(await screen.findByText('김민준')).toBeVisible();
 });

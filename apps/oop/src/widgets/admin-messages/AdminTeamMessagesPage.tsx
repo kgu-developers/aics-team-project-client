@@ -149,6 +149,15 @@ export function AdminTeamMessagesPanel({
     : team.sectionId;
   const messagesQuery = useTeamMessagesQuery(teamId);
   const recipientsQuery = useAdminMessageRecipientsQuery(recipientMessageId);
+  const hasCurrentTeamRecipient =
+    recipientsQuery.data?.contents.some(
+      recipient => recipient.teamId === Number(teamId),
+    ) ?? false;
+  const shouldShowRecipientView =
+    recipientMessageId !== undefined &&
+    (recipientsQuery.isPending ||
+      recipientsQuery.isError ||
+      hasCurrentTeamRecipient);
   const submitMutation = useSubmitTeamMessageMutation(teamId);
   const submitMidReportFeedbackMutation =
     useSubmitAdminMidReportFeedbackMutation();
@@ -249,7 +258,7 @@ export function AdminTeamMessagesPanel({
           </div>
         ) : null}
       </header>
-      {recipientMessageId !== undefined ? (
+      {shouldShowRecipientView ? (
         <Card
           aria-label='수신 팀 목록'
           className={styles.recipients}
@@ -267,10 +276,18 @@ export function AdminTeamMessagesPanel({
           {recipientsQuery.isPending ? (
             <Text role='status'>수신 팀 목록을 불러오는 중입니다.</Text>
           ) : recipientsQuery.isError ? (
-            <Text color='secondary' role='status'>
-              수신 팀 목록을 아직 불러오지 못했습니다. 대표 팀 쪽지함은 계속
-              확인할 수 있습니다.
-            </Text>
+            <div className={styles.recipientLookupError}>
+              <Text color='secondary' role='status'>
+                수신 팀 목록을 아직 불러오지 못했습니다. 대표 팀 쪽지함은 계속
+                확인할 수 있습니다.
+              </Text>
+              <Button
+                label='수신 팀 목록 다시 시도'
+                onClick={() => void recipientsQuery.refetch()}
+                size='sm'
+                variant='secondary'
+              />
+            </div>
           ) : recipientsQuery.data?.contents.length ? (
             <ul className={styles.recipientList}>
               {recipientsQuery.data.contents.map(recipient => (

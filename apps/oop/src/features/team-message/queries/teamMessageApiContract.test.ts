@@ -203,7 +203,7 @@ it('복수 팀 전송의 대표 메시지에서 실제 수신 팀 목록을 반�
   expect(broadcast).toBeDefined();
   await expect(fetchAdminMessageRecipients(broadcast!.id)).resolves.toEqual({
     contents: [
-      { leaderName: '1팀 팀장', teamId: 1, teamName: '1팀' },
+      { leaderName: '김민준', teamId: 1, teamName: '1팀' },
       { leaderName: null, teamId: 8, teamName: '2팀' },
     ],
   });

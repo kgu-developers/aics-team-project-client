@@ -178,24 +178,6 @@ export default function AdminMessagesPage() {
     useSubmitSectionTeamMessageMutation(composeSectionId);
   const readMutation = useUpdateAdminMessageReadMutation();
   const messages = useMemo(() => query.data?.contents ?? [], [query.data]);
-  const needsLeaderFallback =
-    Boolean(sectionId) &&
-    messages.some(
-      message => (message.targetTeamCount ?? 1) === 1 && !message.leaderName,
-    );
-  const messageTeamsQuery = useAdminSectionTeamsQuery(
-    needsLeaderFallback ? sectionId : undefined,
-  );
-  const leaderNamesByTeamId = useMemo(
-    () =>
-      new Map(
-        (messageTeamsQuery.data?.contents ?? []).map(team => [
-          team.id,
-          team.leaderName ?? null,
-        ]),
-      ),
-    [messageTeamsQuery.data?.contents],
-  );
   const pagination = query.data?.pageable;
   const boundedPage = pagination
     ? Math.max(0, Math.min(pagination.page, pagination.totalPages - 1))
@@ -670,15 +652,9 @@ export default function AdminMessagesPage() {
                         ) : (
                           <span
                             className={styles.metadataText}
-                            title={
-                              row.leaderName ||
-                              leaderNamesByTeamId.get(row.teamId) ||
-                              '-'
-                            }
+                            title={row.leaderName ?? '-'}
                           >
-                            {row.leaderName ||
-                              leaderNamesByTeamId.get(row.teamId) ||
-                              '-'}
+                            {row.leaderName ?? '-'}
                           </span>
                         )}
                       </td>
