@@ -5,6 +5,7 @@ import {
   Card,
   EmptyState,
   Heading,
+  IconButton,
   proportional,
   Table,
   Text,
@@ -12,6 +13,7 @@ import {
   type TableProps,
 } from '@aics/design-system';
 import { useNavigate } from '@tanstack/react-router';
+import { Pencil, Trash2 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -249,14 +251,6 @@ function AdminCourseOverview({
     <section aria-label={courseLabel} className={styles.section}>
       <div className={styles.courseCardHeader}>
         <Heading level={2}>{course.name}</Heading>
-        <div
-          aria-label={`${courseLabel} 강좌 관리`}
-          className={styles.courseActions}
-          role='group'
-        >
-          <Button label='강좌 정보 수정' onClick={onEdit} variant='secondary' />
-          <Button label='강좌 삭제' onClick={onDelete} variant='ghost' />
-        </div>
       </div>
       <Card className={styles.courseCard} padding={5}>
         <article
@@ -270,6 +264,28 @@ function AdminCourseOverview({
                 label={statusLabel(course.status)}
                 variant={statusBadgeVariant(course.status)}
               />
+              <div
+                aria-label={`${courseLabel} 강좌 관리`}
+                className={styles.courseActions}
+                role='group'
+              >
+                <IconButton
+                  icon={<Pencil aria-hidden='true' size={16} />}
+                  label='강좌 정보 수정'
+                  onClick={onEdit}
+                  size='sm'
+                  tooltip='강좌 정보 수정'
+                  variant='ghost'
+                />
+                <IconButton
+                  icon={<Trash2 aria-hidden='true' size={16} />}
+                  label='강좌 삭제'
+                  onClick={onDelete}
+                  size='sm'
+                  tooltip='강좌 삭제'
+                  variant='ghost'
+                />
+              </div>
             </div>
           </div>
           <dl className={styles.courseMetadata}>

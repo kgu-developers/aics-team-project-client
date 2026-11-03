@@ -245,10 +245,13 @@ describe('AdminCoursesPage', () => {
     expect(within(courseSummary).getByText('담당 교수자')).toBeInTheDocument();
     expect(within(courseSummary).getByText(demoAdmin.name)).toBeInTheDocument();
     expect(
-      within(screen.getByRole('group', { name: `${oopCourseLabel} 강좌 관리` }))
-        .getAllByRole('button')
-        .map(button => button.textContent),
-    ).toEqual(['강좌 정보 수정', '강좌 삭제']);
+      within(courseSummary).getByRole('button', { name: '강좌 정보 수정' }),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByRole('group', { name: `${oopCourseLabel} 강좌 관리` }),
+      ).getByRole('button', { name: '강좌 삭제' }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('article', {
         name: '웹 프로그래밍 · 2027년 1학기 강좌 요약',
@@ -972,8 +975,8 @@ describe('AdminCourseDetailPage', () => {
 
     await user.click(
       within(
-        screen.getByRole('group', {
-          name: '객체지향 프로그래밍 · 2026년 2학기 강좌 관리',
+        screen.getByRole('article', {
+          name: '객체지향 프로그래밍 · 2026년 2학기 강좌 요약',
         }),
       ).getByRole('button', { name: '강좌 정보 수정' }),
     );

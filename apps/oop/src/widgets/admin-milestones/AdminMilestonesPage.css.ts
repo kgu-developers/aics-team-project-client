@@ -56,8 +56,8 @@ export const table = style({
 
 export const sectionColumn = style({ width: 220 });
 export const dueAtColumn = style({ width: 156 });
-export const statusColumn = style({ width: 152 });
-export const actionColumn = style({ width: 84 });
+export const statusColumn = style({ width: 144 });
+export const actionColumn = style({ width: 72 });
 
 globalStyle(table + ' th', {
   background: tokens.color.background.card,
