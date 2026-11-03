@@ -244,13 +244,14 @@ describe('AdminCoursesPage', () => {
     expect(await within(courseSummary).findByText(/\d+개/)).toBeInTheDocument();
     expect(within(courseSummary).getByText('담당 교수자')).toBeInTheDocument();
     expect(within(courseSummary).getByText(demoAdmin.name)).toBeInTheDocument();
+    const courseManagement = within(
+      screen.getByRole('group', { name: `${oopCourseLabel} 강좌 관리` }),
+    );
     expect(
-      within(courseSummary).getByRole('button', { name: '강좌 정보 수정' }),
+      courseManagement.getByRole('button', { name: '강좌 정보 수정' }),
     ).toBeInTheDocument();
     expect(
-      within(
-        screen.getByRole('group', { name: `${oopCourseLabel} 강좌 관리` }),
-      ).getByRole('button', { name: '강좌 삭제' }),
+      courseManagement.getByRole('button', { name: '강좌 삭제' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('article', {
