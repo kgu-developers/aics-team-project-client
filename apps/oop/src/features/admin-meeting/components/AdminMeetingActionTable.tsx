@@ -23,6 +23,7 @@ import * as styles from './AdminMeetingActionTable.css';
 type AdminMeetingActionTableProps = {
   actions: readonly AdminSectionMeetingAction[];
   emptyMessage: string;
+  leaderNamesByTeamId?: ReadonlyMap<number, string | null>;
   showMeeting?: boolean;
   showTeam?: boolean;
 };
@@ -42,6 +43,7 @@ const statusDotVariants: Record<MeetingActionStatus, StatusDotVariant> = {
 export default function AdminMeetingActionTable({
   actions,
   emptyMessage,
+  leaderNamesByTeamId,
   showMeeting = true,
   showTeam = true,
 }: AdminMeetingActionTableProps) {
@@ -53,7 +55,15 @@ export default function AdminMeetingActionTable({
         header: '팀',
         key: 'team',
         renderCell: action => <span>{action.teamName}</span>,
-        width: proportional(1.1, { minWidth: 104 }),
+        width: proportional(0.7, { minWidth: 64 }),
+      });
+      result.push({
+        header: '팀장',
+        key: 'leader',
+        renderCell: action => (
+          <span>{leaderNamesByTeamId?.get(action.teamId) ?? '-'}</span>
+        ),
+        width: proportional(0.8, { minWidth: 80 }),
       });
     }
 
@@ -66,6 +76,7 @@ export default function AdminMeetingActionTable({
             <Link
               className={styles.meetingLink}
               params={{ meetingId: String(action.meetingRecordId) }}
+              title={action.meetingRecordTitle}
               to={ROUTES.ADMIN_MEETING_DETAIL}
             >
               {action.meetingRecordTitle}
@@ -75,7 +86,7 @@ export default function AdminMeetingActionTable({
             </span>
           </div>
         ),
-        width: proportional(1.8, { minWidth: 160 }),
+        width: proportional(1.3, { minWidth: 128 }),
       });
     }
 
@@ -85,19 +96,21 @@ export default function AdminMeetingActionTable({
         key: 'content',
         renderCell: action => (
           <div className={styles.cell}>
-            <span className={styles.actionContent}>{action.content}</span>
+            <span className={styles.actionContent} title={action.content}>
+              {action.content}
+            </span>
             <span className={styles.secondaryText}>
               생성 {formatAdminMeetingDateTime(action.createdAt)}
             </span>
           </div>
         ),
-        width: proportional(3, { minWidth: 220 }),
+        width: proportional(2.3, { minWidth: 160 }),
       },
       {
         header: '담당자',
         key: 'assignee',
         renderCell: action => <span>{action.assigneeName ?? '미지정'}</span>,
-        width: proportional(1, { minWidth: 100 }),
+        width: proportional(0.8, { minWidth: 80 }),
       },
       {
         header: '상태',
@@ -111,7 +124,7 @@ export default function AdminMeetingActionTable({
             <Text>{statusLabels[action.status]}</Text>
           </HStack>
         ),
-        width: proportional(1, { minWidth: 100 }),
+        width: proportional(0.85, { minWidth: 88 }),
       },
       {
         header: '기한',
@@ -121,12 +134,12 @@ export default function AdminMeetingActionTable({
             {action.dueAt ? formatAdminMeetingDateTime(action.dueAt) : '없음'}
           </span>
         ),
-        width: proportional(1.2, { minWidth: 128 }),
+        width: proportional(1, { minWidth: 112 }),
       },
     );
 
     return result;
-  }, [showMeeting, showTeam]);
+  }, [leaderNamesByTeamId, showMeeting, showTeam]);
 
   return (
     <Table<AdminSectionMeetingAction>
@@ -137,7 +150,7 @@ export default function AdminMeetingActionTable({
       emptyState={<span className={styles.emptyCell}>{emptyMessage}</span>}
       idKey='id'
       plugins={{ scrollWrapperLayout: tableScrollWrapperPlugin }}
-      textOverflow='wrap'
+      textOverflow='truncate'
       verticalAlign='top'
     />
   );

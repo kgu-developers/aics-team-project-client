@@ -35,6 +35,12 @@ export const adminMilestoneSubmissionsHandlers = [
       const milestoneId = String(params.milestoneId);
 
       const fixture = getAdminMilestoneSubmissionsFixture(milestoneId);
+      const leaderNameByTeamId = new Map(
+        getAdminSectionTeamsResponse('1').contents.map(team => [
+          team.id,
+          team.leaderName ?? null,
+        ]),
+      );
 
       if (!fixture) {
         const milestone = findAdminSectionMilestoneFixture(milestoneId);
@@ -87,16 +93,14 @@ export const adminMilestoneSubmissionsHandlers = [
         });
       }
 
-      return HttpResponse.json(
-        teamId
-          ? {
-              ...fixture,
-              contents: fixture.contents.filter(
-                submission => submission.teamId === Number(teamId),
-              ),
-            }
-          : fixture,
-      );
+      const submissions = fixture.contents
+        .filter(submission => !teamId || submission.teamId === Number(teamId))
+        .map(submission => ({
+          ...submission,
+          leaderName: leaderNameByTeamId.get(submission.teamId) ?? null,
+        }));
+
+      return HttpResponse.json({ ...fixture, contents: submissions });
     },
   ),
 ];

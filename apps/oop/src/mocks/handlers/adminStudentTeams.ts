@@ -278,6 +278,9 @@ export function getAdminSectionTeamsResponse(sectionId: string) {
         createdAt: '2026-09-08T15:15:06.656Z',
         id: getAdminTeamId(team.id),
         kickoffRule: '매주 화요일 회고',
+        leaderName:
+          getBaselineTeamStudents(team).find(student => student.isLeader)
+            ?.name ?? null,
         meetingSchedule: '매주 목 19:00',
         name: team.name,
         status: finalizedSectionIds.has(fixtureSectionId)

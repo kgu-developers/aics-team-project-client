@@ -2,6 +2,7 @@ import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
+import { getAdminSectionTeamsResponse } from './adminStudentTeams';
 import {
   getAdminSubmissionFixture,
   getAdminSubmissionVersionFixture,
@@ -54,7 +55,13 @@ export const adminMilestoneSubmissionDetailHandlers = [
       }
 
       const fixture = getAdminSubmissionFixture(String(params.submissionId));
-      return fixture ? HttpResponse.json(fixture) : notFoundResponse();
+      if (!fixture) return notFoundResponse();
+
+      const leaderName = getAdminSectionTeamsResponse('1').contents.find(
+        team => team.id === fixture.teamId,
+      )?.leaderName;
+
+      return HttpResponse.json({ ...fixture, leaderName: leaderName ?? null });
     },
   ),
   http.get(

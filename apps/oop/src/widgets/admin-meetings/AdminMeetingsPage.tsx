@@ -225,6 +225,7 @@ export default function AdminMeetingsPage() {
                 />
                 <th scope='col'>분반</th>
                 <th scope='col'>팀</th>
+                <th scope='col'>팀장</th>
                 <th scope='col'>회의 제목</th>
                 <th scope='col'>회의 일자</th>
                 <th scope='col'>작성자</th>
@@ -261,6 +262,7 @@ export default function AdminMeetingsPage() {
                         : record.sectionName}
                     </td>
                     <td>{record.teamName}</td>
+                    <td>{record.leaderName ?? '-'}</td>
                     <td>{record.title}</td>
                     <td>{formatAdminMeetingDateTime(record.meetingAt)}</td>
                     <td>{record.authorId}</td>

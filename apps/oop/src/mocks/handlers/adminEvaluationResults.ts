@@ -48,13 +48,36 @@ function forbidden() {
   );
 }
 
+function withLeaderNames<T extends { teamId: number }>(
+  sectionId: string,
+  teams: readonly T[],
+) {
+  const leaderNameByTeamId = new Map(
+    getAdminSectionTeamsResponse(sectionId).contents.map(team => [
+      team.id,
+      team.leaderName ?? null,
+    ]),
+  );
+
+  return teams.map(team => ({
+    ...team,
+    leaderName: leaderNameByTeamId.get(team.teamId) ?? null,
+  }));
+}
+
 export const adminEvaluationResultHandlers = [
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PEER_EVALUATIONS(':sectionId')}`,
     ({ params, request }) => {
       if (!isAdmin(request)) return unauthorized();
       if (!isAccessibleSection(params.sectionId)) return forbidden();
-      return HttpResponse.json(adminPeerEvaluationListFixture);
+      return HttpResponse.json({
+        ...adminPeerEvaluationListFixture,
+        teams: withLeaderNames(
+          String(params.sectionId),
+          adminPeerEvaluationListFixture.teams,
+        ),
+      });
     },
   ),
   http.get(
@@ -82,7 +105,13 @@ export const adminEvaluationResultHandlers = [
       if (!isAccessibleSection(params.sectionId)) return forbidden();
       const sectionId = String(params.sectionId);
       if (sectionId === '1' || sectionId === 'oop-2026-2-01') {
-        return HttpResponse.json(adminPresentationEvaluationListFixture);
+        return HttpResponse.json({
+          ...adminPresentationEvaluationListFixture,
+          teams: withLeaderNames(
+            sectionId,
+            adminPresentationEvaluationListFixture.teams,
+          ),
+        });
       }
       const milestoneId = Number(
         new URL(request.url).searchParams.get('milestoneId'),
@@ -98,6 +127,7 @@ export const adminEvaluationResultHandlers = [
         sectionId: Number(sectionId) || 0,
         teams: getAdminSectionTeamsResponse(sectionId).contents.map(team => ({
           evaluationCount: 0,
+          leaderName: team.leaderName ?? null,
           projectTitle: null,
           scores: criteria.map(criterion => ({
             criterionId: criterion.criterionId,

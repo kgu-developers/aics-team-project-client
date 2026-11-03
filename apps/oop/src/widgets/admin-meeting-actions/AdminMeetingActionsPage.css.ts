@@ -24,6 +24,10 @@ export const activityTabsRow = style({
   justifyContent: 'space-between',
 });
 
+export const activityTabDivider = style({
+  marginTop: tokens.spacing['1'],
+});
+
 export const tableCard = style({
   minWidth: 0,
   padding: tokens.spacing[4],

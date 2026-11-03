@@ -48,7 +48,7 @@ export const tableCard = style({
 
 export const table = style({
   borderCollapse: 'collapse',
-  minWidth: 660,
+  minWidth: 760,
   width: '100%',
 });
 

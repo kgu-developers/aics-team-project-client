@@ -43,6 +43,22 @@ function getAdminMeetingAuthorStudentNumber(
   );
 }
 
+function getAdminMeetingLeaderName(
+  record: (typeof adminMeetingRecordsFixture)[number],
+) {
+  const team = adminTeamsFixture.find(
+    candidate => getAdminTeamId(candidate.id) === record.apiTeamId,
+  );
+
+  return team
+    ? (team.memberIds
+        .map(memberId =>
+          adminStudentsFixture.find(student => student.id === memberId),
+        )
+        .find(student => student?.isLeader)?.name ?? null)
+    : null;
+}
+
 function isAccessibleRecordSection(
   record: (typeof adminMeetingRecordsFixture)[number],
   accessibleSectionIds: string[],
@@ -401,6 +417,7 @@ export const adminMeetingHandlers = [
           content: getRichTextPlainText(record.content),
           id: getAdminMeetingRecordId(record),
           location: record.location,
+          leaderName: getAdminMeetingLeaderName(record),
           meetingAt: record.heldAt.slice(0, 16).replace('T', ' '),
           participantCount: record.participants.length,
           phase: record.phase,

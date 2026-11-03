@@ -1,4 +1,4 @@
-import { Text } from '@aics/design-system';
+import { Badge, HStack, Text } from '@aics/design-system';
 import type { ReactNode } from 'react';
 
 import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
@@ -9,6 +9,7 @@ type AdminMilestoneSubmissionCardProps = {
   action: ReactNode;
   isUnread?: boolean;
   label: string;
+  leaderName?: string | null;
   meetingCountLabel?: ReactNode;
   messageCountLabel?: string;
   secondaryLabel: string;
@@ -20,6 +21,7 @@ export function AdminMilestoneSubmissionCard({
   action,
   isUnread = false,
   label,
+  leaderName,
   meetingCountLabel,
   messageCountLabel,
   secondaryLabel,
@@ -29,10 +31,15 @@ export function AdminMilestoneSubmissionCard({
   return (
     <article className={styles.card}>
       <div className={styles.meta}>
-        <Text className={styles.label}>
-          {isUnread ? <AdminUnreadDot /> : null}
-          {label}
-        </Text>
+        <HStack align='center' gap={2} wrap='wrap'>
+          <Text className={styles.label}>
+            {isUnread ? <AdminUnreadDot /> : null}
+            {label}
+          </Text>
+          {leaderName ? (
+            <Badge label={`팀장 ${leaderName}`} variant='neutral' />
+          ) : null}
+        </HStack>
         <Text className={styles.secondaryLabel}>{secondaryLabel}</Text>
         {submissionMetadata ? (
           <div className={styles.submissionMetadata}>{submissionMetadata}</div>

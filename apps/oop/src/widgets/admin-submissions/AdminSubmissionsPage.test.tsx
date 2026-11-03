@@ -502,6 +502,8 @@ describe('AdminSubmissionsPage', () => {
     expect(
       screen.getByRole('link', { name: '팀 전체 회의록 1건' }),
     ).toHaveAttribute('href', '/admin/meetings?sectionId=1&teamId=2');
+    expect(screen.getByText('팀장 김민준')).toBeInTheDocument();
+    expect(screen.getByText('팀장 박지훈')).toBeInTheDocument();
   });
 
   it('팀 전체 회의록 수가 0건이면 빈 회의록 목록으로 이동시키지 않는다', async () => {
@@ -550,6 +552,8 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByRole('heading', { name: 'OOP-01 · 1팀 제안서' }),
     ).toBeInTheDocument();
     expect(screen.getByText('상태: 수정 요청 · 현재 버전: 2차')).toBeVisible();
+    expect(screen.getByText('팀장')).toBeVisible();
+    expect(screen.getByText('김민준')).toBeVisible();
     expect(
       screen.queryByText('SUBMISSION / READ ONLY'),
     ).not.toBeInTheDocument();
