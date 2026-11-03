@@ -64,6 +64,61 @@ export const thread = style({
   overflowY: 'auto',
   padding: 20,
 });
+export const recipients = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['3'],
+  padding: tokens.spacing['4'],
+});
+export const recipientsHeader = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: tokens.spacing['2'],
+  justifyContent: 'space-between',
+});
+export const recipientList = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['2'],
+  listStyle: 'none',
+  margin: 0,
+  padding: 0,
+});
+export const recipientItem = style({
+  alignItems: 'center',
+  borderTop: `1px solid ${tokens.color.border.base}`,
+  display: 'flex',
+  gap: tokens.spacing['3'],
+  justifyContent: 'space-between',
+  minWidth: 0,
+  paddingTop: tokens.spacing['3'],
+  '@media': {
+    'screen and (max-width: 480px)': {
+      alignItems: 'flex-start',
+      flexDirection: 'column',
+      gap: tokens.spacing['2'],
+    },
+  },
+});
+export const recipientDetails = style({
+  minWidth: 0,
+});
+export const recipientName = style({
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+});
+export const recipientLink = style({
+  color: tokens.color.text.accent,
+  fontSize: 14,
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
+  whiteSpace: 'nowrap',
+  ':focus-visible': {
+    outline: `2px solid ${tokens.color.accent}`,
+    outlineOffset: 2,
+  },
+});
 export const message = style({
   alignSelf: 'flex-start',
   display: 'flex',

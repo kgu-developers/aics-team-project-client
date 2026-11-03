@@ -2,6 +2,7 @@ import {
   API_BASE_URL,
   ENDPOINTS,
   apiClient,
+  fetchAdminMessageRecipients,
   fetchAdminMessages,
   fetchTeamMessages,
   fetchTeamThread,
@@ -160,26 +161,52 @@ it('담당 교수의 분반 전체 전송은 한 요청으로 모든 팀에 GENE
 it('분반 전체 전송은 관리자 쪽지함에서 한 행으로 묶이고 하나를 읽으면 전체가 읽힌다', async () => {
   setApiAccessToken(demoNoticeProfessorAccessToken);
 
+  const before = await fetchAdminMessages({ sectionId: 1, size: 100 });
+
   await submitSectionTeamMessage('1', {
     message: '한 행으로 묶일 전체 팀 공지입니다.',
   });
 
-  const firstInbox = await fetchAdminMessages({ sectionId: 1 });
+  const firstInbox = await fetchAdminMessages({ sectionId: 1, size: 100 });
   const broadcast = firstInbox.contents.filter(
     message => message.message === '한 행으로 묶일 전체 팀 공지입니다.',
   );
 
   expect(broadcast).toHaveLength(1);
   expect(broadcast[0]).toMatchObject({ read: false, targetTeamCount: 3 });
+  expect(firstInbox.pageable.totalElements).toBe(
+    before.pageable.totalElements + 1,
+  );
 
   await updateAdminMessageRead(broadcast[0]!.id);
 
-  const refreshedInbox = await fetchAdminMessages({ sectionId: 1 });
+  const refreshedInbox = await fetchAdminMessages({ sectionId: 1, size: 100 });
   expect(
     refreshedInbox.contents.find(
       message => message.message === '한 행으로 묶일 전체 팀 공지입니다.',
     ),
   ).toMatchObject({ read: true, targetTeamCount: 3 });
+});
+
+it('복수 팀 전송의 대표 메시지에서 실제 수신 팀 목록을 반환한다', async () => {
+  setApiAccessToken(demoNoticeProfessorAccessToken);
+
+  await submitSectionTeamMessage('1', {
+    message: '수신 팀 목록 확인 메시지입니다.',
+    teamIds: [1, 8],
+  });
+  const inbox = await fetchAdminMessages({ sectionId: 1 });
+  const broadcast = inbox.contents.find(
+    message => message.message === '수신 팀 목록 확인 메시지입니다.',
+  );
+
+  expect(broadcast).toBeDefined();
+  await expect(fetchAdminMessageRecipients(broadcast!.id)).resolves.toEqual({
+    contents: [
+      { leaderName: '1팀 팀장', teamId: 1, teamName: '1팀' },
+      { leaderName: null, teamId: 8, teamName: '2팀' },
+    ],
+  });
 });
 
 it('담당 교수는 선택한 여러 팀에만 한 요청으로 GENERAL 메시지를 보낸다', async () => {

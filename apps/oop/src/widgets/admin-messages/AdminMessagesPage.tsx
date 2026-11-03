@@ -178,6 +178,24 @@ export default function AdminMessagesPage() {
     useSubmitSectionTeamMessageMutation(composeSectionId);
   const readMutation = useUpdateAdminMessageReadMutation();
   const messages = useMemo(() => query.data?.contents ?? [], [query.data]);
+  const needsLeaderFallback =
+    Boolean(sectionId) &&
+    messages.some(
+      message => (message.targetTeamCount ?? 1) === 1 && !message.leaderName,
+    );
+  const messageTeamsQuery = useAdminSectionTeamsQuery(
+    needsLeaderFallback ? sectionId : undefined,
+  );
+  const leaderNamesByTeamId = useMemo(
+    () =>
+      new Map(
+        (messageTeamsQuery.data?.contents ?? []).map(team => [
+          team.id,
+          team.leaderName ?? null,
+        ]),
+      ),
+    [messageTeamsQuery.data?.contents],
+  );
   const pagination = query.data?.pageable;
   const boundedPage = pagination
     ? Math.max(0, Math.min(pagination.page, pagination.totalPages - 1))
@@ -338,6 +356,9 @@ export default function AdminMessagesPage() {
     void navigate({
       params: { teamId: String(message.teamId) },
       search: {
+        ...(message.targetTeamCount && message.targetTeamCount > 1
+          ? { messageId: message.id }
+          : {}),
         ...(sectionId ? { sectionId: Number(sectionId) } : {}),
         ...(senderKeyword ? { senderKeyword } : {}),
         ...(sort === 'ASC' ? { sort } : {}),
@@ -546,6 +567,7 @@ export default function AdminMessagesPage() {
                   </th>
                   <th className={styles.sectionColumn}>분반</th>
                   <th className={styles.teamColumn}>팀</th>
+                  <th className={styles.leaderColumn}>팀장</th>
                   <th>내용</th>
                   <th className={styles.senderColumn}>발신자</th>
                 </tr>
@@ -634,6 +656,29 @@ export default function AdminMessagesPage() {
                             title={row.teamName}
                           >
                             {teamLabel}
+                          </span>
+                        )}
+                      </td>
+                      <td className={styles.leaderColumn}>
+                        {isBroadcast ? (
+                          <span
+                            aria-label='복수 팀 발송에는 팀장 정보를 표시하지 않습니다.'
+                            className={styles.metadataText}
+                          >
+                            -
+                          </span>
+                        ) : (
+                          <span
+                            className={styles.metadataText}
+                            title={
+                              row.leaderName ||
+                              leaderNamesByTeamId.get(row.teamId) ||
+                              '-'
+                            }
+                          >
+                            {row.leaderName ||
+                              leaderNamesByTeamId.get(row.teamId) ||
+                              '-'}
                           </span>
                         )}
                       </td>

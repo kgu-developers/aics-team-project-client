@@ -259,6 +259,7 @@ export function createTeamMessageHandlers(
           sectionId: matchingSectionId,
           sectionName: matchingSection?.name ?? team.sectionId,
           teamId: team.id,
+          leaderName: team.leaderName,
           teamName: team.name,
         };
       });
@@ -315,7 +316,9 @@ export function createTeamMessageHandlers(
         pageable: {
           page,
           size,
-          totalElements: matchingMessages.length,
+          // The inbox exposes one row for a broadcast even though it stores one
+          // message per recipient. Pagination must use the visible row count.
+          totalElements: groupedMessages.length,
           totalPages,
           isEnd: page + 1 >= totalPages,
         },
@@ -336,6 +339,39 @@ export function createTeamMessageHandlers(
         });
         persistData();
         return new HttpResponse(null, { status: 204 });
+      },
+    ),
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.RECIPIENTS(':messageId')}`,
+      ({ params, request }) => {
+        const guarded = guardMessage(request, String(params.messageId));
+        if (!('message' in guarded)) return guarded.response;
+
+        const recipientMessages = guarded.message.broadcastId
+          ? data.messages.filter(
+              message => message.broadcastId === guarded.message.broadcastId,
+            )
+          : [guarded.message];
+        const recipientTeams = recipientMessages
+          .flatMap(message => {
+            const thread = data.threads.find(
+              item => item.threadId === message.threadId,
+            );
+            const team = data.teams.find(item => item.id === thread?.teamId);
+            return team ? [team] : [];
+          })
+          .filter(
+            (team, index, teams) =>
+              teams.findIndex(candidate => candidate.id === team.id) === index,
+          )
+          .sort((left, right) => left.id - right.id)
+          .map(team => ({
+            leaderName: team.leaderName,
+            teamId: team.id,
+            teamName: team.name,
+          }));
+
+        return HttpResponse.json({ contents: recipientTeams });
       },
     ),
     http.get(

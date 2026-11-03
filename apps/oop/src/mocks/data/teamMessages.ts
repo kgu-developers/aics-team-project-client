@@ -12,9 +12,19 @@ export const teamMessageSenderNames: Record<string, string> = {
   'other-section-professor': '다른 분반 교수',
 };
 
-const teams = [
+type TeamMessageFixtureTeam = {
+  id: number;
+  leaderName: string | null;
+  memberIds: string[];
+  name: string;
+  professorId: string;
+  sectionId: string;
+};
+
+const teams: TeamMessageFixtureTeam[] = [
   {
     id: 1,
+    leaderName: '1팀 팀장',
     memberIds: ['20230001', '20230002'],
     name: '1팀',
     professorId: teamMessageProfessorId,
@@ -22,6 +32,7 @@ const teams = [
   },
   {
     id: 7,
+    leaderName: '검수 학생',
     memberIds: ['20260001', '20260003', '20260004'],
     name: '1팀',
     professorId: teamMessageProfessorId,
@@ -29,6 +40,7 @@ const teams = [
   },
   {
     id: 8,
+    leaderName: null,
     memberIds: [],
     name: '2팀',
     professorId: teamMessageProfessorId,
@@ -36,6 +48,7 @@ const teams = [
   },
   {
     id: 9,
+    leaderName: null,
     memberIds: [],
     name: '다른 분반 팀',
     professorId: 'other-section-professor',

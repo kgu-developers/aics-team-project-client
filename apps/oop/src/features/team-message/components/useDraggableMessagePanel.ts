@@ -1,4 +1,10 @@
-import { useRef, useState, type CSSProperties, type PointerEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent,
+} from 'react';
 
 type PanelPosition = { left: number; top: number };
 
@@ -6,6 +12,31 @@ export function useDraggableMessagePanel() {
   const panelRef = useRef<HTMLElement | null>(null);
   const dragOffsetRef = useRef<PanelPosition | null>(null);
   const [position, setPosition] = useState<PanelPosition | null>(null);
+
+  useEffect(() => {
+    function keepPanelInViewport() {
+      const panel = panelRef.current;
+      if (!panel) return;
+
+      const bounds = panel.getBoundingClientRect();
+      setPosition(current => {
+        if (!current) return current;
+        return {
+          left: Math.max(
+            0,
+            Math.min(current.left, window.innerWidth - bounds.width),
+          ),
+          top: Math.max(
+            0,
+            Math.min(current.top, window.innerHeight - bounds.height),
+          ),
+        };
+      });
+    }
+
+    window.addEventListener('resize', keepPanelInViewport);
+    return () => window.removeEventListener('resize', keepPanelInViewport);
+  }, []);
 
   function handlePointerDown(event: PointerEvent<HTMLElement>) {
     const target = event.target;

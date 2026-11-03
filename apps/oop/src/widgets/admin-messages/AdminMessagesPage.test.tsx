@@ -227,6 +227,7 @@ function messagePage(
         sectionId: 1,
         sectionName: '분반 하나',
         teamId: 1,
+        leaderName: '팀장 학생',
         teamName: '1팀',
         targetTeamCount: 1,
         senderId: 'student',
@@ -273,6 +274,7 @@ it('전체 팀에 보낸 일반 메시지는 대상 팀 수와 함께 한 행으
     screen.getByLabelText('3개 팀 발송 · 대표 팀 알파 쪽지함 보기'),
   ).toBeVisible();
   expect(screen.queryByText('전체 팀')).not.toBeInTheDocument();
+  expect(screen.queryByText('팀장 학생')).not.toBeInTheDocument();
 });
 
 it('대상 팀 수가 없는 이전 응답은 단일 팀 메시지로 안전하게 표시한다', async () => {
@@ -290,7 +292,48 @@ it('대상 팀 수가 없는 이전 응답은 단일 팀 메시지로 안전하�
   setup();
 
   expect(await screen.findByText('1팀')).toBeVisible();
+  expect(screen.getByText('팀장 학생')).toBeVisible();
   expect(screen.queryByText(/undefined개 팀/)).not.toBeInTheDocument();
+});
+
+it('선택한 분반에서 목록 응답에 팀장이 없으면 팀 목록의 팀장으로 보완한다', async () => {
+  const messageWithoutLeader = { ...messagePage(0, 10, 1).contents[0]! };
+  Reflect.deleteProperty(messageWithoutLeader, 'leaderName');
+
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>
+      HttpResponse.json({
+        ...messagePage(0, 10, 1),
+        contents: [messageWithoutLeader],
+      }),
+    ),
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS(':sectionId')}`,
+      () =>
+        HttpResponse.json({
+          contents: [
+            {
+              createdAt: '2026-09-08T15:15:06.656Z',
+              id: 1,
+              kickoffRule: null,
+              leaderName: '김민준',
+              meetingSchedule: null,
+              name: '1팀',
+              status: 'CONFIRMED',
+            },
+          ],
+        }),
+    ),
+  );
+
+  setup(
+    defaultSections,
+    demoAdmin,
+    demoAdminAccessToken,
+    '/admin/messages?sectionId=1',
+  );
+
+  expect(await screen.findByText('김민준')).toBeVisible();
 });
 
 function paginationButtons() {
@@ -379,7 +422,15 @@ it('쪽지 목록은 분반 옆에 유형을 표시하고 읽지 않은 행만 �
   await screen.findByRole('columnheader', { name: '분반' });
   expect(
     screen.getAllByRole('columnheader').map(header => header.textContent),
-  ).toEqual(['', '작성 일시 · 최신순 ↓', '분반', '팀', '내용', '발신자']);
+  ).toEqual([
+    '',
+    '작성 일시 · 최신순 ↓',
+    '분반',
+    '팀',
+    '팀장',
+    '내용',
+    '발신자',
+  ]);
   expect(
     screen.getAllByText('현재 분반 하나 · 월요일 1-2교시'),
   ).not.toHaveLength(0);

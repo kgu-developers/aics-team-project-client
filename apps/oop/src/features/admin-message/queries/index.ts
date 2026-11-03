@@ -1,4 +1,5 @@
 export { useAdminMessagesQuery } from './useAdminMessagesQuery';
+export { useAdminMessageRecipientsQuery } from './useAdminMessageRecipientsQuery';
 export { useAdminActiveMessagesQuery } from './useAdminActiveMessagesQuery';
 export {
   useAdminRelatedSubmissionQuery,
