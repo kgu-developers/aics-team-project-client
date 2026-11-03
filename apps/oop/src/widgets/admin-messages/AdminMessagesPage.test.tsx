@@ -275,6 +275,24 @@ it('전체 팀에 보낸 일반 메시지는 대상 팀 수와 함께 한 행으
   expect(screen.queryByText('전체 팀')).not.toBeInTheDocument();
 });
 
+it('대상 팀 수가 없는 이전 응답은 단일 팀 메시지로 안전하게 표시한다', async () => {
+  const legacyMessage = { ...messagePage(0, 10, 1).contents[0]! };
+  Reflect.deleteProperty(legacyMessage, 'targetTeamCount');
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>
+      HttpResponse.json({
+        ...messagePage(0, 10, 1),
+        contents: [legacyMessage],
+      }),
+    ),
+  );
+
+  setup();
+
+  expect(await screen.findByText('1팀')).toBeVisible();
+  expect(screen.queryByText(/undefined개 팀/)).not.toBeInTheDocument();
+});
+
 function paginationButtons() {
   return within(
     screen.getByRole('navigation', { name: '쪽지함 페이지 이동' }),

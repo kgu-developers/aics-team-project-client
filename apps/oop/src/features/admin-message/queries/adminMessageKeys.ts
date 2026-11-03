@@ -14,7 +14,7 @@ export const adminMessageKeys = {
       sectionId ?? 'all',
       teamId ?? 'all',
       page,
-      senderKeyword?.trim() || 'all-senders',
+      senderKeyword?.trim() || null,
       sort,
     ] as const,
   relatedSubmission: (

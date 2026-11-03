@@ -558,7 +558,7 @@ export default function AdminMessagesPage() {
                   const relatedTypeLabel = formatTeamMessageRelatedType(
                     row.relatedType,
                   );
-                  const targetTeamCount = row.targetTeamCount;
+                  const targetTeamCount = row.targetTeamCount ?? 1;
                   const isBroadcast = targetTeamCount > 1;
                   const teamLabel = isBroadcast
                     ? `${targetTeamCount}개 팀`

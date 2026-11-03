@@ -277,8 +277,9 @@ export function createTeamMessageHandlers(
       const matchingMessages = scopedMessages
         .filter(message => {
           if (!senderKeyword) return true;
-          return [message.senderName, message.senderId].some(value =>
-            value?.toLocaleLowerCase().includes(senderKeyword) ?? false,
+          return [message.senderName, message.senderId].some(
+            value =>
+              value?.toLocaleLowerCase().includes(senderKeyword) ?? false,
           );
         })
         .sort((left, right) =>
@@ -296,6 +297,7 @@ export function createTeamMessageHandlers(
         }, new Map<string, typeof matchingMessages>()),
       ).map(([, messages]) => {
         const message = messages[0]!;
+        const read = messages.every(item => item.read);
         const targetTeamCount = message.broadcastId
           ? data.messages.filter(
               candidate => candidate.broadcastId === message.broadcastId,
@@ -303,7 +305,7 @@ export function createTeamMessageHandlers(
           : 1;
         const response = { ...message };
         delete response.broadcastId;
-        return { ...response, targetTeamCount };
+        return { ...response, read, targetTeamCount };
       });
       const totalPages = Math.ceil(groupedMessages.length / size);
       const contents = groupedMessages.slice(page * size, (page + 1) * size);
