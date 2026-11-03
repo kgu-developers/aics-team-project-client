@@ -2,12 +2,20 @@ export const adminMessageKeys = {
   all: ['admin-messages'] as const,
   activeSectionSummary: (sectionId: string) =>
     [...adminMessageKeys.all, 'active-section-summary', sectionId] as const,
-  list: (sectionId?: string, page = 0, teamId?: string) =>
+  list: (
+    sectionId?: string,
+    page = 0,
+    teamId?: string,
+    senderKeyword?: string,
+    sort: 'ASC' | 'DESC' = 'DESC',
+  ) =>
     [
       ...adminMessageKeys.all,
       sectionId ?? 'all',
       teamId ?? 'all',
       page,
+      senderKeyword?.trim() || 'all-senders',
+      sort,
     ] as const,
   relatedSubmission: (
     sectionId: string,

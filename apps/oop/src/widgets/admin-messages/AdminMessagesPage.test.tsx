@@ -107,6 +107,12 @@ function validateMessageSearch(search: Record<string, unknown>) {
   return {
     page: nonNegativePage(search.page),
     sectionId: positiveId(search.sectionId),
+    senderKeyword:
+      typeof search.senderKeyword === 'string' && search.senderKeyword.trim()
+        ? search.senderKeyword.trim()
+        : undefined,
+    sort:
+      search.sort === 'ASC' || search.sort === 'DESC' ? search.sort : undefined,
     teamId: positiveId(search.teamId),
   };
 }
@@ -222,6 +228,7 @@ function messagePage(
         sectionName: '분반 하나',
         teamId: 1,
         teamName: '1팀',
+        targetTeamCount: 1,
         senderId: 'student',
         senderName: '학생',
         message: `${section} 쪽지 ${page * size + index + 1}`,
@@ -241,6 +248,32 @@ function messagePage(
     },
   };
 }
+
+it('전체 팀에 보낸 일반 메시지는 대상 팀 수와 함께 한 행으로 표시한다', async () => {
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`, () =>
+      HttpResponse.json({
+        ...messagePage(0, 10, 1),
+        contents: [
+          {
+            ...messagePage(0, 10, 1).contents[0]!,
+            targetTeamCount: 3,
+            teamName: '알파',
+          },
+        ],
+      }),
+    ),
+  );
+
+  setup();
+
+  expect(await screen.findByText('3개 팀')).toBeVisible();
+  expect(screen.getByText('대표 팀: 알파')).toBeVisible();
+  expect(
+    screen.getByLabelText('3개 팀 발송 · 대표 팀 알파 쪽지함 보기'),
+  ).toBeVisible();
+  expect(screen.queryByText('전체 팀')).not.toBeInTheDocument();
+});
 
 function paginationButtons() {
   return within(
@@ -319,11 +352,16 @@ it('쪽지 목록은 분반 옆에 유형을 표시하고 읽지 않은 행만 �
 
   setup();
 
+  expect(
+    await screen.findByRole('columnheader', {
+      name: '작성 일시 · 최신순 ↓',
+    }),
+  ).toHaveAttribute('aria-sort', 'descending');
   await screen.findByRole('columnheader', { name: '읽음 상태' });
   await screen.findByRole('columnheader', { name: '분반' });
   expect(
     screen.getAllByRole('columnheader').map(header => header.textContent),
-  ).toEqual(['', '분반', '팀', '내용', '발신자']);
+  ).toEqual(['', '작성 일시 · 최신순 ↓', '분반', '팀', '내용', '발신자']);
   expect(
     screen.getAllByText('현재 분반 하나 · 월요일 1-2교시'),
   ).not.toHaveLength(0);
@@ -336,6 +374,80 @@ it('쪽지 목록은 분반 옆에 유형을 표시하고 읽지 않은 행만 �
       'cell',
     )[0],
   ).toContainElement(screen.getByLabelText('읽지 않음'));
+});
+
+it('발신자 검색과 정렬 조건을 서버 요청 및 URL 상태에 반영한다', async () => {
+  const requests: Array<{
+    page: string | null;
+    senderKeyword: string | null;
+    sort: string | null;
+  }> = [];
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.LIST}`,
+      ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        requests.push({
+          page: params.get('page'),
+          senderKeyword: params.get('senderKeyword'),
+          sort: params.get('sort'),
+        });
+        return HttpResponse.json({
+          ...messagePage(0, 10, 2),
+          contents: [
+            {
+              ...messagePage(0, 10, 2).contents[0]!,
+              id: 1,
+              message: '먼저 작성된 쪽지',
+            },
+            {
+              ...messagePage(0, 10, 2).contents[1]!,
+              id: 2,
+              message: '나중에 작성된 쪽지',
+            },
+          ],
+        });
+      },
+    ),
+  );
+  setup(
+    defaultSections,
+    demoAdmin,
+    demoAdminAccessToken,
+    '/admin/messages?sectionId=1&teamId=1&page=1&senderKeyword=%ED%99%8D%EA%B8%B8%EB%8F%99&sort=ASC',
+  );
+  const user = userEvent.setup();
+
+  const senderSearch = await screen.findByRole('textbox', {
+    name: '발신자 검색',
+  });
+  expect(senderSearch).toHaveValue('홍길동');
+  expect(await screen.findByText('먼저 작성된 쪽지')).toBeVisible();
+  expect(screen.getByText('나중에 작성된 쪽지')).toBeVisible();
+
+  await user.clear(senderSearch);
+  await user.type(senderSearch, '김학생');
+  await user.click(screen.getByRole('button', { name: '검색' }));
+
+  await waitFor(() =>
+    expect(requests).toContainEqual({
+      page: '0',
+      senderKeyword: '김학생',
+      sort: 'ASC',
+    }),
+  );
+
+  await user.click(
+    screen.getByRole('button', { name: '작성 일시 · 오래된순 ↑' }),
+  );
+
+  await waitFor(() =>
+    expect(requests).toContainEqual({
+      page: '0',
+      senderKeyword: '김학생',
+      sort: 'DESC',
+    }),
+  );
 });
 
 it('분반과 팀을 선택해 첫 일반 메시지를 보낸다', async () => {

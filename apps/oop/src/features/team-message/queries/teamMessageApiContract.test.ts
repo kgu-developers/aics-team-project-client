@@ -8,6 +8,7 @@ import {
   setApiAccessToken,
   submitSectionTeamMessage,
   submitTeamMessage,
+  updateAdminMessageRead,
 } from '@aics/api-client';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -83,7 +84,7 @@ it('관리자 쪽지함은 현재 분반의 숫자 ID와 분반 라벨을 반환
     ]),
   );
   expect(page.contents.map(message => message.id)).toEqual([
-    711, 705, 704, 703, 712, 702, 701, 710,
+    712, 711, 710, 705, 704, 703, 702, 701,
   ]);
 });
 
@@ -154,6 +155,31 @@ it('담당 교수의 분반 전체 전송은 한 요청으로 모든 팀에 GENE
       }),
     );
   }
+});
+
+it('분반 전체 전송은 관리자 쪽지함에서 한 행으로 묶이고 하나를 읽으면 전체가 읽힌다', async () => {
+  setApiAccessToken(demoNoticeProfessorAccessToken);
+
+  await submitSectionTeamMessage('1', {
+    message: '한 행으로 묶일 전체 팀 공지입니다.',
+  });
+
+  const firstInbox = await fetchAdminMessages({ sectionId: 1 });
+  const broadcast = firstInbox.contents.filter(
+    message => message.message === '한 행으로 묶일 전체 팀 공지입니다.',
+  );
+
+  expect(broadcast).toHaveLength(1);
+  expect(broadcast[0]).toMatchObject({ read: false, targetTeamCount: 3 });
+
+  await updateAdminMessageRead(broadcast[0]!.id);
+
+  const refreshedInbox = await fetchAdminMessages({ sectionId: 1 });
+  expect(
+    refreshedInbox.contents.find(
+      message => message.message === '한 행으로 묶일 전체 팀 공지입니다.',
+    ),
+  ).toMatchObject({ read: true, targetTeamCount: 3 });
 });
 
 it('담당 교수는 선택한 여러 팀에만 한 요청으로 GENERAL 메시지를 보낸다', async () => {

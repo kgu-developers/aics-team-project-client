@@ -3,8 +3,12 @@ import type { AdminMessagePage, TeamMessagesParams } from '@aics/core';
 import { apiClient } from '../client';
 import { ENDPOINTS } from '../constants/endpoints';
 
+export type AdminMessageSortDirection = 'ASC' | 'DESC';
+
 export type AdminMessagesParams = TeamMessagesParams & {
   sectionId?: string | number;
+  senderKeyword?: string;
+  sort?: AdminMessageSortDirection;
   teamId?: string | number;
 };
 

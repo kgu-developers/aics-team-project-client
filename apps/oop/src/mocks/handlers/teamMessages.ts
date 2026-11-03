@@ -25,7 +25,16 @@ const teamMessageStorageKey = 'aics.oop.msw.team-messages';
 const adminSectionId = '1';
 const demoSectionId = 'oop-2026-2-01';
 
-type MockTeamMessageData = ReturnType<typeof createTeamMessageData>;
+type MockTeamMessage = TeamMessage & {
+  broadcastId?: string | null;
+};
+
+type MockTeamMessageData = Omit<
+  ReturnType<typeof createTeamMessageData>,
+  'messages'
+> & {
+  messages: MockTeamMessage[];
+};
 
 type MockFeedbackTeamMessageInput = {
   createdAt: string;
@@ -191,10 +200,20 @@ export function createTeamMessageHandlers(
       }
       const query = new URL(request.url).searchParams;
       const sectionId = query.get('sectionId');
+      const senderKeyword = query
+        .get('senderKeyword')
+        ?.trim()
+        .toLocaleLowerCase();
+      const sort = query.get('sort') ?? 'DESC';
       const teamId = query.get('teamId');
       const page = Number(query.get('page') ?? 0);
       const size = Number(query.get('size') ?? 10);
-      if (!Number.isSafeInteger(page) || page < 0 || !isId(size)) {
+      if (
+        !Number.isSafeInteger(page) ||
+        page < 0 ||
+        !isId(size) ||
+        (sort !== 'ASC' && sort !== 'DESC')
+      ) {
         return error(400, 'INVALID_REQUEST');
       }
       const accessibleSections = getMockMySections(
@@ -213,46 +232,84 @@ export function createTeamMessageHandlers(
         item => !sectionId || isAccessibleSection(item.id, sectionId),
       );
       if (!section) return error(403, 'ACCESS_DENIED');
-      const matchingMessages = data.messages
-        .flatMap(message => {
-          const thread = data.threads.find(
-            item => item.threadId === message.threadId,
-          );
-          const team = data.teams.find(item => item.id === thread?.teamId);
-          if (!team) return [];
-          if (teamId && String(team.id) !== teamId) return [];
-          if (sectionId && !isAccessibleSection(sectionId, team.sectionId)) {
-            return [];
-          }
-          if (
-            !accessibleSections.some(section =>
-              isAccessibleSection(section.id, team.sectionId),
-            )
-          )
-            return [];
-          const matchingSection = accessibleSections.find(section =>
+      const scopedMessages = data.messages.flatMap(message => {
+        const thread = data.threads.find(
+          item => item.threadId === message.threadId,
+        );
+        const team = data.teams.find(item => item.id === thread?.teamId);
+        if (!team) return [];
+        if (teamId && String(team.id) !== teamId) return [];
+        if (sectionId && !isAccessibleSection(sectionId, team.sectionId)) {
+          return [];
+        }
+        if (
+          !accessibleSections.some(section =>
             isAccessibleSection(section.id, team.sectionId),
-          );
-          const matchingSectionId = Number(matchingSection?.id);
-          if (!isId(matchingSectionId)) return [];
+          )
+        )
+          return [];
+        const matchingSection = accessibleSections.find(section =>
+          isAccessibleSection(section.id, team.sectionId),
+        );
+        const matchingSectionId = Number(matchingSection?.id);
+        if (!isId(matchingSectionId)) return [];
 
-          return {
-            ...message,
-            sectionId: matchingSectionId,
-            sectionName: matchingSection?.name ?? team.sectionId,
-            teamId: team.id,
-            teamName: team.name,
-          };
+        return {
+          ...message,
+          sectionId: matchingSectionId,
+          sectionName: matchingSection?.name ?? team.sectionId,
+          teamId: team.id,
+          teamName: team.name,
+        };
+      });
+      // The server keeps the unread badge scoped to the accessible inbox, not
+      // to a transient sender search result.
+      const unreadMessageGroupKeys = new Set(
+        scopedMessages
+          .filter(message => !message.read)
+          .map(message =>
+            message.broadcastId
+              ? `broadcast-${message.broadcastId}`
+              : `message-${message.id}`,
+          ),
+      );
+      const unreadCount = unreadMessageGroupKeys.size;
+      const matchingMessages = scopedMessages
+        .filter(message => {
+          if (!senderKeyword) return true;
+          return [message.senderName, message.senderId].some(value =>
+            value?.toLocaleLowerCase().includes(senderKeyword) ?? false,
+          );
         })
-        .sort((left, right) => {
-          const createdAtOrder = right.createdAt.localeCompare(left.createdAt);
-          return createdAtOrder || right.id - left.id;
-        });
-      const totalPages = Math.ceil(matchingMessages.length / size);
-      const contents = matchingMessages.slice(page * size, (page + 1) * size);
+        .sort((left, right) =>
+          sort === 'ASC' ? left.id - right.id : right.id - left.id,
+        );
+      const groupedMessages = Array.from(
+        matchingMessages.reduce((groups, message) => {
+          const key = message.broadcastId
+            ? `broadcast-${message.broadcastId}`
+            : `message-${message.id}`;
+          const group = groups.get(key) ?? [];
+          group.push(message);
+          groups.set(key, group);
+          return groups;
+        }, new Map<string, typeof matchingMessages>()),
+      ).map(([, messages]) => {
+        const message = messages[0]!;
+        const targetTeamCount = message.broadcastId
+          ? data.messages.filter(
+              candidate => candidate.broadcastId === message.broadcastId,
+            ).length
+          : 1;
+        const response = { ...message };
+        delete response.broadcastId;
+        return { ...response, targetTeamCount };
+      });
+      const totalPages = Math.ceil(groupedMessages.length / size);
+      const contents = groupedMessages.slice(page * size, (page + 1) * size);
       return HttpResponse.json({
         contents,
-        unreadCount: matchingMessages.filter(message => !message.read).length,
+        unreadCount,
         pageable: {
           page,
           size,
@@ -267,7 +324,14 @@ export function createTeamMessageHandlers(
       ({ request, params }) => {
         const guarded = guardMessage(request, String(params.messageId));
         if (!('message' in guarded)) return guarded.response;
-        guarded.message.read = true;
+        const targetMessages = guarded.message.broadcastId
+          ? data.messages.filter(
+              message => message.broadcastId === guarded.message.broadcastId,
+            )
+          : [guarded.message];
+        targetMessages.forEach(message => {
+          message.read = true;
+        });
         persistData();
         return new HttpResponse(null, { status: 204 });
       },
@@ -359,6 +423,10 @@ export function createTeamMessageHandlers(
         ) {
           return error(403, 'ACCESS_DENIED');
         }
+        const broadcastId =
+          targetTeams.length > 0
+            ? `broadcast-${Date.now()}-${data.nextMessageId}`
+            : null;
         for (const team of targetTeams) {
           const thread = getOrCreateThread(team.id);
           data.messages.push({
@@ -371,6 +439,7 @@ export function createTeamMessageHandlers(
             important: false,
             read: false,
             createdAt: now(),
+            broadcastId,
           });
         }
         persistData();
@@ -487,7 +556,7 @@ function loadTeamMessageData(
       return initialData;
     }
 
-    return parsed as ReturnType<typeof createTeamMessageData>;
+    return parsed as MockTeamMessageData;
   } catch {
     return initialData;
   }

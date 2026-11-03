@@ -80,6 +80,8 @@ export type AdminMessage = TeamMessage & {
   sectionName: string;
   teamId: number;
   teamName: string;
+  /** Number of recipients in the original section-level broadcast. */
+  targetTeamCount: number;
 };
 
 export type AdminMessagePage = {
