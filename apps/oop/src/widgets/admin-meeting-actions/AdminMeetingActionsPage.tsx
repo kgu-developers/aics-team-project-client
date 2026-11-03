@@ -5,6 +5,7 @@ import {
   Divider,
   EmptyState,
   Heading,
+  HStack,
   Pagination,
   Selector,
   SelectorOption,
@@ -102,6 +103,11 @@ export default function AdminMeetingActionsPage() {
       ),
     [sectionTeamsQuery.data],
   );
+  const leaderLookupState = sectionTeamsQuery.isPending
+    ? 'loading'
+    : sectionTeamsQuery.isError
+      ? 'error'
+      : 'ready';
 
   useEffect(() => {
     if (!selectedSectionId || requestedSectionId === selectedSectionId) return;
@@ -232,6 +238,18 @@ export default function AdminMeetingActionsPage() {
         />
       </AdminSectionTeamFilter>
 
+      {sectionTeamsQuery.isError ? (
+        <HStack gap={2} wrap='wrap'>
+          <Text role='status'>팀장 정보를 불러오지 못했습니다.</Text>
+          <Button
+            label='팀장 정보 다시 시도'
+            onClick={() => void sectionTeamsQuery.refetch()}
+            size='sm'
+            variant='secondary'
+          />
+        </HStack>
+      ) : null}
+
       {activeSectionsQuery.isPending ? (
         <Text aria-live='polite' role='status'>
           운영 중인 분반을 불러오는 중입니다.
@@ -263,6 +281,7 @@ export default function AdminMeetingActionsPage() {
           <AdminMeetingActionTable
             actions={actions}
             emptyMessage='조건에 맞는 액션플랜이 없습니다.'
+            leaderLookupState={leaderLookupState}
             leaderNamesByTeamId={leaderNamesByTeamId}
           />
         </Card>

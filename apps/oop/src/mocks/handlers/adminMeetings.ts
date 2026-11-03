@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 
 import { getRichTextPlainText } from '../../features/admin-meeting/model';
 import { getMockAuthenticatedAccount } from '../authSession';
+import { getAdminTeamLeaderName } from './adminStudentTeams';
 import {
   adminMeetingEditLogsFixture,
   adminMeetingRecordsFixture,
@@ -46,17 +47,7 @@ function getAdminMeetingAuthorStudentNumber(
 function getAdminMeetingLeaderName(
   record: (typeof adminMeetingRecordsFixture)[number],
 ) {
-  const team = adminTeamsFixture.find(
-    candidate => getAdminTeamId(candidate.id) === record.apiTeamId,
-  );
-
-  return team
-    ? (team.memberIds
-        .map(memberId =>
-          adminStudentsFixture.find(student => student.id === memberId),
-        )
-        .find(student => student?.isLeader)?.name ?? null)
-    : null;
+  return getAdminTeamLeaderName(record.apiTeamId) ?? null;
 }
 
 function isAccessibleRecordSection(

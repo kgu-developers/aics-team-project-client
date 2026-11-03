@@ -23,6 +23,7 @@ import * as styles from './AdminMeetingActionTable.css';
 type AdminMeetingActionTableProps = {
   actions: readonly AdminSectionMeetingAction[];
   emptyMessage: string;
+  leaderLookupState?: 'error' | 'loading' | 'ready';
   leaderNamesByTeamId?: ReadonlyMap<number, string | null>;
   showMeeting?: boolean;
   showTeam?: boolean;
@@ -43,6 +44,7 @@ const statusDotVariants: Record<MeetingActionStatus, StatusDotVariant> = {
 export default function AdminMeetingActionTable({
   actions,
   emptyMessage,
+  leaderLookupState = 'ready',
   leaderNamesByTeamId,
   showMeeting = true,
   showTeam = true,
@@ -60,9 +62,19 @@ export default function AdminMeetingActionTable({
       result.push({
         header: '팀장',
         key: 'leader',
-        renderCell: action => (
-          <span>{leaderNamesByTeamId?.get(action.teamId) ?? '-'}</span>
-        ),
+        renderCell: action => {
+          const leaderName = leaderNamesByTeamId?.get(action.teamId);
+          const label =
+            leaderName !== undefined
+              ? (leaderName ?? '-')
+              : leaderLookupState === 'loading'
+                ? '불러오는 중'
+                : leaderLookupState === 'error'
+                  ? '불러오기 실패'
+                  : '-';
+
+          return <span title={label}>{label}</span>;
+        },
         width: proportional(0.8, { minWidth: 80 }),
       });
     }
@@ -81,7 +93,10 @@ export default function AdminMeetingActionTable({
             >
               {action.meetingRecordTitle}
             </Link>
-            <span className={styles.secondaryText}>
+            <span
+              className={styles.secondaryText}
+              title={formatAdminMeetingDateTime(action.meetingAt)}
+            >
               {formatAdminMeetingDateTime(action.meetingAt)}
             </span>
           </div>
@@ -99,7 +114,10 @@ export default function AdminMeetingActionTable({
             <span className={styles.actionContent} title={action.content}>
               {action.content}
             </span>
-            <span className={styles.secondaryText}>
+            <span
+              className={styles.secondaryText}
+              title={`생성 ${formatAdminMeetingDateTime(action.createdAt)}`}
+            >
               생성 {formatAdminMeetingDateTime(action.createdAt)}
             </span>
           </div>
@@ -109,7 +127,11 @@ export default function AdminMeetingActionTable({
       {
         header: '담당자',
         key: 'assignee',
-        renderCell: action => <span>{action.assigneeName ?? '미지정'}</span>,
+        renderCell: action => (
+          <span title={action.assigneeName ?? '미지정'}>
+            {action.assigneeName ?? '미지정'}
+          </span>
+        ),
         width: proportional(0.8, { minWidth: 80 }),
       },
       {
@@ -130,7 +152,11 @@ export default function AdminMeetingActionTable({
         header: '기한',
         key: 'dueAt',
         renderCell: action => (
-          <span>
+          <span
+            title={
+              action.dueAt ? formatAdminMeetingDateTime(action.dueAt) : '없음'
+            }
+          >
             {action.dueAt ? formatAdminMeetingDateTime(action.dueAt) : '없음'}
           </span>
         ),
@@ -139,7 +165,7 @@ export default function AdminMeetingActionTable({
     );
 
     return result;
-  }, [leaderNamesByTeamId, showMeeting, showTeam]);
+  }, [leaderLookupState, leaderNamesByTeamId, showMeeting, showTeam]);
 
   return (
     <Table<AdminSectionMeetingAction>

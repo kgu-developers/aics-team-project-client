@@ -52,6 +52,7 @@ export const adminMilestoneSubmissionsHandlers = [
             currentVersion: 0,
             hasPendingReview: false,
             id: milestone.id * 100_000 + team.id,
+            leaderName: leaderNameByTeamId.get(team.id) ?? null,
             meetingRecordCount: 0,
             milestoneId: milestone.id,
             presentationOrder: getAdminPresentationOrderFixture(
