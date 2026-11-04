@@ -33,7 +33,8 @@ export type ProjectProposalResponse = {
   repositoryUrl?: string | null;
   externalLinks?: unknown;
   topicCandidateId?: number | null;
-  approvalStatus?: 'DRAFT' | 'SUBMITTED' | 'REVISION_REQUESTED' | null;
+  approvalStatus?:
+    'DRAFT' | 'PENDING' | 'REVISION_REQUESTED' | 'APPROVED' | 'REJECTED' | null;
   proposalCompletedAt?: string | null;
   teamOperation: TeamKickoffResponse;
 };
