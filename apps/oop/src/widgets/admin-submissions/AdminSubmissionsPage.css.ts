@@ -117,6 +117,12 @@ export const list = style({
   gap: 8,
 });
 
+export const submissionEntry = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 8,
+});
+
 export const submissionArtifactList = style({
   display: 'flex',
   flexDirection: 'column',
@@ -149,6 +155,26 @@ export const meetingLink = style({
   color: tokens.color.text.accent,
   textDecoration: 'underline',
   textUnderlineOffset: 3,
+  ':focus-visible': {
+    outline: `2px solid ${tokens.color.accent}`,
+    outlineOffset: 2,
+  },
+});
+
+export const footerCountLink = style({
+  color: tokens.color.text.accent,
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
+  ':focus-visible': {
+    outline: `2px solid ${tokens.color.accent}`,
+    outlineOffset: 2,
+  },
+});
+
+export const feedbackCountToggle = style({
+  color: tokens.color.text.primary,
+  minHeight: 'auto',
+  padding: 0,
   ':focus-visible': {
     outline: `2px solid ${tokens.color.accent}`,
     outlineOffset: 2,

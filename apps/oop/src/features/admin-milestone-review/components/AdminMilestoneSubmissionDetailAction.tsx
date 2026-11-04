@@ -7,6 +7,8 @@ import * as styles from './AdminMilestoneSubmissionCard.css';
 type AdminMilestoneSubmissionDetailActionProps = {
   apiSectionId?: string;
   milestoneId: string;
+  projectId?: string | null;
+  proposalCompletedAt?: string | null;
   sectionId: string | undefined;
   submissionId: string | null;
   teamId?: string | number;
@@ -17,6 +19,8 @@ type AdminMilestoneSubmissionDetailActionProps = {
 export function AdminMilestoneSubmissionDetailAction({
   apiSectionId,
   milestoneId,
+  projectId,
+  proposalCompletedAt,
   sectionId,
   submissionId,
   teamId,
@@ -27,6 +31,7 @@ export function AdminMilestoneSubmissionDetailAction({
     !sectionId ||
     !submissionId ||
     unavailableReason ||
+    (milestoneId === 'proposal' && !projectId) ||
     (milestoneId === 'midterm' && teamId === undefined)
   ) {
     return (
@@ -53,6 +58,9 @@ export function AdminMilestoneSubmissionDetailAction({
         sectionId,
         ...(teamId === undefined ? {} : { teamId: String(teamId) }),
         ...(apiSectionId === undefined ? {} : { apiSectionId }),
+        ...(proposalCompletedAt === null || proposalCompletedAt === undefined
+          ? {}
+          : { proposalCompletedAt }),
       }}
       to={ROUTES.ADMIN_SUBMISSION_DETAIL}
       onClick={onOpen}

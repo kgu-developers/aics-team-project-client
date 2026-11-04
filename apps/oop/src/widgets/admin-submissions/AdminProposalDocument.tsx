@@ -1,6 +1,7 @@
 import { Button, Card, EmptyState, Heading, Text } from '@aics/design-system';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { seoulInstant } from '~/shared/lib/seoulInstant';
 
 import { useAdminProjectProposalQuery } from '~/features/admin-milestone-review/queries';
 import { safeDisplayUrl } from '~/features/submission/submissionUploadInput';
@@ -8,9 +9,14 @@ import { safeDisplayUrl } from '~/features/submission/submissionUploadInput';
 import * as styles from './AdminProposalDocument.css';
 
 export default function AdminProposalDocument({
+  dueAt,
+  proposalCompletedAt: submittedAt,
   sectionId,
   teamId,
 }: {
+  dueAt?: string | null;
+  /** Last submitted proposal time supplied by the admin submission detail. */
+  proposalCompletedAt?: string | null;
   sectionId: string;
   teamId: string;
 }) {
@@ -41,6 +47,15 @@ export default function AdminProposalDocument({
     );
   const project = query.data;
   if (!project) return <EmptyState title='아직 작성한 제안서가 없습니다.' />;
+  // A revision request can reopen the project document while the submission
+  // detail still retains its last completed submission timestamp.
+  const proposalCompletedAt = project.proposalCompletedAt ?? submittedAt;
+  const proposalCompletedAtInstant = seoulInstant(proposalCompletedAt);
+  const dueAtInstant = seoulInstant(dueAt);
+  const isLate =
+    Number.isFinite(proposalCompletedAtInstant) &&
+    Number.isFinite(dueAtInstant) &&
+    proposalCompletedAtInstant > dueAtInstant;
   return (
     <Card className={styles.document}>
       <header className={styles.header}>
@@ -50,9 +65,10 @@ export default function AdminProposalDocument({
           <div>
             <dt>제출 일시</dt>
             <dd>
-              {project.proposalCompletedAt
-                ? formatSeoulDateTime(project.proposalCompletedAt)
+              {proposalCompletedAt
+                ? formatSeoulDateTime(proposalCompletedAt)
                 : '-'}
+              {isLate ? ' · 지각 제출' : ''}
             </dd>
           </div>
           <div>

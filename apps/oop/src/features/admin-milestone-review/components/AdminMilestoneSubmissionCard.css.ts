@@ -69,6 +69,16 @@ export const footerMetric = style({
   padding: 10,
 });
 
+export const footerMetricWithDivider = style({
+  alignItems: 'center',
+  borderLeft: `1px solid ${tokens.color.border.base}`,
+  display: 'flex',
+  flex: 1,
+  justifyContent: 'center',
+  minWidth: 0,
+  padding: 10,
+});
+
 export const label = style({
   fontWeight: 600,
 });

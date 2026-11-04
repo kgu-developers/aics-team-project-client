@@ -18,12 +18,16 @@ import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
 import { AdminLinkedMeetingsTable } from '~/features/admin-meeting/components';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
-import type { AdminSubmissionArtifactView } from '~/features/admin-milestone-review/model';
+import {
+  getAdminMilestoneReviewStatus,
+  type AdminSubmissionArtifactView,
+} from '~/features/admin-milestone-review/model';
 import {
   useAdminProposalFeedbacksQuery,
+  useAdminMilestoneSubmissionsQuery,
   useAdminMilestoneSubmissionDetailQuery,
   useAdminMidReportQuery,
-  useAdminProjectProposalQuery,
+  useAdminSectionMilestonesQuery,
   useAdminSubmissionVersionQuery,
   useAdminSubmissionVersionsQuery,
   useSubmitAdminProposalFeedbackMutation,
@@ -60,6 +64,19 @@ function getMilestoneLabel(milestoneId: string | undefined) {
 
 function normalizeSearchId(value: string | number | undefined) {
   return value === undefined ? undefined : String(value).replace(/^"|"$/g, '');
+}
+
+function validDateTimeOrNull(value: string | null | undefined) {
+  return value && Number.isFinite(Date.parse(value)) ? value : null;
+}
+
+function getLatestSubmittedAt(versions: readonly { submittedAt: string }[]) {
+  return versions.reduce<string | null>((latest, version) => {
+    const submittedAt = validDateTimeOrNull(version.submittedAt);
+    if (!submittedAt) return latest;
+    if (!latest) return submittedAt;
+    return Date.parse(submittedAt) > Date.parse(latest) ? submittedAt : latest;
+  }, null);
 }
 
 function formatSubmissionTitle(teamName: string, milestoneLabel: string) {
@@ -112,14 +129,16 @@ function SubmissionDetailHeader({
           </Text>
         ) : null}
       </div>
-      <Link
-        aria-label={`${milestoneLabel} 목록으로`}
-        className={styles.backLink}
-        search={search}
-        to={ROUTES.ADMIN_SUBMISSIONS}
-      >
-        ← {milestoneLabel} 목록으로
-      </Link>
+      <div className={styles.headerActions}>
+        <Link
+          aria-label={`${milestoneLabel} 목록으로`}
+          className={styles.backLink}
+          search={search}
+          to={ROUTES.ADMIN_SUBMISSIONS}
+        >
+          ← {milestoneLabel} 목록으로
+        </Link>
+      </div>
     </div>
   );
 }
@@ -175,6 +194,7 @@ export default function AdminSubmissionDetailPage() {
   const search = useSearch({ from: '/admin/submissions/$submissionId' }) as {
     apiSectionId?: string | number;
     milestoneId?: string;
+    proposalCompletedAt?: string;
     sectionId?: string | number;
     teamId?: string | number;
   };
@@ -183,6 +203,9 @@ export default function AdminSubmissionDetailPage() {
   const normalizedSectionId = normalizeSearchId(search.sectionId);
   const normalizedApiSectionId = normalizeSearchId(search.apiSectionId);
   const normalizedTeamId = normalizeSearchId(search.teamId);
+  const proposalCompletedAtFromList = validDateTimeOrNull(
+    search.proposalCompletedAt,
+  );
   const isRequestedSectionAccessible = Boolean(
     currentUser &&
     normalizedSectionId &&
@@ -190,6 +213,11 @@ export default function AdminSubmissionDetailPage() {
   );
   const isMidReport = search.milestoneId === 'midterm';
   const isProposal = search.milestoneId === 'proposal';
+  const scrollToFeedback = () => {
+    document
+      .getElementById('submission-feedback')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
   const isVersionDetailAvailable = Boolean(
     search.milestoneId &&
     versionDetailMilestoneIds.has(search.milestoneId) &&
@@ -198,27 +226,60 @@ export default function AdminSubmissionDetailPage() {
   const canRequestDetail = Boolean(
     submissionId && isRequestedSectionAccessible && isVersionDetailAvailable,
   );
+  const canRequestSubmissionMetadata = Boolean(
+    submissionId &&
+    isRequestedSectionAccessible &&
+    (isVersionDetailAvailable || isMidReport),
+  );
   const submissionQuery = useAdminMilestoneSubmissionDetailQuery(
     submissionId,
-    canRequestDetail,
+    canRequestSubmissionMetadata,
   );
   const detail = submissionQuery.data;
+  const sectionMilestonesQuery = useAdminSectionMilestonesQuery(
+    isRequestedSectionAccessible && isProposal
+      ? (normalizedApiSectionId ?? normalizedSectionId)
+      : undefined,
+  );
+  const proposalDueAt = sectionMilestonesQuery.data?.content.find(
+    milestone => String(milestone.id) === detail?.milestoneId,
+  )?.schedule.dueAt;
   const isProjectProposal = isProposal && detail?.currentVersion === 0;
+  // A proposal can be reopened after a revision request. In that state the
+  // detail and project responses may omit the prior submission time, while
+  // the milestone list still retains it. Query the current team only so a
+  // direct detail URL or browser refresh can restore the same date.
+  const proposalSubmissionListQuery = useAdminMilestoneSubmissionsQuery(
+    isProjectProposal ? detail?.milestoneId : undefined,
+    canRequestDetail && isProjectProposal,
+    normalizedTeamId,
+  );
+  const proposalCompletedAtFromSubmissionList =
+    proposalSubmissionListQuery.data?.submissions.find(
+      submission => submission.teamId === normalizedTeamId,
+    )?.proposalCompletedAt ?? null;
+  const needsProposalSubmissionHistory = Boolean(
+    isProjectProposal &&
+    (detail?.hasPendingReview ||
+      detail?.status === 'REVISION_REQUESTED' ||
+      (detail?.feedbackCount ?? 0) > 0),
+  );
   const midReportQuery = useAdminMidReportQuery(
     isRequestedSectionAccessible && isMidReport && normalizedTeamId
       ? (normalizedApiSectionId ?? normalizedSectionId)
       : undefined,
     isRequestedSectionAccessible && isMidReport ? normalizedTeamId : undefined,
   );
-  const projectProposalQuery = useAdminProjectProposalQuery(
-    normalizedSectionId ?? '',
-    isProjectProposal ? String(detail?.teamId) : undefined,
-  );
   const versionsQuery = useAdminSubmissionVersionsQuery(
     submissionId,
-    canRequestDetail && submissionQuery.isSuccess && !isProjectProposal,
+    canRequestDetail &&
+      submissionQuery.isSuccess &&
+      (!isProjectProposal || needsProposalSubmissionHistory),
   );
   const versions = versionsQuery.data ?? [];
+  const latestProposalSubmissionAt = isProjectProposal
+    ? getLatestSubmittedAt(versions)
+    : null;
   const proposalFeedbackSectionId = isProposal
     ? (normalizedApiSectionId ?? normalizedSectionId)
     : undefined;
@@ -264,6 +325,10 @@ export default function AdminSubmissionDetailPage() {
   }, [proposalFeedbackSectionId, proposalFeedbackTeamId]);
 
   useEffect(() => {
+    if (isProjectProposal) {
+      return;
+    }
+
     const isSelectedVersionAvailable = versions.some(
       version => version.version === selectedVersion,
     );
@@ -277,12 +342,12 @@ export default function AdminSubmissionDetailPage() {
         hasCurrentVersion ? currentVersion : versions[0]?.version,
       );
     }
-  }, [detail?.currentVersion, selectedVersion, versions]);
+  }, [detail?.currentVersion, isProjectProposal, selectedVersion, versions]);
 
   const versionQuery = useAdminSubmissionVersionQuery(
     submissionId,
     selectedVersion,
-    canRequestDetail && versionsQuery.isSuccess,
+    canRequestDetail && versionsQuery.isSuccess && !isProjectProposal,
   );
   const milestoneLabel = getMilestoneLabel(search.milestoneId);
   const headerTeamName = isMidReport
@@ -292,13 +357,7 @@ export default function AdminSubmissionDetailPage() {
     ? midReportQuery.data
       ? formatMidReportStatus(midReportQuery.data.status)
       : undefined
-    : isProjectProposal
-      ? projectProposalQuery.data
-        ? projectProposalQuery.data.proposalCompletedAt
-          ? '제출 완료'
-          : '작성 중'
-        : undefined
-      : detail?.statusLabel;
+    : detail?.statusLabel;
   const headerVersion = isMidReport
     ? midReportQuery.data?.version
     : isProjectProposal
@@ -307,6 +366,7 @@ export default function AdminSubmissionDetailPage() {
   const selectedSection = currentUser?.sections.find(
     section => String(section.id) === normalizedSectionId,
   );
+  const reviewStatus = detail ? getAdminMilestoneReviewStatus(detail) : null;
 
   if (
     isRequestedSectionAccessible &&
@@ -323,9 +383,18 @@ export default function AdminSubmissionDetailPage() {
           version={headerVersion}
         />
         <AdminMidReportDetail
+          feedbackCount={detail?.feedbackCount}
+          feedbackSectionId='submission-feedback'
           onOpenGeneralMessage={() => setIsGeneralMessageDialogOpen(true)}
           sectionId={normalizedApiSectionId ?? normalizedSectionId}
           teamId={normalizedTeamId}
+        />
+        <Button
+          className={styles.feedbackFloatingAction}
+          label='피드백으로 이동'
+          onClick={scrollToFeedback}
+          type='button'
+          variant='secondary'
         />
         <AdminGeneralMessageDialog
           initialTeamId={normalizedTeamId}
@@ -393,6 +462,14 @@ export default function AdminSubmissionDetailPage() {
         <>
           {isProjectProposal ? (
             <AdminProposalDocument
+              dueAt={proposalDueAt}
+              proposalCompletedAt={
+                validDateTimeOrNull(detail.proposalCompletedAt) ??
+                latestProposalSubmissionAt ??
+                validDateTimeOrNull(proposalCompletedAtFromSubmissionList) ??
+                proposalCompletedAtFromList ??
+                null
+              }
               sectionId={normalizedSectionId!}
               teamId={detail.teamId}
             />
@@ -428,9 +505,7 @@ export default function AdminSubmissionDetailPage() {
                   <div className={styles.field}>
                     <Text className={styles.fieldLabel}>검토 상태</Text>
                     <Text className={styles.fieldValue}>
-                      {detail.hasPendingReview
-                        ? '검토 대기 중'
-                        : '검토 대기 없음'}
+                      {reviewStatus ?? '검토 대기 없음'}
                     </Text>
                   </div>
                   {detail.completedAt ? (
@@ -554,126 +629,145 @@ export default function AdminSubmissionDetailPage() {
           )}
 
           {isProposal ? (
-            <Card className={styles.feedbackPanel}>
-              <section className={styles.section}>
-                <Heading level={3}>{milestoneLabel} 피드백</Heading>
-                {proposalFeedbacksQuery.isPending ? (
-                  <Text aria-live='polite' role='status'>
-                    피드백을 불러오는 중입니다.
-                  </Text>
-                ) : proposalFeedbacksQuery.isError ? (
-                  <EmptyState
-                    description='잠시 후 다시 시도해 주세요.'
-                    title='피드백을 불러오지 못했습니다.'
-                  />
-                ) : proposalFeedbacks.length === 0 ? (
-                  <Text className={styles.sectionDescription}>
-                    등록된 피드백이 없습니다.
-                  </Text>
-                ) : (
-                  <div className={styles.feedbackThread}>
-                    {proposalFeedbacks.map(feedback => (
-                      <article
-                        className={cx(
-                          styles.feedbackMessage,
-                          feedback.senderId === currentUser?.studentNumber &&
-                            styles.feedbackOwnMessage,
-                        )}
-                        key={feedback.messageId}
-                      >
-                        <Text className={styles.feedbackMessageMeta}>
-                          {feedback.senderName ?? feedback.senderId} ·{' '}
-                          {feedback.createdAt
-                            ? formatSeoulDateTime(feedback.createdAt)
-                            : '-'}
-                        </Text>
-                        <Text className={styles.feedbackMessageContent}>
-                          {feedback.message}
-                        </Text>
-                      </article>
-                    ))}
-                  </div>
-                )}
-                {proposalFeedbackPageable &&
-                proposalFeedbackPageable.totalPages > 1 ? (
-                  <HStack gap={2} justify='end'>
-                    <Button
-                      isDisabled={proposalFeedbackPageable.page === 0}
-                      label='이전 페이지'
-                      onClick={() =>
-                        setProposalFeedbackPage(page => Math.max(0, page - 1))
-                      }
-                      type='button'
-                      variant='secondary'
-                    />
-                    <Text aria-live='polite'>
-                      {proposalFeedbackPageable.page + 1} /{' '}
-                      {proposalFeedbackPageable.totalPages}
+            <section id='submission-feedback'>
+              <Card className={styles.feedbackPanel}>
+                <section className={styles.section}>
+                  <Heading level={3}>
+                    {milestoneLabel} 피드백
+                    {detail.feedbackCount !== null
+                      ? ` (교수 피드백 ${detail.feedbackCount}건)`
+                      : ''}
+                  </Heading>
+                  {reviewStatus ? <Text>{reviewStatus}</Text> : null}
+                  {proposalFeedbacksQuery.isPending ? (
+                    <Text aria-live='polite' role='status'>
+                      피드백을 불러오는 중입니다.
                     </Text>
-                    <Button
-                      isDisabled={proposalFeedbackPageable.isEnd}
-                      label='다음 페이지'
-                      onClick={() => setProposalFeedbackPage(page => page + 1)}
-                      type='button'
-                      variant='secondary'
+                  ) : proposalFeedbacksQuery.isError ? (
+                    <EmptyState
+                      description='잠시 후 다시 시도해 주세요.'
+                      title='피드백을 불러오지 못했습니다.'
                     />
-                  </HStack>
-                ) : null}
-                {submitFeedbackMutation.isError ? (
-                  <Text role='alert'>
-                    피드백을 보내지 못했습니다. 입력 내용을 확인한 뒤 다시
-                    시도해 주세요.
-                  </Text>
-                ) : null}
-                <div className={styles.feedbackComposer}>
-                  <TextArea
-                    aria-label={`${milestoneLabel} 피드백 내용`}
-                    label={`${milestoneLabel} 피드백 작성`}
-                    onChange={setFeedbackMessage}
-                    placeholder={`${detail.teamName}에 전달할 피드백을 입력하세요.`}
-                    value={feedbackMessage}
-                  />
-                  <div className={styles.feedbackSubmitAction}>
-                    <Button
-                      label='일반 메시지 보내기'
-                      onClick={() => setIsGeneralMessageDialogOpen(true)}
-                      variant='secondary'
+                  ) : proposalFeedbacks.length === 0 ? (
+                    <Text className={styles.sectionDescription}>
+                      등록된 피드백이 없습니다.
+                    </Text>
+                  ) : (
+                    <div className={styles.feedbackThread}>
+                      {proposalFeedbacks.map(feedback => (
+                        <article
+                          className={cx(
+                            styles.feedbackMessage,
+                            feedback.senderId === currentUser?.studentNumber &&
+                              styles.feedbackOwnMessage,
+                          )}
+                          key={feedback.messageId}
+                        >
+                          <Text className={styles.feedbackMessageMeta}>
+                            {feedback.senderName ?? feedback.senderId} ·{' '}
+                            {feedback.createdAt
+                              ? formatSeoulDateTime(feedback.createdAt)
+                              : '-'}
+                          </Text>
+                          <Text className={styles.feedbackMessageContent}>
+                            {feedback.message}
+                          </Text>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                  {proposalFeedbackPageable &&
+                  proposalFeedbackPageable.totalPages > 1 ? (
+                    <HStack gap={2} justify='end'>
+                      <Button
+                        isDisabled={proposalFeedbackPageable.page === 0}
+                        label='최신 기록'
+                        onClick={() =>
+                          setProposalFeedbackPage(page => Math.max(0, page - 1))
+                        }
+                        type='button'
+                        variant='secondary'
+                      />
+                      <Text aria-live='polite'>
+                        {proposalFeedbackPageable.page + 1} /{' '}
+                        {proposalFeedbackPageable.totalPages}
+                      </Text>
+                      <Button
+                        isDisabled={proposalFeedbackPageable.isEnd}
+                        label='이전 기록'
+                        onClick={() =>
+                          setProposalFeedbackPage(page => page + 1)
+                        }
+                        type='button'
+                        variant='secondary'
+                      />
+                    </HStack>
+                  ) : null}
+                  {submitFeedbackMutation.isError ? (
+                    <Text role='alert'>
+                      피드백을 보내지 못했습니다. 입력 내용을 확인한 뒤 다시
+                      시도해 주세요.
+                    </Text>
+                  ) : null}
+                  <div className={styles.feedbackComposer}>
+                    <TextArea
+                      aria-label={`${milestoneLabel} 피드백 내용`}
+                      label={`${milestoneLabel} 피드백 작성`}
+                      onChange={setFeedbackMessage}
+                      placeholder={`${detail.teamName}에 전달할 피드백을 입력하세요.`}
+                      value={feedbackMessage}
                     />
-                    <Button
-                      isDisabled={
-                        !feedbackMessage.trim() ||
-                        !proposalFeedbackSectionId ||
-                        !proposalFeedbackTeamId ||
-                        submitFeedbackMutation.isPending
-                      }
-                      label='피드백 보내기'
-                      onClick={() => {
-                        if (
+                    <div className={styles.feedbackSubmitAction}>
+                      <Button
+                        label='일반 메시지 보내기'
+                        onClick={() => setIsGeneralMessageDialogOpen(true)}
+                        variant='secondary'
+                      />
+                      <Button
+                        isDisabled={
                           !feedbackMessage.trim() ||
                           !proposalFeedbackSectionId ||
-                          !proposalFeedbackTeamId
-                        )
-                          return;
+                          !proposalFeedbackTeamId ||
+                          submitFeedbackMutation.isPending
+                        }
+                        label='피드백 보내기'
+                        onClick={() => {
+                          if (
+                            !feedbackMessage.trim() ||
+                            !proposalFeedbackSectionId ||
+                            !proposalFeedbackTeamId
+                          )
+                            return;
 
-                        submitFeedbackMutation.mutate(
-                          {
-                            input: { message: feedbackMessage.trim() },
-                            sectionId: proposalFeedbackSectionId,
-                            teamId: proposalFeedbackTeamId,
-                          },
-                          {
-                            onSuccess: () => {
-                              setFeedbackMessage('');
-                              setProposalFeedbackPage(0);
+                          submitFeedbackMutation.mutate(
+                            {
+                              input: { message: feedbackMessage.trim() },
+                              sectionId: proposalFeedbackSectionId,
+                              teamId: proposalFeedbackTeamId,
                             },
-                          },
-                        );
-                      }}
-                    />
+                            {
+                              onSuccess: () => {
+                                setFeedbackMessage('');
+                                setProposalFeedbackPage(0);
+                              },
+                            },
+                          );
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              </section>
-            </Card>
+                </section>
+              </Card>
+            </section>
+          ) : null}
+          {isProposal ? (
+            <Button
+              className={styles.feedbackFloatingAction}
+              label='피드백으로 이동'
+              onClick={scrollToFeedback}
+              type='button'
+              variant='secondary'
+            />
           ) : null}
           <section className={styles.relatedMeetings}>
             <section className={styles.section}>

@@ -165,12 +165,16 @@ function formatBlockFields(fields: unknown) {
 }
 
 type Props = {
+  feedbackCount?: number | null;
+  feedbackSectionId?: string;
   onOpenGeneralMessage: () => void;
   sectionId: string;
   teamId: string;
 };
 
 export function AdminMidReportDetail({
+  feedbackCount,
+  feedbackSectionId,
   onOpenGeneralMessage,
   sectionId,
   teamId,
@@ -410,119 +414,126 @@ export function AdminMidReportDetail({
           );
         })}
       </Card>
-      <Card className={styles.feedbackPanel}>
-        <div className={styles.feedbackHeader}>
-          <Heading level={3}>중간 보고서 피드백</Heading>
-          {report.revision?.requestedAt &&
-          !report.revision.completedAt &&
-          (report.status === 'REVISION_REQUESTED' ||
-            report.status === 'SUBMITTED') ? (
-            <Button
-              isDisabled={completeFeedbackMutation.isPending}
-              label='피드백 반영 최종 확인'
-              onClick={() => {
-                setCompletionError(null);
-                setIsCompletionDialogOpen(true);
-              }}
-              type='button'
-            />
-          ) : null}
-        </div>
-        {feedbacksQuery.isPending ? (
-          <Text aria-live='polite' role='status'>
-            피드백을 불러오는 중입니다.
-          </Text>
-        ) : feedbacksQuery.isError ? (
-          <Text role='alert'>피드백을 불러오지 못했습니다.</Text>
-        ) : feedbacks.length ? (
-          <div className={styles.feedbackThread}>
-            {feedbacks.map(feedback => (
-              <article
-                className={cx(
-                  styles.feedbackMessage,
-                  feedback.senderId === currentUser?.studentNumber &&
-                    styles.feedbackOwnMessage,
-                )}
-                key={feedback.messageId}
-              >
-                <Text className={styles.feedbackMessageMeta}>
-                  {feedback.senderName ?? feedback.senderId} ·{' '}
-                  {feedback.createdAt
-                    ? formatSeoulDateTime(feedback.createdAt)
-                    : '-'}
-                </Text>
-                <Text className={styles.feedbackMessageContent}>
-                  {feedback.message}
-                </Text>
-              </article>
-            ))}
+      <section id={feedbackSectionId}>
+        <Card className={styles.feedbackPanel}>
+          <div className={styles.feedbackHeader}>
+            <Heading level={3}>
+              중간 보고서 피드백
+              {feedbackCount !== null && feedbackCount !== undefined
+                ? ` (교수 피드백 ${feedbackCount}건)`
+                : ''}
+            </Heading>
+            {report.revision?.requestedAt &&
+            !report.revision.completedAt &&
+            (report.status === 'REVISION_REQUESTED' ||
+              report.status === 'SUBMITTED') ? (
+              <Button
+                isDisabled={completeFeedbackMutation.isPending}
+                label='피드백 반영 최종 확인'
+                onClick={() => {
+                  setCompletionError(null);
+                  setIsCompletionDialogOpen(true);
+                }}
+                type='button'
+              />
+            ) : null}
           </div>
-        ) : (
-          <Text className={styles.sectionDescription}>
-            등록된 피드백이 없습니다.
-          </Text>
-        )}
-        {feedbackPageable && feedbackPageable.totalPages > 1 ? (
-          <Pagination
-            className={styles.feedbackPagination}
-            isDisabled={feedbacksQuery.isFetching}
-            onChange={page => setFeedbackPage(page - 1)}
-            page={feedbackPageable.page + 1}
-            pageSize={feedbackPageable.size}
-            totalPages={feedbackPageable.totalPages}
-            variant='compact'
-          />
-        ) : null}
-        <div className={styles.feedbackComposer}>
-          {report.status === 'SUBMITTED' ? (
-            <Text className={styles.sectionDescription}>
-              수정 요청을 보내면 학생이 수정본을 재제출하기 전까지 추가 수정
-              요청을 보낼 수 없습니다. 필요한 내용을 한 메시지에 작성해 주세요.
-              추가 안내는 쪽지함의 일반 메시지로 전달할 수 있습니다.
+          {feedbacksQuery.isPending ? (
+            <Text aria-live='polite' role='status'>
+              피드백을 불러오는 중입니다.
             </Text>
+          ) : feedbacksQuery.isError ? (
+            <Text role='alert'>피드백을 불러오지 못했습니다.</Text>
+          ) : feedbacks.length ? (
+            <div className={styles.feedbackThread}>
+              {feedbacks.map(feedback => (
+                <article
+                  className={cx(
+                    styles.feedbackMessage,
+                    feedback.senderId === currentUser?.studentNumber &&
+                      styles.feedbackOwnMessage,
+                  )}
+                  key={feedback.messageId}
+                >
+                  <Text className={styles.feedbackMessageMeta}>
+                    {feedback.senderName ?? feedback.senderId} ·{' '}
+                    {feedback.createdAt
+                      ? formatSeoulDateTime(feedback.createdAt)
+                      : '-'}
+                  </Text>
+                  <Text className={styles.feedbackMessageContent}>
+                    {feedback.message}
+                  </Text>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <Text className={styles.sectionDescription}>
+              등록된 피드백이 없습니다.
+            </Text>
+          )}
+          {feedbackPageable && feedbackPageable.totalPages > 1 ? (
+            <Pagination
+              className={styles.feedbackPagination}
+              isDisabled={feedbacksQuery.isFetching}
+              onChange={page => setFeedbackPage(page - 1)}
+              page={feedbackPageable.page + 1}
+              pageSize={feedbackPageable.size}
+              totalPages={feedbackPageable.totalPages}
+              variant='compact'
+            />
           ) : null}
-          <TextArea
-            aria-label='중간 보고서 피드백 내용'
-            label='중간 보고서 피드백 작성'
-            onChange={setFeedbackMessage}
-            placeholder={`${report.teamName}에 전달할 피드백을 입력하세요.`}
-            value={feedbackMessage}
-          />
-          <div className={styles.feedbackSubmitAction}>
-            <Button
-              label='일반 메시지 보내기'
-              onClick={onOpenGeneralMessage}
-              type='button'
-              variant='secondary'
+          <div className={styles.feedbackComposer}>
+            {report.status === 'SUBMITTED' ? (
+              <Text className={styles.sectionDescription}>
+                수정 요청을 보내면 학생이 수정본을 재제출하기 전까지 추가 수정
+                요청을 보낼 수 없습니다. 필요한 내용을 한 메시지에 작성해
+                주세요. 추가 안내는 쪽지함의 일반 메시지로 전달할 수 있습니다.
+              </Text>
+            ) : null}
+            <TextArea
+              aria-label='중간 보고서 피드백 내용'
+              label='중간 보고서 피드백 작성'
+              onChange={setFeedbackMessage}
+              placeholder={`${report.teamName}에 전달할 피드백을 입력하세요.`}
+              value={feedbackMessage}
             />
-            <Button
-              isDisabled={
-                !feedbackMessage.trim() ||
-                submitFeedbackMutation.isPending ||
-                report.status !== 'SUBMITTED'
-              }
-              isLoading={submitFeedbackMutation.isPending}
-              label='수정 요청 보내기'
-              onClick={() =>
-                submitFeedbackMutation.mutate(
-                  {
-                    input: { message: feedbackMessage.trim() },
-                    sectionId,
-                    teamId,
-                  },
-                  { onSuccess: () => setFeedbackMessage('') },
-                )
-              }
-              type='button'
-            />
+            <div className={styles.feedbackSubmitAction}>
+              <Button
+                label='일반 메시지 보내기'
+                onClick={onOpenGeneralMessage}
+                type='button'
+                variant='secondary'
+              />
+              <Button
+                isDisabled={
+                  !feedbackMessage.trim() ||
+                  submitFeedbackMutation.isPending ||
+                  report.status !== 'SUBMITTED'
+                }
+                isLoading={submitFeedbackMutation.isPending}
+                label='수정 요청 보내기'
+                onClick={() =>
+                  submitFeedbackMutation.mutate(
+                    {
+                      input: { message: feedbackMessage.trim() },
+                      sectionId,
+                      teamId,
+                    },
+                    { onSuccess: () => setFeedbackMessage('') },
+                  )
+                }
+                type='button'
+              />
+            </div>
+            {report.status !== 'SUBMITTED' ? (
+              <Text className={styles.sectionDescription}>
+                제출 완료된 중간보고서에만 수정 요청을 보낼 수 있습니다.
+              </Text>
+            ) : null}
           </div>
-          {report.status !== 'SUBMITTED' ? (
-            <Text className={styles.sectionDescription}>
-              제출 완료된 중간보고서에만 수정 요청을 보낼 수 있습니다.
-            </Text>
-          ) : null}
-        </div>
-      </Card>
+        </Card>
+      </section>
       <Dialog
         aria-label='중간보고서 피드백 최종 확인'
         isOpen={isCompletionDialogOpen}
