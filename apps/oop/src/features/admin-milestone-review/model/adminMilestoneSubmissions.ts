@@ -77,14 +77,12 @@ export function hasAdminTotalMeetingRecords(
 function toSubmissionView(
   submission: AdminMilestoneSubmissionItemDto,
 ): AdminMilestoneSubmissionView {
+  const isExplicitlyNotSubmitted = submission.status === 'NOT_SUBMITTED';
   const hasPersistedSubmission =
-    submission.currentVersion > 0 ||
-    (submission.status != null && submission.status !== 'NOT_SUBMITTED') ||
-    submission.projectId != null ||
-    submission.midReportId != null ||
-    (submission.feedbackCount ?? 0) > 0 ||
-    submission.feedbackRequested === true ||
-    submission.hasPendingReview;
+    !isExplicitlyNotSubmitted &&
+    (submission.currentVersion > 0 ||
+      submission.status != null ||
+      submission.midReportId != null);
 
   return {
     canSubmitNow: submission.canSubmitNow,

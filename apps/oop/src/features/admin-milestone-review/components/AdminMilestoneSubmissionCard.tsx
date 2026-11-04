@@ -53,17 +53,19 @@ export function AdminMilestoneSubmissionCard({
           {meetingCountLabel ? (
             <div className={styles.footerMetric}>{meetingCountLabel}</div>
           ) : null}
-          {feedbackCountLabel ? (
-            <div className={styles.footerMetricWithDivider}>
-              {feedbackCountLabel}
-            </div>
-          ) : null}
-          {messageCountLabel ? (
-            <div className={styles.footerMetric}>
-              <Text>{messageCountLabel}</Text>
-            </div>
-          ) : null}
-          {action}
+          <div className={styles.footerTrailing}>
+            {feedbackCountLabel ? (
+              <div className={styles.footerTrailingLabel}>
+                {feedbackCountLabel}
+              </div>
+            ) : null}
+            {messageCountLabel ? (
+              <div className={styles.footerTrailingLabel}>
+                <Text>{messageCountLabel}</Text>
+              </div>
+            ) : null}
+            {action}
+          </div>
         </div>
       </div>
     </article>
