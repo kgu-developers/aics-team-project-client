@@ -26,6 +26,21 @@ function hasSubmittedProposal(
   );
 }
 
+function hasProposalSubmissionEvidence(
+  submission: Awaited<
+    ReturnType<typeof fetchAdminMilestoneSubmissions>
+  >['contents'][number],
+) {
+  return (
+    submission.currentVersion > 0 ||
+    submission.status !== 'NOT_SUBMITTED' ||
+    submission.proposalCompletedAt != null ||
+    (submission.feedbackCount ?? 0) > 0 ||
+    submission.feedbackRequested === true ||
+    submission.hasPendingReview === true
+  );
+}
+
 export function useAdminMilestoneSubmissionsQuery(
   milestoneId: string | undefined,
   isEnabled: boolean,
@@ -62,10 +77,16 @@ export function useAdminMilestoneSubmissionsQuery(
         ...view,
         submissions: view.submissions.map((item, index) => {
           const projectResult = projects[index];
+          const sourceSubmission = response.contents[index];
           if (projectResult?.status === 'rejected') {
             return {
               ...item,
               statusLabel: '제안서 확인 실패',
+              submissionId:
+                sourceSubmission &&
+                hasProposalSubmissionEvidence(sourceSubmission)
+                  ? String(sourceSubmission.id)
+                  : item.submissionId,
             };
           }
           const project =
@@ -73,7 +94,7 @@ export function useAdminMilestoneSubmissionsQuery(
 
           if (!project && item.currentVersion > 0) return item;
 
-          const sourceSubmissionId = response.contents[index]?.id;
+          const sourceSubmissionId = sourceSubmission?.id;
 
           const submissionId =
             item.submissionId ??

@@ -33,7 +33,7 @@ describe('toAdminMilestoneSubmissionsView', () => {
     expect(hasAdminTotalMeetingRecords(5)).toBe(true);
   });
 
-  it('중간보고서 문서 식별자가 있으면 현재 상태가 미제출이어도 상세 ID를 유지한다', () => {
+  it('중간보고서 문서 식별자가 남아 있어도 미제출 상태면 상세 ID를 만들지 않는다', () => {
     const view = toAdminMilestoneSubmissionsView({
       contents: [
         {
@@ -53,11 +53,11 @@ describe('toAdminMilestoneSubmissionsView', () => {
 
     expect(view.submissions[0]).toMatchObject({
       midReportId: '401',
-      submissionId: '1003',
+      submissionId: null,
     });
   });
 
-  it('최초 미제출 행은 존재하지 않는 상세 ID를 만들지 않는다', () => {
+  it('팀 프로젝트만 있고 중간보고서를 제출하지 않은 행은 상세 ID를 만들지 않는다', () => {
     const view = toAdminMilestoneSubmissionsView({
       contents: [
         {
@@ -67,6 +67,7 @@ describe('toAdminMilestoneSubmissionsView', () => {
           id: 1004,
           meetingRecordCount: 0,
           milestoneId: 102,
+          projectId: 42,
           status: 'NOT_SUBMITTED',
           teamId: 2,
           teamName: 'OOP-01 - 2팀',
@@ -101,7 +102,7 @@ describe('toAdminMilestoneSubmissionsView', () => {
     expect(hasAdminTotalMeetingRecords(null)).toBe(false);
   });
 
-  it('미제출 상태로 내려와도 이전 제출 버전이 있으면 상세 조회 ID를 유지한다', () => {
+  it('수정 요청 상태이고 이전 제출 버전이 있으면 상세 조회 ID를 유지한다', () => {
     const view = toAdminMilestoneSubmissionsView({
       contents: [
         {
@@ -111,7 +112,7 @@ describe('toAdminMilestoneSubmissionsView', () => {
           id: 1001,
           meetingRecordCount: 1,
           milestoneId: 101,
-          status: 'NOT_SUBMITTED',
+          status: 'REVISION_REQUESTED',
           teamId: 1,
           teamName: 'OOP-01 - 1팀',
         },
@@ -120,18 +121,19 @@ describe('toAdminMilestoneSubmissionsView', () => {
 
     expect(view.submissions[0]).toMatchObject({
       currentVersion: 2,
-      status: 'NOT_SUBMITTED',
+      status: 'REVISION_REQUESTED',
       statusLabel: '수정 요청',
       submissionId: '1001',
     });
   });
 
-  it('미제출 상태여도 교수 검토 대기 중이면 상세 조회 ID를 유지한다', () => {
+  it('검토 대기 상태만 있고 중간보고서 문서가 없으면 상세 조회 ID를 만들지 않는다', () => {
     const view = toAdminMilestoneSubmissionsView({
       contents: [
         {
           canSubmitNow: false,
           currentVersion: 0,
+          feedbackCount: 2,
           feedbackRequested: true,
           hasPendingReview: false,
           id: 1002,
@@ -146,7 +148,32 @@ describe('toAdminMilestoneSubmissionsView', () => {
 
     expect(view.submissions[0]).toMatchObject({
       statusLabel: '검토 대기 중',
-      submissionId: '1002',
+      submissionId: null,
+    });
+  });
+
+  it('수정 요청 상태만 있고 제출 문서가 없으면 상세 조회 ID를 만들지 않는다', () => {
+    const view = toAdminMilestoneSubmissionsView({
+      contents: [
+        {
+          canSubmitNow: true,
+          currentVersion: 0,
+          feedbackCount: 1,
+          feedbackRequested: false,
+          hasPendingReview: true,
+          id: 1005,
+          meetingRecordCount: 0,
+          milestoneId: 102,
+          status: 'NOT_SUBMITTED',
+          teamId: 3,
+          teamName: 'OOP-01 - 3팀',
+        },
+      ],
+    });
+
+    expect(view.submissions[0]).toMatchObject({
+      statusLabel: '수정 요청',
+      submissionId: null,
     });
   });
 
