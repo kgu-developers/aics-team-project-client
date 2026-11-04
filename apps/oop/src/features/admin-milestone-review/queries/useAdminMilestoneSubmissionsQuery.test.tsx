@@ -149,12 +149,63 @@ it.each([
         teamId: '2',
         projectId: '20',
         submissionId: approvalStatus === 'DRAFT' ? null : '1002',
+        status:
+          approvalStatus === 'DRAFT'
+            ? 'NOT_SUBMITTED'
+            : approvalStatus === 'REVISION_REQUESTED'
+              ? 'REVISION_REQUESTED'
+              : 'SUBMITTED',
+        statusLabel:
+          approvalStatus === 'DRAFT'
+            ? '미제출'
+            : approvalStatus === 'REVISION_REQUESTED'
+              ? '수정 요청'
+              : '제출 완료',
       });
     } finally {
       cleanup();
     }
   },
 );
+
+it('제출 근거가 있는 이전 응답의 프로젝트 조회가 실패하면 확인 실패를 표시한다', async () => {
+  const fixture = getAdminMilestoneSubmissionsFixture('101');
+  if (!fixture) throw new Error('마일스톤 101 제출물 픽스처가 필요합니다.');
+
+  const submissions = structuredClone(fixture);
+  const submitted = submissions.contents[1];
+  if (!submitted) throw new Error('두 번째 제출물 픽스처가 필요합니다.');
+
+  submissions.contents[1] = {
+    ...submitted,
+    currentVersion: 0,
+    feedbackRequested: true,
+    projectId: undefined,
+  };
+
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('101')}`,
+      () => HttpResponse.json(submissions),
+    ),
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM(String(submitted.teamId))}`,
+      () => HttpResponse.json({ code: 'SERVICE_UNAVAILABLE' }, { status: 503 }),
+    ),
+  );
+
+  const { result, cleanup } = renderQuery();
+  try {
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.submissions[1]).toMatchObject({
+      statusLabel: '제안서 확인 실패',
+      submissionId: String(submitted.id),
+      teamId: String(submitted.teamId),
+    });
+  } finally {
+    cleanup();
+  }
+});
 
 it.each([
   [503, 'SERVICE_UNAVAILABLE'],

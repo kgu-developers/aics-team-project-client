@@ -27,8 +27,9 @@ function getFeedbackDraftStorageKey(
   milestoneId: 'midterm' | 'proposal',
   sectionId: string,
   teamId: string,
+  userId: string,
 ) {
-  return `aics.oop.admin.submission-feedback-draft:${milestoneId}:${sectionId}:${teamId}`;
+  return `aics.oop.admin.submission-feedback-draft:${userId}:${milestoneId}:${sectionId}:${teamId}`;
 }
 
 function readFeedbackDraft(storageKey: string) {
@@ -57,16 +58,21 @@ export function AdminSubmissionFeedbackHistory({
   teamId,
   teamName,
 }: AdminSubmissionFeedbackHistoryProps) {
-  const draftStorageKey = getFeedbackDraftStorageKey(
-    milestoneId,
-    sectionId,
-    teamId,
-  );
+  const currentUser = useAuthStore(state => state.currentUser);
+  const draftStorageKey = currentUser?.studentNumber
+    ? getFeedbackDraftStorageKey(
+        milestoneId,
+        sectionId,
+        teamId,
+        currentUser.studentNumber,
+      )
+    : null;
   const [page, setPage] = useState(0);
   const [feedbackMessage, setFeedbackMessage] = useState(() =>
-    readFeedbackDraft(draftStorageKey),
+    draftStorageKey ? readFeedbackDraft(draftStorageKey) : '',
   );
-  const currentUser = useAuthStore(state => state.currentUser);
+  const [loadedDraftStorageKey, setLoadedDraftStorageKey] =
+    useState(draftStorageKey);
   const proposalFeedbacksQuery = useAdminProposalFeedbacksQuery(
     milestoneId === 'proposal' ? sectionId : undefined,
     milestoneId === 'proposal' ? teamId : undefined,
@@ -97,31 +103,49 @@ export function AdminSubmissionFeedbackHistory({
     submitMidReportFeedbackMutation.isError;
 
   useEffect(() => {
-    storeFeedbackDraft(draftStorageKey, feedbackMessage);
-  }, [draftStorageKey, feedbackMessage]);
+    setFeedbackMessage(
+      draftStorageKey ? readFeedbackDraft(draftStorageKey) : '',
+    );
+    setLoadedDraftStorageKey(draftStorageKey);
+  }, [draftStorageKey]);
 
-  function submitFeedback() {
+  useEffect(() => {
+    if (draftStorageKey && loadedDraftStorageKey === draftStorageKey) {
+      storeFeedbackDraft(draftStorageKey, feedbackMessage);
+    }
+  }, [draftStorageKey, feedbackMessage, loadedDraftStorageKey]);
+
+  async function submitFeedback() {
+    const submittedDraft = feedbackMessage;
     const message = feedbackMessage.trim();
     if (!message || isSubmitting) return;
 
-    const onSuccess = () => {
-      storeFeedbackDraft(draftStorageKey, '');
-      setFeedbackMessage('');
-      setPage(0);
-    };
-
-    if (milestoneId === 'proposal') {
-      submitProposalFeedbackMutation.mutate(
-        { input: { message }, sectionId, teamId },
-        { onSuccess },
-      );
+    try {
+      if (milestoneId === 'proposal') {
+        await submitProposalFeedbackMutation.mutateAsync({
+          input: { message },
+          sectionId,
+          teamId,
+        });
+      } else {
+        await submitMidReportFeedbackMutation.mutateAsync({
+          input: { message },
+          sectionId,
+          teamId,
+        });
+      }
+    } catch {
       return;
     }
 
-    submitMidReportFeedbackMutation.mutate(
-      { input: { message }, sectionId, teamId },
-      { onSuccess },
-    );
+    if (
+      draftStorageKey &&
+      readFeedbackDraft(draftStorageKey) === submittedDraft
+    ) {
+      storeFeedbackDraft(draftStorageKey, '');
+    }
+    setFeedbackMessage(current => (current === submittedDraft ? '' : current));
+    setPage(0);
   }
 
   return (
@@ -217,7 +241,7 @@ export function AdminSubmissionFeedbackHistory({
             label={
               milestoneId === 'proposal' ? '피드백 보내기' : '수정 요청 보내기'
             }
-            onClick={submitFeedback}
+            onClick={() => void submitFeedback()}
             type='button'
           />
         </div>

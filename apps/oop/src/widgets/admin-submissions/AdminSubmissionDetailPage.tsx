@@ -15,6 +15,7 @@ import { ROUTES } from '~/app/constants/routes';
 import { cx } from '~/shared/lib/cx';
 import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { seoulInstant } from '~/shared/lib/seoulInstant';
 
 import { AdminLinkedMeetingsTable } from '~/features/admin-meeting/components';
 import { useAdminMeetingRecordListQuery } from '~/features/admin-meeting/queries';
@@ -67,7 +68,7 @@ function normalizeSearchId(value: string | number | undefined) {
 }
 
 function validDateTimeOrNull(value: string | null | undefined) {
-  return value && Number.isFinite(Date.parse(value)) ? value : null;
+  return value && Number.isFinite(seoulInstant(value)) ? value : null;
 }
 
 function getLatestSubmittedAt(versions: readonly { submittedAt: string }[]) {
@@ -75,7 +76,9 @@ function getLatestSubmittedAt(versions: readonly { submittedAt: string }[]) {
     const submittedAt = validDateTimeOrNull(version.submittedAt);
     if (!submittedAt) return latest;
     if (!latest) return submittedAt;
-    return Date.parse(submittedAt) > Date.parse(latest) ? submittedAt : latest;
+    return seoulInstant(submittedAt) > seoulInstant(latest)
+      ? submittedAt
+      : latest;
   }, null);
 }
 
@@ -211,6 +214,10 @@ export default function AdminSubmissionDetailPage() {
     normalizedSectionId &&
     accessibleSectionIds.includes(normalizedSectionId),
   );
+  const resolvedApiSectionId =
+    normalizedApiSectionId === normalizedSectionId
+      ? normalizedApiSectionId
+      : normalizedSectionId;
   const isMidReport = search.milestoneId === 'midterm';
   const isProposal = search.milestoneId === 'proposal';
   const scrollToFeedback = () => {
@@ -236,9 +243,11 @@ export default function AdminSubmissionDetailPage() {
     canRequestSubmissionMetadata,
   );
   const detail = submissionQuery.data;
+  const detailTeamId =
+    detail?.teamId === undefined ? undefined : String(detail.teamId);
   const sectionMilestonesQuery = useAdminSectionMilestonesQuery(
     isRequestedSectionAccessible && isProposal
-      ? (normalizedApiSectionId ?? normalizedSectionId)
+      ? resolvedApiSectionId
       : undefined,
   );
   const proposalDueAt = sectionMilestonesQuery.data?.content.find(
@@ -252,11 +261,11 @@ export default function AdminSubmissionDetailPage() {
   const proposalSubmissionListQuery = useAdminMilestoneSubmissionsQuery(
     isProjectProposal ? detail?.milestoneId : undefined,
     canRequestDetail && isProjectProposal,
-    normalizedTeamId,
+    detailTeamId,
   );
   const proposalCompletedAtFromSubmissionList =
     proposalSubmissionListQuery.data?.submissions.find(
-      submission => submission.teamId === normalizedTeamId,
+      submission => submission.teamId === detailTeamId,
     )?.proposalCompletedAt ?? null;
   const needsProposalSubmissionHistory = Boolean(
     isProjectProposal &&
@@ -266,7 +275,7 @@ export default function AdminSubmissionDetailPage() {
   );
   const midReportQuery = useAdminMidReportQuery(
     isRequestedSectionAccessible && isMidReport && normalizedTeamId
-      ? (normalizedApiSectionId ?? normalizedSectionId)
+      ? resolvedApiSectionId
       : undefined,
     isRequestedSectionAccessible && isMidReport ? normalizedTeamId : undefined,
   );
@@ -281,7 +290,7 @@ export default function AdminSubmissionDetailPage() {
     ? getLatestSubmittedAt(versions)
     : null;
   const proposalFeedbackSectionId = isProposal
-    ? (normalizedApiSectionId ?? normalizedSectionId)
+    ? resolvedApiSectionId
     : undefined;
   const proposalFeedbackTeamId =
     isProposal && detail?.teamId !== undefined
@@ -386,23 +395,25 @@ export default function AdminSubmissionDetailPage() {
           feedbackCount={detail?.feedbackCount}
           feedbackSectionId='submission-feedback'
           onOpenGeneralMessage={() => setIsGeneralMessageDialogOpen(true)}
-          sectionId={normalizedApiSectionId ?? normalizedSectionId}
+          sectionId={resolvedApiSectionId!}
           teamId={normalizedTeamId}
         />
-        <Button
-          className={styles.feedbackFloatingAction}
-          label='피드백으로 이동'
-          onClick={scrollToFeedback}
-          type='button'
-          variant='secondary'
-        />
+        {midReportQuery.isSuccess && midReportQuery.data ? (
+          <Button
+            className={styles.feedbackFloatingAction}
+            label='피드백으로 이동'
+            onClick={scrollToFeedback}
+            type='button'
+            variant='secondary'
+          />
+        ) : null}
         <AdminGeneralMessageDialog
           initialTeamId={normalizedTeamId}
           description='일반 메시지는 중간 보고서 피드백과 별도로 팀의 일반 메시지 대화에 전달됩니다.'
           isOpen={isGeneralMessageDialogOpen}
           isTeamLocked
           onClose={() => setIsGeneralMessageDialogOpen(false)}
-          sectionId={normalizedApiSectionId ?? normalizedSectionId}
+          sectionId={resolvedApiSectionId!}
           sectionLabel={
             selectedSection
               ? formatAdminSectionLabel(selectedSection)
@@ -429,7 +440,7 @@ export default function AdminSubmissionDetailPage() {
             isOpen={isGeneralMessageDialogOpen}
             isTeamLocked
             onClose={() => setIsGeneralMessageDialogOpen(false)}
-            sectionId={normalizedApiSectionId ?? normalizedSectionId}
+            sectionId={resolvedApiSectionId!}
             sectionLabel={
               selectedSection
                 ? formatAdminSectionLabel(selectedSection)

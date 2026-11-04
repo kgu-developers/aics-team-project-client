@@ -62,10 +62,7 @@ export function useAdminMilestoneSubmissionsQuery(
         ...view,
         submissions: view.submissions.map((item, index) => {
           const projectResult = projects[index];
-          if (
-            projectResult?.status === 'rejected' &&
-            item.submissionId === null
-          ) {
+          if (projectResult?.status === 'rejected') {
             return {
               ...item,
               statusLabel: '제안서 확인 실패',
@@ -98,6 +95,25 @@ export function useAdminMilestoneSubmissionsQuery(
                 project.proposalCompletedAt ?? item.proposalCompletedAt,
               status: 'REVISION_REQUESTED' as const,
               statusLabel: '수정 요청',
+              submissionId,
+            };
+          }
+
+          if (
+            project &&
+            hasSubmittedProposal(
+              project.approvalStatus,
+              project.proposalCompletedAt,
+            )
+          ) {
+            return {
+              ...item,
+              projectId: String(project.id),
+              projectTitle: project.title ?? item.projectTitle,
+              proposalCompletedAt:
+                project.proposalCompletedAt ?? item.proposalCompletedAt,
+              status: 'SUBMITTED' as const,
+              statusLabel: '제출 완료',
               submissionId,
             };
           }

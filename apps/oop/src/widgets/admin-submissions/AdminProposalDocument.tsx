@@ -49,7 +49,12 @@ export default function AdminProposalDocument({
   if (!project) return <EmptyState title='아직 작성한 제안서가 없습니다.' />;
   // A revision request can reopen the project document while the submission
   // detail still retains its last completed submission timestamp.
-  const proposalCompletedAt = project.proposalCompletedAt ?? submittedAt;
+  const projectCompletedAt = Number.isFinite(
+    seoulInstant(project.proposalCompletedAt),
+  )
+    ? project.proposalCompletedAt
+    : null;
+  const proposalCompletedAt = projectCompletedAt ?? submittedAt;
   const proposalCompletedAtInstant = seoulInstant(proposalCompletedAt);
   const dueAtInstant = seoulInstant(dueAt);
   const isLate =

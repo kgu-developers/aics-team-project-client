@@ -1490,7 +1490,6 @@ export default function AdminSubmissionsPage() {
                               ) : (
                                 <AdminMilestoneSubmissionDetailAction
                                   milestoneId={activeTab.id}
-                                  projectId={submission.projectId}
                                   proposalCompletedAt={
                                     submission.proposalCompletedAt
                                   }

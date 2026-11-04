@@ -205,8 +205,16 @@ export function getAdminMilestoneSubmissionsFixture(
               submission.milestoneId,
               submission.teamId,
             )
-              ? false
+              ? true
               : submission.hasPendingReview,
+          feedbackRequested:
+            submission.milestoneId === 102 &&
+            isAdminMidReportSubmissionReopened(
+              submission.milestoneId,
+              submission.teamId,
+            )
+              ? false
+              : submission.feedbackRequested,
           meetingRecordCount: countAdminMeetingRecords(
             submission.teamId,
             submission.milestoneId,

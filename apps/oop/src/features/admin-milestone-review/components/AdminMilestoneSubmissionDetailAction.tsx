@@ -7,7 +7,6 @@ import * as styles from './AdminMilestoneSubmissionCard.css';
 type AdminMilestoneSubmissionDetailActionProps = {
   apiSectionId?: string;
   milestoneId: string;
-  projectId?: string | null;
   proposalCompletedAt?: string | null;
   sectionId: string | undefined;
   submissionId: string | null;
@@ -19,7 +18,6 @@ type AdminMilestoneSubmissionDetailActionProps = {
 export function AdminMilestoneSubmissionDetailAction({
   apiSectionId,
   milestoneId,
-  projectId,
   proposalCompletedAt,
   sectionId,
   submissionId,
@@ -31,7 +29,6 @@ export function AdminMilestoneSubmissionDetailAction({
     !sectionId ||
     !submissionId ||
     unavailableReason ||
-    (milestoneId === 'proposal' && !projectId) ||
     (milestoneId === 'midterm' && teamId === undefined)
   ) {
     return (

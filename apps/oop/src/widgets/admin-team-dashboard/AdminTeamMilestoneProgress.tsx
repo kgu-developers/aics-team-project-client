@@ -223,7 +223,6 @@ export default function AdminTeamMilestoneProgress({
                           ? 'proposal'
                           : 'midterm'
                       }
-                      projectId={submission?.projectId}
                       proposalCompletedAt={submission?.proposalCompletedAt}
                       sectionId={sectionId}
                       submissionId={submissionId}

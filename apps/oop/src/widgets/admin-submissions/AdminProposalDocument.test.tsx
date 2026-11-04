@@ -153,6 +153,24 @@ it('수정 요청으로 프로젝트의 제출 시각이 비어도 상세 응답
   }
 });
 
+it('프로젝트 제출 시각이 잘못된 값이면 상세 응답의 마지막 제출 시각을 표시한다', async () => {
+  const project = createProjectProposalFixture();
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('19')}`, () =>
+      HttpResponse.json({ ...project, proposalCompletedAt: 'not-a-date' }),
+    ),
+  );
+
+  const cleanup = renderDocument('1', '19', '2026-09-07T09:00:00Z');
+  try {
+    expect(await screen.findByText(project.title)).toBeVisible();
+    expect(screen.getByText('2026-09-07/18:00')).toBeVisible();
+    expect(screen.queryByText('not-a-date')).toBeNull();
+  } finally {
+    cleanup();
+  }
+});
+
 it('서버 문서의 백슬래시 기반 외부 이미지 URL을 렌더링하지 않는다', async () => {
   const project = createProjectProposalFixture();
   server.use(
