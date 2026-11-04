@@ -46,8 +46,10 @@ export function parseProjectProposal(
     !(
       value.approvalStatus == null ||
       value.approvalStatus === 'DRAFT' ||
-      value.approvalStatus === 'SUBMITTED' ||
-      value.approvalStatus === 'REVISION_REQUESTED'
+      value.approvalStatus === 'PENDING' ||
+      value.approvalStatus === 'REVISION_REQUESTED' ||
+      value.approvalStatus === 'APPROVED' ||
+      value.approvalStatus === 'REJECTED'
     ) ||
     !Array.isArray(value.dataConfiguration) ||
     !value.dataConfiguration.every(

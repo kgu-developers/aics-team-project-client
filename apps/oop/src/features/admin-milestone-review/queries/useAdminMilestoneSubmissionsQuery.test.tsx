@@ -116,6 +116,45 @@ it('수정 요청된 제안서는 제출 버전이 0이어도 상세 조회를 �
 });
 
 it.each([
+  'DRAFT',
+  'PENDING',
+  'REVISION_REQUESTED',
+  'APPROVED',
+  'REJECTED',
+] as const)(
+  '서버 제안서 승인 상태 %s를 받아도 전체 목록을 유지한다',
+  async approvalStatus => {
+    const proposal = createProjectProposalFixture();
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('2')}`,
+        () =>
+          HttpResponse.json({
+            ...proposal,
+            id: 20,
+            teamId: 2,
+            approvalStatus,
+            proposalCompletedAt:
+              approvalStatus === 'DRAFT' ? null : '2026-11-04T02:00:00Z',
+            teamOperation: { ...proposal.teamOperation, id: 2 },
+          }),
+      ),
+    );
+
+    const { result, cleanup } = renderQuery();
+    try {
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data?.submissions).toHaveLength(2);
+      expect(result.current.data?.submissions[1]).toMatchObject({
+        teamId: '2',
+      });
+    } finally {
+      cleanup();
+    }
+  },
+);
+
+it.each([
   [503, 'SERVICE_UNAVAILABLE'],
   [403, 'FORBIDDEN'],
   [404, 'SECTION_NOT_FOUND'],
