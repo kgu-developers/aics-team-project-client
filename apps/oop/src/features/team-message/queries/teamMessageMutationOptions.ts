@@ -2,6 +2,7 @@ import { submitTeamMessage } from '@aics/api-client';
 import type { SubmitTeamMessageInput } from '@aics/core';
 import type { QueryClient } from '@tanstack/react-query';
 
+import { adminMessageKeys } from '~/features/admin-message/queries/adminMessageKeys';
 import { isValidPositiveTeamId } from '~/features/team-assignment/queries/useTeamMemberContactsQuery';
 
 import { teamMessageKeys } from './teamMessageKeys';
@@ -22,14 +23,17 @@ export function teamMessageMutationOptions(
     },
     retry: false,
     onMutate: () => ({ teamId }),
-    onSuccess: (
+    onSuccess: async (
       _message: unknown,
       _input: unknown,
       context: { teamId: string | undefined },
     ) =>
       // Invalidate the mutation's team even if the active screen changes teams.
-      queryClient.invalidateQueries({
-        queryKey: teamMessageKeys.team(context?.teamId),
-      }),
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: teamMessageKeys.team(context?.teamId),
+        }),
+        queryClient.invalidateQueries({ queryKey: adminMessageKeys.all }),
+      ]),
   };
 }

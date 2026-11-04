@@ -4,6 +4,9 @@ import {
 } from '@aics/api-client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { adminMessageKeys } from '~/features/admin-message/queries/adminMessageKeys';
+import { teamMessageKeys } from '~/features/team-message/queries/teamMessageKeys';
+
 import { adminMilestoneSubmissionsKeys } from './adminMilestoneSubmissionsKeys';
 import { adminProposalFeedbackKeys } from './adminProposalFeedbackKeys';
 
@@ -19,7 +22,7 @@ export function useSubmitAdminProposalFeedbackMutation() {
   return useMutation({
     mutationFn: ({ input, sectionId, teamId }: Variables) =>
       submitAdminProposalFeedback(sectionId, teamId, input),
-    onSuccess: async () => {
+    onSuccess: async (_response, variables) => {
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: adminProposalFeedbackKeys.all,
@@ -29,6 +32,12 @@ export function useSubmitAdminProposalFeedbackMutation() {
         }),
         queryClient.invalidateQueries({
           queryKey: ['admin-project-proposal'],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: teamMessageKeys.team(variables.teamId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: adminMessageKeys.all,
         }),
       ]);
     },

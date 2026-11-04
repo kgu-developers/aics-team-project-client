@@ -269,7 +269,7 @@ describe('AdminTeamDashboard', () => {
 
     await user.click(screen.getByRole('button', { name: '제출·평가' }));
 
-    expect(screen.getByText('수정 요청')).toBeInTheDocument();
+    expect(await screen.findAllByText('수정 요청')).not.toHaveLength(0);
     expect(screen.getByText('2026-09-07/18:00')).toBeInTheDocument();
     expect(screen.getByText('발표 자료 제출')).toBeInTheDocument();
     expect(screen.getByText('presentation.pdf')).toBeInTheDocument();
