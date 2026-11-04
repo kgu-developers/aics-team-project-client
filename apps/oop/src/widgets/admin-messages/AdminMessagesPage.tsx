@@ -338,6 +338,9 @@ export default function AdminMessagesPage() {
     void navigate({
       params: { teamId: String(message.teamId) },
       search: {
+        ...(message.targetTeamCount && message.targetTeamCount > 1
+          ? { messageId: message.id }
+          : {}),
         ...(sectionId ? { sectionId: Number(sectionId) } : {}),
         ...(senderKeyword ? { senderKeyword } : {}),
         ...(sort === 'ASC' ? { sort } : {}),
@@ -546,6 +549,7 @@ export default function AdminMessagesPage() {
                   </th>
                   <th className={styles.sectionColumn}>분반</th>
                   <th className={styles.teamColumn}>팀</th>
+                  <th className={styles.leaderColumn}>팀장</th>
                   <th>내용</th>
                   <th className={styles.senderColumn}>발신자</th>
                 </tr>
@@ -563,8 +567,9 @@ export default function AdminMessagesPage() {
                   const teamLabel = isBroadcast
                     ? `${targetTeamCount}개 팀`
                     : row.teamName;
+                  const additionalTeamCount = Math.max(targetTeamCount - 1, 0);
                   const messageThreadLabel = isBroadcast
-                    ? `${teamLabel} 발송 · 대표 팀 ${row.teamName} 쪽지함 보기`
+                    ? `${row.teamName} 팀 외 ${additionalTeamCount}개 팀 발송 상세 보기`
                     : `${row.teamName} 쪽지 상세 보기`;
 
                   return (
@@ -617,15 +622,15 @@ export default function AdminMessagesPage() {
                           <span className={styles.broadcastTeamContext}>
                             <span
                               className={styles.metadataText}
-                              title={`${targetTeamCount}개 팀 발송`}
+                              title={row.teamName}
                             >
-                              {teamLabel}
+                              {row.teamName} 팀
                             </span>
                             <span
-                              className={styles.broadcastRepresentative}
-                              title={`대표 팀 ${row.teamName} 쪽지함 보기`}
+                              className={styles.broadcastTeamCount}
+                              title={`${row.teamName} 팀 외 ${additionalTeamCount}개 팀 전송`}
                             >
-                              대표 팀: {row.teamName}
+                              외 {additionalTeamCount}개 팀 전송
                             </span>
                           </span>
                         ) : (
@@ -634,6 +639,23 @@ export default function AdminMessagesPage() {
                             title={row.teamName}
                           >
                             {teamLabel}
+                          </span>
+                        )}
+                      </td>
+                      <td className={styles.leaderColumn}>
+                        {isBroadcast ? (
+                          <span
+                            aria-label='복수 팀 발송에는 팀장 정보를 표시하지 않습니다.'
+                            className={styles.metadataText}
+                          >
+                            -
+                          </span>
+                        ) : (
+                          <span
+                            className={styles.metadataText}
+                            title={row.leaderName ?? '-'}
+                          >
+                            {row.leaderName ?? '-'}
                           </span>
                         )}
                       </td>

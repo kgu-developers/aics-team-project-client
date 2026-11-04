@@ -32,6 +32,7 @@ export const Route = createFileRoute('/admin/messages/teams/$teamId')({
     search: Record<string, unknown>,
   ): {
     page?: number;
+    messageId?: number;
     sectionId?: number;
     senderKeyword?: string;
     sort?: 'ASC' | 'DESC';
@@ -39,6 +40,7 @@ export const Route = createFileRoute('/admin/messages/teams/$teamId')({
     type?: MessageFilter;
   } => ({
     page: nonNegativePage(search.page),
+    messageId: positiveId(search.messageId),
     sectionId: positiveId(search.sectionId),
     senderKeyword: senderKeyword(search.senderKeyword),
     sort: sortDirection(search.sort),

@@ -10,6 +10,7 @@ import {
 import { http, HttpResponse } from 'msw';
 
 import { getMockAuthenticatedAccount } from '../authSession';
+import { getAdminTeamLeaderName } from './adminStudentTeams';
 import { getMockMySections } from '../data/sections';
 import {
   createTeamMessageData,
@@ -45,6 +46,15 @@ type MockFeedbackTeamMessageInput = {
   senderName?: string | null;
   teamId: number;
 };
+
+function getCurrentMessageTeamLeaderName(team: {
+  id: number;
+  leaderName: string | null;
+}) {
+  const currentLeaderName = getAdminTeamLeaderName(team.id);
+
+  return currentLeaderName === undefined ? team.leaderName : currentLeaderName;
+}
 
 function error(status: number, code: string) {
   return HttpResponse.json({ code }, { status });
@@ -259,6 +269,7 @@ export function createTeamMessageHandlers(
           sectionId: matchingSectionId,
           sectionName: matchingSection?.name ?? team.sectionId,
           teamId: team.id,
+          leaderName: getCurrentMessageTeamLeaderName(team),
           teamName: team.name,
         };
       });
@@ -315,7 +326,9 @@ export function createTeamMessageHandlers(
         pageable: {
           page,
           size,
-          totalElements: matchingMessages.length,
+          // The inbox exposes one row for a broadcast even though it stores one
+          // message per recipient. Pagination must use the visible row count.
+          totalElements: groupedMessages.length,
           totalPages,
           isEnd: page + 1 >= totalPages,
         },
@@ -336,6 +349,43 @@ export function createTeamMessageHandlers(
         });
         persistData();
         return new HttpResponse(null, { status: 204 });
+      },
+    ),
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.RECIPIENTS(':messageId')}`,
+      ({ params, request }) => {
+        const account = getMockAuthenticatedAccount(request);
+        if (!account || account.user.globalRole === 'STUDENT') {
+          return error(401, 'UNAUTHORIZED');
+        }
+        const guarded = guardMessage(request, String(params.messageId));
+        if (!('message' in guarded)) return guarded.response;
+
+        const recipientMessages = guarded.message.broadcastId
+          ? data.messages.filter(
+              message => message.broadcastId === guarded.message.broadcastId,
+            )
+          : [guarded.message];
+        const recipientTeams = recipientMessages
+          .flatMap(message => {
+            const thread = data.threads.find(
+              item => item.threadId === message.threadId,
+            );
+            const team = data.teams.find(item => item.id === thread?.teamId);
+            return team ? [team] : [];
+          })
+          .filter(
+            (team, index, teams) =>
+              teams.findIndex(candidate => candidate.id === team.id) === index,
+          )
+          .sort((left, right) => left.id - right.id)
+          .map(team => ({
+            leaderName: getCurrentMessageTeamLeaderName(team),
+            teamId: team.id,
+            teamName: team.name,
+          }));
+
+        return HttpResponse.json({ contents: recipientTeams });
       },
     ),
     http.get(

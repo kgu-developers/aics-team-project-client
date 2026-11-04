@@ -221,6 +221,8 @@ export const ENDPOINTS = {
     LIST: '/api/v1/admin/messages',
     READ: (messageId: string | number) =>
       `/api/v1/admin/messages/${messageId}/read`,
+    RECIPIENTS: (messageId: string | number) =>
+      `/api/v1/admin/messages/${messageId}/recipients`,
   },
   MEETING: {
     RECORDS: (teamId: string) => `/api/v1/teams/${teamId}/meeting-records`,

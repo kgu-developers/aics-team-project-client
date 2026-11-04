@@ -6,6 +6,8 @@ export type AdminMeetingRecordListItem = {
   content: string;
   id: number;
   location: string | null;
+  /** Nullable for teams without a designated leader and older API deployments. */
+  leaderName?: string | null;
   meetingAt: string;
   participantCount: number;
   phase: 'FINAL' | 'MID_CHECK' | 'PROPOSAL';

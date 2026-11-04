@@ -80,6 +80,8 @@ export type AdminMessage = TeamMessage & {
   sectionName: string;
   teamId: number;
   teamName: string;
+  /** Nullable when a team has no designated leader. */
+  leaderName: string | null;
   /** Number of recipients in the original section-level broadcast. */
   targetTeamCount: number;
 };

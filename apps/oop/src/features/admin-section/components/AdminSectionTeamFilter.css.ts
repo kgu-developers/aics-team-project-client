@@ -1,10 +1,12 @@
+import { tokens } from '@aics/design-system';
 import { style } from '@vanilla-extract/css';
 
 export const root = style({
   alignItems: 'flex-end',
+  columnGap: tokens.spacing['3'],
   display: 'flex',
   flexWrap: 'wrap',
-  gap: 12,
+  rowGap: tokens.spacing['4'],
 });
 
 export const sectionTabs = style({

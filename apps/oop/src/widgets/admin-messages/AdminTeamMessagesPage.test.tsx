@@ -8,7 +8,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -56,6 +56,7 @@ function nonNegativePage(value: unknown) {
 
 function validateMessageSearch(search: Record<string, unknown>) {
   return {
+    messageId: positiveId(search.messageId),
     page: nonNegativePage(search.page),
     sectionId: positiveId(search.sectionId),
     teamId: positiveId(search.teamId),
@@ -133,6 +134,66 @@ it('쪽지함 목록으로 돌아갈 때 열기 전의 필터·검색·정렬 �
     'href',
     '/admin/messages?sectionId=1&senderKeyword=%ED%99%8D%EA%B8%B8%EB%8F%99&sort=ASC&teamId=1&page=2',
   );
+});
+
+it('복수 팀 발송 상세에서 실제 수신 팀과 각 팀 쪽지함 이동을 표시한다', async () => {
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.RECIPIENTS('710')}`,
+      () =>
+        HttpResponse.json({
+          contents: [
+            { leaderName: '1팀 팀장', teamId: 1, teamName: '1팀' },
+            { leaderName: null, teamId: 8, teamName: '2팀' },
+          ],
+        }),
+    ),
+  );
+
+  renderPage('1', '/admin/messages/teams/1?messageId=710');
+
+  const recipientList = await screen.findByRole('region', {
+    name: '수신 팀 목록',
+  });
+  await within(recipientList).findByText('2개 팀에 전송됨');
+
+  expect(recipientList).toHaveTextContent('수신 팀');
+  expect(recipientList).toHaveTextContent('2개 팀에 전송됨');
+  expect(recipientList).toHaveTextContent('1팀');
+  expect(recipientList).toHaveTextContent('팀장: 1팀 팀장');
+  expect(recipientList).toHaveTextContent('2팀');
+  expect(recipientList).toHaveTextContent('팀장: -');
+
+  const recipientLinks = within(recipientList).getAllByRole('link', {
+    name: '쪽지함 보기 →',
+  });
+  expect(recipientLinks[0]).toHaveAttribute(
+    'href',
+    '/admin/messages/teams/1?messageId=710',
+  );
+  expect(recipientLinks[1]).toHaveAttribute(
+    'href',
+    '/admin/messages/teams/8?messageId=710',
+  );
+});
+
+it('수신 팀 목록 API를 아직 사용할 수 없어도 대표 팀 쪽지함은 표시한다', async () => {
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN_MESSAGE.RECIPIENTS('710')}`,
+      () => HttpResponse.json({}, { status: 404 }),
+    ),
+  );
+  renderPage('1', '/admin/messages/teams/1?messageId=710');
+
+  expect(
+    await screen.findByText(
+      '수신 팀 목록을 아직 불러오지 못했습니다. 대표 팀 쪽지함은 계속 확인할 수 있습니다.',
+    ),
+  ).toBeVisible();
+  expect(
+    screen.getByRole('heading', { name: '여러 팀 발송 쪽지' }),
+  ).toBeVisible();
 });
 
 it('uses the revision request API for mid-report feedback and preserves the draft on conflict', async () => {

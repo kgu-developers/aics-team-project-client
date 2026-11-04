@@ -25,6 +25,7 @@ import ListPagination from '~/shared/ui/ListPagination/ListPagination';
 
 import {
   useAdminMessagesQuery,
+  useAdminMessageRecipientsQuery,
   useAdminRelatedSubmissionQuery,
   useUpdateAdminMessageReadMutation,
 } from '~/features/admin-message/queries';
@@ -45,6 +46,7 @@ type RelatedType = 'GENERAL' | 'PROPOSAL' | 'MID_REPORT';
 type MessageFilter = 'ALL' | RelatedType;
 type AdminMessageListSearch = {
   page?: number;
+  messageId?: number;
   sectionId?: number;
   senderKeyword?: string;
   sort?: 'ASC' | 'DESC';
@@ -62,6 +64,7 @@ export default function AdminTeamMessagesPage() {
   const { teamId } = useParams({ from: '/admin/messages/teams/$teamId' });
   const search = useSearch({ from: '/admin/messages/teams/$teamId' }) as {
     page?: number | string;
+    messageId?: number | string;
     sectionId?: number | string;
     senderKeyword?: string;
     sort?: 'ASC' | 'DESC';
@@ -97,6 +100,12 @@ export default function AdminTeamMessagesPage() {
     );
   }
   const page = Number(search.page);
+  const parsedRecipientMessageId = Number(search.messageId);
+  const recipientMessageId =
+    Number.isSafeInteger(parsedRecipientMessageId) &&
+    parsedRecipientMessageId > 0
+      ? parsedRecipientMessageId
+      : undefined;
   const listSearch: AdminMessageListSearch = {
     ...(search.sectionId === undefined
       ? {}
@@ -111,6 +120,7 @@ export default function AdminTeamMessagesPage() {
       key={`${currentUser.id}:${teamQuery.data.id}`}
       initialFilter={search.type}
       listSearch={listSearch}
+      recipientMessageId={recipientMessageId}
       team={teamQuery.data}
     />
   );
@@ -120,11 +130,13 @@ export function AdminTeamMessagesPanel({
   embedded = false,
   initialFilter = 'ALL',
   listSearch = {},
+  recipientMessageId,
   team,
 }: {
   embedded?: boolean;
   initialFilter?: MessageFilter;
   listSearch?: AdminMessageListSearch;
+  recipientMessageId?: number;
   team: NonNullable<ReturnType<typeof useAdminTeamDashboardQuery>['data']>;
 }) {
   const teamId = team.id;
@@ -136,6 +148,17 @@ export function AdminTeamMessagesPanel({
     ? formatAdminSectionLabel(section)
     : team.sectionId;
   const messagesQuery = useTeamMessagesQuery(teamId);
+  const recipientsQuery = useAdminMessageRecipientsQuery(recipientMessageId);
+  const hasCurrentTeamRecipient =
+    recipientsQuery.data?.contents.some(
+      recipient => recipient.teamId === Number(teamId),
+    ) ?? false;
+  const shouldShowRecipientView =
+    recipientMessageId !== undefined &&
+    (recipientsQuery.isPending ||
+      recipientsQuery.isError ||
+      hasCurrentTeamRecipient ||
+      recipientsQuery.data?.contents.length === 0);
   const submitMutation = useSubmitTeamMessageMutation(teamId);
   const submitMidReportFeedbackMutation =
     useSubmitAdminMidReportFeedbackMutation();
@@ -202,18 +225,27 @@ export function AdminTeamMessagesPanel({
             분반 {sectionLabel}
           </Text>
           <Heading level={embedded ? 2 : 1}>
-            <Link
-              className={styles.teamTitleLink}
-              params={{ teamId: String(team.id) }}
-              search={{ sectionId: team.sectionId }}
-              title={`${team.name} 팀 상세 보기`}
-              to={ROUTES.ADMIN_TEAM_DETAIL}
-            >
-              {team.name}
-              <span aria-hidden='true'> ↗</span>
-            </Link>{' '}
-            · {messageFilterLabels[messageFilter]}
+            {shouldShowRecipientView ? (
+              '여러 팀 발송 쪽지'
+            ) : (
+              <>
+                <Link
+                  className={styles.teamTitleLink}
+                  params={{ teamId: String(team.id) }}
+                  search={{ sectionId: team.sectionId }}
+                  title={`${team.name} 팀 상세 보기`}
+                  to={ROUTES.ADMIN_TEAM_DETAIL}
+                >
+                  {team.name}
+                  <span aria-hidden='true'> ↗</span>
+                </Link>{' '}
+                · {messageFilterLabels[messageFilter]}
+              </>
+            )}
           </Heading>
+          {shouldShowRecipientView ? (
+            <Text color='secondary'>현재 확인 중인 팀: {team.name}</Text>
+          ) : null}
         </div>
         {!embedded ? (
           <div className={styles.headerLinks}>
@@ -227,6 +259,70 @@ export function AdminTeamMessagesPanel({
           </div>
         ) : null}
       </header>
+      {shouldShowRecipientView ? (
+        <Card
+          aria-label='수신 팀 목록'
+          className={styles.recipients}
+          padding={0}
+          role='region'
+        >
+          <div className={styles.recipientsHeader}>
+            <Heading level={2}>수신 팀</Heading>
+            {recipientsQuery.data ? (
+              <Text color='secondary'>
+                {recipientsQuery.data.contents.length}개 팀에 전송됨
+              </Text>
+            ) : null}
+          </div>
+          {recipientsQuery.isPending ? (
+            <Text role='status'>수신 팀 목록을 불러오는 중입니다.</Text>
+          ) : recipientsQuery.isError ? (
+            <div className={styles.recipientLookupError}>
+              <Text color='secondary' role='status'>
+                수신 팀 목록을 아직 불러오지 못했습니다. 대표 팀 쪽지함은 계속
+                확인할 수 있습니다.
+              </Text>
+              <Button
+                label='수신 팀 목록 다시 시도'
+                onClick={() => void recipientsQuery.refetch()}
+                size='sm'
+                variant='secondary'
+              />
+            </div>
+          ) : recipientsQuery.data?.contents.length ? (
+            <ul className={styles.recipientList}>
+              {recipientsQuery.data.contents.map(recipient => (
+                <li className={styles.recipientItem} key={recipient.teamId}>
+                  <div
+                    className={styles.recipientDetails}
+                    title={recipient.teamName}
+                  >
+                    <Text className={styles.recipientName} weight='medium'>
+                      {recipient.teamName}
+                    </Text>
+                    <Text className={styles.recipientLeader} color='secondary'>
+                      팀장: {recipient.leaderName ?? '-'}
+                    </Text>
+                  </div>
+                  <Link
+                    className={styles.recipientLink}
+                    params={{ teamId: String(recipient.teamId) }}
+                    search={{
+                      ...listSearch,
+                      messageId: recipientMessageId,
+                    }}
+                    to={ROUTES.ADMIN_MESSAGE_TEAM}
+                  >
+                    쪽지함 보기 →
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Text color='secondary'>수신 팀이 없습니다.</Text>
+          )}
+        </Card>
+      ) : null}
       <div aria-label='쪽지 유형' className={styles.typeActions} role='group'>
         {(Object.keys(messageFilterLabels) as MessageFilter[]).map(type => (
           <Button

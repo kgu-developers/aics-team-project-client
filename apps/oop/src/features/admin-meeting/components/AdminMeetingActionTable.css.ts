@@ -8,15 +8,21 @@ export const cell = style({
 });
 
 export const actionContent = style({
-  overflowWrap: 'anywhere',
+  display: 'block',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 });
 
 export const meetingLink = style({
   color: tokens.color.text.accent,
-  overflowWrap: 'anywhere',
+  display: 'block',
+  overflow: 'hidden',
   textDecoration: 'underline',
   textUnderlineOffset: 3,
-  width: 'fit-content',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  width: '100%',
   ':focus-visible': {
     outline: `2px solid ${tokens.color.accent}`,
     outlineOffset: 2,
@@ -25,8 +31,10 @@ export const meetingLink = style({
 
 export const secondaryText = style({
   color: tokens.color.text.secondary,
+  overflow: 'hidden',
   fontSize: 'var(--font-size-sm)',
-  overflowWrap: 'anywhere',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 });
 
 export const emptyCell = style({

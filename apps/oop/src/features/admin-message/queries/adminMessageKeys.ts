@@ -29,4 +29,6 @@ export const adminMessageKeys = {
       teamId,
       relatedType,
     ] as const,
+  recipients: (messageId: string | number) =>
+    [...adminMessageKeys.all, 'recipients', String(messageId)] as const,
 };

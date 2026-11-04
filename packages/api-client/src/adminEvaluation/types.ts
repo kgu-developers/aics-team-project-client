@@ -17,6 +17,8 @@ export type AdminPeerEvaluationTeamDetailInput =
 
 export type AdminPeerEvaluationTeamSummaryDto = {
   lastSubmittedAt: string | null;
+  /** Nullable for teams without a designated leader and older API deployments. */
+  leaderName?: string | null;
   meetingRecordCount: number;
   submittedCount: number;
   teamId: number;
@@ -102,6 +104,8 @@ export type AdminPresentationEvaluationScoreDto = {
 
 export type AdminPresentationEvaluationTeamSummaryDto = {
   evaluationCount: number;
+  /** Nullable for teams without a designated leader and older API deployments. */
+  leaderName?: string | null;
   projectTitle: string | null;
   scores: AdminPresentationEvaluationScoreDto[];
   teamId: number;

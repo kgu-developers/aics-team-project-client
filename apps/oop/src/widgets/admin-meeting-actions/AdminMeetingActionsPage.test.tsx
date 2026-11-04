@@ -39,7 +39,10 @@ const server = setupServer(
   ...adminMeetingHandlers,
   http.get(
     `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAMS(':sectionId')}`,
-    () => HttpResponse.json({ contents: [{ id: 1, name: '1팀' }] }),
+    () =>
+      HttpResponse.json({
+        contents: [{ id: 1, leaderName: '김민준', name: '1팀' }],
+      }),
   ),
 );
 
@@ -106,6 +109,10 @@ describe('AdminMeetingActionsPage', () => {
     expect(
       screen.getByRole('columnheader', { name: '팀' }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('columnheader', { name: '팀장' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText('김민준')).not.toHaveLength(0);
     expect(
       screen.getByRole('columnheader', { name: '회의록' }),
     ).toBeInTheDocument();

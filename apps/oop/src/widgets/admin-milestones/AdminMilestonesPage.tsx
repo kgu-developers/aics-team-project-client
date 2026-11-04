@@ -291,16 +291,16 @@ export default function AdminMilestonesPage() {
                   <col className={styles.sectionColumn} />
                   <col />
                   <col className={styles.dueAtColumn} />
-                  <col className={styles.actionColumn} />
                   <col className={styles.statusColumn} />
+                  <col className={styles.actionColumn} />
                 </colgroup>
                 <thead>
                   <tr>
                     <th>적용 분반</th>
                     <th>제목</th>
                     <th>마감일</th>
-                    <th scope='col'>관리</th>
                     <th>공개 상태</th>
+                    <th scope='col'>수정</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -356,17 +356,6 @@ export default function AdminMilestonesPage() {
                           {formatAdminMilestoneDate(milestone.schedule.dueAt)}
                         </td>
                         <td>
-                          <IconButton
-                            icon={<Pencil aria-hidden='true' size={16} />}
-                            label={`${milestone.title} 수정`}
-                            onClick={event => {
-                              event.stopPropagation();
-                              editMilestone();
-                            }}
-                            variant='secondary'
-                          />
-                        </td>
-                        <td>
                           {milestone.status === 'CLOSED' ? (
                             <Text>
                               {getAdminMilestoneStatusLabel(milestone.status)}
@@ -413,6 +402,17 @@ export default function AdminMilestonesPage() {
                               {statusUpdateError.message}
                             </Text>
                           ) : null}
+                        </td>
+                        <td>
+                          <IconButton
+                            icon={<Pencil aria-hidden='true' size={16} />}
+                            label={`${milestone.title} 수정`}
+                            onClick={event => {
+                              event.stopPropagation();
+                              editMilestone();
+                            }}
+                            variant='secondary'
+                          />
                         </td>
                       </tr>
                     );

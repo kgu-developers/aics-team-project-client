@@ -406,6 +406,12 @@ export default function AdminSubmissionDetailPage() {
                     <Text className={styles.fieldValue}>{detail.teamName}</Text>
                   </div>
                   <div className={styles.field}>
+                    <Text className={styles.fieldLabel}>팀장</Text>
+                    <Text className={styles.fieldValue}>
+                      {detail.leaderName ?? '-'}
+                    </Text>
+                  </div>
+                  <div className={styles.field}>
                     <Text className={styles.fieldLabel}>제출 상태</Text>
                     <Text className={styles.fieldValue}>
                       {detail.statusLabel}

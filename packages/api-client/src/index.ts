@@ -197,8 +197,14 @@ export {
   type AdminMeetingRecordSummaryDto,
   type AdminMeetingRecordsResponse,
 } from './adminMeeting';
-export { fetchAdminMessages, updateAdminMessageRead } from './adminMessage';
+export {
+  fetchAdminMessageRecipients,
+  fetchAdminMessages,
+  updateAdminMessageRead,
+} from './adminMessage';
 export type {
+  AdminMessageRecipient,
+  AdminMessageRecipientsResponse,
   AdminMessagesParams,
   AdminMessageSortDirection,
 } from './adminMessage';

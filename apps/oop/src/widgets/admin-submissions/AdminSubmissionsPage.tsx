@@ -126,6 +126,23 @@ function sortTeamRowsByName<
   );
 }
 
+function TeamNameWithLeader({
+  leaderName,
+  teamName,
+}: {
+  leaderName?: string | null;
+  teamName: string;
+}) {
+  return (
+    <HStack align='center' gap={2} wrap='wrap'>
+      <Text>{teamName}</Text>
+      {leaderName ? (
+        <Badge label={`팀장 ${leaderName}`} variant='neutral' />
+      ) : null}
+    </HStack>
+  );
+}
+
 function getNextPresentationTotalScoreSort(
   sort: PresentationTotalScoreSort,
 ): PresentationTotalScoreSort {
@@ -1045,6 +1062,12 @@ export default function AdminSubmissionsPage() {
                             align: 'start',
                             header: '팀',
                             key: 'teamName',
+                            renderCell: team => (
+                              <TeamNameWithLeader
+                                leaderName={team.leaderName}
+                                teamName={team.teamName}
+                              />
+                            ),
                             width: proportional(1, { minWidth: 128 }),
                           },
                           {
@@ -1238,6 +1261,12 @@ export default function AdminSubmissionsPage() {
                           align: 'start',
                           header: '팀',
                           key: 'teamName',
+                          renderCell: team => (
+                            <TeamNameWithLeader
+                              leaderName={team.leaderName}
+                              teamName={team.teamName}
+                            />
+                          ),
                           width: proportional(1.3, { minWidth: 160 }),
                         },
                         {
@@ -1423,6 +1452,7 @@ export default function AdminSubmissionsPage() {
                             !submissionReadState.isRead(readTarget)
                           }
                           label={submission.teamName}
+                          leaderName={submission.leaderName}
                           secondaryLabel={submission.statusLabel}
                           submissionMetadata={getSubmissionMetadata(
                             submission,

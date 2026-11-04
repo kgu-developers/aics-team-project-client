@@ -104,12 +104,38 @@ function getTeams(sectionId: string): Team[] {
         id: student.id,
         name: student.name,
         isLeader:
+          !withdrawnStudentNumbers.has(student.studentNumber) &&
           student.studentNumber ===
-          (teamLeaderStudentNumbers.get(team.id) ??
-            getBaselineTeamStudents(team).find(candidate => candidate.isLeader)
-              ?.studentNumber),
+            (teamLeaderStudentNumbers.get(team.id) ??
+              getBaselineTeamStudents(team).find(
+                candidate => candidate.isLeader,
+              )?.studentNumber),
       })),
     }));
+}
+
+/**
+ * Returns the current team leader from the mutable team-management mock state.
+ * `undefined` means that the numeric ID does not belong to this fixture.
+ */
+export function getAdminTeamLeaderName(teamId: number) {
+  const team = adminTeamsFixture.find(
+    candidate => getAdminTeamId(candidate.id) === teamId,
+  );
+  if (!team) return undefined;
+
+  const leaderStudentNumber =
+    teamLeaderStudentNumbers.get(team.id) ??
+    getBaselineTeamStudents(team).find(candidate => candidate.isLeader)
+      ?.studentNumber;
+
+  return (
+    getTeamStudents(team.id).find(
+      student =>
+        student.studentNumber === leaderStudentNumber &&
+        !withdrawnStudentNumbers.has(student.studentNumber),
+    )?.name ?? null
+  );
 }
 
 function getStudents(sectionId: string) {
@@ -278,6 +304,7 @@ export function getAdminSectionTeamsResponse(sectionId: string) {
         createdAt: '2026-09-08T15:15:06.656Z',
         id: getAdminTeamId(team.id),
         kickoffRule: '매주 화요일 회고',
+        leaderName: getAdminTeamLeaderName(getAdminTeamId(team.id)),
         meetingSchedule: '매주 목 19:00',
         name: team.name,
         status: finalizedSectionIds.has(fixtureSectionId)

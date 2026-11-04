@@ -2,15 +2,17 @@ import type { MeetingActionStatus } from '@aics/core';
 import {
   Button,
   Card,
+  Divider,
   EmptyState,
   Heading,
+  HStack,
   Pagination,
   Selector,
   SelectorOption,
   Text,
 } from '@aics/design-system';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -25,6 +27,7 @@ import { useAdminSectionMeetingActionsQuery } from '~/features/admin-meeting/que
 import AdminSectionTeamFilter, {
   ALL_TEAMS,
 } from '~/features/admin-section/components/AdminSectionTeamFilter';
+import { useAdminSectionTeamsQuery } from '~/features/admin-student-team/queries';
 import { AdminGeneralMessageDialog } from '~/features/team-message/components';
 
 import * as styles from './AdminMeetingActionsPage.css';
@@ -87,6 +90,24 @@ export default function AdminMeetingActionsPage() {
       teamId: selectedTeamId || undefined,
     },
   );
+  // AdminSectionTeamFilter uses the same query key, so this reuses its section
+  // team request and does not add a separate request for the table.
+  const sectionTeamsQuery = useAdminSectionTeamsQuery(selectedSectionId);
+  const leaderNamesByTeamId = useMemo(
+    () =>
+      new Map(
+        (sectionTeamsQuery.data?.contents ?? []).map(team => [
+          team.id,
+          team.leaderName ?? null,
+        ]),
+      ),
+    [sectionTeamsQuery.data],
+  );
+  const leaderLookupState = sectionTeamsQuery.isPending
+    ? 'loading'
+    : sectionTeamsQuery.isError
+      ? 'error'
+      : 'ready';
 
   useEffect(() => {
     if (!selectedSectionId || requestedSectionId === selectedSectionId) return;
@@ -195,6 +216,7 @@ export default function AdminMeetingActionsPage() {
           variant='secondary'
         />
       </div>
+      <Divider className={styles.activityTabDivider} />
       <AdminSectionTeamFilter
         allowAllSections={false}
         label='액션플랜 필터'
@@ -215,6 +237,18 @@ export default function AdminMeetingActionsPage() {
           width={180}
         />
       </AdminSectionTeamFilter>
+
+      {sectionTeamsQuery.isError ? (
+        <HStack gap={2} wrap='wrap'>
+          <Text role='status'>팀장 정보를 불러오지 못했습니다.</Text>
+          <Button
+            label='팀장 정보 다시 시도'
+            onClick={() => void sectionTeamsQuery.refetch()}
+            size='sm'
+            variant='secondary'
+          />
+        </HStack>
+      ) : null}
 
       {activeSectionsQuery.isPending ? (
         <Text aria-live='polite' role='status'>
@@ -247,6 +281,8 @@ export default function AdminMeetingActionsPage() {
           <AdminMeetingActionTable
             actions={actions}
             emptyMessage='조건에 맞는 액션플랜이 없습니다.'
+            leaderLookupState={leaderLookupState}
+            leaderNamesByTeamId={leaderNamesByTeamId}
           />
         </Card>
       )}

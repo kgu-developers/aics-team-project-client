@@ -16,6 +16,8 @@ export type AdminSubmissionResponse = {
   currentVersion: number;
   hasPendingReview: boolean;
   id: number;
+  /** Nullable for teams without a designated leader and older API deployments. */
+  leaderName?: string | null;
   meetingRecordCount: number;
   totalMeetingRecordCount?: number;
   milestoneId: number;

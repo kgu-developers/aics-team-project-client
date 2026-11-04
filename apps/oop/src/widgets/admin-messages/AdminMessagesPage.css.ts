@@ -36,18 +36,19 @@ export const dateSortButton = style({
 export const tableCard = style({ overflowX: 'auto', padding: 0 });
 export const table = style({
   borderCollapse: 'collapse',
-  minWidth: 880,
+  minWidth: 900,
   tableLayout: 'fixed',
   width: '100%',
 });
 export const readStateColumn = style({
   textAlign: 'center',
-  width: 28,
+  width: 24,
 });
 export const sectionColumn = style({ width: 190 });
-export const teamColumn = style({ width: 176 });
-export const createdAtColumn = style({ whiteSpace: 'nowrap', width: 184 });
-export const senderColumn = style({ width: 132 });
+export const teamColumn = style({ width: 104 });
+export const leaderColumn = style({ width: 88 });
+export const createdAtColumn = style({ whiteSpace: 'nowrap', width: 170 });
+export const senderColumn = style({ width: 116 });
 export const sectionContext = style({
   alignItems: 'center',
   display: 'flex',
@@ -66,9 +67,8 @@ export const broadcastTeamContext = style({
   gap: tokens.spacing['1'],
   minWidth: 0,
 });
-export const broadcastRepresentative = style({
+export const broadcastTeamCount = style({
   color: tokens.color.text.secondary,
-  display: 'block',
   fontSize: 12,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -94,32 +94,54 @@ globalStyle(table + ' th', {
   color: tokens.color.text.secondary,
   fontSize: 13,
   fontWeight: 500,
-  padding: '12px',
+  padding: '12px 10px',
   textAlign: 'left',
 });
 globalStyle(table + ' td', {
   borderTop: '1px solid ' + tokens.color.border.base,
   fontSize: 14,
-  padding: '14px 12px',
+  padding: '14px 10px',
   verticalAlign: 'middle',
 });
 globalStyle(`${table} th.${readStateColumn}`, {
   paddingLeft: 4,
   paddingRight: 0,
-  width: 28,
+  width: 24,
 });
 globalStyle(`${table} td.${readStateColumn}`, {
   paddingLeft: 4,
   paddingRight: 0,
-  width: 28,
+  width: 24,
 });
 globalStyle(`${table} th.${createdAtColumn}`, {
   paddingLeft: 4,
-  paddingRight: 20,
+  paddingRight: 12,
 });
 globalStyle(`${table} td.${createdAtColumn}`, {
   paddingLeft: 4,
-  paddingRight: 20,
+  paddingRight: 12,
+});
+globalStyle(`${table} th.${sectionColumn}`, {
+  paddingRight: 12,
+});
+globalStyle(`${table} td.${sectionColumn}`, {
+  paddingRight: 12,
+});
+globalStyle(`${table} th.${teamColumn}`, {
+  paddingLeft: 8,
+  paddingRight: 8,
+});
+globalStyle(`${table} td.${teamColumn}`, {
+  paddingLeft: 8,
+  paddingRight: 8,
+});
+globalStyle(`${table} th.${leaderColumn}`, {
+  paddingLeft: 8,
+  paddingRight: 8,
+});
+globalStyle(`${table} td.${leaderColumn}`, {
+  paddingLeft: 8,
+  paddingRight: 8,
 });
 globalStyle(table + ' tbody tr:hover td', {
   background: tokens.color.background.muted,

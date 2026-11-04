@@ -30,6 +30,7 @@ export type AdminSubmissionDetailView = {
   completedBy: string | null;
   currentVersion: number;
   hasPendingReview: boolean;
+  leaderName?: string | null;
   milestoneId: string;
   totalMeetingRecordCount: number | null;
   presentationOrder: number | null;
@@ -112,6 +113,7 @@ export function toAdminSubmissionDetailView(
     completedBy: response.completedBy ?? null,
     currentVersion: response.currentVersion,
     hasPendingReview: response.hasPendingReview,
+    leaderName: response.leaderName ?? null,
     milestoneId: String(response.milestoneId),
     totalMeetingRecordCount: response.totalMeetingRecordCount ?? null,
     presentationOrder: response.presentationOrder ?? null,
