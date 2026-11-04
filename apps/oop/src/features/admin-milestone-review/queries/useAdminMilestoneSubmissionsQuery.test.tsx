@@ -147,6 +147,8 @@ it.each([
       expect(result.current.data?.submissions).toHaveLength(2);
       expect(result.current.data?.submissions[1]).toMatchObject({
         teamId: '2',
+        projectId: '20',
+        submissionId: approvalStatus === 'DRAFT' ? null : '1002',
       });
     } finally {
       cleanup();
@@ -159,7 +161,7 @@ it.each([
   [403, 'FORBIDDEN'],
   [404, 'SECTION_NOT_FOUND'],
 ])(
-  '프로젝트 없음 이외의 조회 오류는 미제출로 바꾸지 않고 전달한다 (%s, %s)',
+  '한 팀의 프로젝트 조회가 실패해도 다른 팀의 제출 목록을 유지한다 (%s, %s)',
   async (status, code) => {
     server.use(
       http.get(
@@ -169,11 +171,14 @@ it.each([
     );
     const { result, cleanup } = renderQuery();
     try {
-      await waitFor(() => expect(result.current.isError).toBe(true));
-      expect(result.current.error).toMatchObject({
-        response: { status, data: { code } },
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data?.submissions).toHaveLength(2);
+      expect(result.current.data?.submissions[1]).toMatchObject({
+        submissionId: null,
+        status: 'NOT_SUBMITTED',
+        statusLabel: '제안서 확인 실패',
+        teamId: '2',
       });
-      expect(result.current.data).toBeUndefined();
     } finally {
       cleanup();
     }

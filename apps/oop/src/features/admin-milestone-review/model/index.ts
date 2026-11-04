@@ -60,6 +60,7 @@ export {
 } from './studentMilestonePreviewTemplate';
 export {
   formatAdminTotalMeetingRecordCount,
+  getAdminMilestoneReviewStatus,
   hasAdminTotalMeetingRecords,
   toAdminMilestoneSubmissionsView,
   type AdminMilestoneSubmissionView,

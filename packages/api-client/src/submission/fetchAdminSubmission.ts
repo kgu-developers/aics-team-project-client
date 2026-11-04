@@ -14,6 +14,8 @@ export type AdminSubmissionResponse = {
   completedAt?: string;
   completedBy?: string;
   currentVersion: number;
+  feedbackCount?: number;
+  feedbackRequested?: boolean;
   hasPendingReview: boolean;
   id: number;
   /** Nullable for teams without a designated leader and older API deployments. */
@@ -22,6 +24,11 @@ export type AdminSubmissionResponse = {
   totalMeetingRecordCount?: number;
   milestoneId: number;
   presentationOrder?: number;
+  /**
+   * Last completed proposal submission. This remains available while a
+   * professor revision request is pending.
+   */
+  proposalCompletedAt?: string | null;
   status: AdminSubmissionStatusDto;
   teamId: number;
   teamName: string;

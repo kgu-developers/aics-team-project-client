@@ -21,10 +21,15 @@ export type AdminMilestoneSubmissionView = {
   completedAt: string | null;
   completedBy: string | null;
   currentVersion: number;
+  feedbackCount: number | null;
+  feedbackRequested: boolean | null;
   hasPendingReview: boolean;
   leaderName?: string | null;
+  midReportId?: string | null;
   totalMeetingRecordCount: number | null;
   presentationOrder: number | null;
+  proposalCompletedAt: string | null;
+  projectId: string | null;
   projectTitle: string | null;
   status: AdminMilestoneSubmissionStatusDto;
   statusLabel: string;
@@ -37,6 +42,23 @@ export type AdminMilestoneSubmissionsView = {
   milestoneId: string;
   submissions: AdminMilestoneSubmissionView[];
 };
+
+type AdminMilestoneReviewState = {
+  feedbackRequested?: boolean | null;
+  hasPendingReview?: boolean;
+};
+
+/**
+ * `hasPendingReview` means the student still needs to revise. It takes
+ * precedence over a queued professor review so the two mutually exclusive
+ * actions are never shown together in the UI.
+ */
+export function getAdminMilestoneReviewStatus(
+  submission: AdminMilestoneReviewState,
+) {
+  if (submission.hasPendingReview) return '수정 요청';
+  return submission.feedbackRequested === true ? '검토 대기 중' : null;
+}
 
 export function formatAdminTotalMeetingRecordCount(
   totalMeetingRecordCount: number | null,
@@ -55,22 +77,47 @@ export function hasAdminTotalMeetingRecords(
 function toSubmissionView(
   submission: AdminMilestoneSubmissionItemDto,
 ): AdminMilestoneSubmissionView {
+  const hasPersistedSubmission =
+    submission.currentVersion > 0 ||
+    (submission.status != null && submission.status !== 'NOT_SUBMITTED') ||
+    submission.projectId != null ||
+    submission.midReportId != null ||
+    (submission.feedbackCount ?? 0) > 0 ||
+    submission.feedbackRequested === true ||
+    submission.hasPendingReview;
+
   return {
     canSubmitNow: submission.canSubmitNow,
     completedAt: submission.completedAt ?? null,
     completedBy: submission.completedBy ?? null,
     currentVersion: submission.currentVersion,
+    feedbackCount: submission.feedbackCount ?? null,
+    feedbackRequested: submission.feedbackRequested ?? null,
     hasPendingReview: submission.hasPendingReview,
     leaderName: submission.leaderName ?? null,
+    midReportId:
+      submission.midReportId === null || submission.midReportId === undefined
+        ? null
+        : String(submission.midReportId),
     totalMeetingRecordCount: submission.totalMeetingRecordCount ?? null,
     presentationOrder: submission.presentationOrder ?? null,
+    proposalCompletedAt: submission.proposalCompletedAt ?? null,
+    projectId:
+      submission.projectId === null || submission.projectId === undefined
+        ? null
+        : String(submission.projectId),
     projectTitle: submission.projectTitle ?? null,
     status: submission.status,
-    statusLabel: submissionStatusLabels[submission.status],
-    // A feedback request can temporarily make the list status look unsubmitted
-    // while a previously submitted version still exists. The version is the
-    // reliable indicator that there is a detail document to open.
-    submissionId: submission.currentVersion > 0 ? String(submission.id) : null,
+    // A revision request reopens the editable project document. The persisted
+    // submission can still carry an older status, so the pending-review flag
+    // is the authoritative display state for the administrator.
+    statusLabel:
+      getAdminMilestoneReviewStatus(submission) ??
+      submissionStatusLabels[submission.status],
+    // The list row ID is the submission-detail ID. Proposal revision requests
+    // can reset the current version to 0 while the prior submitted document
+    // remains reviewable, so currentVersion must not gate detail navigation.
+    submissionId: hasPersistedSubmission ? String(submission.id) : null,
     teamId: String(submission.teamId),
     teamName: submission.teamName,
   };

@@ -35,15 +35,15 @@ export const adminMilestoneSubmissionsHandlers = [
       const milestoneId = String(params.milestoneId);
 
       const fixture = getAdminMilestoneSubmissionsFixture(milestoneId);
+      const milestone = findAdminSectionMilestoneFixture(milestoneId);
       const leaderNameByTeamId = new Map(
-        getAdminSectionTeamsResponse('1').contents.map(team => [
-          team.id,
-          team.leaderName ?? null,
-        ]),
+        (milestone
+          ? getAdminSectionTeamsResponse(String(milestone.sectionId)).contents
+          : []
+        ).map(team => [team.id, team.leaderName ?? null]),
       );
 
       if (!fixture) {
-        const milestone = findAdminSectionMilestoneFixture(milestoneId);
         if (milestone) {
           const contents = getAdminSectionTeamsResponse(
             String(milestone.sectionId),
@@ -85,6 +85,7 @@ export const adminMilestoneSubmissionsHandlers = [
               meetingRecordCount: 0,
               totalMeetingRecordCount: 0,
               milestoneId: Number(milestoneId),
+              projectId: milestoneId === '101' ? 7 : undefined,
               projectTitle: milestoneId === '101' ? '검수 프로젝트' : undefined,
               status: 'SUBMITTED',
               teamId: 7,
@@ -98,7 +99,10 @@ export const adminMilestoneSubmissionsHandlers = [
         .filter(submission => !teamId || submission.teamId === Number(teamId))
         .map(submission => ({
           ...submission,
-          leaderName: leaderNameByTeamId.get(submission.teamId) ?? null,
+          leaderName:
+            leaderNameByTeamId.get(submission.teamId) ??
+            submission.leaderName ??
+            null,
         }));
 
       return HttpResponse.json({ ...fixture, contents: submissions });

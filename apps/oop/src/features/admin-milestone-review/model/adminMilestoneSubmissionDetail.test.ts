@@ -16,14 +16,20 @@ describe('toAdminSubmissionDetailView', () => {
         totalMeetingRecordCount: 5,
         id: 1001,
         milestoneId: 101,
-        status: 'REVISION_REQUESTED',
+        proposalCompletedAt: '2026-09-07T09:00:00Z',
+        // Older rows can retain NOT_SUBMITTED after the editable proposal is
+        // reopened. The pending-review flag must still keep the review state.
+        status: 'NOT_SUBMITTED',
         teamId: 11,
         teamName: 'OOP-01 - 1팀',
       }),
     ).toMatchObject({
       completedAt: null,
       completedBy: null,
+      feedbackCount: null,
+      feedbackRequested: null,
       milestoneId: '101',
+      proposalCompletedAt: '2026-09-07T09:00:00Z',
       presentationOrder: null,
       statusLabel: '수정 요청',
       submissionId: '1001',
@@ -46,6 +52,7 @@ describe('toAdminSubmissionVersionDetailView', () => {
         late: false,
         submittedAt: '2026-09-07T09:00:00Z',
         submittedBy: '20230001',
+        teamId: 11,
         version: 2,
       }),
     ).toEqual(
@@ -56,6 +63,7 @@ describe('toAdminSubmissionVersionDetailView', () => {
           expect.objectContaining({ label: '텍스트' }),
           expect.objectContaining({ label: 'CheerpJ 실행' }),
         ],
+        teamId: '11',
       }),
     );
   });

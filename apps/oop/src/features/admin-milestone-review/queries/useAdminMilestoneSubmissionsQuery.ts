@@ -7,6 +7,25 @@ import { useQuery } from '@tanstack/react-query';
 import { toAdminMilestoneSubmissionsView } from '../model';
 import { adminMilestoneSubmissionsKeys } from './adminMilestoneSubmissionsKeys';
 
+function hasSubmittedProposal(
+  approvalStatus:
+    | 'DRAFT'
+    | 'PENDING'
+    | 'REVISION_REQUESTED'
+    | 'APPROVED'
+    | 'REJECTED'
+    | null
+    | undefined,
+  proposalCompletedAt: string | null | undefined,
+) {
+  return (
+    Boolean(proposalCompletedAt) ||
+    (approvalStatus !== undefined &&
+      approvalStatus !== null &&
+      approvalStatus !== 'DRAFT')
+  );
+}
+
 export function useAdminMilestoneSubmissionsQuery(
   milestoneId: string | undefined,
   isEnabled: boolean,
@@ -30,11 +49,11 @@ export function useAdminMilestoneSubmissionsQuery(
       );
       const view = toAdminMilestoneSubmissionsView(response);
       if (!isProposal) return view;
-      // Proposal completion belongs to Project. Generic Submission versions
-      // are independent and cannot determine whether that document was submitted.
-      const projects = await Promise.all(
+      // Proposal approval state belongs to Project. A malformed or unavailable
+      // project for one team must not hide every team's submission row.
+      const projects = await Promise.allSettled(
         response.contents.map(item =>
-          item.currentVersion > 0
+          item.currentVersion > 0 && item.projectId != null
             ? Promise.resolve(null)
             : fetchProjectProposal(String(item.teamId)),
         ),
@@ -42,14 +61,41 @@ export function useAdminMilestoneSubmissionsQuery(
       return {
         ...view,
         submissions: view.submissions.map((item, index) => {
-          if (item.currentVersion > 0) return item;
-          const project = projects[index];
-          const submissionId = String(response.contents[index]!.id);
+          const projectResult = projects[index];
+          if (
+            projectResult?.status === 'rejected' &&
+            item.submissionId === null
+          ) {
+            return {
+              ...item,
+              statusLabel: '제안서 확인 실패',
+            };
+          }
+          const project =
+            projectResult?.status === 'fulfilled' ? projectResult.value : null;
+
+          if (!project && item.currentVersion > 0) return item;
+
+          const sourceSubmissionId = response.contents[index]?.id;
+
+          const submissionId =
+            item.submissionId ??
+            (project &&
+            sourceSubmissionId !== undefined &&
+            hasSubmittedProposal(
+              project.approvalStatus,
+              project.proposalCompletedAt,
+            )
+              ? String(sourceSubmissionId)
+              : null);
 
           if (project?.approvalStatus === 'REVISION_REQUESTED') {
             return {
               ...item,
+              projectId: String(project.id),
               projectTitle: project.title ?? item.projectTitle,
+              proposalCompletedAt:
+                project.proposalCompletedAt ?? item.proposalCompletedAt,
               status: 'REVISION_REQUESTED' as const,
               statusLabel: '수정 요청',
               submissionId,
@@ -58,12 +104,11 @@ export function useAdminMilestoneSubmissionsQuery(
 
           return {
             ...item,
+            projectId: project ? String(project.id) : item.projectId,
             projectTitle: project?.title ?? item.projectTitle,
-            status: project?.proposalCompletedAt
-              ? ('SUBMITTED' as const)
-              : ('NOT_SUBMITTED' as const),
-            statusLabel: project?.proposalCompletedAt ? '제출 완료' : '미제출',
-            submissionId: project?.proposalCompletedAt ? submissionId : null,
+            proposalCompletedAt:
+              project?.proposalCompletedAt ?? item.proposalCompletedAt,
+            submissionId,
           };
         }),
       };
