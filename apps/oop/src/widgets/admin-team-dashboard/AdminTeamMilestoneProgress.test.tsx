@@ -31,12 +31,16 @@ const submittedMilestone: TeamMilestoneProgress = {
     completedAt: null,
     completedBy: null,
     currentVersion: 2,
-    hasPendingReview: true,
+    feedbackCount: 0,
+    feedbackRequested: true,
+    hasPendingReview: false,
     totalMeetingRecordCount: 5,
     presentationOrder: null,
+    projectId: '1',
     projectTitle: 'AI 기반 팀 프로젝트 운영 플랫폼',
+    proposalCompletedAt: null,
     status: 'SUBMITTED',
-    statusLabel: '제출 완료',
+    statusLabel: '검토 대기 중',
     submissionId: '1001',
     teamId: '1',
     teamName: '1팀',
@@ -71,6 +75,7 @@ const submittedMilestone: TeamMilestoneProgress = {
     isLate: false,
     submittedAt: '2026-10-10T09:00:00Z',
     submittedBy: '홍길동',
+    teamId: '1',
     version: 2,
   },
   versionState: 'ready',
@@ -112,7 +117,6 @@ describe('AdminTeamMilestoneProgress', () => {
     renderProgress([submittedMilestone]);
 
     expect(await screen.findByText('제안서')).toBeInTheDocument();
-    expect(screen.getByText('제출 완료')).toBeInTheDocument();
     expect(screen.getByText('2026-10-10/18:00')).toBeInTheDocument();
     expect(
       screen.getByText('제출자: 홍길동', { exact: false }),
@@ -120,7 +124,8 @@ describe('AdminTeamMilestoneProgress', () => {
     expect(
       screen.getByText('프로젝트 주제: AI 기반 팀 프로젝트 운영 플랫폼'),
     ).toBeInTheDocument();
-    expect(screen.getByText('검토 대기 중')).toBeInTheDocument();
+    expect(screen.getAllByText('검토 대기 중')).toHaveLength(1);
+    expect(screen.queryByText('제출 완료')).not.toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: '팀 전체 회의록 5건' }),
     ).toHaveAttribute('href', '/admin/meetings?sectionId=1&teamId=1');

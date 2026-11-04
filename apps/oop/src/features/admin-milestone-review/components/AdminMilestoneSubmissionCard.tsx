@@ -7,6 +7,7 @@ import * as styles from './AdminMilestoneSubmissionCard.css';
 
 type AdminMilestoneSubmissionCardProps = {
   action: ReactNode;
+  feedbackCountLabel?: ReactNode;
   isUnread?: boolean;
   label: string;
   leaderName?: string | null;
@@ -19,6 +20,7 @@ type AdminMilestoneSubmissionCardProps = {
 
 export function AdminMilestoneSubmissionCard({
   action,
+  feedbackCountLabel,
   isUnread = false,
   label,
   leaderName,
@@ -50,6 +52,11 @@ export function AdminMilestoneSubmissionCard({
         <div className={styles.footer}>
           {meetingCountLabel ? (
             <div className={styles.footerMetric}>{meetingCountLabel}</div>
+          ) : null}
+          {feedbackCountLabel ? (
+            <div className={styles.footerMetricWithDivider}>
+              {feedbackCountLabel}
+            </div>
           ) : null}
           {messageCountLabel ? (
             <div className={styles.footerMetric}>

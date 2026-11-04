@@ -43,9 +43,35 @@ export const pageHeaderContent = style({
   minWidth: 0,
 });
 
+export const headerActions = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: tokens.spacing['3'],
+  justifyContent: 'flex-end',
+  '@media': {
+    'screen and (max-width: 560px)': {
+      justifyContent: 'flex-start',
+    },
+  },
+});
+
 export const metadata = style({
   color: tokens.color.text.secondary,
   fontSize: 14,
+});
+
+export const feedbackFloatingAction = style({
+  bottom: tokens.spacing['6'],
+  position: 'fixed',
+  right: tokens.spacing['6'],
+  zIndex: 10,
+  '@media': {
+    'screen and (max-width: 640px)': {
+      bottom: tokens.spacing['4'],
+      right: tokens.spacing['4'],
+    },
+  },
 });
 
 export const document = style({

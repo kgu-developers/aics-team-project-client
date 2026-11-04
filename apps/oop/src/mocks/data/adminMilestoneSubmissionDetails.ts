@@ -23,6 +23,8 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
     detail: {
       canSubmitNow: true,
       currentVersion: 2,
+      feedbackCount: 2,
+      feedbackRequested: false,
       hasPendingReview: true,
       id: 1001,
       milestoneId: 101,
@@ -44,6 +46,7 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
         late: false,
         submittedAt: '2026-09-01T09:00:00Z',
         submittedBy: '20230001',
+        teamId: 1,
         version: 1,
       },
       2: {
@@ -61,6 +64,7 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
         late: false,
         submittedAt: '2026-09-07T09:00:00Z',
         submittedBy: '20230001',
+        teamId: 1,
         version: 2,
       },
     },
@@ -88,6 +92,8 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
     detail: {
       canSubmitNow: false,
       currentVersion: 2,
+      feedbackCount: 1,
+      feedbackRequested: true,
       hasPendingReview: false,
       id: 1003,
       milestoneId: 102,

@@ -23,9 +23,12 @@ const submissionsByMilestoneId: Record<
       {
         canSubmitNow: false,
         currentVersion: 2,
+        feedbackCount: 2,
+        feedbackRequested: false,
         hasPendingReview: true,
         id: 1001,
         milestoneId: 101,
+        projectId: 1,
         projectTitle: 'AI 기반 팀 프로젝트 관리 서비스',
         status: 'REVISION_REQUESTED',
         teamId: 1,
@@ -49,6 +52,8 @@ const submissionsByMilestoneId: Record<
       {
         canSubmitNow: false,
         currentVersion: 2,
+        feedbackCount: 1,
+        feedbackRequested: true,
         hasPendingReview: false,
         id: 1003,
         milestoneId: 102,
@@ -200,8 +205,16 @@ export function getAdminMilestoneSubmissionsFixture(
               submission.milestoneId,
               submission.teamId,
             )
-              ? false
+              ? true
               : submission.hasPendingReview,
+          feedbackRequested:
+            submission.milestoneId === 102 &&
+            isAdminMidReportSubmissionReopened(
+              submission.milestoneId,
+              submission.teamId,
+            )
+              ? false
+              : submission.feedbackRequested,
           meetingRecordCount: countAdminMeetingRecords(
             submission.teamId,
             submission.milestoneId,

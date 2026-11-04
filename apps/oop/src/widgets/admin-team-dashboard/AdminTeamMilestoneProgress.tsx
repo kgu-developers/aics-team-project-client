@@ -48,17 +48,8 @@ function getSubmissionMetadata(
   );
 }
 
-function getReviewSummary(submission: AdminMilestoneSubmissionView) {
-  return <>{submission.hasPendingReview ? <Text>검토 대기 중</Text> : null}</>;
-}
-
 function getProposalSummary(submission: AdminMilestoneSubmissionView) {
-  return (
-    <>
-      <Text>프로젝트 주제: {submission.projectTitle ?? '-'}</Text>
-      {getReviewSummary(submission)}
-    </>
-  );
+  return <Text>프로젝트 주제: {submission.projectTitle ?? '-'}</Text>;
 }
 
 function getDownloadSummary(milestone: TeamMilestoneProgress) {
@@ -139,7 +130,7 @@ function getSummary(milestone: TeamMilestoneProgress) {
     return getDownloadSummary(milestone);
   }
 
-  return getReviewSummary(milestone.submission);
+  return null;
 }
 
 export default function AdminTeamMilestoneProgress({
@@ -198,7 +189,7 @@ export default function AdminTeamMilestoneProgress({
               ? '이 마일스톤의 전용 상세 조회 API 확인 후 제공 예정입니다.'
               : !submission
                 ? '이 팀의 제출 정보를 찾을 수 없습니다.'
-                : submission.currentVersion === 0
+                : !submission.submissionId
                   ? '아직 제출하지 않은 마일스톤입니다.'
                   : undefined;
 
@@ -232,6 +223,7 @@ export default function AdminTeamMilestoneProgress({
                           ? 'proposal'
                           : 'midterm'
                       }
+                      proposalCompletedAt={submission?.proposalCompletedAt}
                       sectionId={sectionId}
                       submissionId={submissionId}
                       teamId={submission?.teamId}

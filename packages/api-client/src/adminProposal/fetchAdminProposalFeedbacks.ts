@@ -30,7 +30,7 @@ export async function fetchAdminProposalFeedbacks(
 ): Promise<AdminProposalFeedbacksResponse> {
   const response = await apiClient.get<AdminProposalFeedbacksResponse>(
     `${ENDPOINTS.ADMIN.SECTION_TEAM_PROPOSAL(sectionId, teamId)}/feedbacks`,
-    { params: { page, size } },
+    { params: { page, size, sort: 'messageId,desc' } },
   );
 
   return response.data;

@@ -242,6 +242,267 @@ describe('AdminSubmissionsPage', () => {
     ]);
   });
 
+  it('피드백 건수를 누를 때만 팀의 제안서 피드백 기록을 펼친다', async () => {
+    const user = userEvent.setup();
+    const proposalSubmissions = getAdminMilestoneSubmissionsFixture('101')!;
+    const firstSubmission = proposalSubmissions.contents[0]!;
+    let feedbackRequestCount = 0;
+    let feedbackSort: string | null = null;
+
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('101')}`,
+        () =>
+          HttpResponse.json({
+            ...proposalSubmissions,
+            contents: [
+              { ...firstSubmission, feedbackCount: 1 },
+              ...proposalSubmissions.contents.slice(1),
+            ],
+          }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_PROPOSAL('1', String(firstSubmission.teamId))}/feedbacks`,
+        ({ request }) => {
+          feedbackRequestCount += 1;
+          feedbackSort = new URL(request.url).searchParams.get('sort');
+          return HttpResponse.json({
+            contents: [
+              {
+                createdAt: '2026-10-10T10:00:00Z',
+                message: '피드백 기록을 펼쳐 확인합니다.',
+                messageId: 1,
+                projectId: 1,
+                senderId: demoAdmin.studentNumber,
+                senderName: demoAdmin.name,
+                teamId: Number(firstSubmission.teamId),
+              },
+            ],
+            pageable: {
+              isEnd: true,
+              page: 0,
+              size: 20,
+              totalElements: 1,
+              totalPages: 1,
+            },
+          });
+        },
+      ),
+    );
+
+    renderPage('/admin/submissions?milestoneId=proposal&sectionId=1');
+
+    const toggle = await screen.findByRole('button', {
+      name: '교수 피드백 1건 ▾',
+    });
+    expect(feedbackRequestCount).toBe(0);
+
+    await user.click(toggle);
+
+    expect(
+      await screen.findByText('피드백 기록을 펼쳐 확인합니다.'),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('textbox', { name: '제안서 피드백 내용' }),
+    ).toBeVisible();
+    expect(feedbackRequestCount).toBe(1);
+    expect(feedbackSort).toBe('messageId,desc');
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    const feedbackInput = screen.getByRole('textbox', {
+      name: '제안서 피드백 내용',
+    });
+    await user.type(feedbackInput, '접어도 남아야 하는 초안');
+    const draftStorageKey = `aics.oop.admin.submission-feedback-draft:${demoAdmin.studentNumber}:proposal:1:${firstSubmission.teamId}`;
+    await waitFor(() =>
+      expect(sessionStorage.getItem(draftStorageKey)).toBe(
+        '접어도 남아야 하는 초안',
+      ),
+    );
+    expect(
+      sessionStorage.getItem(
+        `aics.oop.admin.submission-feedback-draft:proposal:1:${firstSubmission.teamId}`,
+      ),
+    ).toBeNull();
+
+    await user.click(toggle);
+    expect(screen.queryByText('피드백 기록을 펼쳐 확인합니다.')).toBeNull();
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(toggle);
+    expect(
+      await screen.findByRole('textbox', { name: '제안서 피드백 내용' }),
+    ).toHaveValue('접어도 남아야 하는 초안');
+  });
+
+  it('피드백 전송 중 새로 입력한 내용은 성공 응답 뒤에도 초안으로 보존한다', async () => {
+    const user = userEvent.setup();
+    const proposalSubmissions = getAdminMilestoneSubmissionsFixture('101')!;
+    const firstSubmission = proposalSubmissions.contents[0]!;
+    const posted = vi.fn();
+    let releaseResponse!: () => void;
+    const responseGate = new Promise<void>(resolve => {
+      releaseResponse = resolve;
+    });
+
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('101')}`,
+        () =>
+          HttpResponse.json({
+            ...proposalSubmissions,
+            contents: [
+              { ...firstSubmission, feedbackCount: 1 },
+              ...proposalSubmissions.contents.slice(1),
+            ],
+          }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_PROPOSAL('1', String(firstSubmission.teamId))}/feedbacks`,
+        () =>
+          HttpResponse.json({
+            contents: [],
+            pageable: {
+              isEnd: true,
+              page: 0,
+              size: 20,
+              totalElements: 0,
+              totalPages: 0,
+            },
+          }),
+      ),
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_PROPOSAL('1', String(firstSubmission.teamId))}/feedback`,
+        async ({ request }) => {
+          const body = (await request.json()) as { message: string };
+          posted(body);
+          await responseGate;
+          return HttpResponse.json({
+            createdAt: '2026-10-10T10:00:00Z',
+            message: body.message,
+            messageId: 2,
+            projectId: 1,
+            senderId: demoAdmin.studentNumber,
+            senderName: demoAdmin.name,
+            teamId: Number(firstSubmission.teamId),
+          });
+        },
+      ),
+    );
+
+    renderPage('/admin/submissions?milestoneId=proposal&sectionId=1');
+    await user.click(
+      await screen.findByRole('button', { name: '교수 피드백 1건 ▾' }),
+    );
+    const feedbackInput = await screen.findByRole('textbox', {
+      name: '제안서 피드백 내용',
+    });
+    await user.type(feedbackInput, '먼저 보낼 내용');
+    await user.click(screen.getByRole('button', { name: '피드백 보내기' }));
+    await waitFor(() =>
+      expect(posted).toHaveBeenCalledExactlyOnceWith({
+        message: '먼저 보낼 내용',
+      }),
+    );
+
+    await user.type(feedbackInput, ' 뒤에 입력한 내용');
+    releaseResponse();
+
+    const expectedDraft = '먼저 보낼 내용 뒤에 입력한 내용';
+    await waitFor(() => expect(feedbackInput).toHaveValue(expectedDraft));
+    await waitFor(() =>
+      expect(
+        sessionStorage.getItem(
+          `aics.oop.admin.submission-feedback-draft:${demoAdmin.studentNumber}:proposal:1:${firstSubmission.teamId}`,
+        ),
+      ).toBe(expectedDraft),
+    );
+  });
+
+  it('피드백 전송 중 기록을 접어도 전송한 초안은 성공 응답 뒤 제거한다', async () => {
+    const user = userEvent.setup();
+    const proposalSubmissions = getAdminMilestoneSubmissionsFixture('101')!;
+    const firstSubmission = proposalSubmissions.contents[0]!;
+    const posted = vi.fn();
+    let releaseResponse!: () => void;
+    const responseGate = new Promise<void>(resolve => {
+      releaseResponse = resolve;
+    });
+    const draftStorageKey = `aics.oop.admin.submission-feedback-draft:${demoAdmin.studentNumber}:proposal:1:${firstSubmission.teamId}`;
+
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('101')}`,
+        () =>
+          HttpResponse.json({
+            ...proposalSubmissions,
+            contents: [
+              { ...firstSubmission, feedbackCount: 1 },
+              ...proposalSubmissions.contents.slice(1),
+            ],
+          }),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_PROPOSAL('1', String(firstSubmission.teamId))}/feedbacks`,
+        () =>
+          HttpResponse.json({
+            contents: [],
+            pageable: {
+              isEnd: true,
+              page: 0,
+              size: 20,
+              totalElements: 0,
+              totalPages: 0,
+            },
+          }),
+      ),
+      http.post(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_PROPOSAL('1', String(firstSubmission.teamId))}/feedback`,
+        async ({ request }) => {
+          const body = (await request.json()) as { message: string };
+          posted(body);
+          await responseGate;
+          return HttpResponse.json({
+            createdAt: '2026-10-10T10:00:00Z',
+            message: body.message,
+            messageId: 3,
+            projectId: 1,
+            senderId: demoAdmin.studentNumber,
+            senderName: demoAdmin.name,
+            teamId: Number(firstSubmission.teamId),
+          });
+        },
+      ),
+    );
+
+    renderPage('/admin/submissions?milestoneId=proposal&sectionId=1');
+    const toggle = await screen.findByRole('button', {
+      name: '교수 피드백 1건 ▾',
+    });
+    await user.click(toggle);
+    const feedbackInput = await screen.findByRole('textbox', {
+      name: '제안서 피드백 내용',
+    });
+    await user.type(feedbackInput, '전송 후 제거할 초안');
+    await waitFor(() =>
+      expect(sessionStorage.getItem(draftStorageKey)).toBe(
+        '전송 후 제거할 초안',
+      ),
+    );
+    await user.click(screen.getByRole('button', { name: '피드백 보내기' }));
+    await waitFor(() => expect(posted).toHaveBeenCalledTimes(1));
+
+    await user.click(toggle);
+    expect(
+      screen.queryByRole('textbox', { name: '제안서 피드백 내용' }),
+    ).not.toBeInTheDocument();
+    releaseResponse();
+
+    await waitFor(() =>
+      expect(sessionStorage.getItem(draftStorageKey)).toBeNull(),
+    );
+  });
+
   it('제출·평가 현황에서는 산출물 현황 다운로드를 제공하지 않는다', async () => {
     renderPage('/admin/submissions?sectionId=1');
 
@@ -347,6 +608,11 @@ describe('AdminSubmissionsPage', () => {
     async completedAt => {
       const project = {
         ...createProjectProposalFixture(),
+        // The list request and the project-document request describe the
+        // same submitted proposal in this scenario. Keep the project approval
+        // state aligned so the proposal enrichment does not turn it back into
+        // a revision request.
+        approvalStatus: 'APPROVED' as const,
         teamId: 1,
         teamOperation: {
           ...createProjectProposalFixture().teamOperation,
@@ -366,7 +632,10 @@ describe('AdminSubmissionsPage', () => {
       response.contents[0] = {
         ...response.contents[0]!,
         currentVersion: 0,
-        status: 'NOT_SUBMITTED',
+        feedbackRequested: false,
+        hasPendingReview: false,
+        proposalCompletedAt: completedAt,
+        status: 'SUBMITTED',
       };
       server.use(
         http.get(
@@ -533,10 +802,35 @@ describe('AdminSubmissionsPage', () => {
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '중간 보고서' }));
 
-    expect(await screen.findByText('피드백 제공')).toBeInTheDocument();
+    expect(await screen.findAllByText('검토 대기 중')).toHaveLength(1);
     expect(await screen.findByText('2026-10-14/18:00')).toBeInTheDocument();
     expect(screen.getByText('제출자: 20230001')).toBeInTheDocument();
     expect(screen.queryByText('현재 버전: 2차')).not.toBeInTheDocument();
+  });
+
+  it('수정 요청 중에는 검토 대기 중을 함께 표시하지 않고 재제출 뒤에만 표시한다', async () => {
+    const user = userEvent.setup();
+    const proposalResponse = getAdminMilestoneSubmissionsFixture('101')!;
+    proposalResponse.contents[0] = {
+      ...proposalResponse.contents[0]!,
+      feedbackRequested: true,
+      hasPendingReview: true,
+    };
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('101')}`,
+        () => HttpResponse.json(proposalResponse),
+      ),
+    );
+
+    renderPage();
+
+    expect(await screen.findByText('수정 요청')).toBeVisible();
+    expect(screen.queryByText('검토 대기 중')).not.toBeInTheDocument();
+
+    await user.click(await screen.findByRole('tab', { name: '중간 보고서' }));
+
+    expect(await screen.findAllByText('검토 대기 중')).toHaveLength(1);
   });
 
   it('제출 팀은 상세보기로 이동하고 미제출 팀은 상세보기가 비활성화된다', async () => {
@@ -684,7 +978,9 @@ describe('AdminSubmissionsPage', () => {
     renderPage('/admin/submissions/1001?milestoneId=proposal&sectionId=1');
 
     expect(
-      await screen.findByRole('heading', { name: '제안서 피드백' }),
+      await screen.findByRole('heading', {
+        name: /^제안서 피드백 \(교수 피드백 \d+건\)$/,
+      }),
     ).toBeInTheDocument();
     expect(
       screen.getByText('제안서의 문제 정의와 구현 범위를 보완해 주세요.'),
@@ -747,7 +1043,7 @@ describe('AdminSubmissionsPage', () => {
       await screen.findByRole('heading', { name: '연결된 회의록 (1건)' }),
     ).toBeInTheDocument();
     const midReportFeedbackHeading = screen.getByRole('heading', {
-      name: '중간 보고서 피드백',
+      name: /^중간 보고서 피드백 \(교수 피드백 \d+건\)$/,
     });
     const midReportMeetingsHeading = screen.getByRole('heading', {
       name: '연결된 회의록 (1건)',

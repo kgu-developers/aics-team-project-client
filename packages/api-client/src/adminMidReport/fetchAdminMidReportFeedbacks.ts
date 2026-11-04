@@ -30,7 +30,7 @@ export async function fetchAdminMidReportFeedbacks(
 ): Promise<AdminMidReportFeedbacksResponse> {
   const response = await apiClient.get<AdminMidReportFeedbacksResponse>(
     `${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT(sectionId, teamId)}/feedbacks`,
-    { params: { page, size } },
+    { params: { page, size, sort: 'messageId,desc' } },
   );
 
   return response.data;

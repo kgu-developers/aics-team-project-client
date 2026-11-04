@@ -4,6 +4,9 @@ import {
 } from '@aics/api-client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { adminMessageKeys } from '~/features/admin-message/queries/adminMessageKeys';
+import { teamMessageKeys } from '~/features/team-message/queries/teamMessageKeys';
+
 import { adminMidReportKeys } from './adminMidReportKeys';
 import { adminMilestoneSubmissionsKeys } from './adminMilestoneSubmissionsKeys';
 
@@ -32,6 +35,12 @@ export function useSubmitAdminMidReportFeedbackMutation() {
         }),
         queryClient.invalidateQueries({
           queryKey: adminMilestoneSubmissionsKeys.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: teamMessageKeys.team(variables.teamId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: adminMessageKeys.all,
         }),
       ]);
     },

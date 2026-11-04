@@ -607,8 +607,8 @@ describe('AdminCourseDetailPage', () => {
   it('분반을 등록하면 표에 추가된다', async () => {
     const user = userEvent.setup();
     renderAt('/admin/sections');
-    await screen.findByRole('row', {
-      name: 'OOP-01 분반 운영 화면 열기',
+    await screen.findByRole('group', {
+      name: '객체지향 프로그래밍 · 2026년 2학기 강좌 관리',
     });
 
     await user.click(

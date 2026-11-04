@@ -21,7 +21,11 @@ afterEach(() => {
   useAuthStore.getState().clearSession();
 });
 
-function renderDocument(sectionId: string, teamId: string) {
+function renderDocument(
+  sectionId: string,
+  teamId: string,
+  proposalCompletedAt?: string | null,
+) {
   useAuthStore.setState({ currentUser: demoAdmin });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -29,7 +33,11 @@ function renderDocument(sectionId: string, teamId: string) {
   const view = render(
     <AstryxThemeProvider>
       <QueryClientProvider client={client}>
-        <AdminProposalDocument sectionId={sectionId} teamId={teamId} />
+        <AdminProposalDocument
+          proposalCompletedAt={proposalCompletedAt}
+          sectionId={sectionId}
+          teamId={teamId}
+        />
       </QueryClientProvider>
     </AstryxThemeProvider>,
   );
@@ -123,6 +131,41 @@ it('제안서 상위 구성 영역에 순서 번호를 표시한다', async () =
     expect(
       screen.getByRole('heading', { level: 3, name: '4. 팀 운영 방식' }),
     ).toBeVisible();
+  } finally {
+    cleanup();
+  }
+});
+
+it('수정 요청으로 프로젝트의 제출 시각이 비어도 상세 응답의 마지막 제출 시각을 표시한다', async () => {
+  const project = createProjectProposalFixture();
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('19')}`, () =>
+      HttpResponse.json({ ...project, proposalCompletedAt: null }),
+    ),
+  );
+
+  const cleanup = renderDocument('1', '19', '2026-09-07T09:00:00Z');
+  try {
+    expect(await screen.findByText(project.title)).toBeVisible();
+    expect(screen.getByText('2026-09-07/18:00')).toBeVisible();
+  } finally {
+    cleanup();
+  }
+});
+
+it('프로젝트 제출 시각이 잘못된 값이면 상세 응답의 마지막 제출 시각을 표시한다', async () => {
+  const project = createProjectProposalFixture();
+  server.use(
+    http.get(`${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('19')}`, () =>
+      HttpResponse.json({ ...project, proposalCompletedAt: 'not-a-date' }),
+    ),
+  );
+
+  const cleanup = renderDocument('1', '19', '2026-09-07T09:00:00Z');
+  try {
+    expect(await screen.findByText(project.title)).toBeVisible();
+    expect(screen.getByText('2026-09-07/18:00')).toBeVisible();
+    expect(screen.queryByText('not-a-date')).toBeNull();
   } finally {
     cleanup();
   }

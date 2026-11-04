@@ -65,6 +65,7 @@ import { AdminPresentationEvaluationSettingsDialog } from './AdminPresentationEv
 import { AdminPresentationEvaluationStartDialog } from './AdminPresentationEvaluationStartDialog';
 import { getPresentationEvaluationSetupStatus } from './adminPresentationOrder';
 import { AdminPresentationUnevaluatedTeams } from './AdminPresentationUnevaluatedTeams';
+import { AdminSubmissionFeedbackHistory } from './AdminSubmissionFeedbackHistory';
 import * as styles from './AdminSubmissionsPage.css';
 
 const MILESTONE_TABS = [
@@ -276,17 +277,8 @@ function getSubmissionMetadata(
   );
 }
 
-function getReviewSummary(submission: AdminMilestoneSubmissionView) {
-  return <>{submission.hasPendingReview ? <Text>검토 대기 중</Text> : null}</>;
-}
-
 function getProposalSummary(submission: AdminMilestoneSubmissionView) {
-  return (
-    <>
-      <Text>프로젝트 주제: {submission.projectTitle ?? '-'}</Text>
-      {getReviewSummary(submission)}
-    </>
-  );
+  return <Text>프로젝트 주제: {submission.projectTitle ?? '-'}</Text>;
 }
 
 function getDownloadSummary(
@@ -363,6 +355,9 @@ export default function AdminSubmissionsPage() {
   const [isEvaluationResumeOpen, setIsEvaluationResumeOpen] = useState(false);
   const [isGeneralMessageDialogOpen, setIsGeneralMessageDialogOpen] =
     useState(false);
+  const [generalMessageTeamId, setGeneralMessageTeamId] = useState<
+    string | undefined
+  >();
   const [presentationTotalScoreSort, setPresentationTotalScoreSort] =
     useState<PresentationTotalScoreSort>('default');
   const [storedSelection] = useState(readStoredSubmissionSelection);
@@ -436,6 +431,9 @@ export default function AdminSubmissionsPage() {
     activeMilestoneId === 'proposal',
   );
   const [submissionPage, setSubmissionPage] = useState(0);
+  const [expandedFeedbackKeys, setExpandedFeedbackKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
   const submissionListKey = `${effectiveSectionId ?? ''}:${activeMilestoneId}`;
   const [pagedListKey, setPagedListKey] = useState(submissionListKey);
   if (pagedListKey !== submissionListKey) {
@@ -443,6 +441,10 @@ export default function AdminSubmissionsPage() {
     setPagedListKey(submissionListKey);
     setSubmissionPage(0);
   }
+
+  useEffect(() => {
+    setExpandedFeedbackKeys(new Set());
+  }, [activeMilestoneId, effectiveSectionId]);
   const sortedSubmissions = useMemo(
     () => sortTeamRowsByName(submissionsQuery.data?.submissions ?? []),
     [submissionsQuery.data?.submissions],
@@ -1243,7 +1245,10 @@ export default function AdminSubmissionsPage() {
                   <Heading level={2}>상호평가 목록</Heading>
                   <Button
                     label='일반 메시지 보내기'
-                    onClick={() => setIsGeneralMessageDialogOpen(true)}
+                    onClick={() => {
+                      setGeneralMessageTeamId(undefined);
+                      setIsGeneralMessageDialogOpen(true);
+                    }}
                     variant='secondary'
                   />
                 </div>
@@ -1315,7 +1320,10 @@ export default function AdminSubmissionsPage() {
                 <Button
                   isDisabled={!isAccessibleSection}
                   label='일반 메시지 보내기'
-                  onClick={() => setIsGeneralMessageDialogOpen(true)}
+                  onClick={() => {
+                    setGeneralMessageTeamId(undefined);
+                    setIsGeneralMessageDialogOpen(true);
+                  }}
                   variant='secondary'
                 />
               </div>
@@ -1362,6 +1370,15 @@ export default function AdminSubmissionsPage() {
                   <div className={styles.list}>
                     {pagedSubmissions.items.map(submission => {
                       const submissionId = submission.submissionId;
+                      const supportsInlineFeedbackHistory =
+                        activeMilestoneId === 'proposal' ||
+                        activeMilestoneId === 'midterm';
+                      const feedbackHistoryKey = `${activeMilestoneId}:${submission.teamId}`;
+                      const isFeedbackHistoryExpanded =
+                        expandedFeedbackKeys.has(feedbackHistoryKey);
+                      const feedbackHistoryId = `submission-feedback-${activeMilestoneId}-${submission.teamId}`;
+                      const hasFeedbackHistory =
+                        (submission.feedbackCount ?? 0) > 0;
                       const readTarget = effectiveSectionId
                         ? {
                             milestoneId: selectedMilestone.id,
@@ -1377,101 +1394,168 @@ export default function AdminSubmissionsPage() {
                           submission.submissionId ?? '',
                         );
                       return (
-                        <AdminMilestoneSubmissionCard
-                          meetingCountLabel={
-                            hasAdminTotalMeetingRecords(
-                              submission.totalMeetingRecordCount,
-                            ) ? (
-                              <Link
-                                to={ROUTES.ADMIN_MEETINGS}
-                                search={{
-                                  sectionId: effectiveSectionId
-                                    ? Number(effectiveSectionId)
-                                    : undefined,
-                                  teamId: Number(submission.teamId),
-                                }}
-                              >
-                                {formatAdminTotalMeetingRecordCount(
-                                  submission.totalMeetingRecordCount,
-                                )}
-                              </Link>
-                            ) : (
-                              formatAdminTotalMeetingRecordCount(
-                                submission.totalMeetingRecordCount,
-                              )
-                            )
-                          }
-                          action={
-                            activeMilestoneId === 'final-report' ||
-                            activeMilestoneId === 'presentation-submit' ? (
-                              <AdminMilestoneSubmissionBulkDownloadAction
-                                isLoading={downloadArtifactsMutation.isPending}
-                                onClick={
-                                  submissionId
-                                    ? () => {
-                                        downloadArtifactsMutation.mutate(
-                                          submissionId,
-                                          {
-                                            onSuccess: () => {
-                                              if (readTarget)
-                                                submissionReadState.markAsRead(
-                                                  readTarget,
-                                                );
-                                            },
-                                          },
-                                        );
-                                      }
-                                    : undefined
-                                }
-                              />
-                            ) : (
-                              <AdminMilestoneSubmissionDetailAction
-                                milestoneId={activeTab.id}
-                                sectionId={effectiveSectionId}
-                                submissionId={submissionId}
-                                teamId={submission.teamId}
-                                onOpen={
-                                  readTarget
-                                    ? () =>
-                                        submissionReadState.markAsRead(
-                                          readTarget,
-                                        )
-                                    : undefined
-                                }
-                                unavailableReason={
-                                  isVersionDetailAvailable
-                                    ? undefined
-                                    : '이 마일스톤의 전용 상세 조회 API 확인 후 제공 예정입니다.'
-                                }
-                              />
-                            )
-                          }
+                        <div
+                          className={styles.submissionEntry}
                           key={submission.teamId}
-                          isUnread={
-                            readTarget !== null &&
-                            !submissionReadState.isRead(readTarget)
-                          }
-                          label={submission.teamName}
-                          leaderName={submission.leaderName}
-                          secondaryLabel={submission.statusLabel}
-                          submissionMetadata={getSubmissionMetadata(
-                            submission,
-                            versionMetadataQuery?.data,
-                          )}
-                          summary={
-                            activeMilestoneId === 'proposal'
-                              ? getProposalSummary(submission)
-                              : activeMilestoneId === 'final-report' ||
-                                  activeMilestoneId === 'presentation-submit'
-                                ? getDownloadSummary(
-                                    submission,
-                                    versionMetadataQuery?.data,
-                                    Boolean(versionMetadataQuery?.isError),
-                                    Boolean(versionMetadataQuery?.isPending),
-                                  )
-                                : getReviewSummary(submission)
-                          }
-                        />
+                        >
+                          <AdminMilestoneSubmissionCard
+                            feedbackCountLabel={
+                              submission.feedbackCount !== null ? (
+                                supportsInlineFeedbackHistory &&
+                                effectiveSectionId ? (
+                                  <Button
+                                    aria-controls={
+                                      hasFeedbackHistory
+                                        ? feedbackHistoryId
+                                        : undefined
+                                    }
+                                    aria-expanded={
+                                      hasFeedbackHistory
+                                        ? isFeedbackHistoryExpanded
+                                        : undefined
+                                    }
+                                    className={styles.feedbackCountToggle}
+                                    isDisabled={!hasFeedbackHistory}
+                                    label={`교수 피드백 ${submission.feedbackCount}건${hasFeedbackHistory ? ` ${isFeedbackHistoryExpanded ? '▴' : '▾'}` : ''}`}
+                                    onClick={() => {
+                                      if (!hasFeedbackHistory) return;
+                                      setExpandedFeedbackKeys(current => {
+                                        const next = new Set(current);
+                                        if (next.has(feedbackHistoryKey)) {
+                                          next.delete(feedbackHistoryKey);
+                                        } else {
+                                          next.add(feedbackHistoryKey);
+                                        }
+                                        return next;
+                                      });
+                                    }}
+                                    type='button'
+                                    variant='ghost'
+                                  />
+                                ) : (
+                                  `교수 피드백 ${submission.feedbackCount}건`
+                                )
+                              ) : undefined
+                            }
+                            meetingCountLabel={
+                              hasAdminTotalMeetingRecords(
+                                submission.totalMeetingRecordCount,
+                              ) ? (
+                                <Link
+                                  className={styles.footerCountLink}
+                                  to={ROUTES.ADMIN_MEETINGS}
+                                  search={{
+                                    sectionId: effectiveSectionId
+                                      ? Number(effectiveSectionId)
+                                      : undefined,
+                                    teamId: Number(submission.teamId),
+                                  }}
+                                >
+                                  {formatAdminTotalMeetingRecordCount(
+                                    submission.totalMeetingRecordCount,
+                                  )}
+                                </Link>
+                              ) : (
+                                formatAdminTotalMeetingRecordCount(
+                                  submission.totalMeetingRecordCount,
+                                )
+                              )
+                            }
+                            action={
+                              activeMilestoneId === 'final-report' ||
+                              activeMilestoneId === 'presentation-submit' ? (
+                                <AdminMilestoneSubmissionBulkDownloadAction
+                                  isLoading={
+                                    downloadArtifactsMutation.isPending
+                                  }
+                                  onClick={
+                                    submissionId &&
+                                    submission.currentVersion > 0
+                                      ? () => {
+                                          downloadArtifactsMutation.mutate(
+                                            submissionId,
+                                            {
+                                              onSuccess: () => {
+                                                if (readTarget)
+                                                  submissionReadState.markAsRead(
+                                                    readTarget,
+                                                  );
+                                              },
+                                            },
+                                          );
+                                        }
+                                      : undefined
+                                  }
+                                />
+                              ) : (
+                                <AdminMilestoneSubmissionDetailAction
+                                  milestoneId={activeTab.id}
+                                  proposalCompletedAt={
+                                    submission.proposalCompletedAt
+                                  }
+                                  sectionId={effectiveSectionId}
+                                  submissionId={submissionId}
+                                  teamId={submission.teamId}
+                                  onOpen={
+                                    readTarget
+                                      ? () =>
+                                          submissionReadState.markAsRead(
+                                            readTarget,
+                                          )
+                                      : undefined
+                                  }
+                                  unavailableReason={
+                                    isVersionDetailAvailable
+                                      ? undefined
+                                      : '이 마일스톤의 전용 상세 조회 API 확인 후 제공 예정입니다.'
+                                  }
+                                />
+                              )
+                            }
+                            isUnread={
+                              readTarget !== null &&
+                              !submissionReadState.isRead(readTarget)
+                            }
+                            label={submission.teamName}
+                            leaderName={submission.leaderName}
+                            secondaryLabel={submission.statusLabel}
+                            submissionMetadata={getSubmissionMetadata(
+                              submission,
+                              versionMetadataQuery?.data,
+                            )}
+                            summary={
+                              activeMilestoneId === 'proposal'
+                                ? getProposalSummary(submission)
+                                : activeMilestoneId === 'final-report' ||
+                                    activeMilestoneId === 'presentation-submit'
+                                  ? getDownloadSummary(
+                                      submission,
+                                      versionMetadataQuery?.data,
+                                      Boolean(versionMetadataQuery?.isError),
+                                      Boolean(versionMetadataQuery?.isPending),
+                                    )
+                                  : null
+                            }
+                          />
+                          {isFeedbackHistoryExpanded &&
+                          effectiveSectionId &&
+                          (activeMilestoneId === 'proposal' ||
+                            activeMilestoneId === 'midterm') ? (
+                            <AdminSubmissionFeedbackHistory
+                              id={feedbackHistoryId}
+                              milestoneId={activeMilestoneId}
+                              sectionId={effectiveSectionId}
+                              teamId={String(submission.teamId)}
+                              teamName={submission.teamName}
+                              onOpenGeneralMessage={() => {
+                                setGeneralMessageTeamId(
+                                  String(submission.teamId),
+                                );
+                                setIsGeneralMessageDialogOpen(true);
+                              }}
+                            />
+                          ) : null}
+                        </div>
                       );
                     })}
                   </div>
@@ -1494,8 +1578,12 @@ export default function AdminSubmissionsPage() {
       </section>
       {effectiveSectionId && selectedSection ? (
         <AdminGeneralMessageDialog
+          initialTeamId={generalMessageTeamId}
           isOpen={isGeneralMessageDialogOpen}
-          onClose={() => setIsGeneralMessageDialogOpen(false)}
+          onClose={() => {
+            setIsGeneralMessageDialogOpen(false);
+            setGeneralMessageTeamId(undefined);
+          }}
           sectionId={effectiveSectionId}
           sectionLabel={formatAdminSectionLabel(selectedSection)}
         />

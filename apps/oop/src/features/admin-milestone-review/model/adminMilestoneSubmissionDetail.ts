@@ -8,6 +8,8 @@ import type {
   AdminSubmissionVersionsResponse,
 } from '@aics/api-client';
 
+import { getAdminMilestoneReviewStatus } from './adminMilestoneSubmissions';
+
 const submissionStatusLabels: Record<AdminSubmissionStatusDto, string> = {
   APPROVED: '승인됨',
   COMPLETED: '완료',
@@ -29,9 +31,12 @@ export type AdminSubmissionDetailView = {
   completedAt: string | null;
   completedBy: string | null;
   currentVersion: number;
+  feedbackCount: number | null;
+  feedbackRequested: boolean | null;
   hasPendingReview: boolean;
   leaderName?: string | null;
   milestoneId: string;
+  proposalCompletedAt: string | null;
   totalMeetingRecordCount: number | null;
   presentationOrder: number | null;
   status: AdminSubmissionStatusDto;
@@ -64,6 +69,7 @@ export type AdminSubmissionArtifactView = {
 export type AdminSubmissionVersionDetailView =
   AdminSubmissionVersionSummaryView & {
     artifacts: AdminSubmissionArtifactView[];
+    teamId: string | null;
   };
 
 function toSubmissionVersionSummaryView(
@@ -112,13 +118,21 @@ export function toAdminSubmissionDetailView(
     completedAt: response.completedAt ?? null,
     completedBy: response.completedBy ?? null,
     currentVersion: response.currentVersion,
+    feedbackCount: response.feedbackCount ?? null,
+    feedbackRequested: response.feedbackRequested ?? null,
     hasPendingReview: response.hasPendingReview,
     leaderName: response.leaderName ?? null,
     milestoneId: String(response.milestoneId),
+    proposalCompletedAt: response.proposalCompletedAt ?? null,
     totalMeetingRecordCount: response.totalMeetingRecordCount ?? null,
     presentationOrder: response.presentationOrder ?? null,
     status: response.status,
-    statusLabel: submissionStatusLabels[response.status],
+    // A revision request reopens the editable proposal document. Its document
+    // state can be DRAFT while the submission still has to be displayed as a
+    // revision request to the administrator.
+    statusLabel:
+      getAdminMilestoneReviewStatus(response) ??
+      submissionStatusLabels[response.status],
     submissionId: String(response.id),
     teamId: String(response.teamId),
     teamName: response.teamName,
@@ -137,5 +151,6 @@ export function toAdminSubmissionVersionDetailView(
   return {
     ...toSubmissionVersionSummaryView(response),
     artifacts: response.artifacts.map(toArtifactView),
+    teamId: response.teamId === undefined ? null : String(response.teamId),
   };
 }

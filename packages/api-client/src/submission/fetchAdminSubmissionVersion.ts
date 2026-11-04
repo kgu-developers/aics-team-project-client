@@ -27,6 +27,8 @@ export type AdminSubmissionVersionResponse = {
   submittedAt: string;
   /** Swagger returns an object; string keeps legacy mock responses readable. */
   submittedBy: AdminSubmissionSubmitterDto | string;
+  /** 제출 버전이 속한 팀 식별자. */
+  teamId?: number;
   version: number;
 };
 

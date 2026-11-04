@@ -64,7 +64,14 @@ function Harness() {
 }
 async function openAndFill() {
   client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: {
+      mutations: { retry: false },
+      queries: {
+        refetchOnWindowFocus: false,
+        retry: false,
+        staleTime: Infinity,
+      },
+    },
   });
   render(
     <AstryxThemeProvider>
@@ -85,11 +92,12 @@ async function openAndFill() {
     </AstryxThemeProvider>,
   );
   const user = userEvent.setup();
-  await waitFor(() =>
+  await screen.findByRole('button', { name: '후보 추가 열기' });
+  await waitFor(() => {
     expect(
       screen.getByRole('button', { name: '후보 추가 열기' }),
-    ).toBeEnabled(),
-  );
+    ).toBeEnabled();
+  });
   await user.click(screen.getByRole('button', { name: '후보 추가 열기' }));
   await user.type(screen.getByLabelText('후보 제목'), ` ${candidate.title} `);
   await user.type(
