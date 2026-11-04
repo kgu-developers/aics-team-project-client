@@ -107,9 +107,27 @@ export const recipientItem = style({
   },
 });
 export const recipientDetails = style({
+  alignItems: 'center',
+  columnGap: tokens.spacing['6'],
+  display: 'grid',
+  gridTemplateColumns: 'minmax(120px, 1fr) minmax(120px, 1fr)',
   minWidth: 0,
+  width: 'min(480px, 100%)',
+  '@media': {
+    'screen and (max-width: 480px)': {
+      alignItems: 'flex-start',
+      gap: tokens.spacing['1'],
+      gridTemplateColumns: 'minmax(0, 1fr)',
+    },
+  },
 });
 export const recipientName = style({
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+});
+export const recipientLeader = style({
+  minWidth: 0,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',

@@ -567,8 +567,9 @@ export default function AdminMessagesPage() {
                   const teamLabel = isBroadcast
                     ? `${targetTeamCount}개 팀`
                     : row.teamName;
+                  const additionalTeamCount = Math.max(targetTeamCount - 1, 0);
                   const messageThreadLabel = isBroadcast
-                    ? `${teamLabel} 발송 · 대표 팀 ${row.teamName} 쪽지함 보기`
+                    ? `${row.teamName} 팀 외 ${additionalTeamCount}개 팀 발송 상세 보기`
                     : `${row.teamName} 쪽지 상세 보기`;
 
                   return (
@@ -621,15 +622,15 @@ export default function AdminMessagesPage() {
                           <span className={styles.broadcastTeamContext}>
                             <span
                               className={styles.metadataText}
-                              title={`${targetTeamCount}개 팀 발송`}
+                              title={row.teamName}
                             >
-                              {teamLabel}
+                              {row.teamName} 팀
                             </span>
                             <span
-                              className={styles.broadcastRepresentative}
-                              title={`대표 팀 ${row.teamName} 쪽지함 보기`}
+                              className={styles.broadcastTeamCount}
+                              title={`${row.teamName} 팀 외 ${additionalTeamCount}개 팀 전송`}
                             >
-                              대표 팀: {row.teamName}
+                              외 {additionalTeamCount}개 팀 전송
                             </span>
                           </span>
                         ) : (

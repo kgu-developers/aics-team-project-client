@@ -300,7 +300,7 @@ export function AdminTeamMessagesPanel({
                     <Text className={styles.recipientName} weight='medium'>
                       {recipient.teamName}
                     </Text>
-                    <Text color='secondary'>
+                    <Text className={styles.recipientLeader} color='secondary'>
                       팀장: {recipient.leaderName ?? '-'}
                     </Text>
                   </div>

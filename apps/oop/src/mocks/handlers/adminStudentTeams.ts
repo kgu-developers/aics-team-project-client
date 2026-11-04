@@ -104,10 +104,12 @@ function getTeams(sectionId: string): Team[] {
         id: student.id,
         name: student.name,
         isLeader:
+          !withdrawnStudentNumbers.has(student.studentNumber) &&
           student.studentNumber ===
-          (teamLeaderStudentNumbers.get(team.id) ??
-            getBaselineTeamStudents(team).find(candidate => candidate.isLeader)
-              ?.studentNumber),
+            (teamLeaderStudentNumbers.get(team.id) ??
+              getBaselineTeamStudents(team).find(
+                candidate => candidate.isLeader,
+              )?.studentNumber),
       })),
     }));
 }

@@ -67,9 +67,8 @@ export const broadcastTeamContext = style({
   gap: tokens.spacing['1'],
   minWidth: 0,
 });
-export const broadcastRepresentative = style({
+export const broadcastTeamCount = style({
   color: tokens.color.text.secondary,
-  display: 'block',
   fontSize: 12,
   overflow: 'hidden',
   textOverflow: 'ellipsis',

@@ -268,11 +268,12 @@ it('전체 팀에 보낸 일반 메시지는 대상 팀 수와 함께 한 행으
 
   setup();
 
-  expect(await screen.findByText('3개 팀')).toBeVisible();
-  expect(screen.getByText('대표 팀: 알파')).toBeVisible();
+  expect(await screen.findByText('알파 팀')).toBeVisible();
+  expect(screen.getByText('외 2개 팀 전송')).toBeVisible();
   expect(
-    screen.getByLabelText('3개 팀 발송 · 대표 팀 알파 쪽지함 보기'),
+    screen.getByLabelText('알파 팀 외 2개 팀 발송 상세 보기'),
   ).toBeVisible();
+  expect(screen.queryByText(/대표 팀:/)).not.toBeInTheDocument();
   expect(screen.queryByText('전체 팀')).not.toBeInTheDocument();
   expect(screen.queryByText('팀장 학생')).not.toBeInTheDocument();
 });
