@@ -145,12 +145,13 @@ export default defineConfig(({ command, mode }) => {
       env: { VITE_ENABLE_MSW: 'true' },
       environment: 'jsdom',
       // jsdom, MSW, and mutable demo fixtures make the integration-heavy suite
-      // CPU-bound. Keep one isolated worker, but avoid Windows child-process
-      // startup failures that can surface late in a long forks-based run.
+      // CPU-bound. Keep one execution context to avoid late Windows worker
+      // startup timeouts during a long full-suite run.
       pool: 'threads',
       fileParallelism: false,
       maxWorkers: 1,
       minWorkers: 1,
+      singleThread: true,
       testTimeout: 15_000,
       setupFiles: './src/test/setup.ts',
     },
