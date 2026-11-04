@@ -129,7 +129,9 @@ export function getAdminTeamLeaderName(teamId: number) {
 
   return (
     getTeamStudents(team.id).find(
-      student => student.studentNumber === leaderStudentNumber,
+      student =>
+        student.studentNumber === leaderStudentNumber &&
+        !withdrawnStudentNumbers.has(student.studentNumber),
     )?.name ?? null
   );
 }

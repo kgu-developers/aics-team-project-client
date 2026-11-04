@@ -65,12 +65,12 @@ export default function AdminMeetingActionTable({
         renderCell: action => {
           const leaderName = leaderNamesByTeamId?.get(action.teamId);
           const label =
-            leaderName !== undefined
-              ? (leaderName ?? '-')
-              : leaderLookupState === 'loading'
-                ? '불러오는 중'
-                : leaderLookupState === 'error'
-                  ? '불러오기 실패'
+            leaderLookupState === 'error'
+              ? '불러오기 실패'
+              : leaderName !== undefined
+                ? (leaderName ?? '-')
+                : leaderLookupState === 'loading'
+                  ? '불러오는 중'
                   : '-';
 
           return <span title={label}>{label}</span>;

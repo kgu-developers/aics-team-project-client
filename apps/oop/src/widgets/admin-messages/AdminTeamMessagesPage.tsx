@@ -157,7 +157,8 @@ export function AdminTeamMessagesPanel({
     recipientMessageId !== undefined &&
     (recipientsQuery.isPending ||
       recipientsQuery.isError ||
-      hasCurrentTeamRecipient);
+      hasCurrentTeamRecipient ||
+      recipientsQuery.data?.contents.length === 0);
   const submitMutation = useSubmitTeamMessageMutation(teamId);
   const submitMidReportFeedbackMutation =
     useSubmitAdminMidReportFeedbackMutation();
@@ -224,7 +225,7 @@ export function AdminTeamMessagesPanel({
             분반 {sectionLabel}
           </Text>
           <Heading level={embedded ? 2 : 1}>
-            {recipientMessageId !== undefined ? (
+            {shouldShowRecipientView ? (
               '여러 팀 발송 쪽지'
             ) : (
               <>
@@ -242,7 +243,7 @@ export function AdminTeamMessagesPanel({
               </>
             )}
           </Heading>
-          {recipientMessageId !== undefined ? (
+          {shouldShowRecipientView ? (
             <Text color='secondary'>현재 확인 중인 팀: {team.name}</Text>
           ) : null}
         </div>
