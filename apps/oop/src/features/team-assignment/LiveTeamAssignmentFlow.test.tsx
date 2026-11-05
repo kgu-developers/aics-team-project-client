@@ -32,10 +32,6 @@ import {
 } from '~/mocks/handlers/teamAssignment';
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn() }));
-vi.mock('~/shared/config/developmentMode', () => ({
-  isMockDevelopmentMode: () => false,
-}));
-
 const server = setupServer(
   ...authHandlers,
   ...sectionHandlers,
@@ -170,6 +166,7 @@ describe('실 API 모드 설문 흐름', () => {
       view.unmount();
       queryClient.clear();
       renderFlow();
+
       expect(
         await screen.findByRole('button', { name: '시작하기' }),
       ).toBeVisible();
@@ -200,6 +197,7 @@ describe('실 API 모드 설문 흐름', () => {
     view.unmount();
     queryClient.clear();
     renderFlow();
+
     expect(
       await screen.findByRole('heading', {
         name: '설문에 응답해 주셔서 감사합니다.',
@@ -365,6 +363,7 @@ describe('실 API 모드 설문 흐름', () => {
         () => HttpResponse.json({ code: 'SERVER_ERROR' }, { status: 500 }),
       ),
     );
+
     renderFlow();
     const user = await fillSurvey();
     await user.click(

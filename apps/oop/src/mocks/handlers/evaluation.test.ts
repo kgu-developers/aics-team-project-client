@@ -96,7 +96,8 @@ async function getDashboardPreview(
   scenario: 'presentation-evaluation' | 'peer-evaluation',
 ) {
   const response = await request(
-    ENDPOINTS.SECTION.STUDENT_DASHBOARD(evaluationSectionId),
+    // Standalone legacy projection tests keep their own named fixture IDs.
+    ENDPOINTS.SECTION.STUDENT_DASHBOARD('oop-2026-2-01'),
     { headers: { 'X-OOP-Milestone-Preview': scenario } },
   );
   expect(response.status).toBe(200);
@@ -205,7 +206,7 @@ describe('evaluationHandlers', () => {
 
   it('분반의 활성 평가 리소스 ID를 서버 projection으로 제공한다', async () => {
     const response = await request(
-      ENDPOINTS.EVALUATION.CONTEXT('oop-2026-2-01'),
+      ENDPOINTS.EVALUATION.CONTEXT(evaluationSectionId),
     );
 
     expect(response.status).toBe(200);
@@ -227,7 +228,7 @@ describe('evaluationHandlers', () => {
       demoOtherSectionAccessToken,
     );
     const dashboard = await request(
-      ENDPOINTS.SECTION.STUDENT_DASHBOARD(evaluationSectionId),
+      ENDPOINTS.SECTION.STUDENT_DASHBOARD('oop-2026-2-01'),
       { headers: { 'X-OOP-Milestone-Preview': 'peer-evaluation' } },
       demoOtherSectionAccessToken,
     );

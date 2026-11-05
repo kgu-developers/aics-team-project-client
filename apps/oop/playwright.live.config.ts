@@ -52,7 +52,6 @@ export default defineConfig({
         reuseExistingServer: false,
         timeout: 120_000,
         env: {
-          VITE_ENABLE_MSW: 'false',
           VITE_API_BASE_URL: '',
           VITE_API_PROXY_TARGET: process.env.OOP_E2E_API_URL!,
         },

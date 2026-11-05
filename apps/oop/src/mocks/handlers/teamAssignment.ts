@@ -84,6 +84,7 @@ function guard(request: Request, sectionId: string) {
       { status: 403 },
     );
   }
+
   return undefined;
 }
 
@@ -99,28 +100,6 @@ function findCandidate(query: string, requesterId: string) {
         .toLowerCase()
         .includes(normalizedQuery),
     );
-}
-
-function applyDevelopmentPreview(request: Request) {
-  if (!import.meta.env.DEV) return undefined;
-  const phase = request.headers.get('X-OOP-Team-Assignment-Preview');
-  if (
-    phase !== 'resultWaiting' &&
-    phase !== 'result' &&
-    phase !== 'firstMeeting' &&
-    phase !== 'completed'
-  ) {
-    return undefined;
-  }
-
-  if (phase === 'resultWaiting') {
-    return {
-      ...structuredClone(teamAssignmentFixture),
-      phase,
-      window: { resultReleasesAt: '2026-09-08T10:00:00+09:00' },
-    } satisfies TeamAssignmentProjection;
-  }
-  return assignedFixture(phase);
 }
 
 export const teamAssignmentHandlers = [
@@ -203,16 +182,16 @@ export const teamAssignmentHandlers = [
     ({ params, request }) => {
       const denied = guard(request, String(params.sectionId));
       if (denied) return denied;
-      const preview = applyDevelopmentPreview(request);
-      if (preview) return HttpResponse.json(preview);
       return HttpResponse.json(getProjection(request));
     },
   ),
+
   http.get(
     `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.PARTNER_CANDIDATES(':sectionId')}`,
     ({ params, request }) => {
       const denied = guard(request, String(params.sectionId));
       if (denied) return denied;
+
       const accessToken = getAccessToken(request)!;
       const requesterId = studentIdByAccessToken[accessToken];
       const query = new URL(request.url).searchParams.get('query') ?? '';
@@ -275,6 +254,7 @@ export const teamAssignmentHandlers = [
     ({ params, request }) => {
       const denied = guard(request, String(params.sectionId));
       if (denied) return denied;
+
       const accessToken = getAccessToken(request)!;
       const projection = projectionsByAccessToken[accessToken]!;
       const requestId = String(params.requestId);
@@ -306,6 +286,7 @@ export const teamAssignmentHandlers = [
     async ({ params, request }) => {
       const denied = guard(request, String(params.sectionId));
       if (denied) return denied;
+
       const accessToken = getAccessToken(request)!;
       const currentProjection = projectionsByAccessToken[accessToken]!;
       const { decision } = (await request.json()) as {
@@ -356,6 +337,7 @@ export const teamAssignmentHandlers = [
     async ({ params, request }) => {
       const denied = guard(request, String(params.sectionId));
       if (denied) return denied;
+
       const accessToken = getAccessToken(request)!;
       const projection = projectionsByAccessToken[accessToken]!;
       if (projection.phase !== 'survey') {
@@ -373,6 +355,7 @@ export const teamAssignmentHandlers = [
     async ({ params, request }) => {
       const denied = guard(request, String(params.sectionId));
       if (denied) return denied;
+
       const accessToken = getAccessToken(request)!;
       const projection = projectionsByAccessToken[accessToken]!;
       if (projection.phase !== 'survey') {
@@ -394,11 +377,11 @@ export const teamAssignmentHandlers = [
   http.post(
     `${API_BASE_URL}/api/v1/sections/:sectionId/team-assignment/teams/:teamId/leader`,
     ({ params, request }) => {
-      const preview = applyDevelopmentPreview(request);
       const denied = guard(request, String(params.sectionId));
       if (denied) return denied;
+
       const accessToken = getAccessToken(request)!;
-      const projection = preview ?? projectionsByAccessToken[accessToken]!;
+      const projection = projectionsByAccessToken[accessToken]!;
       if (
         projection.phase !== 'firstMeeting' ||
         projection.assignedTeam?.id !== params.teamId
@@ -517,6 +500,7 @@ export const teamAssignmentUserHandlers = [
       return HttpResponse.json(response);
     },
   ),
+
   http.get(
     `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.PRE_SURVEY_CLASSMATES(':sectionId')}`,
     ({ params, request }) => {
@@ -545,12 +529,14 @@ export const teamAssignmentUserHandlers = [
       return HttpResponse.json({ contents: users });
     },
   ),
+
   http.get(
     `${API_BASE_URL}${ENDPOINTS.TEAM_ASSIGNMENT.RECEIVED_PREFERRED_PEER_REQUESTS(':sectionId')}`,
     ({ params, request }) => {
       const rawSectionId = String(params.sectionId);
       const denied = guardPreSurvey(request, rawSectionId);
       if (denied) return denied;
+
       const account = getStudentAccount(request)!;
       const sectionId = parseSectionId(rawSectionId)!;
       const contents = Object.values(preSurveyResponsesByStudentAndSection)
@@ -587,6 +573,7 @@ function decidePreferredPeerMock(
   const rawSectionId = String(params.sectionId);
   const denied = guardPreSurvey(request, rawSectionId);
   if (denied) return denied;
+
   const account = getStudentAccount(request)!;
   const sectionId = parseSectionId(rawSectionId)!;
   const requesterUserId = String(params.requesterUserId);

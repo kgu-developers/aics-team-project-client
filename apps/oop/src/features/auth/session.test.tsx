@@ -70,7 +70,10 @@ function deferred() {
 function readSessionGeneration() {
   return JSON.parse(
     localStorage.getItem(SESSION_RECOVERY_STORAGE_KEY) ?? 'null',
-  ) as { session: string; revision: string };
+  ) as {
+    session: string;
+    revision: string;
+  };
 }
 
 function sessionUserResponse() {
@@ -91,7 +94,6 @@ describe('cookie authentication bootstrap', () => {
   ])(
     '/me %s와 로그인 %s는 %s 세션으로 진입한다',
     async (globalRole, role, expectedRole) => {
-      vi.stubEnv('VITE_ENABLE_MSW', 'false');
       server.use(
         http.post(`${API_BASE_URL}${ENDPOINTS.AUTH.LOGIN}`, () =>
           HttpResponse.json({ message: 'ok', role }),
@@ -146,6 +148,7 @@ describe('cookie authentication bootstrap', () => {
           result.current.mutateAsync(demoCredentials),
         ).rejects.toThrow('일치하지');
       });
+
       expect(useAuthStore.getState()).toMatchObject({
         isAuthenticated: false,
         currentUser: null,
@@ -165,6 +168,7 @@ describe('cookie authentication bootstrap', () => {
         HttpResponse.json({ globalRole: 'USER' }),
       ),
     );
+
     await restoreSession();
     expect(useAuthStore.getState()).toMatchObject({
       isAuthenticated: false,
@@ -174,7 +178,6 @@ describe('cookie authentication bootstrap', () => {
   });
 
   it('로그인은 body token 없이 학생 세션을 설정하고 기존 mock 홈 조회를 허용한다', async () => {
-    vi.stubEnv('VITE_ENABLE_MSW', 'true');
     const { Wrapper } = wrapper();
     const { result } = renderHook(() => useLoginMutation(), {
       wrapper: Wrapper,
@@ -182,6 +185,7 @@ describe('cookie authentication bootstrap', () => {
     await act(async () => {
       await result.current.mutateAsync(demoCredentials);
     });
+
     expect(useAuthStore.getState()).toMatchObject({
       isAuthenticated: true,
       sessionRole: 'STUDENT',
@@ -194,7 +198,6 @@ describe('cookie authentication bootstrap', () => {
   });
 
   it('조교는 /me 재조회와 refresh 뒤에도 역할을 유지하며 운영자 mock을 조회한다', async () => {
-    vi.stubEnv('VITE_ENABLE_MSW', 'true');
     const { Wrapper } = wrapper();
     const { result } = renderHook(
       () => ({ login: useLoginMutation(), me: useCurrentUserQuery() }),
@@ -232,6 +235,7 @@ describe('cookie authentication bootstrap', () => {
         result.current.mutateAsync(demoCredentials),
       ).rejects.toBeDefined();
     });
+
     expect(useAuthStore.getState()).toMatchObject({
       isAuthenticated: false,
       currentUser: null,
@@ -274,6 +278,7 @@ describe('cookie authentication bootstrap', () => {
     await act(async () => {
       await expect(login).rejects.toThrow('세션이 만료');
     });
+
     expect(useAuthStore.getState()).toMatchObject({
       isAuthenticated: false,
       currentUser: null,
@@ -414,6 +419,7 @@ describe('cookie authentication bootstrap', () => {
       );
       window.dispatchEvent(event);
       releaseMe.resolve();
+
       await act(async () => {
         await expect(login).resolves.toMatchObject({
           studentNumber: 'race-user',
@@ -459,7 +465,6 @@ describe('cookie authentication bootstrap', () => {
   });
 
   it('실서버 응답에 없는 팀 이름이나 소속 분반을 생성하지 않는다', async () => {
-    vi.stubEnv('VITE_ENABLE_MSW', 'false');
     const { Wrapper } = wrapper();
     const { result } = renderHook(() => useLoginMutation(), {
       wrapper: Wrapper,
@@ -558,6 +563,7 @@ describe('cookie authentication bootstrap', () => {
         () => new HttpResponse(null, { status: 401 }),
       ),
     );
+
     await restoreSession();
     expect(useAuthStore.getState()).toMatchObject({
       isAuthenticated: false,

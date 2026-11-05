@@ -21,7 +21,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint --fix .",
     "test:e2e:integrated": "playwright test --config playwright.integrated.config.ts",
-    "test:e2e:msw": "playwright test --config playwright.msw.config.ts"
+    "test:logic": "vitest run --project logic",
+    "test:ui": "vitest run --project ui"
   },
   "dependencies": {
     "@aics/api-client": "workspace:*",
@@ -62,10 +63,5 @@
     "vite": "^6.3.5",
     "vitest": "^4.1.10",
     "wrangler": "4.127.0"
-  },
-  "msw": {
-    "workerDirectory": [
-      "public"
-    ]
   }
 }

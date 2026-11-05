@@ -8,10 +8,6 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const contextFixture = vi.hoisted(() => ({
   value: {} as Record<string, unknown>,
 }));
-
-vi.mock('~/shared/config/developmentMode', () => ({
-  isMockDevelopmentMode: () => false,
-}));
 vi.mock('~/features/section/useStudentContext', () => ({
   useStudentContext: () => contextFixture.value,
 }));

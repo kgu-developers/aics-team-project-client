@@ -22,12 +22,10 @@ import { useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { SurveyFlow, SurveyQuestion } from '~/shared/ui/SurveyFlow';
 import { SurveyShell } from '~/shared/ui/SurveyShell';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
-import { useAuthStore } from '~/features/auth/authStore';
 import StudentContextState from '~/features/section/StudentContextState';
 import { useStudentContext } from '~/features/section/useStudentContext';
 
@@ -208,7 +206,7 @@ function PeerEvaluationForm({
     try {
       await saveDraft();
     } catch {
-      // The mutation error is rendered without blocking survey navigation.
+      // Keep the local draft; the mutation displays the save error.
     } finally {
       setStep(nextStep);
     }
@@ -239,7 +237,7 @@ function PeerEvaluationForm({
     try {
       await saveDraft(nextDrafts);
     } catch {
-      // Keep the local edit and surface the mutation error in the form.
+      // Keep the local draft; the mutation displays the save error.
     } finally {
       closeTargetDialog();
     }
@@ -629,27 +627,17 @@ function PeerEvaluationForm({
 }
 
 export default function PeerEvaluationPage() {
-  const isDemo = isMockDevelopmentMode(
-    import.meta.env.DEV,
-    import.meta.env.VITE_ENABLE_MSW,
-  );
-  const currentUser = useAuthStore(state => state.currentUser);
-  const context = useStudentContext(!isDemo);
+  const context = useStudentContext(true);
   const sectionId =
-    isDemo && currentUser?.sections.length === 1
-      ? currentUser.sections[0]!.id
-      : context.status === 'ready'
-        ? String(context.section!.id)
-        : '';
-  const userId = (isDemo ? currentUser : context.user)?.studentNumber ?? '';
+    context.status === 'ready' ? String(context.section!.id) : '';
+  const userId = context.user?.studentNumber ?? '';
   const contextQuery = useEvaluationContextQuery(sectionId, userId);
   const formId =
     sectionId && contextQuery.isSuccess
       ? (contextQuery.data.peerEvaluationFormId ?? '')
       : '';
   const query = usePeerEvaluationTargetsQuery(sectionId, userId, formId);
-
-  if (!isDemo && context.status !== 'ready')
+  if (context.status !== 'ready')
     return <StudentContextState context={context} />;
   if (!sectionId || !userId)
     return <EmptyState title='수강 분반과 학생 계정을 확인해 주세요.' />;

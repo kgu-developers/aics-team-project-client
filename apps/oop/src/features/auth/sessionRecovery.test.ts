@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import {
   API_BASE_URL,
   ENDPOINTS,

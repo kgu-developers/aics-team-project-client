@@ -26,6 +26,9 @@ import {
 const sentinelToken = 'sentinel-openapi-bearer-token';
 const sentinelBody = 'sentinel-upstream-error-body';
 const sentinelUrl = 'https://sentinel.invalid/private/openapi';
+// Directory junctions exercise the same escape guard on Windows without
+// requiring the system privilege needed for ordinary symbolic links.
+const directoryLinkType = process.platform === 'win32' ? 'junction' : 'dir';
 
 let primaryServer;
 let primaryUrl;
@@ -694,7 +697,11 @@ test('source and cache paths cannot escape through symbolic links', async () => 
   );
   await mkdir(join(sourceRoot, '.agent-local'), { recursive: true });
   await writeSource(join(externalSources, 'openapi-source.json'));
-  await symlink(externalSources, join(sourceRoot, '.agent-local', 'sources'));
+  await symlink(
+    externalSources,
+    join(sourceRoot, '.agent-local', 'sources'),
+    directoryLinkType,
+  );
 
   const sourceResult = await refreshOpenApi({ repoRoot: sourceRoot });
   assert.equal(sourceResult.state, 'invalid');
@@ -717,6 +724,7 @@ test('source and cache paths cannot escape through symbolic links', async () => 
   await symlink(
     externalCache,
     join(cacheRoot, '.agent-local', 'openapi-cache'),
+    directoryLinkType,
   );
 
   const cacheResult = await refreshOpenApi({ repoRoot: cacheRoot });
@@ -732,7 +740,11 @@ test('cache writes reject symbolic-link subdirectories', async () => {
     join(tmpdir(), 'openapi-contract-external-raw-'),
   );
   await mkdir(workspace.cacheDir, { recursive: true });
-  await symlink(externalRaw, join(workspace.cacheDir, 'raw'));
+  await symlink(
+    externalRaw,
+    join(workspace.cacheDir, 'raw'),
+    directoryLinkType,
+  );
 
   const result = await refreshOpenApi(workspace);
 

@@ -233,3 +233,10 @@ default.
   caches, reports, tokens, and private server material out of committed files.
 - The audit proposes changes; it does not edit app code, API client code, or MSW. After
   human approval, use `kd-work` for implementation and `kd-test` for behavior checks.
+
+## MSW composition and wire-format evidence
+
+- Inventory declarations, the shared default test factory, and test-specific overrides separately. A handler existing in a file does not mean the shared test composition registers it.
+- Compare OpenAPI responses with raw handler output before domain mapping. Route/method correspondence is not a schema match.
+- Record success-response samples, unsupported/unverified schemas and error coverage explicitly. A successful collection script is not proof that every collected response matched.
+- Classify nullable/error-documentation gaps separately when pinned server DTO evidence supports the existing response. Do not fill nulls with invented data simply to satisfy incomplete documentation.

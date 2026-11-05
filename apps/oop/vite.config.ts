@@ -141,17 +141,35 @@ export default defineConfig(({ command, mode }) => {
         : {}),
     },
     test: {
-      include: ['src/**/*.test.{ts,tsx}', 'vite.config.test.ts'],
-      env: { VITE_ENABLE_MSW: 'true' },
-      environment: 'jsdom',
-      // jsdom, MSW, and mutable demo fixtures make the integration-heavy suite
-      // CPU-bound. Keep one execution context to avoid late Windows worker
-      // startup timeouts during a long full-suite run.
+      // Automated HTTP doubles never inherit a personal/live API origin.
+      env: {
+        VITE_API_BASE_URL: 'http://localhost:8080',
+        VITE_API_PROXY_TARGET: '',
+      },
+      projects: [
+        {
+          extends: true,
+          test: {
+            name: 'logic',
+            environment: 'node',
+            include: ['src/**/*.test.ts', 'vite.config.test.ts'],
+          },
+        },
+        {
+          extends: true,
+          test: {
+            name: 'ui',
+            environment: 'jsdom',
+            include: ['src/**/*.test.tsx'],
+          },
+        },
+      ],
+      // File isolation protects stores and MSW state. Limit parallelism on
+      // Windows while allowing independent files to share the available CPU.
       pool: 'threads',
-      fileParallelism: false,
-      maxWorkers: 1,
-      minWorkers: 1,
-      singleThread: true,
+      isolate: true,
+      fileParallelism: true,
+      maxWorkers: 2,
       testTimeout: 15_000,
       setupFiles: './src/test/setup.ts',
     },

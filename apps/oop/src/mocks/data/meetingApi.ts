@@ -29,6 +29,7 @@ export const meetingApiTeam: TeamKickoffResponse = {
   ],
 };
 export const meetingApiRecord: MeetingRecordDetailResponseDto = {
+  milestones: [],
   id: 19,
   teamId: 7,
   title: '진행 점검 회의',

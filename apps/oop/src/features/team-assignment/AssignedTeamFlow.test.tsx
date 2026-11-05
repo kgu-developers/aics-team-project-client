@@ -26,9 +26,6 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigate,
   Navigate: ({ to }: { to: string }) => <p>이동: {to}</p>,
 }));
-vi.mock('~/shared/config/developmentMode', () => ({
-  isMockDevelopmentMode: () => false,
-}));
 
 const section: SectionResponse = {
   id: 1,
@@ -163,6 +160,7 @@ async function claimLeader() {
 
 it('공개 중에도 결과·팀원·다음 단계를 거친 뒤 연락처를 연결하고 선점 204 후 재조회한다', async () => {
   renderFlow();
+
   await viewTeam();
   expect(screen.getByText('한가온')).toBeVisible();
   expect(screen.getByText('20260001')).toBeVisible();
@@ -220,6 +218,7 @@ it('내 팀에서 서버가 확정한 팀장의 이름과 학번을 확인할 �
 
 it('온보딩 결과 안의 팀 요약에는 중복 홈 이동을 표시하지 않는다', async () => {
   renderFlow();
+
   await viewTeam();
   expect(
     screen.queryByRole('button', { name: '학생 홈으로 돌아가기' }),
@@ -260,7 +259,7 @@ it.each(['2026-09-10T10:00:00', '2026-09-10T10:00:00+09:00'])(
   'KST 일정 %s의 시작 시각부터 다음 단계와 연락처를 함께 연다',
   async visibleFrom => {
     const start = Date.parse('2026-09-10T10:00:00+09:00');
-    const now = vi.spyOn(Date, 'now').mockReturnValue(start - 60_000);
+    const now = vi.spyOn(Date, 'now').mockReturnValue(start - 60000);
     activeSection.contactVisibleFrom = visibleFrom;
     renderFlow();
 
@@ -317,6 +316,7 @@ it.each([401, 403, 404, 500])(
         : []),
     );
     renderFlow();
+
     expect(
       await screen.findByText('배정된 팀 정보를 확인하지 못했어요.'),
     ).toHaveAttribute('role', 'alert');
@@ -384,7 +384,7 @@ it('공개 종료 후 내 팀에서는 전화번호 열과 조회를 생략한�
 
 it('내 팀 화면을 열어 둔 채 공개 기간이 끝나도 기존 전화번호를 숨긴다', async () => {
   const end = Date.parse('2026-10-26T23:59:00+09:00');
-  const now = vi.spyOn(Date, 'now').mockReturnValue(end - 60_000);
+  const now = vi.spyOn(Date, 'now').mockReturnValue(end - 60000);
   activeSection.contactVisibleUntil = '2026-10-26T23:59:00+09:00';
   renderFlow(true);
   expect(

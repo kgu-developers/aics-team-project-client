@@ -1,5 +1,7 @@
 # OOP Playwright E2E
 
+개발 기본 env와 E2E 계정 파일은 [환경변수 안내](../docs/environment.md)를 따른다. 브라우저 MSW 모드는 제거했으며 요청 모킹 검증은 공통 UI와 Playwright route를 사용한다.
+
 에이전트에게 **“OOP 학생 실서버 E2E 기본 15개를 검증해줘”**라고 요청한다. 기본 E2E는 실제 서버를 사용한다. API 응답을 모킹하거나 인증 store를 주입하지 않고 화면에서 로그인한다. 각 테스트는 새 브라우저 context를 사용하며 같은 계정의 세션과 편집 잠금 충돌을 피하려고 worker 1개, 자동 재시도 0회로 실행한다.
 
 ## 관리자·학생 브라우저 통합 E2E
@@ -53,7 +55,7 @@ OOP_E2E_PRESENTATION_ID=<발표 마일스톤 ID>
 OOP_E2E_FINAL_REPORT_ID=<최종보고서 마일스톤 ID>
 ```
 
-자동 실행 시 API의 CORS 허용 origin에 `http://localhost:5173`이 포함돼야 한다. 이미 그 포트에 실서버 연동 앱이 실행 중이면 `OOP_E2E_BASE_URL`을 지정한다. 다른 서버를 임의로 재사용하거나 CORS를 우회하지 않는다. 해당 앱은 `VITE_ENABLE_MSW=false`여야 한다.
+자동 실행 시 API의 CORS 허용 origin에 `http://localhost:5173`이 포함돼야 한다. 이미 그 포트에 실서버 연동 앱이 실행 중이면 `OOP_E2E_BASE_URL`을 지정한다. 다른 서버를 임의로 재사용하거나 CORS를 우회하지 않는다. 해당 앱은 실제 API에 연결된 공통 UI여야 한다.
 
 ## 테스트 데이터 조건
 

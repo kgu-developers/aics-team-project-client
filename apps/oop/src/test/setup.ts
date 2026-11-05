@@ -1,6 +1,3 @@
-import '@testing-library/jest-dom/vitest';
-
-import { cleanup, configure } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
 class ResizeObserverMock implements ResizeObserver {
@@ -12,9 +9,11 @@ class ResizeObserverMock implements ResizeObserver {
 // Astryx 0.4+ announces each toast in a persistent, visually hidden live
 // region as well as in its visible toast. Text queries target rendered UI;
 // announcement semantics can be asserted separately through role queries.
-configure({ defaultIgnore: 'script, style, [data-astryx-live-region]' });
-
 if (typeof window !== 'undefined') {
+  // Node logic/HTTP tests do not load the DOM assertion or React test runtime.
+  await import('@testing-library/jest-dom/vitest');
+  const { cleanup, configure } = await import('@testing-library/react');
+  configure({ defaultIgnore: 'script, style, [data-astryx-live-region]' });
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,
     value: vi.fn().mockImplementation((query: string) => ({

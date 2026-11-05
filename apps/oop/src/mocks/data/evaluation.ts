@@ -13,7 +13,7 @@ import type {
   TeamEvaluationScoreDto,
 } from '@aics/core';
 
-export const evaluationSectionId = 'oop-2026-2-01';
+export const evaluationSectionId = '1';
 export const presentationEvaluationMilestoneId = '303';
 export const presentationEvaluationOpensAt = '2026-11-10T14:00:00+09:00';
 export const presentationEvaluationClosesAt = '2026-11-10T16:00:00+09:00';
@@ -84,7 +84,7 @@ const evaluationMembershipByUserId: Record<string, EvaluationMembership> = {
     memberUserIds: evaluationTeamMemberIds,
   },
   '20260021': {
-    sectionId: 'oop-2026-2-02',
+    sectionId: '2',
     teamId: 'team-21',
     memberUserIds: ['20260021'],
   },

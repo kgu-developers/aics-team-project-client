@@ -6,13 +6,8 @@ import { appQueryClient } from './app/providers/query-provider';
 import { routeTree } from './app/routeTree.gen';
 import { restoreSession } from './features/auth/restoreSession';
 import { startSessionSync } from './features/auth/sessionSync';
-import { isMockDevelopmentMode } from './shared/config/developmentMode';
 
 const router = createRouter({ routeTree });
-const mockDevelopmentMode = isMockDevelopmentMode(
-  import.meta.env.DEV,
-  import.meta.env.VITE_ENABLE_MSW,
-);
 
 declare module '@tanstack/react-router' {
   interface Register {
@@ -24,8 +19,7 @@ async function disableMocking() {
   if (
     typeof navigator === 'undefined' ||
     !('serviceWorker' in navigator) ||
-    !import.meta.env.DEV ||
-    mockDevelopmentMode
+    !import.meta.env.DEV
   ) {
     return;
   }
@@ -48,29 +42,8 @@ async function disableMocking() {
   );
 }
 
-async function enableMocking() {
-  if (!mockDevelopmentMode) {
-    return;
-  }
-
-  const { startMockWorker } = await import('./mocks/browser');
-  await startMockWorker();
-}
-
-async function enableDevelopmentMilestonePreview() {
-  if (!mockDevelopmentMode) {
-    return;
-  }
-
-  const { enableDevelopmentMilestonePreview: enablePreview } =
-    await import('./mocks/developmentMilestonePreview');
-  enablePreview();
-}
-
 async function bootstrap() {
   await disableMocking();
-  await enableMocking();
-  await enableDevelopmentMilestonePreview();
   startSessionSync(() => appQueryClient.clear());
   await restoreSession();
 

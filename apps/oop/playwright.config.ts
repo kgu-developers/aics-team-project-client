@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  testIgnore: ['**/live/**', '**/integrated/**', '**/msw/**'],
+  testIgnore: ['**/live/**', '**/integrated/**'],
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
@@ -38,9 +38,8 @@ export default defineConfig({
     url: 'http://127.0.0.1:4173/login',
     reuseExistingServer: false,
     timeout: 120_000,
-    // Exercise the deployed UI paths; do not start the alternate demo flow.
+    // HTTP interception exercises the same UI paths as the real backend.
     env: {
-      VITE_ENABLE_MSW: 'false',
       VITE_API_BASE_URL: '',
       VITE_API_PROXY_TARGET: '',
     },

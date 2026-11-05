@@ -1,8 +1,6 @@
-import { updateMeetingRecord, updateMeetingRecordApi } from '@aics/api-client';
+import { updateMeetingRecordApi } from '@aics/api-client';
 import type { MeetingPhase, UpdateMeetingRecordInput } from '@aics/core';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-
-import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 
 import { useAuthStore } from '~/features/auth/authStore';
 import { studentHomeKeys } from '~/features/student-home/queries/studentHomeKeys';
@@ -20,10 +18,6 @@ import { meetingKeys } from './meetingKeys';
 export function useUpdateMeetingRecordMutation() {
   const queryClient = useQueryClient();
   const session = useAuthStore();
-  const isDemo = isMockDevelopmentMode(
-    import.meta.env.DEV,
-    import.meta.env.VITE_ENABLE_MSW,
-  );
   return useMutation({
     retry: false,
     onMutate: () => ({ session }),
@@ -48,16 +42,6 @@ export function useUpdateMeetingRecordMutation() {
         throw new MeetingUpdateValidationError(
           '유효한 팀과 회의록이 필요해요.',
         );
-      if (isDemo) {
-        try {
-          return await updateMeetingRecord(meetingId, {
-            ...input,
-            changeReason,
-          });
-        } catch (error) {
-          throw new MeetingUpdateError(error);
-        }
-      }
       if (
         !hasMeetingApiId(teamId) ||
         !hasMeetingApiId(meetingId) ||
@@ -97,10 +81,6 @@ export function useUpdateMeetingRecordMutation() {
         if (error instanceof MeetingEditLockError) throw error;
         throw new MeetingUpdateError(error);
       }
-    },
-    onSuccess: (record, { meetingId }, context) => {
-      if (isDemo && context?.session === useAuthStore.getState())
-        queryClient.setQueryData(meetingKeys.detail(meetingId), record);
     },
     onSettled: (_record, _error, { meetingId, teamId }, context) => {
       if (!teamId || !meetingId || context?.session !== useAuthStore.getState())

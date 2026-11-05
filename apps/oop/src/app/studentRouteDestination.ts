@@ -5,7 +5,6 @@ import { isNoTeamAccessibleStudentRoute, ROUTES } from './constants/routes';
 
 export function getStudentRouteDestination(
   status: StudentContextStatus,
-  isDemo: boolean,
   pathname: string,
   section?: {
     contactVisibleFrom?: string | null;
@@ -13,7 +12,6 @@ export function getStudentRouteDestination(
   },
   now = Date.now(),
 ) {
-  if (isDemo) return undefined;
   if (status === 'no-team' && !isNoTeamAccessibleStudentRoute(pathname)) {
     return ROUTES.ONBOARDING.TEAM;
   }

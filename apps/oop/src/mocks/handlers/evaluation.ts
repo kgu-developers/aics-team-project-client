@@ -27,6 +27,7 @@ import {
   teamNumericId,
   upsertTeamEvaluation,
 } from '../data/evaluation';
+import { getMockMySections } from '../data/sections';
 import { getDemoUserAccount } from '../data/users';
 
 function error(code: string, message: string, status: number) {
@@ -53,7 +54,9 @@ function requireEvaluationStudent(request: Request) {
   const membership = getEvaluationMembership(userId);
   if (
     !membership ||
-    !account.user.sections.some(section => section.id === membership.sectionId)
+    !getMockMySections(account.credentials.studentNumber, {
+      status: 'ACTIVE',
+    }).some(section => String(section.id) === membership.sectionId)
   )
     return {
       response: error(
@@ -116,11 +119,9 @@ function requirePresentationViewer(request: Request) {
 
   const isResponsibleProfessor =
     account.user.globalRole === 'PROFESSOR' &&
-    account.user.sections.some(
-      section =>
-        (section.id === evaluationSectionId || section.id === '1') &&
-        section.role === 'PROFESSOR',
-    );
+    getMockMySections(account.credentials.studentNumber, {
+      status: 'ACTIVE',
+    }).some(section => String(section.id) === evaluationSectionId);
   if (!isResponsibleProfessor)
     return {
       response: error(

@@ -39,6 +39,9 @@ jobs:
 
   vitest:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        suite: ['logic', 'ui']
 
     steps:
       - uses: actions/checkout@v4
@@ -56,5 +59,8 @@ jobs:
           cache-dependency-path: 'pnpm-lock.yaml'
 
       - run: pnpm install
-      - run: pnpm --filter @aics/oop test
-      - run: pnpm --filter @aics/oop test:harness
+      - run: pnpm agent:check-msw
+      - run: node --test .agent/scripts/check-msw-boundary.test.mjs
+      - run: pnpm --filter @aics/oop test:${{ matrix.suite }}
+      - if: matrix.suite == 'logic'
+        run: pnpm --filter @aics/oop test:harness

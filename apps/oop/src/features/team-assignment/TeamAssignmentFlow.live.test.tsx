@@ -20,11 +20,6 @@ const mockLiveProjectionQuery = vi.hoisted(() => vi.fn());
 const mockKickoffQuery = vi.hoisted(() => vi.fn());
 const mockProjectionQuery = vi.hoisted(() => vi.fn());
 const mockWaitingPoll = vi.hoisted(() => vi.fn());
-
-vi.mock('~/shared/config/developmentMode', () => ({
-  isMockDevelopmentMode: () => false,
-}));
-
 vi.mock('@tanstack/react-router', () => ({
   Navigate: ({ to }: { to: string }) => <p>이동: {to}</p>,
   useNavigate: () => mockNavigate,
@@ -203,7 +198,9 @@ describe('TeamAssignmentFlow live API mode', () => {
       mockSurveyQuery.mockReturnValue(
         queryResult(undefined, { isAxiosError: true, response: { status } }),
       );
+
       renderFlow();
+
       expect(
         screen.getByText('사전 설문 제출 상태를 확인하지 못했어요.'),
       ).toBeVisible();
@@ -217,6 +214,7 @@ describe('TeamAssignmentFlow live API mode', () => {
       queryResult(student, new Error('session expired')),
     );
     mockSurveyQuery.mockReturnValue(queryResult(surveyResponse));
+
     renderFlow();
     expect(screen.getByText('로그인 정보를 확인해 주세요.')).toBeVisible();
     expect(mockSurveyQuery).toHaveBeenCalledWith(undefined);
@@ -266,6 +264,7 @@ describe('TeamAssignmentFlow live API mode', () => {
     );
     mockSurveyQuery.mockReturnValue(queryResult());
     renderFlow();
+
     expect(
       screen.getByText(/선택한 분반의 팀 소속을 확인할 수 없어요/),
     ).toBeVisible();
@@ -290,7 +289,9 @@ describe('TeamAssignmentFlow live API mode', () => {
         ],
       }),
     );
+
     renderFlow();
+
     expect(
       screen.getByRole('heading', { name: '7조에 배정되었어요!' }),
     ).toBeVisible();
@@ -317,6 +318,7 @@ describe('TeamAssignmentFlow live API mode', () => {
         ],
       }),
     );
+
     renderFlow();
     expect(screen.getByText('이동: /student')).toBeVisible();
   });

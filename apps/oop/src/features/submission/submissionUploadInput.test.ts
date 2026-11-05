@@ -1,11 +1,13 @@
 import type { RequiredSubmissionArtifact } from '@aics/core';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   safeDisplayUrl,
   safeSubmissionUrl,
   submissionUploadInput,
 } from './submissionUploadInput';
+afterEach(() => vi.unstubAllGlobals());
+
 const rule: RequiredSubmissionArtifact = {
   id: 1,
   type: 'FILE',
@@ -77,6 +79,7 @@ describe('파일 제출 입력 검증', () => {
     expect(safeSubmissionUrl('https://user:pass@example.com')).toBeUndefined();
   });
   it('표시용 이미지는 같은 출처의 루트 상대 경로만 추가로 허용한다', () => {
+    vi.stubGlobal('location', { origin: 'http://localhost:3000' });
     expect(safeDisplayUrl(123)).toBeUndefined();
     expect(safeDisplayUrl({ url: '/screen.png' })).toBeUndefined();
     expect(safeDisplayUrl('/project-images/screen.png')).toBe(

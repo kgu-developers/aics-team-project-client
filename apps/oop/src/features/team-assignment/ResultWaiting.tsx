@@ -1,23 +1,12 @@
-import { Button } from '@aics/design-system';
-import { useNavigate } from '@tanstack/react-router';
-
-import { ROUTES } from '~/app/constants/routes';
-
-import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { contactWindowInstant } from '~/shared/lib/contactWindowDateTime';
 
 import { formatTeamAssignmentDate } from './formatTeamAssignmentDate';
 import * as styles from './TeamAssignmentFlow.css';
-const mockDevelopmentMode = isMockDevelopmentMode(
-  import.meta.env.DEV,
-  import.meta.env.VITE_ENABLE_MSW,
-);
 export default function ResultWaiting({
   resultReleasesAt,
 }: {
   resultReleasesAt?: string;
 }) {
-  const navigate = useNavigate();
   const releaseTimestamp = resultReleasesAt
     ? contactWindowInstant(resultReleasesAt)
     : Number.NaN;
@@ -52,20 +41,6 @@ export default function ResultWaiting({
           <p>팀원 공개 일정은 추후 안내됩니다.</p>
         )}
       </div>
-      {mockDevelopmentMode ? (
-        <div className={`${styles.actions} ${styles.centeredActions}`}>
-          <Button
-            label='개발용: 팀 선정 결과 보기'
-            onClick={() =>
-              void navigate({
-                search: { teamAssignmentPreview: 'result' },
-                to: ROUTES.ONBOARDING.TEAM,
-              })
-            }
-            variant='secondary'
-          />
-        </div>
-      ) : null}
     </section>
   );
 }

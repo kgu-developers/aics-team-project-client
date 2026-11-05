@@ -29,7 +29,6 @@ const server = setupServer();
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   apiClient.defaults.headers.common.Authorization = 'Bearer ' + demoAccessToken;
   server.use(...createMeetingApiHandlers());
 });

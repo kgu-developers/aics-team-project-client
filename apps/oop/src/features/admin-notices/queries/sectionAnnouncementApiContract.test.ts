@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { Blob as NodeBlob, File as NodeFile } from 'node:buffer';
 
 import {

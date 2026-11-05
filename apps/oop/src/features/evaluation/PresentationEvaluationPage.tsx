@@ -22,12 +22,10 @@ import {
 } from '@aics/design-system';
 import { useEffect, useRef, useState } from 'react';
 
-import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { PdfPreview } from '~/shared/ui/PdfPreview';
 import { PresentationTeamNavigator } from '~/shared/ui/PresentationTeamNavigator/PresentationTeamNavigator';
 
-import { useAuthStore } from '~/features/auth/authStore';
 import StudentContextState from '~/features/section/StudentContextState';
 import { useStudentContext } from '~/features/section/useStudentContext';
 import {
@@ -67,7 +65,7 @@ function EvaluationTimer({
   useEffect(() => {
     hasCompleted.current = false;
     setNow(Date.now());
-    const timerId = window.setInterval(() => setNow(Date.now()), 1_000);
+    const timerId = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timerId);
   }, [targetAt]);
 
@@ -851,19 +849,10 @@ function PresentationEvaluationContent({
 }
 
 export default function PresentationEvaluationPage() {
-  const isDemo = isMockDevelopmentMode(
-    import.meta.env.DEV,
-    import.meta.env.VITE_ENABLE_MSW,
-  );
-  const currentUser = useAuthStore(state => state.currentUser);
-  const context = useStudentContext(!isDemo);
+  const context = useStudentContext(true);
   const sectionId =
-    isDemo && currentUser?.sections.length === 1
-      ? currentUser.sections[0]!.id
-      : context.status === 'ready'
-        ? String(context.section!.id)
-        : '';
-  const userId = (isDemo ? currentUser : context.user)?.studentNumber ?? '';
+    context.status === 'ready' ? String(context.section!.id) : '';
+  const userId = context.user?.studentNumber ?? '';
   const contextQuery = useEvaluationContextQuery(sectionId, userId);
   const milestoneId =
     sectionId && contextQuery.isSuccess
@@ -871,8 +860,7 @@ export default function PresentationEvaluationPage() {
       : '';
   const rosterQuery = useMilestonePresentationsQuery(milestoneId);
   const evaluationsQuery = useMyTeamEvaluationsQuery(userId, milestoneId);
-
-  if (!isDemo && context.status !== 'ready')
+  if (context.status !== 'ready')
     return <StudentContextState context={context} />;
   if (!sectionId || !userId)
     return <EmptyState title='수강 분반과 학생 계정을 확인해 주세요.' />;
@@ -945,7 +933,7 @@ export default function PresentationEvaluationPage() {
       key={`${userId}:${sectionId}:${context.teamId}`}
       evaluations={evaluationsQuery.data}
       milestoneId={milestoneId}
-      myTeamId={(isDemo ? currentUser?.teamId : context.teamId) ?? null}
+      myTeamId={context.teamId ?? null}
       onReloadMaterials={() => {
         void rosterQuery.refetch();
       }}

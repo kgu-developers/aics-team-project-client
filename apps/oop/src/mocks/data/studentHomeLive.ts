@@ -57,6 +57,7 @@ export const liveHomeRecords: MeetingRecordSummaryDto[] = [1, 4, 2, 3].map(
     meetingAt: `2026-09-0${id} 10:30`,
     authorId: '202600002',
     participantCount: 2,
+    milestones: [],
   }),
 );
 

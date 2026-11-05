@@ -11,7 +11,21 @@ export const meetingApiActionStatuses = [
 
 export type MeetingApiActionStatus = (typeof meetingApiActionStatuses)[number];
 
+export type MeetingRecordMilestoneDto = {
+  id: number;
+  title: string;
+  type:
+    | 'PROPOSAL'
+    | 'MID_REPORT'
+    | 'FINAL_REPORT'
+    | 'PRESENTATION'
+    | 'PEER_EVALUATION'
+    | 'GENERAL';
+  weekNumber: number;
+};
+
 export type MeetingRecordSummaryDto = {
+  milestones: MeetingRecordMilestoneDto[];
   title: string | null;
   id: number;
   phase: MeetingPhase;
@@ -26,6 +40,7 @@ export type MeetingRecordListResponseDto = {
 };
 
 export type MeetingRecordDetailResponseDto = {
+  milestones: MeetingRecordMilestoneDto[];
   title: string | null;
   id: number;
   teamId: number;
@@ -96,6 +111,7 @@ export type TeamMeetingActionEntry = MeetingActionEntry & {
 };
 
 export type MeetingRecordSummary = {
+  milestones: MeetingRecordMilestoneDto[];
   title: string | null;
   id: string;
   phase: MeetingPhase;
@@ -106,6 +122,7 @@ export type MeetingRecordSummary = {
 };
 
 export type MeetingRecordDetail = {
+  milestones: MeetingRecordMilestoneDto[];
   title: string | null;
   id: string;
   teamId: string;
@@ -129,6 +146,7 @@ export type MeetingRecordPersistResult = {
 };
 
 export type MeetingRecordCreateRequest = {
+  milestoneIds?: number[];
   title: string;
   meetingAt: string;
   location?: string;
@@ -138,6 +156,7 @@ export type MeetingRecordCreateRequest = {
 };
 
 export type MeetingRecordUpdateRequest = {
+  milestoneIds?: number[];
   title?: string;
   meetingAt?: string;
   location?: string;

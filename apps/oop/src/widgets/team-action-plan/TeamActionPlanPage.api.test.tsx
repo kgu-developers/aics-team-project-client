@@ -70,7 +70,6 @@ beforeAll(() => {
 });
 beforeEach(() => {
   resetMockSessionState();
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setAccessToken(demoAccessToken);
   useAuthStore
@@ -116,7 +115,7 @@ async function ready() {
   await screen.findByRole(
     'heading',
     { name: '팀 액션 플랜' },
-    { timeout: 5_000 },
+    { timeout: 5000 },
   );
   await waitFor(() =>
     expect(
@@ -258,6 +257,7 @@ it('담당자와 기한을 비우면 clear 플래그로 서버와 화면에 반�
   await user.click(screen.getByRole('option', { name: '미정' }));
   await user.click(within(dialog).getByRole('button', { name: 'Clear 기한' }));
   await user.click(within(dialog).getByRole('button', { name: '저장' }));
+
   await waitFor(() =>
     expect(
       screen.queryByRole('dialog', { name: '액션 플랜 수정' }),

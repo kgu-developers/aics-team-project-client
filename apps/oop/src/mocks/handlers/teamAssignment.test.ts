@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import {
   fetchTeamAssignmentProjection,
   requestPartner,
@@ -52,26 +54,11 @@ describe('team assignment MSW contract', () => {
     expect(projection.window.resultReleasesAt).toBeDefined();
   });
 
-  it('개발 preview를 명시하면 대기 중에도 팀 선정 결과를 조회한다', async () => {
-    setApiAccessToken(demoAccessToken);
-
-    const projection = await fetchTeamAssignmentProjection(
-      'oop-2026-2-01',
-      'result',
-    );
-
-    expect(projection.phase).toBe('result');
-    expect(projection.assignedTeam).toBeDefined();
-  });
-
-  it('인증되지 않은 요청에는 개발 preview를 제공하지 않는다', async () => {
+  it('인증되지 않은 요청에는 팀 선정 정보를 제공하지 않는다', async () => {
     setApiAccessToken(null);
 
     await expect(
-      fetchTeamAssignmentProjection(
-        demoTeamAssignmentSectionId,
-        'firstMeeting',
-      ),
+      fetchTeamAssignmentProjection(demoTeamAssignmentSectionId),
     ).rejects.toMatchObject({
       response: { data: { code: 'UNAUTHORIZED' }, status: 401 },
     });

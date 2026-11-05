@@ -10,7 +10,9 @@ import LoginForm from './LoginForm';
 import { demoAdmin, demoStudent } from '~/mocks/data/users';
 
 const navigate = vi.fn();
-const search: { redirect?: string } = {};
+const search: {
+  redirect?: string;
+} = {};
 const mutateAsync = vi.fn();
 
 vi.mock('@tanstack/react-router', () => ({
@@ -141,7 +143,6 @@ describe('LoginForm', () => {
   });
 
   it('팀장이 없는 배정 학생은 세션 만료 뒤 온보딩 redirect로 복구한다', async () => {
-    vi.stubEnv('VITE_ENABLE_MSW', 'false');
     search.redirect = '/onboarding/team';
     mutateAsync.mockResolvedValue({ ...demoStudent, teamId: '7' });
     fetchKickoffMock.mockResolvedValue({
@@ -168,7 +169,6 @@ describe('LoginForm', () => {
   });
 
   it('kickoff 조회 실패 시 로그인 화면에 남지 않고 온보딩 복구 화면으로 이동한다', async () => {
-    vi.stubEnv('VITE_ENABLE_MSW', 'false');
     search.redirect = '/student/meetings';
     mutateAsync.mockResolvedValue({ ...demoStudent, teamId: '7' });
     fetchKickoffMock.mockRejectedValue(new Error('kickoff unavailable'));
@@ -186,7 +186,6 @@ describe('LoginForm', () => {
   });
 
   it('실서버 모드의 공개 전 배정 학생은 학생 redirect 대신 온보딩으로 이동한다', async () => {
-    vi.stubEnv('VITE_ENABLE_MSW', 'false');
     search.redirect = '/student/meetings';
     mutateAsync.mockResolvedValue({
       ...demoStudent,

@@ -84,7 +84,6 @@ const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   resetMockSessionState();
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setAccessToken(demoAccessToken);
   useAuthStore
@@ -129,7 +128,7 @@ it('회의록 본문 수정 진입과 액션 관리·상태 변경을 제공한�
     await screen.findByRole(
       'heading',
       { name: '진행 점검 회의' },
-      { timeout: 5_000 },
+      { timeout: 5000 },
     ),
   ).toBeVisible();
   expect(
@@ -181,7 +180,10 @@ async function fillNewMeeting() {
 }
 
 it('실 API 생성 폼은 액션 입력을 제공하고 액션이 없으면 회의록만 한 번 등록한다', async () => {
-  const writes: { method: string; url: string }[] = [];
+  const writes: {
+    method: string;
+    url: string;
+  }[] = [];
   server.events.on('request:start', ({ request }) => {
     if (request.method !== 'GET')
       writes.push({ method: request.method, url: request.url });
@@ -370,8 +372,7 @@ it('상세에서 액션 등록→수정→완료→삭제하면 회의별·팀�
   expect(await fetchMeetingRecordDetail('19')).toMatchObject({
     title: '진행 점검 회의',
   });
-}, 30_000);
-
+}, 30000);
 it('두 번째 액션 등록 실패 시 저장된 회의록과 첫 행을 보존하고 남은 행만 재시도한다', async () => {
   const writes: string[] = [];
   let failSecond = true;
@@ -384,7 +385,9 @@ it('두 번째 액션 등록 실패 시 저장된 회의록과 첫 행을 보존
     http.post(
       `${API_BASE_URL}/api/v1/meeting-records/:id/actions`,
       async ({ request }) => {
-        const input = (await request.clone().json()) as { content: string };
+        const input = (await request.clone().json()) as {
+          content: string;
+        };
         writes.push(input.content);
         if (failSecond && input.content === '두 번째 작업')
           return HttpResponse.json({ code: 'DATA_CONFLICT' }, { status: 409 });
@@ -432,8 +435,7 @@ it('두 번째 액션 등록 실패 시 저장된 회의록과 첫 행을 보존
   expect(recordPosts).toBe(1);
   expect(writes).toEqual(['첫 번째 작업', '두 번째 작업', '두 번째 작업']);
   expect(await fetchMeetingActionEntries('20')).toHaveLength(2);
-}, 30_000);
-
+}, 30000);
 it('액션 등록 409와 삭제 403을 입력·기존 행을 보존하는 오류로 보여준다', async () => {
   server.use(
     http.post(`${API_BASE_URL}/api/v1/meeting-records/:id/actions`, () =>
@@ -446,11 +448,7 @@ it('액션 등록 409와 삭제 403을 입력·기존 행을 보존하는 오류
   const user = userEvent.setup();
   renderPage();
   await user.click(
-    await screen.findByRole(
-      'button',
-      { name: '액션 추가' },
-      { timeout: 5_000 },
-    ),
+    await screen.findByRole('button', { name: '액션 추가' }, { timeout: 5000 }),
   );
   let dialog = screen.getByRole('dialog', { name: '액션 플랜 추가' });
   await user.type(

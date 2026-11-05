@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { saveDownload } from './saveDownload';
