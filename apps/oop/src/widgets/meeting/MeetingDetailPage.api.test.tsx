@@ -264,9 +264,68 @@ it('팀원은 작성자와 달라도 회의록 전체 삭제를 확인 후 실�
   await waitFor(() =>
     expect(navigate).toHaveBeenCalledWith({ to: '/student/meetings' }),
   );
+  expect(await screen.findByText('회의록을 삭제했어요.')).toBeInTheDocument();
   await expect(fetchMeetingRecordDetail('19')).rejects.toMatchObject({
     response: { status: 404 },
   });
+});
+
+it('회의록 삭제 확인을 취소하면 회의록을 유지하고 원래 버튼으로 돌아간다', async () => {
+  const user = userEvent.setup();
+  renderPage();
+  const trigger = await screen.findByRole('button', { name: '회의록 삭제' });
+  await user.click(trigger);
+  const dialog = await screen.findByRole('dialog', {
+    name: '회의록 삭제 확인',
+  });
+  const cancel = within(dialog).getByRole('button', { name: '취소' });
+  expect(cancel).toHaveFocus();
+  await user.click(cancel);
+  await waitFor(() => expect(dialog).not.toBeVisible());
+  expect(trigger).toHaveFocus();
+  expect(await fetchMeetingRecordDetail('19')).toMatchObject({ id: '19' });
+  expect(navigate).not.toHaveBeenCalled();
+});
+
+it('수정 로그의 시각과 사유를 상세 버튼과 대화상자에 표시한다', async () => {
+  server.use(
+    http.get(`${API_BASE_URL}/api/v1/meeting-records/19/logs`, () =>
+      HttpResponse.json({
+        contents: [
+          {
+            id: 1900001,
+            meetingRecordId: 19,
+            editorId: '20260001',
+            editorName: 'OOP 데모 학생 A',
+            createdAt: '2026-09-07 10:00',
+            reason: '회의 주제와 결정 사항을 수정했습니다.',
+          },
+        ],
+        pageable: {
+          page: 0,
+          size: 20,
+          totalPages: 1,
+          totalElements: 1,
+          isEnd: true,
+        },
+      }),
+    ),
+  );
+  const user = userEvent.setup();
+  renderPage();
+  const trigger = await screen.findByRole('button', {
+    name: /최종 수정 2026-09-07\/10:00/,
+  });
+  expect(
+    screen.getByText(/최초 작성.*최종 수정 2026-09-07\/10:00/),
+  ).toBeVisible();
+  await user.click(trigger);
+  const dialog = await screen.findByRole('dialog', {
+    name: '회의록 수정 로그',
+  });
+  expect(
+    within(dialog).getByText('회의 주제와 결정 사항을 수정했습니다.'),
+  ).toBeVisible();
 });
 
 it.each([403, 404, 500])(

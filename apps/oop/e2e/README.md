@@ -111,6 +111,8 @@ pnpm test:e2e:contract
 
 `playwright.config.ts`는 별도 Vite 서버와 Playwright route 응답을 사용한다. 실제 연동 UI를 실행하고 성공·실패·분반 미배정·편집 충돌을 독립적으로 재현한다. MSW 데모는 꺼져 있다. 요청은 테스트별 상태로 분리하고 미처리 API와 JavaScript 오류는 실패 처리한다. 실제 쿠키·CORS·서버 권한 검증 결과로 해석하면 안 된다. Vitest는 `src/**/*.test.{ts,tsx}`와 `vite.config.test.ts`를 수집하며 E2E 파일은 실행하지 않는다.
 
+`session-recovery.spec.ts`는 같은 계약 suite에서 실제 API 클라이언트를 두 브라우저 탭에 띄우고 Playwright route로 응답을 제어한다. Web Locks 아래 동시 401, 불확실한 갱신 실패, 갱신 중 로그아웃 순서를 검증하며, 브라우저 MSW 워커는 사용하지 않는다.
+
 보조 검증은 실제 서버 없이 프런트엔드 회귀를 확인하기 위한 것이며, 실서버 기능 검증 결과는 `live` 실행 결과로 판단한다. Playwright 공식 [webServer](https://playwright.dev/docs/test-webserver), [authentication](https://playwright.dev/docs/auth), [network](https://playwright.dev/docs/network) 문서를 참고했다.
 
 스크린샷·결과는 `.agent-local/playwright/`에 저장한다. 실서버 trace는 기본 비활성화하며 필요할 때만 `OOP_E2E_TRACE=1`을 사용한다. trace에는 요청·쿠키·입력값이 담길 수 있어 공유 전에 확인한다. 테스트 코드에는 계정·토큰·실제 학생 데이터를 넣지 않는다.

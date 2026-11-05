@@ -39,20 +39,16 @@ export async function resolveStudentLoginDestination(
       ? redirect
       : ROUTES.ONBOARDING.TEAM;
   }
-  {
-    try {
-      const kickoff = await (options.fetchKickoff ?? fetchTeamKickoff)(
-        currentUser.teamId!,
-      );
-      const hasConfirmedLeader = kickoff.members.some(
-        member => member.isLeader,
-      );
-      if (String(kickoff.id) !== currentUser.teamId || !hasConfirmedLeader) {
-        return ROUTES.ONBOARDING.TEAM;
-      }
-    } catch {
+  try {
+    const kickoff = await (options.fetchKickoff ?? fetchTeamKickoff)(
+      currentUser.teamId!,
+    );
+    const hasConfirmedLeader = kickoff.members.some(member => member.isLeader);
+    if (String(kickoff.id) !== currentUser.teamId || !hasConfirmedLeader) {
       return ROUTES.ONBOARDING.TEAM;
     }
+  } catch {
+    return ROUTES.ONBOARDING.TEAM;
   }
 
   return isRoleRoute(redirect, ROUTES.STUDENT.HOME)

@@ -44,19 +44,17 @@ export function useCreateMeetingWithActions() {
         setMeetingId(record.id);
       }
       const id = receipt.current.meetingId;
-      {
-        // After the record is saved, the form keeps row order fixed. Successful
-        // indexes are receipts, so retrying a later row cannot replay an earlier POST.
-        for (const [index, input] of args.input.actions.entries()) {
-          if (receipt.current.saved.includes(index)) continue;
-          await createAction.mutateAsync({
-            teamId: args.teamId,
-            meetingId: id,
-            input,
-          });
-          receipt.current.saved.push(index);
-          setSavedActionIndexes([...receipt.current.saved]);
-        }
+      // After the record is saved, the form keeps row order fixed. Successful
+      // indexes are receipts, so retrying a later row cannot replay an earlier POST.
+      for (const [index, input] of args.input.actions.entries()) {
+        if (receipt.current.saved.includes(index)) continue;
+        await createAction.mutateAsync({
+          teamId: args.teamId,
+          meetingId: id,
+          input,
+        });
+        receipt.current.saved.push(index);
+        setSavedActionIndexes([...receipt.current.saved]);
       }
       return { id };
     } catch (cause) {

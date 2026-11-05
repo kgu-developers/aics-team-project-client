@@ -221,6 +221,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   server.resetHandlers();
+  server.events.removeAllListeners();
   clients.splice(0).forEach(client => client.clear());
   useAuthStore.getState().clearSession();
   vi.unstubAllEnvs();
@@ -363,16 +364,21 @@ it('받은 메시지가 없으면 답장 입력 없이 빈 상태를 안내한�
 });
 
 it('팀이 없으면 메시지 API를 호출하지 않고 안내한다', async () => {
-  let requests = 0;
-  server.use(
-    http.get(API_BASE_URL + ENDPOINTS.TEAM_MESSAGE.BY_TEAM('7'), () => {
-      requests += 1;
-      return HttpResponse.json({});
-    }),
-  );
+  const requests: string[] = [];
+  server.events.on('request:start', ({ request }) => {
+    requests.push(new URL(request.url).pathname);
+  });
   useAuthStore.getState().setCurrentUser({ ...demoStudent, teamId: null });
   renderPage();
 
   expect(await screen.findByText('쪽지함을 열 수 없어요.')).toBeVisible();
-  expect(requests).toBe(0);
+  await waitFor(() => expect(requests).toHaveLength(3));
+  await waitFor(() => expect(clients.at(-1)?.isFetching()).toBe(0));
+  expect(requests.sort()).toEqual(
+    [
+      ENDPOINTS.USER.ME,
+      ENDPOINTS.SECTION.MY_SECTIONS,
+      ENDPOINTS.STUDENT_MILESTONE.LIST('1'),
+    ].sort(),
+  );
 });

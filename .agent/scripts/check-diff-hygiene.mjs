@@ -12,23 +12,34 @@ const allowedEnv = new Map([
   ],
   ['apps/oop/.env.production', ['VITE_API_BASE_URL', 'VITE_OPEN_CHAT_URL']],
 ]);
-const status = execFileSync('git', ['status', '--porcelain', '-z'], {
+const status = execFileSync('git', ['status', '--porcelain=v1', '-z'], {
   encoding: 'utf8',
 })
   .split('\0')
   .filter(Boolean);
 const suspicious = [];
-for (const entry of status) {
+for (let index = 0; index < status.length; index += 1) {
+  const entry = status[index];
+  const state = entry.slice(0, 2);
   const file = entry.slice(3).replaceAll('\\', '/');
-  if (file.includes('.agent-local') || file.includes('node_modules'))
-    suspicious.push(file);
-  if (!file.includes('.env')) continue;
+  // Porcelain -z stores a rename/copy's source as a second NUL field, without
+  // another XY prefix. Consume it instead of treating it as a new status row.
+  const source = /[RC]/.test(state)
+    ? status[++index]?.replaceAll('\\', '/')
+    : undefined;
+  if (/[RC]/.test(state) && !source)
+    throw new Error('Incomplete rename/copy entry in git status');
+  for (const path of [file, source]) {
+    if (path?.includes('.agent-local') || path?.includes('node_modules'))
+      suspicious.push(path);
+  }
+  if (!file.includes('.env') && !source?.includes('.env')) continue;
   const allowed = allowedEnv.get(file);
   if (!allowed) {
     suspicious.push(file);
     continue;
   }
-  if (entry.slice(0, 2).includes('D')) continue;
+  if (state.includes('D')) continue;
   const assignments = readFileSync(file, 'utf8')
     .replace(/^\uFEFF/, '')
     .split(/\r?\n/)

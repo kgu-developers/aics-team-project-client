@@ -97,7 +97,9 @@ Pages는 최상위 `404.html`이 없는 정적 앱을 SPA로 처리합니다. Ta
 
 ### 로컬 개발과 환경변수
 
-기본 `pnpm dev`는 `apps/oop/.env.development`를 읽어 실제 API에 연결합니다.
+기본 `pnpm dev`는 `apps/oop/.env.development`를 읽어 로컬 백엔드
+`http://localhost:8080`에 연결합니다. 공유/운영 API는 개인 설정에서 명시적으로
+지정해야 합니다.
 개발 전용 MSW 화면 모드는 없습니다. 개인 설정은 `.env.development.local`에서만
 덮어쓰고, 이전 `VITE_ENABLE_MSW`·`VITE_APP_ENV` 값은 정리합니다.
 

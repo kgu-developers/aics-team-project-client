@@ -42,24 +42,27 @@ test('헤더 쪽지함에서 교수자 메시지를 열고 기존 대화에만 �
       request.method === 'PATCH' &&
       request.path === '/api/v1/messages/701/read',
   );
-  const replyRequests = api.requests.filter(
-    request =>
-      request.method === 'POST' && request.path === '/api/v1/teams/7/messages',
-  );
-
   expect(readRequest?.headers['x-xsrf-token']).toBe('e2e-csrf-token');
-  expect(replyRequests).toEqual([
-    expect.objectContaining({
-      body: {
-        message: '문제 정의를 반영했습니다.',
-        relatedId: 21,
-        relatedType: 'PROPOSAL',
-      },
-      headers: expect.objectContaining({
-        'x-xsrf-token': 'e2e-csrf-token',
+  await expect
+    .poll(() =>
+      api.requests.filter(
+        request =>
+          request.method === 'POST' &&
+          request.path === '/api/v1/teams/7/messages',
+      ),
+    )
+    .toEqual([
+      expect.objectContaining({
+        body: {
+          message: '문제 정의를 반영했습니다.',
+          relatedId: 21,
+          relatedType: 'PROPOSAL',
+        },
+        headers: expect.objectContaining({
+          'x-xsrf-token': 'e2e-csrf-token',
+        }),
       }),
-    }),
-  ]);
+    ]);
 });
 
 test('피드백 답장 기간이 아니면 입력과 전송을 차단한다', async ({

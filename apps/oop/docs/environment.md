@@ -10,11 +10,14 @@ MSW는 자동 테스트 안에서 HTTP 응답을 대체하는 도구로만 사�
 
 ```dotenv
 VITE_API_BASE_URL=
-VITE_API_PROXY_TARGET=https://team-project-api.kgudevelopers.monster
+VITE_API_PROXY_TARGET=http://localhost:8080
 VITE_OPEN_CHAT_URL=https://open.kakao.com/o/s38nlZNi
 ```
 
 브라우저의 `/api/v1/...` 요청은 로컬 Vite를 거쳐 지정한 API로 전달된다.
+기본 대상은 로컬 백엔드다. 백엔드가 실행 중이지 않으면 요청은 실패하며, 운영 API에
+자동 접속하지 않는다. 공유/원격 서버에 접속할 때만 `.env.development.local`에
+`VITE_API_PROXY_TARGET`을 명시하고, 대상 서버와 테스트 계정을 확인한다.
 `VITE_API_BASE_URL=`의 빈 값은 의도된 설정이다. 값을 생략하면 API 클라이언트가
 기본값 `http://localhost:8080`을 사용하므로 빈 값과 생략은 다르다.
 
@@ -31,8 +34,8 @@ VITE_OPEN_CHAT_URL=https://open.kakao.com/o/s38nlZNi
 ## 개인 설정과 우선순위
 
 - 앱 env 파일은 `apps/oop/`에 둔다. `.env.example`은 자동 로드되지 않는다.
-- 개인 개발 설정은 `.env.development.local`에 둔다. 로컬 백엔드는
-  `VITE_API_PROXY_TARGET=http://localhost:8080`처럼 지정할 수 있다.
+- 개인 개발 설정은 `.env.development.local`에 둔다. 기본 로컬 백엔드 주소와
+  다른 서버가 필요할 때만 `VITE_API_PROXY_TARGET`을 재지정한다.
 - `.env.local`은 모든 모드에서 읽히므로 개발 전용 값은 `.env.development.local`로 옮긴다.
 - 기존 `VITE_ENABLE_MSW`, `VITE_APP_ENV`는 개인 파일과 셸에서도 정리한다. 이제 사용하는 항목이 아니다.
 - 개인 파일을 복사할 때 공유 운영 파일을 덮어쓰지 않는다.
@@ -59,7 +62,8 @@ VITE_OPEN_CHAT_URL=https://open.kakao.com/o/s38nlZNi
 - MSW 응답은 테스트별 `setupServer`와 핸들러로 제공한다. 개발 env로 켜고 끄지 않는다.
 - Vitest는 API 주소를 `http://localhost:8080`으로 고정하고 개발 프록시를 끈다.
   개인 env의 실서버 주소를 상속하지 않으며, HTTP 테스트는 처리하지 않은 요청을 오류로 막는다.
-- `test:e2e:contract`는 Playwright 요청 모킹이다. 브라우저 워커 없이 공통 UI를 검사한다.
+- `test:e2e:contract`는 Playwright 요청 모킹이다. 브라우저 워커 없이 공통 UI와
+  두 탭의 Web Locks 세션 복구를 검사한다.
 - `test:e2e`/`test:e2e:live`/`test:e2e:integrated`는 실제 서버를 사용한다.
   실서버 검수에는 테스트 계정과 분반·팀·마일스톤 데이터가 필요하다.
 
@@ -70,7 +74,8 @@ VITE_OPEN_CHAT_URL=https://open.kakao.com/o/s38nlZNi
 
 ## 전환 후 확인
 
-1. `pnpm dev` 후 `http://localhost:5173`에서 실제 테스트 계정으로 로그인한다.
+1. 로컬 백엔드를 실행하거나 개인 개발 설정에 승인된 API 대상을 지정한 뒤
+   `pnpm dev`로 `http://localhost:5173`에서 테스트 계정으로 로그인한다.
 2. 요청이 로컬 origin으로 나가고 프록시 대상 서버에서 처리되는지 확인한다.
 3. 오래된 MSW 워커는 앱 시작 시 정리한다. 이전 워커가 남아 보이면 해당 워커를
    확인하고 다시 접속한다. 실제 서버 데이터나 전체 브라우저 저장소를 지울 필요는 없다.
