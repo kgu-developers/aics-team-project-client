@@ -21,6 +21,8 @@ import { useAuthStore } from '~/features/auth/authStore';
 
 import StudentMessagesPage from './StudentMessagesPage';
 
+import { studentMilestoneFixtures } from '~/mocks/data/studentMilestones';
+import { studentSubmissionFixture } from '~/mocks/data/studentSubmission';
 import { demoStudent } from '~/mocks/data/users';
 
 const professorId = 'professor-1';
@@ -28,8 +30,61 @@ let messages: TeamMessage[] = [];
 let posted: unknown[] = [];
 let readIds: number[] = [];
 let nextId = 705;
-
+const section = {
+  id: 1,
+  code: 'OOP-1',
+  name: '테스트 분반',
+  courseId: 1,
+  courseName: 'OOP',
+  capacity: 40,
+  classTime: '',
+  year: 2026,
+  semester: 'FALL',
+  status: 'ACTIVE',
+};
 const server = setupServer(
+  http.get(API_BASE_URL + ENDPOINTS.USER.ME, () =>
+    HttpResponse.json({
+      studentNumber: demoStudent.studentNumber,
+      name: demoStudent.name,
+      globalRole: 'USER',
+      sections: [section],
+      teamId: useAuthStore.getState().currentUser?.teamId == null ? null : 7,
+    }),
+  ),
+  http.get(API_BASE_URL + ENDPOINTS.SECTION.MY_SECTIONS, () =>
+    HttpResponse.json({ contents: [section] }),
+  ),
+  http.get(API_BASE_URL + ENDPOINTS.PROJECT.BY_TEAM('7'), () =>
+    HttpResponse.json({
+      id: 19,
+      teamId: 7,
+      title: '제안서',
+      description: '',
+      proposalCompletedAt: null,
+    }),
+  ),
+  http.get(
+    '*/api/v1/mid-reports/current',
+    () => new HttpResponse(null, { status: 404 }),
+  ),
+  http.get(API_BASE_URL + ENDPOINTS.STUDENT_MILESTONE.LIST('1'), () =>
+    HttpResponse.json({ contents: studentMilestoneFixtures(1) }),
+  ),
+  http.get(
+    API_BASE_URL +
+      ENDPOINTS.STUDENT_MILESTONE.MY_TEAM_SUBMISSION(':milestoneId'),
+    ({ params }) => {
+      const milestone = studentMilestoneFixtures(1).find(
+        item => item.id === Number(params.milestoneId),
+      )!;
+      return HttpResponse.json({
+        ...studentSubmissionFixture(milestone, 7),
+        canSubmitNow: true,
+        status: 'NOT_SUBMITTED',
+      });
+    },
+  ),
   http.get(`${API_BASE_URL}${ENDPOINTS.TEAM.KICKOFF('7')}`, () =>
     HttpResponse.json({
       id: 7,
@@ -109,7 +164,6 @@ const clients: QueryClient[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
-  vi.stubEnv('VITE_ENABLE_MSW', 'true');
   messages = [
     {
       id: 701,
@@ -167,6 +221,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   server.resetHandlers();
+  server.events.removeAllListeners();
   clients.splice(0).forEach(client => client.clear());
   useAuthStore.getState().clearSession();
   vi.unstubAllEnvs();
@@ -309,16 +364,21 @@ it('받은 메시지가 없으면 답장 입력 없이 빈 상태를 안내한�
 });
 
 it('팀이 없으면 메시지 API를 호출하지 않고 안내한다', async () => {
-  let requests = 0;
-  server.use(
-    http.all('*', () => {
-      requests += 1;
-      return HttpResponse.json({});
-    }),
-  );
+  const requests: string[] = [];
+  server.events.on('request:start', ({ request }) => {
+    requests.push(new URL(request.url).pathname);
+  });
   useAuthStore.getState().setCurrentUser({ ...demoStudent, teamId: null });
   renderPage();
 
   expect(await screen.findByText('쪽지함을 열 수 없어요.')).toBeVisible();
-  expect(requests).toBe(0);
+  await waitFor(() => expect(requests).toHaveLength(3));
+  await waitFor(() => expect(clients.at(-1)?.isFetching()).toBe(0));
+  expect(requests.sort()).toEqual(
+    [
+      ENDPOINTS.USER.ME,
+      ENDPOINTS.SECTION.MY_SECTIONS,
+      ENDPOINTS.STUDENT_MILESTONE.LIST('1'),
+    ].sort(),
+  );
 });

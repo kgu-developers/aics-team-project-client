@@ -1,3 +1,5 @@
+import type { ProjectProposalResponse } from '@aics/core';
+
 import { adminCourseHandlers } from './adminCourses';
 import { adminEvaluationResultHandlers } from './adminEvaluationResults';
 import { adminMeetingHandlers } from './adminMeetings';
@@ -16,39 +18,94 @@ import { adminSectionMilestoneHandlers } from './adminSectionMilestones';
 import { adminSectionHandlers } from './adminSections';
 import { adminStudentTeamHandlers } from './adminStudentTeams';
 import { authHandlers } from './auth';
-import { editLockHandlers } from './editLock';
 import { evaluationHandlers } from './evaluation';
 import { createLiveEditLockHandlers } from './liveEditLock';
-import { meetingHandlers } from './meeting';
+import { createLiveTopicHandlers } from './liveTopic';
 import { createMeetingApiHandlers } from './meetingApi';
 import { midReportHandlers } from './midReport';
-import { presentationHandlers } from './presentation';
-import { proposalHandlers } from './proposal';
+import { createProjectProposalHandlers } from './projectProposal';
 import { sectionHandlers } from './section';
-import { studentFeedbackHandlers } from './studentFeedback';
-import { studentHomeHandlers } from './studentHome';
 import { studentMilestoneHandlers } from './studentMilestones';
 import { studentNoticeHandlers } from './studentNotices';
-import { createStudentPageHandlers } from './studentPages';
 import { studentSubmissionHandlers } from './studentSubmission';
-import { submissionHandlers } from './submission';
-import {
-  teamAssignmentHandlers,
-  teamAssignmentUserHandlers,
-} from './teamAssignment';
+import { teamAssignmentUserHandlers } from './teamAssignment';
+import { createTeamContractHandlers } from './teamContract';
 import { createTeamMessageHandlers } from './teamMessages';
-import { topicHandlers } from './topic';
 import { liveEditLockMockResources } from '../data/liveEditLock';
+import { meetingApiTeam } from '../data/meetingApi';
+import { createProjectProposalFixture } from '../data/projectProposal';
 
-export function createHandlers({ persistStudentPages = false } = {}) {
+/** HTTP test doubles only. Application bootstrap never imports this module. */
+export function createHandlers({
+  project: initialProject,
+}: {
+  project?: ProjectProposalResponse | null;
+} = {}) {
+  let projectExists = initialProject !== null;
+  const project: ProjectProposalResponse = {
+    ...createProjectProposalFixture(),
+    id: 17,
+    teamId: meetingApiTeam.id,
+    teamOperation: structuredClone(meetingApiTeam),
+    ...structuredClone(initialProject ?? {}),
+  };
+  const locks = createLiveEditLockHandlers({
+    resources: liveEditLockMockResources.map(resource => ({
+      ...resource,
+      studentNumbers: project.teamOperation.members.map(
+        member => member.studentNumber,
+      ),
+      id:
+        resource.targetType === 'PROJECT'
+          ? project.id
+          : resource.targetType === 'MEETING_RECORD'
+            ? 19
+            : 701,
+    })),
+  });
+  const projectHandlers = createProjectProposalHandlers({
+    project,
+    shareProject: true,
+    lockStatus: locks.getStatus,
+    projectExists: () => projectExists,
+  });
+  const topics = createLiveTopicHandlers(projectExists ? project : null, {
+    shareProject: true,
+    projectResponse: () => project,
+    onProjectChange: value => {
+      projectExists = true;
+      return Object.assign(project, value);
+    },
+  });
   return [
     ...sectionHandlers,
     ...authHandlers,
+    ...createTeamContractHandlers(project.teamOperation),
+    ...projectHandlers,
+    // The project handler above owns GET /teams/:teamId/project. Topic writes
+    // update the same object, rather than maintaining a second document model.
+    ...topics.filter(
+      handler =>
+        !(
+          handler.info.method === 'GET' &&
+          String(handler.info.path).endsWith('/project')
+        ),
+    ),
+    ...locks,
+    ...createMeetingApiHandlers().filter(
+      handler =>
+        !(
+          handler.info.method === 'GET' &&
+          String(handler.info.path).endsWith('/kickoff')
+        ),
+    ),
     ...adminCourseHandlers,
     ...adminEvaluationResultHandlers,
     ...adminSectionHandlers,
     ...adminSectionArtifactHandlers,
+    // These two existing consumers still need backend contract decisions.
     ...adminMilestoneScheduleHandlers,
+    ...adminProfileHandlers,
     ...adminSectionMilestoneHandlers,
     ...adminRequiredArtifactHandlers,
     ...adminMilestoneSubmissionDetailHandlers,
@@ -59,33 +116,14 @@ export function createHandlers({ persistStudentPages = false } = {}) {
     ...adminPresentationEvaluationHandlers,
     ...adminPeerEvaluationFormHandlers,
     ...adminProjectProposalHandlers,
-    ...createStudentPageHandlers({ persist: persistStudentPages }),
-    ...createLiveEditLockHandlers({
-      onlyMidReport: true,
-      resources: liveEditLockMockResources.map(resource => ({
-        ...resource,
-        id: 701,
-      })),
-    }),
-    ...editLockHandlers,
     ...evaluationHandlers,
-    ...topicHandlers,
-    ...createTeamMessageHandlers({ persist: true }),
-    ...createMeetingApiHandlers(),
-    ...meetingHandlers,
+    ...createTeamMessageHandlers(),
     ...midReportHandlers,
-    ...presentationHandlers,
-    ...proposalHandlers,
-    ...studentFeedbackHandlers,
-    ...studentHomeHandlers,
     ...studentNoticeHandlers,
     ...studentMilestoneHandlers,
     ...studentSubmissionHandlers,
-    ...submissionHandlers,
-    ...teamAssignmentHandlers,
     ...teamAssignmentUserHandlers,
     ...adminStudentTeamHandlers,
-    ...adminProfileHandlers,
   ];
 }
 

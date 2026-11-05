@@ -4,7 +4,6 @@ import { Link, Navigate, Outlet, useRouterState } from '@tanstack/react-router';
 import { ROUTES } from '~/app/constants/routes';
 import { getStudentRouteDestination } from '~/app/studentRouteDestination';
 
-import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { contactWindowInstant } from '~/shared/lib/contactWindowDateTime';
 
 import {
@@ -22,11 +21,7 @@ import * as styles from './StudentShell.css';
 import { StudentHeaderActions } from './StudentShellPopovers';
 
 export default function StudentShell() {
-  const isDemo = isMockDevelopmentMode(
-    import.meta.env.DEV,
-    import.meta.env.VITE_ENABLE_MSW,
-  );
-  const context = useStudentContext(!isDemo);
+  const context = useStudentContext(true);
   const hasSession = useAuthStore(selectHasAuthenticatedSession);
   const currentUser = useAuthStore(state => state.currentUser);
   // Select a primitive so the subscription never re-renders on identity alone.
@@ -39,7 +34,6 @@ export default function StudentShell() {
   );
   const teamResultReleaseInstant = contactWindowInstant(teamResultReleaseAt);
   const shouldVerifyOnboarding =
-    !isDemo &&
     context.status === 'ready' &&
     (teamResultReleaseAt === undefined ||
       (Number.isFinite(teamResultReleaseInstant) &&
@@ -65,7 +59,6 @@ export default function StudentShell() {
 
   const guardedDestination = getStudentRouteDestination(
     context.status,
-    isDemo,
     currentPathname,
     context.section,
   );
@@ -89,11 +82,7 @@ export default function StudentShell() {
   ) {
     return <Navigate replace to={ROUTES.ONBOARDING.TEAM} />;
   }
-
-  const section =
-    isDemo && currentUser.sections.length === 1
-      ? currentUser.sections[0]
-      : context.section;
+  const section = context.section;
   const sectionCode = section ? `/${section.code}` : '';
 
   return (

@@ -21,11 +21,14 @@ export function createProjectProposalHandlers(
     project?: ProjectProposalResponse;
     sections?: ProposalSectionsResponse;
     lockStatus?: (target: LiveEditLockTarget) => LiveEditLockStatus;
+    shareProject?: boolean;
+    projectExists?: () => boolean;
   } = {},
 ) {
-  const project = structuredClone(
-    options.project ?? createProjectProposalFixture(),
-  );
+  const project =
+    options.shareProject && options.project
+      ? options.project
+      : structuredClone(options.project ?? createProjectProposalFixture());
   const sections = structuredClone(
     options.sections ?? createProposalSectionsFixture(),
   );
@@ -34,6 +37,8 @@ export function createProjectProposalHandlers(
   function access(request: Request) {
     const account = getDemoUserAccount(getMockAccessToken(request));
     if (!account) return failure('UNAUTHORIZED', 401);
+    if (options.projectExists && !options.projectExists())
+      return failure('PROJECT_NOT_FOUND', 404);
     if (
       !project.teamOperation.members.some(
         m => m.studentNumber === account.user.studentNumber,

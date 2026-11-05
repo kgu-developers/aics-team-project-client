@@ -25,7 +25,6 @@ type MessageReplyAvailabilityInput = {
   isFeedbackCycleCompleted?: boolean;
   isFeedbackCycleError?: boolean;
   isFeedbackCyclePending?: boolean;
-  isDemo: boolean;
   isMilestoneListError: boolean;
   isMilestoneListPending: boolean;
   milestones: StudentMilestoneResponse[];
@@ -44,7 +43,6 @@ export function messageReplyAvailability({
   isFeedbackCycleCompleted = false,
   isFeedbackCycleError = false,
   isFeedbackCyclePending = false,
-  isDemo,
   isMilestoneListError,
   isMilestoneListPending,
   milestones,
@@ -53,8 +51,7 @@ export function messageReplyAvailability({
   submissions,
 }: MessageReplyAvailabilityInput): MessageReplyAvailability {
   const milestoneType = milestoneTypeByRelatedType[relatedType];
-  if (isDemo || !milestoneType) return { canReply: true };
-
+  if (!milestoneType) return { canReply: true };
   if (isFeedbackCyclePending) {
     return {
       canReply: false,

@@ -54,3 +54,9 @@ Use this skill when the user asks to implement, fix, modify, refactor, create, o
 - Create `apps/database` or another course app without an explicit ticket.
 - Move app code to shared packages just because it looks reusable once.
 - Call work done without real verification output or an explicit blocker.
+
+## MSW and environment changes
+
+- Keep mock imports and HTTP doubles inside tests/fixtures; the application has no browser MSW mode or alternate mock UI/API path.
+- For relevant changes, run the MSW boundary check and verify shared handler composition uses current server wire contracts. Preserve meaningful authorization, session and prerequisite tests.
+- Default real-API development values belong in `apps/oop/.env.development`; personal overrides belong in `.env.development.local`. Do not put credentials in `VITE_` variables or add obsolete `VITE_ENABLE_MSW`/`VITE_APP_ENV` switches.

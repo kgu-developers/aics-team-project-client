@@ -44,8 +44,54 @@ import {
 } from '~/mocks/authSession';
 import { demoStudent, demoUserAccounts } from '~/mocks/data/users';
 import { authHandlers, resetDemoPasswordState } from '~/mocks/handlers/auth';
-
-const server = setupServer(...authHandlers);
+let profileFixture: CurrentUser = demoStudent;
+function fixtureSections() {
+  return profileFixture.sections.map((section, index) => ({
+    id: /^\d+$/.test(section.id) ? Number(section.id) : index + 1,
+    code: index === 0 ? '월8/1151' : section.code,
+    name: section.name,
+    courseId: 1,
+    courseName: 'OOP',
+    capacity: 40,
+    classTime: '',
+    year: 2026,
+    semester: 'FALL',
+    status: 'ACTIVE',
+    contactVisibleFrom: '2020-01-01T00:00:00+09:00',
+    contactVisibleUntil: null,
+  }));
+}
+const server = setupServer(
+  http.get(API_BASE_URL + ENDPOINTS.USER.ME, () =>
+    HttpResponse.json({
+      studentNumber: profileFixture.studentNumber,
+      name: profileFixture.name,
+      email: profileFixture.email,
+      phone: '010-0000-0000',
+      globalRole: 'USER',
+      sections: fixtureSections(),
+      teamId: profileFixture.teamId == null ? undefined : profileFixture.teamId,
+    }),
+  ),
+  http.get(API_BASE_URL + ENDPOINTS.SECTION.MY_SECTIONS, () =>
+    HttpResponse.json({ contents: fixtureSections() }),
+  ),
+  http.get(API_BASE_URL + ENDPOINTS.TEAM.KICKOFF('7'), () =>
+    HttpResponse.json({
+      id: 7,
+      name: '7팀',
+      members: [
+        {
+          id: 1,
+          studentNumber: demoStudent.studentNumber,
+          name: demoStudent.name,
+          isLeader: true,
+        },
+      ],
+    }),
+  ),
+  ...authHandlers,
+);
 const queryClients: QueryClient[] = [];
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
@@ -92,8 +138,9 @@ function createWrapper(initialPath = '/student') {
 
 function renderHeader(
   initialPath?: string,
-  currentUser: CurrentUser = demoStudent,
+  currentUser: CurrentUser = { ...demoStudent, teamId: '7' },
 ) {
+  profileFixture = currentUser;
   useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setCurrentUser(currentUser);
   mockSessionResponseHeaders(issueMockSession(demoUserAccounts[0]));
@@ -107,9 +154,10 @@ function renderHeader(
 }
 
 function renderHeaderActions(
-  initialPath = '/onboarding/team',
-  currentUser: CurrentUser = demoStudent,
+  initialPath = '/student',
+  currentUser: CurrentUser = { ...demoStudent, teamId: '7' },
 ) {
+  profileFixture = currentUser;
   useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setCurrentUser(currentUser);
   mockSessionResponseHeaders(issueMockSession(demoUserAccounts[0]));
@@ -153,7 +201,7 @@ describe('StudentHeaderActions', () => {
           }),
       ),
     );
-    const { queryClient, router } = renderHeader();
+    const { queryClient, router } = renderHeaderActions();
     const navigate = vi.spyOn(router, 'navigate');
     queryClient.setQueryData(['private-data'], 'preserved');
     const user = userEvent.setup();
@@ -167,7 +215,10 @@ describe('StudentHeaderActions', () => {
       '로그아웃하지 못했습니다. 로그인 상태가 유지됩니다.',
     );
     expect(navigate).not.toHaveBeenCalled();
-    expect(useAuthStore.getState().currentUser).toEqual(demoStudent);
+    expect(useAuthStore.getState().currentUser).toEqual({
+      ...demoStudent,
+      teamId: '7',
+    });
     expect(queryClient.getQueryData(['private-data'])).toBe('preserved');
     await user.click(
       screen.getByRole('button', { name: '로그아웃 다시 시도' }),
@@ -216,7 +267,7 @@ describe('StudentHeaderActions', () => {
         });
       }),
     );
-    renderHeader('/student', {
+    renderHeaderActions('/onboarding/team', {
       ...demoStudent,
       teamId: '4',
       currentTeam: null,
@@ -242,7 +293,7 @@ describe('StudentHeaderActions', () => {
           return new HttpResponse(null, { status: 500 });
         }),
       );
-      renderHeader('/student', {
+      renderHeaderActions('/onboarding/team', {
         ...demoStudent,
         teamId,
         currentTeam: null,
@@ -254,7 +305,7 @@ describe('StudentHeaderActions', () => {
       const profile = within(
         await screen.findByRole('dialog', { name: '내 프로필' }),
       );
-      expect(profile.getByText('팀 정보 확인 필요')).toBeVisible();
+      expect(await profile.findByText('팀 정보 확인 필요')).toBeVisible();
       expect(profile.getByText('확인 필요')).toBeVisible();
       expect(profile.queryByText('확인 중…')).toBeNull();
       expect(profile.queryByText('미배정')).toBeNull();
@@ -270,7 +321,7 @@ describe('StudentHeaderActions', () => {
         () => new HttpResponse(null, { status: 500 }),
       ),
     );
-    renderHeader('/student', {
+    renderHeaderActions('/onboarding/team', {
       ...demoStudent,
       teamId: '4',
       currentTeam: null,
@@ -319,8 +370,8 @@ describe('StudentHeaderActions', () => {
 
   it('모바일 메뉴는 토글 상태를 알리고 메뉴 링크를 누르면 닫힌다', async () => {
     const user = userEvent.setup();
-    renderHeader();
-
+    const { queryClient } = renderHeader();
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
     const menuButton = screen.getByRole('button', { name: '학생 메뉴 열기' });
     const navigation = screen.getByRole('navigation', { name: '학생 메뉴' });
 
@@ -368,23 +419,22 @@ describe('StudentHeaderActions', () => {
 
   it('프로필 팝오버에서 비밀번호 변경 Dialog를 열고 필수값을 검증한다', async () => {
     const user = userEvent.setup();
-    renderHeader();
-
+    renderHeaderActions();
     await user.click(screen.getByRole('button', { name: '내 프로필 열기' }));
     const profileDialog = await screen.findByRole('dialog', {
       name: '내 프로필',
     });
     expect(profileDialog).toBeInTheDocument();
-    expect(within(profileDialog).getByText('월8/1151')).toBeInTheDocument();
     expect(
-      within(profileDialog).getByText('CineFlow (7팀)'),
+      await within(profileDialog).findByText('월8/1151'),
     ).toBeInTheDocument();
-
+    expect(await within(profileDialog).findByText('7팀')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }));
     const dialog = await screen.findByRole('dialog', { name: '비밀번호 변경' });
     expect(dialog).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }));
+
     expect(
       await within(dialog).findByText('현재 비밀번호를 입력해 주세요.'),
     ).toBeInTheDocument();
@@ -392,7 +442,7 @@ describe('StudentHeaderActions', () => {
 
   it('비밀번호 변경 성공 시 완료 안내와 로그인 이동, 세션 정리를 수행한다', async () => {
     const user = userEvent.setup();
-    const { router, queryClient } = renderHeader();
+    const { router, queryClient } = renderHeaderActions();
     queryClient.setQueryData(['private-data'], 'existing');
 
     await user.click(screen.getByRole('button', { name: '내 프로필 열기' }));
@@ -444,7 +494,7 @@ describe('StudentHeaderActions', () => {
       ),
     );
     const user = userEvent.setup();
-    renderHeader();
+    renderHeaderActions();
     await user.click(screen.getByRole('button', { name: '내 프로필 열기' }));
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }));
     const dialog = await screen.findByRole('dialog', { name: '비밀번호 변경' });
@@ -514,12 +564,13 @@ describe('StudentHeaderActions', () => {
         ),
       );
       const user = userEvent.setup();
-      const { router } = renderHeader();
+      const { router } = renderHeaderActions();
       await user.click(screen.getByRole('button', { name: '내 프로필 열기' }));
       await user.click(screen.getByRole('button', { name: '비밀번호 변경' }));
       const dialog = await screen.findByRole('dialog', {
         name: '비밀번호 변경',
       });
+
       await user.type(
         within(dialog).getByLabelText('현재 비밀번호', { exact: false }),
         'wrong-password',
@@ -548,7 +599,6 @@ describe('StudentHeaderActions', () => {
 });
 
 it('redirects an assigned live student before contact release without requesting kickoff identity', async () => {
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   const section = {
     id: 2,
     code: 'OOP-02',
@@ -600,7 +650,6 @@ it('redirects an assigned live student before contact release without requesting
 });
 
 it('redirects an assigned live student without a confirmed leader back to onboarding', async () => {
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   const section = {
     id: 2,
     code: 'OOP-02',
@@ -657,7 +706,6 @@ it('redirects an assigned live student without a confirmed leader back to onboar
 });
 
 it('verifies the leader from result-release midnight before allowing direct home entry', async () => {
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   vi.spyOn(Date, 'now').mockReturnValue(
     Date.parse('2099-09-10T00:00:00+09:00'),
   );
@@ -717,7 +765,6 @@ it('verifies the leader from result-release midnight before allowing direct home
 });
 
 it('shows neutral profile copy without requesting kickoff before contact release', async () => {
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   const section = {
     id: 2,
     code: 'OOP-02',
@@ -766,7 +813,6 @@ it('shows neutral profile copy without requesting kickoff before contact release
 });
 
 it('keeps an assigned student route and kickoff identity when contact release is unscheduled', async () => {
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   const section = {
     id: 2,
     code: 'OOP-02',
@@ -825,7 +871,6 @@ it('keeps an assigned student route and kickoff identity when contact release is
 });
 
 it('uses the selected live section in shell and profile, with no unattributed team request', async () => {
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   const sections = [1, 2].map(id => ({
     id,
     code: `SELECTED-0${id}`,

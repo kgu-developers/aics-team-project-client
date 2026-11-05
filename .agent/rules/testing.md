@@ -36,3 +36,12 @@ Use the smallest test layer that proves user-visible behavior or a risky contrac
 - Await user events and asynchronous UI transitions.
 - Do not use arbitrary sleeps or depend on test execution order.
 - A test that cannot reliably distinguish the regression from a passing implementation should not be added as evidence.
+
+## Execution cost and environments
+
+- OOP logic/HTTP suites (`*.test.ts`) default to Node. DOM/React assertion setup loads only when a browser environment exists.
+- OOP component/Hook suites (`*.test.tsx`) use jsdom. A `.test.ts` suite with genuine DOM/cookie/storage dependencies must declare `@vitest-environment jsdom`.
+- Preserve high-risk functional behavior, contract checks and missing-identifier regressions. Consolidate duplicate render-heavy checks; do not replace all automated checks with live-server E2E or remove every UI test.
+- Keep file isolation enabled. Validate bounded parallelism against the whole suite before increasing workers; never turn isolation off globally to obtain a faster number.
+- Report setup/environment/import time separately from test-body time when optimizing execution. Compare equivalent cases and mark incomplete full-suite measurements.
+- Real-server E2E is a separate explicitly selected scope requiring accounts and prepared data. Mocked automatic tests require no real server or credentials.

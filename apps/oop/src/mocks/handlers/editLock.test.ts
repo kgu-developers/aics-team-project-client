@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
 import type {
   EditLockTarget,
@@ -395,6 +397,7 @@ describe('edit lock handler contract', () => {
     const staleVersion = readyProposal.version;
     const topic = readyProposal.blocks.find(block => block.key === 'topic');
     if (!topic) throw new Error('proposal topic fixture is required');
+
     const collaboratorSave = await fetch(
       `${API_BASE_URL}${ENDPOINTS.PROPOSAL.BLOCK(readyProposal.id, topic.key)}`,
       {

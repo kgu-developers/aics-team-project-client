@@ -37,13 +37,16 @@ apps/oop/src/features/<domain>/queries/
 
 - Fixtures → `apps/oop/src/mocks/data`
 - Handlers → `apps/oop/src/mocks/handlers`
-- Browser worker setup → `apps/oop/src/mocks/browser.ts`, started only in development
-- `mockServiceWorker.js` is generated; never hand-edit it.
+- Node HTTP test servers → `setupServer` in automated tests only; no browser worker or MSW application mode.
 
-A demo user is one coherent account across credentials, token, login, and `/me`. Do not branch UI behavior by fixture names/passwords or place mock switches/data in routes and components. Handlers must implement the same API-client contract.
+Synthetic credentials, authentication responses and `/me` must describe one coherent account. Application UI, Hooks, API functions, mappers and prerequisite/permission checks use one path regardless of response provider. Do not add mock flags, preview headers, fixture-based branches or user enrichment to application code.
+
+Handlers return the server wire format before API-client mapping: methods, paths, identifiers, body/content type, status and response schema follow the current OpenAPI and pinned server evidence. Domain/UI objects belong after mapping, not in HTTP fixtures. Keep nullable/documentation conflicts explicit rather than inventing values.
+
+Use per-instance handler state for new scenarios and reset mutable fixture/auth state between tests. Do not enable browser-storage persistence for ordinary automated tests. Retire mock-only operations when their UI is removed; an endpoint without a documented server equivalent and with an existing UI consumer needs an explicit backend/product decision.
 
 ## MSW security boundary
 
-MSW verifies development request, response, and error contracts. It does not prove real HttpOnly cookie behavior, credentialed CORS, token rotation, backend RBAC, or section-scope authorization. Never put real credentials, tokens, student data, or production URLs in fixtures.
+MSW verifies test request, response, and error contracts. It does not prove real HttpOnly cookie behavior, credentialed CORS, token rotation, backend RBAC, or section-scope authorization. Never put real credentials, tokens, student data, or production URLs in fixtures.
 
-Verify at least one success scenario, one unauthorized/invalid scenario, and the consuming route/form. Keep `onUnhandledRequest: 'bypass'` intentional and investigate new unhandled requests.
+Verify at least one success scenario, one unauthorized/invalid scenario, and the consuming route/form. Use `onUnhandledRequest: 'error'` for test HTTP boundaries; never silently send an unhandled test request to a real backend.

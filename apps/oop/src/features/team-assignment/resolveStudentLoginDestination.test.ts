@@ -190,26 +190,6 @@ describe('resolveStudentLoginDestination', () => {
     ).resolves.toBe('/student/meetings');
   });
 
-  it('MSW demo에서는 공개 전이어도 기존 학생 목적지를 유지한다', async () => {
-    await expect(
-      resolveStudentLoginDestination(
-        {
-          ...student,
-          teamId: '7',
-          sections: [
-            {
-              ...student.sections[0]!,
-              contactVisibleFrom: '2099-01-01T00:00:00+09:00',
-            },
-          ],
-        },
-        '/student/meetings',
-        { ...options, isDemo: true },
-      ),
-    ).resolves.toBe('/student/meetings');
-    expect(fetchKickoff).not.toHaveBeenCalled();
-  });
-
   it('분반이 여러 개인 학생은 scalar teamId를 추측하지 않고 온보딩으로 이동한다', async () => {
     await expect(
       resolveStudentLoginDestination(

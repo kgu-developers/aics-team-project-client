@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import type { StudentMilestoneResponse } from '@aics/core';
 import { describe, expect, it } from 'vitest';
 
@@ -45,6 +47,7 @@ describe('주제 선정 마일스톤 기간', () => {
       topicMilestoneEligibility([milestone], '2', Number(now)).status,
     ).toBe(status);
   });
+
   it.each([
     undefined,
     [],

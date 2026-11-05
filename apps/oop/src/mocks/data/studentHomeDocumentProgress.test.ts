@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+
 import type { MidReport } from '@aics/core';
 import { describe, expect, it } from 'vitest';
 

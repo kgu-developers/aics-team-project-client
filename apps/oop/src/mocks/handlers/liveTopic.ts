@@ -15,10 +15,17 @@ export function createLiveTopicHandlers(
   initialProject: TeamProjectResponse | null = null,
   options: {
     projectResponse?: (project: TeamProjectResponse) => unknown;
-    onProjectChange?: (project: TeamProjectResponse) => void;
+    onProjectChange?: (
+      project: TeamProjectResponse,
+    ) => TeamProjectResponse | void;
+    shareProject?: boolean;
   } = {},
 ) {
-  let project = initialProject ? structuredClone(initialProject) : null;
+  let project = initialProject
+    ? options.shareProject
+      ? initialProject
+      : structuredClone(initialProject)
+    : null;
   const state = createLiveTopicState();
   function guard(request: Request, teamId = liveTopicTeamId) {
     const account = getMockAuthenticatedAccount(request);
@@ -84,7 +91,7 @@ export function createLiveTopicHandlers(
         };
         state.candidates.length = 0;
         state.votes.clear();
-        options.onProjectChange?.(project);
+        project = options.onProjectChange?.(project) ?? project;
         return HttpResponse.json({
           projectId: project.id,
           candidateId: null,
@@ -149,7 +156,7 @@ export function createLiveTopicHandlers(
           goal: input.goal.trim(),
           proposalCompletedAt: null,
         };
-        options.onProjectChange?.(project);
+        project = options.onProjectChange?.(project) ?? project;
         return HttpResponse.json({
           projectId: project.id,
           candidateId: candidate.id,

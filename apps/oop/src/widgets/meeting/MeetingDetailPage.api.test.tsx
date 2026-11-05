@@ -84,7 +84,6 @@ const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   resetMockSessionState();
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   useAuthStore.getState().markAuthenticated('STUDENT');
   useAuthStore.getState().setAccessToken(demoAccessToken);
   useAuthStore
@@ -129,7 +128,7 @@ it('회의록 본문 수정 진입과 액션 관리·상태 변경을 제공한�
     await screen.findByRole(
       'heading',
       { name: '진행 점검 회의' },
-      { timeout: 5_000 },
+      { timeout: 5000 },
     ),
   ).toBeVisible();
   expect(
@@ -181,7 +180,10 @@ async function fillNewMeeting() {
 }
 
 it('실 API 생성 폼은 액션 입력을 제공하고 액션이 없으면 회의록만 한 번 등록한다', async () => {
-  const writes: { method: string; url: string }[] = [];
+  const writes: {
+    method: string;
+    url: string;
+  }[] = [];
   server.events.on('request:start', ({ request }) => {
     if (request.method !== 'GET')
       writes.push({ method: request.method, url: request.url });
@@ -262,9 +264,68 @@ it('팀원은 작성자와 달라도 회의록 전체 삭제를 확인 후 실�
   await waitFor(() =>
     expect(navigate).toHaveBeenCalledWith({ to: '/student/meetings' }),
   );
+  expect(await screen.findByText('회의록을 삭제했어요.')).toBeInTheDocument();
   await expect(fetchMeetingRecordDetail('19')).rejects.toMatchObject({
     response: { status: 404 },
   });
+});
+
+it('회의록 삭제 확인을 취소하면 회의록을 유지하고 원래 버튼으로 돌아간다', async () => {
+  const user = userEvent.setup();
+  renderPage();
+  const trigger = await screen.findByRole('button', { name: '회의록 삭제' });
+  await user.click(trigger);
+  const dialog = await screen.findByRole('dialog', {
+    name: '회의록 삭제 확인',
+  });
+  const cancel = within(dialog).getByRole('button', { name: '취소' });
+  expect(cancel).toHaveFocus();
+  await user.click(cancel);
+  await waitFor(() => expect(dialog).not.toBeVisible());
+  expect(trigger).toHaveFocus();
+  expect(await fetchMeetingRecordDetail('19')).toMatchObject({ id: '19' });
+  expect(navigate).not.toHaveBeenCalled();
+});
+
+it('수정 로그의 시각과 사유를 상세 버튼과 대화상자에 표시한다', async () => {
+  server.use(
+    http.get(`${API_BASE_URL}/api/v1/meeting-records/19/logs`, () =>
+      HttpResponse.json({
+        contents: [
+          {
+            id: 1900001,
+            meetingRecordId: 19,
+            editorId: '20260001',
+            editorName: 'OOP 데모 학생 A',
+            createdAt: '2026-09-07 10:00',
+            reason: '회의 주제와 결정 사항을 수정했습니다.',
+          },
+        ],
+        pageable: {
+          page: 0,
+          size: 20,
+          totalPages: 1,
+          totalElements: 1,
+          isEnd: true,
+        },
+      }),
+    ),
+  );
+  const user = userEvent.setup();
+  renderPage();
+  const trigger = await screen.findByRole('button', {
+    name: /최종 수정 2026-09-07\/10:00/,
+  });
+  expect(
+    screen.getByText(/최초 작성.*최종 수정 2026-09-07\/10:00/),
+  ).toBeVisible();
+  await user.click(trigger);
+  const dialog = await screen.findByRole('dialog', {
+    name: '회의록 수정 로그',
+  });
+  expect(
+    within(dialog).getByText('회의 주제와 결정 사항을 수정했습니다.'),
+  ).toBeVisible();
 });
 
 it.each([403, 404, 500])(
@@ -370,8 +431,7 @@ it('상세에서 액션 등록→수정→완료→삭제하면 회의별·팀�
   expect(await fetchMeetingRecordDetail('19')).toMatchObject({
     title: '진행 점검 회의',
   });
-}, 30_000);
-
+}, 30000);
 it('두 번째 액션 등록 실패 시 저장된 회의록과 첫 행을 보존하고 남은 행만 재시도한다', async () => {
   const writes: string[] = [];
   let failSecond = true;
@@ -384,7 +444,9 @@ it('두 번째 액션 등록 실패 시 저장된 회의록과 첫 행을 보존
     http.post(
       `${API_BASE_URL}/api/v1/meeting-records/:id/actions`,
       async ({ request }) => {
-        const input = (await request.clone().json()) as { content: string };
+        const input = (await request.clone().json()) as {
+          content: string;
+        };
         writes.push(input.content);
         if (failSecond && input.content === '두 번째 작업')
           return HttpResponse.json({ code: 'DATA_CONFLICT' }, { status: 409 });
@@ -432,8 +494,7 @@ it('두 번째 액션 등록 실패 시 저장된 회의록과 첫 행을 보존
   expect(recordPosts).toBe(1);
   expect(writes).toEqual(['첫 번째 작업', '두 번째 작업', '두 번째 작업']);
   expect(await fetchMeetingActionEntries('20')).toHaveLength(2);
-}, 30_000);
-
+}, 30000);
 it('액션 등록 409와 삭제 403을 입력·기존 행을 보존하는 오류로 보여준다', async () => {
   server.use(
     http.post(`${API_BASE_URL}/api/v1/meeting-records/:id/actions`, () =>
@@ -446,11 +507,7 @@ it('액션 등록 409와 삭제 403을 입력·기존 행을 보존하는 오류
   const user = userEvent.setup();
   renderPage();
   await user.click(
-    await screen.findByRole(
-      'button',
-      { name: '액션 추가' },
-      { timeout: 5_000 },
-    ),
+    await screen.findByRole('button', { name: '액션 추가' }, { timeout: 5000 }),
   );
   let dialog = screen.getByRole('dialog', { name: '액션 플랜 추가' });
   await user.type(

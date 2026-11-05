@@ -277,7 +277,6 @@ it('상세 조회가 실패해도 조회된 파일과 제출 이력은 표시하
 });
 
 it('blocks final-report reads and approval actions for an unattributed live team, even with a cached submission target', async () => {
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   useAuthStore.getState().markAuthenticated('STUDENT');
   const first = {
     id: 1,
@@ -329,7 +328,6 @@ it('blocks final-report reads and approval actions for an unattributed live team
 });
 
 it('does not read the current mid-report before live student context attribution succeeds', async () => {
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   useAuthStore.getState().markAuthenticated('STUDENT');
   const first = {
     id: 1,

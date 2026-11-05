@@ -36,3 +36,7 @@ Verification must be based on real command/browser output. Do not replace failed
 ## PR screenshot standard
 
 A PR should help reviewers understand the screen without cloning the branch. Include screenshot candidates for desktop/mobile and meaningful empty/error/success states when relevant.
+
+## Fast and representative checks
+
+Select logic/HTTP (Node), necessary UI/Hook (jsdom), browser contract, or explicitly requested live-server checks by changed behavior. The production UI/API path must be the same under test. Run the MSW boundary check when app/API code changes. Never treat mock success as proof of real cookie, CORS or backend authorization behavior. Record environment/import/body timing for performance work and keep full-suite completion separate from passing samples.

@@ -32,7 +32,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { seoulInstant } from '~/shared/lib/seoulInstant';
@@ -88,8 +87,10 @@ function toDateInput(value: string) {
 }
 function hasRichTextContent(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
-
-  const node = value as { content?: unknown[]; text?: unknown };
+  const node = value as {
+    content?: unknown[];
+    text?: unknown;
+  };
   if (typeof node.text === 'string' && node.text.trim()) return true;
 
   return node.content?.some(hasRichTextContent) ?? false;
@@ -196,7 +197,10 @@ function ActionFields({
   lockRows?: boolean;
   emptyMessage?: string;
   isDisabled: boolean;
-  members: { id: string; name: string }[];
+  members: {
+    id: string;
+    name: string;
+  }[];
   onChange: (next: DraftAction[]) => void;
 }) {
   const update = (index: number, patch: Partial<DraftAction>) =>
@@ -382,8 +386,7 @@ export function MeetingForm({
       mounted.current = false;
     };
   }, []);
-  const canEditActions =
-    context.canManageActions && (!record || context.isDemo);
+  const canEditActions = context.canManageActions && !record;
   const team = context.team;
   const [title, setTitle] = useState(record?.title ?? '');
   const [heldAt, setHeldAt] = useState(
@@ -410,18 +413,12 @@ export function MeetingForm({
   const [actions, setActions] = useState<DraftAction[]>(
     record?.actions.map(toDraftAction) ?? [],
   );
-  const actionsDirty = Boolean(
-    record &&
-    canEditActions &&
-    JSON.stringify(record.actions.map(toDraftAction)) !==
-      JSON.stringify(actions),
-  );
   const creation = useCreateMeetingWithActions();
   const updateMutation = useUpdateMeetingRecordMutation();
   const pending = record ? updateMutation.isPending : creation.isPending;
   const submitBusy = useRef(false);
   const allowNavigation = useRef(false);
-  const liveEdit = Boolean(record && !context.isDemo);
+  const liveEdit = Boolean(record);
   const [originalContentJson] = useState(() =>
     JSON.stringify(record?.content ?? emptyDoc),
   );
@@ -451,9 +448,7 @@ export function MeetingForm({
       ).length > 0
     );
   }, [record, title, heldAt, meetingTime, location, participants, phase]);
-  const dirty = Boolean(
-    record && (metadataDirty || contentDirty || actionsDirty),
-  );
+  const dirty = Boolean(record && (metadataDirty || contentDirty));
   const blocker = useBlocker({
     disabled: !liveEdit,
     withResolver: true,
@@ -475,7 +470,7 @@ export function MeetingForm({
     saveError instanceof MeetingEditLockError ||
     creation.isUncertain;
   const fieldsDisabled = isDisabled || Boolean(creation.meetingId);
-  if (!context.isDemo && context.studentContext.status !== 'ready')
+  if (context.studentContext.status !== 'ready')
     return <StudentContextState context={context.studentContext} />;
   if ((context.isError || context.isPending) && (!record || !team))
     return <MeetingContextRecovery context={context} />;
@@ -508,16 +503,12 @@ export function MeetingForm({
     }
     setSaveError(null);
     if (!metadataDirty && !contentDirty) {
-      if (actionsDirty) {
-        void submit(true);
-        return;
-      }
       toast({ body: '변경된 회의록 내용이 없어요.' });
       return;
     }
     setIsConfirmationOpen(true);
   };
-  const submit = async (actionsOnly = false) => {
+  const submit = async () => {
     if (
       !title.trim() ||
       !heldAt ||
@@ -530,14 +521,12 @@ export function MeetingForm({
       return;
     if (
       record &&
-      !actionsOnly &&
       (changeReason.trim().length < 30 ||
         changeReason.trim().length > 500 ||
         !isConfirmationOpen)
     )
       return;
     const input = currentInput();
-    if (actionsOnly && record) input.content = record.content;
     try {
       submitBusy.current = true;
       setSaveError(null);
@@ -749,7 +738,7 @@ export function MeetingForm({
             isDisabled={fieldsDisabled}
             onChange={changeContent}
           />
-          {record && !context.isDemo ? (
+          {record ? (
             <Text color='secondary' type='supporting'>
               액션 플랜은 회의록 상세에서 수정할 수 있어요.
             </Text>
@@ -950,7 +939,7 @@ function MeetingContextRecovery({
 }: {
   context: ReturnType<typeof useMeetingTeamQuery>;
 }) {
-  if (!context.isDemo && context.studentContext.status !== 'ready')
+  if (context.studentContext.status !== 'ready')
     return <StudentContextState context={context.studentContext} />;
   return (
     <EmptyState
@@ -1017,13 +1006,9 @@ export function MeetingListPage() {
     [navigate],
   );
   if (
-    !isMockDevelopmentMode(
-      import.meta.env.DEV,
-      import.meta.env.VITE_ENABLE_MSW,
-    ) &&
-    (query.context.studentContext.status !== 'ready' ||
-      query.context.isPending ||
-      query.context.isError)
+    query.context.studentContext.status !== 'ready' ||
+    query.context.isPending ||
+    query.context.isError
   )
     return <MeetingContextRecovery context={query.context} />;
   if (teamId == null)
@@ -1175,10 +1160,9 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
   const teamId = context.teamId;
   const removeMutation = useRemoveMeetingRecordMutation();
   if (
-    !context.isDemo &&
-    (context.studentContext.status !== 'ready' ||
-      context.isError ||
-      context.isPending)
+    context.studentContext.status !== 'ready' ||
+    context.isError ||
+    context.isPending
   )
     return <MeetingContextRecovery context={context} />;
   if (!query.teamId)
@@ -1227,9 +1211,7 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
     if (seoulInstant(latestLog.createdAt) >= seoulInstant(record.updatedAt))
       footerRevisionLabel = `최종 수정 ${modifiedAt}`;
   }
-  const canDelete =
-    record.teamId === teamId &&
-    context.canDeleteRecord(record.createdBy.userId);
+  const canDelete = record.teamId === teamId && context.canDeleteRecord();
   return (
     <div className={styles.page}>
       <div className={styles.routeHeader}>
@@ -1407,18 +1389,11 @@ export function MeetingDetailPage({ meetingId }: { meetingId: string }) {
   );
 }
 export function MeetingNewPage() {
-  const currentUser = useAuthStore(state => state.currentUser);
   const context = useMeetingTeamQuery();
-  const identity = context.isDemo
-    ? undefined
-    : context.studentContext.identity.data;
+  const identity = context.studentContext.identity.data;
   return (
     <MeetingForm
-      key={
-        context.isDemo
-          ? `${currentUser?.id}:${currentUser?.currentTeam?.id}`
-          : `${identity?.studentNumber}:${identity?.teamId}:${identity?.sections.map(section => section.id).join(',')}`
-      }
+      key={`${identity?.studentNumber}:${identity?.teamId}:${identity?.sections.map(section => section.id).join(',')}`}
     />
   );
 }
@@ -1429,7 +1404,6 @@ export function MeetingEditPage({ meetingId }: { meetingId: string }) {
     context.canEditRecord ? meetingId : undefined,
   );
   if (
-    !context.isDemo &&
     (context.studentContext.status !== 'ready' ||
       context.isError ||
       context.isPending) &&
@@ -1486,12 +1460,7 @@ export function MeetingEditPage({ meetingId }: { meetingId: string }) {
         />
       </div>
     );
-  return context.isDemo ? (
-    <MeetingForm
-      key={`${session.currentUser?.studentNumber}:${query.data.teamId}:${query.data.id}`}
-      record={query.data}
-    />
-  ) : (
+  return (
     <MeetingLiveEditForm
       key={JSON.stringify([
         liveEditLockKeys.detail(session, null),

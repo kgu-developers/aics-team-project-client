@@ -40,7 +40,6 @@ function availability({
   relatedType?: 'PROPOSAL' | 'GENERAL';
 } = {}) {
   return messageReplyAvailability({
-    isDemo: false,
     isMilestoneListError: false,
     isMilestoneListPending: false,
     milestones: [item],
@@ -65,7 +64,6 @@ describe('messageReplyAvailability', () => {
   it('문서 피드백 사이클이 완료되면 기간이 남아도 답장을 차단한다', () => {
     expect(
       messageReplyAvailability({
-        isDemo: false,
         isFeedbackCycleCompleted: true,
         isMilestoneListError: false,
         isMilestoneListPending: false,
@@ -140,7 +138,6 @@ describe('messageReplyAvailability', () => {
   it('기간 상태를 조회 중이거나 실패한 경우 안전하게 차단한다', () => {
     expect(
       messageReplyAvailability({
-        isDemo: false,
         isMilestoneListError: false,
         isMilestoneListPending: true,
         milestones: [],
@@ -154,7 +151,6 @@ describe('messageReplyAvailability', () => {
     });
     expect(
       messageReplyAvailability({
-        isDemo: false,
         isMilestoneListError: true,
         isMilestoneListPending: false,
         milestones: [],

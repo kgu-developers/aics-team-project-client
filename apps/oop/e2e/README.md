@@ -1,5 +1,7 @@
 # OOP Playwright E2E
 
+개발 기본 env와 E2E 계정 파일은 [환경변수 안내](../docs/environment.md)를 따른다. 브라우저 MSW 모드는 제거했으며 요청 모킹 검증은 공통 UI와 Playwright route를 사용한다.
+
 에이전트에게 **“OOP 학생 실서버 E2E 기본 15개를 검증해줘”**라고 요청한다. 기본 E2E는 실제 서버를 사용한다. API 응답을 모킹하거나 인증 store를 주입하지 않고 화면에서 로그인한다. 각 테스트는 새 브라우저 context를 사용하며 같은 계정의 세션과 편집 잠금 충돌을 피하려고 worker 1개, 자동 재시도 0회로 실행한다.
 
 ## 관리자·학생 브라우저 통합 E2E
@@ -53,7 +55,7 @@ OOP_E2E_PRESENTATION_ID=<발표 마일스톤 ID>
 OOP_E2E_FINAL_REPORT_ID=<최종보고서 마일스톤 ID>
 ```
 
-자동 실행 시 API의 CORS 허용 origin에 `http://localhost:5173`이 포함돼야 한다. 이미 그 포트에 실서버 연동 앱이 실행 중이면 `OOP_E2E_BASE_URL`을 지정한다. 다른 서버를 임의로 재사용하거나 CORS를 우회하지 않는다. 해당 앱은 `VITE_ENABLE_MSW=false`여야 한다.
+자동 실행 시 API의 CORS 허용 origin에 `http://localhost:5173`이 포함돼야 한다. 이미 그 포트에 실서버 연동 앱이 실행 중이면 `OOP_E2E_BASE_URL`을 지정한다. 다른 서버를 임의로 재사용하거나 CORS를 우회하지 않는다. 해당 앱은 실제 API에 연결된 공통 UI여야 한다.
 
 ## 테스트 데이터 조건
 
@@ -108,6 +110,8 @@ pnpm test:e2e:contract
 ```
 
 `playwright.config.ts`는 별도 Vite 서버와 Playwright route 응답을 사용한다. 실제 연동 UI를 실행하고 성공·실패·분반 미배정·편집 충돌을 독립적으로 재현한다. MSW 데모는 꺼져 있다. 요청은 테스트별 상태로 분리하고 미처리 API와 JavaScript 오류는 실패 처리한다. 실제 쿠키·CORS·서버 권한 검증 결과로 해석하면 안 된다. Vitest는 `src/**/*.test.{ts,tsx}`와 `vite.config.test.ts`를 수집하며 E2E 파일은 실행하지 않는다.
+
+`session-recovery.spec.ts`는 같은 계약 suite에서 실제 API 클라이언트를 두 브라우저 탭에 띄우고 Playwright route로 응답을 제어한다. Web Locks 아래 동시 401, 불확실한 갱신 실패, 갱신 중 로그아웃 순서를 검증하며, 브라우저 MSW 워커는 사용하지 않는다.
 
 보조 검증은 실제 서버 없이 프런트엔드 회귀를 확인하기 위한 것이며, 실서버 기능 검증 결과는 `live` 실행 결과로 판단한다. Playwright 공식 [webServer](https://playwright.dev/docs/test-webserver), [authentication](https://playwright.dev/docs/auth), [network](https://playwright.dev/docs/network) 문서를 참고했다.
 

@@ -15,6 +15,7 @@ export function mapMeetingRecordSummary(
   dto: MeetingRecordSummaryDto,
 ): MeetingRecordSummary {
   return {
+    milestones: dto.milestones ?? [],
     id: String(dto.id),
     title: dto.title ?? null,
     phase: dto.phase,
@@ -29,6 +30,7 @@ export function mapMeetingRecordDetail(
   dto: MeetingRecordDetailResponseDto,
 ): MeetingRecordDetail {
   return {
+    milestones: dto.milestones ?? [],
     id: String(dto.id),
     teamId: String(dto.teamId),
     title: dto.title ?? null,

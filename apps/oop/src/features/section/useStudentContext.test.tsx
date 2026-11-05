@@ -78,7 +78,6 @@ beforeAll(() => {
   );
 });
 beforeEach(() => {
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   useAuthStore.getState().markAuthenticated('STUDENT');
   sections = [section, second];
   memberships = [section, second];

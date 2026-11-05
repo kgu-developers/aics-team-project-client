@@ -29,3 +29,11 @@ Test-authoring rules live in `testing.md`; API/MSW scenario boundaries live in `
 
 - Run `.agent/scripts/check-local-files.mjs` and `.agent/scripts/check-diff-hygiene.mjs` when local PRD sources/caches or other private artifacts were used.
 - Confirm no PRD URL, downloaded workbook, credential, or private content appears in the diff.
+
+## Selecting MSW and UI verification
+
+- `pnpm --filter @aics/oop test:logic` selects logic/HTTP suites; `test:ui` selects component/Hook suites. `test` runs both. Browser-dependent TS suites may explicitly select jsdom.
+- Use the same application UI and API functions in component/contract checks. A retired demo page or transformed UI fixture is not proof of a current server response contract.
+- Choose affected functional/contract checks first; use targeted UI checks or human review for consuming screens. Do not implicitly run an entire live-server write workflow for a small handler change.
+- Run `pnpm agent:check-msw` after app/API changes to prevent production imports of test mocks or obsolete mock switches/preview headers.
+- For contract alignment, distinguish declared handlers, default test composition and test overrides. Record which request/response/error cases were actually inspected.

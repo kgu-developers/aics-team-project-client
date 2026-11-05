@@ -138,12 +138,14 @@ describe('meeting API client contract', () => {
         ...meetingRecordSummaryDto,
         id: '7',
         location: null,
+        milestones: [],
       },
     ]);
     expect(detail).toEqual({
       ...meetingRecordDetailDto,
       id: '7',
       location: null,
+      milestones: [],
       teamId: '10',
     });
   });

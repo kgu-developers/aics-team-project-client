@@ -29,8 +29,12 @@ const { studentContextState } = vi.hoisted(() => ({
     current: { status: 'loading' } as {
       status: string;
       teamId?: string;
-      section?: { id: number };
-      user?: { studentNumber: string };
+      section?: {
+        id: number;
+      };
+      user?: {
+        studentNumber: string;
+      };
     },
   },
 }));
@@ -586,7 +590,6 @@ describe('MilestoneDetails', () => {
   );
 
   it('발표 평가 아코디언에서는 발표 팀 목록을 중복해서 불러오지 않는다', () => {
-    vi.stubEnv('VITE_ENABLE_MSW', 'false');
     const body = createStudentHomeDashboardPreview(
       'presentation-evaluation',
     ).milestones.find(

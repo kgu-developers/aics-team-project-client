@@ -19,9 +19,20 @@ import {
   meetingApiRecord,
   meetingApiTeam,
 } from '../data/meetingApi';
+import { studentMilestoneFixtures } from '../data/studentMilestones';
 
-// Numeric server-contract fixtures coexist with the legacy demo's named IDs.
+// Test-only wire responses use the numeric IDs from the server contract.
 export function createMeetingApiHandlers() {
+  const milestones = studentMilestoneFixtures(1).map(
+    ({ id, title, type, weekNumber }) => ({ id, title, type, weekNumber }),
+  );
+  const validMilestoneIds = (ids: number[] | undefined) =>
+    ids === undefined ||
+    (Array.isArray(ids) &&
+      ids.every(
+        id =>
+          Number.isSafeInteger(id) && milestones.some(item => item.id === id),
+      ));
   let records: MeetingRecordDetailResponseDto[] = [
     structuredClone(meetingApiRecord),
   ];
@@ -130,11 +141,16 @@ export function createMeetingApiHandlers() {
           !input.content?.trim() ||
           !input.meetingAt ||
           !meetingPhases.includes(input.phase) ||
-          input.participantIds?.some(id => !member(id))
+          input.participantIds?.some(id => !member(id)) ||
+          !validMilestoneIds(input.milestoneIds)
         )
           return fail(400);
+        const { milestoneIds, ...fields } = input;
         const record = {
-          ...input,
+          ...fields,
+          milestones: milestones.filter(item =>
+            milestoneIds?.includes(item.id),
+          ),
           participantIds: input.participantIds ?? [],
           id: nextRecordId++,
           teamId: 7,
@@ -219,7 +235,8 @@ export function createMeetingApiHandlers() {
         (input.participantIds != null &&
           (!Array.isArray(input.participantIds) ||
             input.participantIds.some(id => typeof id !== 'string'))) ||
-        invalidDate
+        invalidDate ||
+        !validMilestoneIds(input.milestoneIds)
       )
         return HttpResponse.json({ code: 'INVALID_INPUT' }, { status: 400 });
       const before = structuredClone(record);
@@ -232,6 +249,10 @@ export function createMeetingApiHandlers() {
       if (input.content != null) record.content = input.content;
       if (input.participantIds != null)
         record.participantIds = input.participantIds;
+      if (input.milestoneIds !== undefined)
+        record.milestones = milestones.filter(item =>
+          input.milestoneIds!.includes(item.id),
+        );
       if (JSON.stringify(before) !== JSON.stringify(record)) {
         record.updatedAt = now();
         changeLogs.push({

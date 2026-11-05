@@ -20,7 +20,6 @@ import { useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 import { tableScrollWrapperPlugin } from '~/shared/ui/tableScrollWrapperPlugin';
 
@@ -355,14 +354,7 @@ function TeamActionPlanContent({
     ],
     [team, toast, updateActionMutation, isPending],
   );
-
-  if (
-    !isMockDevelopmentMode(
-      import.meta.env.DEV,
-      import.meta.env.VITE_ENABLE_MSW,
-    ) &&
-    data.studentContext.status !== 'ready'
-  )
+  if (data.studentContext.status !== 'ready')
     return <StudentContextState context={data.studentContext} />;
   if (!data.teamId && (data.isPending || data.isError))
     return (

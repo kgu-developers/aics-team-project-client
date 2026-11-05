@@ -48,7 +48,6 @@ const projectUrl = `${API_BASE_URL}${ENDPOINTS.PROJECT_PROPOSAL.BY_TEAM('19')}`;
 const lockUrl = `${API_BASE_URL}${ENDPOINTS.EDIT_LOCKS.ROOT}`;
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -208,6 +207,7 @@ it('저장과 후속 조회가 실패해도 폼을 제거하지 않는다', asyn
     }),
   );
   await userEvent.click(screen.getByRole('button', { name: '저장' }));
+
   await waitFor(() =>
     expect(
       screen
@@ -232,6 +232,7 @@ it('다른 계정이 소유한 영역은 읽기 전용이고 이름을 표시한
     ),
   );
   render();
+
   expect(
     await screen.findByText(
       '지금은 수정할 수 없어요. 다른 팀원 님이 편집 중입니다. 편집이 끝난 뒤 다시 열어 주세요.',
@@ -394,6 +395,7 @@ it.each([
   await userEvent.type(screen.getByLabelText(label), value);
   await userEvent.click(screen.getByRole('button', { name: '저장' }));
   await screen.findByText('제안서를 저장했어요.');
+
   const saved = await fetchProjectProposal('19');
   expect(saved?.dataConfiguration[0]?.expectedCount).toBe(
     section === 'data-composition' ? value : '약 100권',
@@ -414,7 +416,9 @@ it('저장 응답 유실 뒤 재시도는 최신 버전을 채택하고 본문 P
   server.use(...handlers);
   server.use(
     http.put(projectUrl, async ({ request }) => {
-      const body = (await request.clone().json()) as { sectionVersion: number };
+      const body = (await request.clone().json()) as {
+        sectionVersion: number;
+      };
       versions.push(body.sectionVersion);
       // Persist through the real version-checking handler, then lose its response.
       const response = await getResponse(handlers, request);
@@ -684,6 +688,7 @@ it('데이터 구성은 표에서 행을 추가하고 지운다', async () => {
   await waitFor(() =>
     expect(screen.getByLabelText('데이터 1 이름')).toBeEnabled(),
   );
+
   expect(
     screen.getAllByRole('columnheader').map(cell => cell.textContent),
   ).toEqual(['데이터 이름', '데이터 설명', '예상 개수', '관리']);
@@ -713,6 +718,7 @@ it('데이터가 없어도 빈 행 한 개를 표에 보여준다', async () => 
     'aria-disabled',
     'true',
   );
+
   expect(
     within(screen.getAllByRole('row').at(-1)!).getByRole('button', {
       name: '데이터 추가',
@@ -732,6 +738,7 @@ it('팀원 역할은 표에서 팀원별로 입력한다', async () => {
   await waitFor(() =>
     expect(screen.getByLabelText('OOP 데모 학생 A 역할')).toBeEnabled(),
   );
+
   expect(
     screen.getAllByRole('columnheader').map(cell => cell.textContent),
   ).toEqual(['팀원', '역할']);
@@ -761,6 +768,7 @@ it('연속 저장은 서버 응답 버전을 사용하고 다른 영역 필드�
     await start();
     await userEvent.type(screen.getByLabelText(/프로젝트 제목/), ' 첫째');
     await userEvent.click(screen.getByRole('button', { name: '저장' }));
+
     await waitFor(() =>
       expect(screen.getByRole('button', { name: '저장' })).toBeDisabled(),
     );
@@ -931,6 +939,7 @@ it.each(['local-validation', 'server-validation', 'network', 'unknown-409'])(
             ? '다른 변경이 먼저 저장됐어요. 최신 내용을 확인한 뒤 다시 시도해 주세요.'
             : '입력하지 않은 필수 항목이 있어요. 제목·설명·목표와 각 영역 입력을 확인해 주세요.',
     );
+
     expect(
       screen.queryByRole('button', { name: '최신 내용 확인' }),
     ).not.toBeInTheDocument();

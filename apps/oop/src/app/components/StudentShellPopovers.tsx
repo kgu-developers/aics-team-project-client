@@ -17,7 +17,6 @@ import { type FormEvent, useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { cx } from '~/shared/lib/cx';
 
 import { getPasswordChangeErrorMessage } from '~/features/auth/getPasswordChangeErrorMessage';
@@ -46,18 +45,16 @@ function resolveProfileTeamName({
   isInvalidTeamId,
   isKickoffError,
   kickoff,
-  legacyTeamName,
 }: {
   teamId?: string;
   isKickoffGated: boolean;
   isInvalidTeamId: boolean;
   isKickoffError: boolean;
   kickoff?: TeamKickoffResponse;
-  legacyTeamName?: string;
 }) {
-  if (teamId === undefined) return legacyTeamName;
-  if (isKickoffGated) return '공개 예정';
   if (isInvalidTeamId || isKickoffError) return '팀 정보 확인 필요';
+  if (teamId === undefined) return undefined;
+  if (isKickoffGated) return '공개 예정';
   return kickoff?.name ?? '팀 정보 확인 필요';
 }
 
@@ -68,7 +65,6 @@ function resolveProfileLeaderName({
   isKickoffError,
   isKickoffPending,
   liveLeader,
-  legacyLeaderName,
 }: {
   teamId?: string;
   isKickoffGated: boolean;
@@ -76,11 +72,10 @@ function resolveProfileLeaderName({
   isKickoffError: boolean;
   isKickoffPending: boolean;
   liveLeader?: TeamKickoffResponse['members'][number];
-  legacyLeaderName?: string | null;
 }) {
-  if (teamId === undefined) return legacyLeaderName ?? '미확정';
-  if (isKickoffGated) return '공개 예정';
   if (isInvalidTeamId || isKickoffError) return '확인 필요';
+  if (teamId === undefined) return '미확정';
+  if (isKickoffGated) return '공개 예정';
   if (isKickoffPending) return '확인 중…';
   if (!liveLeader) return '미확정';
   return `${liveLeader.name ?? liveLeader.studentNumber} (${liveLeader.studentNumber})`;
@@ -266,24 +261,17 @@ function StudentProfilePopover({
   const navigate = useNavigate();
   const logoutMutation = useLogoutMutation();
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
-  const isDemo = isMockDevelopmentMode(
-    import.meta.env.DEV,
-    import.meta.env.VITE_ENABLE_MSW,
-  );
-  const context = useStudentContext(!isDemo);
-  const section =
-    isDemo && currentUser.sections.length === 1
-      ? currentUser.sections[0]
-      : context.section;
-  const team = isDemo ? currentUser.currentTeam : undefined;
-  const teamId = isDemo ? (currentUser.teamId ?? undefined) : context.teamId;
+  const context = useStudentContext();
+  const section = context.section;
+
+  const teamId = context.teamId;
   const isInvalidTeamId =
-    teamId !== undefined && !isValidPositiveTeamId(teamId);
-  const contactVisibility = isDemo
-    ? 'open'
-    : resolveContactVisibility(context.section ?? {});
-  const isKickoffGated =
-    !isDemo && (!context.section || contactVisibility === 'upcoming');
+    (context.status === 'ambiguous' &&
+      context.user?.teamId != null &&
+      !isValidPositiveTeamId(context.user.teamId)) ||
+    (teamId !== undefined && !isValidPositiveTeamId(teamId));
+  const contactVisibility = resolveContactVisibility(context.section ?? {});
+  const isKickoffGated = !context.section || contactVisibility === 'upcoming';
   const kickoff = useTeamKickoffQuery(
     isOpen && !isKickoffGated && !isInvalidTeamId ? teamId : undefined,
   );
@@ -292,14 +280,13 @@ function StudentProfilePopover({
       ? kickoff.data
       : undefined;
   const liveLeader = verifiedKickoff?.members.find(member => member.isLeader);
-  const legacyLeader = team?.members.find(member => member.isLeader);
+
   const teamName = resolveProfileTeamName({
     teamId,
     isKickoffGated,
     isInvalidTeamId,
     isKickoffError: kickoff.isError,
     kickoff: verifiedKickoff,
-    legacyTeamName: team?.name,
   });
   const leaderName = resolveProfileLeaderName({
     teamId,
@@ -308,12 +295,11 @@ function StudentProfilePopover({
     isKickoffError: kickoff.isError,
     isKickoffPending: kickoff.isPending,
     liveLeader,
-    legacyLeaderName: legacyLeader?.name,
   });
   const teamValue = resolveProfileTeamValue({
     teamName,
-    isKickoffGated,
-    hasUnresolvedTeamMembership: !isDemo && context.status !== 'no-team',
+    isKickoffGated: isKickoffGated || isInvalidTeamId || kickoff.isError,
+    hasUnresolvedTeamMembership: context.status !== 'no-team',
   });
 
   const openPasswordDialog = () => {
@@ -387,7 +373,7 @@ function StudentProfilePopover({
             )}
           </dd>
         </div>
-        {teamId !== undefined || team ? (
+        {teamId !== undefined || isInvalidTeamId ? (
           <div className={styles.profileDetailRow}>
             <dt>팀장</dt>
             <dd>{leaderName}</dd>

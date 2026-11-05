@@ -11,7 +11,6 @@ import {
 } from '@aics/design-system';
 import { useMemo, useRef, useState } from 'react';
 
-import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
 import { cx } from '~/shared/lib/cx';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
 
@@ -63,19 +62,16 @@ function getSenderDisplayName(message: TeamMessage) {
 }
 
 export default function StudentMessagesPage() {
-  const isDemo = isMockDevelopmentMode(
-    import.meta.env.DEV,
-    import.meta.env.VITE_ENABLE_MSW,
-  );
   const currentUser = useAuthStore(state => state.currentUser);
-  const context = useStudentContext(!isDemo);
-  const teamId = isDemo ? (currentUser?.teamId ?? undefined) : context.teamId;
-  const sectionId =
-    !isDemo && context.section?.id ? String(context.section.id) : undefined;
+  const context = useStudentContext(true);
+  const teamId = context.teamId;
+  const sectionId = context.section?.id
+    ? String(context.section.id)
+    : undefined;
   const teamQuery = useTeamKickoffQuery(teamId);
   const messagesQuery = useTeamMessagesQuery(teamId);
-  const projectQuery = useTeamProjectQuery(isDemo ? undefined : teamId);
-  const midReportQuery = useCurrentMidReportQuery(!isDemo && Boolean(teamId));
+  const projectQuery = useTeamProjectQuery(teamId);
+  const midReportQuery = useCurrentMidReportQuery(Boolean(teamId));
   const milestonesQuery = useStudentMilestonesQuery(sectionId, teamId);
   const now = useMilestoneScheduleClock(
     milestonesQuery.milestones,
@@ -153,7 +149,6 @@ export default function StudentMessagesPage() {
               teamQuery.isPending ||
               messagesQuery.isPending)) ||
           (isMidReportReply && midReportQuery.isPending),
-        isDemo,
         isMilestoneListError: milestonesQuery.list.isError,
         isMilestoneListPending: milestonesQuery.list.isPending,
         milestones: milestonesQuery.milestones,
@@ -196,8 +191,7 @@ export default function StudentMessagesPage() {
     setReplyError(null);
     if (!message.read) markMessageRead(message.id);
   };
-
-  if (!isDemo && context.status !== 'ready' && context.status !== 'no-team') {
+  if (context.status !== 'ready' && context.status !== 'no-team') {
     return <StudentContextState context={context} />;
   }
 

@@ -22,7 +22,7 @@ import { createHandlers } from './index';
 const server = setupServer();
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
-  server.use(...createHandlers());
+  server.use(...createHandlers({ project: null }));
   useAuthStore.getState().setAccessToken(demoAccessToken);
   updateMockSectionContactVisibility(1, {
     contactVisibleFrom: '2020-01-01T00:00:00+09:00',

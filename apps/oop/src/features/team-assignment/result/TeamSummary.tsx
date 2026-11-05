@@ -4,8 +4,6 @@ import { useNavigate } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
 
-import { isMockDevelopmentMode } from '~/shared/config/developmentMode';
-
 import { formatTeamAssignmentDate } from '../formatTeamAssignmentDate';
 import * as styles from '../TeamAssignmentFlow.css';
 import { TeamMemberTable } from './TeamMemberTable';
@@ -20,12 +18,6 @@ type TeamSummaryProps = {
   contactStatus?: 'loading' | 'error';
   onRetryContacts?: () => void;
 };
-
-const mockDevelopmentMode = isMockDevelopmentMode(
-  import.meta.env.DEV,
-  import.meta.env.VITE_ENABLE_MSW,
-);
-
 export function TeamSummary({
   showContacts = false,
   contactStatus,
@@ -91,31 +83,15 @@ export function TeamSummary({
           </HStack>
         ) : null}
         {isResult ? (
-          <>
-            <HStack justify='center'>
-              <Button
-                isDisabled={isContinueDisabled || !onContinue}
-                label='다음'
-                onClick={onContinue}
-                size='md'
-                variant='secondary'
-              />
-            </HStack>
-            {mockDevelopmentMode && !onContinue ? (
-              <div className={`${styles.actions} ${styles.centeredActions}`}>
-                <Button
-                  label='개발용: 첫 만남 단계 보기'
-                  onClick={() =>
-                    void navigate({
-                      search: { teamAssignmentPreview: 'firstMeeting' },
-                      to: ROUTES.ONBOARDING.TEAM,
-                    })
-                  }
-                  variant='secondary'
-                />
-              </div>
-            ) : null}
-          </>
+          <HStack justify='center'>
+            <Button
+              isDisabled={isContinueDisabled || !onContinue}
+              label='다음'
+              onClick={onContinue}
+              size='md'
+              variant='secondary'
+            />
+          </HStack>
         ) : null}
       </div>
     </section>

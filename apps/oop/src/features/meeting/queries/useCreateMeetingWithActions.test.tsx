@@ -28,7 +28,6 @@ const server = setupServer();
 const clients: QueryClient[] = [];
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   apiClient.defaults.headers.common.Authorization = 'Bearer ' + demoAccessToken;
   server.use(...createMeetingApiHandlers());
 });
@@ -79,7 +78,9 @@ it('두 번째 액션 실패 후 재시도하면 회의록과 첫 번째 액션�
     http.post(
       API_BASE_URL + '/api/v1/meeting-records/:id/actions',
       async ({ request }) => {
-        const body = (await request.clone().json()) as { content: string };
+        const body = (await request.clone().json()) as {
+          content: string;
+        };
         writes.push(body.content);
         if (body.content === '두 번째 액션' && fail)
           return HttpResponse.json({ code: 'DATA_CONFLICT' }, { status: 409 });

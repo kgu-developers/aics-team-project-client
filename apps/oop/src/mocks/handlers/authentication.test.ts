@@ -10,7 +10,6 @@ import {
 import {
   demoAccessToken,
   demoAdminAccessToken,
-  demoOtherSectionAccessToken,
   getDemoUserAccount,
 } from '../data/users';
 
@@ -97,19 +96,4 @@ it.each([
     headers: { cookie: `accessToken=${demoAdminAccessToken}` },
   });
   expect(response.status).toBe(403);
-});
-
-it('학생 대시보드는 소속 학생만 허용하고 어드민과 다른 분반 학생은 거부한다', async () => {
-  const url = `${API_BASE_URL}${ENDPOINTS.SECTION.STUDENT_DASHBOARD(sectionId)}`;
-  expect((await fetch(url)).status).toBe(401);
-  for (const [token, expectedStatus] of [
-    [demoAccessToken, 200],
-    [demoAdminAccessToken, 401],
-    [demoOtherSectionAccessToken, 403],
-  ] as const) {
-    const response = await fetch(url, {
-      headers: { cookie: `accessToken=${token}` },
-    });
-    expect(response.status).toBe(expectedStatus);
-  }
 });

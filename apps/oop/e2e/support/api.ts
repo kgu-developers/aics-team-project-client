@@ -123,6 +123,7 @@ export function createState() {
   })) as StudentMilestoneResponse[];
   const meetings: MeetingRecordDetailResponseDto[] = [
     {
+      milestones: [],
       id: 19,
       teamId: 7,
       title: 'E2E 진행 점검',

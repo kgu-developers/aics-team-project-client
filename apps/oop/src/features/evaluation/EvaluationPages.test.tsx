@@ -30,27 +30,33 @@ import {
   teamEvaluationCriteria,
 } from '~/mocks/data/evaluation';
 import { demoAccessToken, demoStudent } from '~/mocks/data/users';
+import { authHandlers } from '~/mocks/handlers/auth';
 import { evaluationHandlers } from '~/mocks/handlers/evaluation';
-
+import { sectionHandlers } from '~/mocks/handlers/section';
 const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
 
 vi.mock('@tanstack/react-router', async importOriginal => ({
   ...(await importOriginal<typeof import('@tanstack/react-router')>()),
   useNavigate: () => mockNavigate,
 }));
-
-const server = setupServer(...evaluationHandlers);
-
+const queryClients: QueryClient[] = [];
+const server = setupServer(
+  ...authHandlers,
+  ...sectionHandlers,
+  ...evaluationHandlers,
+);
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 beforeEach(() => {
   resetEvaluationMockData();
   setApiAccessToken(demoAccessToken);
   useAuthStore.getState().setAccessToken(demoAccessToken);
   useAuthStore.getState().setCurrentUser(demoStudent);
+  useAuthStore.getState().markAuthenticated('STUDENT');
   mockNavigate.mockClear();
 });
 afterEach(() => {
   server.resetHandlers();
+  queryClients.splice(0).forEach(client => client.clear());
   setApiAccessToken(null);
   useAuthStore.getState().clearSession();
 });
@@ -63,7 +69,7 @@ function renderPage(element: ReactElement) {
       queries: { retry: false },
     },
   });
-
+  queryClients.push(queryClient);
   function Wrapper({ children }: PropsWithChildren) {
     return (
       <AstryxThemeProvider>
@@ -199,6 +205,7 @@ describe('KD3-92 학생 평가 화면', () => {
       ),
     );
     renderPage(<PeerEvaluationPage />);
+
     expect(
       await screen.findByRole('textbox', { name: /자신의 역할 요약/ }),
     ).toHaveValue('');
@@ -369,6 +376,7 @@ describe('KD3-92 학생 평가 화면', () => {
       await user.click(
         within(dialog).getByRole('button', { name: '평가 저장' }),
       );
+
       expect(
         within(
           screen.getByRole('row', { name: new RegExp(member.name) }),
@@ -377,6 +385,7 @@ describe('KD3-92 학생 평가 화면', () => {
     }
 
     expect(screen.getByText('기여도 합계 100%')).toBeInTheDocument();
+
     await user.click(screen.getByRole('button', { name: '제출하기' }));
     let confirmation = screen.getByRole('alertdialog', {
       name: '상호평가 최종 제출 확인',
@@ -400,8 +409,7 @@ describe('KD3-92 학생 평가 화면', () => {
     ).not.toHaveLength(0);
     expect(mockNavigate).toHaveBeenCalledWith({ to: '/student' });
     expect(screen.queryByText('내 응답 제출 완료')).not.toBeInTheDocument();
-  }, 30_000);
-
+  }, 30000);
   it('상호평가 초안을 서버에 저장한 뒤 현재 단계와 응답을 다시 읽는다', async () => {
     const user = userEvent.setup();
     const view = renderPage(<PeerEvaluationPage />);
@@ -564,6 +572,7 @@ describe('KD3-92 학생 평가 화면', () => {
     const screens = screen.getByRole('article', {
       name: 'CineFlow (7팀) 화면 구성',
     });
+
     expect(
       within(screens).getByAltText('상영 일정 대시보드'),
     ).toBeInTheDocument();
@@ -574,6 +583,7 @@ describe('KD3-92 학생 평가 화면', () => {
     const composition = screen.getByRole('article', {
       name: 'CineFlow (7팀) 프로젝트 구성',
     });
+
     expect(
       within(composition).getByRole('row', { name: /상영관별 일정 관리/ }),
     ).toBeInTheDocument();
@@ -656,6 +666,7 @@ describe('KD3-92 학생 평가 화면', () => {
         },
       ),
     );
+
     await renderPresentationPage();
     await user.click(await screen.findByRole('button', { name: '다음 팀' }));
 
@@ -703,6 +714,7 @@ describe('KD3-92 학생 평가 화면', () => {
           }),
       ),
     );
+
     await renderPresentationPage();
 
     await screen.findByRole('heading', { level: 1, name: '발표 평가' });
@@ -754,6 +766,7 @@ describe('KD3-92 학생 평가 화면', () => {
         },
       ),
     );
+
     await renderPresentationPage();
     await user.click(await screen.findByRole('button', { name: '다음 팀' }));
     const score = (await screen.findAllByRole('radio', { name: '4점' }))[0]!;
@@ -792,12 +805,13 @@ describe('KD3-92 학생 평가 화면', () => {
           requestCount += 1;
           return HttpResponse.json({
             ...overview,
-            evaluationClosesAt: new Date(Date.now() - 1_000).toISOString(),
+            evaluationClosesAt: new Date(Date.now() - 1000).toISOString(),
             windowState: requestCount === 1 ? 'OPEN' : 'CLOSED',
           });
         },
       ),
     );
+
     await renderPresentationPage();
 
     await screen.findByRole('heading', { level: 1, name: '발표 평가' });
@@ -823,11 +837,12 @@ describe('KD3-92 학생 평가 화면', () => {
         () =>
           HttpResponse.json({
             ...overview,
-            evaluationClosesAt: new Date(Date.now() - 1_000).toISOString(),
+            evaluationClosesAt: new Date(Date.now() - 1000).toISOString(),
             windowState: 'OPEN',
           }),
       ),
     );
+
     await renderPresentationPage();
 
     await screen.findByRole('heading', { level: 1, name: '발표 평가' });
@@ -858,7 +873,6 @@ describe('KD3-92 학생 평가 화면', () => {
 });
 
 it('live multi-section membership blocks evaluation reads and writes even after retry', async () => {
-  vi.stubEnv('VITE_ENABLE_MSW', 'false');
   useAuthStore.getState().markAuthenticated('STUDENT');
   const writes = vi.fn();
   const reads = vi.fn();
@@ -901,6 +915,7 @@ it('live multi-section membership blocks evaluation reads and writes even after 
         <PresentationEvaluationPage />
       </>,
     );
+
     expect(
       await screen.findAllByText(/선택한 분반의 팀 소속을 확인할 수 없어요/),
     ).toHaveLength(2);
