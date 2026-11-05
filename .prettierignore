@@ -6,6 +6,7 @@ coverage
 .turbo
 pnpm-lock.yaml
 .agent-local
+README.md
 
 # Generated source; update through its generator, never Prettier.
 apps/oop/src/app/routeTree.gen.ts
