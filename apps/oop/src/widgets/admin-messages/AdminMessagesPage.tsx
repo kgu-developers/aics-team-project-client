@@ -5,10 +5,12 @@ import {
   Card,
   EmptyState,
   Heading,
+  Icon,
   Text,
   TextInput,
 } from '@aics/design-system';
 import { useNavigate, useSearch } from '@tanstack/react-router';
+import { Inbox } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -461,7 +463,10 @@ export default function AdminMessagesPage() {
 
   return (
     <div className={styles.page}>
-      <Heading level={1}>쪽지함</Heading>
+      <div className={styles.pageHeading}>
+        <Icon icon={Inbox} size='lg' />
+        <Heading level={1}>쪽지함</Heading>
+      </div>
       <AdminSectionTeamFilter
         onSectionChange={next =>
           selectSection(next === ALL_SECTIONS ? undefined : next)

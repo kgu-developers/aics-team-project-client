@@ -202,7 +202,7 @@ export default function AdminMeetingDetailPage() {
             </dd>
           </div>
           <div className={styles.metadataItem}>
-            <dt>작성자</dt>
+            <dt>작성자 학번 · 이름</dt>
             <dd>{authorLabel}</dd>
           </div>
           <div className={styles.metadataItem}>

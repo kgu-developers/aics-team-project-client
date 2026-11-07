@@ -11,6 +11,12 @@ export const page = style({
   width: '100%',
 });
 
+export const pageHeading = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: tokens.spacing['3'],
+});
+
 export const titleRow = style({
   alignItems: 'center',
   display: 'flex',

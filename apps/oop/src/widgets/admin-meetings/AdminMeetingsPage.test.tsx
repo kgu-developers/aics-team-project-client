@@ -138,7 +138,15 @@ describe('AdminMeetingsPage', () => {
     ).toBeInTheDocument();
     expect(
       screen.getAllByRole('columnheader').map(header => header.textContent),
-    ).toEqual(['', '분반', '팀', '팀장', '회의 제목', '회의 일자', '작성자']);
+    ).toEqual([
+      '',
+      '분반',
+      '팀',
+      '팀장',
+      '회의 제목',
+      '회의 일자',
+      '작성자 학번',
+    ]);
     expect(screen.getAllByText('김민준')).not.toHaveLength(0);
     expect(screen.getAllByText('OOP-01 · 월요일 1-2교시')).not.toHaveLength(0);
     expect(

@@ -5,10 +5,12 @@ import {
   Divider,
   EmptyState,
   Heading,
+  Icon,
   Pagination,
   Text,
 } from '@aics/design-system';
 import { useNavigate, useSearch } from '@tanstack/react-router';
+import { MessagesSquare } from 'lucide-react';
 import { useEffect, useState, type KeyboardEvent } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -160,7 +162,10 @@ export default function AdminMeetingsPage() {
 
   return (
     <div className={styles.page}>
-      <Heading level={1}>회의록</Heading>
+      <div className={styles.pageHeading}>
+        <Icon icon={MessagesSquare} size='lg' />
+        <Heading level={1}>회의록</Heading>
+      </div>
       <div className={styles.activityTabsRow}>
         <AdminTeamActivityTabs
           activeView='meetings'
@@ -228,7 +233,7 @@ export default function AdminMeetingsPage() {
                 <th scope='col'>팀장</th>
                 <th scope='col'>회의 제목</th>
                 <th scope='col'>회의 일자</th>
-                <th scope='col'>작성자</th>
+                <th scope='col'>작성자 학번</th>
               </tr>
             </thead>
             <tbody>
