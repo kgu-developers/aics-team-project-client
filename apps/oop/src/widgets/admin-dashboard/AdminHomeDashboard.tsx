@@ -656,7 +656,11 @@ export default function AdminHomeDashboard() {
                             <td key={column.id}>
                               {item?.submissionTabId ? (
                                 <Link
-                                  aria-label={`${row.sectionLabel} ${column.label} 제출·평가 현황 보기`}
+                                  aria-label={`${row.sectionLabel} ${column.label} ${
+                                    item.isStudentVisible
+                                      ? item.deadlineLabel
+                                      : `${item.deadlineLabel} · 미공개`
+                                  } 제출·평가 현황 보기`}
                                   className={styles.scheduleMilestoneItem}
                                   search={{
                                     milestoneId: item.submissionTabId,

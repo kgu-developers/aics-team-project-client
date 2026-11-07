@@ -513,6 +513,7 @@ describe('AdminCourseDetailPage', () => {
     await waitFor(() =>
       expect(router.state.location.pathname).toBe('/admin/milestones'),
     );
+    expect(router.state.location.search).toMatchObject({ sectionId: 1 });
   });
 
   it('사전 정보 내역을 8명씩 나누고 페이지를 전환한다', async () => {

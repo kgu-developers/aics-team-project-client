@@ -579,7 +579,12 @@ export default function AdminCourseDetailPage({
                 />
                 <Button
                   label='마일스톤 관리'
-                  onClick={() => void navigate({ to: ROUTES.ADMIN_MILESTONES })}
+                  onClick={() =>
+                    void navigate({
+                      search: { sectionId: Number(detailSection.id) },
+                      to: ROUTES.ADMIN_MILESTONES,
+                    })
+                  }
                   size='sm'
                   variant='primary'
                 />
