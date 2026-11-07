@@ -329,7 +329,11 @@ function AdminCourseOverview({
             />
           ) : sections.length === 0 ? (
             <EmptyState
-              description='아래의 추가 버튼으로 분반을 등록할 수 있습니다.'
+              description={
+                isSectionCreationDisabled
+                  ? '계정 학번 정보를 확인할 수 없어 분반을 등록할 수 없습니다.'
+                  : '아래의 추가 버튼으로 분반을 등록할 수 있습니다.'
+              }
               title='등록된 분반이 없습니다.'
             />
           ) : (
@@ -389,7 +393,7 @@ function AdminCourseOverview({
             </Card>
           )}
           <div className={styles.courseSectionActions}>
-            {isSectionCreationDisabled ? (
+            {isSectionCreationDisabled && sections.length > 0 ? (
               <span className={styles.sectionCreationUnavailable}>
                 계정 학번 정보를 확인할 수 없어 분반을 등록할 수 없습니다.
               </span>

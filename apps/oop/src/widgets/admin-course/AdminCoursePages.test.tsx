@@ -47,6 +47,7 @@ import { resetAdminCoursesMockData } from '~/mocks/data/adminCourses';
 import { resetAdminProfileMockData } from '~/mocks/data/adminProfile';
 import {
   createAdminSection,
+  removeAdminSectionFixture,
   resetAdminSectionsMockData,
   updateAdminSectionFixture,
 } from '~/mocks/data/adminSections';
@@ -231,6 +232,62 @@ function getCourseSection(courseName: string, year: number, semester: string) {
 }
 
 describe('AdminCoursesPage', () => {
+  it('학번 정보가 없고 등록된 분반이 없으면 등록 불가 사유를 표시한다', async () => {
+    removeAdminSectionFixture(1);
+    const adminAccount = demoUserAccounts.find(
+      account => account.user.studentNumber === demoAdmin.studentNumber,
+    );
+    if (!adminAccount)
+      throw new Error('관리자 테스트 계정을 찾을 수 없습니다.');
+    mockSessionResponseHeaders(
+      issueMockSession({
+        ...adminAccount,
+        user: { ...adminAccount.user, studentNumber: '' },
+      }),
+    );
+    useAuthStore.setState({
+      currentUser: { ...demoAdmin, studentNumber: '' },
+    });
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.USER.ME}`, () =>
+        HttpResponse.json({
+          studentNumber: '',
+          email: adminAccount.user.email,
+          name: adminAccount.user.name,
+          globalRole: 'ADMIN',
+          phone: '010-0000-0000',
+          sections: [],
+        }),
+      ),
+    );
+
+    renderAt('/admin/sections');
+
+    const oopCourseLabel = courseLabel('객체지향 프로그래밍', 2026, '2학기');
+    await screen.findByRole('group', {
+      name: `${oopCourseLabel} 강좌 관리`,
+    });
+    const courseSection = getCourseSection(
+      '객체지향 프로그래밍',
+      2026,
+      '2학기',
+    );
+
+    expect(
+      await within(courseSection).findByText(
+        '계정 학번 정보를 확인할 수 없어 분반을 등록할 수 없습니다.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(courseSection).queryByText(
+        '아래의 추가 버튼으로 분반을 등록할 수 있습니다.',
+      ),
+    ).not.toBeInTheDocument();
+    expect(
+      within(courseSection).getByRole('button', { name: '분반 등록' }),
+    ).toHaveAttribute('aria-disabled', 'true');
+  });
+
   it('등록한 모든 강좌와 분반 목록을 함께 표시하고 분반을 누르면 운영 화면으로 이동한다', async () => {
     const user = userEvent.setup();
     const router = renderAt('/admin/sections');
