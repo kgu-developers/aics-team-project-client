@@ -11,6 +11,12 @@ export const page = style({
   width: '100%',
 });
 
+export const pageHeading = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: tokens.spacing['3'],
+});
+
 export const header = style({
   alignItems: 'flex-start',
   display: 'flex',
@@ -94,14 +100,6 @@ export const courseMetadataValue = style({
   margin: 0,
 });
 
-export const courseCardHeader = style({
-  alignItems: 'flex-start',
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 12,
-  justifyContent: 'space-between',
-});
-
 export const courseActions = style({
   display: 'flex',
   flexWrap: 'wrap',
@@ -114,12 +112,26 @@ export const section = style({
   gap: 12,
 });
 
-export const sectionHeader = style({
-  alignItems: 'flex-start',
+export const courseSections = style({
+  borderTop: `1px solid ${tokens.color.border.base}`,
   display: 'flex',
-  flexWrap: 'wrap',
-  gap: 12,
-  justifyContent: 'space-between',
+  flexDirection: 'column',
+  gap: tokens.spacing[3],
+  marginTop: tokens.spacing[5],
+  paddingTop: tokens.spacing[4],
+});
+
+export const courseSectionActions = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: tokens.spacing['2'],
+  justifyContent: 'flex-end',
+});
+
+export const sectionCreationUnavailable = style({
+  color: tokens.color.text.secondary,
+  fontSize: 13,
+  textAlign: 'right',
 });
 
 export const clickableRow = style({

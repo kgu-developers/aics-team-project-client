@@ -180,6 +180,7 @@ function PeerEvaluationOverview({
 
 function Meetings({
   records,
+  showAuthorStudentNumber = true,
 }: {
   records: Array<{
     id: number;
@@ -188,10 +189,16 @@ function Meetings({
     phase: string;
     title: string;
   }>;
+  showAuthorStudentNumber?: boolean;
 }) {
   if (records.length === 0)
-    return <Text className={styles.muted}>연결된 회의록이 없습니다.</Text>;
-  return <AdminLinkedMeetingsTable records={records} />;
+    return <Text className={styles.muted}>팀 전체 회의록이 없습니다.</Text>;
+  return (
+    <AdminLinkedMeetingsTable
+      records={records}
+      showAuthorStudentNumber={showAuthorStudentNumber}
+    />
+  );
 }
 
 function PeerDetail({
@@ -318,8 +325,11 @@ function PeerDetail({
         </Card>
       </section>
       <section className={styles.section}>
-        <Heading level={2}>관련 회의록</Heading>
-        <Meetings records={data.meetingRecords} />
+        <Heading level={2}>팀 전체 회의록</Heading>
+        <Meetings
+          records={data.meetingRecords}
+          showAuthorStudentNumber={false}
+        />
       </section>
       <AdminStudentDetailDialog
         details={
@@ -401,7 +411,6 @@ function PresentationDetail({
         </Text>
       </div>
       <section className={styles.section}>
-        <Heading level={2}>평가자별 결과</Heading>
         <PresentationEvaluationResults
           action={
             <Button
@@ -471,7 +480,7 @@ function PresentationDetail({
         )}
       </section>
       <section className={styles.section}>
-        <Heading level={2}>관련 회의록</Heading>
+        <Heading level={2}>팀 전체 회의록</Heading>
         <Meetings records={data.meetingRecords} />
       </section>
       <AdminStudentDetailDialog

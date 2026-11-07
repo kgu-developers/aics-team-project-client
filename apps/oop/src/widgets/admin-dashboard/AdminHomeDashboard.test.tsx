@@ -270,7 +270,11 @@ describe('AdminHomeDashboard', () => {
     );
 
     renderPage(demoAdmin, activeSections);
-    await screen.findByRole('heading', { name: '홈' });
+    await screen.findByRole('heading', { level: 1, name: '홈' });
+    await screen.findByRole('heading', {
+      level: 2,
+      name: '분반별 제출·평가 일정',
+    });
 
     const expectedSectionIds = activeSections.map(section => section.id);
     expect(dashboardState.milestoneSectionIds).toEqual(expectedSectionIds);
@@ -311,10 +315,10 @@ describe('AdminHomeDashboard', () => {
       name: '분반별 제출·평가 일정',
     });
     const proposalLink = await screen.findByRole('link', {
-      name: /제안서 제출·평가 현황 보기/,
+      name: /제안서.*제출·평가 현황 보기/,
     });
     const midReportLink = screen.getByRole('link', {
-      name: /중간 보고서 제출·평가 현황 보기/,
+      name: /중간 보고서.*제출·평가 현황 보기/,
     });
     const proposalUrl = new URL(
       proposalLink.getAttribute('href')!,
@@ -365,6 +369,30 @@ describe('AdminHomeDashboard', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('미공개 일정 상태를 제출·평가 현황 링크의 접근 가능한 이름에 포함한다', async () => {
+    dashboardState.milestones = [
+      {
+        allowResubmissionBeforeDueAt: false,
+        id: 105,
+        peerEvaluationForm: null,
+        schedule: { dueAt: '2026-10-08T23:59:00' },
+        sectionId: 1,
+        status: 'DRAFT',
+        title: '제안서',
+        type: 'PROPOSAL',
+        weekNumber: 3,
+      },
+    ];
+
+    renderPage();
+
+    const proposalLink = await screen.findByRole('link', {
+      name: 'OOP-01 제안서 마감 · 미공개 제출·평가 현황 보기',
+    });
+
+    expect(within(proposalLink).getByText('마감 · 미공개')).toBeVisible();
+  });
+
   it('발표 자료 제출과 발표 평가를 별도 일정과 탭 링크로 표시한다', async () => {
     dashboardState.milestones = [
       {
@@ -402,14 +430,14 @@ describe('AdminHomeDashboard', () => {
     renderPage();
 
     const presentationLink = await screen.findByRole('link', {
-      name: /OOP-01 발표 자료 제출 제출·평가 현황 보기/,
+      name: /OOP-01 발표 자료 제출.*제출·평가 현황 보기/,
     });
     const presentationUrl = new URL(
       presentationLink.getAttribute('href')!,
       'https://aics.test',
     );
     const evaluationLink = screen.getByRole('link', {
-      name: /OOP-01 발표 평가 제출·평가 현황 보기/,
+      name: /OOP-01 발표 평가.*제출·평가 현황 보기/,
     });
     const evaluationUrl = new URL(
       evaluationLink.getAttribute('href')!,
@@ -450,7 +478,7 @@ describe('AdminHomeDashboard', () => {
     renderPage();
 
     const evaluationLink = await screen.findByRole('link', {
-      name: /OOP-01 발표 평가 제출·평가 현황 보기/,
+      name: /OOP-01 발표 평가.*제출·평가 현황 보기/,
     });
 
     expect(within(evaluationLink).getByText('기간 미정')).toBeVisible();
@@ -494,7 +522,7 @@ describe('AdminHomeDashboard', () => {
     renderPage(userWithArchivedCourse, [activeSection]);
 
     const activeSectionLink = await screen.findByRole('link', {
-      name: /OOP-01.*중간 보고서 제출·평가 현황 보기/,
+      name: /OOP-01.*중간 보고서.*제출·평가 현황 보기/,
     });
     expect(dashboardState.milestoneSectionIds).toEqual(['1']);
     expect(activeSectionLink.getAttribute('href')).toContain(

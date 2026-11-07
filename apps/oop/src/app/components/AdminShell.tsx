@@ -1,12 +1,16 @@
-import {
-  Badge,
-  Collapsible,
-  Divider,
-  IconButton,
-  Text,
-} from '@aics/design-system';
+import { Badge, Divider, Icon, IconButton, Text } from '@aics/design-system';
 import { Link, Outlet, useRouterState } from '@tanstack/react-router';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  Flag,
+  House,
+  Inbox,
+  Megaphone,
+  MessagesSquare,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -21,22 +25,24 @@ import StudentContactLink from '~/widgets/student-contact-link/StudentContactLin
 import AdminProfilePopover from './AdminProfilePopover';
 import * as styles from './AdminShell.css';
 
-const menuGroups = [
+const SIDEBAR_COLLAPSE_MEDIA_QUERY = '(max-width: 767px)';
+
+const menuItems = [
+  { icon: House, label: '홈', to: ROUTES.ADMIN },
+  { icon: BookOpen, label: '강좌·분반 관리', to: ROUTES.ADMIN_SECTIONS },
+  { icon: Flag, label: '마일스톤 관리', to: ROUTES.ADMIN_MILESTONES },
   {
-    items: [
-      { label: '마일스톤 관리', to: ROUTES.ADMIN_MILESTONES },
-      { label: '제출·평가 현황', to: ROUTES.ADMIN_SUBMISSIONS },
-    ],
-    label: '프로젝트 관리',
+    icon: ClipboardCheck,
+    label: '제출·평가 현황',
+    to: ROUTES.ADMIN_SUBMISSIONS,
   },
+  { icon: Megaphone, label: '공지사항', to: ROUTES.ADMIN_NOTICES },
   {
-    items: [
-      { label: '공지사항', to: ROUTES.ADMIN_NOTICES },
-      { label: '회의록·액션플랜', to: ROUTES.ADMIN_MEETINGS },
-      { label: '쪽지함', to: ROUTES.ADMIN_MESSAGES },
-    ],
-    label: '소통',
+    icon: MessagesSquare,
+    label: '회의록·액션플랜',
+    to: ROUTES.ADMIN_MEETINGS,
   },
+  { icon: Inbox, label: '쪽지함', to: ROUTES.ADMIN_MESSAGES },
 ] as const;
 
 function isMenuItemActive(pathname: string, itemPath: string) {
@@ -62,27 +68,37 @@ function isMenuItemActive(pathname: string, itemPath: string) {
 }
 
 export default function AdminShell() {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia(SIDEBAR_COLLAPSE_MEDIA_QUERY).matches,
+  );
+
+  useEffect(() => {
+    if (
+      typeof window === 'undefined' ||
+      typeof window.matchMedia !== 'function'
+    ) {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia(SIDEBAR_COLLAPSE_MEDIA_QUERY);
+    const handleChange = (event: MediaQueryListEvent) => {
+      setIsSidebarCollapsed(event.matches);
+    };
+
+    if (typeof mediaQuery.addEventListener !== 'function') {
+      return;
+    }
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
   const pathname = useRouterState({ select: state => state.location.pathname });
   const currentUser = useAuthStore(state => state.currentUser);
   const messagesQuery = useAdminMessagesQuery();
   const unreadMessageCount = messagesQuery.data?.unreadCount ?? 0;
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-
-  useEffect(() => {
-    if (typeof window.matchMedia !== 'function') return undefined;
-    const mediaQuery = window.matchMedia('(max-width: 1100px)');
-    const syncSidebarWithViewport = (matches: boolean) => {
-      setIsSidebarCollapsed(matches);
-    };
-
-    syncSidebarWithViewport(mediaQuery.matches);
-    const handleChange = (event: MediaQueryListEvent) => {
-      syncSidebarWithViewport(event.matches);
-    };
-    mediaQuery.addEventListener('change', handleChange);
-
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
 
   return (
     <div
@@ -94,98 +110,70 @@ export default function AdminShell() {
           isSidebarCollapsed && styles.sidebarCollapsed,
         )}
       >
-        <IconButton
-          aria-controls='admin-sidebar-content'
-          aria-expanded={!isSidebarCollapsed}
-          className={styles.sidebarToggle}
-          icon={
-            isSidebarCollapsed ? (
-              <ChevronRight aria-hidden='true' />
-            ) : (
-              <ChevronLeft aria-hidden='true' />
-            )
-          }
-          label={isSidebarCollapsed ? '사이드바 펼치기' : '사이드바 접기'}
-          onClick={() => setIsSidebarCollapsed(value => !value)}
-          size='sm'
-          variant='secondary'
-        />
         <div
-          className={styles.sidebarContent}
-          hidden={isSidebarCollapsed}
-          id='admin-sidebar-content'
+          aria-hidden={isSidebarCollapsed || undefined}
+          className={cx(
+            styles.sidebarContent,
+            isSidebarCollapsed && styles.sidebarContentCollapsed,
+          )}
         >
           <div className={styles.brand}>
             <strong>OOTeamProject</strong>
             <small>2026-2 · 객체지향프로그래밍</small>
           </div>
           <nav aria-label='관리자 메뉴' className={styles.nav}>
-            <Link
-              className={
-                isMenuItemActive(pathname, ROUTES.ADMIN)
-                  ? styles.activeNav
-                  : styles.navItem
-              }
-              to={ROUTES.ADMIN}
-            >
-              홈
-            </Link>
-            <Link
-              className={
-                isMenuItemActive(pathname, ROUTES.ADMIN_SECTIONS)
-                  ? styles.activeNav
-                  : styles.navItem
-              }
-              to={ROUTES.ADMIN_SECTIONS}
-            >
-              강좌·분반 관리
-            </Link>
-            {menuGroups.map(group => (
-              <Collapsible
-                className={styles.navGroup}
-                defaultIsOpen
-                key={group.label}
-                trigger={group.label}
-              >
-                <div className={styles.navGroupItems}>
-                  {group.items.map(item => {
-                    const isActive = isMenuItemActive(pathname, item.to);
-                    const showsUnreadMessageCount =
-                      item.to === ROUTES.ADMIN_MESSAGES &&
-                      unreadMessageCount > 0;
+            {menuItems.map(item => {
+              const isActive = isMenuItemActive(pathname, item.to);
+              const showsUnreadMessageCount =
+                item.to === ROUTES.ADMIN_MESSAGES && unreadMessageCount > 0;
 
-                    return (
-                      <Link
-                        aria-label={
-                          showsUnreadMessageCount
-                            ? `${item.label}, 미확인 쪽지 ${unreadMessageCount}건`
-                            : undefined
-                        }
-                        className={
-                          isActive ? styles.activeGroupNav : styles.groupNavItem
-                        }
-                        key={item.label}
-                        to={item.to}
-                      >
-                        {item.label}
-                        {showsUnreadMessageCount ? (
-                          <Badge
-                            aria-hidden
-                            label={unreadMessageCount}
-                            variant='info'
-                          />
-                        ) : null}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </Collapsible>
-            ))}
+              return (
+                <Link
+                  aria-label={
+                    showsUnreadMessageCount
+                      ? `${item.label}, 미확인 쪽지 ${unreadMessageCount}건`
+                      : undefined
+                  }
+                  className={isActive ? styles.activeNav : styles.navItem}
+                  key={item.to}
+                  to={item.to}
+                >
+                  <span className={styles.navLabel}>
+                    <Icon color='inherit' icon={item.icon} size='sm' />
+                    <span>{item.label}</span>
+                  </span>
+                  {showsUnreadMessageCount ? (
+                    <Badge
+                      aria-hidden
+                      label={unreadMessageCount}
+                      variant='info'
+                    />
+                  ) : null}
+                </Link>
+              );
+            })}
           </nav>
           {currentUser ? (
             <AdminProfilePopover currentUser={currentUser} />
           ) : null}
         </div>
+        <IconButton
+          className={cx(
+            styles.sidebarBoundaryToggle,
+            isSidebarCollapsed && styles.sidebarBoundaryToggleCollapsed,
+          )}
+          icon={
+            isSidebarCollapsed ? (
+              <ChevronRight aria-hidden='true' size={16} />
+            ) : (
+              <ChevronLeft aria-hidden='true' size={16} />
+            )
+          }
+          label={isSidebarCollapsed ? '사이드바 펼치기' : '사이드바 접기'}
+          onClick={() => setIsSidebarCollapsed(current => !current)}
+          size='sm'
+          variant='ghost'
+        />
       </aside>
       <main className={styles.main}>
         <div className={styles.content}>

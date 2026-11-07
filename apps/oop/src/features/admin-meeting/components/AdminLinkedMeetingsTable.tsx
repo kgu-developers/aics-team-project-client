@@ -28,11 +28,11 @@ type LinkedMeetingTablePlugin = NonNullable<
 >[string];
 
 export function AdminLinkedMeetingsTable({
-  authorLabel = '작성자',
   records,
+  showAuthorStudentNumber = true,
 }: {
-  authorLabel?: string;
   records: LinkedMeeting[];
+  showAuthorStudentNumber?: boolean;
 }) {
   const navigate = useNavigate();
   const currentUser = useAuthStore(state => state.currentUser);
@@ -96,18 +96,23 @@ export function AdminLinkedMeetingsTable({
           },
           {
             align: 'center',
-            header: '회의 일시',
+            header: '회의 일자',
             key: 'meetingAt',
             renderCell: record => formatAdminMeetingDateTime(record.meetingAt),
             width: proportional(1.4, { minWidth: 170 }),
           },
-          {
-            align: 'center',
-            header: authorLabel,
-            key: 'authorName',
-            renderCell: record => record.authorName ?? '-',
-            width: proportional(1, { minWidth: 120 }),
-          },
+          ...(showAuthorStudentNumber
+            ? [
+                {
+                  align: 'center' as const,
+                  header: '작성자 학번',
+                  key: 'authorName',
+                  renderCell: (record: LinkedMeeting) =>
+                    record.authorName ?? '-',
+                  width: proportional(1, { minWidth: 120 }),
+                },
+              ]
+            : []),
           {
             align: 'center',
             header: '참석 인원',

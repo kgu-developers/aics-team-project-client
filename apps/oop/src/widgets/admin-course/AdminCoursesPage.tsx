@@ -5,6 +5,7 @@ import {
   Card,
   EmptyState,
   Heading,
+  Icon,
   IconButton,
   proportional,
   Table,
@@ -13,7 +14,7 @@ import {
   type TableProps,
 } from '@aics/design-system';
 import { useNavigate } from '@tanstack/react-router';
-import { Pencil, Trash2 } from 'lucide-react';
+import { BookOpen, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -106,7 +107,10 @@ export default function AdminCoursesPage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <Heading level={1}>강좌·분반 관리</Heading>
+        <div className={styles.pageHeading}>
+          <Icon icon={BookOpen} size='lg' />
+          <Heading level={1}>강좌·분반 관리</Heading>
+        </div>
         <Button label='강좌 등록' onClick={() => setIsCreateOpen(true)} />
       </header>
 
@@ -249,9 +253,6 @@ function AdminCourseOverview({
 
   return (
     <section aria-label={courseLabel} className={styles.section}>
-      <div className={styles.courseCardHeader}>
-        <Heading level={2}>{course.name}</Heading>
-      </div>
       <Card className={styles.courseCard} padding={5}>
         <article
           aria-label={`${courseLabel} 강좌 요약`}
@@ -259,7 +260,7 @@ function AdminCourseOverview({
         >
           <div className={styles.courseIdentity}>
             <div className={styles.courseTitleRow}>
-              <Heading level={3}>{course.name}</Heading>
+              <Heading level={2}>{course.name}</Heading>
               <Badge
                 label={statusLabel(course.status)}
                 variant={statusBadgeVariant(course.status)}
@@ -313,85 +314,98 @@ function AdminCourseOverview({
             </div>
           </dl>
         </article>
+        <section
+          aria-label={`${courseLabel} 분반`}
+          className={styles.courseSections}
+        >
+          {sectionsQuery.isPending ? (
+            <Text aria-live='polite' role='status'>
+              분반 목록을 불러오는 중입니다.
+            </Text>
+          ) : sectionsQuery.isError ? (
+            <EmptyState
+              description='잠시 후 다시 시도해 주세요.'
+              title='분반 목록을 불러오지 못했습니다.'
+            />
+          ) : sections.length === 0 ? (
+            <EmptyState
+              description='아래의 추가 버튼으로 분반을 등록할 수 있습니다.'
+              title='등록된 분반이 없습니다.'
+            />
+          ) : (
+            <Card padding={0}>
+              <Table
+                aria-label={`${courseLabel} 분반 목록`}
+                columns={[
+                  {
+                    align: 'start',
+                    header: '분반 코드',
+                    key: 'code',
+                    width: proportional(1, { minWidth: 120 }),
+                  },
+                  {
+                    align: 'start',
+                    header: '수업 시간',
+                    key: 'classTime',
+                    width: proportional(1.4, { minWidth: 160 }),
+                  },
+                  {
+                    align: 'start',
+                    header: '온보딩 기간',
+                    key: 'contactVisibleFrom',
+                    renderCell: section => {
+                      const visibility = contactVisibilityStatus(
+                        section.contactVisibleFrom,
+                        section.contactVisibleUntil,
+                      );
+                      return (
+                        <Badge
+                          label={visibility}
+                          variant={contactVisibilityBadgeVariant(visibility)}
+                        />
+                      );
+                    },
+                    width: proportional(0.9, { minWidth: 120 }),
+                  },
+                  {
+                    align: 'end',
+                    header: '',
+                    key: 'id',
+                    renderCell: () => (
+                      <span aria-hidden className={styles.rowChevron}>
+                        ›
+                      </span>
+                    ),
+                    width: proportional(0.2, { minWidth: 36 }),
+                  },
+                ]}
+                data={sections}
+                dividers='rows'
+                hasHover
+                idKey='id'
+                plugins={{ rowInteraction: sectionRowPlugin }}
+                verticalAlign='middle'
+              />
+            </Card>
+          )}
+          <div className={styles.courseSectionActions}>
+            {isSectionCreationDisabled ? (
+              <span className={styles.sectionCreationUnavailable}>
+                계정 학번 정보를 확인할 수 없어 분반을 등록할 수 없습니다.
+              </span>
+            ) : null}
+            <IconButton
+              icon={<Plus aria-hidden='true' size={16} />}
+              isDisabled={isSectionCreationDisabled}
+              label='분반 등록'
+              onClick={onCreateSection}
+              size='sm'
+              tooltip='분반 등록'
+              variant='secondary'
+            />
+          </div>
+        </section>
       </Card>
-      <div className={styles.sectionHeader}>
-        <Heading level={3}>분반</Heading>
-        <Button
-          isDisabled={isSectionCreationDisabled}
-          label='분반 등록'
-          onClick={onCreateSection}
-        />
-      </div>
-      {sectionsQuery.isPending ? (
-        <Text aria-live='polite' role='status'>
-          분반 목록을 불러오는 중입니다.
-        </Text>
-      ) : sectionsQuery.isError ? (
-        <EmptyState
-          description='잠시 후 다시 시도해 주세요.'
-          title='분반 목록을 불러오지 못했습니다.'
-        />
-      ) : sections.length === 0 ? (
-        <EmptyState
-          description='분반을 등록하면 수강생과 팀을 관리할 수 있습니다.'
-          title='등록된 분반이 없습니다.'
-        />
-      ) : (
-        <Card padding={0}>
-          <Table
-            aria-label={`${courseLabel} 분반 목록`}
-            columns={[
-              {
-                align: 'start',
-                header: '분반 코드',
-                key: 'code',
-                width: proportional(1, { minWidth: 120 }),
-              },
-              {
-                align: 'start',
-                header: '수업 시간',
-                key: 'classTime',
-                width: proportional(1.4, { minWidth: 160 }),
-              },
-              {
-                align: 'start',
-                header: '온보딩 기간',
-                key: 'contactVisibleFrom',
-                renderCell: section => {
-                  const visibility = contactVisibilityStatus(
-                    section.contactVisibleFrom,
-                    section.contactVisibleUntil,
-                  );
-                  return (
-                    <Badge
-                      label={visibility}
-                      variant={contactVisibilityBadgeVariant(visibility)}
-                    />
-                  );
-                },
-                width: proportional(0.9, { minWidth: 120 }),
-              },
-              {
-                align: 'end',
-                header: '',
-                key: 'id',
-                renderCell: () => (
-                  <span aria-hidden className={styles.rowChevron}>
-                    ›
-                  </span>
-                ),
-                width: proportional(0.2, { minWidth: 36 }),
-              },
-            ]}
-            data={sections}
-            dividers='rows'
-            hasHover
-            idKey='id'
-            plugins={{ rowInteraction: sectionRowPlugin }}
-            verticalAlign='middle'
-          />
-        </Card>
-      )}
     </section>
   );
 }

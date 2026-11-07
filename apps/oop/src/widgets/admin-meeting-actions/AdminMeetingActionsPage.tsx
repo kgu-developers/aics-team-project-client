@@ -6,12 +6,14 @@ import {
   EmptyState,
   Heading,
   HStack,
+  Icon,
   Pagination,
   Selector,
   SelectorOption,
   Text,
 } from '@aics/design-system';
 import { useNavigate, useSearch } from '@tanstack/react-router';
+import { MessagesSquare } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -200,7 +202,10 @@ export default function AdminMeetingActionsPage() {
   return (
     <div className={styles.page}>
       <div className={styles.titleArea}>
-        <Heading level={1}>액션플랜</Heading>
+        <div className={styles.pageHeading}>
+          <Icon icon={MessagesSquare} size='lg' />
+          <Heading level={1}>액션플랜</Heading>
+        </div>
       </div>
       <div className={styles.activityTabsRow}>
         <AdminTeamActivityTabs

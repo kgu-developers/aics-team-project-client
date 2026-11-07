@@ -11,6 +11,12 @@ export const page = style({
   width: '100%',
 });
 
+export const pageHeading = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: tokens.spacing['3'],
+});
+
 export const headerContent = style({
   display: 'flex',
   flexDirection: 'column',
@@ -48,6 +54,20 @@ export const tabPanel = style({
   gap: 18,
 });
 
+export const milestoneTabRow = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: 12,
+  justifyContent: 'space-between',
+  '@media': {
+    'screen and (max-width: 640px)': {
+      alignItems: 'stretch',
+      flexDirection: 'column',
+    },
+  },
+});
+
 export const evaluationHeader = style({
   alignItems: 'center',
   display: 'flex',
@@ -62,40 +82,23 @@ export const evaluationHeader = style({
   },
 });
 
-export const evaluationTitle = style({
+export const evaluationPeriod = style({
   alignItems: 'center',
   display: 'flex',
   flexWrap: 'wrap',
   gap: 8,
-});
-
-export const evaluationHeadingGroup = style({
-  alignItems: 'flex-start',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 4,
   minWidth: 0,
 });
 
-export const setupWarning = style({
-  background: tokens.color.background.muted,
-  border: `1px solid ${tokens.color.border.base}`,
-  borderRadius: 8,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 6,
+export const setupNotice = style({
+  marginBottom: 12,
   padding: 16,
 });
 
-export const setupWarningUrgent = style({
-  borderColor: tokens.color.accent,
-  borderWidth: 2,
-});
-
-export const setupWarningList = style({
+export const setupNoticeContent = style({
   display: 'flex',
   flexDirection: 'column',
-  gap: 4,
+  gap: 6,
 });
 
 export const evaluationActions = style({
@@ -173,8 +176,12 @@ export const footerCountLink = style({
 
 export const feedbackCountToggle = style({
   color: tokens.color.text.primary,
+  maxWidth: '100%',
   minHeight: 'auto',
+  overflow: 'hidden',
   padding: 0,
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
   ':focus-visible': {
     outline: `2px solid ${tokens.color.accent}`,
     outlineOffset: 2,
@@ -205,9 +212,4 @@ export const backLink = style({
     outline: `2px solid ${tokens.color.accent}`,
     outlineOffset: 2,
   },
-});
-
-export const criteriaNotice = style({
-  marginBottom: 12,
-  padding: 16,
 });

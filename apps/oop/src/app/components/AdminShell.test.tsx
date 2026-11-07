@@ -65,64 +65,37 @@ describe('AdminShell', () => {
     useAuthStore.getState().clearSession();
   });
 
-  it('사이드바를 버튼으로 접고 다시 펼친다', async () => {
+  it('사이드바 경계 제어로 메뉴를 접고 다시 펼친다', async () => {
     const user = userEvent.setup();
+
     renderShell();
 
+    const navigation = screen.getByRole('navigation', { name: '관리자 메뉴' });
     await user.click(screen.getByRole('button', { name: '사이드바 접기' }));
 
-    expect(
-      screen.getByRole('button', { name: '사이드바 펼치기' }),
-    ).toHaveAttribute('aria-expanded', 'false');
-    expect(
-      screen.queryByRole('navigation', { name: '관리자 메뉴' }),
-    ).not.toBeInTheDocument();
-
+    expect(navigation.parentElement).toHaveAttribute('aria-hidden', 'true');
     await user.click(screen.getByRole('button', { name: '사이드바 펼치기' }));
 
-    expect(
-      screen.getByRole('navigation', { name: '관리자 메뉴' }),
-    ).toBeVisible();
+    expect(navigation.parentElement).not.toHaveAttribute('aria-hidden');
   });
 
-  it('화면 폭이 좁으면 사이드바를 자동으로 접는다', async () => {
-    vi.stubGlobal(
-      'matchMedia',
-      vi.fn().mockReturnValue({
-        addEventListener: vi.fn(),
-        matches: true,
-        media: '(max-width: 1100px)',
-        onchange: null,
-        removeEventListener: vi.fn(),
-      }),
-    );
-
-    renderShell();
-
-    expect(
-      await screen.findByRole('button', { name: '사이드바 펼치기' }),
-    ).toHaveAttribute('aria-expanded', 'false');
-  });
-
-  it('강좌·분반 관리는 바로 노출하고 나머지 관리 메뉴는 그룹별로 접을 수 있다', () => {
+  it('관리자 메뉴를 그룹 제목 없이 한 줄 목록으로 표시한다', () => {
     renderShell();
 
     expect(screen.getByText('OOTeamProject')).toBeVisible();
-    expect(screen.getByRole('link', { name: '강좌·분반 관리' })).toBeVisible();
-    expect(
-      screen.queryByRole('button', { name: '강좌 관리' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('link', { name: '수강생·팀 관리' }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: '프로젝트 관리' }),
-    ).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('button', { name: '소통' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
-    expect(screen.getByRole('link', { name: '공지사항' })).toBeVisible();
+    [
+      '홈',
+      '강좌·분반 관리',
+      '마일스톤 관리',
+      '제출·평가 현황',
+      '공지사항',
+      '회의록·액션플랜',
+      '쪽지함',
+    ].forEach(label => {
+      expect(screen.getByRole('link', { name: label })).toBeVisible();
+    });
+    expect(screen.queryByText('프로젝트 관리')).not.toBeInTheDocument();
+    expect(screen.queryByText('소통')).not.toBeInTheDocument();
   });
 
   it('미확인 쪽지가 있으면 쪽지함 탐색 항목에 숫자 배지를 표시한다', () => {
@@ -137,7 +110,7 @@ describe('AdminShell', () => {
     expect(messagesLink).toHaveTextContent('3');
   });
 
-  it('회의록과 액션플랜을 하나의 소통 탐색 항목으로 제공한다', () => {
+  it('회의록과 액션플랜을 하나의 탐색 항목으로 제공한다', () => {
     renderShell();
 
     expect(

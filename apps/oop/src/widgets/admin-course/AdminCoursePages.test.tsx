@@ -207,7 +207,13 @@ async function openAssistantDialog(user: UserEvent) {
   const table = await screen.findByRole('table', {
     name: '선택한 분반 기본 설정',
   });
-  await user.click(within(table).getByRole('button', { name: '조교 관리' }));
+  await user.click(within(table).getByRole('button', { name: '분반 설정' }));
+  const settingsDialog = await screen.findByRole('dialog', {
+    name: '분반 정보 수정',
+  });
+  await user.click(
+    within(settingsDialog).getByRole('button', { name: '조교 관리' }),
+  );
   return screen.findByRole('dialog', { name: 'OOP-01 조교 관리' });
 }
 
@@ -281,7 +287,10 @@ describe('AdminCoursesPage', () => {
     );
     expect(router.state.location.search).toMatchObject({ sectionId: 1 });
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'OOP-01 분반' }),
+      await screen.findByRole('heading', { level: 2, name: '기본 설정' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('table', { name: '선택한 분반 기본 설정' }),
     ).toBeInTheDocument();
   });
 
@@ -354,7 +363,7 @@ describe('AdminCoursesPage', () => {
 });
 
 describe('AdminCourseDetailPage', () => {
-  it('분반 없는 상세 주소는 목록으로 이동하고 선택한 분반을 URL 기준으로 전환한다', async () => {
+  it('분반 없는 상세 주소는 목록으로 이동하고 목록에서 선택한 분반을 연다', async () => {
     const user = userEvent.setup();
     createAdminSection({
       capacity: 35,
@@ -377,18 +386,21 @@ describe('AdminCourseDetailPage', () => {
         name: 'OOP-01 분반 운영 화면 열기',
       }),
     );
-    const selector = await screen.findByRole('combobox', {
-      name: '현재 분반',
+    expect(
+      screen.queryByRole('combobox', { name: '현재 분반' }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: '강좌·분반 관리' }));
+    const updatedList = await screen.findByRole('table', {
+      name: '객체지향 프로그래밍 · 2026년 2학기 분반 목록',
     });
-    expect(selector).toHaveTextContent('OOP-01');
-
-    await user.click(selector);
     await user.click(
-      screen.getByRole('option', { name: 'OOP-02 · 화요일 3-4교시' }),
+      within(updatedList).getByRole('row', {
+        name: 'OOP-02 분반 운영 화면 열기',
+      }),
     );
 
     expect(
-      await screen.findByRole('heading', { name: 'OOP-02 분반' }),
+      await screen.findByRole('heading', { name: /^OOP-02 분반/ }),
     ).toBeInTheDocument();
     expect(router.state.location.search).toMatchObject({ sectionId: 3 });
   });
@@ -487,6 +499,21 @@ describe('AdminCourseDetailPage', () => {
     expect(
       within(dialog).getByRole('button', { name: '다운로드' }),
     ).toBeDisabled();
+  });
+
+  it('진행 일정에서 마일스톤 관리 화면으로 이동한다', async () => {
+    const user = userEvent.setup();
+    const router = renderAt('/admin/sections/1?sectionId=1');
+
+    await screen.findByRole('table', {
+      name: '분반 진행 일정',
+    });
+    await user.click(screen.getByRole('button', { name: '마일스톤 관리' }));
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/admin/milestones'),
+    );
+    expect(router.state.location.search).toMatchObject({ sectionId: 1 });
   });
 
   it('사전 정보 내역을 8명씩 나누고 페이지를 전환한다', async () => {

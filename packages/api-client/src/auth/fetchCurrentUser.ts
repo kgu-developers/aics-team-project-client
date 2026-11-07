@@ -12,7 +12,9 @@ export function mapCurrentUserResponse(
   role: AuthSessionRole,
 ): CurrentUser {
   const hasCompatibleRole =
-    (response.globalRole === 'ADMIN' && role === 'ADMIN') ||
+    ((response.globalRole === 'ADMIN' ||
+      response.globalRole === 'SUPER_ADMIN') &&
+      role === 'ADMIN') ||
     (response.globalRole === 'USER' &&
       (role === 'STUDENT' || role === 'ASSISTANT'));
 

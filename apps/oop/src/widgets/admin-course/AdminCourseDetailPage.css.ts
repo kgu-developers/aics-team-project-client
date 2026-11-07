@@ -11,23 +11,15 @@ export const page = style({
   width: '100%',
 });
 
-export const pageHeader = style({
-  alignItems: 'flex-start',
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 16,
-  justifyContent: 'space-between',
-});
-
-export const pageTitle = style({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 4,
-});
-
-export const sectionSelector = style({
-  maxWidth: 360,
-  width: '100%',
+export const visuallyHidden = style({
+  clip: 'rect(0, 0, 0, 0)',
+  height: 1,
+  margin: -1,
+  overflow: 'hidden',
+  padding: 0,
+  position: 'absolute',
+  whiteSpace: 'nowrap',
+  width: 1,
 });
 
 export const tabRow = style({

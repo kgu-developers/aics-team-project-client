@@ -89,6 +89,7 @@ function sessionUserResponse() {
 describe('cookie authentication bootstrap', () => {
   it.each([
     ['ADMIN', 'ADMIN', 'PROFESSOR'],
+    ['SUPER_ADMIN', 'ADMIN', 'PROFESSOR'],
     ['USER', 'STUDENT', 'STUDENT'],
     ['USER', 'ASSISTANT', 'ASSISTANT'],
   ])(
