@@ -7,6 +7,7 @@ import {
   FileInput,
   Heading,
   HStack,
+  Icon,
   MultiSelector,
   Tab,
   TabList,
@@ -20,6 +21,7 @@ import {
   useParams,
   useSearch,
 } from '@tanstack/react-router';
+import { Megaphone } from 'lucide-react';
 import {
   type Dispatch,
   type KeyboardEvent,
@@ -186,7 +188,10 @@ export function AdminNoticeListPage() {
 
   return (
     <div className={styles.page}>
-      <Heading level={1}>공지사항</Heading>
+      <div className={styles.pageHeading}>
+        <Icon icon={Megaphone} size='lg' />
+        <Heading level={1}>공지사항</Heading>
+      </div>
       <div className={styles.listControls}>
         <SectionSelect
           includeAll

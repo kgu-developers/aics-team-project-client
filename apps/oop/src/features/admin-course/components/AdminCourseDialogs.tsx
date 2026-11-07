@@ -22,7 +22,13 @@ import {
   VStack,
   type TimeInputProps,
 } from '@aics/design-system';
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import {
+  type FormEvent,
+  type RefObject,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   toContactWindowFormDateTime,
@@ -457,15 +463,19 @@ export function CourseFormDialog({
 }
 
 export function SectionSettingsDialog({
+  assistantManagementButtonRef,
   isOpen,
   onClose,
   onDeleted,
+  onManageAssistants,
   onSaved,
   section,
 }: {
+  assistantManagementButtonRef?: RefObject<HTMLButtonElement | null>;
   isOpen: boolean;
   onClose: () => void;
   onDeleted: () => Promise<boolean>;
+  onManageAssistants?: (section: AdminOopSectionDto) => void;
   onSaved: () => Promise<boolean>;
   section: AdminOopSectionDto | null;
 }) {
@@ -817,6 +827,16 @@ export function SectionSettingsDialog({
           </Text>
         ) : null}
         <HStack className={styles.dialogActions} gap={2} justify='end'>
+          {section && onManageAssistants ? (
+            <Button
+              isDisabled={isPending}
+              label='조교 관리'
+              onClick={() => onManageAssistants(section)}
+              ref={assistantManagementButtonRef}
+              type='button'
+              variant='secondary'
+            />
+          ) : null}
           {isDeleteConfirming ? (
             <>
               <Button

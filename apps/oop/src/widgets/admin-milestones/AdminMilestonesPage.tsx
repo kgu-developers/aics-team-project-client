@@ -5,6 +5,7 @@ import {
   Divider,
   EmptyState,
   Heading,
+  Icon,
   IconButton,
   Selector,
   SelectorOption,
@@ -13,7 +14,7 @@ import {
   Text,
 } from '@aics/design-system';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { Pencil } from 'lucide-react';
+import { Flag, Pencil } from 'lucide-react';
 import { type KeyboardEvent, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -206,7 +207,10 @@ export default function AdminMilestonesPage() {
   return (
     <div className={styles.page}>
       <div className={styles.titleRow}>
-        <Heading level={1}>마일스톤 관리</Heading>
+        <div className={styles.pageHeading}>
+          <Icon icon={Flag} size='lg' />
+          <Heading level={1}>마일스톤 관리</Heading>
+        </div>
         <Link className={styles.backLink} to={ROUTES.ADMIN}>
           ← 홈으로
         </Link>

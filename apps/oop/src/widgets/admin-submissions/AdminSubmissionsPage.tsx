@@ -10,6 +10,7 @@ import {
   EmptyState,
   Heading,
   HStack,
+  Icon,
   IconButton,
   proportional,
   Tab,
@@ -19,7 +20,7 @@ import {
   Text,
 } from '@aics/design-system';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { ArrowDown, ArrowDownUp, ArrowUp } from 'lucide-react';
+import { ArrowDown, ArrowDownUp, ArrowUp, ClipboardCheck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -63,7 +64,10 @@ import { AdminGeneralMessageDialog } from '~/features/team-message/components';
 import { AdminPresentationEvaluationEndDialog } from './AdminPresentationEvaluationEndDialog';
 import { AdminPresentationEvaluationSettingsDialog } from './AdminPresentationEvaluationSettingsDialog';
 import { AdminPresentationEvaluationStartDialog } from './AdminPresentationEvaluationStartDialog';
-import { getPresentationEvaluationSetupStatus } from './adminPresentationOrder';
+import {
+  getPresentationEvaluationStartReadiness,
+  hasConfiguredPresentationOrders,
+} from './adminPresentationOrder';
 import { AdminPresentationUnevaluatedTeams } from './AdminPresentationUnevaluatedTeams';
 import { AdminSubmissionFeedbackHistory } from './AdminSubmissionFeedbackHistory';
 import * as styles from './AdminSubmissionsPage.css';
@@ -533,17 +537,13 @@ export default function AdminSubmissionsPage() {
     presentationEvaluationMilestone?.schedule.evaluationClosesAt ?? null;
   const isPresentationMilestonePublished =
     presentationEvaluationMilestone?.status === 'PUBLISHED';
-  const presentationSetupStatus =
+  const presentationStartReadiness =
     presentationEvaluationMilestone &&
     presentationEvaluationsQuery.data &&
     presentationTeamsQuery.data &&
     presentationOrdersQuery.data
-      ? getPresentationEvaluationSetupStatus({
+      ? getPresentationEvaluationStartReadiness({
           criteriaCount: presentationEvaluationsQuery.data.criteria.length,
-          evaluationStartsAt: isPresentationMilestonePublished
-            ? presentationEvaluationStartsAt
-            : null,
-          now: presentationReadinessClock,
           teams: presentationOrderTeams,
         })
       : null;
@@ -557,14 +557,48 @@ export default function AdminSubmissionsPage() {
   const presentationEvaluationClosesAtInstant = seoulInstant(
     presentationEvaluationEndsAt,
   );
+  const hasConfiguredPresentationEvaluationPeriod =
+    !Number.isNaN(presentationEvaluationStartsAtInstant) &&
+    !Number.isNaN(presentationEvaluationClosesAtInstant) &&
+    presentationEvaluationStartsAtInstant <
+      presentationEvaluationClosesAtInstant;
+  const isPresentationConfigurationLoading =
+    presentationEvaluationsQuery.isPending ||
+    presentationTeamsQuery.isPending ||
+    presentationOrdersQuery.isPending;
+  const hasPresentationConfigurationError =
+    presentationEvaluationsQuery.isError ||
+    presentationTeamsQuery.isError ||
+    presentationOrdersQuery.isError;
+  const hasConfiguredPresentationEvaluationOrder =
+    !isPresentationConfigurationLoading &&
+    hasConfiguredPresentationOrders(presentationOrderTeams);
+  const hasConfiguredPresentationEvaluationCriteria =
+    (presentationEvaluationsQuery.data?.criteria.length ?? 0) > 0;
+  const presentationConfigurationBadge = isPresentationConfigurationLoading
+    ? { label: '설정 확인 중', variant: 'neutral' as const }
+    : hasPresentationConfigurationError
+      ? { label: '설정 상태 확인 실패', variant: 'neutral' as const }
+      : !isPresentationMilestonePublished
+        ? { label: '마일스톤 공개 필요', variant: 'neutral' as const }
+        : presentationStartReadiness?.isComplete
+          ? {
+              label: isPresentationEvaluationStarted
+                ? '설정 완료'
+                : '시작 준비 완료',
+              variant: 'success' as const,
+            }
+          : hasConfiguredPresentationEvaluationOrder
+            ? { label: '평가 항목 설정 필요', variant: 'neutral' as const }
+            : hasConfiguredPresentationEvaluationCriteria
+              ? { label: '발표 순서 설정 필요', variant: 'neutral' as const }
+              : { label: '순서·항목 설정 필요', variant: 'neutral' as const };
   const isPresentationEvaluationEnded =
     isPresentationEvaluationStarted &&
     !Number.isNaN(presentationEvaluationClosesAtInstant) &&
     presentationReadinessClock >= presentationEvaluationClosesAtInstant;
-  const hasPresentationEvaluationWindow = Boolean(
-    presentationEvaluationMilestone?.schedule.evaluationOpensAt &&
-    presentationEvaluationMilestone?.schedule.evaluationClosesAt,
-  );
+  const hasPresentationEvaluationWindow =
+    hasConfiguredPresentationEvaluationPeriod;
   const presentationMilestoneCandidates =
     sectionMilestonesQuery.data?.content.filter(
       milestone => milestone.type === 'PRESENTATION',
@@ -756,7 +790,10 @@ export default function AdminSubmissionsPage() {
     <div className={styles.page}>
       <div className={styles.header}>
         <div className={styles.headerContent}>
-          <Heading level={1}>제출·평가 현황</Heading>
+          <div className={styles.pageHeading}>
+            <Icon icon={ClipboardCheck} size='lg' />
+            <Heading level={1}>제출·평가 현황</Heading>
+          </div>
           {accessibleSections.length > 0 ? (
             <TabList
               aria-label='조회할 분반'
@@ -784,21 +821,32 @@ export default function AdminSubmissionsPage() {
         id={sectionPanelId}
         role='tabpanel'
       >
-        <TabList
-          aria-label='마일스톤 선택'
-          onChange={selectTab}
-          role='tablist'
-          value={activeTab.id}
-        >
-          {MILESTONE_TABS.map(tab => (
-            <Tab
-              key={tab.id}
-              label={tab.label}
-              panelId={`submission-panel-${tab.id}`}
-              value={tab.id}
-            />
-          ))}
-        </TabList>
+        <div className={styles.milestoneTabRow}>
+          <TabList
+            aria-label='마일스톤 선택'
+            onChange={selectTab}
+            role='tablist'
+            value={activeTab.id}
+          >
+            {MILESTONE_TABS.map(tab => (
+              <Tab
+                key={tab.id}
+                label={tab.label}
+                panelId={`submission-panel-${tab.id}`}
+                value={tab.id}
+              />
+            ))}
+          </TabList>
+          <Button
+            isDisabled={!isAccessibleSection}
+            label='일반 메시지 보내기'
+            onClick={() => {
+              setGeneralMessageTeamId(undefined);
+              setIsGeneralMessageDialogOpen(true);
+            }}
+            variant='secondary'
+          />
+        </div>
 
         <div
           aria-label={`${activeTab.label} 제출·평가 내용`}
@@ -823,52 +871,47 @@ export default function AdminSubmissionsPage() {
               />
             ) : (
               <>
-                <div className={styles.evaluationHeader}>
-                  <div className={styles.evaluationHeadingGroup}>
-                    <div className={styles.evaluationTitle}>
-                      <Heading level={2}>발표 평가 목록</Heading>
-                      {presentationSetupStatus ? (
-                        <Badge
-                          label={
-                            presentationSetupStatus.isComplete
-                              ? '설정 완료'
-                              : '설정 필요'
-                          }
-                          variant={
-                            presentationSetupStatus.isComplete
-                              ? 'success'
-                              : 'neutral'
-                          }
-                        />
-                      ) : null}
-                      {isPresentationEvaluationStarted ? (
-                        <Badge
-                          label={
-                            isPresentationEvaluationEnded
-                              ? '평가 종료'
-                              : '평가 진행 중'
-                          }
-                          variant={
-                            isPresentationEvaluationEnded
-                              ? 'neutral'
-                              : 'success'
-                          }
-                        />
-                      ) : null}
-                    </div>
-                    <Text color='secondary' type='supporting'>
-                      {formatPresentationEvaluationPeriod(
-                        presentationEvaluationStartsAt,
-                        presentationEvaluationEndsAt,
-                      )}
-                    </Text>
+                <div
+                  aria-label='발표 평가 운영 설정'
+                  className={styles.evaluationHeader}
+                >
+                  <div className={styles.evaluationPeriod}>
+                    {hasConfiguredPresentationEvaluationPeriod ? (
+                      <>
+                        <Text weight='medium'>
+                          {formatPresentationEvaluationPeriod(
+                            presentationEvaluationStartsAt,
+                            presentationEvaluationEndsAt,
+                          )}
+                        </Text>
+                        <Text aria-hidden='true' color='secondary'>
+                          ·
+                        </Text>
+                      </>
+                    ) : null}
+                    <Badge
+                      label={presentationConfigurationBadge.label}
+                      variant={presentationConfigurationBadge.variant}
+                    />
+                    {isPresentationEvaluationStarted ? (
+                      <Badge
+                        label={
+                          isPresentationEvaluationEnded
+                            ? '평가 종료'
+                            : '평가 진행 중'
+                        }
+                        variant={
+                          isPresentationEvaluationEnded ? 'neutral' : 'success'
+                        }
+                      />
+                    ) : null}
                   </div>
                   <div className={styles.evaluationActions}>
                     {!isPresentationEvaluationStarted ? (
                       <>
                         <Button
                           isDisabled={
-                            !presentationSetupStatus?.isComplete ||
+                            !presentationStartReadiness?.isComplete ||
                             !isPresentationMilestonePublished
                           }
                           label='발표 평가 시작'
@@ -876,11 +919,11 @@ export default function AdminSubmissionsPage() {
                           tooltip={
                             !isPresentationMilestonePublished
                               ? '발표 마일스톤을 공개한 뒤 평가를 시작할 수 있습니다.'
-                              : presentationSetupStatus?.isComplete
+                              : presentationStartReadiness?.isComplete
                                 ? hasPresentationEvaluationWindow
                                   ? '기존 시작 예정 시각 대신 지금부터 평가를 시작합니다.'
                                   : '평가 진행 시간을 정한 뒤 학생 발표 평가를 시작합니다.'
-                                : '평가 항목과 모든 팀의 발표 순서를 먼저 설정해 주세요.'
+                                : '평가 항목과 모든 팀의 발표 순서를 설정한 뒤 평가 진행 시간을 정해 시작할 수 있습니다.'
                           }
                         />
                         <Button
@@ -967,30 +1010,20 @@ export default function AdminSubmissionsPage() {
                     )}
                   </div>
                 </div>
-                {presentationSetupStatus &&
-                !presentationSetupStatus.isComplete ? (
-                  <div
-                    className={cx(
-                      styles.setupWarning,
-                      presentationSetupStatus.urgency !== 'upcoming'
-                        ? styles.setupWarningUrgent
-                        : '',
-                    )}
-                    role='alert'
-                  >
-                    <Text>
-                      {presentationSetupStatus.urgency === 'started'
-                        ? '발표 평가가 시작되었지만 설정이 완료되지 않았습니다.'
-                        : presentationSetupStatus.urgency === 'imminent'
-                          ? '발표 평가 시작이 24시간 이내입니다. 지금 설정을 완료해 주세요.'
-                          : '발표 평가 설정이 완료되지 않았습니다. 평가 시작 전에 확인해 주세요.'}
-                    </Text>
-                    <div className={styles.setupWarningList}>
-                      {presentationSetupStatus.issues.map(issue => (
+                {!isPresentationEvaluationStarted &&
+                presentationStartReadiness &&
+                !presentationStartReadiness.isComplete ? (
+                  <Card className={styles.setupNotice} variant='muted'>
+                    <div className={styles.setupNoticeContent} role='alert'>
+                      <Text>
+                        발표 순서와 평가 항목을 설정한 뒤 발표 평가를 시작할 수
+                        있습니다.
+                      </Text>
+                      {presentationStartReadiness.issues.map(issue => (
                         <Text key={issue}>{issue}</Text>
                       ))}
                     </div>
-                  </div>
+                  </Card>
                 ) : null}
                 {hasAmbiguousPresentationMilestone ? (
                   <EmptyState
@@ -1046,16 +1079,6 @@ export default function AdminSubmissionsPage() {
                   />
                 ) : presentationEvaluationsQuery.data ? (
                   <>
-                    {presentationEvaluationsQuery.data.criteria.length === 0 ? (
-                      <Card className={styles.criteriaNotice} variant='muted'>
-                        <Text role='status'>
-                          이 분반에는 발표 평가 항목이 없습니다. 학생 발표 평가
-                          화면에 평가할 항목이 나타나지 않으니, 평가 시작 전에
-                          항목을 등록해 주세요. 평가 항목은 분반별로 관리자가
-                          등록하며, 위 '평가 설정'에서 추가할 수 있습니다.
-                        </Text>
-                      </Card>
-                    ) : null}
                     <Card>
                       <Table
                         className={styles.clickableTable}
@@ -1241,17 +1264,6 @@ export default function AdminSubmissionsPage() {
               />
             ) : peerEvaluationsQuery.data ? (
               <>
-                <div className={styles.evaluationHeader}>
-                  <Heading level={2}>상호평가 목록</Heading>
-                  <Button
-                    label='일반 메시지 보내기'
-                    onClick={() => {
-                      setGeneralMessageTeamId(undefined);
-                      setIsGeneralMessageDialogOpen(true);
-                    }}
-                    variant='secondary'
-                  />
-                </div>
                 {peerEvaluationTeams.length === 0 ? (
                   <EmptyState
                     description='상호평가 양식 또는 팀 구성을 확인해 주세요.'
@@ -1315,18 +1327,6 @@ export default function AdminSubmissionsPage() {
             ) : null
           ) : activeTab.isListAvailable ? (
             <>
-              <div className={styles.evaluationHeader}>
-                <Heading level={2}>{activeTab.label} 목록</Heading>
-                <Button
-                  isDisabled={!isAccessibleSection}
-                  label='일반 메시지 보내기'
-                  onClick={() => {
-                    setGeneralMessageTeamId(undefined);
-                    setIsGeneralMessageDialogOpen(true);
-                  }}
-                  variant='secondary'
-                />
-              </div>
               {accessibleSectionIds.length === 0 ? (
                 <EmptyState
                   description='담당 분반이 없어 제출물을 조회할 수 없습니다.'

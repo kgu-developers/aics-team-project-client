@@ -309,7 +309,6 @@ export default function AdminSubmissionDetailPage() {
   const relatedMeetingsQuery = useAdminMeetingRecordListQuery(
     accessibleSectionIds,
     {
-      milestoneId: detail?.milestoneId,
       page: relatedMeetingsPage,
       sectionId: search.sectionId,
       size: 100,
@@ -783,27 +782,26 @@ export default function AdminSubmissionDetailPage() {
           <section className={styles.relatedMeetings}>
             <section className={styles.section}>
               <Heading level={3}>
-                연결된 회의록
+                팀 전체 회의록
                 {relatedMeetingsQuery.data
                   ? ` (${relatedMeetingsQuery.data.pageable.totalElements}건)`
                   : ''}
               </Heading>
               {relatedMeetingsQuery.isPending ? (
                 <Text aria-live='polite' role='status'>
-                  연결된 회의록을 불러오는 중입니다.
+                  팀 전체 회의록을 불러오는 중입니다.
                 </Text>
               ) : relatedMeetingsQuery.isError ? (
                 <EmptyState
                   description='잠시 후 다시 시도해 주세요.'
-                  title='연결된 회의록을 불러오지 못했습니다.'
+                  title='팀 전체 회의록을 불러오지 못했습니다.'
                 />
               ) : relatedMeetings.length === 0 ? (
                 <Text className={styles.sectionDescription}>
-                  이 마일스톤에 연결된 회의록이 없습니다.
+                  이 팀의 회의록이 없습니다.
                 </Text>
               ) : (
                 <AdminLinkedMeetingsTable
-                  authorLabel='작성자 학번'
                   records={relatedMeetings.map(meeting => ({
                     authorName: meeting.authorId,
                     id: meeting.id,

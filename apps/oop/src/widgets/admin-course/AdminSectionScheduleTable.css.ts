@@ -1,5 +1,5 @@
 import { tokens } from '@aics/design-system';
-import { style } from '@vanilla-extract/css';
+import { globalStyle, style } from '@vanilla-extract/css';
 
 export const root = style({
   display: 'flex',
@@ -15,12 +15,36 @@ export const header = style({
   justifyContent: 'space-between',
 });
 
+export const scheduleTable = style({});
+
+globalStyle(`${scheduleTable} tbody tr`, {
+  transition: 'background-color 120ms ease',
+});
+
+globalStyle(`${scheduleTable} tbody tr:hover td`, {
+  background: tokens.color.background.muted,
+});
+
 export const milestoneLink = style({
-  color: tokens.color.text.accent,
-  fontWeight: 600,
-  textDecoration: 'underline',
-  textUnderlineOffset: 3,
+  color: tokens.color.text.primary,
+  textDecoration: 'none',
   selectors: {
+    '&:focus-visible': {
+      outline: `2px solid ${tokens.color.accent}`,
+      outlineOffset: 2,
+    },
+  },
+});
+
+export const milestoneAction = style({
+  alignItems: 'center',
+  color: tokens.color.text.secondary,
+  display: 'inline-flex',
+  padding: 4,
+  selectors: {
+    '&:hover': {
+      color: tokens.color.text.primary,
+    },
     '&:focus-visible': {
       outline: `2px solid ${tokens.color.accent}`,
       outlineOffset: 2,

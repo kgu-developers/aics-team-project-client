@@ -16,7 +16,7 @@ export type CurrentUserResponse = {
   email: string;
   name: string;
   phone: string;
-  globalRole: 'ADMIN' | 'USER';
+  globalRole: 'ADMIN' | 'SUPER_ADMIN' | 'USER';
   sections?: SectionResponse[];
   teamId?: number | null;
 };
