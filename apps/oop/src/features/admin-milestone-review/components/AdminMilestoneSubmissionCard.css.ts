@@ -56,7 +56,8 @@ export const summary = style({
 export const footer = style({
   alignItems: 'stretch',
   borderTop: `1px solid ${tokens.color.border.base}`,
-  display: 'flex',
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
   minHeight: 43,
 });
 
@@ -66,7 +67,9 @@ export const footerMetric = style({
   flex: 1,
   justifyContent: 'center',
   minWidth: 0,
+  overflow: 'hidden',
   padding: 10,
+  whiteSpace: 'nowrap',
 });
 
 export const footerTrailing = style({
@@ -74,7 +77,11 @@ export const footerTrailing = style({
   borderLeft: `1px solid ${tokens.color.border.base}`,
   display: 'flex',
   flex: 1,
+  gap: 10,
+  justifyContent: 'space-between',
   minWidth: 0,
+  overflow: 'hidden',
+  padding: '0 8px',
 });
 
 export const footerTrailingLabel = style({
@@ -83,7 +90,9 @@ export const footerTrailingLabel = style({
   flex: 1,
   justifyContent: 'center',
   minWidth: 0,
-  padding: 10,
+  overflow: 'hidden',
+  padding: '10px 0',
+  whiteSpace: 'nowrap',
 });
 
 export const label = style({
@@ -110,6 +119,7 @@ export const detailLink = style({
   color: tokens.color['on-accent'],
   cursor: 'pointer',
   display: 'inline-flex',
+  flexShrink: 0,
   font: 'inherit',
   fontSize: 14,
   fontWeight: 500,

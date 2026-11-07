@@ -6,16 +6,9 @@ import {
   Text,
   VStack,
 } from '@aics/design-system';
-import { Link } from '@tanstack/react-router';
 
-import { ROUTES } from '~/app/constants/routes';
-
-import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
-import { AdminUnreadDot } from '~/shared/ui/AdminUnreadDot';
-
-import { useAdminMeetingReadState } from '~/features/admin-meeting-read/useAdminMeetingReadState';
+import { AdminLinkedMeetingsTable } from '~/features/admin-meeting/components';
 import { useAdminPresentationEvaluationTeamQuery } from '~/features/admin-milestone-review/queries';
-import { useAuthStore } from '~/features/auth/authStore';
 
 import * as styles from './AdminPresentationEvaluationSettingsDialog.css';
 
@@ -34,8 +27,6 @@ export function AdminPresentationEvaluationTeamDetailDialog({
   sectionId,
   teamId,
 }: Props) {
-  const currentUser = useAuthStore(state => state.currentUser);
-  const meetingReadState = useAdminMeetingReadState(currentUser?.id);
   const query = useAdminPresentationEvaluationTeamQuery(
     sectionId,
     isOpen ? teamId : undefined,
@@ -77,7 +68,6 @@ export function AdminPresentationEvaluationTeamDetailDialog({
             <Text color='secondary'>
               프로젝트 주제: {detail.projectTitle ?? '-'}
             </Text>
-            <Heading level={3}>평가자별 결과</Heading>
             <Table
               columns={[
                 {
@@ -123,27 +113,11 @@ export function AdminPresentationEvaluationTeamDetailDialog({
               textOverflow='wrap'
               verticalAlign='middle'
             />
-            <Heading level={3}>팀 회의록</Heading>
+            <Heading level={3}>팀 전체 회의록</Heading>
             {detail.meetingRecords.length === 0 ? (
-              <Text color='secondary'>연결된 회의록이 없습니다.</Text>
+              <Text color='secondary'>이 팀의 회의록이 없습니다.</Text>
             ) : (
-              <VStack gap={1}>
-                {detail.meetingRecords.map(record => (
-                  <Link
-                    className={styles.meetingLink}
-                    key={record.id}
-                    params={{ meetingId: String(record.id) }}
-                    to={ROUTES.ADMIN_MEETING_DETAIL}
-                  >
-                    {!meetingReadState.isRead(record.id) ? (
-                      <AdminUnreadDot />
-                    ) : null}
-                    {record.title} · {record.phase} ·{' '}
-                    {formatSeoulDateTime(record.meetingAt)} · 참가자{' '}
-                    {record.participantCount}명
-                  </Link>
-                ))}
-              </VStack>
+              <AdminLinkedMeetingsTable records={detail.meetingRecords} />
             )}
           </>
         ) : null}

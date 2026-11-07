@@ -13,10 +13,6 @@ export const content = style({
   overflowY: 'auto',
   paddingRight: 4,
 });
-export const meetingLink = style({
-  color: 'var(--color-text-accent)',
-  textDecoration: 'underline',
-});
 export const dialogActions = style({
   display: 'flex',
   justifyContent: 'flex-end',

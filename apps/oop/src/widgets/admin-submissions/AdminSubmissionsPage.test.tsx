@@ -852,7 +852,7 @@ describe('AdminSubmissionsPage', () => {
       screen.queryByText('SUBMISSION / READ ONLY'),
     ).not.toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: '연결된 회의록 (1건)' }),
+      await screen.findByRole('heading', { name: '팀 전체 회의록 (2건)' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('row', { name: /프로젝트 킥오프 회의록 보기/ }),
@@ -996,7 +996,7 @@ describe('AdminSubmissionsPage', () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(
-      screen.getByRole('heading', { name: '연결된 회의록 (1건)' }),
+      screen.getByRole('heading', { name: '팀 전체 회의록 (2건)' }),
     ).toBeInTheDocument();
 
     await user.type(
@@ -1040,13 +1040,13 @@ describe('AdminSubmissionsPage', () => {
       screen.queryByText('제안서의 문제 정의와 구현 범위를 보완해 주세요.'),
     ).not.toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: '연결된 회의록 (1건)' }),
+      await screen.findByRole('heading', { name: '팀 전체 회의록 (2건)' }),
     ).toBeInTheDocument();
     const midReportFeedbackHeading = screen.getByRole('heading', {
       name: /^중간 보고서 피드백 \(교수 피드백 \d+건\)$/,
     });
     const midReportMeetingsHeading = screen.getByRole('heading', {
-      name: '연결된 회의록 (1건)',
+      name: '팀 전체 회의록 (2건)',
     });
     expect(
       midReportFeedbackHeading.compareDocumentPosition(
@@ -1130,7 +1130,7 @@ describe('AdminSubmissionsPage', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('연결된 회의록이 여러 페이지면 다음 페이지를 조회한다', async () => {
+  it('팀 전체 회의록이 여러 페이지면 다음 페이지를 조회한다', async () => {
     const user = userEvent.setup();
     const requestedPages = vi.fn();
 
@@ -1458,7 +1458,10 @@ describe('AdminSubmissionsPage', () => {
       name: '평가 설정',
     });
     await waitFor(() => expect(settingsButton).toBeEnabled());
-    expect(screen.getByText('설정 완료')).toBeVisible();
+    expect(
+      screen.queryByRole('heading', { name: '발표 평가 목록' }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('시작 준비 완료')).toBeVisible();
     expect(
       screen.getByText('평가 기간 2026-11-19 09:00 ~ 2026-11-26 09:00'),
     ).toBeVisible();
@@ -1541,7 +1544,7 @@ describe('AdminSubmissionsPage', () => {
     expect(getTeamRowOrder()[3]).toContain('OOP-01 - 4팀');
   });
 
-  it('발표 평가 설정이 부족하면 평가 시작 전 경고와 설정 필요 상태를 표시한다', async () => {
+  it('발표 순서만 설정된 경우 평가 항목 설정 필요 상태를 표시한다', async () => {
     const evaluationStartsAt = new Date(
       Date.now() + 48 * 60 * 60 * 1000,
     ).toISOString();
@@ -1577,17 +1580,21 @@ describe('AdminSubmissionsPage', () => {
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
 
-    expect(await screen.findByText('설정 필요')).toBeVisible();
-    const warning = screen
+    expect(await screen.findByText('평가 항목 설정 필요')).toBeVisible();
+    const setupNotice = screen
       .getByText(
-        '발표 평가 설정이 완료되지 않았습니다. 평가 시작 전에 확인해 주세요.',
+        '발표 순서와 평가 항목을 설정한 뒤 발표 평가를 시작할 수 있습니다.',
       )
       .closest('[role="alert"]');
-    expect(warning).not.toBeNull();
-    expect(warning).toHaveTextContent(
-      '발표 평가 설정이 완료되지 않았습니다. 평가 시작 전에 확인해 주세요.',
+    expect(setupNotice).not.toBeNull();
+    expect(setupNotice).toHaveTextContent(
+      '평가 항목을 1개 이상 추가해 주세요.',
     );
-    expect(warning).toHaveTextContent('평가 항목을 1개 이상 추가해 주세요.');
+    expect(
+      screen.queryByText(
+        '발표 평가 설정이 완료되지 않았습니다. 평가 시작 전에 확인해 주세요.',
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it('발표 평가 항목이 1개여도 목록에서는 완료 상태만 표시한다', async () => {
@@ -1621,7 +1628,7 @@ describe('AdminSubmissionsPage', () => {
     ).toBeVisible();
   });
 
-  it('평가 기간이 없는 단일 발표 마일스톤도 제출물 화면에서 시작을 준비한다', async () => {
+  it('평가 기간이 없어도 순서와 항목이 설정된 발표 평가는 시작을 준비한다', async () => {
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_MILESTONES('1')}`,
@@ -1645,6 +1652,8 @@ describe('AdminSubmissionsPage', () => {
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
 
+    expect(await screen.findByText('시작 준비 완료')).toBeVisible();
+    expect(screen.queryByText('기간 설정 필요')).not.toBeInTheDocument();
     const startButton = await screen.findByRole('button', {
       name: '발표 평가 시작',
     });
