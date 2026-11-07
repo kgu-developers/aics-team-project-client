@@ -460,12 +460,14 @@ export function SectionSettingsDialog({
   isOpen,
   onClose,
   onDeleted,
+  onManageAssistants,
   onSaved,
   section,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onDeleted: () => Promise<boolean>;
+  onManageAssistants?: (section: AdminOopSectionDto) => void;
   onSaved: () => Promise<boolean>;
   section: AdminOopSectionDto | null;
 }) {
@@ -817,6 +819,15 @@ export function SectionSettingsDialog({
           </Text>
         ) : null}
         <HStack className={styles.dialogActions} gap={2} justify='end'>
+          {section && onManageAssistants ? (
+            <Button
+              isDisabled={isPending}
+              label='조교 관리'
+              onClick={() => onManageAssistants(section)}
+              type='button'
+              variant='secondary'
+            />
+          ) : null}
           {isDeleteConfirming ? (
             <>
               <Button

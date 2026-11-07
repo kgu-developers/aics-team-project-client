@@ -12,9 +12,8 @@ import {
   Dialog,
   EmptyState,
   Heading,
+  IconButton,
   proportional,
-  Selector,
-  SelectorOption,
   Tab,
   TabList,
   Table,
@@ -23,9 +22,9 @@ import {
   type DateInputProps,
 } from '@aics/design-system';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
+import { Pencil } from 'lucide-react';
 import {
   forwardRef,
-  useCallback,
   useEffect,
   useMemo,
   useState,
@@ -47,7 +46,6 @@ import {
   contactVisibilityStatus,
 } from '~/features/admin-course/model/courseLabels';
 import { useAdminOopCourseQuery } from '~/features/admin-course/queries';
-import { ADMIN_SECTION_FILTER_WIDTH } from '~/features/admin-section/filterLayout';
 import { useAdminOopSectionsQuery } from '~/features/admin-section/queries';
 import { useDownloadAdminSectionArtifactsExcelMutation } from '~/features/admin-section-artifact/queries';
 import EnrollmentImportDialog from '~/features/admin-student-team/components/EnrollmentImportDialog';
@@ -191,23 +189,19 @@ export default function AdminCourseDetailPage({
   const detailSection = detailSectionId
     ? sections.find(section => String(section.id) === detailSectionId)
     : undefined;
+  const detailSectionLabel = detailSection
+    ? formatAdminSectionLabel(detailSection)
+    : '';
+  const detailSectionBreadcrumb = detailSection
+    ? detailSectionLabel === detailSection.code
+      ? `${detailSection.code} 분반`
+      : detailSectionLabel.replace(
+          `${detailSection.code} · `,
+          `${detailSection.code} 분반 · `,
+        )
+    : '';
   const detailRosterStatusQuery =
     useAdminRosterImportStatusQuery(detailSectionId);
-
-  const selectDetailSection = useCallback(
-    (nextSectionId: string, nextTab: AdminCourseDetailTab = 'basic') => {
-      setDetailSectionId(nextSectionId);
-      setActiveTab(nextTab);
-      void navigate({
-        search: previous => ({
-          ...previous,
-          sectionId: Number(nextSectionId),
-          tab: nextTab === 'basic' ? undefined : nextTab,
-        }),
-      });
-    },
-    [navigate],
-  );
 
   async function refreshCurrentUserSections() {
     if (!sessionRole) return false;
@@ -438,32 +432,10 @@ export default function AdminCourseDetailPage({
         <BreadcrumbItem as={CourseBreadcrumbLink} href={ROUTES.ADMIN_SECTIONS}>
           강좌·분반 관리
         </BreadcrumbItem>
-        <BreadcrumbItem isCurrent>{detailSection.code} 분반</BreadcrumbItem>
+        <BreadcrumbItem isCurrent>{detailSectionBreadcrumb}</BreadcrumbItem>
       </Breadcrumbs>
 
-      <header className={styles.pageHeader}>
-        <div className={styles.pageTitle}>
-          <Heading level={1}>{detailSection.code} 분반</Heading>
-        </div>
-      </header>
-
-      {detailSection && sections.length > 1 ? (
-        <div className={styles.sectionSelector}>
-          <Selector
-            label='현재 분반'
-            onChange={selectDetailSection}
-            options={sections.map(section => ({
-              label: formatAdminSectionLabel(section),
-              value: String(section.id),
-            }))}
-            renderOption={option => (
-              <SelectorOption label={option.label ?? option.value} />
-            )}
-            value={detailSectionId ?? ''}
-            width={ADMIN_SECTION_FILTER_WIDTH}
-          />
-        </div>
-      ) : null}
+      <h1 className={styles.visuallyHidden}>{detailSectionBreadcrumb}</h1>
 
       {detailSection ? (
         <div className={styles.tabRow}>
@@ -511,14 +483,9 @@ export default function AdminCourseDetailPage({
             <div className={styles.blockHeader}>
               <div>
                 <Heading id='section-settings-title' level={2}>
-                  분반 기본 설정
+                  기본 설정
                 </Heading>
               </div>
-              <Button
-                label='분반 설정'
-                onClick={() => setSectionToEdit(detailSection)}
-                variant='secondary'
-              />
             </div>
             <Card padding={0}>
               <Table
@@ -559,17 +526,25 @@ export default function AdminCourseDetailPage({
                     header: '조교',
                     key: 'id',
                     renderCell: section => (
-                      <span className={styles.assistantCell}>
-                        <AssistantCount sectionId={String(section.id)} />
-                        <Button
-                          label='조교 관리'
-                          onClick={() => setAssistantSection(section)}
-                          size='sm'
-                          variant='ghost'
-                        />
-                      </span>
+                      <AssistantCount sectionId={String(section.id)} />
                     ),
-                    width: proportional(1, { minWidth: 150 }),
+                    width: proportional(0.8, { minWidth: 100 }),
+                  },
+                  {
+                    align: 'center',
+                    header: '관리',
+                    key: 'capacity',
+                    renderCell: section => (
+                      <IconButton
+                        icon={<Pencil aria-hidden='true' size={16} />}
+                        label='분반 설정'
+                        onClick={() => setSectionToEdit(section)}
+                        size='sm'
+                        tooltip='분반 설정'
+                        variant='ghost'
+                      />
+                    ),
+                    width: proportional(0.45, { minWidth: 64 }),
                   },
                 ]}
                 data={[detailSection]}
@@ -582,12 +557,20 @@ export default function AdminCourseDetailPage({
 
           <AdminSectionScheduleTable
             actions={
-              <Button
-                label='제출물 현황 다운로드'
-                onClick={openArtifactDownloadDialog}
-                size='sm'
-                variant='secondary'
-              />
+              <div className={styles.rowActions}>
+                <Button
+                  label='제출물 현황 다운로드'
+                  onClick={openArtifactDownloadDialog}
+                  size='sm'
+                  variant='secondary'
+                />
+                <Button
+                  label='마일스톤 관리'
+                  onClick={() => void navigate({ to: ROUTES.ADMIN_MILESTONES })}
+                  size='sm'
+                  variant='primary'
+                />
+              </div>
             }
             sectionId={String(detailSection.id)}
           />
@@ -617,6 +600,10 @@ export default function AdminCourseDetailPage({
           isOpen
           onClose={() => setSectionToEdit(null)}
           onDeleted={refreshSectionsAndSession}
+          onManageAssistants={section => {
+            setSectionToEdit(null);
+            setAssistantSection(section);
+          }}
           onSaved={refreshSectionsAndSession}
           section={sectionToEdit}
         />

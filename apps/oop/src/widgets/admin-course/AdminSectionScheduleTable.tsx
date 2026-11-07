@@ -1,5 +1,6 @@
 import { Card, EmptyState, Heading, Table, Text } from '@aics/design-system';
 import { Link } from '@tanstack/react-router';
+import { ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -54,6 +55,7 @@ export default function AdminSectionScheduleTable({
         <Card padding={0}>
           <Table
             aria-label='분반 진행 일정'
+            className={styles.scheduleTable}
             columns={[
               { align: 'start', header: '주차', key: 'weekNumber' },
               {
@@ -91,6 +93,22 @@ export default function AdminSectionScheduleTable({
                 header: '상태',
                 key: 'status',
                 renderCell: milestone => milestoneStatusLabel[milestone.status],
+              },
+              {
+                align: 'end',
+                header: '',
+                key: 'id',
+                renderCell: milestone => (
+                  <Link
+                    aria-label={`${milestone.title} 상세 보기`}
+                    className={styles.milestoneAction}
+                    params={{ milestoneId: String(milestone.id) }}
+                    search={{ sectionId: Number(sectionId) }}
+                    to={ROUTES.ADMIN_MILESTONE_DETAIL}
+                  >
+                    <ChevronRight aria-hidden='true' size={18} />
+                  </Link>
+                ),
               },
             ]}
             data={milestones}
