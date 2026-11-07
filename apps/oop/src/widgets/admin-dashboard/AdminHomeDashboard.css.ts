@@ -8,6 +8,12 @@ export const dashboard = style({
   minHeight: '100dvh',
   '@media': { '(max-width: 900px)': { gridTemplateColumns: '1fr' } },
 });
+
+export const pageHeading = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: tokens.spacing['3'],
+});
 export const sidebar = style({
   background: tokens.color.text.primary,
   color: tokens.color.background.surface,

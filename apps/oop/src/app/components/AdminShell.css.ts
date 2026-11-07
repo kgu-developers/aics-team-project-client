@@ -14,10 +14,9 @@ export const shell = style({
 });
 
 export const shellCollapsed = style({
-  vars: {
-    [layoutTokens.workspace['sidebar-width']]: '64px',
-  },
+  gridTemplateColumns: '0 minmax(0, 1fr)',
 });
+
 export const sidebar = style({
   alignSelf: 'start',
   background: tokens.color.text.primary,
@@ -25,6 +24,7 @@ export const sidebar = style({
   display: 'flex',
   flexDirection: 'column',
   height: '100dvh',
+  minWidth: 0,
   overflow: 'visible',
   padding: '24px 16px 16px',
   position: 'sticky',
@@ -36,15 +36,7 @@ export const sidebar = style({
 });
 
 export const sidebarCollapsed = style({
-  paddingInline: 8,
-});
-
-export const sidebarToggle = style({
-  boxShadow: '0 2px 10px rgba(10, 19, 23, 0.24)',
-  position: 'absolute',
-  right: -18,
-  top: 24,
-  zIndex: 30,
+  paddingInline: 0,
 });
 
 export const sidebarContent = style({
@@ -52,12 +44,87 @@ export const sidebarContent = style({
   flex: 1,
   flexDirection: 'column',
   minHeight: 0,
+  minWidth: 0,
   overflowY: 'auto',
 });
 
-globalStyle(`${sidebarContent}[hidden]`, {
+export const sidebarContentCollapsed = style({
   display: 'none',
+  pointerEvents: 'none',
 });
+
+export const sidebarBoundaryToggle = style({
+  alignItems: 'center',
+  background: tokens.color.background.card,
+  border: `1px solid ${tokens.color.border.base}`,
+  borderRadius: '0 8px 8px 0',
+  color: tokens.color.text.primary,
+  cursor: 'pointer',
+  display: 'inline-flex',
+  height: 40,
+  justifyContent: 'center',
+  opacity: 0,
+  padding: 0,
+  position: 'absolute',
+  right: -20,
+  top: '50%',
+  transform: 'translateY(-50%)',
+  transition: 'opacity 120ms ease, background-color 120ms ease',
+  width: 20,
+  zIndex: 1,
+  selectors: {
+    '&::before': {
+      background: 'transparent',
+      content: '',
+      height: '100dvh',
+      left: -2,
+      position: 'absolute',
+      top: '50%',
+      transform: 'translateY(-50%)',
+      width: 2,
+    },
+    '&:hover': {
+      background: tokens.color.background.muted,
+      opacity: 1,
+    },
+    '&:hover::before': {
+      background: tokens.color.accent,
+    },
+    '&:focus-visible': {
+      opacity: 1,
+      outline: `2px solid ${tokens.color.accent}`,
+      outlineOffset: 2,
+    },
+    '&:focus-visible::before': {
+      background: tokens.color.accent,
+    },
+  },
+});
+
+export const sidebarBoundaryToggleCollapsed = style({
+  borderRadius: 0,
+  height: '100dvh',
+  opacity: 0,
+  right: -18,
+  top: 0,
+  transform: 'none',
+  width: 18,
+  selectors: {
+    '&::before': {
+      display: 'none',
+    },
+    '&:hover': {
+      background: tokens.color.background.muted,
+      opacity: 1,
+    },
+    '&:hover::before': { display: 'none' },
+  },
+});
+
+globalStyle(`${sidebar}:hover ${sidebarBoundaryToggle}`, {
+  opacity: 1,
+});
+
 export const brand = style({
   display: 'flex',
   flexDirection: 'column',
@@ -90,49 +157,14 @@ export const activeNav = style({
   ...navBase,
   background: 'rgba(255, 255, 255, 0.06)',
 });
-export const navGroup = style({
-  display: 'block',
-});
-globalStyle(`${navGroup} .astryx-collapsible-trigger`, {
+export const navLabel = style({
   alignItems: 'center',
-  background: 'transparent',
-  border: 0,
-  color: tokens.color.background.surface,
-  cursor: 'pointer',
-  display: 'flex',
-  font: 'inherit',
-  fontSize: 16,
-  fontWeight: 400,
-  justifyContent: 'space-between',
-  minHeight: 36,
-  padding: '0 12px',
-  textAlign: 'left',
-  width: '100%',
+  display: 'inline-flex',
+  gap: tokens.spacing['3'],
+  minWidth: 0,
 });
-globalStyle(`${navGroup} .astryx-collapsible-trigger:focus-visible`, {
-  outline: `2px solid ${tokens.color.accent}`,
-  outlineOffset: 2,
-});
-globalStyle(`${navGroup} .astryx-collapsible-trigger > span:last-child`, {
-  color: tokens.color.background.surface,
-});
-globalStyle(`${navGroup} .astryx-collapsible-content`, {
-  paddingBlockStart: tokens.spacing['1'],
-});
-export const navGroupItems = style({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 2,
-});
-const groupNavBase = {
-  ...navBase,
-  minHeight: 38,
-  padding: '0 12px 0 24px',
-};
-export const groupNavItem = style(groupNavBase);
-export const activeGroupNav = style({
-  ...groupNavBase,
-  background: 'rgba(255, 255, 255, 0.06)',
+globalStyle(`${navLabel} svg`, {
+  flexShrink: 0,
 });
 globalStyle(navItem + ':disabled', {
   color: tokens.color.text.disabled,

@@ -5,11 +5,12 @@ import {
   Button,
   Card,
   Heading,
+  Icon,
   Tab,
   TabList,
-  Text,
 } from '@aics/design-system';
 import { Link, useNavigate } from '@tanstack/react-router';
+import { House } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -537,12 +538,14 @@ export default function AdminHomeDashboard() {
 
   return (
     <div className={styles.content}>
-      <Heading level={1}>홈</Heading>
+      <div className={styles.pageHeading}>
+        <Icon icon={House} size='lg' />
+        <Heading level={1}>홈</Heading>
+      </div>
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <Heading level={2}>분반별 제출·평가 일정</Heading>
           <div className={styles.scheduleHeaderActions}>
-            <Text type='supporting'>회색 배지: 학생 미공개 또는 마감</Text>
             <Button
               label='마일스톤 관리'
               onClick={() => navigate({ to: ROUTES.ADMIN_MILESTONES })}

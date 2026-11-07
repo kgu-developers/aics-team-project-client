@@ -38,6 +38,13 @@ export type { FileInputProps } from '@astryxdesign/core/FileInput';
 export { HStack, VStack } from '@astryxdesign/core/Layout';
 export { IconButton } from '@astryxdesign/core/IconButton';
 export type { IconButtonProps } from '@astryxdesign/core/IconButton';
+export { Icon } from '@astryxdesign/core/Icon';
+export type {
+  IconColor,
+  IconProps,
+  IconSize,
+  IconType,
+} from '@astryxdesign/core/Icon';
 export {
   MetadataList,
   MetadataListItem,

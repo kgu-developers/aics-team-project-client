@@ -270,7 +270,11 @@ describe('AdminHomeDashboard', () => {
     );
 
     renderPage(demoAdmin, activeSections);
-    await screen.findByRole('heading', { name: '홈' });
+    await screen.findByRole('heading', { level: 1, name: '홈' });
+    await screen.findByRole('heading', {
+      level: 2,
+      name: '분반별 제출·평가 일정',
+    });
 
     const expectedSectionIds = activeSections.map(section => section.id);
     expect(dashboardState.milestoneSectionIds).toEqual(expectedSectionIds);
