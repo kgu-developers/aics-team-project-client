@@ -629,7 +629,11 @@ export default function AdminHomeDashboard() {
                           const content = item ? (
                             <>
                               <Badge
-                                label={item.deadlineLabel}
+                                label={
+                                  item.isStudentVisible
+                                    ? item.deadlineLabel
+                                    : '학생 미공개'
+                                }
                                 variant={
                                   item.deadlineLabel === '진행 중'
                                     ? 'success'

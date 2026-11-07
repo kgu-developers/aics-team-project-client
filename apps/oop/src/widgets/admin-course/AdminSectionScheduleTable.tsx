@@ -97,7 +97,7 @@ export default function AdminSectionScheduleTable({
               {
                 align: 'end',
                 header: '',
-                key: 'id',
+                key: 'actions',
                 renderCell: milestone => (
                   <Link
                     aria-label={`${milestone.title} 상세 보기`}

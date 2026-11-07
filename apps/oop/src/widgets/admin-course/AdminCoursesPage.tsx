@@ -389,6 +389,11 @@ function AdminCourseOverview({
             </Card>
           )}
           <div className={styles.courseSectionActions}>
+            {isSectionCreationDisabled ? (
+              <span className={styles.sectionCreationUnavailable}>
+                계정 학번 정보를 확인할 수 없어 분반을 등록할 수 없습니다.
+              </span>
+            ) : null}
             <IconButton
               icon={<Plus aria-hidden='true' size={16} />}
               isDisabled={isSectionCreationDisabled}

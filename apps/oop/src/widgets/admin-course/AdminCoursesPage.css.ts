@@ -124,7 +124,14 @@ export const courseSections = style({
 export const courseSectionActions = style({
   alignItems: 'center',
   display: 'flex',
+  gap: tokens.spacing['2'],
   justifyContent: 'flex-end',
+});
+
+export const sectionCreationUnavailable = style({
+  color: tokens.color.text.secondary,
+  fontSize: 13,
+  textAlign: 'right',
 });
 
 export const clickableRow = style({

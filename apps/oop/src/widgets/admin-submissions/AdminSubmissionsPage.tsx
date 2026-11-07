@@ -566,6 +566,10 @@ export default function AdminSubmissionsPage() {
     presentationEvaluationsQuery.isPending ||
     presentationTeamsQuery.isPending ||
     presentationOrdersQuery.isPending;
+  const hasPresentationConfigurationError =
+    presentationEvaluationsQuery.isError ||
+    presentationTeamsQuery.isError ||
+    presentationOrdersQuery.isError;
   const hasConfiguredPresentationEvaluationOrder =
     !isPresentationConfigurationLoading &&
     hasConfiguredPresentationOrders(presentationOrderTeams);
@@ -573,18 +577,20 @@ export default function AdminSubmissionsPage() {
     (presentationEvaluationsQuery.data?.criteria.length ?? 0) > 0;
   const presentationConfigurationBadge = isPresentationConfigurationLoading
     ? { label: '설정 확인 중', variant: 'neutral' as const }
-    : presentationStartReadiness?.isComplete
-      ? {
-          label: isPresentationEvaluationStarted
-            ? '설정 완료'
-            : '시작 준비 완료',
-          variant: 'success' as const,
-        }
-      : hasConfiguredPresentationEvaluationOrder
-        ? { label: '평가 항목 설정 필요', variant: 'neutral' as const }
-        : hasConfiguredPresentationEvaluationCriteria
-          ? { label: '발표 순서 설정 필요', variant: 'neutral' as const }
-          : { label: '순서·항목 설정 필요', variant: 'neutral' as const };
+    : hasPresentationConfigurationError
+      ? { label: '설정 상태 확인 실패', variant: 'neutral' as const }
+      : presentationStartReadiness?.isComplete
+        ? {
+            label: isPresentationEvaluationStarted
+              ? '설정 완료'
+              : '시작 준비 완료',
+            variant: 'success' as const,
+          }
+        : hasConfiguredPresentationEvaluationOrder
+          ? { label: '평가 항목 설정 필요', variant: 'neutral' as const }
+          : hasConfiguredPresentationEvaluationCriteria
+            ? { label: '발표 순서 설정 필요', variant: 'neutral' as const }
+            : { label: '순서·항목 설정 필요', variant: 'neutral' as const };
   const isPresentationEvaluationEnded =
     isPresentationEvaluationStarted &&
     !Number.isNaN(presentationEvaluationClosesAtInstant) &&

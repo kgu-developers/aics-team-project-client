@@ -22,7 +22,13 @@ import {
   VStack,
   type TimeInputProps,
 } from '@aics/design-system';
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import {
+  type FormEvent,
+  type RefObject,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   toContactWindowFormDateTime,
@@ -457,6 +463,7 @@ export function CourseFormDialog({
 }
 
 export function SectionSettingsDialog({
+  assistantManagementButtonRef,
   isOpen,
   onClose,
   onDeleted,
@@ -464,6 +471,7 @@ export function SectionSettingsDialog({
   onSaved,
   section,
 }: {
+  assistantManagementButtonRef?: RefObject<HTMLButtonElement | null>;
   isOpen: boolean;
   onClose: () => void;
   onDeleted: () => Promise<boolean>;
@@ -824,6 +832,7 @@ export function SectionSettingsDialog({
               isDisabled={isPending}
               label='조교 관리'
               onClick={() => onManageAssistants(section)}
+              ref={assistantManagementButtonRef}
               type='button'
               variant='secondary'
             />

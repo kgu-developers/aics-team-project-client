@@ -66,7 +66,12 @@ function isMenuItemActive(pathname: string, itemPath: string) {
 }
 
 export default function AdminShell() {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(max-width: 767px)').matches,
+  );
   const pathname = useRouterState({ select: state => state.location.pathname });
   const currentUser = useAuthStore(state => state.currentUser);
   const messagesQuery = useAdminMessagesQuery();

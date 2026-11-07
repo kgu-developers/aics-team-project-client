@@ -27,6 +27,7 @@ import {
   forwardRef,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ComponentPropsWithoutRef,
   type FormEvent,
@@ -145,6 +146,11 @@ export default function AdminCourseDetailPage({
   );
   const [assistantSection, setAssistantSection] =
     useState<AdminOopSectionDto | null>(null);
+  const assistantManagementButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [
+    shouldRestoreAssistantManagementFocus,
+    setShouldRestoreAssistantManagementFocus,
+  ] = useState(false);
   const [uploadKind, setUploadKind] = useState<UploadFileKind | null>(null);
   const [uploadSectionId, setUploadSectionId] = useState('');
   const [activeTab, setActiveTab] = useState<AdminCourseDetailTab>(initialTab);
@@ -161,6 +167,13 @@ export default function AdminCourseDetailPage({
 
   const sectionIds = sections.map(section => String(section.id));
   const sectionIdsKey = sectionIds.join('|');
+
+  useEffect(() => {
+    if (!sectionToEdit || !shouldRestoreAssistantManagementFocus) return;
+
+    assistantManagementButtonRef.current?.focus();
+    setShouldRestoreAssistantManagementFocus(false);
+  }, [sectionToEdit, shouldRestoreAssistantManagementFocus]);
 
   useEffect(() => {
     if (!sectionsQuery.isSuccess) return;
@@ -597,10 +610,15 @@ export default function AdminCourseDetailPage({
 
       {sectionToEdit ? (
         <SectionSettingsDialog
+          assistantManagementButtonRef={assistantManagementButtonRef}
           isOpen
-          onClose={() => setSectionToEdit(null)}
+          onClose={() => {
+            setShouldRestoreAssistantManagementFocus(false);
+            setSectionToEdit(null);
+          }}
           onDeleted={refreshSectionsAndSession}
           onManageAssistants={section => {
+            setShouldRestoreAssistantManagementFocus(false);
             setSectionToEdit(null);
             setAssistantSection(section);
           }}
@@ -611,7 +629,11 @@ export default function AdminCourseDetailPage({
       {assistantSection ? (
         <SectionAssistantManagement
           isOpen
-          onClose={() => setAssistantSection(null)}
+          onClose={() => {
+            setShouldRestoreAssistantManagementFocus(true);
+            setSectionToEdit(assistantSection);
+            setAssistantSection(null);
+          }}
           section={assistantSection}
         />
       ) : null}

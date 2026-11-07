@@ -109,6 +109,13 @@ export const sidebarBoundaryToggleCollapsed = style({
   top: 0,
   transform: 'none',
   width: 18,
+  '@media': {
+    '(hover: none)': {
+      background: tokens.color.background.muted,
+      opacity: 1,
+      right: 0,
+    },
+  },
   selectors: {
     '&::before': {
       display: 'none',
