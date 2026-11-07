@@ -632,7 +632,7 @@ export default function AdminHomeDashboard() {
                                 label={
                                   item.isStudentVisible
                                     ? item.deadlineLabel
-                                    : '학생 미공개'
+                                    : `${item.deadlineLabel} · 미공개`
                                 }
                                 variant={
                                   item.deadlineLabel === '진행 중'

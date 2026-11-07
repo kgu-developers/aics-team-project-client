@@ -11,7 +11,7 @@ import {
   Megaphone,
   MessagesSquare,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
@@ -24,6 +24,8 @@ import StudentContactLink from '~/widgets/student-contact-link/StudentContactLin
 
 import AdminProfilePopover from './AdminProfilePopover';
 import * as styles from './AdminShell.css';
+
+const SIDEBAR_COLLAPSE_MEDIA_QUERY = '(max-width: 767px)';
 
 const menuItems = [
   { icon: House, label: '홈', to: ROUTES.ADMIN },
@@ -70,8 +72,29 @@ export default function AdminShell() {
     () =>
       typeof window !== 'undefined' &&
       typeof window.matchMedia === 'function' &&
-      window.matchMedia('(max-width: 767px)').matches,
+      window.matchMedia(SIDEBAR_COLLAPSE_MEDIA_QUERY).matches,
   );
+
+  useEffect(() => {
+    if (
+      typeof window === 'undefined' ||
+      typeof window.matchMedia !== 'function'
+    ) {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia(SIDEBAR_COLLAPSE_MEDIA_QUERY);
+    const handleChange = (event: MediaQueryListEvent) => {
+      setIsSidebarCollapsed(event.matches);
+    };
+
+    if (typeof mediaQuery.addEventListener !== 'function') {
+      return;
+    }
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, []);
   const pathname = useRouterState({ select: state => state.location.pathname });
   const currentUser = useAuthStore(state => state.currentUser);
   const messagesQuery = useAdminMessagesQuery();
