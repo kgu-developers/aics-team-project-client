@@ -1,4 +1,10 @@
-import { render, screen, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  act,
+  fireEvent,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -30,6 +36,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.useRealTimers();
   useAuthStore.getState().clearSession();
 });
 
@@ -118,4 +125,48 @@ it('Escape로 닫으면 7일 숨김을 저장하지 않는다', async () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
   );
   expect(localStorage.length).toBe(0);
+});
+
+it.each([
+  '1e30',
+  '9007199254740992',
+  '1.5',
+  '-1',
+  'Infinity',
+  ' 9999999999999',
+])('잘못된 만료값 %s로 공지를 숨기지 않는다', stored => {
+  localStorage.setItem(
+    `oop:login-notice:${loginNotice.id}:v${loginNotice.version}:${user.id}`,
+    stored,
+  );
+  expect(isLoginNoticeHidden(user.id)).toBe(false);
+});
+
+it('같은 탭에서 7일이 지나면 다시 열고 일반 닫기는 계속 유지한다', () => {
+  vi.useFakeTimers();
+  signIn();
+  render(<LoginNotice />);
+  fireEvent.click(screen.getByRole('button', { name: '일주일간 안 보기' }));
+  const week = 7 * 24 * 60 * 60 * 1000;
+  act(() => vi.advanceTimersByTime(week - 1));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  act(() => vi.advanceTimersByTime(1));
+  expect(screen.getByRole('dialog', { name: loginNotice.title })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: /^닫기$/ }));
+  act(() => vi.advanceTimersByTime(week));
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+});
+
+it('숨김 만료 후 백그라운드 탭으로 돌아오면 공지를 다시 표시한다', () => {
+  vi.useFakeTimers();
+  const now = Date.now();
+  hideLoginNoticeForWeek(user.id, now);
+  signIn();
+  render(<LoginNotice />);
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  act(() => {
+    vi.setSystemTime(now + 7 * 24 * 60 * 60 * 1000);
+    window.dispatchEvent(new Event('focus'));
+  });
+  expect(screen.getByRole('dialog', { name: loginNotice.title })).toBeVisible();
 });

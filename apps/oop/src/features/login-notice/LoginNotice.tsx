@@ -1,5 +1,5 @@
 import { Button, Dialog, Heading, Text, VStack } from '@aics/design-system';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import {
   selectHasAuthenticatedSession,
@@ -9,7 +9,10 @@ import {
 import { loginNotice } from '~/course/loginNotice';
 
 import * as styles from './LoginNotice.css';
-import { hideLoginNoticeForWeek, isLoginNoticeHidden } from './noticeDismissal';
+import {
+  getLoginNoticeHiddenUntil,
+  hideLoginNoticeForWeek,
+} from './noticeDismissal';
 
 export default function LoginNotice() {
   const hasSession = useAuthStore(selectHasAuthenticatedSession);
@@ -21,14 +24,36 @@ export default function LoginNotice() {
 }
 
 function StudentLoginNotice({ userId }: { userId: string }) {
-  const [isOpen, setIsOpen] = useState(() => !isLoginNoticeHidden(userId));
+  const [hiddenUntil, setHiddenUntil] = useState(() =>
+    getLoginNoticeHiddenUntil(userId),
+  );
+  const [isClosed, setIsClosed] = useState(false);
   const [storageError, setStorageError] = useState(false);
+
+  useEffect(() => {
+    const remaining = hiddenUntil - Date.now();
+    if (remaining <= 0) return;
+
+    const checkExpiry = () => {
+      if (Date.now() >= hiddenUntil) setHiddenUntil(0);
+    };
+    // Focus also catches expiry after a background tab or device suspension.
+    const timer = window.setTimeout(
+      checkExpiry,
+      Math.min(remaining, 2_147_483_647),
+    );
+    window.addEventListener('focus', checkExpiry);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener('focus', checkExpiry);
+    };
+  }, [hiddenUntil]);
 
   return (
     <Dialog
       aria-labelledby='login-notice-title'
-      isOpen={isOpen}
-      onOpenChange={setIsOpen}
+      isOpen={!isClosed && hiddenUntil <= Date.now()}
+      onOpenChange={isOpen => setIsClosed(!isOpen)}
       width={520}
     >
       <VStack gap={5}>
@@ -51,12 +76,13 @@ function StudentLoginNotice({ userId }: { userId: string }) {
           <Button
             label='일주일간 안 보기'
             onClick={() => {
-              if (hideLoginNoticeForWeek(userId)) setIsOpen(false);
-              else setStorageError(true);
+              if (hideLoginNoticeForWeek(userId)) {
+                setHiddenUntil(getLoginNoticeHiddenUntil(userId));
+              } else setStorageError(true);
             }}
             variant='secondary'
           />
-          <Button label='닫기' onClick={() => setIsOpen(false)} />
+          <Button label='닫기' onClick={() => setIsClosed(true)} />
         </div>
       </VStack>
     </Dialog>

@@ -1,5 +1,6 @@
+import { login as integratedLogin } from './integrated/ui';
 import { test, expect } from './support/fixtures';
-import { login } from './support/ui';
+import { login, loginToHome, student } from './support/ui';
 
 const title = '중간보고서 피드백 반영 계획 안내';
 
@@ -28,7 +29,12 @@ test('로그인 공지의 닫기·새로고침·7일 숨김과 만료를 확인�
   });
   await dialog.getByRole('button', { name: '닫기', exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await page.getByRole('link', { name: 'OOTeamPlay 홈' }).click();
+  await page.getByRole('button', { name: '학생 메뉴 열기' }).click();
+  await page
+    .getByRole('link', { name: '공지사항', exact: true })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/\/student\/notices$/);
   await expect(dialog).toHaveCount(0);
   await page.reload();
   await expect(dialog).toBeVisible();
@@ -36,6 +42,7 @@ test('로그인 공지의 닫기·새로고침·7일 숨김과 만료를 확인�
   await expect(dialog).toHaveCount(0);
   await page.reload();
   await dialog.getByRole('button', { name: '일주일간 안 보기' }).click();
+  await page.clock.setFixedTime(new Date('2026-11-25T11:59:59.999+09:00'));
   await page.reload();
   await expect(
     page.getByRole('button', { name: '내 프로필 열기' }),
@@ -45,3 +52,18 @@ test('로그인 공지의 닫기·새로고침·7일 숨김과 만료를 확인�
   await page.reload();
   await expect(dialog).toBeVisible();
 });
+
+for (const helper of ['contract', 'integrated'] as const) {
+  test(`${helper} 로그인 헬퍼는 첫 공지를 닫고 숨김 후 재로그인도 처리한다`, async ({
+    page,
+  }) => {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      if (helper === 'contract') await loginToHome(page);
+      else await integratedLogin(page, student);
+      await expect(page.getByRole('dialog', { name: title })).toHaveCount(0);
+      await page.getByRole('button', { name: '내 프로필 열기' }).click();
+      await page.getByRole('button', { name: '로그아웃', exact: true }).click();
+      await expect(page).toHaveURL(/\/login$/);
+    }
+  });
+}

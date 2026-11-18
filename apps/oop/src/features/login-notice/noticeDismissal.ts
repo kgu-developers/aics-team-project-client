@@ -8,13 +8,19 @@ function dismissalKey(userId: string) {
 
 // Only notice preferences are persisted; no session credentials are stored here.
 // Keep the local adapter separate so server persistence can replace it later.
-export function isLoginNoticeHidden(userId: string, now = Date.now()) {
+export function getLoginNoticeHiddenUntil(userId: string) {
   try {
-    const hiddenUntil = Number(localStorage.getItem(dismissalKey(userId)));
-    return Number.isFinite(hiddenUntil) && hiddenUntil > now;
+    const stored = localStorage.getItem(dismissalKey(userId));
+    if (!stored || !/^[1-9]\d*$/.test(stored)) return 0;
+    const hiddenUntil = Number(stored);
+    return Number.isSafeInteger(hiddenUntil) ? hiddenUntil : 0;
   } catch {
-    return false;
+    return 0;
   }
+}
+
+export function isLoginNoticeHidden(userId: string, now = Date.now()) {
+  return getLoginNoticeHiddenUntil(userId) > now;
 }
 
 export function hideLoginNoticeForWeek(userId: string, now = Date.now()) {

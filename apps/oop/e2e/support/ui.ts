@@ -16,10 +16,17 @@ export async function login(page: Page, account = student) {
 }
 
 export async function dismissLoginNotice(page: Page) {
-  await page
-    .getByRole('dialog', { name: '중간보고서 피드백 반영 계획 안내' })
-    .getByRole('button', { name: '일주일간 안 보기' })
-    .click();
+  // Wait for the authenticated render before checking this optional dialog.
+  await expect(
+    page.getByRole('button', { name: '로그인', exact: true }),
+  ).toBeHidden();
+  const dialog = page.getByRole('dialog', {
+    name: '중간보고서 피드백 반영 계획 안내',
+  });
+  if (await dialog.isVisible()) {
+    await dialog.getByRole('button', { name: '일주일간 안 보기' }).click();
+    await expect(dialog).toBeHidden();
+  }
 }
 
 export async function loginToHome(page: Page) {

@@ -2,7 +2,7 @@ import { env } from 'node:process';
 
 import { test as base, expect, type Page } from '@playwright/test';
 
-import { login } from '../support/ui';
+import { dismissLoginNotice, login } from '../support/ui';
 
 export function setting(name: string) {
   const value = env[name];
@@ -47,6 +47,7 @@ export async function signIn(
   expect(
     user.sections.map((section: { id: number }) => String(section.id)),
   ).toContain(setting('OOP_E2E_SECTION_ID'));
+  await dismissLoginNotice(page);
   if (kind !== 'survey') {
     expect(String(user.teamId), '설정한 E2E 팀 소속').toBe(
       setting('OOP_E2E_TEAM_ID'),

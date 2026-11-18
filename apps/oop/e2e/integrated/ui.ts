@@ -1,5 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
+import { dismissLoginNotice } from '../support/ui';
+
 export async function choose(
   scope: Page | Locator,
   label: string | RegExp,
@@ -43,6 +45,7 @@ export async function login(
     await expect(
       page.getByRole('navigation', { name: '관리자 메뉴' }),
     ).toBeVisible();
+  else await dismissLoginNotice(page);
 }
 
 export async function fillDate(
