@@ -15,9 +15,17 @@ export async function login(page: Page, account = student) {
   await page.getByRole('button', { name: '로그인', exact: true }).click();
 }
 
+export async function dismissLoginNotice(page: Page) {
+  await page
+    .getByRole('dialog', { name: '중간보고서 피드백 반영 계획 안내' })
+    .getByRole('button', { name: '일주일간 안 보기' })
+    .click();
+}
+
 export async function loginToHome(page: Page) {
   await login(page);
   await expect(page).toHaveURL(/\/student\/?$/);
+  await dismissLoginNotice(page);
   await expect(
     page.getByRole('button', { name: '내 프로필 열기' }),
   ).toBeVisible();

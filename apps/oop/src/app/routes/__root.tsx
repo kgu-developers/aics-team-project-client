@@ -5,6 +5,8 @@ import { TanStackRouterDevtools } from '@tanstack/router-devtools';
 import HomeNotFoundPage from '~/app/components/HomeNotFoundPage';
 import RouteErrorPage from '~/app/components/RouteErrorPage';
 
+import LoginNotice from '~/features/login-notice/LoginNotice';
+
 import { QueryProvider } from '../providers/query-provider';
 
 import '../globals.css';
@@ -23,6 +25,7 @@ function RootRoute() {
       <QueryProvider>
         <ToastViewport position='bottomEnd'>
           <Outlet />
+          <LoginNotice />
           {import.meta.env.DEV ? <TanStackRouterDevtools /> : null}
         </ToastViewport>
       </QueryProvider>

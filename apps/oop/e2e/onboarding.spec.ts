@@ -1,6 +1,6 @@
 import { paths } from './support/api';
 import { test, expect } from './support/fixtures';
-import { login } from './support/ui';
+import { dismissLoginNotice, login } from './support/ui';
 
 test('분반의 미제출 학생이 필수 역할을 선택하고 설문을 제출한다', async ({
   page,
@@ -8,6 +8,7 @@ test('분반의 미제출 학생이 필수 역할을 선택하고 설문을 제�
 }) => {
   api.state.user.teamId = null;
   await login(page);
+  await dismissLoginNotice(page);
   await page.getByRole('button', { name: '시작하기' }).click();
   await expect(page.getByRole('button', { name: '다음 설문' })).toBeDisabled();
   await page.getByRole('checkbox', { name: '개발', exact: true }).check();
@@ -52,6 +53,7 @@ test('선호 팀원 신청을 수락해도 본인 설문 미제출 상태를 유
   ];
 
   await login(page);
+  await dismissLoginNotice(page);
   await page.getByRole('button', { name: '시작하기' }).click();
   await expect(
     page.getByRole('region', { name: '받은 파트너 신청' }),
@@ -96,6 +98,7 @@ test('분반이 없으면 설문이나 팀 API를 호출하지 않는다', async
   api.state.user.sections = [];
   api.state.sections = [];
   await login(page);
+  await dismissLoginNotice(page);
   await expect(
     page.getByRole('heading', { name: '소속 분반이 없어요.' }),
   ).toBeVisible();
@@ -146,6 +149,7 @@ test('KST 온보딩 시작 정시에 다음 단계와 연락처 공개가 함께
     });
   });
   await login(page);
+  await dismissLoginNotice(page);
   await page.getByRole('button', { name: '우리 팀 확인하기' }).click();
   await expect(
     page.getByRole('button', { name: '다음', exact: true }),
