@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 
-import { dismissLoginNotice } from '../support/ui';
+import { dismissLoginNotice } from '../support/ui.ts';
 
 export async function choose(
   scope: Page | Locator,

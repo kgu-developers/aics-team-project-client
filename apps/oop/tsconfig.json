@@ -1,6 +1,7 @@
 {
   "extends": "@aics/typescript/react.json",
   "compilerOptions": {
+    "allowImportingTsExtensions": true,
     "baseUrl": ".",
     "module": "ESNext",
     "moduleResolution": "Bundler",
