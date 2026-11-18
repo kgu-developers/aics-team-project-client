@@ -55,6 +55,7 @@ beforeEach(() => {
   mockNavigate.mockClear();
 });
 afterEach(() => {
+  vi.restoreAllMocks();
   server.resetHandlers();
   queryClients.splice(0).forEach(client => client.clear());
   setApiAccessToken(null);
@@ -475,6 +476,9 @@ describe('KD3-92 학생 평가 화면', () => {
   });
 
   it('우리 팀 발표는 자료만 보여 주고 평가 입력을 잠근다', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(
+      new Date('2026-11-10T15:00:00+09:00').getTime(),
+    );
     await renderPresentationPage();
 
     expect(
@@ -494,6 +498,9 @@ describe('KD3-92 학생 평가 화면', () => {
   });
 
   it('오프셋 없는 평가 일정은 타이머와 같은 서울 벽시각으로 표시한다', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(
+      new Date('2026-11-10T15:00:00+09:00').getTime(),
+    );
     const overview = getMyTeamEvaluations(demoStudent.studentNumber);
     server.use(
       http.get(
