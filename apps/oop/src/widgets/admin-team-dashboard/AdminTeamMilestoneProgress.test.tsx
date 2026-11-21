@@ -33,6 +33,7 @@ const submittedMilestone: TeamMilestoneProgress = {
     currentVersion: 2,
     feedbackCount: 0,
     feedbackRequested: true,
+    studentFeedbackSubmitted: null,
     hasPendingReview: false,
     totalMeetingRecordCount: 5,
     presentationOrder: null,

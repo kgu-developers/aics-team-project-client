@@ -813,12 +813,92 @@ describe('AdminSubmissionsPage', () => {
     const user = userEvent.setup();
 
     renderPage();
+    expect(screen.queryByText('학생 답글 없음')).not.toBeInTheDocument();
     await user.click(await screen.findByRole('tab', { name: '중간 보고서' }));
 
     expect(await screen.findAllByText('검토 대기 중')).toHaveLength(1);
+    expect(screen.getAllByText('학생 답글 없음')).toHaveLength(2);
     expect(await screen.findByText('2026-10-14/18:00')).toBeInTheDocument();
     expect(screen.getByText('제출자: 20230001')).toBeInTheDocument();
     expect(screen.queryByText('현재 버전: 2차')).not.toBeInTheDocument();
+  });
+
+  it('학생 답글 이력이 있는 팀은 이력을 표시하고 대화를 열 수 있다', async () => {
+    const response = getAdminMilestoneSubmissionsFixture('102')!;
+    response.contents[0] = {
+      ...response.contents[0]!,
+      feedbackCount: 0,
+      studentFeedbackSubmitted: true,
+    };
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('102')}`,
+        () => HttpResponse.json(response),
+      ),
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.SECTION_TEAM_MID_REPORT('1', '1')}/feedbacks`,
+        () =>
+          HttpResponse.json({
+            contents: [
+              {
+                createdAt: '2026-11-20 10:00',
+                message: '대면 피드백 반영 방향을 보냈습니다.',
+                messageId: 801,
+                midReportId: 401,
+                senderId: '20260001',
+                senderName: '학생',
+                teamId: 1,
+              },
+            ],
+            pageable: {
+              isEnd: true,
+              page: 0,
+              size: 20,
+              totalElements: 1,
+              totalPages: 1,
+            },
+          }),
+      ),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '중간 보고서' }));
+
+    expect(await screen.findByText('학생 답글 없음')).toBeVisible();
+    expect(screen.getByText('학생 답글 이력 있음')).toBeVisible();
+    const open = screen.getByRole('button', {
+      name: '피드백 대화 보기 (교수 0건) ▾',
+    });
+    const feedbackSummary = open.closest('[role="group"]');
+    expect(feedbackSummary).toHaveAttribute('aria-label', '피드백 대화 요약');
+    expect(feedbackSummary).toContainElement(open);
+    await user.click(open);
+    expect(
+      await screen.findByText('대면 피드백 반영 방향을 보냈습니다.'),
+    ).toBeVisible();
+  });
+
+  it('서버에 학생 답글 필드가 없으면 미제출로 단정하지 않는다', async () => {
+    const response = getAdminMilestoneSubmissionsFixture('102')!;
+    response.contents = response.contents.map(item => ({
+      ...item,
+      studentFeedbackSubmitted: undefined,
+    }));
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('102')}`,
+        () => HttpResponse.json(response),
+      ),
+    );
+
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: '중간 보고서' }));
+
+    expect(await screen.findAllByText('답글 여부 확인 불가')).toHaveLength(2);
+    expect(screen.queryByText('학생 답글 없음')).not.toBeInTheDocument();
+    expect(screen.queryByText('학생 답글 이력 있음')).not.toBeInTheDocument();
   });
 
   it('수정 요청 중에는 검토 대기 중을 함께 표시하지 않고 재제출 뒤에만 표시한다', async () => {

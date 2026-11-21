@@ -438,6 +438,7 @@ export default function AdminSubmissionsPage() {
     isAccessibleSection && selectedMilestone !== undefined,
     undefined,
     activeMilestoneId === 'proposal',
+    activeMilestoneId === 'midterm',
   );
   const [submissionPage, setSubmissionPage] = useState(0);
   const [expandedFeedbackKeys, setExpandedFeedbackKeys] = useState<Set<string>>(
@@ -1460,7 +1461,20 @@ export default function AdminSubmissionsPage() {
                         expandedFeedbackKeys.has(feedbackHistoryKey);
                       const feedbackHistoryId = `submission-feedback-${activeMilestoneId}-${submission.teamId}`;
                       const hasFeedbackHistory =
-                        (submission.feedbackCount ?? 0) > 0;
+                        (submission.feedbackCount ?? 0) > 0 ||
+                        (activeMilestoneId === 'midterm' &&
+                          submission.studentFeedbackSubmitted === true);
+                      let feedbackHistoryLabel =
+                        submission.feedbackCount === null
+                          ? '피드백 대화 보기'
+                          : `교수 피드백 ${submission.feedbackCount}건`;
+                      if (
+                        submission.feedbackCount === 0 &&
+                        submission.studentFeedbackSubmitted === true
+                      ) {
+                        feedbackHistoryLabel = '피드백 대화 보기 (교수 0건)';
+                      }
+                      const feedbackToggleLabel = `${feedbackHistoryLabel}${hasFeedbackHistory ? ` ${isFeedbackHistoryExpanded ? '▴' : '▾'}` : ''}`;
                       const readTarget = effectiveSectionId
                         ? {
                             milestoneId: selectedMilestone.id,
@@ -1481,8 +1495,16 @@ export default function AdminSubmissionsPage() {
                           key={submission.teamId}
                         >
                           <AdminMilestoneSubmissionCard
+                            studentFeedbackStatus={
+                              activeMilestoneId === 'midterm'
+                                ? submission.studentFeedbackSubmitted
+                                : undefined
+                            }
                             feedbackCountLabel={
-                              submission.feedbackCount !== null ? (
+                              submission.feedbackCount !== null ||
+                              (activeMilestoneId === 'midterm' &&
+                                submission.studentFeedbackSubmitted ===
+                                  true) ? (
                                 supportsInlineFeedbackHistory &&
                                 effectiveSectionId ? (
                                   <Button
@@ -1498,7 +1520,7 @@ export default function AdminSubmissionsPage() {
                                     }
                                     className={styles.feedbackCountToggle}
                                     isDisabled={!hasFeedbackHistory}
-                                    label={`교수 피드백 ${submission.feedbackCount}건${hasFeedbackHistory ? ` ${isFeedbackHistoryExpanded ? '▴' : '▾'}` : ''}`}
+                                    label={feedbackToggleLabel}
                                     onClick={() => {
                                       if (!hasFeedbackHistory) return;
                                       setExpandedFeedbackKeys(current => {
@@ -1513,7 +1535,13 @@ export default function AdminSubmissionsPage() {
                                     }}
                                     type='button'
                                     variant='ghost'
-                                  />
+                                  >
+                                    <span
+                                      className={styles.feedbackCountToggleText}
+                                    >
+                                      {feedbackToggleLabel}
+                                    </span>
+                                  </Button>
                                 ) : (
                                   `교수 피드백 ${submission.feedbackCount}건`
                                 )

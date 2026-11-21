@@ -46,9 +46,13 @@ export function useAdminMilestoneSubmissionsQuery(
   isEnabled: boolean,
   teamId?: string,
   isProposal = false,
+  refreshWhileVisible = false,
 ) {
   return useQuery({
     enabled: Boolean(milestoneId) && isEnabled,
+    refetchInterval: refreshWhileVisible ? 30_000 : false,
+    refetchOnMount: refreshWhileVisible ? 'always' : undefined,
+    refetchOnWindowFocus: refreshWhileVisible ? 'always' : undefined,
     queryKey: [
       ...adminMilestoneSubmissionsKeys.list(milestoneId ?? 'disabled', teamId),
       isProposal ? 'proposal-document' : 'submission',

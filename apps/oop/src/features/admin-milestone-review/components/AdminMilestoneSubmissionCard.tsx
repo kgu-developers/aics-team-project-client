@@ -14,6 +14,7 @@ type AdminMilestoneSubmissionCardProps = {
   meetingCountLabel?: ReactNode;
   messageCountLabel?: string;
   secondaryLabel: string;
+  studentFeedbackStatus?: boolean | null;
   submissionMetadata?: ReactNode;
   summary: ReactNode;
 };
@@ -27,6 +28,7 @@ export function AdminMilestoneSubmissionCard({
   meetingCountLabel,
   messageCountLabel,
   secondaryLabel,
+  studentFeedbackStatus,
   submissionMetadata,
   summary,
 }: AdminMilestoneSubmissionCardProps) {
@@ -54,8 +56,26 @@ export function AdminMilestoneSubmissionCard({
             <div className={styles.footerMetric}>{meetingCountLabel}</div>
           ) : null}
           <div className={styles.footerTrailing}>
-            {feedbackCountLabel ? (
-              <div className={styles.footerTrailingLabel}>
+            {feedbackCountLabel || studentFeedbackStatus !== undefined ? (
+              <div
+                aria-label='피드백 대화 요약'
+                className={styles.footerTrailingLabel}
+                role='group'
+              >
+                {studentFeedbackStatus !== undefined ? (
+                  <Badge
+                    label={
+                      studentFeedbackStatus === null
+                        ? '답글 여부 확인 불가'
+                        : studentFeedbackStatus
+                          ? '학생 답글 이력 있음'
+                          : '학생 답글 없음'
+                    }
+                    variant={
+                      studentFeedbackStatus === false ? 'error' : 'neutral'
+                    }
+                  />
+                ) : null}
                 {feedbackCountLabel}
               </div>
             ) : null}

@@ -23,6 +23,7 @@ export type AdminMilestoneSubmissionView = {
   currentVersion: number;
   feedbackCount: number | null;
   feedbackRequested: boolean | null;
+  studentFeedbackSubmitted: boolean | null;
   hasPendingReview: boolean;
   leaderName?: string | null;
   midReportId?: string | null;
@@ -91,6 +92,7 @@ function toSubmissionView(
     currentVersion: submission.currentVersion,
     feedbackCount: submission.feedbackCount ?? null,
     feedbackRequested: submission.feedbackRequested ?? null,
+    studentFeedbackSubmitted: submission.studentFeedbackSubmitted ?? null,
     hasPendingReview: submission.hasPendingReview,
     leaderName: submission.leaderName ?? null,
     midReportId:

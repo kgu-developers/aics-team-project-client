@@ -21,6 +21,8 @@ export type AdminMilestoneSubmissionItemDto = {
   feedbackCount?: number;
   /** 제안서·중간보고서의 최신 학생 활동 이후 교수 피드백 대기 여부. */
   feedbackRequested?: boolean;
+  /** 중간보고서에 연결된 학생 메시지가 한 번이라도 있었는지. */
+  studentFeedbackSubmitted?: boolean;
   hasPendingReview: boolean;
   meetingRecordCount: number;
   /** Nullable for teams without a designated leader and older API deployments. */

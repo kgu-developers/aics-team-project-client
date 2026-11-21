@@ -254,8 +254,9 @@ export default function AdminPresentationProgressPage({
   );
   const requestedTeamId = toPositiveTeamId(teamId);
   const selectedTeamId =
-    presentations.find(team => team.teamId === requestedTeamId)?.teamId ??
-    presentations[0]?.teamId ??
+    (teamId === undefined
+      ? presentations[0]?.teamId
+      : presentations.find(team => team.teamId === requestedTeamId)?.teamId) ??
     null;
   const [studentDetailNumber, setStudentDetailNumber] = useState<string | null>(
     null,
@@ -335,9 +336,8 @@ export default function AdminPresentationProgressPage({
     });
   }
 
-  const selectedIndex = Math.max(
-    0,
-    presentations.findIndex(team => team.teamId === selectedTeamId),
+  const selectedIndex = presentations.findIndex(
+    team => team.teamId === selectedTeamId,
   );
   const selectedTeam = presentations[selectedIndex];
   const embeddedMembers = selectedTeam ? getDisplayMembers(selectedTeam) : [];
@@ -458,12 +458,21 @@ export default function AdminPresentationProgressPage({
   }
 
   if (!selectedTeam) {
+    const isUnknownTeam = teamId !== undefined && presentations.length > 0;
     return (
       <main className={styles.page}>
         <EmptyState
           actions={<BackToPresentationList sectionId={sectionId} />}
-          description='발표 순서와 발표 자료 제출 여부를 확인해 주세요.'
-          title='표시할 발표 팀이 없습니다.'
+          description={
+            isUnknownTeam
+              ? '주소의 팀 ID를 확인하거나 발표 평가 목록에서 팀을 다시 선택해 주세요.'
+              : '발표 순서와 발표 자료 제출 여부를 확인해 주세요.'
+          }
+          title={
+            isUnknownTeam
+              ? '해당 발표 팀을 찾을 수 없습니다.'
+              : '표시할 발표 팀이 없습니다.'
+          }
         />
       </main>
     );
@@ -562,6 +571,22 @@ export default function AdminPresentationProgressPage({
               자료가 교체되면 새로 고침으로 최신 자료를 확인하세요.
             </Text>
             <Card padding={4}>
+              {requiredArtifactsQuery.isError ? (
+                <VStack align='start' gap={2}>
+                  <Text role='alert' type='supporting'>
+                    발표 자료 항목 설정을 불러오지 못했습니다. 자료 이름은 이전
+                    정보나 기본 이름으로 표시될 수 있습니다.
+                  </Text>
+                  <Button
+                    isLoading={requiredArtifactsQuery.isFetching}
+                    label='자료 항목 설정 다시 시도'
+                    onClick={() => void requiredArtifactsQuery.refetch()}
+                    size='sm'
+                    type='button'
+                    variant='secondary'
+                  />
+                </VStack>
+              ) : null}
               {submissionVersionsQuery.isError ? (
                 <VStack align='start' gap={2}>
                   <Text role='alert' type='supporting'>

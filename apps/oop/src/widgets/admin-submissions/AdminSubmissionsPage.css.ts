@@ -178,14 +178,18 @@ export const feedbackCountToggle = style({
   color: tokens.color.text.primary,
   maxWidth: '100%',
   minHeight: 'auto',
-  overflow: 'hidden',
   padding: 0,
-  textOverflow: 'ellipsis',
-  whiteSpace: 'nowrap',
   ':focus-visible': {
     outline: `2px solid ${tokens.color.accent}`,
     outlineOffset: 2,
   },
+});
+
+export const feedbackCountToggleText = style({
+  display: 'inline-block',
+  maxWidth: '100%',
+  overflowWrap: 'anywhere',
+  whiteSpace: 'normal',
 });
 
 export const clickableRow = style({

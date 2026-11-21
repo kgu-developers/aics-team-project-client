@@ -16,6 +16,8 @@ export type AdminSubmissionResponse = {
   currentVersion: number;
   feedbackCount?: number;
   feedbackRequested?: boolean;
+  /** 중간보고서에 연결된 학생 메시지가 한 번이라도 있었는지. */
+  studentFeedbackSubmitted?: boolean;
   hasPendingReview: boolean;
   id: number;
   /** Nullable for teams without a designated leader and older API deployments. */

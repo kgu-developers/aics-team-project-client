@@ -16,6 +16,8 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from 'vitest';
 
+import { validatePresentationProgressSearch } from '~/app/routes/admin.presentation-progress';
+
 import { adminPresentationProgressKeys } from '~/features/admin-milestone-review/queries/adminPresentationProgressKeys';
 import { useAuthStore } from '~/features/auth/authStore';
 
@@ -88,15 +90,7 @@ function renderPage(teamId?: string) {
     },
     getParentRoute: () => rootRoute,
     path: '/admin/presentation-progress',
-    validateSearch: (search: Record<string, unknown>) => {
-      const parsed = Number(search.teamId);
-      return {
-        teamId:
-          Number.isSafeInteger(parsed) && parsed > 0
-            ? String(parsed)
-            : undefined,
-      };
-    },
+    validateSearch: validatePresentationProgressSearch,
   });
   const submissionsRoute = createRoute({
     component: () => <div>발표 평가 목록</div>,
@@ -106,7 +100,7 @@ function renderPage(teamId?: string) {
   const router = createRouter({
     history: createMemoryHistory({
       initialEntries: [
-        `/admin/presentation-progress${teamId ? `?teamId=${teamId}` : ''}`,
+        `/admin/presentation-progress${teamId ? `?teamId=${encodeURIComponent(teamId)}` : ''}`,
       ],
     }),
     routeTree: rootRoute.addChildren([progressRoute, submissionsRoute]),
@@ -144,6 +138,28 @@ it('팀 링크로 진입해도 다음 팀으로 이동할 수 있다', async () 
   expect(await screen.findByText('1번째 발표')).toBeVisible();
   await waitFor(() => expect(router.state.location.search.teamId).toBe('1'));
 });
+
+it.each(['999999', '"999999"', 'invalid-team'])(
+  '존재하지 않는 팀 ID %s로 진입하면 다른 팀 기록을 표시하지 않는다',
+  async teamId => {
+    setApiAccessToken(demoPresentationProfessorAccessToken);
+    useAuthStore.setState({
+      accessToken: demoPresentationProfessorAccessToken,
+      currentUser: demoPresentationProfessor,
+    });
+
+    const router = renderPage(teamId);
+
+    expect(
+      await screen.findByText('해당 발표 팀을 찾을 수 없습니다.'),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('link', { name: '← 발표 평가 목록으로' }),
+    ).toBeVisible();
+    expect(screen.queryByText('1번째 발표')).toBeNull();
+    expect(router.state.location.search.teamId).toBeDefined();
+  },
+);
 
 it('팀원 이름에서 학생 상세 정보를 연다', async () => {
   const user = userEvent.setup();
@@ -369,6 +385,56 @@ it('제출 이력 조회가 실패하면 미제출로 단정하지 않고 재시
       '이 팀은 발표 자료를 아직 제출하지 않았습니다.',
     ),
   ).not.toBeInTheDocument();
+});
+
+it('자료 항목 설정 조회 실패를 알리고 자료를 유지하며 다시 시도할 수 있다', async () => {
+  const user = userEvent.setup();
+  const requiredArtifactsUrl = `${API_BASE_URL}${ENDPOINTS.ADMIN.REQUIRED_ARTIFACTS('1', '103')}`;
+  const failureHandler = http.get(requiredArtifactsUrl, () =>
+    HttpResponse.json({ code: 'TEMPORARY_FAILURE' }, { status: 500 }),
+  );
+  server.use(failureHandler);
+  setApiAccessToken(demoPresentationProfessorAccessToken);
+  useAuthStore.setState({
+    accessToken: demoPresentationProfessorAccessToken,
+    currentUser: demoPresentationProfessor,
+  });
+
+  renderPage();
+
+  const materialsSection = await screen.findByRole('region', {
+    name: '발표 자료',
+  });
+  expect(await within(materialsSection).findByRole('alert')).toHaveTextContent(
+    '발표 자료 항목 설정을 불러오지 못했습니다.',
+  );
+  expect(
+    await within(materialsSection).findByRole('link', {
+      name: 'presentation-material-v2.pdf',
+    }),
+  ).toBeVisible();
+
+  server.use(
+    http.get(requiredArtifactsUrl, () => HttpResponse.json({ contents: [] })),
+  );
+  await user.click(
+    within(materialsSection).getByRole('button', {
+      name: '자료 항목 설정 다시 시도',
+    }),
+  );
+  await waitFor(() => {
+    expect(within(materialsSection).queryByRole('alert')).toBeNull();
+  });
+
+  server.use(failureHandler);
+  await user.click(
+    within(materialsSection).getByRole('button', {
+      name: '발표 자료 새로 고침',
+    }),
+  );
+  expect(await within(materialsSection).findByRole('alert')).toHaveTextContent(
+    '발표 자료 항목 설정을 불러오지 못했습니다.',
+  );
 });
 
 it('발표 자료 응답에 역할이 없으면 킥오프 정보에서 팀원 역할을 보완한다', async () => {
