@@ -685,13 +685,11 @@ describe('KD3-92 학생 평가 화면', () => {
       ),
     );
     await act(() =>
-      queryClients
-        .at(-1)!
-        .refetchQueries({
-          queryKey: evaluationKeys.presentationRoster(
-            presentationEvaluationMilestoneId,
-          ),
-        }),
+      queryClients.at(-1)!.refetchQueries({
+        queryKey: evaluationKeys.presentationRoster(
+          presentationEvaluationMilestoneId,
+        ),
+      }),
     );
     const message = '새로 고침하지 못해 이전 발표 자료를 보여 드려요.';
     expect(screen.queryByText(message)).not.toBeInTheDocument();
@@ -699,6 +697,23 @@ describe('KD3-92 학생 평가 화면', () => {
       screen.getByRole('button', { name: '발표 자료 새로 고침' }),
     );
     expect(await screen.findByText(message)).toBeVisible();
+  });
+
+  it('빈 발표 목록에서도 수동 새로 고침 실패와 재시도 수단을 보여 준다', async () => {
+    const url = `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MILESTONE_PRESENTATIONS(':milestoneId')}`;
+    server.use(http.get(url, () => HttpResponse.json({ contents: [] })));
+    renderPage(<PresentationEvaluationPage />);
+    const refresh = await screen.findByRole('button', {
+      name: '발표 자료 새로 고침',
+    });
+    server.use(http.get(url, () => new HttpResponse(null, { status: 500 })));
+    await userEvent.click(refresh);
+    expect(
+      await screen.findByText(
+        '발표 자료를 새로 고침하지 못했어요. 다시 시도해 주세요.',
+      ),
+    ).toBeVisible();
+    expect(refresh).toBeEnabled();
   });
 
   it.each(['CLOSED', 'UPCOMING'] as const)(

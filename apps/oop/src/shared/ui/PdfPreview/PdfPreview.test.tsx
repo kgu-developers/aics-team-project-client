@@ -8,12 +8,15 @@ import { PdfPreview } from './PdfPreview';
 const firstUrl = 'https://files.example.test/slides.pdf?expires=1';
 const refreshedUrl = 'https://files.example.test/slides.pdf?expires=2';
 
-vi.mock('pdfjs-dist', () => ({
-  GlobalWorkerOptions: {},
-  getDocument: () => ({
+const getDocument = vi.hoisted(() =>
+  vi.fn(() => ({
     promise: Promise.reject(new Error('PDF blocked')),
     destroy: async () => {},
-  }),
+  })),
+);
+vi.mock('pdfjs-dist', () => ({
+  GlobalWorkerOptions: {},
+  getDocument,
 }));
 
 function preview(url: string, onReload?: () => void, fileKey = 'file-19') {
@@ -42,6 +45,11 @@ describe('PdfPreview', () => {
     );
     const view = render(mobile(firstUrl));
     await screen.findByRole('alert');
+    expect(getDocument).toHaveBeenCalledWith(
+      expect.objectContaining({
+        CMapReaderFactory: expect.any(Function),
+      }),
+    );
     view.rerender(mobile(refreshedUrl));
     expect(screen.getByRole('link', { name: 'PDF 원본 열기' })).toHaveAttribute(
       'href',

@@ -84,9 +84,7 @@ async function addScreen(page: Page) {
     .click();
   const dialog = page.getByRole('dialog', { name: '화면 추가', exact: true });
   await dialog.locator('input[type="file"]').setInputFiles(png);
-  await dialog
-    .getByRole('textbox', { name: /^제목/ })
-    .fill('도서 검색 화면');
+  await dialog.getByRole('textbox', { name: /^제목/ }).fill('도서 검색 화면');
   await dialog
     .getByRole('textbox', { name: /^설명/ })
     .fill('제목과 저자로 도서를 검색한다.');

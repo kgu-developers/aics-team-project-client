@@ -30,14 +30,22 @@ function PdfCanvas({
     let loadingTask: PDFDocumentLoadingTask | undefined;
     void (async () => {
       try {
-        const [{ GlobalWorkerOptions, getDocument }, worker] =
-          await Promise.all([
-            import('pdfjs-dist'),
-            import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
-          ]);
+        const [
+          { GlobalWorkerOptions, getDocument },
+          worker,
+          { PdfCMapReader },
+        ] = await Promise.all([
+          import('pdfjs-dist'),
+          import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
+          import('./PdfCMapReader'),
+        ]);
         if (disposed) return;
         GlobalWorkerOptions.workerSrc = worker.default;
-        loadingTask = getDocument({ url, withCredentials: false });
+        loadingTask = getDocument({
+          url,
+          withCredentials: false,
+          CMapReaderFactory: PdfCMapReader,
+        });
         const document = await loadingTask.promise;
         if (!disposed) setPdf(document);
       } catch {

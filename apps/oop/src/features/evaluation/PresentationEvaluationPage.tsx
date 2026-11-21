@@ -802,6 +802,8 @@ export default function PresentationEvaluationPage() {
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [manualRefreshError, setManualRefreshError] = useState<unknown>(null);
+  const refreshError =
+    manualRefreshError !== null && manualRefreshError === rosterQuery.error;
   const refreshInFlight = useRef(false);
   const reloadMaterials = async () => {
     if (refreshInFlight.current) return;
@@ -893,7 +895,11 @@ export default function PresentationEvaluationPage() {
             variant='secondary'
           />
         }
-        description='발표 자료가 제출된 팀이 아직 없어요.'
+        description={
+          refreshError
+            ? '발표 자료를 새로 고침하지 못했어요. 다시 시도해 주세요.'
+            : '발표 자료가 제출된 팀이 아직 없어요.'
+        }
         title='조회할 발표가 없어요.'
       />
     );
@@ -909,9 +915,7 @@ export default function PresentationEvaluationPage() {
         const result = await evaluationsQuery.refetch({ cancelRefetch: false });
         return result.isSuccess ? result.data.windowState : undefined;
       }}
-      refreshError={
-        manualRefreshError !== null && manualRefreshError === rosterQuery.error
-      }
+      refreshError={refreshError}
       refreshVersion={refreshVersion}
       refreshing={refreshing}
       presentations={rosterQuery.data}

@@ -227,6 +227,13 @@ export default function ScreenImageBoard({
               value={null}
               width='100%'
             />
+            {editing.index != null &&
+              editing.imageFileId == null &&
+              !upload.isPending && (
+                <Text color='secondary' role='status'>
+                  화면 이미지를 올려야 변경 내용을 적용할 수 있어요.
+                </Text>
+              )}
             {upload.isPending && (
               <Text role='status'>이미지를 올리는 중이에요.</Text>
             )}

@@ -658,6 +658,21 @@ it('저장된 화면의 역슬래시 기반 외부 이미지 URL을 렌더링하
   expect(screen.getByText('등록한 이미지가 없습니다.')).toBeVisible();
   expect(screen.queryByRole('img', { name: '도서 목록' })).toBeNull();
 });
+it('이미지 없는 저장 카드를 편집할 때 적용할 수 없는 이유를 보여 준다', async () => {
+  const project = createProjectProposalFixture();
+  project.screenConfiguration[0] = { title: '기존 화면', description: '' };
+  server.use(http.get(projectUrl, () => HttpResponse.json(project)));
+  render('screen-composition');
+  await startScreenSection();
+  await userEvent.click(
+    screenCard('화면 1').getByRole('button', { name: '편집' }),
+  );
+  const dialog = within(screen.getByRole('dialog', { name: '화면 편집' }));
+  expect(dialog.getByRole('button', { name: '적용' })).toBeDisabled();
+  expect(
+    dialog.getByText('화면 이미지를 올려야 변경 내용을 적용할 수 있어요.'),
+  ).toBeVisible();
+});
 it('화면 칸을 지우면 저장 본문에서도 빠진다', async () => {
   render('screen-composition');
   await startScreenSection();
