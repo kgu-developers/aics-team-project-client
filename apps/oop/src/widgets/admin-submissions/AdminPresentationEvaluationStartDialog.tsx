@@ -1,7 +1,6 @@
 import type { AdminSectionMilestoneDto } from '@aics/api-client';
 import {
   Button,
-  Card,
   Dialog,
   Heading,
   HStack,
@@ -12,6 +11,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { GuidanceCard } from '~/shared/ui/GuidanceCard';
 
 import {
   formatAdminMilestoneRequestError,
@@ -164,26 +164,25 @@ export function AdminPresentationEvaluationStartDialog({
         <Heading level={2}>
           {isResume ? '발표 평가 재개' : '발표 평가 시작'}
         </Heading>
-        <Text color='secondary' type='supporting'>
-          {isResume
-            ? '재개하면 학생이 기존 발표 평가 점수를 다시 수정할 수 있습니다.'
-            : '시작을 확정하면 학생 발표 평가가 바로 열립니다. 평가 항목과 모든 팀의 발표 순서를 확인한 뒤 시작해 주세요. 평가 시작 후에는 평가 항목을 추가·수정·삭제할 수 없습니다.'}
-        </Text>
+        <GuidanceCard title='유의사항'>
+          <Text type='supporting'>
+            {isResume
+              ? '재개하면 학생이 기존 발표 평가 점수를 다시 수정할 수 있습니다.'
+              : '시작을 확정하면 학생 발표 평가가 바로 열립니다. 평가 항목과 모든 팀의 발표 순서를 확인한 뒤 시작해 주세요. 평가 시작 후에는 평가 항목을 추가·수정·삭제할 수 없습니다.'}
+          </Text>
+        </GuidanceCard>
         <div className={styles.summary}>
           <Text>평가 항목: {criteriaCount}개</Text>
           <Text>발표 대상: {teams.length}팀</Text>
           <Text>발표 순서: {teams.map(team => team.teamName).join(' → ')}</Text>
         </div>
         {!isResume && criteriaCount === 1 ? (
-          <Card padding={3} variant='muted'>
-            <VStack gap={1}>
-              <Text weight='medium'>시작 전 확인</Text>
-              <Text>
-                현재 학생에게는 발표 평가 항목 1개만 표시됩니다. 의도한 구성인지
-                확인한 뒤 평가를 시작해 주세요.
-              </Text>
-            </VStack>
-          </Card>
+          <GuidanceCard title='시작 전 확인'>
+            <Text>
+              현재 학생에게는 발표 평가 항목 1개만 표시됩니다. 의도한 구성인지
+              확인한 뒤 평가를 시작해 주세요.
+            </Text>
+          </GuidanceCard>
         ) : null}
         <NumberInput
           isIntegerOnly

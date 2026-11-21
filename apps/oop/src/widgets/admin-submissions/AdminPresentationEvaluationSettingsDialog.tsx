@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { seoulInstant } from '~/shared/lib/seoulInstant';
+import { GuidanceCard } from '~/shared/ui/GuidanceCard';
 
 import {
   useAdminTeamEvaluationCriteriaQuery,
@@ -362,17 +363,21 @@ export function AdminPresentationEvaluationSettingsDialog({
     >
       <VStack className={styles.content} gap={4}>
         <Heading level={2}>발표 순서·평가 항목 설정</Heading>
-        <Text color='secondary' type='supporting'>
-          팀별 발표 순서와 학생이 채점할 평가 항목을 여기에서 관리합니다. 평가
-          시작은 발표 평가 목록의 발표 평가 시작 버튼에서 진행 시간을 정한 뒤
-          확정합니다.
-        </Text>
+        <GuidanceCard title='설정 안내'>
+          <Text type='supporting'>
+            팀별 발표 순서와 학생이 채점할 평가 항목을 여기에서 관리합니다. 평가
+            시작은 발표 평가 목록의 발표 평가 시작 버튼에서 진행 시간을 정한 뒤
+            확정합니다.
+          </Text>
+        </GuidanceCard>
         <VStack gap={3}>
           {hasEvaluationStarted ? (
-            <Text color='secondary' role='status' type='supporting'>
-              평가 진행 중에도 발표 순서를 변경할 수 있습니다. 저장하면 학생에게
-              보이는 발표 순서도 변경됩니다.
-            </Text>
+            <GuidanceCard title='발표 순서 변경 안내'>
+              <Text role='status' type='supporting'>
+                평가 진행 중에도 발표 순서를 변경할 수 있습니다. 저장하면
+                학생에게 보이는 발표 순서도 변경됩니다.
+              </Text>
+            </GuidanceCard>
           ) : null}
           {teams.length ? (
             teams.map(team => (
@@ -438,15 +443,14 @@ export function AdminPresentationEvaluationSettingsDialog({
         </VStack>
         <VStack gap={2}>
           <Heading level={3}>평가 항목</Heading>
-          <Text color='secondary' type='supporting'>
-            평가 항목은 표시 순서대로 학생 발표 평가에 적용됩니다.
-          </Text>
           {isEvaluationLocked ? (
-            <Text color='secondary' role='status' type='supporting'>
-              {hasInvalidEvaluationStart
-                ? '평가 시작 시각을 확인할 수 없어 평가 항목을 추가·수정·삭제할 수 없습니다.'
-                : '평가 기간이 시작되어 평가 항목을 추가·수정·삭제할 수 없습니다.'}
-            </Text>
+            <GuidanceCard title='평가 항목 변경 제한'>
+              <Text role='status' type='supporting'>
+                {hasInvalidEvaluationStart
+                  ? '평가 시작 시각을 확인할 수 없어 평가 항목을 추가·수정·삭제할 수 없습니다.'
+                  : '평가 기간이 시작되어 평가 항목을 추가·수정·삭제할 수 없습니다.'}
+              </Text>
+            </GuidanceCard>
           ) : null}
           {criteriaQuery.isPending ? (
             <Text aria-live='polite' role='status'>

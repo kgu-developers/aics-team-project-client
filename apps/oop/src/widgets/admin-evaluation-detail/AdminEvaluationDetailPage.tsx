@@ -17,6 +17,7 @@ import { ROUTES } from '~/app/constants/routes';
 import { formatAdminSectionLabel } from '~/shared/lib/formatAdminSectionLabel';
 import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
 import { formatSeoulDateTime } from '~/shared/lib/formatSeoulDateTime';
+import { GuidanceCard } from '~/shared/ui/GuidanceCard';
 
 import PresentationEvaluationResults from '~/features/admin-evaluation/components/PresentationEvaluationResults';
 import {
@@ -432,10 +433,12 @@ function PresentationDetail({
       </section>
       <section className={styles.section}>
         <Heading level={2}>교수자 평가</Heading>
-        <Text className={styles.muted} type='supporting'>
-          교수자 점수는 학생 평가 평균에 포함되지 않으며, 교수자 메모는 학생에게
-          공개되지 않습니다.
-        </Text>
+        <GuidanceCard title='교수자 평가 안내'>
+          <Text type='supporting'>
+            교수자 점수는 학생 평가 평균에 포함되지 않으며, 교수자 메모는
+            학생에게 공개되지 않습니다.
+          </Text>
+        </GuidanceCard>
         {!canViewProfessorEvaluation ? (
           <Text className={styles.muted}>
             교수자 평가와 메모는 담당 교수만 조회할 수 있습니다.
