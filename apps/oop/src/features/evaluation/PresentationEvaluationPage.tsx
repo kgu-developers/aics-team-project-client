@@ -13,13 +13,18 @@ import {
   EmptyState,
   Heading,
   HStack,
+  IconButton,
   RadioList,
   RadioListItem,
   StatusDot,
   Text,
   TextInput,
+  ToastViewport,
   useToast,
 } from '@aics/design-system';
+import { useNavigate } from '@tanstack/react-router';
+import { isAxiosError } from 'axios';
+import { RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
@@ -28,10 +33,7 @@ import { PresentationTeamNavigator } from '~/shared/ui/PresentationTeamNavigator
 
 import StudentContextState from '~/features/section/StudentContextState';
 import { useStudentContext } from '~/features/section/useStudentContext';
-import {
-  safeDisplayUrl,
-  safeSubmissionUrl,
-} from '~/features/submission/submissionUploadInput';
+import { safeSubmissionUrl } from '~/features/submission/submissionUploadInput';
 
 import { formatEvaluationRemainingTime } from './formatEvaluationRemainingTime';
 import { getEvaluationErrorMessage } from './getEvaluationErrorMessage';
@@ -115,214 +117,92 @@ function findPdfArtifact(team: MilestonePresentation) {
 }
 
 function PresentationViewer({
+  isDesktop,
+  isRefreshError,
+  isRefreshing,
   onReloadMaterials,
+  refreshVersion,
   team,
 }: {
+  isDesktop: boolean;
+  isRefreshError: boolean;
+  isRefreshing: boolean;
   onReloadMaterials: () => void;
+  refreshVersion: number;
   team: MilestonePresentation;
 }) {
-  const project = team.project;
   const pdf = findPdfArtifact(team);
   const teamLabel = team.teamName ?? `${team.teamId}팀`;
-  const screens = (project?.screenConfiguration ?? []).flatMap(screen => {
-    const imageUrl = safeDisplayUrl(screen.imageUrl);
-    return imageUrl ? [{ ...screen, imageUrl }] : [];
-  });
-  const dataItems = (project?.dataConfiguration ?? []).filter(item =>
-    [item.name, item.description, item.expectedCount].some(value =>
-      value?.trim(),
-    ),
-  );
-  const members = project?.teamOperation?.members ?? [];
   return (
-    <>
-      <Card padding={5} width='100%'>
-        <article
-          aria-label={`${teamLabel} 제출 발표 자료`}
-          className={styles.cardContent}
-        >
-          <div className={styles.section}>
+    <Card padding={5} width='100%'>
+      <article
+        aria-label={`${teamLabel} 제출 발표 자료`}
+        className={styles.cardContent}
+      >
+        <div className={styles.section}>
+          <div className={styles.artifactHeading}>
             <h3 className={styles.sectionTitle}>제출한 발표 자료</h3>
-            {team.artifacts.length ? (
-              <ul className={styles.detailList}>
-                {team.artifacts.map((artifact, index) => {
-                  const href = safeSubmissionUrl(
-                    artifact.type === 'FILE'
-                      ? artifact.downloadUrl
-                      : artifact.url,
-                  );
-                  const label =
-                    artifact.fileName ??
-                    artifact.url ??
-                    `제출 자료 ${index + 1}`;
-                  return (
-                    <li
-                      key={`${artifact.requiredArtifactId ?? index}:${label}`}
-                    >
-                      {href ? (
-                        <a
-                          className={styles.link}
-                          href={href}
-                          rel='noreferrer'
-                          target='_blank'
-                        >
-                          {label}
-                        </a>
-                      ) : (
-                        label
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className={styles.helper}>등록된 발표 자료가 없어요.</p>
-            )}
+            <IconButton
+              icon={<RefreshCw aria-hidden='true' size={18} />}
+              isDisabled={isRefreshing}
+              isLoading={isRefreshing}
+              label='발표 자료 새로 고침'
+              onClick={onReloadMaterials}
+              size='sm'
+              variant='ghost'
+            />
           </div>
-          {pdf ? (
-            <div className={styles.section}>
-              <h4 className={styles.previewTitle}>{pdf.label}</h4>
-              <PdfPreview
-                fileKey={pdf.key}
-                onReload={onReloadMaterials}
-                title={pdf.label}
-                url={pdf.href}
-              />
-            </div>
-          ) : null}
-        </article>
-      </Card>
-
-      <Card padding={5} width='100%'>
-        <article
-          aria-label={`${teamLabel} 프로젝트 정보`}
-          className={styles.cardContent}
-        >
-          <section className={styles.section}>
-            <h3 className={styles.sectionTitle}>프로젝트 소개</h3>
-            <p className={styles.bodyText}>
-              {project?.description ??
-                project?.goal ??
-                '프로젝트 설명이 등록되지 않았어요.'}
+          {isRefreshError ? (
+            <p className={styles.error} role='status'>
+              새로 고침하지 못해 이전 발표 자료를 보여 드려요.
             </p>
-          </section>
-          {project?.goal && project.goal !== project.description ? (
-            <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>프로젝트 목표</h3>
-              <p className={styles.bodyText}>{project.goal}</p>
-            </section>
           ) : null}
-          {project?.projectSchedule ? (
-            <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>진행 일정</h3>
-              <p className={styles.bodyText}>{project.projectSchedule}</p>
-            </section>
-          ) : null}
-          {safeSubmissionUrl(project?.repositoryUrl) ? (
-            <a
-              className={styles.link}
-              href={safeSubmissionUrl(project?.repositoryUrl)}
-              rel='noreferrer'
-              target='_blank'
-            >
-              프로젝트 저장소 열기
-            </a>
-          ) : null}
-        </article>
-      </Card>
-
-      {screens.length ? (
-        <Card padding={5} width='100%'>
-          <article
-            aria-label={`${teamLabel} 화면 구성`}
-            className={styles.cardContent}
-          >
-            <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>화면 구성</h3>
-              <div className={styles.screenGrid}>
-                {screens.map((screen, index) => (
-                  <figure
-                    className={styles.screenItem}
-                    key={`${screen.imageFileId ?? index}:${screen.title ?? ''}`}
-                  >
-                    <img
-                      alt={screen.title || `화면 ${index + 1}`}
-                      className={styles.screenImage}
-                      src={screen.imageUrl}
-                    />
-                    <figcaption className={styles.screenItem}>
-                      <strong>{screen.title || `화면 ${index + 1}`}</strong>
-                      {screen.description ? <p>{screen.description}</p> : null}
-                    </figcaption>
-                  </figure>
-                ))}
-              </div>
-            </section>
-          </article>
-        </Card>
-      ) : null}
-
-      {dataItems.length || members.length ? (
-        <Card padding={5} width='100%'>
-          <article
-            aria-label={`${teamLabel} 프로젝트 구성`}
-            className={styles.cardContent}
-          >
-            {dataItems.length ? (
-              <section className={styles.section}>
-                <h3 className={styles.sectionTitle}>데이터 구성</h3>
-                <div className={styles.tableScroll}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th scope='col'>이름</th>
-                        <th scope='col'>설명</th>
-                        <th scope='col'>예상 개수</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dataItems.map((item, index) => (
-                        <tr key={`${item.name ?? ''}:${index}`}>
-                          <td>{item.name || '-'}</td>
-                          <td>{item.description || '-'}</td>
-                          <td>{item.expectedCount || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            ) : null}
-            {members.length ? (
-              <section className={styles.section}>
-                <h3 className={styles.sectionTitle}>팀원 역할</h3>
-                <div className={styles.tableScroll}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th scope='col'>이름</th>
-                        <th scope='col'>역할</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {members.map(member => (
-                        <tr key={member.id}>
-                          <td>
-                            {member.name || member.studentNumber}
-                            {member.isLeader ? ' · 팀장' : ''}
-                          </td>
-                          <td>{member.projectRole || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            ) : null}
-          </article>
-        </Card>
-      ) : null}
-    </>
+          {team.artifacts.length ? (
+            <ul className={styles.detailList}>
+              {team.artifacts.map((artifact, index) => {
+                const href = safeSubmissionUrl(
+                  artifact.type === 'FILE'
+                    ? artifact.downloadUrl
+                    : artifact.url,
+                );
+                const label =
+                  artifact.fileName ?? artifact.url ?? `제출 자료 ${index + 1}`;
+                return (
+                  <li key={`${artifact.requiredArtifactId ?? index}:${label}`}>
+                    {href ? (
+                      <a
+                        className={styles.link}
+                        href={href}
+                        rel='noreferrer'
+                        target='_blank'
+                      >
+                        {label}
+                      </a>
+                    ) : (
+                      label
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className={styles.helper}>등록된 발표 자료가 없어요.</p>
+          )}
+        </div>
+        {pdf ? (
+          <div className={styles.section}>
+            <h4 className={styles.previewTitle}>{pdf.label}</h4>
+            <PdfPreview
+              fileKey={pdf.key}
+              key={refreshVersion}
+              mobileCanvas={!isDesktop}
+              title={pdf.label}
+              url={pdf.href}
+            />
+          </div>
+        ) : null}
+      </article>
+    </Card>
   );
 }
 
@@ -340,9 +220,13 @@ function EvaluationForm({
   evaluation?: TeamEvaluationDto;
   isMyTeam: boolean;
   isSubmitting: boolean;
-  onSubmit: (scores: Record<number, number>) => void;
+  onSubmit: (
+    scores: Record<number, number>,
+    notify: ReturnType<typeof useToast>,
+  ) => void;
   windowState: MyTeamEvaluationsResponse['windowState'];
 }) {
+  const notify = useToast();
   const submitted = Object.fromEntries(
     (evaluation?.scores ?? []).map(score => [score.criterionId, score.score]),
   );
@@ -377,12 +261,9 @@ function EvaluationForm({
           <p className={styles.helper}>
             {isMyTeam
               ? '우리 팀 발표는 평가 대상이 아니에요.'
-              : windowCopy[windowState]}
-          </p>
-        ) : null}
-        {evaluation?.submittedAt && !compact ? (
-          <p className={styles.helper}>
-            제출한 평가예요. 기간 안에는 다시 제출해 점수를 고칠 수 있어요.
+              : evaluation?.submittedAt && windowState === 'OPEN'
+                ? '제출한 평가예요. 기간 안에는 다시 제출해 점수를 고칠 수 있어요.'
+                : windowCopy[windowState]}
           </p>
         ) : null}
       </div>
@@ -498,7 +379,7 @@ function EvaluationForm({
               setIsResubmitConfirmationOpen(true);
               return;
             }
-            if (!invalid.length) onSubmit(scores);
+            if (!invalid.length) onSubmit(scores, notify);
           }}
           tooltip={
             invalid.length
@@ -543,7 +424,7 @@ function EvaluationForm({
               onClick={() => {
                 if (isSubmitting) return;
                 setIsResubmitConfirmationOpen(false);
-                if (!invalid.length) onSubmit(scores);
+                if (!invalid.length) onSubmit(scores, notify);
               }}
               variant='primary'
             />
@@ -577,6 +458,9 @@ function PresentationEvaluationContent({
   myTeamId,
   onReloadMaterials,
   onWindowClosed,
+  refreshError,
+  refreshVersion,
+  refreshing,
   presentations,
   userId,
 }: {
@@ -584,11 +468,17 @@ function PresentationEvaluationContent({
   milestoneId: string;
   myTeamId: string | null;
   onReloadMaterials: () => void;
-  onWindowClosed: () => void;
+  onWindowClosed: () => void | Promise<
+    MyTeamEvaluationsResponse['windowState'] | undefined
+  >;
+  refreshError: boolean;
+  refreshVersion: number;
+  refreshing: boolean;
   presentations: MilestonePresentation[];
   userId: string;
 }) {
   const toast = useToast();
+  const navigate = useNavigate();
   const submitMutation = useSubmitTeamEvaluationMutation(userId, milestoneId);
   const teams = [...presentations].sort(
     (left, right) =>
@@ -601,8 +491,11 @@ function PresentationEvaluationContent({
   const isDesktop = useDesktopEvaluationLayout();
   const evaluationPanelRef = useRef<HTMLDivElement>(null);
   const evaluationTriggerRef = useRef<HTMLButtonElement>(null);
-  const selectedIndex = teams.findIndex(team => team.teamId === selectedTeamId);
-  const selectedTeam = teams[selectedIndex] ?? teams[0];
+  const selectedIndex = Math.max(
+    0,
+    teams.findIndex(team => team.teamId === selectedTeamId),
+  );
+  const selectedTeam = teams[selectedIndex];
   if (!selectedTeam) return null;
 
   const criteria = [...evaluations.criteria].sort(
@@ -620,7 +513,10 @@ function PresentationEvaluationContent({
   const closeEvaluation = () => {
     setIsEvaluationOpen(false);
   };
-  const submitScores = (scores: Record<number, number>) => {
+  const submitScores = (
+    scores: Record<number, number>,
+    notify: ReturnType<typeof useToast>,
+  ) => {
     submitMutation.mutate(
       {
         teamId: String(selectedTeam.teamId),
@@ -632,12 +528,33 @@ function PresentationEvaluationContent({
         },
       },
       {
-        onError: error =>
-          toast({ body: getEvaluationErrorMessage(error), type: 'error' }),
+        onError: async error => {
+          if (
+            isAxiosError<{ code?: string }>(error) &&
+            error.response?.status === 403 &&
+            (error.response.data?.code === 'EVALUATION_NOT_OPEN' ||
+              (evaluations.evaluationClosesAt != null &&
+                formatEvaluationRemainingTime(
+                  evaluations.evaluationClosesAt,
+                ) === '00:00:00'))
+          ) {
+            const refreshed = await onWindowClosed();
+            if (refreshed === 'CLOSED') {
+              closeEvaluation();
+              toast({
+                body: '평가 시간이 마감되어 제출하지 못했어요. 홈에서 마감 상태를 확인해 주세요.',
+                type: 'error',
+              });
+              void navigate({ to: '/student', replace: true });
+              return;
+            }
+          }
+          notify({ body: getEvaluationErrorMessage(error), type: 'error' });
+        },
         onSuccess: () => {
           if (evaluationPanelRef.current)
             evaluationPanelRef.current.scrollTop = 0;
-          toast({ body: `${teamLabel} 평가를 제출했어요.` });
+          notify({ body: `${teamLabel} 평가를 제출했어요.` });
         },
       },
     );
@@ -694,7 +611,7 @@ function PresentationEvaluationContent({
                 ?.submittedAt,
             );
             const statusLabel = isMyTeam
-              ? '우리 팀'
+              ? '우리 팀 · 평가 제외'
               : isEvaluated
                 ? '평가 완료'
                 : '평가 전';
@@ -704,7 +621,7 @@ function PresentationEvaluationContent({
                 <span className={styles.teamStatusDot}>
                   <StatusDot
                     label={statusLabel}
-                    variant={isEvaluated ? 'success' : 'neutral'}
+                    variant={isMyTeam || isEvaluated ? 'success' : 'neutral'}
                   />
                 </span>
                 <Button
@@ -768,16 +685,18 @@ function PresentationEvaluationContent({
                 variant='secondary'
               />
             </div>
-            <EvaluationForm
-              compact={false}
-              key={selectedTeam.teamId}
-              criteria={criteria}
-              evaluation={evaluation}
-              isMyTeam={String(selectedTeam.teamId) === myTeamId}
-              isSubmitting={submitMutation.isPending}
-              onSubmit={submitScores}
-              windowState={evaluations.windowState}
-            />
+            <ToastViewport isTopLayer={false} position='topEnd'>
+              <EvaluationForm
+                compact={false}
+                key={selectedTeam.teamId}
+                criteria={criteria}
+                evaluation={evaluation}
+                isMyTeam={String(selectedTeam.teamId) === myTeamId}
+                isSubmitting={submitMutation.isPending}
+                onSubmit={submitScores}
+                windowState={evaluations.windowState}
+              />
+            </ToastViewport>
           </div>
         </BottomSheet>
       ) : null}
@@ -814,14 +733,12 @@ function PresentationEvaluationContent({
               {selectedTeam.presentationOrder ?? '–'}
             </span>
             <div>
-              <p className={styles.teamName}>
-                {teamLabel} · {presentationLabel}
-              </p>
+              <p className={styles.teamName}>{presentationLabel}</p>
               <h2
                 className={styles.teamTitle}
                 id={`presentation-team-title-${selectedTeam.teamId}`}
               >
-                {selectedTeam.project?.title ?? teamLabel}
+                {teamLabel}
               </h2>
             </div>
           </div>
@@ -829,7 +746,11 @@ function PresentationEvaluationContent({
         <Divider className={styles.contentDivider} />
         <div className={styles.contentGrid}>
           <PresentationViewer
+            isDesktop={isDesktop}
+            isRefreshError={refreshError}
+            isRefreshing={refreshing}
             onReloadMaterials={onReloadMaterials}
+            refreshVersion={refreshVersion}
             team={selectedTeam}
           />
         </div>
@@ -843,6 +764,24 @@ function PresentationEvaluationContent({
         presentationLabel={presentationLabel}
         teamLabel={teamLabel}
         total={teams.length}
+        onSelectTeam={value => setSelectedTeamId(Number(value))}
+        selectedTeamValue={String(selectedTeam.teamId)}
+        teams={teams.map((team, index) => {
+          const isMyTeam = String(team.teamId) === myTeamId;
+          const isEvaluated = Boolean(
+            evaluations.evaluations.find(item => item.teamId === team.teamId)
+              ?.submittedAt,
+          );
+          return {
+            label: `${team.presentationOrder ?? index + 1}번 · ${team.teamName ?? `${team.teamId}팀`}`,
+            statusLabel: isMyTeam
+              ? '우리 팀 · 평가 제외'
+              : isEvaluated
+                ? '평가 완료'
+                : '평가 전',
+            value: String(team.teamId),
+          };
+        })}
       />
     </div>
   );
@@ -860,6 +799,26 @@ export default function PresentationEvaluationPage() {
       : '';
   const rosterQuery = useMilestonePresentationsQuery(milestoneId);
   const evaluationsQuery = useMyTeamEvaluationsQuery(userId, milestoneId);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [manualRefreshError, setManualRefreshError] = useState<unknown>(null);
+  const refreshError =
+    manualRefreshError !== null && manualRefreshError === rosterQuery.error;
+  const refreshInFlight = useRef(false);
+  const reloadMaterials = async () => {
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
+    setRefreshing(true);
+    setManualRefreshError(null);
+    try {
+      const result = await rosterQuery.refetch({ cancelRefetch: false });
+      if (result.isSuccess) setRefreshVersion(version => version + 1);
+      if (result.isError) setManualRefreshError(result.error);
+    } finally {
+      refreshInFlight.current = false;
+      setRefreshing(false);
+    }
+  };
   if (context.status !== 'ready')
     return <StudentContextState context={context} />;
   if (!sectionId || !userId)
@@ -899,7 +858,10 @@ export default function PresentationEvaluationPage() {
         발표 평가를 불러오는 중...
       </p>
     );
-  if (rosterQuery.isError || evaluationsQuery.isError)
+  if (
+    (rosterQuery.isError && !rosterQuery.data) ||
+    (evaluationsQuery.isError && !evaluationsQuery.data)
+  )
     return (
       <EmptyState
         actions={
@@ -923,7 +885,21 @@ export default function PresentationEvaluationPage() {
   if (!rosterQuery.data.length)
     return (
       <EmptyState
-        description='발표 자료가 제출된 팀이 아직 없어요.'
+        actions={
+          <IconButton
+            icon={<RefreshCw aria-hidden='true' size={18} />}
+            isDisabled={refreshing}
+            isLoading={refreshing}
+            label='발표 자료 새로 고침'
+            onClick={reloadMaterials}
+            variant='secondary'
+          />
+        }
+        description={
+          refreshError
+            ? '발표 자료를 새로 고침하지 못했어요. 다시 시도해 주세요.'
+            : '발표 자료가 제출된 팀이 아직 없어요.'
+        }
         title='조회할 발표가 없어요.'
       />
     );
@@ -934,12 +910,14 @@ export default function PresentationEvaluationPage() {
       evaluations={evaluationsQuery.data}
       milestoneId={milestoneId}
       myTeamId={context.teamId ?? null}
-      onReloadMaterials={() => {
-        void rosterQuery.refetch();
+      onReloadMaterials={reloadMaterials}
+      onWindowClosed={async () => {
+        const result = await evaluationsQuery.refetch({ cancelRefetch: false });
+        return result.isSuccess ? result.data.windowState : undefined;
       }}
-      onWindowClosed={() => {
-        void evaluationsQuery.refetch();
-      }}
+      refreshError={refreshError}
+      refreshVersion={refreshVersion}
+      refreshing={refreshing}
       presentations={rosterQuery.data}
       userId={userId}
     />

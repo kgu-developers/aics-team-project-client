@@ -585,8 +585,19 @@ it('추가 버튼의 모달에서 이미지와 제목·설명을 입력해 화�
   await waitFor(() =>
     expect(screen.getByRole('button', { name: '추가' })).toBeEnabled(),
   );
-  await userEvent.type(screen.getByLabelText('제목'), '대출 화면');
-  await userEvent.type(screen.getByLabelText('설명'), '대출을 신청한다');
+  await userEvent.click(screen.getByRole('button', { name: '추가' }));
+  expect(screen.getByRole('textbox', { name: /^제목/ })).toBeRequired();
+  expect(screen.getByRole('textbox', { name: /^설명/ })).toBeRequired();
+  expect(screen.getByText('제목을 입력해 주세요.')).toBeVisible();
+  expect(screen.getByText('설명을 입력해 주세요.')).toBeVisible();
+  await userEvent.type(
+    screen.getByRole('textbox', { name: /^제목/ }),
+    '대출 화면',
+  );
+  await userEvent.type(
+    screen.getByRole('textbox', { name: /^설명/ }),
+    '대출을 신청한다',
+  );
   await userEvent.click(screen.getByRole('button', { name: '추가' }));
   await userEvent.click(screen.getByRole('button', { name: '저장' }));
   await screen.findByText('제안서를 저장했어요.');
@@ -609,8 +620,10 @@ it('화면 이름과 설명은 편집 모달에서만 수정한다', async () =>
   await userEvent.click(
     screenCard('화면 1').getByRole('button', { name: '편집' }),
   );
-  const description = await screen.findByLabelText('설명');
+  const description = await screen.findByRole('textbox', { name: /^설명/ });
   await userEvent.clear(description);
+  await userEvent.click(screen.getByRole('button', { name: '적용' }));
+  expect(screen.getByText('설명을 입력해 주세요.')).toBeVisible();
   await userEvent.type(description, '도서를 정렬한다');
   await userEvent.click(screen.getByRole('button', { name: '적용' }));
   await userEvent.click(screen.getByRole('button', { name: '저장' }));
@@ -644,6 +657,21 @@ it('저장된 화면의 역슬래시 기반 외부 이미지 URL을 렌더링하
 
   expect(screen.getByText('등록한 이미지가 없습니다.')).toBeVisible();
   expect(screen.queryByRole('img', { name: '도서 목록' })).toBeNull();
+});
+it('이미지 없는 저장 카드를 편집할 때 적용할 수 없는 이유를 보여 준다', async () => {
+  const project = createProjectProposalFixture();
+  project.screenConfiguration[0] = { title: '기존 화면', description: '' };
+  server.use(http.get(projectUrl, () => HttpResponse.json(project)));
+  render('screen-composition');
+  await startScreenSection();
+  await userEvent.click(
+    screenCard('화면 1').getByRole('button', { name: '편집' }),
+  );
+  const dialog = within(screen.getByRole('dialog', { name: '화면 편집' }));
+  expect(dialog.getByRole('button', { name: '적용' })).toBeDisabled();
+  expect(
+    dialog.getByText('화면 이미지를 올려야 변경 내용을 적용할 수 있어요.'),
+  ).toBeVisible();
 });
 it('화면 칸을 지우면 저장 본문에서도 빠진다', async () => {
   render('screen-composition');
@@ -1048,15 +1076,22 @@ it('다른 영역 저장은 보존하며 같은 영역의 오래된 버전은 �
   });
 });
 
-it('버전 없는 조회를 0 버전으로 간주하지 않는다', async () => {
-  const project = createProjectProposalFixture();
-  server.use(
-    http.get(projectUrl, () =>
-      HttpResponse.json({ ...project, sectionVersions: undefined }),
-    ),
-  );
-  await expect(fetchProjectProposal('19')).rejects.toThrow('응답 형식');
-});
+it.each([
+  ['sectionVersions', undefined],
+  ['screenConfiguration', null],
+  ['screenConfiguration', undefined],
+])(
+  '제안서 필수 배열/버전 필드 오류를 거절한다: %s = %s',
+  async (key, value) => {
+    const project = createProjectProposalFixture();
+    server.use(
+      http.get(projectUrl, () =>
+        HttpResponse.json({ ...project, [key]: value }),
+      ),
+    );
+    await expect(fetchProjectProposal('19')).rejects.toThrow('응답 형식');
+  },
+);
 
 it('권한 획득 후 최신 조회가 끝나야 최신 내용으로 편집할 수 있다', async () => {
   let release!: () => void;

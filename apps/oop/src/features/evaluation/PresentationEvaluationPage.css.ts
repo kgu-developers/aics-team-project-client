@@ -230,6 +230,12 @@ export const sectionTitle = style({
   fontSize: 18,
   margin: 0,
 });
+export const artifactHeading = style({
+  alignItems: 'center',
+  display: 'flex',
+  gap: tokens.spacing['2'],
+  justifyContent: 'space-between',
+});
 export const previewPage = style({
   flex: '0 0 min(82vw, 720px)',
   margin: 0,
