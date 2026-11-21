@@ -23,6 +23,7 @@ import {
   vi,
 } from 'vitest';
 
+import { adminMilestoneSubmissionsKeys } from '~/features/admin-milestone-review/queries';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import AdminSubmissionDetailPage from './AdminSubmissionDetailPage';
@@ -170,7 +171,7 @@ function renderPage(
     currentUser,
   });
 
-  return render(<RouterProvider router={router} />);
+  return { ...render(<RouterProvider router={router} />), queryClient };
 }
 
 describe('AdminSubmissionsPage', () => {
@@ -824,6 +825,52 @@ describe('AdminSubmissionsPage', () => {
     expect(await screen.findByText('2026-10-14/18:00')).toBeInTheDocument();
     expect(screen.getByText('제출자: 20230001')).toBeInTheDocument();
     expect(screen.queryByText('현재 버전: 2차')).not.toBeInTheDocument();
+  });
+
+  it('중간 보고서 목록의 첫 조회가 실패하면 오류 화면을 표시한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('102')}`,
+        () => HttpResponse.json({ code: 'TEMPORARY_FAILURE' }, { status: 500 }),
+      ),
+    );
+
+    renderPage('/admin/submissions?milestoneId=midterm&sectionId=1');
+
+    expect(
+      await screen.findByText('제출물 목록을 불러오지 못했습니다.'),
+    ).toBeVisible();
+    expect(
+      screen.queryByText(/이전 조회 결과를 표시합니다/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('중간 보고서 목록 갱신이 실패해도 기존 팀을 유지하고 오류를 알린다', async () => {
+    const { queryClient } = renderPage(
+      '/admin/submissions?milestoneId=midterm&sectionId=1',
+    );
+    expect(await screen.findByText('검토 대기 중')).toBeVisible();
+
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('102')}`,
+        () => HttpResponse.json({ code: 'TEMPORARY_FAILURE' }, { status: 500 }),
+      ),
+    );
+    await queryClient.refetchQueries({
+      queryKey: adminMilestoneSubmissionsKeys.list('102'),
+      type: 'active',
+    });
+
+    expect(
+      await screen.findByText(
+        '제출물 목록을 새로 고치지 못했습니다. 이전 조회 결과를 표시합니다.',
+      ),
+    ).toHaveAttribute('role', 'alert');
+    expect(screen.getByText('검토 대기 중')).toBeVisible();
+    expect(
+      screen.queryByText('제출물 목록을 불러오지 못했습니다.'),
+    ).not.toBeInTheDocument();
   });
 
   it('학생 답글 이력이 있는 팀은 이력을 표시하고 대화를 열 수 있다', async () => {

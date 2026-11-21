@@ -440,6 +440,11 @@ export default function AdminSubmissionsPage() {
     activeMilestoneId === 'proposal',
     activeMilestoneId === 'midterm',
   );
+  const submissionRefreshWarning = submissionsQuery.isRefetchError ? (
+    <Text role='alert'>
+      제출물 목록을 새로 고치지 못했습니다. 이전 조회 결과를 표시합니다.
+    </Text>
+  ) : null;
   const [submissionPage, setSubmissionPage] = useState(0);
   const [expandedFeedbackKeys, setExpandedFeedbackKeys] = useState<Set<string>>(
     () => new Set(),
@@ -1438,18 +1443,22 @@ export default function AdminSubmissionsPage() {
                 <Text aria-live='polite' role='status'>
                   제출물 목록을 불러오는 중입니다.
                 </Text>
-              ) : submissionsQuery.isError ? (
+              ) : submissionsQuery.isError && !submissionsQuery.data ? (
                 <EmptyState
                   description='잠시 후 다시 시도해 주세요.'
                   title='제출물 목록을 불러오지 못했습니다.'
                 />
               ) : submissionsQuery.data?.submissions.length === 0 ? (
-                <EmptyState
-                  description='이 마일스톤의 팀별 제출 정보가 없습니다.'
-                  title='표시할 제출물이 없습니다.'
-                />
+                <>
+                  {submissionRefreshWarning}
+                  <EmptyState
+                    description='이 마일스톤의 팀별 제출 정보가 없습니다.'
+                    title='표시할 제출물이 없습니다.'
+                  />
+                </>
               ) : (
                 <>
+                  {submissionRefreshWarning}
                   <div className={styles.list}>
                     {pagedSubmissions.items.map(submission => {
                       const submissionId = submission.submissionId;
