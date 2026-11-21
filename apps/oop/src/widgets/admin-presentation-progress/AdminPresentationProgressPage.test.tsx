@@ -8,6 +8,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  useSearch,
 } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -15,6 +16,7 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it } from 'vitest';
 
+import { adminPresentationProgressKeys } from '~/features/admin-milestone-review/queries/adminPresentationProgressKeys';
 import { useAuthStore } from '~/features/auth/authStore';
 
 import AdminPresentationProgressPage from './AdminPresentationProgressPage';
@@ -34,6 +36,7 @@ import {
 import { adminMilestoneSubmissionDetailHandlers } from '~/mocks/handlers/adminMilestoneSubmissionDetails';
 import { adminPresentationEvaluationHandlers } from '~/mocks/handlers/adminPresentationEvaluations';
 import { adminRequiredArtifactHandlers } from '~/mocks/handlers/adminRequiredArtifacts';
+import { adminStudentTeamHandlers } from '~/mocks/handlers/adminStudentTeams';
 import { evaluationHandlers } from '~/mocks/handlers/evaluation';
 
 const server = setupServer(
@@ -41,6 +44,7 @@ const server = setupServer(
   ...adminPresentationEvaluationHandlers,
   ...adminMilestoneSubmissionDetailHandlers,
   ...adminRequiredArtifactHandlers,
+  ...adminStudentTeamHandlers,
 );
 const queryClients: QueryClient[] = [];
 
@@ -63,18 +67,36 @@ afterEach(() => {
 });
 afterAll(() => server.close());
 
-function renderPage() {
+function renderPage(teamId?: string) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
   queryClients.push(queryClient);
   const rootRoute = createRootRoute({ component: Outlet });
   const progressRoute = createRoute({
-    component: () => (
-      <AdminPresentationProgressPage milestoneId='103' sectionId='1' />
-    ),
+    component: () => {
+      const { teamId: routeTeamId } = useSearch({
+        from: '/admin/presentation-progress',
+      });
+      return (
+        <AdminPresentationProgressPage
+          milestoneId='103'
+          sectionId='1'
+          teamId={routeTeamId}
+        />
+      );
+    },
     getParentRoute: () => rootRoute,
     path: '/admin/presentation-progress',
+    validateSearch: (search: Record<string, unknown>) => {
+      const parsed = Number(search.teamId);
+      return {
+        teamId:
+          Number.isSafeInteger(parsed) && parsed > 0
+            ? String(parsed)
+            : undefined,
+      };
+    },
   });
   const submissionsRoute = createRoute({
     component: () => <div>발표 평가 목록</div>,
@@ -83,7 +105,9 @@ function renderPage() {
   });
   const router = createRouter({
     history: createMemoryHistory({
-      initialEntries: ['/admin/presentation-progress'],
+      initialEntries: [
+        `/admin/presentation-progress${teamId ? `?teamId=${teamId}` : ''}`,
+      ],
     }),
     routeTree: rootRoute.addChildren([progressRoute, submissionsRoute]),
   });
@@ -95,9 +119,55 @@ function renderPage() {
       </QueryClientProvider>
     </AstryxThemeProvider>,
   );
+  return router;
 }
 
-it('담당 교수는 발표 순서에 따라 제안서와 제출 자료를 확인한다', async () => {
+it('팀 링크로 진입해도 다음 팀으로 이동할 수 있다', async () => {
+  const user = userEvent.setup();
+  setApiAccessToken(demoPresentationProfessorAccessToken);
+  useAuthStore.setState({
+    accessToken: demoPresentationProfessorAccessToken,
+    currentUser: demoPresentationProfessor,
+  });
+
+  const router = renderPage('1');
+
+  expect(await screen.findByText('1번째 발표')).toBeVisible();
+  await user.click(screen.getByRole('button', { name: '다음 팀' }));
+  expect(await screen.findByText('2번째 발표')).toBeVisible();
+  await waitFor(() => {
+    expect(router.state.location.search.teamId).toBe('2');
+  });
+  expect(screen.getByRole('button', { name: '이전 팀' })).toBeEnabled();
+
+  router.history.back();
+  expect(await screen.findByText('1번째 발표')).toBeVisible();
+  await waitFor(() => expect(router.state.location.search.teamId).toBe('1'));
+});
+
+it('팀원 이름에서 학생 상세 정보를 연다', async () => {
+  const user = userEvent.setup();
+  setApiAccessToken(demoPresentationProfessorAccessToken);
+  useAuthStore.setState({
+    accessToken: demoPresentationProfessorAccessToken,
+    currentUser: demoPresentationProfessor,
+  });
+
+  renderPage();
+
+  const membersSection = (
+    await screen.findByRole('heading', {
+      name: '팀원 역할',
+    })
+  ).closest('section')!;
+  await user.click(within(membersSection).getAllByRole('button')[0]!);
+
+  expect(
+    await screen.findByRole('dialog', { name: /수강생 정보/ }),
+  ).toBeVisible();
+});
+
+it('담당 교수는 프로젝트 제목과 발표 자료를 확인한다', async () => {
   const user = userEvent.setup();
   setApiAccessToken(demoPresentationProfessorAccessToken);
   useAuthStore.setState({
@@ -110,25 +180,25 @@ it('담당 교수는 발표 순서에 따라 제안서와 제출 자료를 확�
   await screen.findByRole('heading', { name: '발표 기록 보기' });
   expect(screen.getByText('1번째 발표')).toBeVisible();
   expect(
-    screen.getByText('OOP-01 - 1팀 · CineFlow · 영화관 통합 관리 시스템'),
+    screen.getByText(
+      'OOP-01 - 1팀 · 프로젝트 제목: CineFlow · 영화관 통합 관리 시스템',
+    ),
   ).toBeVisible();
   expect(screen.getByText(/1번 발표 · OOP-01 - 1팀 · 1 \/ \d+/)).toBeVisible();
-  const screenHeading = screen.getByRole('heading', { name: '화면 구성' });
-  const materialsHeading = screen.getByRole('heading', { name: '발표 자료' });
-  expect(screenHeading.compareDocumentPosition(materialsHeading)).toBe(
-    Node.DOCUMENT_POSITION_FOLLOWING,
-  );
+  expect(screen.queryByRole('heading', { name: '프로젝트 소개' })).toBeNull();
+  expect(screen.queryByRole('heading', { name: '화면 구성' })).toBeNull();
   const materialsSection = screen.getByRole('region', { name: '발표 자료' });
   expect(
     await within(materialsSection).findByRole('link', {
-      name: '프레젠테이션 자료',
+      name: 'presentation-material-v2.pdf',
     }),
   ).toBeVisible();
+  expect(within(materialsSection).queryByText(/파일명:/)).toBeNull();
   expect(
-    await within(materialsSection).findByText(
-      '파일명: presentation-material-v2.pdf',
-    ),
-  ).toBeVisible();
+    within(materialsSection).queryByRole('button', {
+      name: '미리보기 새로 고침',
+    }),
+  ).toBeNull();
   expect(
     within(materialsSection).getByText(
       '발표 핵심 흐름: 문제 정의 → 해결 방식 → 시연 → 회고',
@@ -139,7 +209,9 @@ it('담당 교수는 발표 순서에 따라 제안서와 제출 자료를 확�
     await within(materialsSection).findByText('발표 자료 보완본'),
   ).toBeVisible();
   expect(
-    await within(materialsSection).findByRole('link', { name: '시연 영상' }),
+    await within(materialsSection).findByRole('link', {
+      name: 'https://demo.example.com/cineflow',
+    }),
   ).toHaveAttribute('href', 'https://demo.example.com/cineflow');
   expect(screen.getByRole('button', { name: '이전 팀' })).toBeDisabled();
 
@@ -233,6 +305,72 @@ it('제출 이력이 없으면 최신 제출 상세 조회 로딩 문구를 남�
   });
 });
 
+it('저장된 조회 결과가 있어도 재조회 실패 시 평가를 편집 가능하게 표시하지 않는다', async () => {
+  setApiAccessToken(demoPresentationProfessorAccessToken);
+  useAuthStore.setState({
+    accessToken: demoPresentationProfessorAccessToken,
+    currentUser: demoPresentationProfessor,
+  });
+
+  renderPage('1');
+  expect(
+    await screen.findByRole('button', { name: '교수자 평가 저장' }),
+  ).toBeVisible();
+
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRESENTATION_EVALUATION_PROFESSOR('1', '103', '1')}`,
+      () => HttpResponse.json({ code: 'TEMPORARY_FAILURE' }, { status: 500 }),
+    ),
+  );
+  await queryClients.at(-1)!.invalidateQueries({
+    queryKey: adminPresentationProgressKeys.professorEvaluation(
+      '1',
+      '103',
+      '1',
+    ),
+  });
+
+  expect(await screen.findByText('교수자 평가 확인 불가')).toBeVisible();
+  expect(screen.getByText('교수자 평가를 불러오지 못했습니다.')).toBeVisible();
+  expect(
+    screen.queryByRole('button', { name: '교수자 평가 저장' }),
+  ).not.toBeInTheDocument();
+});
+
+it('제출 이력 조회가 실패하면 미제출로 단정하지 않고 재시도를 제공한다', async () => {
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.SUBMISSION_VERSIONS('1008')}`,
+      () => HttpResponse.json({ code: 'TEMPORARY_FAILURE' }, { status: 500 }),
+    ),
+  );
+  setApiAccessToken(demoPresentationProfessorAccessToken);
+  useAuthStore.setState({
+    accessToken: demoPresentationProfessorAccessToken,
+    currentUser: demoPresentationProfessor,
+  });
+
+  renderPage();
+
+  const materialsSection = await screen.findByRole('region', {
+    name: '발표 자료',
+  });
+  expect(await within(materialsSection).findByRole('alert')).toHaveTextContent(
+    '제출 이력을 불러오지 못했습니다',
+  );
+  expect(
+    within(materialsSection).getByRole('button', {
+      name: '제출 이력 다시 시도',
+    }),
+  ).toBeVisible();
+  expect(
+    within(materialsSection).queryByText(
+      '이 팀은 발표 자료를 아직 제출하지 않았습니다.',
+    ),
+  ).not.toBeInTheDocument();
+});
+
 it('발표 자료 응답에 역할이 없으면 킥오프 정보에서 팀원 역할을 보완한다', async () => {
   const presentations = getAdminMilestonePresentations();
   const firstPresentation = presentations[0]!;
@@ -267,7 +405,10 @@ it('발표 자료 응답에 역할이 없으면 킥오프 정보에서 팀원 �
 
   renderPage();
 
-  expect(await screen.findByText('OOP 데모 학생 A · 팀장')).toBeVisible();
+  expect(
+    await screen.findByRole('button', { name: 'OOP 데모 학생 A' }),
+  ).toBeVisible();
+  expect(screen.getByText('· 팀장')).toBeVisible();
   expect(screen.getByText('개발')).toBeVisible();
 });
 
@@ -304,25 +445,26 @@ it('담당 교수는 선택한 팀의 발표 자료 제출 이력과 버전별 �
   ).toBeVisible();
   expect(
     await within(historyDialog).findByRole('link', {
-      name: '프레젠테이션 자료',
+      name: 'presentation-material-v2.pdf',
     }),
   ).toBeVisible();
   expect(
-    await within(historyDialog).findByText(
-      '파일명: presentation-material-v2.pdf',
-    ),
-  ).toBeVisible();
+    within(historyDialog).getByRole('link', {
+      name: 'https://demo.example.com/cineflow',
+    }),
+  ).toHaveAttribute('href', 'https://demo.example.com/cineflow');
+  expect(within(historyDialog).queryByText(/파일명:/)).toBeNull();
 
   await user.click(screen.getByRole('button', { name: /v1 · 20230001/ }));
 
   expect(
     await within(historyDialog).findByRole('link', {
-      name: '프레젠테이션 자료',
+      name: 'presentation-material.pdf',
     }),
   ).toBeVisible();
-  expect(
-    within(historyDialog).getByText('파일명: presentation-material.pdf'),
-  ).toBeVisible();
+  expect(within(historyDialog).queryByText(/파일명:/)).toBeNull();
+  expect(within(historyDialog).queryByText('변경 메모')).toBeNull();
+  expect(within(historyDialog).queryByText('변경 메모 없음')).toBeNull();
 });
 
 it('조교에게는 교수 전용 진행 화면과 자료 요청을 노출하지 않는다', async () => {

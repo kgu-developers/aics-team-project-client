@@ -179,7 +179,13 @@ export default function AdminShell() {
         <div className={styles.content}>
           <Outlet />
         </div>
-        <footer className={styles.footer}>
+        <footer
+          className={cx(
+            styles.footer,
+            pathname === ROUTES.ADMIN_PRESENTATION_PROGRESS &&
+              styles.footerWithTeamNavigator,
+          )}
+        >
           <Divider />
           <div className={styles.footerBrand}>
             <div className={styles.universityLogoContainer}>
