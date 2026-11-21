@@ -30,6 +30,7 @@ import {
 } from '~/features/editor/documentRequestErrorMessage';
 import type { EditorReturnContext } from '~/features/editor/editorReturnContext';
 import { useDocumentSectionLock } from '~/features/editor/queries';
+import { screenCardsMissingText } from '~/features/editor/screenCardValidation';
 
 import {
   proposalDraft,
@@ -396,7 +397,9 @@ function ProjectProposalDocument({
                   assigneePending ||
                   !current ||
                   states.isError ||
-                  current.completed
+                  current.completed ||
+                  (sectionType === 'SCREEN' &&
+                    Boolean(screenCardsMissingText(draft.screenConfiguration)))
                 }
                 onClick={() =>
                   void run(async () => {

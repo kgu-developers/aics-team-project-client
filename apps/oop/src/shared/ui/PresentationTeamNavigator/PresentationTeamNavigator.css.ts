@@ -50,3 +50,14 @@ export const status = style({
     '(max-width: 560px)': { fontSize: 12 },
   },
 });
+
+export const mobileSelector = style({
+  minWidth: 0,
+  width: '100%',
+  '@media': { '(min-width: 1024px)': { display: 'none' } },
+});
+
+export const desktopStatus = style({
+  display: 'none',
+  '@media': { '(min-width: 1024px)': { display: 'block' } },
+});

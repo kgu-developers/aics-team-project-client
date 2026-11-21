@@ -6,7 +6,12 @@ import { documentRequestErrorMessage } from '~/features/editor/documentRequestEr
 
 import { proposalSubmitBlocker } from './proposalSubmitGuard';
 
-const project = { title: '제목', description: '설명', goal: '목표' };
+const project = {
+  title: '제목',
+  description: '설명',
+  goal: '목표',
+  screenConfiguration: [],
+};
 function sections(completed: boolean): ProposalSectionsResponse {
   return {
     allCompleted: completed,
@@ -44,6 +49,15 @@ it('미완료 영역을 이름으로 알린다', () => {
 });
 it('채울 것이 없으면 막지 않는다', () => {
   expect(proposalSubmitBlocker(project, sections(true))).toBeNull();
+});
+it('저장된 화면 카드에서 빠진 항목을 번호와 함께 안내한다', () => {
+  const saved = {
+    ...project,
+    screenConfiguration: [{ title: '  ', description: '' }],
+  };
+  expect(proposalSubmitBlocker(saved, sections(true))).toContain(
+    '화면 1: 제목, 설명',
+  );
 });
 it('서버 원문보다 상태 코드 안내를 먼저 쓴다', () => {
   expect(

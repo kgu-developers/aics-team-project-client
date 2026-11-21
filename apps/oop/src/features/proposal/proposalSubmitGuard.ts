@@ -4,6 +4,8 @@ import type {
   ProposalSectionsResponse,
 } from '@aics/core';
 
+import { screenCardsMissingText } from '~/features/editor/screenCardValidation';
+
 const SECTION_LABELS: Record<ProposalSectionType, string> = {
   TOPIC: '주제',
   DATA: '데이터 구성',
@@ -13,7 +15,10 @@ const SECTION_LABELS: Record<ProposalSectionType, string> = {
 
 /** The server rejects a blank title/description/goal, so name the gap before asking it. */
 export function proposalSubmitBlocker(
-  project: Pick<ProjectProposalResponse, 'title' | 'description' | 'goal'>,
+  project: Pick<
+    ProjectProposalResponse,
+    'title' | 'description' | 'goal' | 'screenConfiguration'
+  >,
   sections: ProposalSectionsResponse,
 ): string | null {
   const blanks = (
@@ -25,6 +30,8 @@ export function proposalSubmitBlocker(
   ).flatMap(([label, value]) => (value?.trim() ? [] : [label]));
   if (blanks.length)
     return `${blanks.join(', ')}를 채워야 제출할 수 있어요. 주제 영역에서 입력해 주세요.`;
+  const screenBlocker = screenCardsMissingText(project.screenConfiguration);
+  if (screenBlocker) return `화면 구성 영역을 확인해 주세요. ${screenBlocker}`;
   const incomplete = sections.contents
     .filter(section => !section.completed)
     .map(section => SECTION_LABELS[section.section]);

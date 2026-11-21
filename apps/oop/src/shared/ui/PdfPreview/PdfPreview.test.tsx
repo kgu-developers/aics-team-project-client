@@ -8,6 +8,17 @@ import { PdfPreview } from './PdfPreview';
 const firstUrl = 'https://files.example.test/slides.pdf?expires=1';
 const refreshedUrl = 'https://files.example.test/slides.pdf?expires=2';
 
+const getDocument = vi.hoisted(() =>
+  vi.fn(() => ({
+    promise: Promise.reject(new Error('PDF blocked')),
+    destroy: async () => {},
+  })),
+);
+vi.mock('pdfjs-dist', () => ({
+  GlobalWorkerOptions: {},
+  getDocument,
+}));
+
 function preview(url: string, onReload?: () => void, fileKey = 'file-19') {
   return (
     <AstryxThemeProvider>
@@ -26,6 +37,25 @@ function renderPreview(onReload?: () => void) {
 }
 
 describe('PdfPreview', () => {
+  it('모바일 미리보기가 실패하면 최신 주소로 원본을 열 수 있다', async () => {
+    const mobile = (url: string) => (
+      <AstryxThemeProvider>
+        <PdfPreview fileKey='1' mobileCanvas title='발표자료.pdf' url={url} />
+      </AstryxThemeProvider>
+    );
+    const view = render(mobile(firstUrl));
+    await screen.findByRole('alert');
+    expect(getDocument).toHaveBeenCalledWith(
+      expect.objectContaining({
+        CMapReaderFactory: expect.any(Function),
+      }),
+    );
+    view.rerender(mobile(refreshedUrl));
+    expect(screen.getByRole('link', { name: 'PDF 원본 열기' })).toHaveAttribute(
+      'href',
+      refreshedUrl,
+    );
+  });
   it('브라우저 내장 뷰어로 PDF를 embed하고 실패 시 안내를 남긴다', () => {
     const { container } = renderPreview();
     const embed = container.querySelector('object');

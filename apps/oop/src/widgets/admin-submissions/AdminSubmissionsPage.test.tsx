@@ -100,6 +100,7 @@ beforeEach(() => {
   );
 });
 afterEach(() => {
+  vi.restoreAllMocks();
   resetAdminMilestoneSubmissionsFixture();
   resetAdminMidReportScenario();
   resetPresentationEvaluationScenario();
@@ -109,6 +110,13 @@ afterEach(() => {
   server.resetHandlers();
 });
 afterAll(() => server.close());
+
+function mockPreEvaluationTime() {
+  // The default fixture opens on November 19 at 09:00 KST.
+  vi.spyOn(Date, 'now').mockReturnValue(
+    Date.parse('2026-11-18T09:00:00+09:00'),
+  );
+}
 
 function renderPage(
   initialEntry = '/admin/submissions?sectionId=1',
@@ -718,6 +726,7 @@ describe('AdminSubmissionsPage', () => {
   );
 
   it('저장한 발표 순서를 설정 창 재진입 후에도 분반 팀 목록에 복원한다', async () => {
+    mockPreEvaluationTime();
     const user = userEvent.setup();
     renderPage();
     await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
@@ -1449,6 +1458,7 @@ describe('AdminSubmissionsPage', () => {
   });
 
   it('발표 평가 마일스톤을 찾아 순서 설정을 제공한다', async () => {
+    mockPreEvaluationTime();
     const user = userEvent.setup();
 
     renderPage();
@@ -1598,6 +1608,7 @@ describe('AdminSubmissionsPage', () => {
   });
 
   it('발표 평가 항목이 1개여도 목록에서는 완료 상태만 표시한다', async () => {
+    mockPreEvaluationTime();
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRESENTATION_EVALUATIONS('1')}`,
@@ -1898,6 +1909,7 @@ describe('AdminSubmissionsPage', () => {
   });
 
   it('발표 평가 설정에서 분반별 평가 항목을 조회하고 생성한다', async () => {
+    mockPreEvaluationTime();
     const user = userEvent.setup();
     const createRequest = vi.fn();
 

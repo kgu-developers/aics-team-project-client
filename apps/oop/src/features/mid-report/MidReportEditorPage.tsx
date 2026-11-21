@@ -13,6 +13,10 @@ import type { EditorReturnContext } from '~/features/editor/editorReturnContext'
 import MidReportEngineFields from './MidReportEngineFields';
 import MidReportGuiScreens from './MidReportGuiScreens';
 import {
+  getMidReportGuiIssue,
+  midReportGuiBlocker,
+} from './midReportGuiValidation';
+import {
   midReportKeys,
   useMidReportEditLock,
   useCompleteMidReportBlockMutation,
@@ -36,7 +40,7 @@ export function canSubmitMidReportDocument(
   )
     return false;
 
-  return true;
+  return !getMidReportGuiIssue(report.blocks);
 }
 
 export function getMidReportSubmitDisabledReason(
@@ -46,6 +50,8 @@ export function getMidReportSubmitDisabledReason(
   if (report.status === 'SUBMITTED') return '이미 제출한 중간보고서예요.';
   if (report.teamLeaderName !== currentUserName)
     return '팀장만 중간보고서를 제출할 수 있어요.';
+  const guiIssue = getMidReportGuiIssue(report.blocks);
+  if (guiIssue) return guiIssue.message;
   if (report.blocks.some(block => block.status !== 'COMPLETED'))
     return '모든 작성 영역을 완료 처리하면 제출할 수 있어요.';
   return report.status === 'REVISION_REQUESTED'
@@ -137,6 +143,13 @@ export default function MidReportEditorPage({
         isBlockCompleted: block => block.status === 'COMPLETED',
         completeBlock: input =>
           runDocumentAction('complete', async () => {
+            if (input.block.key === 'gui-design') {
+              const blocker = midReportGuiBlocker(input.fields);
+              if (blocker) {
+                toast({ body: blocker, type: 'error' });
+                throw new Error(blocker);
+              }
+            }
             await lock.ensureWrite(input.documentId, input.block.key);
             const report = await completionMutation.mutateAsync({
               documentId: input.documentId,

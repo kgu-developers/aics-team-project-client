@@ -78,17 +78,15 @@ export async function createProject(
   await expect(finalize).toBeHidden();
 }
 
-async function addScreen(page: Page, midReport = false) {
+async function addScreen(page: Page) {
   await page
     .getByRole('button', { name: '화면 이미지 추가', exact: true })
     .click();
   const dialog = page.getByRole('dialog', { name: '화면 추가', exact: true });
   await dialog.locator('input[type="file"]').setInputFiles(png);
+  await dialog.getByRole('textbox', { name: /^제목/ }).fill('도서 검색 화면');
   await dialog
-    .getByRole('textbox', { name: midReport ? '이름' : '제목', exact: true })
-    .fill('도서 검색 화면');
-  await dialog
-    .getByRole('textbox', { name: '설명', exact: true })
+    .getByRole('textbox', { name: /^설명/ })
     .fill('제목과 저자로 도서를 검색한다.');
   await dialog.getByRole('button', { name: '추가', exact: true }).click();
   await expect(dialog).toBeHidden();
@@ -178,7 +176,7 @@ export async function submitMidReport(
   ]) {
     await page.goto(`/student/editor/mid-review/${section}`);
     if (section === 'gui-design') {
-      if (!revision) await addScreen(page, true);
+      if (!revision) await addScreen(page);
       else {
         await page
           .getByRole('button', { name: '편집', exact: true })
@@ -189,7 +187,7 @@ export async function submitMidReport(
           exact: true,
         });
         await dialog
-          .getByRole('textbox', { name: '설명', exact: true })
+          .getByRole('textbox', { name: /^설명/ })
           .fill('피드백 반영: 검색 결과에 대출 상태를 표시한다.');
         await dialog.getByRole('button', { name: '적용', exact: true }).click();
       }

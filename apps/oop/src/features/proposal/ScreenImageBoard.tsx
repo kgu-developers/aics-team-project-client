@@ -18,6 +18,10 @@ import { Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { useSubmitProjectImageMutation } from '~/features/editor/queries';
+import {
+  screenCardsMissingText,
+  screenCardTextErrors,
+} from '~/features/editor/screenCardValidation';
 import { safeDisplayUrl } from '~/features/submission/submissionUploadInput';
 
 import * as styles from './ProjectProposalFields.css';
@@ -44,6 +48,7 @@ export default function ScreenImageBoard({
   const upload = useSubmitProjectImageMutation(String(project.teamId));
   const [previews, setPreviews] = useState<Record<number, string>>({});
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [attempted, setAttempted] = useState(false);
   const previewsRef = useRef(previews);
   previewsRef.current = previews;
   useEffect(
@@ -55,6 +60,8 @@ export default function ScreenImageBoard({
     [],
   );
   const rows = draft.screenConfiguration;
+  const missingText = screenCardsMissingText(rows);
+  const errors = attempted && editing ? screenCardTextErrors(editing) : null;
   const usedFileIds = [
     ...rows.flatMap(row => (row.imageFileId == null ? [] : [row.imageFileId])),
     ...(editing?.imageFileId == null ? [] : [editing.imageFileId]),
@@ -86,11 +93,16 @@ export default function ScreenImageBoard({
     return safeDisplayUrl(savedUrl) ?? null;
   };
   const closeDialog = () => {
+    setAttempted(false);
     setEditing(null);
     upload.reset();
   };
   const commit = () => {
-    if (!editing) return;
+    if (!editing || disabled || upload.isPending || editing.imageFileId == null)
+      return;
+    setAttempted(true);
+    const missing = screenCardTextErrors(editing);
+    if (missing.title || missing.description) return;
     const next: ProposalScreenItem = {
       description: editing.description,
       imageFileId: editing.imageFileId,
@@ -109,6 +121,7 @@ export default function ScreenImageBoard({
   };
   return (
     <VStack className={styles.screenBoard} gap={4}>
+      {missingText && <Text role='status'>{missingText}</Text>}
       <ul className={styles.screenList}>
         {rows.map((row, index) => {
           const url = imageUrl(row);
@@ -214,6 +227,13 @@ export default function ScreenImageBoard({
               value={null}
               width='100%'
             />
+            {editing.index != null &&
+              editing.imageFileId == null &&
+              !upload.isPending && (
+                <Text color='secondary' role='status'>
+                  화면 이미지를 올려야 변경 내용을 적용할 수 있어요.
+                </Text>
+              )}
             {upload.isPending && (
               <Text role='status'>이미지를 올리는 중이에요.</Text>
             )}
@@ -232,7 +252,13 @@ export default function ScreenImageBoard({
             )}
             <TextInput
               isDisabled={disabled}
+              isRequired
               label='제목'
+              status={
+                errors?.title
+                  ? { type: 'error', message: errors.title }
+                  : undefined
+              }
               onChange={title =>
                 setEditing(current =>
                   current ? { ...current, title } : current,
@@ -243,7 +269,13 @@ export default function ScreenImageBoard({
             />
             <TextArea
               isDisabled={disabled}
+              isRequired
               label='설명'
+              status={
+                errors?.description
+                  ? { type: 'error', message: errors.description }
+                  : undefined
+              }
               onChange={description =>
                 setEditing(current =>
                   current ? { ...current, description } : current,

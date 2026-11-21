@@ -1,4 +1,10 @@
-import { Button, Card } from '@aics/design-system';
+import {
+  Button,
+  Card,
+  Selector,
+  SelectorOption,
+  StatusDot,
+} from '@aics/design-system';
 
 import { cx } from '~/shared/lib/cx';
 
@@ -14,6 +20,13 @@ type PresentationTeamNavigatorProps = {
   withAdminSidebar?: boolean;
   teamLabel: string;
   total: number;
+  teams?: ReadonlyArray<{
+    label: string;
+    statusLabel: string;
+    value: string;
+  }>;
+  selectedTeamValue?: string;
+  onSelectTeam?: (value: string) => void;
 };
 
 export function PresentationTeamNavigator({
@@ -25,8 +38,12 @@ export function PresentationTeamNavigator({
   presentationLabel,
   teamLabel,
   total,
+  teams,
+  selectedTeamValue,
+  onSelectTeam,
   withAdminSidebar = false,
 }: PresentationTeamNavigatorProps) {
+  const showTeamSelector = teams && selectedTeamValue && onSelectTeam;
   return (
     <footer
       aria-label='발표 팀 이동'
@@ -44,7 +61,63 @@ export function PresentationTeamNavigator({
             type='button'
             variant='secondary'
           />
-          <p className={styles.status}>
+          {showTeamSelector ? (
+            <div className={styles.mobileSelector}>
+              <Selector
+                isLabelHidden
+                label='발표 팀 바로 이동'
+                onChange={onSelectTeam}
+                options={teams.map(team => ({
+                  description: team.statusLabel,
+                  label: team.label,
+                  value: team.value,
+                }))}
+                placement='above'
+                presentation='adaptive'
+                renderOption={option => (
+                  <SelectorOption
+                    description={option.description}
+                    endContent={
+                      <StatusDot
+                        label={String(option.description)}
+                        variant={
+                          String(option.description).includes('평가 전')
+                            ? 'neutral'
+                            : 'success'
+                        }
+                      />
+                    }
+                    label={option.label ?? option.value}
+                  />
+                )}
+                renderValue={option => (
+                  <SelectorOption
+                    description={option.description}
+                    endContent={
+                      <StatusDot
+                        label={String(option.description)}
+                        variant={
+                          String(option.description).includes('평가 전')
+                            ? 'neutral'
+                            : 'success'
+                        }
+                      />
+                    }
+                    label={option.label ?? option.value}
+                    layout='inline'
+                  />
+                )}
+                value={selectedTeamValue}
+                width='100%'
+              />
+            </div>
+          ) : null}
+          <p
+            className={cx(
+              styles.status,
+              showTeamSelector ? styles.desktopStatus : undefined,
+            )}
+          >
             {presentationLabel} · {teamLabel} · {currentIndex + 1} / {total}
           </p>
           <Button
