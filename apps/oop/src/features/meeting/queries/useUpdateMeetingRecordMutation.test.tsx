@@ -24,11 +24,11 @@ import {
 
 import { studentHomeKeys } from '~/features/student-home/queries/studentHomeKeys';
 
+import { meetingKeys } from './meetingKeys';
+import { useUpdateMeetingRecordMutation } from './useUpdateMeetingRecordMutation';
 import { MeetingUpdateValidationError } from '../model/meetingUpdateError';
 import { mapStudentMeeting } from '../model/studentMeeting';
 import { meetingApiKeys } from './api/meetingApiKeys';
-import { meetingKeys } from './meetingKeys';
-import { useUpdateMeetingRecordMutation } from './useUpdateMeetingRecordMutation';
 
 import { meetingApiRecord, meetingApiTeam } from '~/mocks/data/meetingApi';
 import { demoAccessToken } from '~/mocks/data/users';
