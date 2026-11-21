@@ -198,6 +198,21 @@ export const clickableRow = style({
 
 export const clickableTable = style({});
 
+export const presentationTeamName = style({
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+});
+
+export const presentationProjectTitle = style({
+  display: 'block',
+  maxWidth: '100%',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+});
+
 globalStyle(`${clickableTable} tbody tr`, {
   cursor: 'pointer',
 });

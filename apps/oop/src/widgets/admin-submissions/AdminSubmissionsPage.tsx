@@ -18,6 +18,7 @@ import {
   Table,
   type TableProps,
   Text,
+  VStack,
 } from '@aics/design-system';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ArrowDown, ArrowDownUp, ArrowUp, ClipboardCheck } from 'lucide-react';
@@ -132,15 +133,19 @@ function sortTeamRowsByName<
 }
 
 function TeamNameWithLeader({
+  keepOnOneLine = false,
   leaderName,
   teamName,
 }: {
+  keepOnOneLine?: boolean;
   leaderName?: string | null;
   teamName: string;
 }) {
   return (
-    <HStack align='center' gap={2} wrap='wrap'>
-      <Text>{teamName}</Text>
+    <HStack align='center' gap={2} wrap={keepOnOneLine ? 'nowrap' : 'wrap'}>
+      <Text className={keepOnOneLine ? styles.presentationTeamName : undefined}>
+        {teamName}
+      </Text>
       {leaderName ? (
         <Badge label={`팀장 ${leaderName}`} variant='neutral' />
       ) : null}
@@ -531,6 +536,16 @@ export default function AdminSubmissionsPage() {
     presentationOrdersQuery.data?.submissions,
     presentationTeamsQuery.data?.contents,
   ]);
+  const presentationOrderByTeamId = useMemo(
+    () =>
+      new Map(
+        presentationOrderTeams.map(team => [
+          team.teamId,
+          team.presentationOrder,
+        ]),
+      ),
+    [presentationOrderTeams],
+  );
   const presentationEvaluationStartsAt =
     presentationEvaluationMilestone?.schedule.evaluationOpensAt ?? null;
   const presentationEvaluationEndsAt =
@@ -1084,23 +1099,44 @@ export default function AdminSubmissionsPage() {
                         className={styles.clickableTable}
                         columns={[
                           {
+                            align: 'center',
+                            header: '순서',
+                            key: 'presentationOrder',
+                            renderCell: team =>
+                              presentationOrderByTeamId.get(
+                                Number(team.teamId),
+                              ) ?? '-',
+                            width: proportional(0.5, { minWidth: 64 }),
+                          },
+                          {
                             align: 'start',
                             header: '팀',
                             key: 'teamName',
                             renderCell: team => (
                               <TeamNameWithLeader
+                                keepOnOneLine
                                 leaderName={team.leaderName}
                                 teamName={team.teamName}
                               />
                             ),
-                            width: proportional(1, { minWidth: 128 }),
+                            width: proportional(1.4, { minWidth: 192 }),
                           },
                           {
                             align: 'start',
-                            header: '주제',
+                            header: '프로젝트 제목',
                             key: 'projectTitle',
-                            renderCell: team => team.projectTitle ?? '-',
-                            width: proportional(2, { minWidth: 200 }),
+                            renderCell: team =>
+                              team.projectTitle ? (
+                                <span
+                                  className={styles.presentationProjectTitle}
+                                  title={team.projectTitle}
+                                >
+                                  {team.projectTitle}
+                                </span>
+                              ) : (
+                                '-'
+                              ),
+                            width: proportional(1, { minWidth: 120 }),
                           },
                           ...presentationEvaluationsQuery.data.criteria.map(
                             criterion => ({
@@ -1165,14 +1201,60 @@ export default function AdminSubmissionsPage() {
                     </Card>
                     {isPresentationRecordAvailable &&
                     effectiveSectionId &&
-                    presentationEvaluationMilestone &&
-                    presentationTeamsQuery.data &&
-                    presentationOrdersQuery.data ? (
-                      <AdminPresentationUnevaluatedTeams
-                        milestoneId={String(presentationEvaluationMilestone.id)}
-                        sectionId={effectiveSectionId}
-                        teams={presentationOrderTeams}
-                      />
+                    presentationEvaluationMilestone ? (
+                      presentationTeamsQuery.data &&
+                      presentationOrdersQuery.data ? (
+                        <>
+                          {presentationTeamsQuery.isError ||
+                          presentationOrdersQuery.isError ? (
+                            <VStack align='start' gap={2}>
+                              <Text role='alert'>
+                                팀 또는 발표 순서를 다시 조회하지 못했습니다.
+                                현황에 이전 정보가 표시될 수 있습니다.
+                              </Text>
+                              <Button
+                                label='평가 현황 다시 시도'
+                                onClick={() => {
+                                  void presentationTeamsQuery.refetch();
+                                  void presentationOrdersQuery.refetch();
+                                }}
+                                size='sm'
+                                type='button'
+                                variant='secondary'
+                              />
+                            </VStack>
+                          ) : null}
+                          <AdminPresentationUnevaluatedTeams
+                            milestoneId={String(
+                              presentationEvaluationMilestone.id,
+                            )}
+                            sectionId={effectiveSectionId}
+                            teams={presentationOrderTeams}
+                          />
+                        </>
+                      ) : presentationTeamsQuery.isPending ||
+                        presentationOrdersQuery.isPending ? (
+                        <Text role='status'>
+                          교수자 평가 현황을 불러오는 중입니다.
+                        </Text>
+                      ) : (
+                        <VStack align='start' gap={2}>
+                          <Text role='alert'>
+                            팀 또는 발표 순서를 조회하지 못해 교수자 평가 현황을
+                            표시할 수 없습니다.
+                          </Text>
+                          <Button
+                            label='평가 현황 다시 시도'
+                            onClick={() => {
+                              void presentationTeamsQuery.refetch();
+                              void presentationOrdersQuery.refetch();
+                            }}
+                            size='sm'
+                            type='button'
+                            variant='secondary'
+                          />
+                        </VStack>
+                      )
                     ) : null}
                     {effectiveSectionId && presentationEvaluationMilestone ? (
                       <>
@@ -1465,6 +1547,11 @@ export default function AdminSubmissionsPage() {
                               activeMilestoneId === 'final-report' ||
                               activeMilestoneId === 'presentation-submit' ? (
                                 <AdminMilestoneSubmissionBulkDownloadAction
+                                  label={
+                                    activeMilestoneId === 'presentation-submit'
+                                      ? '다운로드'
+                                      : undefined
+                                  }
                                   isLoading={
                                     downloadArtifactsMutation.isPending
                                   }

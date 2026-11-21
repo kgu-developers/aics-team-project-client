@@ -21,39 +21,88 @@ export const teamList = style({
   padding: 0,
 });
 
-export const teamLink = style({
+const teamRow = style({
   alignItems: 'center',
   borderBottom: `1px solid ${tokens.color.border.base}`,
-  color: tokens.color.text.primary,
-  display: 'flex',
-  fontSize: 14,
-  fontWeight: 500,
-  gap: 16,
-  justifyContent: 'space-between',
+  display: 'grid',
+  gap: 8,
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
   padding: '12px 4px',
-  textDecoration: 'none',
   width: '100%',
-  ':focus-visible': {
-    outline: `2px solid ${tokens.color.accent}`,
-    outlineOffset: 2,
-  },
-  ':hover': {
-    color: tokens.color.text.accent,
-  },
   '@media': {
     'screen and (max-width: 640px)': {
-      alignItems: 'flex-start',
-      flexDirection: 'column',
-      gap: 4,
+      gridTemplateColumns: 'minmax(0, 1fr)',
     },
   },
 });
 
+export const teamLink = style([
+  teamRow,
+  {
+    color: tokens.color.text.primary,
+    textDecoration: 'none',
+    ':focus-visible': {
+      background: tokens.color.background.muted,
+      outline: `2px solid ${tokens.color.accent}`,
+      outlineOffset: 2,
+    },
+    ':hover': {
+      background: tokens.color.background.muted,
+    },
+  },
+]);
+
+export const teamMain = style({
+  alignItems: 'center',
+  display: 'grid',
+  gap: 12,
+  gridTemplateColumns: '106px minmax(0, 1fr)',
+  minWidth: 0,
+});
+
+export const teamName = style({
+  fontSize: 14,
+  fontWeight: 600,
+  minWidth: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+  '@media': {
+    '(max-width: 560px)': {
+      overflow: 'visible',
+      overflowWrap: 'anywhere',
+      whiteSpace: 'normal',
+    },
+  },
+});
+
+export const teamStatus = style({
+  alignItems: 'center',
+  display: 'inline-flex',
+  gap: 6,
+  fontSize: 12,
+  whiteSpace: 'nowrap',
+});
+
 export const teamLinkAction = style({
-  color: tokens.color.text.accent,
-  flexShrink: 0,
+  alignItems: 'center',
+  color: tokens.color.text.primary,
+  display: 'inline-flex',
   fontSize: 13,
   fontWeight: 500,
-  textDecoration: 'underline',
-  textUnderlineOffset: 3,
+  gap: 16,
+  whiteSpace: 'nowrap',
+  '@media': {
+    'screen and (max-width: 640px)': {
+      justifySelf: 'end',
+    },
+  },
+});
+
+export const teamOrder = style({
+  color: tokens.color.text.secondary,
+  fontSize: 12,
+  fontWeight: 400,
+  minWidth: 64,
+  textAlign: 'right',
 });

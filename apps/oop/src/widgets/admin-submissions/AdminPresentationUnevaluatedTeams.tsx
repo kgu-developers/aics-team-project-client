@@ -1,4 +1,4 @@
-import { Badge, Card, Heading, Text, VStack } from '@aics/design-system';
+import { Badge, Card, Heading, StatusDot, Text } from '@aics/design-system';
 import { Link } from '@tanstack/react-router';
 
 import { ROUTES } from '~/app/constants/routes';
@@ -31,70 +31,99 @@ export function AdminPresentationUnevaluatedTeams({
       teams,
       true,
     );
-  const unevaluatedTeams = professorEvaluationStatuses.data
-    .filter(team => team.submittedAt === null)
-    .sort(
-      (left, right) =>
-        (left.presentationOrder ?? Number.POSITIVE_INFINITY) -
-          (right.presentationOrder ?? Number.POSITIVE_INFINITY) ||
-        left.teamName.localeCompare(right.teamName, 'ko'),
-    );
+  const sortedTeams = [...professorEvaluationStatuses.data].sort(
+    (left, right) =>
+      (left.presentationOrder ?? Number.POSITIVE_INFINITY) -
+        (right.presentationOrder ?? Number.POSITIVE_INFINITY) ||
+      left.teamName.localeCompare(right.teamName, 'ko'),
+  );
+  const unevaluatedCount = sortedTeams.filter(
+    team => !team.isPending && !team.isError && !team.submittedAt,
+  ).length;
+  const hasUnknownEvaluationStatus =
+    professorEvaluationStatuses.isPending ||
+    professorEvaluationStatuses.isError;
 
   return (
     <section className={styles.section}>
       <div className={styles.header}>
-        <Heading level={2}>교수자 미평가 현황</Heading>
-        {!professorEvaluationStatuses.isPending &&
-        !professorEvaluationStatuses.isError &&
-        unevaluatedTeams.length > 0 ? (
+        <Heading level={2}>교수자 평가 현황</Heading>
+        {!hasUnknownEvaluationStatus && sortedTeams.length > 0 ? (
           <Badge
-            label={`미평가 ${unevaluatedTeams.length}팀`}
-            variant='error'
+            label={`미평가 ${unevaluatedCount}팀`}
+            variant={unevaluatedCount > 0 ? 'error' : 'success'}
           />
         ) : null}
       </div>
       <Card padding={4}>
-        <VStack gap={3}>
-          {professorEvaluationStatuses.isPending ? (
-            <Text aria-live='polite' role='status'>
-              교수자 미평가 현황을 불러오는 중입니다.
-            </Text>
-          ) : professorEvaluationStatuses.isError ? (
-            <Text role='alert'>
-              교수자 미평가 현황을 불러오지 못했습니다. 발표 기록 화면에서 팀별
-              상태를 확인해 주세요.
-            </Text>
-          ) : unevaluatedTeams.length > 0 ? (
+        {sortedTeams.length ? (
+          <>
+            {hasUnknownEvaluationStatus ? (
+              <Text aria-live='polite' role='status'>
+                일부 팀의 교수자 평가 상태를 확인하는 중이거나 확인하지
+                못했습니다.
+              </Text>
+            ) : null}
             <ul className={styles.teamList}>
-              {unevaluatedTeams.map(team => (
-                <li key={team.teamId}>
-                  <Link
-                    aria-label={`${team.teamName} 발표 기록 보기로 이동`}
-                    className={styles.teamLink}
-                    search={{
-                      milestoneId,
-                      sectionId,
-                      teamId: String(team.teamId),
-                    }}
-                    to={ROUTES.ADMIN_PRESENTATION_PROGRESS}
-                  >
-                    <span>
-                      {team.presentationOrder
-                        ? `${team.presentationOrder}번째 발표 · `
-                        : ''}
+              {sortedTeams.map(team => {
+                const evaluationLabel = team.isPending
+                  ? '평가 확인 중'
+                  : team.isError
+                    ? '평가 확인 불가'
+                    : team.submittedAt
+                      ? '평가 완료'
+                      : '미평가';
+                const teamContent = (
+                  <span className={styles.teamMain}>
+                    <span className={styles.teamStatus}>
+                      <StatusDot
+                        aria-hidden='true'
+                        label={evaluationLabel}
+                        variant={
+                          team.isPending || team.isError
+                            ? 'neutral'
+                            : team.submittedAt
+                              ? 'success'
+                              : 'error'
+                        }
+                      />
+                      {evaluationLabel}
+                    </span>
+                    <span className={styles.teamName} title={team.teamName}>
                       {team.teamName}
                     </span>
-                    <span className={styles.teamLinkAction}>
-                      발표 기록 보기 →
-                    </span>
-                  </Link>
-                </li>
-              ))}
+                  </span>
+                );
+                return (
+                  <li key={team.teamId}>
+                    <Link
+                      aria-label={`${team.teamName}, ${evaluationLabel}, ${team.presentationOrder != null ? `${team.presentationOrder}번째 발표` : '발표 순서 미정'}, 발표 기록 보기`}
+                      className={styles.teamLink}
+                      search={{
+                        milestoneId,
+                        sectionId,
+                        teamId: String(team.teamId),
+                      }}
+                      to={ROUTES.ADMIN_PRESENTATION_PROGRESS}
+                    >
+                      {teamContent}
+                      <span className={styles.teamLinkAction}>
+                        <span className={styles.teamOrder}>
+                          {team.presentationOrder != null
+                            ? `${team.presentationOrder}번째`
+                            : '순서 미정'}
+                        </span>
+                        <span>기록 보기 →</span>
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
-          ) : (
-            <Text role='status'>모든 팀의 교수자 평가가 저장되었습니다.</Text>
-          )}
-        </VStack>
+          </>
+        ) : (
+          <Text role='status'>표시할 발표 팀이 없습니다.</Text>
+        )}
       </Card>
     </section>
   );
