@@ -15,8 +15,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '~/features/auth/authStore';
 import type { DocumentEditorField } from '~/features/editor/documentEditor';
 import { useSubmitProjectImageMutation } from '~/features/editor/queries';
+import { screenCardTextErrors } from '~/features/editor/screenCardValidation';
 import { safeDisplayUrl } from '~/features/submission/submissionUploadInput';
 
+import { midReportGuiBlocker } from './midReportGuiValidation';
 import * as styles from './MidReportStructuredFields.css';
 
 export type GuiScreenRow = {
@@ -62,6 +64,7 @@ export default function MidReportGuiScreens({
   const upload = useSubmitProjectImageMutation(teamId);
   const [previews, setPreviews] = useState<Record<number, string>>({});
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [attempted, setAttempted] = useState(false);
   const previewsRef = useRef(previews);
   previewsRef.current = previews;
   useEffect(
@@ -74,6 +77,13 @@ export default function MidReportGuiScreens({
   );
   const field = fields.find(item => item.key === 'guiScreens');
   const rows = field ? readRows(field.value) : [];
+  const errors =
+    attempted && editing
+      ? screenCardTextErrors({
+          title: editing.name,
+          description: editing.description,
+        })
+      : null;
   const usedFileIdKey = [
     ...rows.flatMap(row => (row.imageFileId == null ? [] : [row.imageFileId])),
     ...(editing?.imageFileId == null ? [] : [editing.imageFileId]),
@@ -105,11 +115,18 @@ export default function MidReportGuiScreens({
     (row.imageFileId == null ? undefined : previews[row.imageFileId]) ??
     savedImageUrl(row);
   const closeDialog = () => {
+    setAttempted(false);
     setEditing(null);
     upload.reset();
   };
   const commit = () => {
-    if (!editing) return;
+    if (!editing || isLocked || upload.isPending) return;
+    setAttempted(true);
+    const missing = screenCardTextErrors({
+      title: editing.name,
+      description: editing.description,
+    });
+    if (missing.title || missing.description) return;
     const next = {
       description: editing.description,
       name: editing.name,
@@ -126,8 +143,10 @@ export default function MidReportGuiScreens({
     );
     closeDialog();
   };
+  const blocker = midReportGuiBlocker(fields);
   return (
     <VStack className={styles.screenBoard} gap={4}>
+      {blocker && <Text role='status'>{blocker}</Text>}
       <ul className={styles.screenList}>
         {rows.map((row, index) => {
           const url = imageOf(row);
@@ -259,7 +278,13 @@ export default function MidReportGuiScreens({
             )}
             <TextInput
               isDisabled={isLocked}
-              label='이름'
+              isRequired
+              label='제목'
+              status={
+                errors?.title
+                  ? { type: 'error', message: errors.title }
+                  : undefined
+              }
               onChange={name =>
                 setEditing(current =>
                   current ? { ...current, name } : current,
@@ -270,7 +295,13 @@ export default function MidReportGuiScreens({
             />
             <TextArea
               isDisabled={isLocked}
+              isRequired
               label='설명'
+              status={
+                errors?.description
+                  ? { type: 'error', message: errors.description }
+                  : undefined
+              }
               onChange={description =>
                 setEditing(current =>
                   current ? { ...current, description } : current,

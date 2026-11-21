@@ -585,8 +585,19 @@ it('추가 버튼의 모달에서 이미지와 제목·설명을 입력해 화�
   await waitFor(() =>
     expect(screen.getByRole('button', { name: '추가' })).toBeEnabled(),
   );
-  await userEvent.type(screen.getByLabelText('제목'), '대출 화면');
-  await userEvent.type(screen.getByLabelText('설명'), '대출을 신청한다');
+  await userEvent.click(screen.getByRole('button', { name: '추가' }));
+  expect(screen.getByRole('textbox', { name: /^제목/ })).toBeRequired();
+  expect(screen.getByRole('textbox', { name: /^설명/ })).toBeRequired();
+  expect(screen.getByText('제목을 입력해 주세요.')).toBeVisible();
+  expect(screen.getByText('설명을 입력해 주세요.')).toBeVisible();
+  await userEvent.type(
+    screen.getByRole('textbox', { name: /^제목/ }),
+    '대출 화면',
+  );
+  await userEvent.type(
+    screen.getByRole('textbox', { name: /^설명/ }),
+    '대출을 신청한다',
+  );
   await userEvent.click(screen.getByRole('button', { name: '추가' }));
   await userEvent.click(screen.getByRole('button', { name: '저장' }));
   await screen.findByText('제안서를 저장했어요.');
@@ -609,8 +620,10 @@ it('화면 이름과 설명은 편집 모달에서만 수정한다', async () =>
   await userEvent.click(
     screenCard('화면 1').getByRole('button', { name: '편집' }),
   );
-  const description = await screen.findByLabelText('설명');
+  const description = await screen.findByRole('textbox', { name: /^설명/ });
   await userEvent.clear(description);
+  await userEvent.click(screen.getByRole('button', { name: '적용' }));
+  expect(screen.getByText('설명을 입력해 주세요.')).toBeVisible();
   await userEvent.type(description, '도서를 정렬한다');
   await userEvent.click(screen.getByRole('button', { name: '적용' }));
   await userEvent.click(screen.getByRole('button', { name: '저장' }));
@@ -1048,15 +1061,22 @@ it('다른 영역 저장은 보존하며 같은 영역의 오래된 버전은 �
   });
 });
 
-it('버전 없는 조회를 0 버전으로 간주하지 않는다', async () => {
-  const project = createProjectProposalFixture();
-  server.use(
-    http.get(projectUrl, () =>
-      HttpResponse.json({ ...project, sectionVersions: undefined }),
-    ),
-  );
-  await expect(fetchProjectProposal('19')).rejects.toThrow('응답 형식');
-});
+it.each([
+  ['sectionVersions', undefined],
+  ['screenConfiguration', null],
+  ['screenConfiguration', undefined],
+])(
+  '제안서 필수 배열/버전 필드 오류를 거절한다: %s = %s',
+  async (key, value) => {
+    const project = createProjectProposalFixture();
+    server.use(
+      http.get(projectUrl, () =>
+        HttpResponse.json({ ...project, [key]: value }),
+      ),
+    );
+    await expect(fetchProjectProposal('19')).rejects.toThrow('응답 형식');
+  },
+);
 
 it('권한 획득 후 최신 조회가 끝나야 최신 내용으로 편집할 수 있다', async () => {
   let release!: () => void;

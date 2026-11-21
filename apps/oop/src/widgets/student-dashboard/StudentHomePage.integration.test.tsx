@@ -76,7 +76,16 @@ function midReportFixture(
       fields: midReportFieldKeys[block.key]!.map(key => ({
         key,
         label: key,
-        value: '',
+        value:
+          key === 'guiScreens' && block.status === 'COMPLETED'
+            ? JSON.stringify([
+                {
+                  id: 'home',
+                  name: '홈',
+                  description: '홈 화면을 보여 줍니다.',
+                },
+              ])
+            : '',
       })),
       status: block.status,
       lock: null,
@@ -1989,6 +1998,9 @@ describe('중간보고서 작성 영역 상태와 팀장 제출', () => {
   it('블록 상태를 작성 영역 상태로 보여준다', async () => {
     render(<StudentHomePage />, { wrapper: Wrapper });
 
+    expect(
+      await screen.findByText('작성 영역을 차례로 완료해 주세요.'),
+    ).toBeVisible();
     const links = await screen.findAllByRole('link', { name: /주제/ });
     const topic = links.find(
       item => item.getAttribute('href') === '/student/editor/mid-review/topic',

@@ -1,7 +1,7 @@
 import { API_BASE_URL, ENDPOINTS, setApiAccessToken } from '@aics/api-client';
-import { AstryxThemeProvider } from '@aics/design-system';
+import { AstryxThemeProvider, ToastViewport } from '@aics/design-system';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -21,10 +21,12 @@ import { useAuthStore } from '~/features/auth/authStore';
 
 import PeerEvaluationPage from './PeerEvaluationPage';
 import PresentationEvaluationPage from './PresentationEvaluationPage';
+import { evaluationKeys } from './queries/evaluationKeys';
 
 import {
   getMilestonePresentations,
   getMyTeamEvaluations,
+  presentationEvaluationMilestoneId,
   resetEvaluationMockData,
   setEvaluationWindowStates,
   teamEvaluationCriteria,
@@ -75,7 +77,7 @@ function renderPage(element: ReactElement) {
     return (
       <AstryxThemeProvider>
         <QueryClientProvider client={queryClient}>
-          {children}
+          <ToastViewport isTopLayer={false}>{children}</ToastViewport>
         </QueryClientProvider>
       </AstryxThemeProvider>
     );
@@ -102,7 +104,9 @@ describe('KD3-92 학생 평가 화면', () => {
     const footerNavigation = screen.getByRole('navigation', {
       name: '발표 팀 이동',
     });
-    expect(within(footerNavigation).getAllByRole('button')).toHaveLength(2);
+    expect(
+      within(footerNavigation).getByLabelText('발표 팀 바로 이동'),
+    ).toBeInTheDocument();
     expect(
       within(footerNavigation).queryByRole('button', { name: '평가하기' }),
     ).toBeNull();
@@ -484,7 +488,7 @@ describe('KD3-92 학생 평가 화면', () => {
     expect(
       await screen.findByRole('heading', {
         level: 2,
-        name: 'CineFlow · 영화관 통합 관리 시스템',
+        name: 'CineFlow (7팀)',
       }),
     ).toBeInTheDocument();
     expect(screen.getByRole('timer')).toHaveTextContent('평가 마감까지');
@@ -532,7 +536,7 @@ describe('KD3-92 학생 평가 화면', () => {
     expect(
       await screen.findByRole('heading', {
         level: 2,
-        name: 'BookLoop · 도서 대여 관리 프로그램',
+        name: 'BookLoop (1팀)',
       }),
     ).toBeInTheDocument();
     expect(
@@ -565,6 +569,11 @@ describe('KD3-92 학생 평가 화면', () => {
     const teamNavigation = screen.getByRole('navigation', {
       name: '팀 발표 빠른 탐색',
     });
+    expect(
+      within(
+        screen.getByRole('dialog', { name: /BookLoop.*평가 입력/ }),
+      ).queryByText(/평가 기간이에요/),
+    ).not.toBeInTheDocument();
     await waitFor(() =>
       expect(
         within(teamNavigation).getByRole('img', { name: '평가 완료' }),
@@ -572,41 +581,70 @@ describe('KD3-92 학생 평가 화면', () => {
     );
   });
 
-  it('프로젝트 화면 구성과 데이터·팀원 정보를 함께 보여 준다', async () => {
+  it('제안서에서 가져온 프로젝트 정보 대신 제출 자료만 보여 준다', async () => {
     await renderPresentationPage();
 
     await screen.findByRole('heading', { level: 1, name: '발표 평가' });
-    const screens = screen.getByRole('article', {
-      name: 'CineFlow (7팀) 화면 구성',
-    });
-
     expect(
-      within(screens).getByAltText('상영 일정 대시보드'),
+      screen.getByRole('article', { name: 'CineFlow (7팀) 제출 발표 자료' }),
     ).toBeInTheDocument();
     expect(
-      within(screens).getByAltText('좌석 선택 및 예매 화면'),
-    ).toBeInTheDocument();
-
-    const composition = screen.getByRole('article', {
-      name: 'CineFlow (7팀) 프로젝트 구성',
-    });
-
-    expect(
-      within(composition).getByRole('row', { name: /상영관별 일정 관리/ }),
-    ).toBeInTheDocument();
-    expect(
-      within(composition).getByRole('row', {
-        name: /OOP 데모 학생 A · 팀장/,
+      screen.queryByRole('heading', {
+        name: /프로젝트 소개|진행 일정|화면 구성|데이터 구성|팀원 역할/,
       }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: '진행 일정' }),
-    ).toBeInTheDocument();
+    ).not.toBeInTheDocument();
   });
 
-  it('같은 출처 상대 경로로 받은 프로젝트 화면 이미지도 표시한다', async () => {
+  it('백그라운드 조회만으로는 새로 고침 버튼을 잠그지 않는다', async () => {
+    await renderPresentationPage();
+    const roster = getMilestonePresentations();
+    let finish!: () => void;
+    const paused = new Promise<void>(resolve => {
+      finish = resolve;
+    });
+    const fetchRoster = vi.fn(async () => {
+      await paused;
+      return HttpResponse.json({ contents: roster });
+    });
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MILESTONE_PRESENTATIONS(':milestoneId')}`,
+        fetchRoster,
+      ),
+    );
+    const query = queryClients.at(-1)!;
+    const rosterKey = evaluationKeys.presentationRoster(
+      presentationEvaluationMilestoneId,
+    );
+    let request: Promise<void>;
+    try {
+      await act(async () => {
+        request = query.refetchQueries({ queryKey: rosterKey });
+      });
+      await waitFor(() => expect(fetchRoster).toHaveBeenCalledOnce());
+      const refresh = screen.getByRole('button', {
+        name: '발표 자료 새로 고침',
+      });
+      expect(refresh).toBeEnabled();
+      await userEvent.click(refresh);
+      expect(refresh).toBeDisabled();
+      expect(fetchRoster).toHaveBeenCalledOnce();
+    } finally {
+      await act(async () => {
+        finish();
+        await request;
+      });
+    }
+    expect(
+      screen.getByRole('button', { name: '발표 자료 새로 고침' }),
+    ).toBeEnabled();
+  });
+
+  it('발표 자료 새로 고침으로 교체된 파일을 확인한다', async () => {
+    const user = userEvent.setup();
     const presentations = getMilestonePresentations();
     const first = presentations[0]!;
+    await renderPresentationPage();
     server.use(
       http.get(
         `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MILESTONE_PRESENTATIONS(':milestoneId')}`,
@@ -615,29 +653,133 @@ describe('KD3-92 학생 평가 화면', () => {
             contents: [
               {
                 ...first,
-                project: {
-                  ...first.project!,
-                  screenConfiguration: [
-                    {
-                      title: '상대 경로 화면',
-                      description: '같은 출처 이미지',
-                      imageFileId: 77,
-                      imageUrl: '/project-images/screen-77.png',
-                    },
-                  ],
-                },
+                artifacts: [
+                  {
+                    type: 'FILE',
+                    fileId: 77,
+                    fileName: 'latest.pdf',
+                    mimeType: 'application/pdf',
+                    downloadUrl: 'https://files.example.test/latest.pdf',
+                  },
+                ],
               },
             ],
           }),
       ),
     );
 
-    await renderPresentationPage();
-
-    expect(await screen.findByAltText('상대 경로 화면')).toHaveAttribute(
-      'src',
-      'http://localhost:3000/project-images/screen-77.png',
+    await user.click(
+      screen.getByRole('button', { name: '발표 자료 새로 고침' }),
     );
+    expect(
+      await screen.findByRole('link', { name: 'latest.pdf' }),
+    ).toBeInTheDocument();
+  });
+
+  it('자동 조회가 실패해도 수동 새로 고침 오류는 누르기 전까지 표시하지 않는다', async () => {
+    await renderPresentationPage();
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MILESTONE_PRESENTATIONS(':milestoneId')}`,
+        () => new HttpResponse(null, { status: 500 }),
+      ),
+    );
+    await act(() =>
+      queryClients
+        .at(-1)!
+        .refetchQueries({
+          queryKey: evaluationKeys.presentationRoster(
+            presentationEvaluationMilestoneId,
+          ),
+        }),
+    );
+    const message = '새로 고침하지 못해 이전 발표 자료를 보여 드려요.';
+    expect(screen.queryByText(message)).not.toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole('button', { name: '발표 자료 새로 고침' }),
+    );
+    expect(await screen.findByText(message)).toBeVisible();
+  });
+
+  it.each(['CLOSED', 'UPCOMING'] as const)(
+    '제출이 거절되면 재조회가 %s인 경우의 안내를 표시한다',
+    async windowState => {
+      const user = userEvent.setup();
+      server.use(
+        http.put(
+          `${API_BASE_URL}${ENDPOINTS.EVALUATION.TEAM_EVALUATION(':milestoneId', ':teamId')}`,
+          () => {
+            setEvaluationWindowStates(windowState, 'OPEN');
+            return HttpResponse.json(
+              {
+                code: 'EVALUATION_NOT_OPEN',
+                message: '발표 평가 기간이 아니에요.',
+              },
+              { status: 403 },
+            );
+          },
+        ),
+      );
+      await renderPresentationPage();
+      await user.click(screen.getByRole('button', { name: '다음 팀' }));
+      for (const option of screen.getAllByRole('radio', { name: '5점' }))
+        await user.click(option);
+      await user.click(screen.getByRole('button', { name: '평가 제출' }));
+      if (windowState === 'CLOSED') {
+        expect(
+          await screen.findByText(/평가 시간이 마감되어 제출하지 못했어요/),
+        ).toBeInTheDocument();
+        expect(mockNavigate).toHaveBeenCalledWith({
+          to: '/student',
+          replace: true,
+        });
+      } else {
+        expect(
+          await within(
+            screen.getByRole('dialog', { name: /평가 입력/ }),
+          ).findByText('발표 평가 기간이 아니에요.'),
+        ).toBeInTheDocument();
+        expect(mockNavigate).not.toHaveBeenCalled();
+      }
+    },
+  );
+
+  it('마감 시각이 없는 일반 403은 평가 기간 재조회나 홈 이동 없이 알려 준다', async () => {
+    const overview = getMyTeamEvaluations(demoStudent.studentNumber);
+    const loadWindow = vi.fn(() =>
+      HttpResponse.json({
+        ...overview,
+        windowState: 'OPEN',
+        evaluationClosesAt: null,
+      }),
+    );
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.MY_TEAM_EVALUATIONS(':milestoneId')}`,
+        loadWindow,
+      ),
+      http.put(
+        `${API_BASE_URL}${ENDPOINTS.EVALUATION.TEAM_EVALUATION(':milestoneId', ':teamId')}`,
+        () =>
+          HttpResponse.json(
+            { code: 'FORBIDDEN', message: '평가 권한이 없어요.' },
+            { status: 403 },
+          ),
+      ),
+    );
+    await renderPresentationPage();
+    await userEvent.click(screen.getByRole('button', { name: '다음 팀' }));
+    for (const option of screen.getAllByRole('radio', { name: '5점' }))
+      await userEvent.click(option);
+    const previousRequests = loadWindow.mock.calls.length;
+    await userEvent.click(screen.getByRole('button', { name: '평가 제출' }));
+    expect(
+      await within(
+        screen.getByRole('dialog', { name: /평가 입력/ }),
+      ).findByText('평가 권한이 없어요.'),
+    ).toBeVisible();
+    expect(loadWindow).toHaveBeenCalledTimes(previousRequests);
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it('5점을 초과하는 평가 항목은 범위를 제한한 숫자 입력으로 제출한다', async () => {

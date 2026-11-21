@@ -351,7 +351,20 @@ it('화면 이미지를 업로드해 받은 파일 ID를 저장 요청에 담는
       input,
       new File(['png'], 'gui.png', { type: 'image/png' }),
     );
-    await userEvent.type(await screen.findByLabelText('이름'), '대출 화면');
+    const dialog = within(
+      await screen.findByRole('dialog', { name: '화면 추가' }),
+    );
+    const title = dialog.getByRole('textbox', { name: /^제목/ });
+    const description = dialog.getByRole('textbox', { name: /^설명/ });
+    await userEvent.type(title, '대출 화면');
+    await userEvent.type(description, '   ');
+    await userEvent.click(screen.getByRole('button', { name: '추가' }));
+    expect(title).toBeRequired();
+    expect(description).toBeRequired();
+    expect(screen.getByText('설명을 입력해 주세요.')).toBeVisible();
+    expect(title).toHaveValue('대출 화면');
+    await userEvent.clear(description);
+    await userEvent.type(description, '도서 대출을 신청한다');
     await userEvent.click(screen.getByRole('button', { name: '추가' }));
 
     expect(bodies).toHaveLength(0);
@@ -363,6 +376,7 @@ it('화면 이미지를 업로드해 받은 파일 ID를 저장 요청에 담는
     expect(saved.at(-1)).toMatchObject({
       imageFileId: 901,
       name: '대출 화면',
+      description: '도서 대출을 신청한다',
     });
   } finally {
     server.events.removeAllListeners('request:start');

@@ -21,6 +21,23 @@ export const embed = style({
     },
   },
 });
+export const mobileCanvas = style({
+  alignItems: 'center',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['3'],
+});
+export const canvas = style({
+  background: tokens.color.background.card,
+  border: `1px solid ${tokens.color.border.base}`,
+  height: 'auto',
+  maxWidth: '100%',
+});
+export const pagination = style({ display: 'flex', gap: tokens.spacing['2'] });
+export const pageStatus = style({
+  color: tokens.color.text.secondary,
+  margin: 0,
+});
 
 export const message = style({
   color: tokens.color.text.secondary,
