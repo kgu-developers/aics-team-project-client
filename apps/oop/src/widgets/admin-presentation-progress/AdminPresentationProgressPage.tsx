@@ -258,6 +258,14 @@ export default function AdminPresentationProgressPage({
       ? presentations[0]?.teamId
       : presentations.find(team => team.teamId === requestedTeamId)?.teamId) ??
     null;
+  useEffect(() => {
+    if (teamId !== undefined || selectedTeamId === null) return;
+    void navigate({
+      replace: true,
+      search: { milestoneId, sectionId, teamId: String(selectedTeamId) },
+      to: ROUTES.ADMIN_PRESENTATION_PROGRESS,
+    });
+  }, [milestoneId, navigate, sectionId, selectedTeamId, teamId]);
   const [studentDetailNumber, setStudentDetailNumber] = useState<string | null>(
     null,
   );
@@ -279,6 +287,7 @@ export default function AdminPresentationProgressPage({
   const [professorEvaluationSavedAt, setProfessorEvaluationSavedAt] = useState<
     string | null
   >(null);
+  const selectedTeamIdRef = useRef(selectedTeamId);
   const hydratedProfessorEvaluationTeamIdRef = useRef<number | null>(null);
   const [materialRefreshVersion, setMaterialRefreshVersion] = useState(0);
   const [isSubmissionHistoryOpen, setSubmissionHistoryOpen] = useState(false);
@@ -303,6 +312,10 @@ export default function AdminPresentationProgressPage({
     enableBeforeUnload: () => hasUnsavedProfessorEvaluation,
     shouldBlockFn: () => hasUnsavedProfessorEvaluation,
   });
+
+  useEffect(() => {
+    selectedTeamIdRef.current = selectedTeamId;
+  }, [selectedTeamId]);
 
   useEffect(() => {
     const evaluation = professorEvaluationQuery.data;
@@ -800,6 +813,7 @@ export default function AdminPresentationProgressPage({
                 },
                 {
                   onSuccess: evaluation => {
+                    if (evaluation.teamId !== selectedTeamIdRef.current) return;
                     setProfessorScores(
                       Object.fromEntries(
                         evaluation.scores.map(score => [
@@ -814,6 +828,7 @@ export default function AdminPresentationProgressPage({
                     setProfessorEvaluationSavedAt(evaluation.submittedAt);
                   },
                   onError: requestError => {
+                    if (selectedTeamId !== selectedTeamIdRef.current) return;
                     const error = toAdminMilestoneRequestError(requestError);
                     setProfessorEvaluationError(
                       error.code === 'TEAM_EVALUATION_CLOSED'

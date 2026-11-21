@@ -1584,6 +1584,36 @@ describe('AdminSubmissionsPage', () => {
     expect(within(section).getAllByRole('link')).toHaveLength(2);
   });
 
+  it('모든 팀의 교수자 평가가 저장되면 완료 안내를 상태 메시지로 제공한다', async () => {
+    server.use(
+      http.get(
+        `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRESENTATION_EVALUATION_PROFESSOR('1', '103', ':teamId')}`,
+        ({ params }) =>
+          HttpResponse.json({
+            editable: false,
+            memo: null,
+            milestoneId: 103,
+            scores: [],
+            submittedAt: '2026-11-19T12:00:00Z',
+            teamId: Number(params.teamId),
+          }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderPage(undefined, { ...demoAdmin, globalRole: 'PROFESSOR' });
+    await user.click(await screen.findByRole('tab', { name: '발표 평가' }));
+
+    const section = (
+      await screen.findByRole('heading', {
+        name: '교수자 평가 현황',
+      })
+    ).closest('section')!;
+    expect(await within(section).findByRole('status')).toHaveTextContent(
+      '모든 팀의 교수자 평가가 저장되었습니다.',
+    );
+    expect(within(section).getByText('미평가 0팀')).toBeVisible();
+  });
+
   it('발표 평가 표에는 팀명 정렬과 무관하게 저장된 발표 순서를 표시한다', async () => {
     const submissions = getAdminMilestoneSubmissionsFixture('103')!;
     server.use(

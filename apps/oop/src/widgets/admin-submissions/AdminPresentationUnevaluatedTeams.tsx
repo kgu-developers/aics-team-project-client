@@ -58,6 +58,11 @@ export function AdminPresentationUnevaluatedTeams({
       <Card padding={4}>
         {sortedTeams.length ? (
           <>
+            {!hasUnknownEvaluationStatus && unevaluatedCount === 0 ? (
+              <Text className={styles.visuallyHidden} role='status'>
+                모든 팀의 교수자 평가가 저장되었습니다.
+              </Text>
+            ) : null}
             {hasUnknownEvaluationStatus ? (
               <Text aria-live='polite' role='status'>
                 일부 팀의 교수자 평가 상태를 확인하는 중이거나 확인하지

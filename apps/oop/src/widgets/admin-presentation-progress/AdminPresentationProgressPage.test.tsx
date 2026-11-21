@@ -139,6 +139,114 @@ it('팀 링크로 진입해도 다음 팀으로 이동할 수 있다', async () 
   await waitFor(() => expect(router.state.location.search.teamId).toBe('1'));
 });
 
+it('팀 ID 없이 진입하면 첫 팀을 URL에 고정하고 목록 순서가 바뀌어도 유지한다', async () => {
+  const user = userEvent.setup();
+  const presentations = getAdminMilestonePresentations();
+  let reordered = false;
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.SUBMISSION.MILESTONE_PRESENTATIONS('103')}`,
+      () =>
+        HttpResponse.json({
+          contents: reordered
+            ? presentations.map(team => ({
+                ...team,
+                presentationOrder: team.teamId === 1 ? 2 : 1,
+              }))
+            : presentations,
+        }),
+    ),
+  );
+  setApiAccessToken(demoPresentationProfessorAccessToken);
+  useAuthStore.setState({
+    accessToken: demoPresentationProfessorAccessToken,
+    currentUser: demoPresentationProfessor,
+  });
+
+  const router = renderPage();
+  expect(await screen.findByText('1번째 발표')).toBeVisible();
+  await waitFor(() => expect(router.state.location.search.teamId).toBe('1'));
+
+  reordered = true;
+  await user.click(screen.getByRole('button', { name: '발표 자료 새로 고침' }));
+  expect(await screen.findByText('2번째 발표')).toBeVisible();
+  expect(
+    screen.getByText(
+      'OOP-01 - 1팀 · 프로젝트 제목: CineFlow · 영화관 통합 관리 시스템',
+    ),
+  ).toBeVisible();
+  expect(router.state.location.search.teamId).toBe('1');
+});
+
+it('다른 팀으로 이동한 뒤 도착한 이전 팀 저장 응답은 현재 팀 입력을 덮어쓰지 않는다', async () => {
+  const user = userEvent.setup();
+  const scores = [1, 2, 3].map(criterionId => ({
+    criterionId,
+    maxScore: 5,
+    score: 1,
+    title: `평가 항목 ${criterionId}`,
+  }));
+  let finishSave: ((response: Response) => void) | undefined;
+  const saveResponse = new Promise<Response>(resolve => {
+    finishSave = resolve;
+  });
+  let saveStarted = false;
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRESENTATION_EVALUATION_PROFESSOR('1', '103', ':teamId')}`,
+      ({ params }) =>
+        HttpResponse.json({
+          editable: true,
+          memo: params.teamId === '1' ? 'A팀 메모' : 'B팀 메모',
+          milestoneId: 103,
+          scores,
+          submittedAt: null,
+          teamId: Number(params.teamId),
+        }),
+    ),
+    http.put(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.OOP_PRESENTATION_EVALUATION_PROFESSOR('1', '103', '1')}`,
+      () => {
+        saveStarted = true;
+        return saveResponse;
+      },
+    ),
+  );
+  setApiAccessToken(demoPresentationProfessorAccessToken);
+  useAuthStore.setState({
+    accessToken: demoPresentationProfessorAccessToken,
+    currentUser: demoPresentationProfessor,
+  });
+
+  const router = renderPage('1');
+  expect(await screen.findByLabelText('교수자 메모')).toHaveValue('A팀 메모');
+  await user.click(screen.getByRole('button', { name: '교수자 평가 저장' }));
+  await waitFor(() => expect(saveStarted).toBe(true));
+
+  await router.navigate({
+    search: { teamId: '2' },
+    to: '/admin/presentation-progress',
+  });
+  expect(await screen.findByLabelText('교수자 메모')).toHaveValue('B팀 메모');
+  finishSave?.(
+    HttpResponse.json({
+      editable: true,
+      memo: 'A팀 저장 완료 메모',
+      milestoneId: 103,
+      scores,
+      submittedAt: '2026-11-19T12:00:00Z',
+      teamId: 1,
+    }),
+  );
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: '교수자 평가 저장' }),
+    ).toBeEnabled(),
+  );
+  expect(screen.getByLabelText('교수자 메모')).toHaveValue('B팀 메모');
+  expect(screen.queryByText(/교수자 평가를 저장했습니다/)).toBeNull();
+});
+
 it.each(['999999', '"999999"', 'invalid-team'])(
   '존재하지 않는 팀 ID %s로 진입하면 다른 팀 기록을 표시하지 않는다',
   async teamId => {
