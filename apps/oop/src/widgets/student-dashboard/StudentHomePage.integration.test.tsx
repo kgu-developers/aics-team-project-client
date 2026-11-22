@@ -2034,13 +2034,16 @@ describe('중간보고서 작성 영역 상태와 팀장 제출', () => {
 
     render(<StudentHomePage />, { wrapper: Wrapper });
 
-    await waitFor(() => {
-      const card = document.getElementById(`student-milestone-${list[1]!.id}`);
-      expect(card).not.toBeNull();
-      expect(within(card!).getByText('미제출')).toBeVisible();
-      expect(card).not.toHaveTextContent('화면 GUI 영역을 확인해 주세요.');
-      expect(card).not.toHaveTextContent('화면 2: 설명');
-    });
+    await waitFor(() =>
+      expect(
+        screen.getByRole('link', { name: /화면 GUI 설계/ }),
+      ).toHaveTextContent('작성 완료'),
+    );
+    const card = document.getElementById(`student-milestone-${list[1]!.id}`);
+    if (!card) throw new Error('중간보고서 마일스톤 카드를 찾을 수 없습니다.');
+    expect(within(card).getByText('미제출')).toBeVisible();
+    expect(card).not.toHaveTextContent('화면 GUI 영역을 확인해 주세요.');
+    expect(card).not.toHaveTextContent('화면 2: 설명');
   });
 
   it('모든 블록이 완료되면 팀장에게 제출하기를 보여주고 제출한다', async () => {
