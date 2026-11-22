@@ -14,6 +14,8 @@ import {
   vi,
 } from 'vitest';
 
+import { useLogoutMutation } from './useLogoutMutation';
+import { useUpdateMyPasswordMutation } from './useUpdateMyPasswordMutation';
 import {
   demoAccessToken,
   demoCredentials,
@@ -24,8 +26,6 @@ import {
   resetDemoPasswordState,
 } from '../../../mocks/handlers/auth';
 import { useAuthStore } from '../authStore';
-import { useLogoutMutation } from './useLogoutMutation';
-import { useUpdateMyPasswordMutation } from './useUpdateMyPasswordMutation';
 
 const server = setupServer(...authHandlers);
 const queryClients: QueryClient[] = [];

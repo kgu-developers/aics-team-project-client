@@ -38,6 +38,8 @@ export function useAdminProfessorPresentationEvaluationStatusesQuery(
     () => ({
       data: teams.map((team, index) => ({
         ...team,
+        isError: queries[index]?.isError ?? false,
+        isPending: queries[index]?.isPending ?? true,
         submittedAt: queries[index]?.data?.submittedAt ?? null,
       })),
       isError: queries.some(query => query.isError),

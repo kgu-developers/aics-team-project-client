@@ -4,6 +4,9 @@ import { globalStyle, style } from '@vanilla-extract/css';
 import { layoutTokens } from '~/app/tokens.css';
 
 export const shell = style({
+  vars: {
+    '--admin-sidebar-effective-width': layoutTokens.workspace['sidebar-width'],
+  },
   background: tokens.color.background.body,
   display: 'grid',
   gridTemplateColumns: `${layoutTokens.workspace['sidebar-width']} minmax(0, 1fr)`,
@@ -14,6 +17,7 @@ export const shell = style({
 });
 
 export const shellCollapsed = style({
+  vars: { '--admin-sidebar-effective-width': '0px' },
   gridTemplateColumns: '0 minmax(0, 1fr)',
 });
 
@@ -205,6 +209,9 @@ export const footer = style({
   minHeight: 105,
   paddingBlockStart: tokens.spacing['4'],
   paddingInline: 'clamp(20px, 5vw, 48px)',
+});
+export const footerWithTeamNavigator = style({
+  paddingBottom: 80,
 });
 export const footerBrand = style({
   alignItems: 'center',

@@ -1,5 +1,9 @@
 import { API_BASE_URL, ENDPOINTS } from '@aics/api-client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+  focusManager,
+  QueryClient,
+  QueryClientProvider,
+} from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -64,6 +68,66 @@ it('없는 제안서만 미제출로 표시하고 다른 팀의 파일 제출 �
     ]);
   } finally {
     cleanup();
+  }
+});
+
+it('중간보고서 목록으로 돌아오면 학생 답글 여부를 다시 조회한다', async () => {
+  const fixture = getAdminMilestoneSubmissionsFixture('102');
+  if (!fixture) throw new Error('중간보고서 제출물 픽스처가 필요합니다.');
+
+  let requestCount = 0;
+  server.use(
+    http.get(
+      `${API_BASE_URL}${ENDPOINTS.ADMIN.MILESTONE_SUBMISSIONS('102')}`,
+      () => {
+        requestCount += 1;
+        return HttpResponse.json({
+          ...fixture,
+          contents: fixture.contents.map((item, index) => ({
+            ...item,
+            studentFeedbackSubmitted: index === 0 ? requestCount > 1 : false,
+          })),
+        });
+      },
+    ),
+  );
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: {
+        refetchOnWindowFocus: false,
+        retry: false,
+        staleTime: Infinity,
+      },
+    },
+  });
+  const wrapper = ({ children }: PropsWithChildren) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  );
+  focusManager.setFocused(false);
+  const hook = renderHook(
+    () =>
+      useAdminMilestoneSubmissionsQuery('102', true, undefined, false, true),
+    { wrapper },
+  );
+
+  try {
+    await waitFor(() => expect(hook.result.current.isSuccess).toBe(true));
+    expect(
+      hook.result.current.data?.submissions[0]?.studentFeedbackSubmitted,
+    ).toBe(false);
+
+    focusManager.setFocused(true);
+
+    await waitFor(() =>
+      expect(
+        hook.result.current.data?.submissions[0]?.studentFeedbackSubmitted,
+      ).toBe(true),
+    );
+    expect(requestCount).toBe(2);
+  } finally {
+    hook.unmount();
+    client.clear();
+    focusManager.setFocused(undefined);
   }
 });
 

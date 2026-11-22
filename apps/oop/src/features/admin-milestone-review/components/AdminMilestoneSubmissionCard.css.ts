@@ -60,7 +60,7 @@ export const footer = style({
   gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
   minHeight: 43,
   '@media': {
-    'screen and (max-width: 520px)': {
+    'screen and (max-width: 1100px)': {
       gridTemplateColumns: 'minmax(0, 1fr)',
     },
   },
@@ -88,7 +88,7 @@ export const footerTrailing = style({
   minWidth: 0,
   padding: '0 8px',
   '@media': {
-    'screen and (max-width: 520px)': {
+    'screen and (max-width: 1100px)': {
       borderLeft: 0,
       borderTop: `1px solid ${tokens.color.border.base}`,
       justifyContent: 'center',
@@ -99,11 +99,14 @@ export const footerTrailing = style({
 export const footerTrailingLabel = style({
   alignItems: 'center',
   display: 'flex',
-  flex: 1,
+  flex: '1 1 180px',
+  columnGap: 8,
+  flexWrap: 'wrap',
   justifyContent: 'center',
   minWidth: 0,
   overflowWrap: 'anywhere',
-  padding: '10px 0',
+  padding: '8px 0',
+  rowGap: 4,
   textAlign: 'center',
 });
 

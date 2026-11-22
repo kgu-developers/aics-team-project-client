@@ -55,35 +55,6 @@ export const section = style({
   gap: 10,
 });
 
-export const imageGrid = style({
-  display: 'grid',
-  gap: 12,
-  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-});
-
-export const screenCard = style({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 10,
-  margin: 0,
-});
-
-export const screenImage = style({
-  background: tokens.color.background.muted,
-  border: `1px solid ${tokens.color.border.base}`,
-  borderRadius: tokens.radius.container,
-  display: 'block',
-  maxHeight: 260,
-  objectFit: 'contain',
-  width: '100%',
-});
-
-export const screenCaption = style({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 4,
-});
-
 export const list = style({
   display: 'flex',
   flexDirection: 'column',
@@ -101,6 +72,21 @@ export const item = style({
   paddingBottom: 8,
 });
 
+export const studentLink = style({
+  background: 'transparent',
+  border: 0,
+  color: tokens.color.text.accent,
+  cursor: 'pointer',
+  font: 'inherit',
+  padding: 0,
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
+  ':focus-visible': {
+    outline: `2px solid ${tokens.color.accent}`,
+    outlineOffset: 2,
+  },
+});
+
 export const artifactTextContent = style({
   whiteSpace: 'pre-wrap',
   wordBreak: 'break-word',
@@ -111,7 +97,14 @@ export const submissionDescription = style({
   display: 'flex',
   flexDirection: 'column',
   gap: tokens.spacing['1'],
+  minWidth: 0,
   paddingBottom: tokens.spacing['3'],
+});
+
+export const submissionDescriptionValue = style({
+  minWidth: 0,
+  overflowWrap: 'anywhere',
+  whiteSpace: 'pre-wrap',
 });
 
 export const submissionHistoryGrid = style({
@@ -138,6 +131,14 @@ export const submissionHistoryDetail = style({
   minWidth: 0,
 });
 
+export const submissionHistoryField = style({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: tokens.spacing['1'],
+  overflowWrap: 'anywhere',
+  whiteSpace: 'pre-wrap',
+});
+
 export const submissionHistoryArtifacts = style({
   display: 'flex',
   flexDirection: 'column',
@@ -155,6 +156,7 @@ export const scoreRow = style({
 
 export const link = style({
   color: tokens.color.text.accent,
+  overflowWrap: 'anywhere',
   textDecoration: 'underline',
   textUnderlineOffset: 3,
   ':focus-visible': {

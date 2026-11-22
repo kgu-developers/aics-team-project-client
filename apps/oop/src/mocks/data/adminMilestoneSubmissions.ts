@@ -54,6 +54,7 @@ const submissionsByMilestoneId: Record<
         currentVersion: 2,
         feedbackCount: 1,
         feedbackRequested: true,
+        studentFeedbackSubmitted: false,
         hasPendingReview: false,
         id: 1003,
         milestoneId: 102,
@@ -64,6 +65,7 @@ const submissionsByMilestoneId: Record<
       {
         canSubmitNow: false,
         currentVersion: 1,
+        studentFeedbackSubmitted: false,
         hasPendingReview: false,
         id: 1004,
         milestoneId: 102,
@@ -191,6 +193,8 @@ export function getAdminMilestoneSubmissionsFixture(
     ? {
         contents: fixture.contents.map(submission => ({
           ...submission,
+          studentFeedbackSubmitted:
+            submission.studentFeedbackSubmitted ?? false,
           canSubmitNow:
             submission.milestoneId === 102 &&
             isAdminMidReportSubmissionReopened(

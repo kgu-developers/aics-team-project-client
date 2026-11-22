@@ -94,6 +94,7 @@ const submissionFixtures: Record<string, SubmissionFixture> = {
       currentVersion: 2,
       feedbackCount: 1,
       feedbackRequested: true,
+      studentFeedbackSubmitted: false,
       hasPendingReview: false,
       id: 1003,
       milestoneId: 102,
@@ -390,6 +391,7 @@ export function getAdminSubmissionFixture(
   return detail
     ? {
         ...detail,
+        studentFeedbackSubmitted: detail.studentFeedbackSubmitted ?? false,
         meetingRecordCount: countAdminMeetingRecords(
           detail.teamId,
           detail.milestoneId,

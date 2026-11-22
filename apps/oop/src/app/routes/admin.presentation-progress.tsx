@@ -7,12 +7,17 @@ function positiveId(value: unknown) {
     : undefined;
 }
 
-export const Route = createFileRoute('/admin/presentation-progress')({
-  validateSearch: (
-    search: Record<string, unknown>,
-  ): { milestoneId?: string; sectionId?: string; teamId?: string } => ({
+export function validatePresentationProgressSearch(
+  search: Record<string, unknown>,
+): { milestoneId?: string; sectionId?: string; teamId?: string } {
+  return {
     milestoneId: positiveId(search.milestoneId),
     sectionId: positiveId(search.sectionId),
-    teamId: positiveId(search.teamId),
-  }),
+    // Keep supplied invalid IDs distinct from an omitted team ID.
+    teamId: search.teamId === undefined ? undefined : String(search.teamId),
+  };
+}
+
+export const Route = createFileRoute('/admin/presentation-progress')({
+  validateSearch: validatePresentationProgressSearch,
 });

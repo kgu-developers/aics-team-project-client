@@ -10,6 +10,22 @@ class ResizeObserverMock implements ResizeObserver {
 // region as well as in its visible toast. Text queries target rendered UI;
 // announcement semantics can be asserted separately through role queries.
 if (typeof window !== 'undefined') {
+  // Vitest leaves pre-existing Node 26 Web Storage globals in place. Its
+  // localStorage getter returns undefined without --localstorage-file, so use
+  // the storage owned by this test file's jsdom instance instead.
+  const jsdomWindow = (
+    globalThis as typeof globalThis & { jsdom?: { window: Window } }
+  ).jsdom?.window;
+  if (jsdomWindow) {
+    for (const key of ['localStorage', 'sessionStorage'] as const) {
+      Object.defineProperty(globalThis, key, {
+        configurable: true,
+        value: jsdomWindow[key],
+        writable: true,
+      });
+    }
+  }
+
   // Node logic/HTTP tests do not load the DOM assertion or React test runtime.
   await import('@testing-library/jest-dom/vitest');
   const { cleanup, configure } = await import('@testing-library/react');

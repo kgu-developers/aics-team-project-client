@@ -33,6 +33,7 @@ export type AdminSubmissionDetailView = {
   currentVersion: number;
   feedbackCount: number | null;
   feedbackRequested: boolean | null;
+  studentFeedbackSubmitted: boolean | null;
   hasPendingReview: boolean;
   leaderName?: string | null;
   milestoneId: string;
@@ -120,6 +121,7 @@ export function toAdminSubmissionDetailView(
     currentVersion: response.currentVersion,
     feedbackCount: response.feedbackCount ?? null,
     feedbackRequested: response.feedbackRequested ?? null,
+    studentFeedbackSubmitted: response.studentFeedbackSubmitted ?? null,
     hasPendingReview: response.hasPendingReview,
     leaderName: response.leaderName ?? null,
     milestoneId: String(response.milestoneId),

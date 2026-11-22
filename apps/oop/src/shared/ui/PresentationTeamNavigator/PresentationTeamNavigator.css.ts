@@ -1,8 +1,6 @@
 import { tokens } from '@aics/design-system';
 import { style } from '@vanilla-extract/css';
 
-import { layoutTokens } from '~/app/tokens.css';
-
 export const footer = style({
   background: tokens.color.background.card,
   borderTop: `1px solid ${tokens.color.border.base}`,
@@ -15,10 +13,7 @@ export const footer = style({
 });
 
 export const footerWithAdminSidebar = style({
-  left: layoutTokens.workspace['sidebar-width'],
-  '@media': {
-    '(max-width: 900px)': { left: 0 },
-  },
+  left: 'var(--admin-sidebar-effective-width, 0px)',
 });
 
 export const card = style({

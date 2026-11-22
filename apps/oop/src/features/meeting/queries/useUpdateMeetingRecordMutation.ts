@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '~/features/auth/authStore';
 import { studentHomeKeys } from '~/features/student-home/queries/studentHomeKeys';
 
+import { meetingKeys } from './meetingKeys';
 import { MeetingEditLockError } from '../model/meetingEditLock';
 import { meetingUpdateRequest } from '../model/meetingUpdate';
 import {
@@ -13,7 +14,6 @@ import {
 } from '../model/meetingUpdateError';
 import type { StudentMeetingRecord } from '../model/studentMeeting';
 import { hasMeetingApiId, meetingApiKeys } from './api/meetingApiKeys';
-import { meetingKeys } from './meetingKeys';
 
 export function useUpdateMeetingRecordMutation() {
   const queryClient = useQueryClient();

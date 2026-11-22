@@ -1,6 +1,5 @@
 import type {
   MilestonePresentation,
-  ProposalScreenItem,
   StudentSubmissionArtifact,
 } from '@aics/core';
 import {
@@ -18,13 +17,14 @@ import {
   TextArea,
   VStack,
 } from '@aics/design-system';
-import { Link } from '@tanstack/react-router';
+import { Link, useBlocker, useNavigate } from '@tanstack/react-router';
 import { RotateCw } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { ROUTES } from '~/app/constants/routes';
 
 import { formatCourseScheduleDateTime } from '~/shared/lib/formatCourseScheduleDateTime';
+import { GuidanceCard } from '~/shared/ui/GuidanceCard';
 import { PdfPreview } from '~/shared/ui/PdfPreview';
 import { PresentationTeamNavigator } from '~/shared/ui/PresentationTeamNavigator/PresentationTeamNavigator';
 
@@ -41,11 +41,9 @@ import {
   useAdminSubmissionVersionsQuery,
   useUpdateAdminProfessorPresentationEvaluationMutation,
 } from '~/features/admin-milestone-review/queries';
+import AdminStudentDetailDialog from '~/features/admin-student-team/components/AdminStudentDetailDialog';
 import { useAuthStore } from '~/features/auth/authStore';
-import {
-  safeDisplayUrl,
-  safeSubmissionUrl,
-} from '~/features/submission/submissionUploadInput';
+import { safeSubmissionUrl } from '~/features/submission/submissionUploadInput';
 
 import * as styles from './AdminPresentationProgressPage.css';
 
@@ -55,7 +53,6 @@ type AdminPresentationProgressPageProps = {
   teamId?: string;
 };
 
-type DisplayScreen = ProposalScreenItem & { imageUrl: string };
 type DisplayTeamMember = {
   id: number;
   isLeader: boolean;
@@ -90,17 +87,6 @@ function comparePresentations(
   const rightOrder = right.presentationOrder ?? Number.POSITIVE_INFINITY;
   if (leftOrder !== rightOrder) return leftOrder - rightOrder;
   return (left.teamName ?? '').localeCompare(right.teamName ?? '', 'ko');
-}
-
-function getDisplayScreens(team: MilestonePresentation): DisplayScreen[] {
-  const configuredScreens = team.project?.screenConfiguration;
-  if (!Array.isArray(configuredScreens)) return [];
-
-  return configuredScreens.flatMap(screen => {
-    if (!screen || typeof screen !== 'object') return [];
-    const imageUrl = safeDisplayUrl(screen.imageUrl);
-    return imageUrl ? [{ ...screen, imageUrl }] : [];
-  });
 }
 
 function isDisplayArtifact(
@@ -242,6 +228,7 @@ export default function AdminPresentationProgressPage({
   sectionId,
   teamId,
 }: AdminPresentationProgressPageProps) {
+  const navigate = useNavigate();
   const currentUser = useAuthStore(state => state.currentUser);
   const isProfessor = currentUser?.globalRole === 'PROFESSOR';
   const presentationsQuery = useAdminMilestonePresentationsQuery(
@@ -266,8 +253,21 @@ export default function AdminPresentationProgressPage({
     [presentationsQuery.data],
   );
   const requestedTeamId = toPositiveTeamId(teamId);
-  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(
-    requestedTeamId,
+  const selectedTeamId =
+    (teamId === undefined
+      ? presentations[0]?.teamId
+      : presentations.find(team => team.teamId === requestedTeamId)?.teamId) ??
+    null;
+  useEffect(() => {
+    if (teamId !== undefined || selectedTeamId === null) return;
+    void navigate({
+      replace: true,
+      search: { milestoneId, sectionId, teamId: String(selectedTeamId) },
+      to: ROUTES.ADMIN_PRESENTATION_PROGRESS,
+    });
+  }, [milestoneId, navigate, sectionId, selectedTeamId, teamId]);
+  const [studentDetailNumber, setStudentDetailNumber] = useState<string | null>(
+    null,
   );
   const professorEvaluationQuery = useAdminProfessorPresentationEvaluationQuery(
     sectionId,
@@ -287,9 +287,9 @@ export default function AdminPresentationProgressPage({
   const [professorEvaluationSavedAt, setProfessorEvaluationSavedAt] = useState<
     string | null
   >(null);
+  const selectedTeamIdRef = useRef(selectedTeamId);
   const hydratedProfessorEvaluationTeamIdRef = useRef<number | null>(null);
   const [materialRefreshVersion, setMaterialRefreshVersion] = useState(0);
-  const [pendingTeamId, setPendingTeamId] = useState<number | null>(null);
   const [isSubmissionHistoryOpen, setSubmissionHistoryOpen] = useState(false);
   const [selectedSubmissionVersion, setSelectedSubmissionVersion] = useState<
     number | undefined
@@ -307,23 +307,15 @@ export default function AdminPresentationProgressPage({
     );
   }, [professorEvaluationQuery.data, professorMemo, professorScores]);
 
+  const navigationBlocker = useBlocker({
+    withResolver: true,
+    enableBeforeUnload: () => hasUnsavedProfessorEvaluation,
+    shouldBlockFn: () => hasUnsavedProfessorEvaluation,
+  });
+
   useEffect(() => {
-    if (!presentations.length) {
-      setSelectedTeamId(null);
-      return;
-    }
-    if (
-      requestedTeamId !== null &&
-      presentations.some(team => team.teamId === requestedTeamId) &&
-      selectedTeamId !== requestedTeamId
-    ) {
-      setSelectedTeamId(requestedTeamId);
-      return;
-    }
-    if (!presentations.some(team => team.teamId === selectedTeamId)) {
-      setSelectedTeamId(presentations[0]!.teamId);
-    }
-  }, [presentations, requestedTeamId, selectedTeamId]);
+    selectedTeamIdRef.current = selectedTeamId;
+  }, [selectedTeamId]);
 
   useEffect(() => {
     const evaluation = professorEvaluationQuery.data;
@@ -347,27 +339,18 @@ export default function AdminPresentationProgressPage({
   useEffect(() => {
     setProfessorEvaluationSavedAt(null);
     setProfessorEvaluationError(null);
-    setPendingTeamId(null);
   }, [selectedTeamId]);
 
   function requestTeamChange(nextTeamId: number) {
     if (nextTeamId === selectedTeamId) return;
-    if (hasUnsavedProfessorEvaluation) {
-      setPendingTeamId(nextTeamId);
-      return;
-    }
-    setSelectedTeamId(nextTeamId);
+    void navigate({
+      search: { milestoneId, sectionId, teamId: String(nextTeamId) },
+      to: ROUTES.ADMIN_PRESENTATION_PROGRESS,
+    });
   }
 
-  function confirmTeamChange() {
-    if (pendingTeamId === null) return;
-    setSelectedTeamId(pendingTeamId);
-    setPendingTeamId(null);
-  }
-
-  const selectedIndex = Math.max(
-    0,
-    presentations.findIndex(team => team.teamId === selectedTeamId),
+  const selectedIndex = presentations.findIndex(
+    team => team.teamId === selectedTeamId,
   );
   const selectedTeam = presentations[selectedIndex];
   const embeddedMembers = selectedTeam ? getDisplayMembers(selectedTeam) : [];
@@ -488,12 +471,21 @@ export default function AdminPresentationProgressPage({
   }
 
   if (!selectedTeam) {
+    const isUnknownTeam = teamId !== undefined && presentations.length > 0;
     return (
       <main className={styles.page}>
         <EmptyState
           actions={<BackToPresentationList sectionId={sectionId} />}
-          description='발표 순서와 발표 자료 제출 여부를 확인해 주세요.'
-          title='표시할 발표 팀이 없습니다.'
+          description={
+            isUnknownTeam
+              ? '주소의 팀 ID를 확인하거나 발표 평가 목록에서 팀을 다시 선택해 주세요.'
+              : '발표 순서와 발표 자료 제출 여부를 확인해 주세요.'
+          }
+          title={
+            isUnknownTeam
+              ? '해당 발표 팀을 찾을 수 없습니다.'
+              : '표시할 발표 팀이 없습니다.'
+          }
         />
       </main>
     );
@@ -501,7 +493,6 @@ export default function AdminPresentationProgressPage({
 
   const project = selectedTeam.project;
   const teamLabel = selectedTeam.teamName ?? `${selectedTeam.teamId}팀`;
-  const screens = getDisplayScreens(selectedTeam);
   const artifacts = latestSubmissionVersionQuery.data
     ? getVersionDisplayArtifacts(
         latestSubmissionVersionQuery.data,
@@ -515,19 +506,24 @@ export default function AdminPresentationProgressPage({
       )
     : [];
   const pdf = findPdfArtifact(artifacts);
+  const isMaterialNotSubmitted =
+    submissionVersionsQuery.isSuccess &&
+    availableSubmissionVersions.length === 0 &&
+    artifacts.length === 0;
+  const professorEvaluationStatus = professorEvaluationQuery.isPending
+    ? { label: '교수자 평가 확인 중', variant: 'neutral' as const }
+    : professorEvaluationQuery.isError
+      ? { label: '교수자 평가 확인 불가', variant: 'neutral' as const }
+      : professorEvaluationQuery.data?.submittedAt
+        ? { label: '교수자 평가 저장됨', variant: 'success' as const }
+        : { label: '교수자 평가 미저장', variant: 'neutral' as const };
   const isFirst = selectedIndex === 0;
   const isLast = selectedIndex === presentations.length - 1;
 
   return (
     <main className={styles.page}>
       <div className={styles.titleRow}>
-        <div>
-          <Heading level={1}>발표 기록 보기</Heading>
-          <Text color='secondary' type='supporting'>
-            발표 순서에 따라 팀의 제안서와 제출 자료를 확인합니다. 자료가
-            교체되면 새로 고침으로 최신 자료를 확인하세요.
-          </Text>
-        </div>
+        <Heading level={1}>발표 기록 보기</Heading>
         <BackToPresentationList sectionId={sectionId} />
       </div>
 
@@ -542,22 +538,12 @@ export default function AdminPresentationProgressPage({
             variant={selectedTeam.presentationOrder ? 'success' : 'neutral'}
           />
           <Text weight='medium'>
-            {teamLabel} · {project?.title ?? '제안서 미작성'}
+            {teamLabel} · 프로젝트 제목: {project?.title ?? '제안서 미작성'}
           </Text>
-          <Badge
-            label={
-              professorEvaluationQuery.isPending
-                ? '교수자 평가 확인 중'
-                : professorEvaluationQuery.isError
-                  ? '교수자 평가 확인 불가'
-                  : professorEvaluationQuery.data?.submittedAt
-                    ? '교수자 평가 저장됨'
-                    : '교수자 평가 미저장'
-            }
-            variant={
-              professorEvaluationQuery.data?.submittedAt ? 'success' : 'neutral'
-            }
-          />
+          {isMaterialNotSubmitted ? (
+            <Badge label='발표 자료 미제출' variant='neutral' />
+          ) : null}
+          <Badge {...professorEvaluationStatus} />
         </HStack>
       </div>
 
@@ -570,88 +556,6 @@ export default function AdminPresentationProgressPage({
 
       <div className={styles.contentGrid}>
         <VStack gap={4}>
-          <section className={styles.section}>
-            <Heading level={2}>프로젝트 소개</Heading>
-            <Card padding={4}>
-              {project ? (
-                <VStack gap={3}>
-                  <div>
-                    <Text weight='medium'>
-                      {project.title ?? '프로젝트 제목 없음'}
-                    </Text>
-                    <Text>
-                      {project.description ?? '프로젝트 설명이 없습니다.'}
-                    </Text>
-                  </div>
-                  {project.goal && project.goal !== project.description ? (
-                    <div>
-                      <Text weight='medium'>프로젝트 목표</Text>
-                      <Text>{project.goal}</Text>
-                    </div>
-                  ) : null}
-                  {project.projectSchedule ? (
-                    <div>
-                      <Text weight='medium'>프로젝트 일정</Text>
-                      <Text>{project.projectSchedule}</Text>
-                    </div>
-                  ) : null}
-                  {safeSubmissionUrl(project.repositoryUrl) ? (
-                    <a
-                      className={styles.link}
-                      href={safeSubmissionUrl(project.repositoryUrl)}
-                      rel='noreferrer'
-                      target='_blank'
-                    >
-                      프로젝트 저장소 열기
-                    </a>
-                  ) : null}
-                </VStack>
-              ) : (
-                <Text color='secondary' role='status'>
-                  제안서를 작성하지 않아 프로젝트 소개를 표시할 수 없습니다.
-                </Text>
-              )}
-            </Card>
-          </section>
-
-          <section className={styles.section}>
-            <Heading level={2}>화면 구성</Heading>
-            {screens.length ? (
-              <div className={styles.imageGrid}>
-                {screens.map((screen, index) => (
-                  <Card
-                    key={`${screen.imageFileId ?? index}:${screen.title ?? ''}`}
-                    padding={3}
-                  >
-                    <figure className={styles.screenCard}>
-                      <img
-                        alt={screen.title || `화면 ${index + 1}`}
-                        className={styles.screenImage}
-                        src={screen.imageUrl}
-                      />
-                      <figcaption className={styles.screenCaption}>
-                        <Text weight='medium'>
-                          {screen.title || `화면 ${index + 1}`}
-                        </Text>
-                        {screen.description ? (
-                          <Text color='secondary' type='supporting'>
-                            {screen.description}
-                          </Text>
-                        ) : null}
-                      </figcaption>
-                    </figure>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card padding={4}>
-                <Text color='secondary' role='status'>
-                  제안서에 등록된 화면 이미지가 없습니다.
-                </Text>
-              </Card>
-            )}
-          </section>
-
           <section
             aria-labelledby='presentation-materials-heading'
             className={styles.section}
@@ -676,7 +580,41 @@ export default function AdminPresentationProgressPage({
                 variant='secondary'
               />
             </HStack>
+            <Text color='secondary' type='supporting'>
+              자료가 교체되면 새로 고침으로 최신 자료를 확인하세요.
+            </Text>
             <Card padding={4}>
+              {requiredArtifactsQuery.isError ? (
+                <VStack align='start' gap={2}>
+                  <Text role='alert' type='supporting'>
+                    발표 자료 항목 설정을 불러오지 못했습니다. 자료 이름은 이전
+                    정보나 기본 이름으로 표시될 수 있습니다.
+                  </Text>
+                  <Button
+                    isLoading={requiredArtifactsQuery.isFetching}
+                    label='자료 항목 설정 다시 시도'
+                    onClick={() => void requiredArtifactsQuery.refetch()}
+                    size='sm'
+                    type='button'
+                    variant='secondary'
+                  />
+                </VStack>
+              ) : null}
+              {submissionVersionsQuery.isError ? (
+                <VStack align='start' gap={2}>
+                  <Text role='alert' type='supporting'>
+                    제출 이력을 불러오지 못했습니다. 아래 자료는 최신 제출본이
+                    아닐 수 있습니다.
+                  </Text>
+                  <Button
+                    label='제출 이력 다시 시도'
+                    onClick={() => void submissionVersionsQuery.refetch()}
+                    size='sm'
+                    type='button'
+                    variant='secondary'
+                  />
+                </VStack>
+              ) : null}
               {latestSubmissionVersionQuery.isLoading ? (
                 <Text color='secondary' role='status' type='supporting'>
                   최신 제출 내용을 불러오는 중입니다.
@@ -699,7 +637,9 @@ export default function AdminPresentationProgressPage({
               {latestSubmissionVersionQuery.data?.description ? (
                 <div className={styles.submissionDescription}>
                   <Text weight='medium'>제출 설명</Text>
-                  <Text>{latestSubmissionVersionQuery.data.description}</Text>
+                  <Text className={styles.submissionDescriptionValue}>
+                    {latestSubmissionVersionQuery.data.description}
+                  </Text>
                 </div>
               ) : null}
               {artifacts.length ? (
@@ -712,6 +652,12 @@ export default function AdminPresentationProgressPage({
                       artifact,
                       label,
                     );
+                    const linkText =
+                      artifact.type === 'LINK'
+                        ? (artifact.url ?? url)
+                        : artifact.type === 'FILE'
+                          ? (artifact.fileName ?? label)
+                          : label;
                     return (
                       <li
                         className={styles.item}
@@ -727,7 +673,7 @@ export default function AdminPresentationProgressPage({
                             rel='noreferrer'
                             target='_blank'
                           >
-                            {label}
+                            {linkText}
                           </a>
                         ) : (
                           <Text weight='medium'>{label}</Text>
@@ -735,11 +681,6 @@ export default function AdminPresentationProgressPage({
                         {supplementalLabel ? (
                           <Text color='secondary' type='supporting'>
                             {supplementalLabel}
-                          </Text>
-                        ) : null}
-                        {artifact.configuredLabel && artifact.fileName ? (
-                          <Text color='secondary' type='supporting'>
-                            파일명: {artifact.fileName}
                           </Text>
                         ) : null}
                         {textContent ? (
@@ -753,7 +694,11 @@ export default function AdminPresentationProgressPage({
                 </ul>
               ) : (
                 <Text color='secondary' role='status'>
-                  제출된 발표 자료가 없습니다.
+                  {submissionVersionsQuery.isError
+                    ? '발표 자료를 확인할 수 없습니다.'
+                    : isMaterialNotSubmitted
+                      ? '이 팀은 발표 자료를 아직 제출하지 않았습니다.'
+                      : '제출된 발표 자료가 없습니다.'}
                 </Text>
               )}
             </Card>
@@ -761,7 +706,6 @@ export default function AdminPresentationProgressPage({
               <PdfPreview
                 // Manual refresh should also replace an otherwise identical file's renewed URL.
                 fileKey={`${pdf.fileKey}:${materialRefreshVersion}`}
-                onReload={() => void refreshPresentationMaterials()}
                 title={pdf.title}
                 url={pdf.url}
               />
@@ -777,10 +721,18 @@ export default function AdminPresentationProgressPage({
                 <ul className={styles.list}>
                   {members.map(member => (
                     <li className={styles.item} key={member.id}>
-                      <Text weight='medium'>
-                        {member.name ?? member.studentNumber}
-                        {member.isLeader ? ' · 팀장' : ''}
-                      </Text>
+                      <HStack align='center' gap={1}>
+                        <button
+                          className={styles.studentLink}
+                          onClick={() =>
+                            setStudentDetailNumber(member.studentNumber)
+                          }
+                          type='button'
+                        >
+                          {member.name ?? member.studentNumber}
+                        </button>
+                        {member.isLeader ? <Text>· 팀장</Text> : null}
+                      </HStack>
                       <Text color='secondary' type='supporting'>
                         {member.projectRole ?? '역할 미입력'}
                       </Text>
@@ -824,7 +776,8 @@ export default function AdminPresentationProgressPage({
             onSave={() => {
               if (!sectionId || !milestoneId || selectedTeamId === null) return;
               const evaluation = professorEvaluationQuery.data;
-              if (!evaluation?.editable) return;
+              if (professorEvaluationQuery.isError || !evaluation?.editable)
+                return;
               if (professorMemo.length > 5000) {
                 setProfessorEvaluationError(
                   '교수자 메모는 5,000자 이하로 입력해 주세요.',
@@ -860,6 +813,7 @@ export default function AdminPresentationProgressPage({
                 },
                 {
                   onSuccess: evaluation => {
+                    if (evaluation.teamId !== selectedTeamIdRef.current) return;
                     setProfessorScores(
                       Object.fromEntries(
                         evaluation.scores.map(score => [
@@ -874,6 +828,7 @@ export default function AdminPresentationProgressPage({
                     setProfessorEvaluationSavedAt(evaluation.submittedAt);
                   },
                   onError: requestError => {
+                    if (selectedTeamId !== selectedTeamIdRef.current) return;
                     const error = toAdminMilestoneRequestError(requestError);
                     setProfessorEvaluationError(
                       error.code === 'TEAM_EVALUATION_CLOSED'
@@ -894,7 +849,11 @@ export default function AdminPresentationProgressPage({
             memo={professorMemo}
             savedAt={professorEvaluationSavedAt}
             scores={professorScores}
-            value={professorEvaluationQuery.data}
+            value={
+              professorEvaluationQuery.isError
+                ? undefined
+                : professorEvaluationQuery.data
+            }
           />
         </VStack>
       </div>
@@ -987,35 +946,44 @@ export default function AdminPresentationProgressPage({
                           : ''}
                       </Text>
                     </div>
-                    <div>
+                    <div className={styles.submissionHistoryField}>
                       <Text weight='medium'>제출 설명</Text>
                       <Text color='secondary'>
                         {submissionVersionQuery.data.description ??
                           '제출 설명 없음'}
                       </Text>
                     </div>
-                    <div>
-                      <Text weight='medium'>변경 메모</Text>
-                      <Text color='secondary'>
-                        {submissionVersionQuery.data.changeNote ??
-                          '변경 메모 없음'}
-                      </Text>
-                    </div>
+                    {submissionVersionQuery.data.version > 1 ? (
+                      <div className={styles.submissionHistoryField}>
+                        <Text weight='medium'>변경 메모</Text>
+                        <Text color='secondary'>
+                          {submissionVersionQuery.data.changeNote ??
+                            '변경 메모 없음'}
+                        </Text>
+                      </div>
+                    ) : null}
                     <div>
                       <Text weight='medium'>제출 자료</Text>
                       {selectedSubmissionArtifacts.length ? (
                         <ul className={styles.submissionHistoryArtifacts}>
                           {selectedSubmissionArtifacts.map(
                             (artifact, index) => {
-                              const url = safeSubmissionUrl(
-                                artifact.downloadUrl ?? artifact.url,
-                              );
+                              const url = artifactUrl(artifact);
                               const label = artifactLabel(artifact, index);
                               const supplementalLabel =
                                 artifactSupplementalLabel(artifact, label);
+                              const linkText =
+                                artifact.type === 'LINK'
+                                  ? (artifact.url ?? url)
+                                  : artifact.type === 'FILE'
+                                    ? (artifact.fileName ?? label)
+                                    : label;
 
                               return (
-                                <li key={artifact.identityKey}>
+                                <li
+                                  className={styles.item}
+                                  key={artifact.identityKey}
+                                >
                                   {url ? (
                                     <a
                                       className={styles.link}
@@ -1023,7 +991,7 @@ export default function AdminPresentationProgressPage({
                                       rel='noreferrer'
                                       target='_blank'
                                     >
-                                      {label}
+                                      {linkText}
                                     </a>
                                   ) : (
                                     <Text>{label}</Text>
@@ -1031,12 +999,6 @@ export default function AdminPresentationProgressPage({
                                   {supplementalLabel ? (
                                     <Text color='secondary' type='supporting'>
                                       {supplementalLabel}
-                                    </Text>
-                                  ) : null}
-                                  {artifact.configuredLabel &&
-                                  artifact.fileName ? (
-                                    <Text color='secondary' type='supporting'>
-                                      파일명: {artifact.fileName}
                                     </Text>
                                   ) : null}
                                   {artifact.content ? (
@@ -1072,6 +1034,10 @@ export default function AdminPresentationProgressPage({
           </HStack>
         </VStack>
       </Dialog>
+      <AdminStudentDetailDialog
+        studentNumber={studentDetailNumber}
+        onClose={() => setStudentDetailNumber(null)}
+      />
       <PresentationTeamNavigator
         currentIndex={selectedIndex}
         isNextDisabled={isLast || saveProfessorEvaluationMutation.isPending}
@@ -1098,10 +1064,10 @@ export default function AdminPresentationProgressPage({
         actionVariant='destructive'
         cancelLabel='계속 작성'
         description='입력한 교수자 점수와 메모는 저장되지 않습니다. 저장한 뒤 이동하거나, 저장하지 않고 다음 팀으로 이동할 수 있습니다.'
-        isOpen={pendingTeamId !== null}
-        onAction={confirmTeamChange}
+        isOpen={navigationBlocker.status === 'blocked'}
+        onAction={() => navigationBlocker.proceed?.()}
         onOpenChange={nextIsOpen => {
-          if (!nextIsOpen) setPendingTeamId(null);
+          if (!nextIsOpen) navigationBlocker.reset?.();
         }}
         title='저장하지 않은 교수자 평가가 있습니다'
       />
@@ -1153,10 +1119,6 @@ function ProfessorEvaluationCard({
       <Heading level={2}>교수자 평가</Heading>
       <Card padding={4}>
         <VStack gap={3}>
-          <Text color='secondary' type='supporting'>
-            교수자 점수는 학생 평균에 포함되지 않으며, 메모는 학생에게 공개되지
-            않습니다.
-          </Text>
           {isLoading ? (
             <Text aria-live='polite' role='status'>
               교수자 평가를 불러오는 중입니다.
@@ -1177,20 +1139,13 @@ function ProfessorEvaluationCard({
             </VStack>
           ) : (
             <>
-              {value.submittedAt ? (
-                <Text color='secondary' type='supporting'>
-                  마지막 저장: {formatCourseScheduleDateTime(value.submittedAt)}
-                </Text>
-              ) : (
-                <Text color='secondary' type='supporting'>
-                  아직 저장된 교수자 평가가 없습니다.
-                </Text>
-              )}
               {!value.editable ? (
-                <Text color='secondary' role='status' type='supporting'>
-                  평가 기간이 종료되어 저장된 교수자 평가를 읽기 전용으로
-                  표시합니다.
-                </Text>
+                <GuidanceCard title='읽기 전용 안내'>
+                  <Text role='status' type='supporting'>
+                    현재 교수자 평가를 수정할 수 없습니다. 평가 기간과 설정을
+                    확인해 주세요.
+                  </Text>
+                </GuidanceCard>
               ) : null}
               {value.scores.map(score => (
                 <HStack

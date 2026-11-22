@@ -9,6 +9,8 @@ import {
 } from '@aics/design-system';
 import { useEffect, useState } from 'react';
 
+import { GuidanceCard } from '~/shared/ui/GuidanceCard';
+
 import {
   formatAdminMilestoneRequestError,
   toAdminMilestoneRequestError,
@@ -109,11 +111,21 @@ export function AdminPresentationEvaluationEndDialog({
     >
       <VStack className={styles.content} gap={4}>
         <Heading level={2}>발표 평가를 지금 종료할까요?</Heading>
-        <Text color='secondary' type='supporting'>
-          종료하면 학생은 발표 평가를 새로 제출하거나 기존 점수를 수정할 수
-          없습니다. 종료 뒤에도 발표 기록과 평가 항목은 읽기 전용으로 확인할 수
-          있습니다. 발표 순서는 변경할 수 있습니다.
-        </Text>
+        <GuidanceCard title='유의사항'>
+          <Text type='supporting'>
+            종료하면 학생은 발표 평가를 새로 제출하거나 기존 점수를 수정할 수
+            없습니다. 종료 뒤에도 발표 기록과 평가 항목은 읽기 전용으로 확인할
+            수 있습니다. 발표 순서는 변경할 수 있습니다.
+          </Text>
+          {!professorEvaluationStatuses.isPending &&
+          !professorEvaluationStatuses.isError &&
+          unevaluatedTeams.length > 0 ? (
+            <Text type='supporting'>
+              저장된 교수자 평가는 유지됩니다. 미평가 팀을 평가하려면 종료 후
+              평가를 재개해야 합니다.
+            </Text>
+          ) : null}
+        </GuidanceCard>
         {canViewProfessorEvaluations ? (
           !isTeamListReady && !isTeamListError ? (
             <Text aria-live='polite' role='status'>
@@ -148,10 +160,6 @@ export function AdminPresentationEvaluationEndDialog({
                   </li>
                 ))}
               </ul>
-              <Text color='secondary' type='supporting'>
-                지금 종료해도 저장된 평가 내용은 유지됩니다. 이 팀들을
-                평가하려면 종료 후 평가를 재개해야 합니다.
-              </Text>
             </VStack>
           ) : (
             <Text role='status'>모든 팀의 교수자 평가가 저장되었습니다.</Text>
