@@ -6,7 +6,6 @@ import { editorSectionTo } from '~/app/constants/editorSections';
 
 import { useAuthStore } from '~/features/auth/authStore';
 import { canSubmitMidReportDocument } from '~/features/mid-report/MidReportEditorPage';
-import { getMidReportGuiIssue } from '~/features/mid-report/midReportGuiValidation';
 import { useCurrentMidReportQuery } from '~/features/mid-report/queries';
 import { TopicApiProvider } from '~/features/project-topic/TopicApiContext';
 import TopicCandidateDialog from '~/features/project-topic/TopicCandidateDialog';
@@ -354,16 +353,9 @@ export default function StudentHomePage() {
       const readyToSubmit =
         midReport.isSuccess &&
         canSubmitMidReportDocument(midReport.data, currentUserName);
-      const blocks = midReport.data?.blocks;
-      const shouldShowGuiIssue =
-        blocks &&
-        (blocks.some(
-          block => block.key === 'gui-design' && block.status === 'COMPLETED',
-        ) ||
-          blocks.every(
-            block => block.key === 'gui-design' || block.status === 'COMPLETED',
-          ));
-      const guiIssue = shouldShowGuiIssue ? getMidReportGuiIssue(blocks) : null;
+      const submissionStatusValue = submission?.isError
+        ? '제출 상태 확인 실패'
+        : '미제출';
       if (
         !isProfessorConfirmed &&
         !isAwaitingProfessorConfirmation &&
@@ -427,22 +419,17 @@ export default function StudentHomePage() {
                   ? {
                       id: 'mid-report-submit',
                       label: '중간보고서 제출',
-                      value: '모든 작성 영역 완료',
+                      value: submissionStatusValue,
                       tone: 'primary',
                       actionLabel: '제출하기',
                     }
                   : {
                       id: 'mid-report-writing',
                       label: '중간보고서 작성',
-                      value:
-                        guiIssue?.message ??
-                        '작성 영역을 차례로 완료해 주세요.',
+                      value: submissionStatusValue,
                       tone: 'primary',
                       actionLabel: '작성하기',
-                      actionTo: editorSectionTo(
-                        'mid-review',
-                        guiIssue?.section ?? 'topic',
-                      ),
+                      actionTo: editorSectionTo('mid-review', 'topic'),
                     },
               ];
       return summary;
