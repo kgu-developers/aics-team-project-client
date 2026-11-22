@@ -1998,9 +1998,7 @@ describe('중간보고서 작성 영역 상태와 팀장 제출', () => {
   it('블록 상태를 작성 영역 상태로 보여준다', async () => {
     render(<StudentHomePage />, { wrapper: Wrapper });
 
-    expect(
-      await screen.findByText('작성 영역을 차례로 완료해 주세요.'),
-    ).toBeVisible();
+    expect(await screen.findByText('미제출')).toBeVisible();
     const links = await screen.findAllByRole('link', { name: /주제/ });
     const topic = links.find(
       item => item.getAttribute('href') === '/student/editor/mid-review/topic',
@@ -2012,6 +2010,37 @@ describe('중간보고서 작성 영역 상태와 팀장 제출', () => {
     expect(screen.getByRole('link', { name: /엔진부 설계/ })).toHaveTextContent(
       '작성 전',
     );
+  });
+
+  it('GUI 카드의 상세 누락 내용은 마일스톤 푸터에 노출하지 않는다', async () => {
+    const completed = [
+      { key: 'topic', status: 'COMPLETED' },
+      { key: 'gui-design', status: 'COMPLETED' },
+      { key: 'engine-design', status: 'COMPLETED' },
+      { key: 'project-plan', status: 'COMPLETED' },
+    ];
+    const report = midReportFixture(completed);
+    const guiBlock = report.blocks.find(block => block.key === 'gui-design');
+    if (!guiBlock) throw new Error('GUI 작성 영역을 찾을 수 없습니다.');
+    guiBlock.fields[0]!.value = JSON.stringify([
+      { id: 'home', name: '홈', description: '홈 화면입니다.' },
+      { id: 'detail', name: '상세', description: '  ' },
+    ]);
+    server.use(
+      http.get(`${API_BASE_URL}${ENDPOINTS.MID_REPORT.CURRENT}`, () =>
+        HttpResponse.json(report),
+      ),
+    );
+
+    render(<StudentHomePage />, { wrapper: Wrapper });
+
+    await waitFor(() => {
+      const card = document.getElementById(`student-milestone-${list[1]!.id}`);
+      expect(card).not.toBeNull();
+      expect(within(card!).getByText('미제출')).toBeVisible();
+      expect(card).not.toHaveTextContent('화면 GUI 영역을 확인해 주세요.');
+      expect(card).not.toHaveTextContent('화면 2: 설명');
+    });
   });
 
   it('모든 블록이 완료되면 팀장에게 제출하기를 보여주고 제출한다', async () => {

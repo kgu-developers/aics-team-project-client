@@ -78,7 +78,9 @@ function PdfCanvas({
         const viewport = page.getViewport({ scale });
         canvas.width = Math.max(1, Math.floor(viewport.width));
         canvas.height = Math.max(1, Math.floor(viewport.height));
-        renderTask = page.render({ canvas, viewport });
+        const canvasContext = canvas.getContext('2d');
+        if (!canvasContext) throw new Error('Could not open PDF canvas');
+        renderTask = page.render({ canvasContext, viewport });
         await renderTask.promise;
         if (!disposed) setStatus('ready');
       } catch {
